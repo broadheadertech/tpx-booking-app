@@ -1,4 +1,4 @@
-# Barbershop Voucher Kiosk System
+# Barbershop Voucher Client System
 
 ## Project Overview
 

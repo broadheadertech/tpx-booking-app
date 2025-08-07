@@ -6,7 +6,7 @@ import VoucherManagement from '../../components/customer/VoucherManagement'
 import LoyaltyPoints from '../../components/customer/LoyaltyPoints'
 import MyBookings from '../../components/customer/MyBookings'
 
-const Kiosk = () => {
+const Client = () => {
   const [activeSection, setActiveSection] = useState('home')
   const [customerData, setCustomerData] = useState(null)
 
@@ -224,4 +224,4 @@ const Kiosk = () => {
   )
 }
 
-export default Kiosk
+export default Client

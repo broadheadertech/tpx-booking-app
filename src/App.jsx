@@ -4,7 +4,8 @@ import Register from './pages/auth/Register'
 import StaffDashboard from './pages/staff/Dashboard'
 import CustomerDashboard from './pages/customer/Dashboard'
 import CustomerBooking from './pages/customer/Booking'
-import Kiosk from './pages/customer/Kiosk'
+import Client from './pages/customer/Client'
+import Kiosk from './pages/Kiosk'
 
 function App() {
   return (
@@ -17,7 +18,8 @@ function App() {
           <Route path="/staff/dashboard" element={<StaffDashboard />} />
           <Route path="/customer/dashboard" element={<CustomerDashboard />} />
           <Route path="/customer/booking" element={<CustomerBooking />} />
-          <Route path="/customer/kiosk" element={<Kiosk />} />
+          <Route path="/customer/client" element={<Client />} />
+          <Route path="/kiosk" element={<Kiosk />} />
         </Routes>
       </div>
     </Router>

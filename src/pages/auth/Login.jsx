@@ -90,13 +90,23 @@ function Login() {
               </Link>
             </div>
             
-            {/* Client Kiosk Button */}
+            {/* Client Portal Button */}
             <div className="text-center mt-2">
               <Link 
-                to="/customer/kiosk" 
+                to="/customer/client" 
                 className="inline-block w-full h-8 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] text-white text-xs font-bold rounded transition-all duration-200 leading-8 shadow-lg"
               >
-                Continue to Client Kiosk
+                Continue to Client Portal
+              </Link>
+            </div>
+            
+            {/* Kiosk Mode Button */}
+            <div className="text-center mt-2">
+              <Link 
+                to="/kiosk" 
+                className="inline-block w-full h-8 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white text-xs font-bold rounded transition-all duration-200 leading-8 shadow-lg"
+              >
+                Continue to Kiosk
               </Link>
             </div>
           </form>
