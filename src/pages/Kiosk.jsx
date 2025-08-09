@@ -158,60 +158,65 @@ function BookingQRGenerator() {
 
   if (bookingConfirmed && bookingQrUrl) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-6">
         {/* Booking Confirmation */}
-        <div className="bg-green-900 rounded-2xl border-2 border-green-600 p-8 text-center">
-          <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-white rounded-2xl p-6 text-center shadow-lg" style={{border: '1px solid #E0E0E0'}}>
+          <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3" style={{backgroundColor: '#4CAF50'}}>
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h3 className="text-2xl font-bold text-white mb-2">Booking Confirmed!</h3>
-          <p className="text-green-200">Your appointment has been scheduled</p>
+          <h3 className="text-xl font-bold mb-2" style={{color: '#36454F'}}>Booking Confirmed!</h3>
+          <p style={{color: '#8B8B8B'}}>Your appointment has been scheduled</p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
+        <div className="grid lg:grid-cols-2 gap-6">
           {/* Booking Details */}
-          <div className="bg-gray-900 rounded-2xl p-6 border border-gray-700">
-            <h3 className="text-white font-semibold mb-4 text-lg">Booking Details</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between text-gray-300">
+          <div className="bg-white rounded-2xl p-4 shadow-lg" style={{border: '1px solid #E0E0E0'}}>
+            <h3 className="font-semibold mb-3 text-base" style={{color: '#36454F'}}>Booking Details</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between" style={{color: '#8B8B8B'}}>
                 <span>Service:</span>
-                <span className="text-white font-medium">{selectedService.name}</span>
+                <span className="font-medium" style={{color: '#36454F'}}>{selectedService.name}</span>
               </div>
-              <div className="flex justify-between text-gray-300">
+              <div className="flex justify-between" style={{color: '#8B8B8B'}}>
                 <span>Duration:</span>
-                <span className="text-white font-medium">{selectedService.duration}</span>
+                <span className="font-medium" style={{color: '#36454F'}}>{selectedService.duration}</span>
               </div>
               {selectedBarber && (
-                <div className="flex justify-between text-gray-300">
+                <div className="flex justify-between" style={{color: '#8B8B8B'}}>
                   <span>Barber:</span>
-                  <span className="text-white font-medium">{selectedBarber}</span>
+                  <span className="font-medium" style={{color: '#36454F'}}>{selectedBarber}</span>
                 </div>
               )}
-              <div className="flex justify-between font-bold text-base pt-2 border-t border-gray-600">
-                <span className="text-gray-300">Total:</span>
-                <span className="text-orange-400">{selectedService.price}</span>
+              <div className="flex justify-between font-bold text-base pt-2" style={{borderTop: '1px solid #E0E0E0'}}>
+                <span style={{color: '#8B8B8B'}}>Total:</span>
+                <span style={{color: '#F68B24'}}>{selectedService.price}</span>
               </div>
             </div>
           </div>
 
           {/* QR Code */}
-          <div className="bg-gray-900 rounded-2xl p-6 border border-gray-700">
-            <h3 className="text-white font-semibold mb-4 text-lg">Your QR Code</h3>
-            <div className="bg-white rounded-xl p-6 flex items-center justify-center mb-6">
-              <img src={bookingQrUrl} alt="Booking QR Code" className="max-w-full max-h-full" />
+          <div className="bg-white rounded-2xl p-4 shadow-lg" style={{border: '1px solid #E0E0E0'}}>
+            <h3 className="font-semibold mb-3 text-base" style={{color: '#36454F'}}>Your QR Code</h3>
+            <div className="rounded-xl p-4 flex items-center justify-center mb-4" style={{backgroundColor: '#F4F0E6', border: '1px solid #E0E0E0'}}>
+              <img src={bookingQrUrl} alt="Booking QR Code" className="max-w-full max-h-full" style={{maxWidth: '200px', maxHeight: '200px'}} />
             </div>
             <button
               onClick={printBookingQR}
-              className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-xl transition-colors duration-200 flex items-center justify-center space-x-2"
+              className="w-full py-3 text-white font-medium rounded-xl transition-colors duration-200 flex items-center justify-center space-x-2"
+              style={{
+                backgroundColor: '#F68B24'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#E67A1F'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
               </svg>
               <span>Print QR Code</span>
             </button>
-            <p className="text-gray-400 text-sm text-center mt-4">
+            <p className="text-sm text-center mt-3" style={{color: '#8B8B8B'}}>
               Present this QR code at your appointment
             </p>
           </div>
@@ -224,31 +229,36 @@ function BookingQRGenerator() {
     <div className="space-y-8">
       {/* Step 1: Select Service */}
       <div>
-        <h2 className="text-2xl font-semibold text-white mb-6">1. Choose Service</h2>
-        <div className="grid gap-4">
+        <h2 className="text-xl font-semibold mb-4" style={{color: '#36454F'}}>1. Choose Service</h2>
+        <div className="grid gap-3">
           {mockData.services.map((service) => (
             <div 
               key={service.id}
-              className={`cursor-pointer transition-all rounded-2xl border-2 p-6 ${
+              className={`cursor-pointer transition-all rounded-xl p-4 ${
                 selectedService?.id === service.id 
-                  ? 'border-orange-500 bg-orange-900/30' 
-                  : 'border-gray-600 bg-gray-800 hover:border-orange-400'
+                  ? 'bg-white shadow-lg' 
+                  : 'bg-white hover:shadow-md'
               }`}
+              style={{
+                border: selectedService?.id === service.id 
+                  ? '2px solid #F68B24' 
+                  : '1px solid #E0E0E0'
+              }}
               onClick={() => setSelectedService(service)}
             >
               <div className="flex justify-between items-start">
                 <div className="flex-1">
-                  <h3 className="font-semibold text-white text-lg">{service.name}</h3>
-                  <p className="text-gray-300 text-sm mt-1">{service.description}</p>
-                  <p className="text-gray-400 text-sm mt-2">{service.duration}</p>
+                  <h3 className="font-semibold text-base" style={{color: '#36454F'}}>{service.name}</h3>
+                  <p className="text-sm mt-1" style={{color: '#8B8B8B'}}>{service.description}</p>
+                  <p className="text-sm mt-2" style={{color: '#8B8B8B'}}>{service.duration}</p>
                 </div>
                 <div className="text-right ml-4">
-                  <p className="font-bold text-orange-400 text-xl">{service.price}</p>
+                  <p className="font-bold text-lg" style={{color: '#F68B24'}}>{service.price}</p>
                 </div>
               </div>
               {selectedService?.id === service.id && (
-                <div className="mt-4 pt-4 border-t border-orange-500/30">
-                  <span className="text-orange-400 text-sm font-medium">✓ Selected</span>
+                <div className="mt-3 pt-3" style={{borderTop: '1px solid #F68B24'}}>
+                  <span className="text-sm font-medium" style={{color: '#F68B24'}}>✓ Selected</span>
                 </div>
               )}
             </div>
@@ -261,32 +271,42 @@ function BookingQRGenerator() {
       {/* Step 2: Select Barber (Optional) */}
       {selectedService && (
         <div>
-          <h2 className="text-2xl font-semibold text-white mb-6">2. Choose Barber (Optional)</h2>
+          <h2 className="text-xl font-semibold mb-4" style={{color: '#36454F'}}>2. Choose Barber (Optional)</h2>
           <div className="space-y-3">
             <button
               onClick={() => setSelectedBarber('')}
-              className={`w-full p-4 rounded-xl border-2 text-left transition-colors ${
+              className={`w-full p-4 rounded-xl text-left transition-all ${
                 selectedBarber === ''
-                  ? 'border-orange-500 bg-orange-900/30'
-                  : 'border-gray-600 bg-gray-800 hover:border-orange-400'
+                  ? 'bg-white shadow-lg'
+                  : 'bg-white hover:shadow-md'
               }`}
+              style={{
+                border: selectedBarber === ''
+                  ? '2px solid #F68B24'
+                  : '1px solid #E0E0E0'
+              }}
             >
-              <span className="font-medium text-white">Any Barber</span>
-              <p className="text-gray-300 text-sm">Any available barber</p>
+              <span className="font-medium" style={{color: '#36454F'}}>Any Barber</span>
+              <p className="text-sm" style={{color: '#8B8B8B'}}>Any available barber</p>
             </button>
             
             {mockData.barbers.map((barber) => (
               <button
                 key={barber.id}
                 onClick={() => setSelectedBarber(barber.name)}
-                className={`w-full p-4 rounded-xl border-2 text-left transition-colors ${
+                className={`w-full p-4 rounded-xl text-left transition-all ${
                   selectedBarber === barber.name
-                    ? 'border-orange-500 bg-orange-900/30'
-                    : 'border-gray-600 bg-gray-800 hover:border-orange-400'
+                    ? 'bg-white shadow-lg'
+                    : 'bg-white hover:shadow-md'
                 }`}
+                style={{
+                  border: selectedBarber === barber.name
+                    ? '2px solid #F68B24'
+                    : '1px solid #E0E0E0'
+                }}
               >
-                <span className="font-medium text-white">{barber.name}</span>
-                <p className="text-gray-300 text-sm">{barber.specialty}</p>
+                <span className="font-medium" style={{color: '#36454F'}}>{barber.name}</span>
+                <p className="text-sm" style={{color: '#8B8B8B'}}>{barber.specialty}</p>
               </button>
             ))}
           </div>
@@ -295,38 +315,43 @@ function BookingQRGenerator() {
 
       {/* Confirm Booking */}
       {selectedService && (
-        <div className="bg-gray-800 rounded-2xl border-2 border-gray-600 p-8">
-          <h3 className="font-semibold text-xl text-white mb-6">Booking Summary</h3>
-          <div className="space-y-3 text-sm mb-8">
+        <div className="bg-white rounded-2xl p-6 shadow-lg" style={{border: '1px solid #E0E0E0'}}>
+          <h3 className="font-semibold text-lg mb-4" style={{color: '#36454F'}}>Booking Summary</h3>
+          <div className="space-y-3 text-sm mb-6">
             <div className="flex justify-between">
-              <span className="text-gray-300">Service:</span>
-              <span className="text-white font-medium">{selectedService.name}</span>
+              <span style={{color: '#8B8B8B'}}>Service:</span>
+              <span className="font-medium" style={{color: '#36454F'}}>{selectedService.name}</span>
             </div>
 
             {selectedBarber && (
               <div className="flex justify-between">
-                <span className="text-gray-300">Barber:</span>
-                <span className="text-white font-medium">{selectedBarber}</span>
+                <span style={{color: '#8B8B8B'}}>Barber:</span>
+                <span className="font-medium" style={{color: '#36454F'}}>{selectedBarber}</span>
               </div>
             )}
-            <div className="flex justify-between font-bold text-base pt-3 border-t border-gray-600">
-              <span className="text-gray-300">Total:</span>
-              <span className="text-orange-400">{selectedService.price}</span>
+            <div className="flex justify-between font-bold text-base pt-3" style={{borderTop: '1px solid #E0E0E0'}}>
+              <span style={{color: '#8B8B8B'}}>Total:</span>
+              <span style={{color: '#F68B24'}}>{selectedService.price}</span>
             </div>
           </div>
           <button 
             onClick={generateBookingQR}
             disabled={isGeneratingBooking}
-            className="w-full py-4 bg-gradient-to-r from-orange-600 to-red-500 hover:from-orange-700 hover:to-red-600 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold rounded-2xl transition-all duration-200 disabled:cursor-not-allowed text-lg shadow-lg transform hover:scale-105 disabled:transform-none flex items-center justify-center space-x-3"
+            className="w-full py-4 text-white font-bold rounded-xl transition-all duration-200 disabled:cursor-not-allowed text-base shadow-lg flex items-center justify-center space-x-3"
+            style={{
+              backgroundColor: isGeneratingBooking ? '#8B8B8B' : '#F68B24'
+            }}
+            onMouseEnter={(e) => !isGeneratingBooking && (e.target.style.backgroundColor = '#E67A1F')}
+            onMouseLeave={(e) => !isGeneratingBooking && (e.target.style.backgroundColor = '#F68B24')}
           >
             {isGeneratingBooking ? (
               <>
-                <div className="animate-spin w-6 h-6 border-3 border-white border-t-transparent rounded-full"></div>
+                <div className="animate-spin w-5 h-5 border-3 border-white border-t-transparent rounded-full"></div>
                 <span>Confirming Booking...</span>
               </>
             ) : (
               <>
-                <QrCode className="w-6 h-6" />
+                <QrCode className="w-5 h-5" />
                 <span>Confirm Booking & Generate QR</span>
               </>
             )}
@@ -530,18 +555,24 @@ function Kiosk() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6">
+    <div className="min-h-screen p-4" style={{backgroundColor: '#F4F0E6'}}>
       {/* Header */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-6">
         <div className="flex items-center space-x-3">
-          <QrCode className="w-8 h-8 text-orange-500" />
-          <h1 className="text-3xl font-bold text-white">Kiosk Mode</h1>
+          <QrCode className="w-7 h-7" style={{color: '#F68B24'}} />
+          <h1 className="text-2xl font-bold" style={{color: '#36454F'}}>Kiosk Mode</h1>
         </div>
         <Link 
           to="/auth/login" 
-          className="flex items-center space-x-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors duration-200"
+          className="flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors duration-200"
+          style={{
+            backgroundColor: '#36454F',
+            color: 'white'
+          }}
+          onMouseEnter={(e) => e.target.style.backgroundColor = '#2A3640'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = '#36454F'}
         >
-          <Home className="w-5 h-5" />
+          <Home className="w-4 h-4" />
           <span>Back to Login</span>
         </Link>
       </div>
@@ -551,10 +582,10 @@ function Kiosk() {
         {mode === 'home' && (
           <div className="space-y-8">
             {/* Live Camera Feed */}
-            <div className="bg-gray-800 rounded-3xl border-2 border-gray-600 p-8 shadow-2xl">
-              <div className="text-center mb-6">
-                <h1 className="text-4xl font-bold text-white mb-2">Live Camera Feed</h1>
-                <p className="text-gray-300 text-lg">Point your camera at a QR code to scan automatically</p>
+            <div className="bg-white rounded-2xl p-6 shadow-lg" style={{border: '1px solid #E0E0E0'}}>
+              <div className="text-center mb-4">
+                <h1 className="text-2xl font-bold mb-2" style={{color: '#36454F'}}>Live Camera Feed</h1>
+                <p className="text-base" style={{color: '#8B8B8B'}}>Point your camera at a QR code to scan automatically</p>
               </div>
               
               <div className="relative bg-black rounded-2xl overflow-hidden" style={{ aspectRatio: '16/9' }}>
@@ -572,7 +603,7 @@ function Kiosk() {
                     <div className="flex justify-between items-center">
                       <div className="flex items-center space-x-3">
                         <div className="flex items-center space-x-2">
-                          <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                          <div className="w-3 h-3 rounded-full animate-pulse" style={{backgroundColor: '#F68B24'}}></div>
                           <span className="text-white text-sm font-bold tracking-wider">LIVE</span>
                         </div>
                         <div className="text-white/80 text-sm">QR Scanner Active</div>
@@ -587,17 +618,21 @@ function Kiosk() {
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="relative">
                       {/* Main scanning frame */}
-                      <div className="w-72 h-72 border-2 border-blue-400/60 rounded-2xl relative">
+                      <div className="w-64 h-64 border-2 rounded-2xl relative" style={{borderColor: '#F68B24', opacity: 0.8}}>
                         {/* Corner indicators */}
-                        <div className="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-blue-400 rounded-tl-2xl"></div>
-                        <div className="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-blue-400 rounded-tr-2xl"></div>
-                        <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-blue-400 rounded-bl-2xl"></div>
-                        <div className="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-blue-400 rounded-br-2xl"></div>
+                        <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 rounded-tl-2xl" style={{borderColor: '#F68B24'}}></div>
+                        <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 rounded-tr-2xl" style={{borderColor: '#F68B24'}}></div>
+                        <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 rounded-bl-2xl" style={{borderColor: '#F68B24'}}></div>
+                        <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 rounded-br-2xl" style={{borderColor: '#F68B24'}}></div>
                         
                         {/* Scanning line animation */}
                         <div className="absolute inset-0 overflow-hidden rounded-2xl">
-                          <div className="absolute w-full h-1 bg-gradient-to-r from-transparent via-blue-400 to-transparent animate-pulse" 
-                               style={{ top: '50%', transform: 'translateY(-50%)' }}></div>
+                          <div className="absolute w-full h-1 animate-pulse" 
+                               style={{ 
+                                 top: '50%', 
+                                 transform: 'translateY(-50%)',
+                                 background: 'linear-gradient(to right, transparent, #F68B24, transparent)'
+                               }}></div>
                         </div>
                       </div>
                       
@@ -614,9 +649,9 @@ function Kiosk() {
                   {!showHomeCamera && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm">
                       <div className="text-center text-white">
-                        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-xl font-medium">Initializing Camera...</p>
-                        <p className="text-blue-300 text-sm mt-2">Please allow camera access</p>
+                        <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin mx-auto mb-3" style={{borderColor: '#F68B24', borderTopColor: 'transparent'}}></div>
+                        <p className="text-lg font-medium">Initializing Camera...</p>
+                        <p className="text-sm mt-2" style={{color: '#F68B24', opacity: 0.8}}>Please allow camera access</p>
                       </div>
                     </div>
                   )}
@@ -625,19 +660,19 @@ function Kiosk() {
             </div>
 
             {/* Action Cards */}
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="grid md:grid-cols-2 gap-6">
               {/* Download App Card */}
-              <div className="bg-gradient-to-br from-blue-900 to-blue-800 rounded-3xl border-2 border-blue-600 p-8 hover:border-blue-400 transition-all duration-300 shadow-2xl transform hover:scale-105">
+              <div className="bg-white rounded-2xl p-6 shadow-lg transition-all duration-300 transform hover:scale-105" style={{border: '1px solid #E0E0E0'}}>
                 <div className="text-center">
-                  <div className="w-24 h-24 bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                    <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg" style={{backgroundColor: '#36454F'}}>
+                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <h2 className="text-3xl font-bold text-white mb-4">Download Our App</h2>
-                  <p className="text-blue-200 mb-6 text-lg">Get exclusive vouchers and loyalty rewards</p>
-                  <div className="bg-white rounded-2xl p-4 mb-6 mx-auto w-fit">
-                    <div className="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+                  <h2 className="text-xl font-bold mb-3" style={{color: '#36454F'}}>Download Our App</h2>
+                  <p className="mb-4 text-base" style={{color: '#8B8B8B'}}>Get exclusive vouchers and loyalty rewards</p>
+                  <div className="rounded-xl p-3 mb-4 mx-auto w-fit" style={{backgroundColor: '#F4F0E6', border: '1px solid #E0E0E0'}}>
+                    <div className="w-24 h-24 rounded-lg flex items-center justify-center overflow-hidden" style={{backgroundColor: '#FFFFFF'}}>
                       {appDownloadQr ? (
                         <img 
                           src={appDownloadQr} 
@@ -645,27 +680,32 @@ function Kiosk() {
                           className="w-full h-full object-contain"
                         />
                       ) : (
-                        <div className="text-xs text-gray-500 text-center">
+                        <div className="text-xs text-center" style={{color: '#8B8B8B'}}>
                           Loading...
                         </div>
                       )}
                     </div>
                   </div>
-                  <p className="text-blue-300 text-sm">Scan to download and unlock exclusive offers!</p>
+                  <p className="text-sm" style={{color: '#8B8B8B'}}>Scan to download and unlock exclusive offers!</p>
                 </div>
               </div>
 
               {/* Book Appointment Card */}
-              <div className="bg-gradient-to-br from-orange-900 to-red-800 rounded-3xl border-2 border-orange-600 p-8 hover:border-orange-400 transition-all duration-300 shadow-2xl transform hover:scale-105">
+              <div className="bg-white rounded-2xl p-6 shadow-lg transition-all duration-300 transform hover:scale-105" style={{border: '1px solid #E0E0E0'}}>
                 <div className="text-center">
-                  <div className="w-24 h-24 bg-gradient-to-r from-orange-500 to-red-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-                    <QrCode className="w-12 h-12 text-white" />
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg" style={{backgroundColor: '#F68B24'}}>
+                    <QrCode className="w-8 h-8 text-white" />
                   </div>
-                  <h2 className="text-3xl font-bold text-white mb-4">Book Appointment</h2>
-                  <p className="text-orange-200 mb-6 text-lg">Schedule your service and get a QR confirmation</p>
+                  <h2 className="text-xl font-bold mb-3" style={{color: '#36454F'}}>Book Appointment</h2>
+                  <p className="mb-4 text-base" style={{color: '#8B8B8B'}}>Schedule your service and get a QR confirmation</p>
                   <button
                     onClick={() => changeMode('generate')}
-                    className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-400 hover:from-orange-600 hover:to-red-500 text-white font-bold rounded-2xl transition-all duration-200 text-lg shadow-lg transform hover:scale-105"
+                    className="w-full py-3 text-white font-bold rounded-xl transition-all duration-200 text-base shadow-lg transform hover:scale-105"
+                    style={{
+                      backgroundColor: '#F68B24'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#E67A1F'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
                   >
                     Book Now
                   </button>
@@ -678,12 +718,17 @@ function Kiosk() {
 
 
         {mode === 'generate' && (
-          <div className="space-y-8">
+          <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h1 className="text-4xl font-bold text-white">Book & Generate QR</h1>
+              <h1 className="text-2xl font-bold" style={{color: '#36454F'}}>Book & Generate QR</h1>
               <button 
                 onClick={() => changeMode('home')}
-                className="px-6 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl transition-colors duration-200 flex items-center space-x-2"
+                className="px-4 py-2 text-white rounded-xl transition-colors duration-200 flex items-center space-x-2"
+                style={{
+                  backgroundColor: '#36454F'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#2A3640'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#36454F'}
               >
                 <span>← Back</span>
               </button>

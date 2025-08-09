@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import bannerImage from '../../assets/img/banner.jpg'
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -27,89 +28,120 @@ function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <div className="bg-gray-800 rounded-lg border-2 border-orange-500 p-6 shadow-2xl">
-          <h1 className="text-white text-xl font-bold text-center mb-6">Login</h1>
-          
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="Username"
-                required
-                className="w-full h-10 px-3 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:border-orange-500 transition-colors duration-200 text-sm"
-              />
+    <div className="min-h-screen" style={{backgroundColor: '#F4F0E6'}}>
+      {/* Background with banner image */}
+      <div className="absolute inset-0">
+        <div 
+          className="h-full bg-cover bg-center bg-no-repeat opacity-10"
+          style={{
+            backgroundImage: `url(${bannerImage})`,
+            filter: 'brightness(0.3)'
+          }}
+        ></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-orange-100/20 to-orange-200/10"></div>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center px-4">
+        <div className="w-full max-w-md">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-light tracking-wider mb-2" style={{color: '#36454F'}}>
+              <span className="font-thin">TPX</span>
+              <span className="font-extralight ml-2" style={{color: '#F68B24'}}>BARBERSHOP</span>
+            </h1>
+            <div className="flex justify-center mb-3">
+              <div className="w-16 h-px bg-gradient-to-r from-transparent via-orange-400 to-transparent"></div>
             </div>
-            
-            <div>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Password"
-                required
-                className="w-full h-10 px-3 bg-gray-700 border border-gray-600 rounded text-white placeholder-gray-400 focus:outline-none focus:border-orange-500 transition-colors duration-200 text-sm"
-              />
+            <p className="text-sm font-light tracking-widest uppercase" style={{color: '#8B8B8B'}}>Welcome Back</p>
+          </div>
+
+          {/* Login Form */}
+          <div className="bg-white rounded-2xl shadow-xl border" style={{borderColor: '#E0E0E0'}}>
+            <div className="p-8">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{color: '#36454F'}}>Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="Enter your email"
+                    required
+                    className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-200 text-sm"
+                    style={{color: '#36454F'}}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium mb-2" style={{color: '#36454F'}}>Password</label>
+                  <input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Enter your password"
+                    required
+                    className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-200 text-sm"
+                    style={{color: '#36454F'}}
+                  />
+                </div>
+                
+                <div className="text-right">
+                  <a href="#" className="text-sm font-medium hover:underline" style={{color: '#F68B24'}}>
+                    Forgot Password?
+                  </a>
+                </div>
+                
+                <button
+                  type="submit"
+                  className="w-full h-12 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  Sign In
+                </button>
+                
+                <div className="text-center">
+                  <span className="text-sm" style={{color: '#8B8B8B'}}>Don't have an account? </span>
+                  <Link 
+                    to="/auth/register" 
+                    className="text-sm font-semibold hover:underline"
+                    style={{color: '#F68B24'}}
+                  >
+                    Sign up
+                  </Link>
+                </div>
+              </form>
             </div>
-            
-            <div className="text-right">
-              <a href="#" className="text-gray-400 text-xs hover:text-gray-300">
-                Forgot Password?
-              </a>
-            </div>
-            
-            <button
-              type="submit"
-              className="w-full h-10 bg-gradient-to-r from-red-600 to-orange-500 hover:from-red-700 hover:to-orange-600 text-white font-bold rounded transition-all duration-200 text-sm"
-            >
-              Login
-            </button>
-            
-            <div className="text-center">
-              <span className="text-gray-400 text-xs">Don't have an account? </span>
-              <Link 
-                to="/auth/register" 
-                className="text-orange-500 hover:text-orange-400 font-medium text-xs"
-              >
-                Sign up
-              </Link>
-            </div>
-            
-            {/* Development only button */}
-            <div className="text-center mt-4">
+
+            {/* Development Navigation */}
+            <div className="border-t px-8 py-6 space-y-3" style={{borderColor: '#E0E0E0', backgroundColor: '#FAFAFA'}}>
+              <p className="text-xs font-medium text-center mb-4" style={{color: '#8B8B8B'}}>Quick Access (Development)</p>
+              
               <Link 
                 to="/staff/dashboard" 
-                className="inline-block w-full h-8 bg-gray-600 hover:bg-gray-700 text-white text-xs font-medium rounded transition-colors duration-200 leading-8"
+                className="block w-full h-10 bg-gray-100 hover:bg-gray-200 text-center leading-10 text-sm font-medium rounded-lg transition-colors duration-200"
+                style={{color: '#36454F'}}
               >
-                Continue to Dashboard (Dev)
+                Staff Dashboard
               </Link>
-            </div>
-            
-            {/* Client Portal Button */}
-            <div className="text-center mt-2">
+              
               <Link 
                 to="/customer/client" 
-                className="inline-block w-full h-8 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] text-white text-xs font-bold rounded transition-all duration-200 leading-8 shadow-lg"
+                className="block w-full h-10 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-center leading-10 text-sm font-semibold rounded-lg transition-all duration-200 shadow-md"
               >
-                Continue to Client Portal
+                Client Portal
               </Link>
-            </div>
-            
-            {/* Kiosk Mode Button */}
-            <div className="text-center mt-2">
+              
               <Link 
                 to="/kiosk" 
-                className="inline-block w-full h-8 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white text-xs font-bold rounded transition-all duration-200 leading-8 shadow-lg"
+                className="block w-full h-10 text-center leading-10 text-sm font-medium rounded-lg transition-all duration-200 border-2 hover:shadow-md"
+                style={{borderColor: '#F68B24', color: '#F68B24'}}
               >
-                Continue to Kiosk
+                Kiosk Mode
               </Link>
             </div>
-          </form>
+          </div>
         </div>
       </div>
     </div>

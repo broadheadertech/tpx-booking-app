@@ -16,13 +16,13 @@ const MyBookings = ({ onBack }) => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'confirmed':
-        return <CheckCircle className="w-5 h-5 text-green-500" />
+        return <CheckCircle className="w-4 h-4 text-green-600" />
       case 'pending':
-        return <AlertCircle className="w-5 h-5 text-yellow-500" />
+        return <AlertCircle className="w-4 h-4 text-yellow-600" />
       case 'cancelled':
-        return <XCircle className="w-5 h-5 text-red-500" />
+        return <XCircle className="w-4 h-4 text-red-600" />
       default:
-        return <Calendar className="w-5 h-5 text-gray-500" />
+        return <Calendar className="w-4 h-4" style={{color: '#8B8B8B'}} />
     }
   }
 
@@ -35,7 +35,7 @@ const MyBookings = ({ onBack }) => {
       case 'cancelled':
         return 'bg-red-50 text-red-700 border-red-200'
       default:
-        return 'bg-gray-50 text-gray-700 border-gray-200'
+        return 'bg-gray-50 border-gray-200'
     }
   }
 
@@ -52,40 +52,53 @@ const MyBookings = ({ onBack }) => {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{backgroundColor: '#F4F0E6'}}>
       {/* Header */}
-      <div className="bg-black sticky top-0 z-40 shadow-lg">
+      <div className="sticky top-0 z-40" style={{backgroundColor: '#36454F'}}>
         <div className="max-w-md mx-auto px-4">
-          <div className="flex items-center justify-between py-4">
+          <div className="flex items-center justify-between py-3">
             <button
               onClick={onBack}
-              className="flex items-center space-x-2 px-3 py-2 text-white hover:text-[#FF6644] font-semibold rounded-xl hover:bg-white/10 transition-all duration-200"
+              className="flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-lg transition-all duration-200"
+              style={{'&:hover': {color: '#F68B24'}}}
+              onMouseEnter={(e) => e.target.style.color = '#F68B24'}
+              onMouseLeave={(e) => e.target.style.color = 'white'}
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
               <span className="text-sm">Back</span>
             </button>
             <div className="text-right">
-              <p className="text-lg font-bold text-white">My Bookings</p>
-              <p className="text-xs text-[#FF6644]">{bookings.length} total</p>
+              <p className="text-sm font-bold text-white">My Bookings</p>
+              <p className="text-xs" style={{color: '#F68B24'}}>{bookings.length} total</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-4 py-6">
+      <div className="max-w-md mx-auto px-4 py-4">
         {/* Filter Tabs */}
-        <div className="mb-6">
-          <div className="bg-white rounded-2xl p-2 border-2 border-gray-200 shadow-sm">
+        <div className="mb-4">
+          <div className="bg-white rounded-xl p-2 border shadow-sm" style={{borderColor: '#E0E0E0'}}>
             <div className="grid grid-cols-4 gap-1">
               {filters.map((filter) => (
                 <button
                   key={filter.id}
                   onClick={() => setActiveFilter(filter.id)}
-                  className={`py-3 px-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
-                    activeFilter === filter.id
-                      ? 'bg-[#FF6644] text-white shadow-lg'
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                  className={`py-2 px-2 rounded-lg text-xs font-semibold transition-all duration-200`}
+                  style={{
+                    backgroundColor: activeFilter === filter.id ? '#F68B24' : 'transparent',
+                    color: activeFilter === filter.id ? 'white' : '#8B8B8B'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeFilter !== filter.id) {
+                      e.target.style.backgroundColor = '#F4F0E6'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeFilter !== filter.id) {
+                      e.target.style.backgroundColor = 'transparent'
+                    }
+                  }}
                 >
                   <div>{filter.label}</div>
                   <div className="text-xs mt-1">({filter.count})</div>
@@ -96,12 +109,12 @@ const MyBookings = ({ onBack }) => {
         </div>
 
         {/* Bookings List */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           {filteredBookings.length === 0 ? (
-            <div className="text-center py-12">
-              <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-black mb-2">No Bookings Found</h3>
-              <p className="text-gray-600 mb-6">
+            <div className="text-center py-8">
+              <Calendar className="w-12 h-12 mx-auto mb-3" style={{color: '#8B8B8B'}} />
+              <h3 className="text-lg font-bold mb-2" style={{color: '#36454F'}}>No Bookings Found</h3>
+              <p className="mb-4" style={{color: '#8B8B8B'}}>
                 {activeFilter === 'all' 
                   ? "You haven't made any bookings yet"
                   : `No ${activeFilter} bookings found`
@@ -109,86 +122,108 @@ const MyBookings = ({ onBack }) => {
               </p>
               <button
                 onClick={onBack}
-                className="px-6 py-3 bg-[#FF6644] hover:bg-[#FF5533] text-white font-bold rounded-2xl transition-all duration-200"
+                className="px-6 py-3 text-white font-bold rounded-xl transition-all duration-200"
+                style={{backgroundColor: '#F68B24'}}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
               >
                 Book Your First Service
               </button>
             </div>
           ) : (
             filteredBookings.map((booking) => (
-              <div key={booking.id} className="bg-white rounded-2xl p-6 border-2 border-gray-200 shadow-sm hover:shadow-lg transition-all duration-200">
+              <div key={booking.id} className="bg-white rounded-xl p-4 border shadow-sm hover:shadow-lg transition-all duration-200" style={{borderColor: '#E0E0E0'}}>
                 {/* Booking Header */}
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex justify-between items-start mb-3">
                   <div className="flex items-center space-x-3">
-                    <div className="text-2xl">{booking.service?.image || '✂️'}</div>
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{backgroundColor: '#F68B24'}}>
+                      <span className="text-white text-lg">{booking.service?.image || '✂️'}</span>
+                    </div>
                     <div>
-                      <h3 className="text-lg font-black text-black">{booking.service?.name}</h3>
-                      <p className="text-sm text-gray-600">Booking ID: {booking.id}</p>
+                      <h3 className="text-base font-bold" style={{color: '#36454F'}}>{booking.service?.name}</h3>
+                      <p className="text-xs" style={{color: '#8B8B8B'}}>ID: {booking.id}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     {getStatusIcon(booking.status)}
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold border-2 ${getStatusColor(booking.status)}`}>
+                    <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getStatusColor(booking.status)}`}>
                       {booking.status.toUpperCase()}
                     </span>
                   </div>
                 </div>
 
                 {/* Booking Details */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-3 mb-3">
                   <div className="flex items-center space-x-2">
-                    <Calendar className="w-4 h-4 text-[#FF6644]" />
+                    <Calendar className="w-3 h-3" style={{color: '#F68B24'}} />
                     <div>
-                      <p className="text-xs text-gray-500">Date</p>
-                      <p className="text-sm font-bold text-black">{new Date(booking.date).toLocaleDateString()}</p>
+                      <p className="text-xs" style={{color: '#8B8B8B'}}>Date</p>
+                      <p className="text-sm font-bold" style={{color: '#36454F'}}>{new Date(booking.date).toLocaleDateString()}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 text-[#FF6644]" />
+                    <Clock className="w-3 h-3" style={{color: '#F68B24'}} />
                     <div>
-                      <p className="text-xs text-gray-500">Time</p>
-                      <p className="text-sm font-bold text-black">{booking.time}</p>
+                      <p className="text-xs" style={{color: '#8B8B8B'}}>Time</p>
+                      <p className="text-sm font-bold" style={{color: '#36454F'}}>{booking.time}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <User className="w-4 h-4 text-[#FF6644]" />
+                    <User className="w-3 h-3" style={{color: '#F68B24'}} />
                     <div>
-                      <p className="text-xs text-gray-500">Barber</p>
-                      <p className="text-sm font-bold text-black">{booking.staff?.name}</p>
+                      <p className="text-xs" style={{color: '#8B8B8B'}}>Barber</p>
+                      <p className="text-sm font-bold" style={{color: '#36454F'}}>{booking.staff?.name}</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <div className="w-4 h-4 bg-[#FF6644] rounded"></div>
+                    <div className="w-3 h-3 rounded" style={{backgroundColor: '#F68B24'}}></div>
                     <div>
-                      <p className="text-xs text-gray-500">Price</p>
-                      <p className="text-sm font-bold text-[#FF6644]">₱{booking.service?.price?.toLocaleString()}</p>
+                      <p className="text-xs" style={{color: '#8B8B8B'}}>Price</p>
+                      <p className="text-sm font-bold" style={{color: '#F68B24'}}>₱{booking.service?.price?.toLocaleString()}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex space-x-3">
+                <div className="flex space-x-2">
                   {booking.status === 'confirmed' && (
                     <button
                       onClick={() => setShowQRCode(booking)}
-                      className="flex-1 py-3 bg-[#FF6644] hover:bg-[#FF5533] text-white font-bold rounded-xl transition-all duration-200 flex items-center justify-center space-x-2"
+                      className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
+                      style={{backgroundColor: '#F68B24'}}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
                     >
-                      <QrCode className="w-4 h-4" />
-                      <span>Show QR Code</span>
+                      <QrCode className="w-3 h-3" />
+                      <span className="text-sm">Show QR</span>
                     </button>
                   )}
                   {booking.status === 'pending' && (
                     <>
-                      <button className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-all duration-200">
+                      <button 
+                        className="flex-1 py-2 bg-red-500 text-white font-bold rounded-lg transition-all duration-200 text-sm"
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#DC2626'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = '#EF4444'}
+                      >
                         Cancel
                       </button>
-                      <button className="flex-1 py-3 bg-[#FF6644] hover:bg-[#FF5533] text-white font-bold rounded-xl transition-all duration-200">
+                      <button 
+                        className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 text-sm"
+                        style={{backgroundColor: '#F68B24'}}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
+                      >
                         Reschedule
                       </button>
                     </>
                   )}
                   {booking.status === 'cancelled' && (
-                    <button className="flex-1 py-3 bg-[#FF6644] hover:bg-[#FF5533] text-white font-bold rounded-xl transition-all duration-200">
+                    <button 
+                      className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 text-sm"
+                      style={{backgroundColor: '#F68B24'}}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
+                    >
                       Book Again
                     </button>
                   )}
@@ -223,10 +258,10 @@ const QRCodeModal = ({ booking, onClose }) => {
     if (qrRef.current) {
       // Generate QR code as canvas
       QRCode.toCanvas(qrRef.current, qrData, {
-        width: 192,
+        width: 160,
         margin: 2,
         color: {
-          dark: '#000000',
+          dark: '#36454F',
           light: '#ffffff'
         },
         errorCorrectionLevel: 'H'
@@ -238,42 +273,42 @@ const QRCodeModal = ({ booking, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl">
-        <div className="text-center space-y-6">
-          <div className="w-16 h-16 bg-[#FF6644] rounded-full flex items-center justify-center mx-auto">
-            <QrCode className="w-8 h-8 text-white" />
+      <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border" style={{borderColor: '#E0E0E0'}}>
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{backgroundColor: '#F68B24'}}>
+            <QrCode className="w-6 h-6 text-white" />
           </div>
           
           <div>
-            <h3 className="text-xl font-black text-black mb-2">Booking QR Code</h3>
-            <p className="text-gray-600 font-medium">Show this to staff when you arrive</p>
+            <h3 className="text-lg font-bold mb-1" style={{color: '#36454F'}}>Booking QR Code</h3>
+            <p className="text-sm" style={{color: '#36454F'}}>Show this to staff when you arrive</p>
           </div>
 
           {/* Real QR Code */}
-          <div className="bg-gray-50 p-6 rounded-2xl">
+          <div className="p-4 rounded-xl" style={{backgroundColor: '#F4F0E6'}}>
             <div className="flex justify-center">
-              <canvas ref={qrRef} className="rounded-xl"></canvas>
+              <canvas ref={qrRef} className="rounded-lg"></canvas>
             </div>
           </div>
 
           {/* Booking Details */}
-          <div className="bg-[#FF6644]/5 rounded-2xl p-4 text-left">
+          <div className="rounded-xl p-3 text-left" style={{backgroundColor: '#F4F0E6', border: '1px solid #E0E0E0'}}>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600">Service:</span>
-                <span className="font-bold text-black">{booking.service?.name}</span>
+                <span style={{color: '#36454F'}}>Service:</span>
+                <span className="font-bold" style={{color: '#36454F'}}>{booking.service?.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Date:</span>
-                <span className="font-bold text-black">{new Date(booking.date).toLocaleDateString()}</span>
+                <span style={{color: '#36454F'}}>Date:</span>
+                <span className="font-bold" style={{color: '#36454F'}}>{new Date(booking.date).toLocaleDateString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Time:</span>
-                <span className="font-bold text-black">{booking.time}</span>
+                <span style={{color: '#36454F'}}>Time:</span>
+                <span className="font-bold" style={{color: '#36454F'}}>{booking.time}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Barber:</span>
-                <span className="font-bold text-black">{booking.staff?.name}</span>
+                <span style={{color: '#36454F'}}>Barber:</span>
+                <span className="font-bold" style={{color: '#36454F'}}>{booking.staff?.name}</span>
               </div>
             </div>
           </div>
@@ -281,7 +316,10 @@ const QRCodeModal = ({ booking, onClose }) => {
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="w-full py-4 bg-[#FF6644] hover:bg-[#FF5533] text-white font-bold rounded-2xl transition-all duration-200"
+            className="w-full py-3 text-white font-bold rounded-xl transition-all duration-200"
+            style={{backgroundColor: '#F68B24'}}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
           >
             Close
           </button>

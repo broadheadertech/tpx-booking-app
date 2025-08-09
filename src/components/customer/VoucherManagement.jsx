@@ -120,88 +120,95 @@ const VoucherManagement = ({ onBack }) => {
   const expiredVouchers = vouchers.filter(v => v.status === 'expired')
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{backgroundColor: '#F4F0E6'}}>
       {/* Header */}
-      <div className="bg-black sticky top-0 z-40 shadow-lg">
+      <div className="sticky top-0 z-40 shadow-lg" style={{backgroundColor: '#36454F'}}>
         <div className="max-w-md mx-auto px-4">
-          <div className="flex items-center justify-between py-4">
+          <div className="flex items-center justify-between py-3">
             <button
               onClick={onBack}
-              className="flex items-center space-x-2 px-3 py-2 text-white hover:text-[#FF6644] font-semibold rounded-xl hover:bg-white/10 transition-all duration-200"
+              className="flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-xl transition-all duration-200"
+              style={{
+                ':hover': {
+                  color: '#F68B24'
+                }
+              }}
+              onMouseEnter={(e) => e.target.style.color = '#F68B24'}
+              onMouseLeave={(e) => e.target.style.color = 'white'}
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
               <span className="text-sm">Back</span>
             </button>
             <div className="text-right">
               <p className="text-lg font-bold text-white">My Vouchers</p>
-              <p className="text-xs text-[#FF6644]">{activeVouchers.length} active</p>
+              <p className="text-xs" style={{color: '#F68B24'}}>{activeVouchers.length} active</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-4 py-6">
+      <div className="max-w-md mx-auto px-4 py-4">
         {/* Title */}
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-[#FF6644] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <Gift className="w-8 h-8 text-white" />
+        <div className="text-center mb-4">
+          <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg" style={{backgroundColor: '#F68B24'}}>
+            <Gift className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-2xl font-black text-black mb-2">Your Vouchers</h1>
-          <p className="text-gray-600 font-medium">Tap active vouchers to redeem</p>
+          <h1 className="text-xl font-black mb-1" style={{color: '#36454F'}}>Your Vouchers</h1>
+          <p className="text-sm font-medium" style={{color: '#8B8B8B'}}>Tap active vouchers to redeem</p>
         </div>
 
         {/* Active Vouchers */}
         {activeVouchers.length > 0 && (
-          <div className="space-y-4 mb-6">
-            <h2 className="text-xl font-black text-black flex items-center">
-              <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+          <div className="space-y-3 mb-4">
+            <h2 className="text-lg font-black flex items-center" style={{color: '#36454F'}}>
+              <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
               Active Vouchers ({activeVouchers.length})
             </h2>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {activeVouchers.map((voucher) => (
                 <div
                   key={voucher.id}
                   onClick={() => handleVoucherClick(voucher)}
-                  className="bg-white rounded-2xl p-6 border-2 border-gray-200 shadow-sm hover:shadow-lg transition-all duration-200 cursor-pointer relative"
+                  className="bg-white rounded-xl p-4 shadow-sm hover:shadow-lg transition-all duration-200 cursor-pointer relative" style={{border: '1px solid #E0E0E0'}}
                 >
                   {/* Expiring Soon Badge */}
                   {isExpiringSoon(voucher.expiresAt) && (
-                    <div className="absolute top-4 right-4 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                    <div className="absolute top-3 right-3 text-white text-xs font-bold px-2 py-1 rounded-full" style={{backgroundColor: '#F68B24'}}>
                       Expiring Soon
                     </div>
                   )}
                   
                   {/* Voucher Header */}
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center space-x-3">
-                      <div className="text-2xl">{getTypeIcon(voucher.type)}</div>
+                      <div className="text-xl">{getTypeIcon(voucher.type)}</div>
                       <div>
-                        <h3 className="text-lg font-black text-black">{voucher.code}</h3>
-                        <p className="text-sm text-gray-600">{voucher.description}</p>
+                        <h3 className="text-base font-black" style={{color: '#36454F'}}>{voucher.code}</h3>
+                        <p className="text-sm" style={{color: '#8B8B8B'}}>{voucher.description}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       {getStatusIcon(voucher.status)}
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold border-2 ${getStatusColor(voucher.status)}`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getStatusColor(voucher.status)}`}>
                         {voucher.status.toUpperCase()}
                       </span>
                     </div>
                   </div>
 
                   {/* Voucher Details */}
-                  <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-2 gap-3 mb-3">
                     <div className="flex items-center space-x-2">
-                      <div className="w-4 h-4 bg-[#FF6644] rounded"></div>
+                      <div className="w-3 h-3 rounded" style={{backgroundColor: '#F68B24'}}></div>
                       <div>
-                        <p className="text-xs text-gray-500">Value</p>
-                        <p className="text-sm font-bold text-[#FF6644]">{formatValue(voucher)}</p>
+                        <p className="text-xs" style={{color: '#8B8B8B'}}>Value</p>
+                        <p className="text-sm font-bold" style={{color: '#F68B24'}}>{formatValue(voucher)}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Clock className="w-4 h-4 text-[#FF6644]" />
+                      <Clock className="w-3 h-3" style={{color: '#F68B24'}} />
                       <div>
-                        <p className="text-xs text-gray-500">Expires</p>
-                        <p className="text-sm font-bold text-black">
+                        <p className="text-xs" style={{color: '#8B8B8B'}}>Expires</p>
+                        <p className="text-sm font-bold" style={{color: '#36454F'}}>
                           {new Date(voucher.expiresAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -209,7 +216,12 @@ const VoucherManagement = ({ onBack }) => {
                   </div>
 
                   {/* Action Button */}
-                  <button className="w-full py-3 bg-[#FF6644] hover:bg-[#FF5533] text-white font-bold rounded-xl transition-all duration-200 flex items-center justify-center space-x-2">
+                  <button 
+                    className="w-full py-2 text-white font-bold rounded-xl transition-all duration-200 flex items-center justify-center space-x-2"
+                    style={{backgroundColor: '#F68B24'}}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
+                  >
                     <QrCode className="w-4 h-4" />
                     <span>Show QR Code</span>
                   </button>
@@ -221,48 +233,48 @@ const VoucherManagement = ({ onBack }) => {
 
         {/* Redeemed Vouchers */}
         {redeemedVouchers.length > 0 && (
-          <div className="space-y-4 mb-6">
-            <h2 className="text-xl font-black text-black flex items-center">
-              <Gift className="w-5 h-5 text-blue-500 mr-2" />
+          <div className="space-y-3 mb-4">
+            <h2 className="text-lg font-black flex items-center" style={{color: '#36454F'}}>
+              <Gift className="w-4 h-4 text-blue-500 mr-2" />
               Redeemed Vouchers ({redeemedVouchers.length})
             </h2>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {redeemedVouchers.map((voucher) => (
                 <div
                   key={voucher.id}
-                  className="bg-white rounded-2xl p-6 border-2 border-gray-200 shadow-sm opacity-75"
+                  className="bg-white rounded-xl p-4 shadow-sm opacity-75" style={{border: '1px solid #E0E0E0'}}
                 >
                   {/* Voucher Header */}
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center space-x-3">
-                      <div className="text-2xl opacity-50">{getTypeIcon(voucher.type)}</div>
+                      <div className="text-xl opacity-50">{getTypeIcon(voucher.type)}</div>
                       <div>
-                        <h3 className="text-lg font-black text-black">{voucher.code}</h3>
-                        <p className="text-sm text-gray-600">{voucher.description}</p>
+                        <h3 className="text-base font-black" style={{color: '#36454F'}}>{voucher.code}</h3>
+                        <p className="text-sm" style={{color: '#8B8B8B'}}>{voucher.description}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       {getStatusIcon(voucher.status)}
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold border-2 ${getStatusColor(voucher.status)}`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getStatusColor(voucher.status)}`}>
                         REDEEMED
                       </span>
                     </div>
                   </div>
 
                   {/* Voucher Details */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="flex items-center space-x-2">
-                      <div className="w-4 h-4 bg-blue-500 rounded"></div>
+                      <div className="w-3 h-3 bg-blue-500 rounded"></div>
                       <div>
-                        <p className="text-xs text-gray-500">Value</p>
+                        <p className="text-xs" style={{color: '#8B8B8B'}}>Value</p>
                         <p className="text-sm font-bold text-blue-600">{formatValue(voucher)}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-4 h-4 text-blue-500" />
+                      <CheckCircle className="w-3 h-3 text-blue-500" />
                       <div>
-                        <p className="text-xs text-gray-500">Redeemed on</p>
-                        <p className="text-sm font-bold text-black">
+                        <p className="text-xs" style={{color: '#8B8B8B'}}>Redeemed on</p>
+                        <p className="text-sm font-bold" style={{color: '#36454F'}}>
                           {new Date(voucher.redeemedAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -276,48 +288,48 @@ const VoucherManagement = ({ onBack }) => {
 
         {/* Expired Vouchers */}
         {expiredVouchers.length > 0 && (
-          <div className="space-y-4 mb-6">
-            <h2 className="text-xl font-black text-black flex items-center">
-              <XCircle className="w-5 h-5 text-red-500 mr-2" />
+          <div className="space-y-3 mb-4">
+            <h2 className="text-lg font-black flex items-center" style={{color: '#36454F'}}>
+              <XCircle className="w-4 h-4 text-red-500 mr-2" />
               Expired Vouchers ({expiredVouchers.length})
             </h2>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {expiredVouchers.map((voucher) => (
                 <div
                   key={voucher.id}
-                  className="bg-white rounded-2xl p-6 border-2 border-gray-200 shadow-sm opacity-50"
+                  className="bg-white rounded-xl p-4 shadow-sm opacity-50" style={{border: '1px solid #E0E0E0'}}
                 >
                   {/* Voucher Header */}
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center space-x-3">
-                      <div className="text-2xl opacity-50">{getTypeIcon(voucher.type)}</div>
+                      <div className="text-xl opacity-50">{getTypeIcon(voucher.type)}</div>
                       <div>
-                        <h3 className="text-lg font-black text-black">{voucher.code}</h3>
-                        <p className="text-sm text-gray-600">{voucher.description}</p>
+                        <h3 className="text-base font-black" style={{color: '#36454F'}}>{voucher.code}</h3>
+                        <p className="text-sm" style={{color: '#8B8B8B'}}>{voucher.description}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       {getStatusIcon(voucher.status)}
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold border-2 ${getStatusColor(voucher.status)}`}>
+                      <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getStatusColor(voucher.status)}`}>
                         EXPIRED
                       </span>
                     </div>
                   </div>
 
                   {/* Voucher Details */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="flex items-center space-x-2">
-                      <div className="w-4 h-4 bg-red-500 rounded"></div>
+                      <div className="w-3 h-3 bg-red-500 rounded"></div>
                       <div>
-                        <p className="text-xs text-gray-500">Value</p>
+                        <p className="text-xs" style={{color: '#8B8B8B'}}>Value</p>
                         <p className="text-sm font-bold text-red-600">{formatValue(voucher)}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <XCircle className="w-4 h-4 text-red-500" />
+                      <XCircle className="w-3 h-3 text-red-500" />
                       <div>
-                        <p className="text-xs text-gray-500">Expired on</p>
-                        <p className="text-sm font-bold text-black">
+                        <p className="text-xs" style={{color: '#8B8B8B'}}>Expired on</p>
+                        <p className="text-sm font-bold" style={{color: '#36454F'}}>
                           {new Date(voucher.expiresAt).toLocaleDateString()}
                         </p>
                       </div>
@@ -331,14 +343,14 @@ const VoucherManagement = ({ onBack }) => {
 
         {/* Empty State */}
         {activeVouchers.length === 0 && redeemedVouchers.length === 0 && expiredVouchers.length === 0 && (
-          <div className="text-center py-16">
-            <div className="bg-orange-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6">
-              <Ticket className="w-10 h-10 text-orange-600" />
+          <div className="text-center py-12">
+            <div className="rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4" style={{backgroundColor: '#F68B24', opacity: 0.1}}>
+              <Ticket className="w-8 h-8" style={{color: '#F68B24'}} />
             </div>
-            <h3 className="text-xl font-black text-black mb-4">
+            <h3 className="text-lg font-black mb-3" style={{color: '#36454F'}}>
               No Vouchers Yet
             </h3>
-            <p className="text-gray-600 text-base max-w-md mx-auto">
+            <p className="text-sm max-w-md mx-auto" style={{color: '#8B8B8B'}}>
               Your vouchers will appear here once you earn them through bookings and special promotions.
             </p>
           </div>
@@ -350,17 +362,17 @@ const VoucherManagement = ({ onBack }) => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl">
             <div className="text-center space-y-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-full flex items-center justify-center mx-auto">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary-orange to-primary-orange-light rounded-full flex items-center justify-center mx-auto">
                 <QrCode className="w-8 h-8 text-white" />
               </div>
               
               <div>
-                <h3 className="text-2xl font-black text-[#1A1A1A] mb-2">Redeem Voucher</h3>
-                <p className="text-[#6B6B6B] font-medium">Show this QR code to staff</p>
+                <h3 className="text-2xl font-black text-primary-black mb-2">Redeem Voucher</h3>
+        <p className="text-gray-dark font-medium">Show this QR code to staff</p>
               </div>
 
               {/* QR Code */}
-              <div className="bg-[#F5F5F5] p-6 rounded-2xl">
+              <div className="bg-gray-light p-6 rounded-2xl">
                 <div className="flex justify-center">
                   <QRCodeDisplay voucher={selectedVoucher} />
                 </div>
@@ -369,16 +381,16 @@ const VoucherManagement = ({ onBack }) => {
               {/* Voucher Details */}
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-4">
                 <div className="text-center">
-                  <h4 className="text-xl font-black text-[#1A1A1A] mb-1">{selectedVoucher.code}</h4>
+                  <h4 className="text-xl font-black text-primary-black mb-1">{selectedVoucher.code}</h4>
                   <p className="text-2xl font-black text-green-600 mb-1">{formatValue(selectedVoucher)}</p>
-                  <p className="text-sm text-[#6B6B6B] font-medium">{selectedVoucher.description}</p>
+                  <p className="text-sm text-gray-dark font-medium">{selectedVoucher.description}</p>
                 </div>
               </div>
 
               {/* Close Button */}
               <button
                 onClick={() => setShowQRCode(false)}
-                className="w-full py-4 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white font-bold rounded-2xl hover:shadow-xl transition-all duration-200"
+                className="w-full py-4 bg-gradient-to-r from-primary-orange to-primary-orange-light text-white font-bold rounded-2xl hover:shadow-xl transition-all duration-200"
               >
                 Close
               </button>

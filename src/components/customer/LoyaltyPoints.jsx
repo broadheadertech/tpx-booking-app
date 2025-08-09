@@ -147,34 +147,34 @@ const LoyaltyPoints = ({ onBack }) => {
   const nextTierInfo = getNextTierInfo()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F5F5F5] to-white py-8">
+    <div className="min-h-screen bg-gradient-to-br from-accent-cream to-white py-8">
       {/* Header */}
       <div className="flex items-center justify-between px-4 mb-8">
         <button
           onClick={onBack}
-          className="flex items-center space-x-2 px-4 py-3 text-[#6B6B6B] hover:text-[#FF8C42] font-semibold rounded-2xl hover:bg-white/50 transition-all duration-200"
+          className="flex items-center space-x-2 px-4 py-3 text-gray-dark hover:text-primary-orange font-semibold rounded-2xl hover:bg-white/50 transition-all duration-200"
         >
           <ArrowLeft className="w-5 h-5" />
           <span>Back to Home</span>
         </button>
         <div className="text-right">
-          <p className="text-sm font-bold text-[#1A1A1A]">Loyalty Rewards</p>
-          <p className="text-xs text-[#6B6B6B]">{currentTier} Member</p>
+          <p className="text-sm font-bold text-primary-black">Loyalty Rewards</p>
+          <p className="text-xs text-gray-dark">{currentTier} Member</p>
         </div>
       </div>
 
       {/* Title */}
       <div className="text-center mb-8 px-4">
-        <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-violet-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-2xl">
+        <div className="w-20 h-20 bg-gradient-to-br from-primary-orange to-primary-orange-light rounded-full flex items-center justify-center mx-auto mb-4 shadow-2xl">
           <Star className="w-10 h-10 text-white" />
         </div>
-        <h1 className="text-3xl font-black text-[#1A1A1A] mb-2">Loyalty Rewards</h1>
-        <p className="text-lg text-[#6B6B6B] font-medium">Earn points, unlock rewards</p>
+        <h1 className="text-3xl font-black text-primary-black mb-2">Loyalty Rewards</h1>
+        <p className="text-lg text-gray-dark font-medium">Earn points, unlock rewards</p>
       </div>
 
       <div className="space-y-8 px-4">
         {/* Points Balance */}
-        <div className="bg-gradient-to-br from-purple-500 to-violet-600 rounded-3xl p-8 shadow-2xl text-white">
+        <div className="bg-gradient-to-br from-primary-orange to-primary-orange-dark rounded-3xl p-8 shadow-2xl text-white">
           <div className="text-center space-y-4">
             <div className="text-6xl">{currentTierInfo?.icon}</div>
             <div>
@@ -203,26 +203,26 @@ const LoyaltyPoints = ({ onBack }) => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white rounded-3xl p-6 shadow-xl border-2 border-[#F5F5F5]">
+          <div className="bg-white rounded-3xl p-6 shadow-xl border-2 border-gray-medium">
             <div className="text-center">
-              <Trophy className="w-12 h-12 text-[#FF8C42] mx-auto mb-3" />
-              <div className="text-2xl font-black text-[#1A1A1A] mb-1">{lifetimePoints.toLocaleString()}</div>
-              <div className="text-sm font-semibold text-[#6B6B6B]">Lifetime Points</div>
+              <Trophy className="w-12 h-12 text-accent-coral mx-auto mb-3" />
+              <div className="text-2xl font-black text-primary-black mb-1">{lifetimePoints.toLocaleString()}</div>
+              <div className="text-sm font-semibold text-gray-dark">Lifetime Points</div>
             </div>
           </div>
-          <div className="bg-white rounded-3xl p-6 shadow-xl border-2 border-[#F5F5F5]">
+          <div className="bg-white rounded-3xl p-6 shadow-xl border-2 border-gray-medium">
             <div className="text-center">
-              <TrendingUp className="w-12 h-12 text-green-500 mx-auto mb-3" />
-              <div className="text-2xl font-black text-[#1A1A1A] mb-1">12</div>
-              <div className="text-sm font-semibold text-[#6B6B6B]">Services Used</div>
+              <TrendingUp className="w-12 h-12 text-primary-orange-light mx-auto mb-3" />
+              <div className="text-2xl font-black text-primary-black mb-1">12</div>
+              <div className="text-sm font-semibold text-gray-dark">Services Used</div>
             </div>
           </div>
         </div>
 
         {/* Available Rewards */}
         <div className="space-y-4">
-          <h2 className="text-2xl font-black text-[#1A1A1A] flex items-center">
-            <Gift className="w-6 h-6 text-[#FF8C42] mr-2" />
+          <h2 className="text-2xl font-black text-primary-black flex items-center">
+            <Gift className="w-6 h-6 text-primary-orange mr-2" />
             Available Rewards
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -252,12 +252,12 @@ const LoyaltyPoints = ({ onBack }) => {
                         {reward.category}
                       </span>
                     </div>
-                    <h3 className="text-lg font-black text-[#1A1A1A] mb-2">{reward.name}</h3>
-                    <p className="text-sm text-[#6B6B6B] font-medium mb-3">{reward.description}</p>
+                    <h3 className="text-lg font-black text-primary-black mb-2">{reward.name}</h3>
+                    <p className="text-sm text-gray-dark font-medium mb-3">{reward.description}</p>
                     <div className="flex justify-between items-center">
                       <div className="flex items-center space-x-1">
-                        <Star className="w-5 h-5 text-[#FF8C42]" />
-                        <span className="text-lg font-black text-[#FF8C42]">
+                        <Star className="w-5 h-5 text-primary-orange" />
+                        <span className="text-lg font-black text-primary-orange">
                           {reward.pointsCost.toLocaleString()}
                         </span>
                       </div>
@@ -281,8 +281,8 @@ const LoyaltyPoints = ({ onBack }) => {
 
         {/* Tier Benefits */}
         <div className="space-y-4">
-          <h2 className="text-2xl font-black text-[#1A1A1A] flex items-center">
-            <Crown className="w-6 h-6 text-[#FF8C42] mr-2" />
+          <h2 className="text-2xl font-black text-primary-black flex items-center">
+            <Crown className="w-6 h-6 text-primary-orange mr-2" />
             Membership Tiers
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -317,11 +317,11 @@ const LoyaltyPoints = ({ onBack }) => {
 
         {/* Points History */}
         <div className="space-y-4">
-          <h2 className="text-2xl font-black text-[#1A1A1A] flex items-center">
-            <Zap className="w-6 h-6 text-[#FF8C42] mr-2" />
+          <h2 className="text-2xl font-black text-primary-black flex items-center">
+            <Zap className="w-6 h-6 text-primary-orange mr-2" />
             Recent Activity
           </h2>
-          <div className="bg-white rounded-3xl shadow-xl border-2 border-[#F5F5F5] divide-y divide-[#F5F5F5]">
+          <div className="bg-white rounded-3xl shadow-xl border-2 border-gray-medium divide-y divide-gray-medium">
             {pointsHistory.map((entry) => (
               <div key={entry.id} className="p-6 flex items-center justify-between">
                 <div className="flex items-center space-x-4">
@@ -337,8 +337,8 @@ const LoyaltyPoints = ({ onBack }) => {
                     {entry.type === 'redeemed' && <Zap className="w-6 h-6 text-red-600" />}
                   </div>
                   <div>
-                    <h4 className="font-bold text-[#1A1A1A]">{entry.description}</h4>
-                    <p className="text-sm text-[#6B6B6B] font-medium">
+                    <h4 className="font-bold text-primary-black">{entry.description}</h4>
+                    <p className="text-sm text-gray-dark font-medium">
                       {new Date(entry.date).toLocaleDateString()}
                     </p>
                   </div>
@@ -354,7 +354,7 @@ const LoyaltyPoints = ({ onBack }) => {
         </div>
 
         {/* How to Earn More Points */}
-        <div className="bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-3xl p-8 text-white">
+        <div className="bg-gradient-to-br from-primary-orange to-primary-orange-dark rounded-3xl p-8 text-white">
           <div className="text-center space-y-4">
             <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto">
               <Star className="w-8 h-8" />

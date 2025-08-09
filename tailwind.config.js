@@ -8,12 +8,23 @@ export default {
     extend: {
       colors: {
         primary: {
-          orange: '#FF8C42',
-          black: '#1A1A1A',
+          orange: '#D9641E',
+          'orange-light': '#ED7D27',
+          'orange-dark': '#C55A1A',
+          black: '#141414',
+          'black-light': '#41423A',
         },
         gray: {
-          light: '#F5F5F5',
-          dark: '#6B6B6B',
+          light: '#F7F7F7',
+          medium: '#ECE2D2',
+          dark: '#8B8B8B',
+          darker: '#5A5A5A',
+        },
+        accent: {
+          cream: '#ECE2D2',
+          'cream-light': '#F5F1EA',
+          coral: '#ED7D27',
+          neutral: '#41423A',
         }
       }
     },

@@ -7,6 +7,35 @@ const ServiceBooking = ({ onBack }) => {
   const [selectedTime, setSelectedTime] = useState(null)
   const [selectedStaff, setSelectedStaff] = useState(null)
   const [step, setStep] = useState(1) // 1: services, 2: time & staff, 3: confirmation
+  const qrRef = useRef(null)
+
+  // Generate QR code when booking is successful
+  useEffect(() => {
+    if (step === 4 && qrRef.current && selectedService && selectedTime && selectedStaff) {
+      const bookingId = 'BK' + Date.now().toString().slice(-8)
+      const qrData = JSON.stringify({
+        bookingId: bookingId,
+        service: selectedService?.name,
+        time: selectedTime,
+        staff: selectedStaff?.name,
+        date: new Date().toISOString().split('T')[0],
+        barbershop: 'TPX Barbershop'
+      })
+      
+      // Generate QR code as canvas
+      QRCode.toCanvas(qrRef.current, qrData, {
+        width: 192,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        },
+        errorCorrectionLevel: 'H'
+      }, (error) => {
+        if (error) console.error('QR Code generation error:', error)
+      })
+    }
+  }, [step, selectedService, selectedTime, selectedStaff])
 
   const services = [
     {
@@ -145,67 +174,65 @@ const ServiceBooking = ({ onBack }) => {
   }
 
   const renderStepIndicator = () => (
-    <div className="flex justify-center mb-8 px-4 py-4">
-      <div className="flex items-center space-x-4">
+    <div className="flex justify-center mb-4 px-4 py-2">
+      <div className="flex items-center space-x-3">
         {[1, 2, 3].map((stepNumber) => (
           <div key={stepNumber} className="flex items-center">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
               step >= stepNumber 
-                ? 'bg-[#FF6644] text-white shadow-lg' 
-                : 'bg-gray-200 text-gray-500'
-            }`}>
+                ? 'text-white shadow-md' 
+                : 'text-gray-500'
+            }`} style={{
+              backgroundColor: step >= stepNumber ? '#F68B24' : '#E0E0E0'
+            }}>
               {stepNumber}
             </div>
             {stepNumber < 3 && (
-              <div className={`w-12 h-1 mx-2 rounded transition-all duration-300 ${
-                step > stepNumber ? 'bg-[#FF6644]' : 'bg-gray-200'
-              }`}></div>
+              <div className={`w-8 h-0.5 mx-1 rounded transition-all duration-300`} style={{
+                backgroundColor: step > stepNumber ? '#F68B24' : '#E0E0E0'
+              }}></div>
             )}
           </div>
         ))}
-      </div>
-      <div className="text-center mt-4">
-        <p className="text-sm text-gray-600 font-medium">
-          {step === 1 && 'Choose your service'}
-          {step === 2 && 'Select time & barber'}
-          {step === 3 && 'Confirm booking'}
-        </p>
       </div>
     </div>
   )
 
   const renderServiceSelection = () => (
-    <div className="space-y-6 px-4">
-      <div className="text-center">
-        <h2 className="text-2xl font-black text-black mb-2">Choose Your Service</h2>
-        <p className="text-gray-600 font-medium">Select from our premium grooming services</p>
+    <div className="space-y-3 px-4">
+      <div className="text-center mb-3">
+        <h2 className="text-xl font-bold mb-1" style={{ color: '#36454F' }}>Choose Your Service</h2>
+        <p className="text-sm font-medium" style={{ color: '#8B8B8B' }}>Select from our premium grooming services</p>
       </div>
       
-      <div className="space-y-4">
+      <div className="space-y-2">
         {services.map((service) => (
           <button
             key={service.id}
             onClick={() => handleServiceSelect(service)}
-            className="w-full bg-white rounded-2xl p-6 border-2 border-gray-200 hover:border-[#FF6644] hover:shadow-lg transition-all duration-200 text-left group"
+            className="w-full bg-white rounded-xl p-4 border hover:shadow-md transition-all duration-200 text-left group"
+            style={{ borderColor: '#E0E0E0' }}
+            onMouseEnter={(e) => e.target.style.borderColor = '#F68B24'}
+            onMouseLeave={(e) => e.target.style.borderColor = '#E0E0E0'}
           >
-            <div className="flex items-center space-x-4">
-              <div className="text-3xl">{service.image}</div>
+            <div className="flex items-center space-x-3">
+              <div className="text-2xl">{service.image}</div>
               <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-lg font-black text-black group-hover:text-[#FF6644] transition-colors duration-200 truncate">
+                <div className="flex justify-between items-start mb-1">
+                  <h3 className="text-base font-bold transition-colors duration-200 truncate" style={{ color: '#36454F' }}>
                     {service.name}
                   </h3>
-                  <div className="text-right ml-3">
-                    <div className="text-xl font-black text-[#FF6644]">₱{service.price.toLocaleString()}</div>
-                    <div className="text-sm text-gray-500 font-medium">{service.duration}</div>
+                  <div className="text-right ml-2">
+                    <div className="text-lg font-bold" style={{ color: '#F68B24' }}>₱{service.price.toLocaleString()}</div>
+                    <div className="text-xs font-medium" style={{ color: '#8B8B8B' }}>{service.duration}</div>
                   </div>
                 </div>
-                <div className="mb-3">
-                  <span className="px-3 py-1 bg-[#FF6644]/10 text-[#FF6644] rounded-full text-sm font-semibold">
+                <div className="mb-2">
+                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ backgroundColor: '#F68B24', color: 'white' }}>
                     {service.category}
                   </span>
                 </div>
-                <p className="text-gray-600 text-sm font-medium leading-relaxed">
+                <p className="text-xs font-medium leading-relaxed" style={{ color: '#8B8B8B' }}>
                   {service.description}
                 </p>
               </div>
@@ -217,42 +244,54 @@ const ServiceBooking = ({ onBack }) => {
   )
 
   const renderTimeAndStaffSelection = () => (
-    <div className="space-y-6 px-4">
-      <div className="text-center">
-        <h2 className="text-2xl font-black text-black mb-2">Select Time & Barber</h2>
-        <p className="text-gray-600 font-medium">Choose your preferred time and barber</p>
+    <div className="space-y-3 px-4">
+      <div className="text-center mb-3">
+        <h2 className="text-xl font-bold mb-1" style={{ color: '#36454F' }}>Select Time & Barber</h2>
+        <p className="text-sm font-medium" style={{ color: '#8B8B8B' }}>Choose your preferred time and barber</p>
       </div>
 
       {/* Selected Service Summary */}
-      <div className="bg-white rounded-2xl p-4 border-2 border-gray-200 shadow-sm">
-        <div className="flex items-center space-x-3">
-          <div className="text-2xl">{selectedService?.image}</div>
+      <div className="bg-white rounded-xl p-3 border shadow-sm" style={{ borderColor: '#E0E0E0' }}>
+        <div className="flex items-center space-x-2">
+          <div className="text-xl">{selectedService?.image}</div>
           <div className="flex-1">
-            <h3 className="text-lg font-black text-black">{selectedService?.name}</h3>
-            <div className="flex items-center space-x-4 text-sm">
-              <span className="text-[#FF6644] font-bold">₱{selectedService?.price.toLocaleString()}</span>
-              <span className="text-gray-600 font-medium">{selectedService?.duration}</span>
+            <h3 className="text-base font-bold" style={{ color: '#36454F' }}>{selectedService?.name}</h3>
+            <div className="flex items-center space-x-3 text-sm">
+              <span className="font-bold" style={{ color: '#F68B24' }}>₱{selectedService?.price.toLocaleString()}</span>
+              <span className="font-medium" style={{ color: '#8B8B8B' }}>{selectedService?.duration}</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Time Slots */}
-      <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 shadow-sm">
-        <h3 className="text-lg font-black text-black mb-4">Available Times - Today</h3>
-        <div className="grid grid-cols-3 gap-3">
+      <div className="bg-white rounded-xl p-4 border shadow-sm" style={{ borderColor: '#E0E0E0' }}>
+        <h3 className="text-base font-bold mb-3" style={{ color: '#36454F' }}>Available Times - Today</h3>
+        <div className="grid grid-cols-3 gap-2">
           {timeSlots.slice(0, 9).map((slot) => (
             <button
               key={slot.time}
               onClick={() => slot.available && setSelectedTime(slot.time)}
               disabled={!slot.available}
-              className={`p-3 rounded-xl font-semibold text-center transition-all duration-200 ${
-                slot.available
-                  ? selectedTime === slot.time
-                    ? 'bg-[#FF6644] text-white shadow-lg'
-                    : 'bg-gray-100 text-black hover:bg-[#FF6644]/10 hover:border-[#FF6644] border-2 border-transparent'
-                  : 'bg-gray-50 text-gray-400 cursor-not-allowed'
-              }`}
+              className="p-2 rounded-lg font-semibold text-center transition-all duration-200 border text-sm"
+              style={{
+                backgroundColor: slot.available 
+                  ? selectedTime === slot.time 
+                    ? '#F68B24' 
+                    : '#F5F5F5'
+                  : '#F0F0F0',
+                color: slot.available 
+                  ? selectedTime === slot.time 
+                    ? 'white' 
+                    : '#36454F'
+                  : '#CCCCCC',
+                borderColor: slot.available 
+                  ? selectedTime === slot.time 
+                    ? '#F68B24' 
+                    : 'transparent'
+                  : 'transparent',
+                cursor: slot.available ? 'pointer' : 'not-allowed'
+              }}
             >
               {slot.time}
             </button>
@@ -261,27 +300,27 @@ const ServiceBooking = ({ onBack }) => {
       </div>
 
       {/* Staff Selection */}
-      <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 shadow-sm">
-        <h3 className="text-lg font-black text-black mb-4">Choose Your Barber</h3>
-        <div className="space-y-3">
+      <div className="bg-white rounded-xl p-4 border shadow-sm" style={{ borderColor: '#E0E0E0' }}>
+        <h3 className="text-base font-bold mb-3" style={{ color: '#36454F' }}>Choose Your Barber</h3>
+        <div className="space-y-2">
           {staff.map((staffMember) => (
             <button
               key={staffMember.id}
               onClick={() => setSelectedStaff(staffMember)}
-              className={`w-full p-4 rounded-xl border-2 transition-all duration-200 text-left ${
-                selectedStaff?.id === staffMember.id
-                  ? 'border-[#FF6644] bg-[#FF6644]/5'
-                  : 'border-gray-200 hover:border-[#FF6644]/50'
-              }`}
+              className="w-full p-3 rounded-lg border transition-all duration-200 text-left"
+              style={{
+                borderColor: selectedStaff?.id === staffMember.id ? '#F68B24' : '#E0E0E0',
+                backgroundColor: selectedStaff?.id === staffMember.id ? 'rgba(246, 139, 36, 0.1)' : 'white'
+              }}
             >
-              <div className="flex items-center space-x-3">
-                <div className="text-2xl">{staffMember.image}</div>
+              <div className="flex items-center space-x-2">
+                <div className="text-xl">{staffMember.image}</div>
                 <div className="flex-1">
-                  <h4 className="font-bold text-black">{staffMember.name}</h4>
-                  <p className="text-sm text-gray-600">{staffMember.specialty}</p>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <div className="flex text-yellow-400 text-sm">★★★★★</div>
-                    <span className="text-xs text-gray-500">{staffMember.rating}</span>
+                  <h4 className="font-bold text-sm" style={{ color: '#36454F' }}>{staffMember.name}</h4>
+                  <p className="text-xs" style={{ color: '#8B8B8B' }}>{staffMember.specialty}</p>
+                  <div className="flex items-center space-x-1 mt-0.5">
+                    <div className="flex text-yellow-400 text-xs">★★★★★</div>
+                    <span className="text-xs" style={{ color: '#8B8B8B' }}>{staffMember.rating}</span>
                   </div>
                 </div>
               </div>
@@ -294,7 +333,10 @@ const ServiceBooking = ({ onBack }) => {
       {selectedTime && selectedStaff && (
         <button
           onClick={() => handleTimeAndStaffSelect(selectedTime, selectedStaff)}
-          className="w-full py-4 bg-[#FF6644] hover:bg-[#FF5533] text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
+          className="w-full py-3 text-white font-bold rounded-xl transition-all duration-200 shadow-lg"
+          style={{ backgroundColor: '#F68B24' }}
+          onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
+          onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
         >
           Continue to Confirmation
         </button>
@@ -341,53 +383,59 @@ const ServiceBooking = ({ onBack }) => {
   )
 
   const renderConfirmation = () => (
-    <div className="space-y-6 px-4">
-      <div className="text-center">
-        <h2 className="text-2xl font-black text-black mb-2">Confirm Your Booking</h2>
-        <p className="text-gray-600 font-medium">Please review your appointment details</p>
+    <div className="space-y-3 px-4">
+      <div className="text-center mb-3">
+        <h2 className="text-xl font-bold mb-1" style={{ color: '#36454F' }}>Confirm Your Booking</h2>
+        <p className="text-sm font-medium" style={{ color: '#8B8B8B' }}>Please review your appointment details</p>
       </div>
 
-      <div className="bg-white rounded-2xl p-6 border-2 border-gray-200 shadow-lg">
-        <div className="space-y-6">
+      <div className="bg-white rounded-xl p-4 border shadow-lg" style={{ borderColor: '#E0E0E0' }}>
+        <div className="space-y-4">
           {/* Service Details */}
-          <div className="text-center border-b border-gray-200 pb-6">
-            <div className="text-3xl mb-3">{selectedService?.image}</div>
-            <h3 className="text-xl font-black text-black mb-2">{selectedService?.name}</h3>
-            <div className="flex justify-center items-center space-x-4">
-              <span className="text-[#FF6644] font-bold text-lg">₱{selectedService?.price.toLocaleString()}</span>
-              <span className="text-gray-600 font-medium">{selectedService?.duration}</span>
+          <div className="text-center border-b pb-3" style={{ borderColor: '#E0E0E0' }}>
+            <div className="text-2xl mb-2">{selectedService?.image}</div>
+            <h3 className="text-lg font-bold mb-1" style={{ color: '#36454F' }}>{selectedService?.name}</h3>
+            <div className="flex justify-center items-center space-x-3">
+              <span className="font-bold text-base" style={{ color: '#F68B24' }}>₱{selectedService?.price.toLocaleString()}</span>
+              <span className="font-medium text-sm" style={{ color: '#8B8B8B' }}>{selectedService?.duration}</span>
             </div>
           </div>
 
           {/* Appointment Details */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center space-x-3">
-                <Calendar className="w-5 h-5 text-[#FF6644]" />
-                <span className="font-semibold text-black">Date & Time</span>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between py-1">
+              <div className="flex items-center space-x-2">
+                <Calendar className="w-4 h-4" style={{ color: '#F68B24' }} />
+                <span className="font-semibold text-sm" style={{ color: '#36454F' }}>Date & Time</span>
               </div>
-              <span className="font-bold text-black">Today, {selectedTime}</span>
+              <span className="font-bold text-sm" style={{ color: '#36454F' }}>Today, {selectedTime}</span>
             </div>
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center space-x-3">
-                <User className="w-5 h-5 text-[#FF6644]" />
-                <span className="font-semibold text-black">Your Barber</span>
+            <div className="flex items-center justify-between py-1">
+              <div className="flex items-center space-x-2">
+                <User className="w-4 h-4" style={{ color: '#F68B24' }} />
+                <span className="font-semibold text-sm" style={{ color: '#36454F' }}>Your Barber</span>
               </div>
-              <span className="font-bold text-black">{selectedStaff?.name}</span>
+              <span className="font-bold text-sm" style={{ color: '#36454F' }}>{selectedStaff?.name}</span>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex space-x-4 pt-4">
+          <div className="flex space-x-3 pt-2">
             <button
               onClick={() => setStep(2)}
-              className="flex-1 py-3 px-4 border-2 border-gray-300 text-gray-600 hover:bg-gray-300 hover:text-black font-bold rounded-xl transition-all duration-200"
+              className="flex-1 py-2 px-3 border font-bold rounded-lg transition-all duration-200 text-sm"
+              style={{ borderColor: '#E0E0E0', color: '#8B8B8B' }}
+              onMouseEnter={(e) => { e.target.style.backgroundColor = '#F5F5F5'; e.target.style.color = '#36454F'; }}
+              onMouseLeave={(e) => { e.target.style.backgroundColor = 'transparent'; e.target.style.color = '#8B8B8B'; }}
             >
               Go Back
             </button>
             <button
               onClick={handleConfirmBooking}
-              className="flex-1 py-3 px-4 bg-[#FF6644] hover:bg-[#FF5533] text-white font-bold rounded-xl transition-all duration-200 shadow-lg"
+              className="flex-1 py-2 px-3 text-white font-bold rounded-lg transition-all duration-200 shadow-lg text-sm"
+              style={{ backgroundColor: '#F68B24' }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
             >
               Confirm Booking
             </button>
@@ -398,81 +446,53 @@ const ServiceBooking = ({ onBack }) => {
   )
 
   const renderBookingSuccess = () => {
-    const qrRef = useRef(null)
     const bookingId = 'BK' + Date.now().toString().slice(-8)
-    
-    // Generate QR code data
-    const qrData = JSON.stringify({
-      bookingId: bookingId,
-      service: selectedService?.name,
-      time: selectedTime,
-      staff: selectedStaff?.name,
-      date: new Date().toISOString().split('T')[0],
-      barbershop: 'TPX Barbershop'
-    })
-
-    useEffect(() => {
-      if (qrRef.current) {
-        // Generate QR code as canvas
-        QRCode.toCanvas(qrRef.current, qrData, {
-          width: 192,
-          margin: 2,
-          color: {
-            dark: '#000000',
-            light: '#ffffff'
-          },
-          errorCorrectionLevel: 'H'
-        }, (error) => {
-          if (error) console.error('QR Code generation error:', error)
-        })
-      }
-    }, [qrData])
 
     return (
       <div className="space-y-6 px-4">
         <div className="text-center">
-          <div className="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl">
+          <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl" style={{ backgroundColor: '#F68B24' }}>
             <CheckCircle className="w-10 h-10 text-white" />
           </div>
-          <h2 className="text-2xl font-black text-black mb-2">Booking Confirmed!</h2>
-          <p className="text-gray-600 font-medium">Your appointment has been successfully booked</p>
+          <h2 className="text-2xl font-black mb-2" style={{ color: '#36454F' }}>Booking Confirmed!</h2>
+          <p className="font-medium" style={{ color: '#8B8B8B' }}>Your appointment has been successfully booked</p>
         </div>
 
         {/* QR Code */}
-        <div className="bg-white rounded-2xl p-8 border-2 border-gray-200 shadow-lg text-center">
-          <h3 className="text-lg font-black text-black mb-4">Your Booking QR Code</h3>
+        <div className="bg-white rounded-2xl p-8 border-2 shadow-lg text-center" style={{ borderColor: '#E0E0E0' }}>
+          <h3 className="text-lg font-black mb-4" style={{ color: '#36454F' }}>Your Booking QR Code</h3>
           
           {/* Real QR Code */}
           <div className="flex justify-center mb-4">
-            <div className="p-4 bg-white rounded-2xl border-2 border-gray-200 shadow-sm">
+            <div className="p-4 bg-white rounded-2xl border-2 shadow-sm" style={{ borderColor: '#E0E0E0' }}>
               <canvas ref={qrRef} className="rounded-xl"></canvas>
             </div>
           </div>
           
           <div className="text-center space-y-2">
-            <p className="text-lg font-black text-black">Booking ID: {bookingId}</p>
-            <p className="text-sm text-gray-600">Show this QR code when you arrive</p>
+            <p className="text-lg font-black" style={{ color: '#36454F' }}>Booking ID: {bookingId}</p>
+            <p className="text-sm" style={{ color: '#8B8B8B' }}>Show this QR code when you arrive</p>
           </div>
         </div>
 
         {/* Booking Summary */}
-        <div className="bg-[#FF6644]/5 rounded-2xl p-6 border border-[#FF6644]/20">
+        <div className="rounded-2xl p-6 border" style={{ backgroundColor: 'rgba(246, 139, 36, 0.05)', borderColor: 'rgba(246, 139, 36, 0.2)' }}>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-black font-medium">Service:</span>
-              <span className="text-black font-bold">{selectedService?.name}</span>
+              <span className="font-medium" style={{ color: '#36454F' }}>Service:</span>
+              <span className="font-bold" style={{ color: '#36454F' }}>{selectedService?.name}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-black font-medium">Date & Time:</span>
-              <span className="text-black font-bold">Today, {selectedTime}</span>
+              <span className="font-medium" style={{ color: '#36454F' }}>Date & Time:</span>
+              <span className="font-bold" style={{ color: '#36454F' }}>Today, {selectedTime}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-black font-medium">Barber:</span>
-              <span className="text-black font-bold">{selectedStaff?.name}</span>
+              <span className="font-medium" style={{ color: '#36454F' }}>Barber:</span>
+              <span className="font-bold" style={{ color: '#36454F' }}>{selectedStaff?.name}</span>
             </div>
-            <div className="flex justify-between border-t border-[#FF6644]/20 pt-3">
-              <span className="text-black font-bold">Total:</span>
-              <span className="text-[#FF6644] font-black text-lg">₱{selectedService?.price.toLocaleString()}</span>
+            <div className="flex justify-between border-t pt-3" style={{ borderColor: 'rgba(246, 139, 36, 0.2)' }}>
+              <span className="font-bold" style={{ color: '#36454F' }}>Total:</span>
+              <span className="font-black text-lg" style={{ color: '#F68B24' }}>₱{selectedService?.price.toLocaleString()}</span>
             </div>
           </div>
         </div>
@@ -481,7 +501,10 @@ const ServiceBooking = ({ onBack }) => {
         <div className="space-y-3">
           <button
             onClick={onBack}
-            className="w-full py-4 bg-[#FF6644] hover:bg-[#FF5533] text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
+            className="w-full py-4 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
+            style={{ backgroundColor: '#F68B24' }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
           >
             Back to Home
           </button>
@@ -490,7 +513,10 @@ const ServiceBooking = ({ onBack }) => {
               // In a real app, this would navigate to bookings page
               alert('View My Bookings feature coming soon!')
             }}
-            className="w-full py-3 border-2 border-[#FF6644] text-[#FF6644] hover:bg-[#FF6644] hover:text-white font-bold rounded-2xl transition-all duration-200"
+            className="w-full py-3 border-2 font-bold rounded-2xl transition-all duration-200"
+            style={{ borderColor: '#F68B24', color: '#F68B24' }}
+            onMouseEnter={(e) => { e.target.style.backgroundColor = '#F68B24'; e.target.style.color = 'white'; }}
+            onMouseLeave={(e) => { e.target.style.backgroundColor = 'transparent'; e.target.style.color = '#F68B24'; }}
           >
             View My Bookings
           </button>
@@ -500,21 +526,22 @@ const ServiceBooking = ({ onBack }) => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen" style={{ backgroundColor: '#F4F0E6' }}>
       {/* Header */}
-      <div className="bg-black sticky top-0 z-40 shadow-lg">
+      <div style={{ backgroundColor: '#36454F' }} className="sticky top-0 z-40 shadow-lg">
         <div className="max-w-md mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             <button
               onClick={onBack}
-              className="flex items-center space-x-2 px-3 py-2 text-white hover:text-[#FF6644] font-semibold rounded-xl hover:bg-white/10 transition-all duration-200"
+              className="flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-xl hover:bg-white/10 transition-all duration-200"
+              style={{ color: '#F4F0E6' }}
             >
               <ArrowLeft className="w-5 h-5" />
               <span className="text-sm">Back</span>
             </button>
             <div className="text-right">
-              <p className="text-lg font-bold text-white">Book Service</p>
-              <p className="text-xs text-[#FF6644]">Step {step} of 3</p>
+              <p className="text-lg font-bold" style={{ color: '#F4F0E6' }}>Book Service</p>
+              <p className="text-xs" style={{ color: '#F68B24' }}>Step {step} of 3</p>
             </div>
           </div>
         </div>
