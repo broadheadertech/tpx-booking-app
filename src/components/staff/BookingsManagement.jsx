@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react'
-import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode } from 'lucide-react'
 import { bookingsService, servicesService } from '../../services/staff'
 import barbersService from '../../services/staff/barbersService'
+import QRCode from 'qrcode'
 
 const BookingsManagement = ({ bookings = [], onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -11,6 +12,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
   const [editingBooking, setEditingBooking] = useState(null)
   const [services, setServices] = useState([])
   const [barbers, setBarbers] = useState([])
+  const [showQRCode, setShowQRCode] = useState(null)
   const [formData, setFormData] = useState({
     service: '',
     barber: '',
@@ -245,6 +247,130 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
     }
   }
 
+  // QR Code Modal Component
+  const QRCodeModal = ({ booking, onClose }) => {
+    const qrRef = useRef(null)
+    
+    // Generate QR code data
+    const qrData = JSON.stringify({
+      bookingId: booking.id,
+      bookingCode: booking.booking_code,
+      service: services.find(s => s.id === booking.service)?.name,
+      barber: booking.barber_name,
+      date: booking.date,
+      time: booking.time,
+      status: booking.status,
+      barbershop: 'TPX Barbershop'
+    })
+
+    useEffect(() => {
+      if (qrRef.current) {
+        // Generate QR code as canvas
+        QRCode.toCanvas(qrRef.current, qrData, {
+          width: 200,
+          margin: 2,
+          color: {
+            dark: '#36454F',
+            light: '#ffffff'
+          },
+          errorCorrectionLevel: 'H'
+        }, (error) => {
+          if (error) console.error('QR Code generation error:', error)
+        })
+      }
+    }, [qrData])
+
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border" style={{borderColor: '#E0E0E0'}}>
+          <div className="text-center space-y-4">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{backgroundColor: '#F68B24'}}>
+              <QrCode className="w-6 h-6 text-white" />
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-bold mb-1" style={{color: '#36454F'}}>Booking QR Code</h3>
+              <p className="text-sm font-mono font-bold text-orange-600">#{booking.booking_code}</p>
+              <p className="text-sm" style={{color: '#8B8B8B'}}>Scan this code for booking verification</p>
+            </div>
+
+            {/* QR Code */}
+            <div className="p-4 rounded-xl" style={{backgroundColor: '#F4F0E6'}}>
+              <div className="flex justify-center">
+                <canvas ref={qrRef} className="rounded-lg"></canvas>
+              </div>
+            </div>
+
+            {/* Booking Details */}
+            <div className="text-left space-y-2 p-4 rounded-xl" style={{backgroundColor: '#F9F9F9'}}>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium" style={{color: '#8B8B8B'}}>Service:</span>
+                <span className="text-sm font-bold" style={{color: '#36454F'}}>
+                  {services.find(s => s.id === booking.service)?.name}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium" style={{color: '#8B8B8B'}}>Date & Time:</span>
+                <span className="text-sm font-bold" style={{color: '#36454F'}}>
+                  {formatDate(booking.date)} at {formatTime(booking.time)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium" style={{color: '#8B8B8B'}}>Barber:</span>
+                <span className="text-sm font-bold" style={{color: '#36454F'}}>
+                  {booking.barber_name || 'Not assigned'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium" style={{color: '#8B8B8B'}}>Status:</span>
+                <span className={`text-xs font-bold px-2 py-1 rounded-full ${getStatusConfig(booking.status).bg} ${getStatusConfig(booking.status).text}`}>
+                  {getStatusConfig(booking.status).label}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="w-full py-2 px-4 rounded-xl font-medium text-white transition-colors"
+              style={{backgroundColor: '#F68B24'}}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Mini QR Code Component for table
+  const MiniQRCode = ({ booking }) => {
+    const miniQrRef = useRef(null)
+    
+    const qrData = JSON.stringify({
+      bookingId: booking.id,
+      bookingCode: booking.booking_code,
+      barbershop: 'TPX Barbershop'
+    })
+
+    useEffect(() => {
+      if (miniQrRef.current) {
+        QRCode.toCanvas(miniQrRef.current, qrData, {
+          width: 40,
+          margin: 1,
+          color: {
+            dark: '#36454F',
+            light: '#ffffff'
+          },
+          errorCorrectionLevel: 'M'
+        }, (error) => {
+          if (error) console.error('Mini QR Code generation error:', error)
+        })
+      }
+    }, [qrData])
+
+    return <canvas ref={miniQrRef} className="rounded" />
+  }
+
   const BookingForm = () => (
     <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
       <div className="flex items-center justify-between mb-4">
@@ -253,7 +379,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
         </h3>
         <button
           onClick={handleCancel}
-          className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100"
         >
           <X className="h-5 w-5" />
         </button>
@@ -499,8 +625,8 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
-                          <div className={`h-10 w-10 rounded-lg ${statusConfig.bg} flex items-center justify-center`}>
-                            <Calendar className="h-5 w-5 text-orange-500" />
+                          <div className="h-10 w-10 rounded-lg bg-orange-50 border-2 border-orange-200 flex items-center justify-center p-1">
+                            <MiniQRCode booking={booking} />
                           </div>
                         </div>
                         <div className="ml-4">
@@ -547,6 +673,14 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
+                        <button
+                          onClick={() => setShowQRCode(booking)}
+                          className="inline-flex items-center px-2.5 py-1.5 border border-orange-300 text-xs font-medium rounded text-orange-700 bg-orange-50 hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                          title="View QR Code"
+                        >
+                          <QrCode className="h-3 w-3 mr-1" />
+                          QR
+                        </button>
                         {booking.status === 'pending' && (
                           <>
                             <button
@@ -612,6 +746,9 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
           </div>
         )}
       </div>
+
+      {/* QR Code Modal */}
+      {showQRCode && <QRCodeModal booking={showQRCode} onClose={() => setShowQRCode(null)} />}
     </div>
   )
 }
