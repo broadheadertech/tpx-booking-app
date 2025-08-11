@@ -1,0 +1,8 @@
+export { default as bookingsService } from './bookingsService.js'
+export { default as servicesService } from './servicesService.js'
+export { default as vouchersService } from './vouchersService.js'
+export { default as salesService } from './salesService.js'
+export { default as loyaltyService } from './loyaltyService.js'
+export { default as usersService } from './usersService.js'
+export { default as barbersService } from './barbersService.js'
+export { default as overviewService } from './overviewService.js'

@@ -1,13 +1,17 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import bannerImage from '../../assets/img/banner.jpg'
+import { useAuth } from '../../context/AuthContext'
 
 function Login() {
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: ''
   })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const navigate = useNavigate()
+  const { login } = useAuth()
 
   const handleChange = (e) => {
     setFormData({
@@ -16,14 +20,29 @@ function Login() {
     })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // TODO: Implement authentication logic
-    // For now, redirect based on demo logic
-    if (formData.email.includes('staff')) {
-      navigate('/staff/dashboard')
-    } else {
-      navigate('/customer/dashboard')
+    setLoading(true)
+    setError('')
+
+    try {
+      const result = await login(formData.username, formData.password)
+      
+      if (result.success) {
+        const { role, is_staff } = result.data
+        
+        if (is_staff) {
+          navigate('/staff/dashboard')
+        } else {
+          navigate('/customer/dashboard')
+        }
+      } else {
+        setError(result.error)
+      }
+    } catch (error) {
+      setError('An unexpected error occurred. Please try again.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -59,15 +78,20 @@ function Login() {
           {/* Login Form */}
           <div className="bg-white rounded-2xl shadow-xl border" style={{borderColor: '#E0E0E0'}}>
             <div className="p-8">
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              )}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium mb-2" style={{color: '#36454F'}}>Email</label>
+                  <label className="block text-sm font-medium mb-2" style={{color: '#36454F'}}>Username</label>
                   <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
+                    type="text"
+                    name="username"
+                    value={formData.username}
                     onChange={handleChange}
-                    placeholder="Enter your email"
+                    placeholder="Enter your username"
                     required
                     className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-200 text-sm"
                     style={{color: '#36454F'}}
@@ -96,9 +120,10 @@ function Login() {
                 
                 <button
                   type="submit"
-                  className="w-full h-12 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  disabled={loading}
+                  className="w-full h-12 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none disabled:shadow-lg"
                 >
-                  Sign In
+                  {loading ? 'Signing In...' : 'Sign In'}
                 </button>
                 
                 <div className="text-center">
