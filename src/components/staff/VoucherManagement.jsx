@@ -1,10 +1,12 @@
-import React, { useState } from 'react'
-import { Gift, Calendar, User, DollarSign, CheckCircle, XCircle, Clock, Search, Filter, Plus, RotateCcw } from 'lucide-react'
+import React, { useState, useRef, useEffect } from 'react'
+import { Gift, Calendar, User, DollarSign, CheckCircle, XCircle, Clock, Search, Filter, Plus, RotateCcw, QrCode, Download, Printer, Copy } from 'lucide-react'
+import QRCode from 'qrcode'
 
 const VoucherManagement = ({ vouchers = [], onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('created_at')
+  const [showQRCode, setShowQRCode] = useState(null)
 
   const getStatusConfig = (voucher) => {
     if (voucher.redeemed) {
@@ -58,6 +60,179 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
     redeemed: vouchers.filter(v => v.redeemed).length,
     expired: vouchers.filter(v => v.isExpired && !v.redeemed).length,
     totalValue: vouchers.reduce((sum, v) => sum + parseFloat(v.value), 0)
+  }
+
+  // Mini QR Code for card thumbnail
+  const MiniQRCode = ({ voucher }) => {
+    const qrRef = useRef(null)
+    const qrData = JSON.stringify({
+      voucherId: voucher.id,
+      code: voucher.code,
+      type: 'voucher',
+      brand: 'TPX Barbershop'
+    })
+
+    useEffect(() => {
+      if (qrRef.current) {
+        QRCode.toCanvas(qrRef.current, qrData, {
+          width: 40,
+          margin: 1,
+          color: { dark: '#36454F', light: '#ffffff' },
+          errorCorrectionLevel: 'M'
+        }, (err) => { if (err) console.error('Mini QR error:', err) })
+      }
+    }, [qrData])
+
+    return <canvas ref={qrRef} className="rounded" />
+  }
+
+  // QR Code Modal for full-size display
+  const QRCodeModal = ({ voucher, onClose }) => {
+    const qrCanvasRef = useRef(null)
+
+    const qrPayload = JSON.stringify({
+      voucherId: voucher.id,
+      code: voucher.code,
+      value: voucher.value,
+      expires_at: voucher.expires_at,
+      user: voucher.user,
+      redeemed: !!voucher.redeemed,
+      type: 'voucher',
+      brand: 'TPX Barbershop'
+    })
+
+    useEffect(() => {
+      if (qrCanvasRef.current) {
+        QRCode.toCanvas(qrCanvasRef.current, qrPayload, {
+          width: 220,
+          margin: 2,
+          color: { dark: '#1F2937', light: '#ffffff' },
+          errorCorrectionLevel: 'H'
+        }, (err) => { if (err) console.error('QR generation error:', err) })
+      }
+    }, [qrPayload])
+
+    const handleDownload = async () => {
+      try {
+        const url = await QRCode.toDataURL(qrPayload, {
+          width: 600,
+          margin: 2,
+          color: { dark: '#111827', light: '#ffffff' },
+          errorCorrectionLevel: 'H'
+        })
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `voucher-${voucher.code}.png`
+        link.click()
+      } catch (e) {
+        console.error('Failed to download QR:', e)
+      }
+    }
+
+    const handlePrint = async () => {
+      try {
+        const url = await QRCode.toDataURL(qrPayload, {
+          width: 600,
+          margin: 2,
+          color: { dark: '#111827', light: '#ffffff' },
+          errorCorrectionLevel: 'H'
+        })
+        const printWindow = window.open('', '_blank')
+        if (!printWindow) return
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Voucher ${voucher.code} - QR</title>
+              <style>
+                body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; text-align: center; padding: 24px; }
+                .code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-weight: 700; color: #F68B24; }
+              </style>
+            </head>
+            <body>
+              <h2>Voucher <span class="code">${voucher.code}</span></h2>
+              <img src="${url}" alt="Voucher QR" style="width: 320px; height: 320px;" />
+              <p>Present this QR at the counter to redeem.</p>
+              <script>window.onload = () => { window.print(); window.onafterprint = () => window.close(); };</script>
+            </body>
+          </html>
+        `)
+        printWindow.document.close()
+      } catch (e) {
+        console.error('Failed to print QR:', e)
+      }
+    }
+
+    const handleCopy = async () => {
+      try {
+        await navigator.clipboard.writeText(voucher.code)
+      } catch (e) {
+        console.error('Failed to copy code:', e)
+      }
+    }
+
+    const status = getStatusConfig(voucher)
+
+    return (
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gray-200">
+          <div className="text-center space-y-4">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto bg-gradient-to-br from-orange-400 to-amber-500 shadow-sm">
+              <QrCode className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-gray-900">Voucher QR Code</h3>
+              <p className="text-sm font-mono font-bold text-orange-600">{voucher.code}</p>
+              <p className="text-sm text-gray-500">Scan this code to validate or redeem</p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
+              <div className="flex justify-center">
+                <canvas ref={qrCanvasRef} className="rounded-lg" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-left">
+              <div className="p-3 rounded-xl bg-gray-50">
+                <div className="text-xs text-gray-500">Value</div>
+                <div className="text-sm font-bold text-gray-900">{voucher.formattedValue || `₱${parseFloat(voucher.value).toFixed(2)}`}</div>
+              </div>
+              <div className="p-3 rounded-xl bg-gray-50">
+                <div className="text-xs text-gray-500">Expires</div>
+                <div className={`text-sm font-bold ${voucher.isExpired ? 'text-red-600' : 'text-gray-900'}`}>{new Date(voucher.expires_at).toLocaleDateString()}</div>
+              </div>
+              <div className="p-3 rounded-xl bg-gray-50">
+                <div className="text-xs text-gray-500">User</div>
+                <div className="text-sm font-bold text-gray-900">User {voucher.user}</div>
+              </div>
+              <div className="p-3 rounded-xl bg-gray-50 flex items-center justify-between">
+                <div>
+                  <div className="text-xs text-gray-500">Status</div>
+                  <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${status.bg} ${status.border} border ${status.text}`}>
+                    <status.icon className={`h-3 w-3 mr-1 ${status.iconColor}`} />
+                    {status.label}
+                  </div>
+                </div>
+                <button onClick={handleCopy} className="ml-2 inline-flex items-center px-2.5 py-1 border border-gray-200 text-xs font-medium rounded bg-white hover:bg-gray-50 text-gray-700">
+                  <Copy className="h-3 w-3 mr-1" /> Copy
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <button onClick={onClose} className="px-4 py-2 rounded-xl text-gray-700 border border-gray-200 hover:bg-gray-50">Close</button>
+              <div className="flex items-center space-x-2">
+                <button onClick={handleDownload} className="inline-flex items-center px-3 py-2 rounded-xl text-white bg-orange-500 hover:bg-orange-600">
+                  <Download className="h-4 w-4 mr-1" /> Download
+                </button>
+                <button onClick={handlePrint} className="inline-flex items-center px-3 py-2 rounded-xl text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200">
+                  <Printer className="h-4 w-4 mr-1" /> Print
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -186,20 +361,29 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
               className={`bg-white rounded-lg border-2 ${statusConfig.border} shadow-sm hover:shadow-md transition-shadow p-4`}
             >
               <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                  <div className={`p-2 rounded-lg ${statusConfig.bg}`}>
-                    <Gift className="h-4 w-4 text-orange-500" />
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 rounded-lg bg-orange-50 border-2 border-orange-200 flex items-center justify-center w-12 h-12">
+                    <MiniQRCode voucher={voucher} />
                   </div>
                   <div>
                     <p className="font-mono text-sm font-bold text-gray-900">{voucher.code}</p>
                     <p className="text-xs text-gray-500">ID: {voucher.id}</p>
                   </div>
                 </div>
-                <div className={`flex items-center space-x-1 px-2 py-1 rounded-full ${statusConfig.bg} ${statusConfig.border} border`}>
-                  <StatusIcon className={`h-3 w-3 ${statusConfig.iconColor}`} />
-                  <span className={`text-xs font-medium ${statusConfig.text}`}>
-                    {statusConfig.label}
-                  </span>
+                <div className="flex items-center space-x-2">
+                  <div className={`flex items-center space-x-1 px-2 py-1 rounded-full ${statusConfig.bg} ${statusConfig.border} border`}>
+                    <StatusIcon className={`h-3 w-3 ${statusConfig.iconColor}`} />
+                    <span className={`text-xs font-medium ${statusConfig.text}`}>
+                      {statusConfig.label}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowQRCode(voucher)}
+                    className="inline-flex items-center px-2.5 py-1 border border-orange-300 text-xs font-medium rounded text-orange-700 bg-orange-50 hover:bg-orange-100"
+                    title="View QR Code"
+                  >
+                    <QrCode className="h-3 w-3 mr-1" /> QR
+                  </button>
                 </div>
               </div>
 
@@ -236,8 +420,11 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
 
               {!voucher.redeemed && !voucher.isExpired && (
                 <div className="mt-4 pt-3 border-t border-gray-200">
-                  <button className="w-full px-3 py-2 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors text-sm font-medium">
-                    Manage Voucher
+                  <button
+                    onClick={() => setShowQRCode(voucher)}
+                    className="w-full px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg hover:from-orange-600 hover:to-amber-600 transition-colors text-sm font-semibold flex items-center justify-center"
+                  >
+                    <QrCode className="h-4 w-4 mr-2" /> View QR to Redeem
                   </button>
                 </div>
               )}
@@ -257,6 +444,10 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
             }
           </p>
         </div>
+      )}
+
+      {showQRCode && (
+        <QRCodeModal voucher={showQRCode} onClose={() => setShowQRCode(null)} />
       )}
     </div>
   )
