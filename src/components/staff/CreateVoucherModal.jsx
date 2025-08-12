@@ -1,18 +1,22 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
-import Input from '../common/Input'
-import { Gift, DollarSign, Calendar, User } from 'lucide-react'
+import { Gift, User, QrCode } from 'lucide-react'
+import QRCode from 'qrcode'
+import apiService from '../../services/api.js'
 
 const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
     code: '',
     value: '',
-    customerEmail: '',
-    expiryDate: '',
-    description: '',
-    type: 'discount'
+    points_required: '',
+    max_uses: '',
+    expires_at: '',
+    description: ''
   })
+  
+  const [qrCodeUrl, setQrCodeUrl] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   const generateVoucherCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
@@ -21,36 +25,79 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
       code += chars.charAt(Math.floor(Math.random() * chars.length))
     }
     setFormData(prev => ({ ...prev, code }))
+    generateQRCode(code)
   }
 
-  const handleSubmit = (e) => {
+  const generateQRCode = async (code) => {
+    if (!code) return
+    try {
+      const qrData = {
+        username: "", // Will be filled when voucher is assigned to a user
+        code: code,
+        value: formData.value || "0"
+      }
+      
+      const url = await QRCode.toDataURL(JSON.stringify(qrData), {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#1A1A1A',
+          light: '#FFFFFF'
+        }
+      })
+      setQrCodeUrl(url)
+    } catch (err) {
+      console.error('Failed to generate QR code:', err)
+    }
+  }
+
+  useEffect(() => {
+    if (formData.code) {
+      generateQRCode(formData.code)
+    }
+  }, [formData.code, formData.value])
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    onSubmit({
-      id: Date.now(),
-      code: formData.code,
-      value: formData.type === 'fixed' ? `₱${formData.value}` : `${formData.value}%`,
-      customer: formData.customerEmail,
-      status: 'active',
-      expires: formData.expiryDate,
-      created: new Date().toISOString().split('T')[0],
-      type: formData.type,
-      description: formData.description
-    })
+    setIsLoading(true)
     
-    setFormData({
-      code: '',
-      value: '',
-      customerEmail: '',
-      expiryDate: '',
-      description: '',
-      type: 'discount'
-    })
-    onClose()
+    try {
+      const voucherData = {
+        code: formData.code,
+        value: formData.value,
+        points_required: parseInt(formData.points_required) || 0,
+        max_uses: parseInt(formData.max_uses) || 1,
+        redeemed: false,
+        expires_at: new Date(formData.expires_at).toISOString()
+      }
+
+      const response = await apiService.post('/vouchers/', voucherData)
+
+      onSubmit(response)
+      
+      // Reset form
+      setFormData({
+        code: '',
+        value: '',
+        points_required: '',
+        max_uses: '',
+        expires_at: '',
+        description: ''
+      })
+      setQrCodeUrl('')
+      onClose()
+    } catch (error) {
+      console.error('Failed to create voucher:', error)
+      alert('Failed to create voucher. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
+
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Create New Voucher" size="lg">
@@ -87,17 +134,32 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
 
             <div>
               <label className="block text-[#1A1A1A] font-bold text-base mb-2">
-                Voucher Type <span className="text-red-500">*</span>
+                Points Required <span className="text-red-500">*</span>
               </label>
-              <select
-                value={formData.type}
-                onChange={(e) => handleInputChange('type', e.target.value)}
+              <input
+                type="number"
+                placeholder="100"
+                value={formData.points_required}
+                onChange={(e) => handleInputChange('points_required', e.target.value)}
                 required
+                min="0"
                 className="w-full h-12 px-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200"
-              >
-                <option value="discount">Percentage Discount</option>
-                <option value="fixed">Fixed Amount</option>
-              </select>
+              />
+            </div>
+
+            <div>
+              <label className="block text-[#1A1A1A] font-bold text-base mb-2">
+                Max Uses <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                placeholder="1"
+                value={formData.max_uses}
+                onChange={(e) => handleInputChange('max_uses', e.target.value)}
+                required
+                min="1"
+                className="w-full h-12 px-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200"
+              />
             </div>
 
             <div>
@@ -107,44 +169,39 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
               <div className="relative">
                 <input
                   type="number"
-                  placeholder={formData.type === 'fixed' ? "1000" : "20"}
+                  placeholder="50.00"
                   value={formData.value}
                   onChange={(e) => handleInputChange('value', e.target.value)}
                   required
-                  min="1"
-                  max={formData.type === 'discount' ? "100" : "50000"}
+                  min="0.01"
+                  step="0.01"
                   className="w-full h-12 px-4 pr-12 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200"
                 />
                 <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-[#6B6B6B] font-bold">
-                  {formData.type === 'fixed' ? '₱' : '%'}
+                  ₱
                 </div>
               </div>
             </div>
 
-            <Input
-              label="Expiry Date"
-              type="date"
-              value={formData.expiryDate}
-              onChange={(e) => handleInputChange('expiryDate', e.target.value)}
-              required
-              className="border-[#F5F5F5] focus:border-[#FF8C42]"
-            />
+            <div>
+              <label className="block text-[#1A1A1A] font-bold text-base mb-2">
+                Expiry Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={formData.expires_at}
+                onChange={(e) => handleInputChange('expires_at', e.target.value)}
+                required
+                className="w-full h-12 px-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200"
+              />
+            </div>
           </div>
           
           <div className="space-y-4">
             <h3 className="text-lg font-black text-[#1A1A1A] uppercase tracking-wide flex items-center">
               <User className="w-5 h-5 text-[#FF8C42] mr-2" />
-              Customer & Description
+              Description
             </h3>
-            
-            <Input
-              label="Customer Email (Optional)"
-              type="email"
-              placeholder="customer@example.com"
-              value={formData.customerEmail}
-              onChange={(e) => handleInputChange('customerEmail', e.target.value)}
-              className="border-[#F5F5F5] focus:border-[#FF8C42]"
-            />
 
             <div>
               <label className="block text-[#1A1A1A] font-bold text-base mb-2">
@@ -160,18 +217,32 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
             </div>
 
             <div className="bg-[#FF8C42]/10 border-2 border-[#FF8C42]/20 rounded-2xl p-4">
-              <h4 className="text-base font-bold text-[#1A1A1A] mb-2">Voucher Preview</h4>
+              <h4 className="text-base font-bold text-[#1A1A1A] mb-2 flex items-center">
+                <QrCode className="w-4 h-4 mr-2" />
+                Voucher Preview
+              </h4>
               <div className="bg-white rounded-xl p-4 border border-[#FF8C42]/30">
                 <div className="text-center">
-                  <div className="text-lg font-black text-[#1A1A1A] font-mono">
+                  <div className="text-lg font-black text-[#1A1A1A] font-mono mb-2">
                     {formData.code || 'VOUCHER-CODE'}
                   </div>
                   <div className="text-2xl font-black text-[#FF8C42] my-2">
-                    {formData.type === 'fixed' ? '₱' : ''}{formData.value || '0'}{formData.type === 'discount' ? '%' : ''} OFF
+                    ₱{formData.value || '0'} OFF
                   </div>
-                  <div className="text-sm text-[#6B6B6B]">
-                    Expires: {formData.expiryDate || 'MM/DD/YYYY'}
+                  <div className="text-sm text-[#6B6B6B] mb-2">
+                    Points Required: {formData.points_required || '0'}
                   </div>
+                  <div className="text-sm text-[#6B6B6B] mb-2">
+                    Max Uses: {formData.max_uses || '1'}
+                  </div>
+                  <div className="text-sm text-[#6B6B6B] mb-3">
+                    Expires: {formData.expires_at ? new Date(formData.expires_at).toLocaleDateString() : 'Not Set'}
+                  </div>
+                  {qrCodeUrl && (
+                    <div className="flex justify-center">
+                      <img src={qrCodeUrl} alt="Voucher QR Code" className="w-24 h-24" />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -189,9 +260,10 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
           </Button>
           <Button
             type="submit"
-            className="flex-1 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white hover:shadow-lg"
+            disabled={isLoading}
+            className="flex-1 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Create Voucher
+            {isLoading ? 'Creating...' : 'Create Voucher'}
           </Button>
         </div>
       </form>

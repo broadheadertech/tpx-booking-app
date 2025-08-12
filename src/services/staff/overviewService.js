@@ -21,15 +21,23 @@ class OverviewService {
         apiService.get('/points/')
       ])
 
-      // Extract data from settled promises
-      const services = servicesResult.status === 'fulfilled' ? servicesResult.value : []
-      const barbers = barbersResult.status === 'fulfilled' ? barbersResult.value : []
-      const clients = clientsResult.status === 'fulfilled' ? clientsResult.value : []
-      const vouchers = vouchersResult.status === 'fulfilled' ? vouchersResult.value : []
-      const sales = salesResult.status === 'fulfilled' ? salesResult.value : []
-      const points = pointsResult.status === 'fulfilled' ? pointsResult.value : []
+      // Extract data from settled promises with proper error handling
+      const services = Array.isArray(servicesResult.value) ? servicesResult.value : []
+      const barbers = Array.isArray(barbersResult.value) ? barbersResult.value : []
+      const clients = Array.isArray(clientsResult.value) ? clientsResult.value : []
+      const vouchers = Array.isArray(vouchersResult.value) ? vouchersResult.value : []
+      const sales = Array.isArray(salesResult.value) ? salesResult.value : []
+      const points = Array.isArray(pointsResult.value) ? pointsResult.value : []
 
-      // Calculate key metrics
+      // Log any failed requests
+      if (servicesResult.status === 'rejected') console.warn('Services API failed:', servicesResult.reason)
+      if (barbersResult.status === 'rejected') console.warn('Barbers API failed:', barbersResult.reason)
+      if (clientsResult.status === 'rejected') console.warn('Clients API failed:', clientsResult.reason)
+      if (vouchersResult.status === 'rejected') console.warn('Vouchers API failed:', vouchersResult.reason)
+      if (salesResult.status === 'rejected') console.warn('Sales API failed:', salesResult.reason)
+      if (pointsResult.status === 'rejected') console.warn('Points API failed:', pointsResult.reason)
+
+      // Calculate key metrics with error handling
       const stats = this.calculateOverviewStats({
         services,
         barbers,
@@ -39,7 +47,7 @@ class OverviewService {
         points
       })
 
-      // Generate recent activity
+      // Generate recent activity with error handling
       const recentActivity = this.generateRecentActivity({
         sales,
         vouchers,
@@ -61,18 +69,107 @@ class OverviewService {
 
     } catch (error) {
       console.error('Error fetching dashboard overview:', error)
-      throw error
+      
+      // Return fallback data instead of throwing
+      return this.getFallbackOverviewData()
     }
+  }
+
+  // Provide fallback data when API calls fail
+  getFallbackOverviewData() {
+    return {
+      stats: [
+        {
+          label: "Today's Revenue",
+          value: "₱0.00",
+          change: "0%",
+          trend: 'neutral',
+          icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z',
+          subtitle: 'Data unavailable'
+        },
+        {
+          label: 'Total Services',
+          value: '0',
+          change: '0%',
+          trend: 'neutral',
+          icon: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+          subtitle: 'Data unavailable'
+        },
+        {
+          label: 'Active Barbers',
+          value: '0',
+          change: '0%',
+          trend: 'neutral',
+          icon: 'M16 11c1.66 0 3-1.34 3-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3z',
+          subtitle: 'Data unavailable'
+        },
+        {
+          label: 'Active Vouchers',
+          value: '0',
+          change: '0%',
+          trend: 'neutral',
+          icon: 'M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z',
+          subtitle: 'Data unavailable'
+        },
+        {
+          label: 'Total Clients',
+          value: '0',
+          change: '0%',
+          trend: 'neutral',
+          icon: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4z',
+          subtitle: 'Data unavailable'
+        },
+        {
+          label: 'Loyalty Points',
+          value: '0',
+          change: '0%',
+          trend: 'neutral',
+          icon: 'M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z',
+          subtitle: 'Data unavailable'
+        }
+      ],
+      recentActivity: [
+        {
+          id: 'fallback-1',
+          type: 'info',
+          message: 'Unable to load recent activity - please check your connection',
+          time: 'N/A',
+          status: 'error',
+          icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+        }
+      ],
+      totals: {
+        services: 0,
+        barbers: 0,
+        clients: 0,
+        vouchers: 0,
+        sales: 0,
+        totalPoints: 0
+      }
+    }
+  }
+
+  // Helper method to safely parse dates
+  safeParseDate(dateString) {
+    if (!dateString) return null
+    const date = new Date(dateString)
+    return isNaN(date.getTime()) ? null : date
+  }
+
+  // Helper method to safely get date string
+  safeDateToString(dateString) {
+    const date = this.safeParseDate(dateString)
+    return date ? date.toISOString().split('T')[0] : null
   }
 
   calculateOverviewStats({ services, barbers, clients, vouchers, sales, points }) {
     // Get today's date for filtering
     const today = new Date().toISOString().split('T')[0]
     
-    // Filter today's sales
+    // Filter today's sales with safe date parsing
     const todaysSales = sales.filter(sale => {
-      const saleDate = new Date(sale.sale_date).toISOString().split('T')[0]
-      return saleDate === today
+      const saleDateString = this.safeDateToString(sale.sale_date)
+      return saleDateString === today
     })
 
     // Calculate today's revenue
@@ -85,11 +182,11 @@ class OverviewService {
       return sum + parseFloat(sale.discounted_amount || sale.total_amount || 0)
     }, 0)
 
-    // Filter active vouchers (not expired and not redeemed)
+    // Filter active vouchers (not expired and not redeemed) with safe date parsing
     const now = new Date()
     const activeVouchers = vouchers.filter(voucher => {
-      const expiresAt = new Date(voucher.expires_at)
-      return !voucher.redeemed && expiresAt > now
+      const expiresAt = this.safeParseDate(voucher.expires_at)
+      return !voucher.redeemed && expiresAt && expiresAt > now
     })
 
     // Filter active barbers
@@ -100,12 +197,12 @@ class OverviewService {
       return sum + (point.total_points || 0)
     }, 0)
 
-    // Get this week's sales for trend calculation
+    // Get this week's sales for trend calculation with safe date parsing
     const weekAgo = new Date()
     weekAgo.setDate(weekAgo.getDate() - 7)
     const thisWeekSales = sales.filter(sale => {
-      const saleDate = new Date(sale.sale_date)
-      return saleDate >= weekAgo
+      const saleDate = this.safeParseDate(sale.sale_date)
+      return saleDate && saleDate >= weekAgo
     })
 
     const thisWeekRevenue = thisWeekSales.reduce((sum, sale) => {
@@ -171,9 +268,14 @@ class OverviewService {
   generateRecentActivity({ sales, vouchers, clients }) {
     const activities = []
     
-    // Recent sales (last 3)
+    // Recent sales (last 3) with safe date parsing
     const recentSales = sales
-      .sort((a, b) => new Date(b.sale_date) - new Date(a.sale_date))
+      .filter(sale => this.safeParseDate(sale.sale_date)) // Only include sales with valid dates
+      .sort((a, b) => {
+        const dateA = this.safeParseDate(a.sale_date)
+        const dateB = this.safeParseDate(b.sale_date)
+        return dateB - dateA
+      })
       .slice(0, 3)
 
     recentSales.forEach(sale => {
@@ -187,10 +289,14 @@ class OverviewService {
       })
     })
 
-    // Recent voucher redemptions
+    // Recent voucher redemptions with safe date parsing
     const recentVouchers = vouchers
-      .filter(v => v.redeemed)
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .filter(v => v.redeemed && this.safeParseDate(v.created_at)) // Only include vouchers with valid dates
+      .sort((a, b) => {
+        const dateA = this.safeParseDate(a.created_at)
+        const dateB = this.safeParseDate(b.created_at)
+        return dateB - dateA
+      })
       .slice(0, 2)
 
     recentVouchers.forEach(voucher => {
@@ -250,7 +356,9 @@ class OverviewService {
   formatTimeAgo(dateString) {
     if (!dateString) return 'Unknown'
     
-    const date = new Date(dateString)
+    const date = this.safeParseDate(dateString)
+    if (!date) return 'Unknown'
+    
     const now = new Date()
     const diffInMinutes = Math.floor((now - date) / (1000 * 60))
     

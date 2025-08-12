@@ -4,7 +4,9 @@ const TOKEN_KEYS = {
   ACCESS: 'access_token',
   REFRESH: 'refresh_token',
   USER_ROLE: 'user_role',
-  IS_STAFF: 'is_staff'
+  IS_STAFF: 'is_staff',
+  USER_ID: 'user_id',
+  USERNAME: 'username'
 }
 
 class AuthService {
@@ -17,7 +19,11 @@ class AuthService {
       
       if (response.access && response.refresh) {
         this.setTokens(response.access, response.refresh)
-        this.setUserInfo(response.role, response.is_staff)
+        this.setUserInfo(response.user_id, response.role, response.is_staff)
+        // Store the username that was used for login
+        localStorage.setItem(TOKEN_KEYS.USERNAME, username)
+        // Also store as 'username' for compatibility
+        localStorage.setItem('username', username)
         return {
           success: true,
           data: response
@@ -56,6 +62,10 @@ class AuthService {
     localStorage.removeItem(TOKEN_KEYS.REFRESH)
     localStorage.removeItem(TOKEN_KEYS.USER_ROLE)
     localStorage.removeItem(TOKEN_KEYS.IS_STAFF)
+    localStorage.removeItem(TOKEN_KEYS.USER_ID)
+    localStorage.removeItem(TOKEN_KEYS.USERNAME)
+    // Also remove the compatibility username key
+    localStorage.removeItem('username')
   }
 
   setTokens(accessToken, refreshToken) {
@@ -63,7 +73,8 @@ class AuthService {
     localStorage.setItem(TOKEN_KEYS.REFRESH, refreshToken)
   }
 
-  setUserInfo(role, isStaff) {
+  setUserInfo(userId, role, isStaff) {
+    localStorage.setItem(TOKEN_KEYS.USER_ID, userId.toString())
     localStorage.setItem(TOKEN_KEYS.USER_ROLE, role)
     localStorage.setItem(TOKEN_KEYS.IS_STAFF, isStaff.toString())
   }
@@ -82,6 +93,15 @@ class AuthService {
 
   getIsStaff() {
     return localStorage.getItem(TOKEN_KEYS.IS_STAFF) === 'true'
+  }
+
+  getUserId() {
+    const userId = localStorage.getItem(TOKEN_KEYS.USER_ID)
+    return userId ? parseInt(userId) : null
+  }
+
+  getUsername() {
+    return localStorage.getItem(TOKEN_KEYS.USERNAME)
   }
 
   isAuthenticated() {

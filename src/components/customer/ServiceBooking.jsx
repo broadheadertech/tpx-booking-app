@@ -1,182 +1,229 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, Clock, DollarSign, User, Calendar, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Clock, DollarSign, User, Calendar, CheckCircle, XCircle } from 'lucide-react'
 import QRCode from 'qrcode'
+import bookingService from '../../services/customer/bookingService'
+import { useAuth } from '../../context/AuthContext'
 
 const ServiceBooking = ({ onBack }) => {
+  const { user, isAuthenticated } = useAuth()
+  const [services, setServices] = useState([])
+  const [barbers, setBarbers] = useState([])
   const [selectedService, setSelectedService] = useState(null)
+  const [selectedDate, setSelectedDate] = useState('')
   const [selectedTime, setSelectedTime] = useState(null)
   const [selectedStaff, setSelectedStaff] = useState(null)
-  const [step, setStep] = useState(1) // 1: services, 2: time & staff, 3: confirmation
+  const [step, setStep] = useState(1) // 1: services, 2: date & time, 3: staff, 4: confirmation, 5: success
+  const [loading, setLoading] = useState(true)
+  const [bookingLoading, setBookingLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [createdBooking, setCreatedBooking] = useState(null)
+  const [qrCodeLoading, setQrCodeLoading] = useState(true)
   const qrRef = useRef(null)
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      loadBookingData()
+    }
+  }, [isAuthenticated, user])
+
+  // Reset QR code loading state when step changes
+  useEffect(() => {
+    if (step === 5) {
+      setQrCodeLoading(true)
+    }
+  }, [step])
 
   // Generate QR code when booking is successful
   useEffect(() => {
-    if (step === 4 && qrRef.current && selectedService && selectedTime && selectedStaff) {
-      const bookingId = 'BK' + Date.now().toString().slice(-8)
-      const qrData = JSON.stringify({
-        bookingId: bookingId,
-        service: selectedService?.name,
-        time: selectedTime,
-        staff: selectedStaff?.name,
-        date: new Date().toISOString().split('T')[0],
-        barbershop: 'TPX Barbershop'
-      })
+    if (step === 5 && qrRef.current && createdBooking) {
+      // Add a small delay to ensure the canvas is properly rendered
+      setTimeout(() => {
+        const qrData = JSON.stringify({
+          bookingId: createdBooking.id,
+          bookingCode: createdBooking.booking_code,
+          service: selectedService?.name,
+          time: createdBooking.time,
+          barber: selectedStaff?.full_name || selectedStaff?.name || 'Any Barber',
+          date: createdBooking.date,
+          barbershop: 'TPX Barbershop'
+        })
+        
+        // Generate QR code as canvas
+        QRCode.toCanvas(qrRef.current, qrData, {
+          width: 192,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#ffffff'
+          },
+          errorCorrectionLevel: 'H'
+        }, (error) => {
+          if (error) {
+            console.error('QR Code generation error:', error)
+            // Retry once after a short delay
+            setTimeout(() => {
+              QRCode.toCanvas(qrRef.current, qrData, {
+                width: 192,
+                margin: 2,
+                color: {
+                  dark: '#000000',
+                  light: '#ffffff'
+                },
+                errorCorrectionLevel: 'M'
+              }, (retryError) => {
+                if (retryError) {
+                  console.error('QR Code retry failed:', retryError)
+                  setQrCodeLoading(false)
+                } else {
+                  setQrCodeLoading(false)
+                }
+              })
+            }, 500)
+          } else {
+            setQrCodeLoading(false)
+          }
+        })
+      }, 100)
+    }
+  }, [step, createdBooking, selectedService, selectedStaff])
+
+  const loadBookingData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
       
-      // Generate QR code as canvas
-      QRCode.toCanvas(qrRef.current, qrData, {
-        width: 192,
-        margin: 2,
-        color: {
-          dark: '#000000',
-          light: '#ffffff'
-        },
-        errorCorrectionLevel: 'H'
-      }, (error) => {
-        if (error) console.error('QR Code generation error:', error)
-      })
+      const [servicesData, barbersData] = await Promise.all([
+        bookingService.getServices(),
+        bookingService.getBarbers()
+      ])
+      
+      setServices(servicesData)
+      setBarbers(barbersData)
+    } catch (error) {
+      console.error('Error loading booking data:', error)
+      setError('Failed to load services and barbers')
+    } finally {
+      setLoading(false)
     }
-  }, [step, selectedService, selectedTime, selectedStaff])
+  }
 
-  const services = [
-    {
-      id: 1,
-      name: 'Premium Haircut',
-      price: 1750,
-      duration: '45 min',
-      category: 'Hair Services',
-      description: 'Complete haircut with wash, styling, and premium products',
-      image: '💇‍♂️'
-    },
-    {
-      id: 2,
-      name: 'Beard Trim & Style',
-      price: 1250,
-      duration: '30 min',
-      category: 'Beard Services',
-      description: 'Professional beard trimming and styling with hot towel',
-      image: '🧔'
-    },
-    {
-      id: 3,
-      name: 'Classic Cut',
-      price: 1000,
-      duration: '30 min',
-      category: 'Hair Services',
-      description: 'Traditional barbershop haircut with basic styling',
-      image: '✂️'
-    },
-    {
-      id: 4,
-      name: 'Hot Towel Shave',
-      price: 1500,
-      duration: '40 min',
-      category: 'Shave Services',
-      description: 'Luxury wet shave with hot towel treatment',
-      image: '🪒'
-    },
-    {
-      id: 5,
-      name: 'Hair Wash & Dry',
-      price: 500,
-      duration: '20 min',
-      category: 'Hair Services',
-      description: 'Professional hair wash with premium shampoo and styling',
-      image: '🧴'
-    },
-    {
-      id: 6,
-      name: 'Complete Package',
-      price: 2500,
-      duration: '75 min',
-      category: 'Premium Services',
-      description: 'Haircut, beard trim, hot towel shave, and styling',
-      image: '⭐'
+  // Generate available time slots for booking
+  const generateTimeSlots = () => {
+    const slots = []
+    const startHour = 9
+    const endHour = 18
+    
+    for (let hour = startHour; hour < endHour; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+        const displayTime = new Date(`2000-01-01T${time}`).toLocaleTimeString('en-PH', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        })
+        
+        // Randomly mark some slots as unavailable for demo
+        const available = Math.random() > 0.3
+        
+        slots.push({
+          time: time,
+          displayTime: displayTime,
+          available: available
+        })
+      }
     }
-  ]
+    
+    return slots
+  }
 
-  const timeSlots = [
-    { time: '9:00 AM', available: true },
-    { time: '9:30 AM', available: false },
-    { time: '10:00 AM', available: true },
-    { time: '10:30 AM', available: true },
-    { time: '11:00 AM', available: false },
-    { time: '11:30 AM', available: true },
-    { time: '1:00 PM', available: true },
-    { time: '1:30 PM', available: true },
-    { time: '2:00 PM', available: false },
-    { time: '2:30 PM', available: true },
-    { time: '3:00 PM', available: true },
-    { time: '3:30 PM', available: true },
-    { time: '4:00 PM', available: true },
-    { time: '4:30 PM', available: false }
-  ]
+  const timeSlots = generateTimeSlots()
 
-  const staff = [
-    {
-      id: 1,
-      name: 'Alex Rodriguez',
-      specialty: 'Master Barber',
-      experience: '8 years',
-      rating: 4.9,
-      image: '👨‍💼'
-    },
-    {
-      id: 2,
-      name: 'Mike Johnson',
-      specialty: 'Hair Styling Expert',
-      experience: '6 years',
-      rating: 4.8,
-      image: '👨‍💼'
-    },
-    {
-      id: 3,
-      name: 'Sarah Wilson',
-      specialty: 'Beard Specialist',
-      experience: '5 years',
-      rating: 4.7,
-      image: '👩‍💼'
+  // Get available barbers for selected service
+  const getAvailableBarbers = () => {
+    if (!selectedService) return barbers
+    
+    return barbers.filter(barber => 
+      barber.services && barber.services.includes(selectedService.id)
+    )
+  }
+
+  // Helper function to get service icon
+  const getServiceIcon = (serviceName) => {
+    const name = serviceName?.toLowerCase() || ''
+    if (name.includes('haircut') || name.includes('cut')) return '💇‍♂️'
+    if (name.includes('beard')) return '🧔'
+    if (name.includes('shave')) return '🪒'
+    if (name.includes('wash')) return '🧴'
+    if (name.includes('package') || name.includes('complete')) return '⭐'
+    return '✂️'
+  }
+
+  const handleCreateBooking = async () => {
+    if (!selectedService || !selectedDate || !selectedTime) {
+      alert('Please fill in all booking details')
+      return
     }
-  ]
+
+    try {
+      setBookingLoading(true)
+      
+      const bookingData = {
+        service: selectedService.id,
+        barber: selectedStaff?.id || null,
+        date: selectedDate,
+        time: selectedTime
+      }
+
+      const result = await bookingService.createBooking(bookingData)
+      
+      if (result.success) {
+        setCreatedBooking(result.data)
+        setStep(5) // Success step
+      } else {
+        alert(`Failed to create booking: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error creating booking:', error)
+      alert('Failed to create booking. Please try again.')
+    } finally {
+      setBookingLoading(false)
+    }
+  }
 
   const handleServiceSelect = (service) => {
     setSelectedService(service)
     setStep(2)
   }
 
-  const handleTimeAndStaffSelect = (time, staffMember) => {
+  const handleTimeSelect = (time) => {
     setSelectedTime(time)
-    setSelectedStaff(staffMember)
     setStep(3)
   }
 
-  const handleConfirmBooking = () => {
-    // Generate booking ID
-    const bookingId = 'BK' + Date.now().toString().slice(-8)
-    
-    // Here you would typically make an API call to create the booking
-    const bookingData = {
-      id: bookingId,
-      service: selectedService,
-      time: selectedTime,
-      staff: selectedStaff,
-      date: new Date().toISOString().split('T')[0],
-      status: 'confirmed'
+  const handleStaffSelect = (staffMember) => {
+    setSelectedStaff(staffMember)
+    setStep(4) // Go to confirmation
+  }
+
+  const handleConfirmBooking = async () => {
+    await handleCreateBooking()
+  }
+
+  const getStepTitle = () => {
+    switch (step) {
+      case 1: return 'Choose Service'
+      case 2: return 'Select Date & Time'
+      case 3: return 'Choose Barber'
+      case 4: return 'Confirm Booking'
+      case 5: return 'Booking Confirmed'
+      default: return 'Book Service'
     }
-    console.log('Booking confirmed:', bookingData)
-    
-    // Store in localStorage for demo (in real app, this would be in database)
-    const existingBookings = JSON.parse(localStorage.getItem('userBookings') || '[]')
-    existingBookings.push(bookingData)
-    localStorage.setItem('userBookings', JSON.stringify(existingBookings))
-    
-    // Set booking data for QR display
-    setStep(4) // Add QR step
   }
 
   const renderStepIndicator = () => (
     <div className="flex justify-center mb-4 px-4 py-2">
       <div className="flex items-center space-x-3">
-        {[1, 2, 3].map((stepNumber) => (
+        {[1, 2, 3, 4].map((stepNumber) => (
           <div key={stepNumber} className="flex items-center">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
               step >= stepNumber 
@@ -185,9 +232,9 @@ const ServiceBooking = ({ onBack }) => {
             }`} style={{
               backgroundColor: step >= stepNumber ? '#F68B24' : '#E0E0E0'
             }}>
-              {stepNumber}
+              {step > stepNumber ? '✓' : stepNumber}
             </div>
-            {stepNumber < 3 && (
+            {stepNumber < 4 && (
               <div className={`w-8 h-0.5 mx-1 rounded transition-all duration-300`} style={{
                 backgroundColor: step > stepNumber ? '#F68B24' : '#E0E0E0'
               }}></div>
@@ -198,50 +245,84 @@ const ServiceBooking = ({ onBack }) => {
     </div>
   )
 
-  const renderServiceSelection = () => (
-    <div className="space-y-3 px-4">
-      <div className="text-center mb-3">
-        <h2 className="text-xl font-bold mb-1" style={{ color: '#36454F' }}>Choose Your Service</h2>
-        <p className="text-sm font-medium" style={{ color: '#8B8B8B' }}>Select from our premium grooming services</p>
-      </div>
-      
-      <div className="space-y-2">
-        {services.map((service) => (
-          <button
-            key={service.id}
-            onClick={() => handleServiceSelect(service)}
-            className="w-full bg-white rounded-xl p-4 border hover:shadow-md transition-all duration-200 text-left group"
-            style={{ borderColor: '#E0E0E0' }}
-            onMouseEnter={(e) => e.target.style.borderColor = '#F68B24'}
-            onMouseLeave={(e) => e.target.style.borderColor = '#E0E0E0'}
+  const renderServiceSelection = () => {
+    if (loading) {
+      return (
+        <div className="text-center py-12 px-4">
+          <div className="rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4" style={{backgroundColor: '#F68B24', opacity: 0.1}}>
+            <Calendar className="w-8 h-8" style={{color: '#F68B24'}} />
+          </div>
+          <p className="text-sm" style={{color: '#8B8B8B'}}>Loading services...</p>
+        </div>
+      )
+    }
+
+    if (error) {
+      return (
+        <div className="text-center py-12 px-4">
+          <div className="rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4" style={{backgroundColor: '#dc3545', opacity: 0.1}}>
+            <XCircle className="w-8 h-8 text-red-500" />
+          </div>
+          <p className="text-sm text-red-600 mb-4">{error}</p>
+          <button 
+            onClick={loadBookingData}
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
           >
-            <div className="flex items-center space-x-3">
-              <div className="text-2xl">{service.image}</div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start mb-1">
-                  <h3 className="text-base font-bold transition-colors duration-200 truncate" style={{ color: '#36454F' }}>
-                    {service.name}
-                  </h3>
-                  <div className="text-right ml-2">
-                    <div className="text-lg font-bold" style={{ color: '#F68B24' }}>₱{service.price.toLocaleString()}</div>
-                    <div className="text-xs font-medium" style={{ color: '#8B8B8B' }}>{service.duration}</div>
-                  </div>
-                </div>
-                <div className="mb-2">
-                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ backgroundColor: '#F68B24', color: 'white' }}>
-                    {service.category}
-                  </span>
-                </div>
-                <p className="text-xs font-medium leading-relaxed" style={{ color: '#8B8B8B' }}>
-                  {service.description}
-                </p>
-              </div>
-            </div>
+            Try Again
           </button>
-        ))}
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-3 px-4">
+        <div className="text-center mb-3">
+          <h2 className="text-xl font-bold mb-1" style={{ color: '#36454F' }}>Choose Your Service</h2>
+          <p className="text-sm font-medium" style={{ color: '#8B8B8B' }}>Select from our premium grooming services</p>
+        </div>
+        
+        <div className="space-y-2">
+          {services.map((service) => (
+            <button
+              key={service.id}
+              onClick={() => handleServiceSelect(service)}
+              className="w-full bg-white rounded-xl p-4 border hover:shadow-md transition-all duration-200 text-left group"
+              style={{ borderColor: '#E0E0E0' }}
+              onMouseEnter={(e) => e.target.style.borderColor = '#F68B24'}
+              onMouseLeave={(e) => e.target.style.borderColor = '#E0E0E0'}
+            >
+              <div className="flex items-center space-x-3">
+                <div className="text-2xl">{getServiceIcon(service.name)}</div>
+                <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start mb-1">
+                      <h3 className="text-base font-bold transition-colors duration-200 truncate" style={{ color: '#36454F' }}>
+                        {service.name}
+                      </h3>
+                      <div className="text-right ml-2">
+                        <div className="text-lg font-bold" style={{ color: '#F68B24' }}>
+                          ₱{parseFloat(service.price || 0).toLocaleString()}
+                        </div>
+                        <div className="text-xs font-medium" style={{ color: '#8B8B8B' }}>
+                          {service.duration_minutes ? `${service.duration_minutes} min` : 'Duration varies'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mb-2">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ backgroundColor: '#F68B24', color: 'white' }}>
+                        Service
+                      </span>
+                    </div>
+                    <p className="text-xs font-medium leading-relaxed" style={{ color: '#8B8B8B' }}>
+                      {service.description || 'Professional grooming service'}
+                    </p>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   const renderTimeAndStaffSelection = () => (
     <div className="space-y-3 px-4">
@@ -303,24 +384,24 @@ const ServiceBooking = ({ onBack }) => {
       <div className="bg-white rounded-xl p-4 border shadow-sm" style={{ borderColor: '#E0E0E0' }}>
         <h3 className="text-base font-bold mb-3" style={{ color: '#36454F' }}>Choose Your Barber</h3>
         <div className="space-y-2">
-          {staff.map((staffMember) => (
+          {getAvailableBarbers().map((barber) => (
             <button
-              key={staffMember.id}
-              onClick={() => setSelectedStaff(staffMember)}
+              key={barber.id}
+              onClick={() => handleStaffSelect(barber)}
               className="w-full p-3 rounded-lg border transition-all duration-200 text-left"
               style={{
-                borderColor: selectedStaff?.id === staffMember.id ? '#F68B24' : '#E0E0E0',
-                backgroundColor: selectedStaff?.id === staffMember.id ? 'rgba(246, 139, 36, 0.1)' : 'white'
+                borderColor: selectedStaff?.id === barber.id ? '#F68B24' : '#E0E0E0',
+                backgroundColor: selectedStaff?.id === barber.id ? 'rgba(246, 139, 36, 0.1)' : 'white'
               }}
             >
               <div className="flex items-center space-x-2">
-                <div className="text-xl">{staffMember.image}</div>
+                <div className="text-xl">👨‍💼</div>
                 <div className="flex-1">
-                  <h4 className="font-bold text-sm" style={{ color: '#36454F' }}>{staffMember.name}</h4>
-                  <p className="text-xs" style={{ color: '#8B8B8B' }}>{staffMember.specialty}</p>
+                  <h4 className="font-bold text-sm" style={{ color: '#36454F' }}>{barber.full_name}</h4>
+                  <p className="text-xs" style={{ color: '#8B8B8B' }}>Professional Barber</p>
                   <div className="flex items-center space-x-1 mt-0.5">
                     <div className="flex text-yellow-400 text-xs">★★★★★</div>
-                    <span className="text-xs" style={{ color: '#8B8B8B' }}>{staffMember.rating}</span>
+                    <span className="text-xs" style={{ color: '#8B8B8B' }}>5.0</span>
                   </div>
                 </div>
               </div>
@@ -352,27 +433,27 @@ const ServiceBooking = ({ onBack }) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {staff.map((staffMember) => (
+        {getAvailableBarbers().map((barber) => (
           <button
-            key={staffMember.id}
-            onClick={() => handleStaffSelect(staffMember)}
+            key={barber.id}
+            onClick={() => handleStaffSelect(barber)}
             className="group bg-white rounded-3xl p-6 shadow-xl border-2 border-[#F5F5F5] hover:border-[#FF8C42] hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
           >
             <div className="text-center">
-              <div className="text-6xl mb-4">{staffMember.image}</div>
+              <div className="text-6xl mb-4">👨‍💼</div>
               <h3 className="text-xl font-black text-[#1A1A1A] mb-2 group-hover:text-[#FF8C42] transition-colors duration-200">
-                {staffMember.name}
+                {barber.full_name}
               </h3>
               <div className="space-y-2">
                 <div className="px-3 py-1 bg-[#FF8C42]/10 text-[#FF8C42] rounded-full text-sm font-semibold inline-block">
-                  {staffMember.specialty}
+                  Professional Barber
                 </div>
-                <p className="text-[#6B6B6B] text-sm font-medium">{staffMember.experience} experience</p>
+                <p className="text-[#6B6B6B] text-sm font-medium">Experienced professional</p>
                 <div className="flex items-center justify-center space-x-1">
                   <div className="flex text-yellow-400">
                     {'★'.repeat(5)}
                   </div>
-                  <span className="text-sm font-bold text-[#6B6B6B] ml-1">{staffMember.rating}</span>
+                  <span className="text-sm font-bold text-[#6B6B6B] ml-1">5.0</span>
                 </div>
               </div>
             </div>
@@ -446,8 +527,6 @@ const ServiceBooking = ({ onBack }) => {
   )
 
   const renderBookingSuccess = () => {
-    const bookingId = 'BK' + Date.now().toString().slice(-8)
-
     return (
       <div className="space-y-6 px-4">
         <div className="text-center">
@@ -465,12 +544,21 @@ const ServiceBooking = ({ onBack }) => {
           {/* Real QR Code */}
           <div className="flex justify-center mb-4">
             <div className="p-4 bg-white rounded-2xl border-2 shadow-sm" style={{ borderColor: '#E0E0E0' }}>
-              <canvas ref={qrRef} className="rounded-xl"></canvas>
+              {qrCodeLoading ? (
+                <div className="w-48 h-48 flex items-center justify-center">
+                  <div className="text-center space-y-3">
+                    <div className="animate-spin w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full mx-auto"></div>
+                    <p className="text-sm" style={{ color: '#8B8B8B' }}>Generating QR Code...</p>
+                  </div>
+                </div>
+              ) : (
+                <canvas ref={qrRef} className="rounded-xl"></canvas>
+              )}
             </div>
           </div>
           
           <div className="text-center space-y-2">
-            <p className="text-lg font-black" style={{ color: '#36454F' }}>Booking ID: {bookingId}</p>
+            <p className="text-lg font-black" style={{ color: '#36454F' }}>Booking ID: {createdBooking?.booking_code || 'Loading...'}</p>
             <p className="text-sm" style={{ color: '#8B8B8B' }}>Show this QR code when you arrive</p>
           </div>
         </div>
@@ -484,11 +572,13 @@ const ServiceBooking = ({ onBack }) => {
             </div>
             <div className="flex justify-between">
               <span className="font-medium" style={{ color: '#36454F' }}>Date & Time:</span>
-              <span className="font-bold" style={{ color: '#36454F' }}>Today, {selectedTime}</span>
+              <span className="font-bold" style={{ color: '#36454F' }}>
+                {createdBooking?.date ? new Date(createdBooking.date).toLocaleDateString() : 'Today'}, {createdBooking?.time || selectedTime}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="font-medium" style={{ color: '#36454F' }}>Barber:</span>
-              <span className="font-bold" style={{ color: '#36454F' }}>{selectedStaff?.name}</span>
+              <span className="font-bold" style={{ color: '#36454F' }}>{selectedStaff?.full_name || selectedStaff?.name || 'Any Barber'}</span>
             </div>
             <div className="flex justify-between border-t pt-3" style={{ borderColor: 'rgba(246, 139, 36, 0.2)' }}>
               <span className="font-bold" style={{ color: '#36454F' }}>Total:</span>

@@ -23,14 +23,16 @@ export const AuthProvider = ({ children }) => {
   const checkAuthStatus = () => {
     try {
       const isAuth = authService.isAuthenticated()
+      const userId = authService.getUserId()
       const userRole = authService.getUserRole()
       const isStaff = authService.getIsStaff()
 
-      console.log('Checking auth status:', { isAuth, userRole, isStaff })
+      console.log('Checking auth status:', { isAuth, userId, userRole, isStaff })
 
       if (isAuth) {
         setIsAuthenticated(true)
         setUser({
+          id: userId,
           role: userRole,
           is_staff: isStaff
         })
@@ -55,12 +57,14 @@ export const AuthProvider = ({ children }) => {
       
       if (result.success) {
         console.log('Login successful, setting user state:', {
+          id: result.data.user_id,
           role: result.data.role,
           is_staff: result.data.is_staff
         })
         
         setIsAuthenticated(true)
         setUser({
+          id: result.data.user_id,
           role: result.data.role,
           is_staff: result.data.is_staff
         })

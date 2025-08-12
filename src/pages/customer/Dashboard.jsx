@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { User, Calendar, Gift, Star, Clock, MapPin, Phone, History } from 'lucide-react'
 import ServiceBooking from '../../components/customer/ServiceBooking'
 import CustomerProfile from '../../components/customer/CustomerProfile'
@@ -6,10 +6,17 @@ import VoucherManagement from '../../components/customer/VoucherManagement'
 import LoyaltyPoints from '../../components/customer/LoyaltyPoints'
 import MyBookings from '../../components/customer/MyBookings'
 import bannerImage from '../../assets/img/banner.jpg'
+import loyaltyService from '../../services/customer/loyaltyService'
+import voucherService from '../../services/customer/voucherService'
+import { useAuth } from '../../context/AuthContext'
 
 const Dashboard = () => {
+  const { user, isAuthenticated } = useAuth()
   const [activeSection, setActiveSection] = useState('home')
   const [customerData, setCustomerData] = useState(null)
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0)
+  const [activeVouchers, setActiveVouchers] = useState(0)
+  const [loading, setLoading] = useState(true)
 
   const sections = [
     { id: 'home', label: 'Dashboard', icon: User },
@@ -18,9 +25,42 @@ const Dashboard = () => {
     { id: 'vouchers', label: 'Vouchers', icon: Gift }
   ]
 
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      loadDashboardData()
+    }
+  }, [isAuthenticated, user])
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true)
+      
+      // Fetch loyalty points
+      const pointsData = await loyaltyService.getUserPoints()
+      setLoyaltyPoints(pointsData.total_points || 0)
+      
+      // Fetch available vouchers count
+      const availableVouchers = await voucherService.getAvailableVouchers()
+      setActiveVouchers(availableVouchers.length)
+      
+    } catch (error) {
+      console.error('Error loading dashboard data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const quickStats = [
-    { label: 'Loyalty Points', value: '1,250', icon: Star },
-    { label: 'Active Vouchers', value: '3', icon: Gift }
+    { 
+      label: 'Loyalty Points', 
+      value: loading ? '...' : loyaltyService.formatPoints(loyaltyPoints), 
+      icon: Star 
+    },
+    { 
+      label: 'Active Vouchers', 
+      value: loading ? '...' : activeVouchers.toString(), 
+      icon: Gift 
+    }
   ]
 
   const renderContent = () => {
@@ -191,32 +231,30 @@ const Dashboard = () => {
       </div>
 
       {/* Bottom Navigation */}
-      {activeSection === 'home' && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t" style={{borderColor: '#E0E0E0'}}>
-          <div className="max-w-md mx-auto px-4">
-            <div className="grid grid-cols-4 py-2">
-              {sections.map((section) => {
-                const IconComponent = section.icon
-                const isActive = activeSection === section.id
-                return (
-                  <button
-                    key={section.id}
-                    onClick={() => setActiveSection(section.id)}
-                    className="flex flex-col items-center space-y-1 py-2 px-1 rounded-lg transition-all duration-200"
-                    style={{
-                      backgroundColor: isActive ? '#F68B24' : 'transparent',
-                      color: isActive ? 'white' : '#8B8B8B'
-                    }}
-                  >
-                    <IconComponent className="w-4 h-4" />
-                    <span className="text-xs font-medium">{section.label}</span>
-                  </button>
-                )
-              })}
-            </div>
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t" style={{borderColor: '#E0E0E0'}}>
+        <div className="max-w-md mx-auto px-4">
+          <div className="grid grid-cols-4 py-2">
+            {sections.map((section) => {
+              const IconComponent = section.icon
+              const isActive = activeSection === section.id
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSection(section.id)}
+                  className="flex flex-col items-center space-y-1 py-2 px-1 rounded-lg transition-all duration-200"
+                  style={{
+                    backgroundColor: isActive ? '#F68B24' : 'transparent',
+                    color: isActive ? 'white' : '#8B8B8B'
+                  }}
+                >
+                  <IconComponent className="w-4 h-4" />
+                  <span className="text-xs font-medium">{section.label}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }

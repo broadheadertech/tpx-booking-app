@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Gift, Calendar, User, DollarSign, CheckCircle, XCircle, Clock, Search, Filter, Plus, RotateCcw, QrCode, Download, Printer, Copy } from 'lucide-react'
+import { Gift, Calendar, User, DollarSign, CheckCircle, XCircle, Clock, Search, Filter, Plus, RotateCcw, QrCode, Download, Printer, Copy, Mail } from 'lucide-react'
 import QRCode from 'qrcode'
+import SendVoucherModal from './SendVoucherModal'
 
 const VoucherManagement = ({ vouchers = [], onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('created_at')
   const [showQRCode, setShowQRCode] = useState(null)
+  const [showSendModal, setShowSendModal] = useState(null)
 
   const getStatusConfig = (voucher) => {
     if (voucher.redeemed) {
@@ -378,11 +380,11 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
                     </span>
                   </div>
                   <button
-                    onClick={() => setShowQRCode(voucher)}
+                    onClick={() => setShowSendModal(voucher)}
                     className="inline-flex items-center px-2.5 py-1 border border-orange-300 text-xs font-medium rounded text-orange-700 bg-orange-50 hover:bg-orange-100"
-                    title="View QR Code"
+                    title="Send via Email"
                   >
-                    <QrCode className="h-3 w-3 mr-1" /> QR
+                    <Mail className="h-3 w-3 mr-1" /> Send
                   </button>
                 </div>
               </div>
@@ -419,12 +421,18 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
               </div>
 
               {!voucher.redeemed && !voucher.isExpired && (
-                <div className="mt-4 pt-3 border-t border-gray-200">
+                <div className="mt-4 pt-3 border-t border-gray-200 flex space-x-2">
                   <button
                     onClick={() => setShowQRCode(voucher)}
-                    className="w-full px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg hover:from-orange-600 hover:to-amber-600 transition-colors text-sm font-semibold flex items-center justify-center"
+                    className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium flex items-center justify-center"
                   >
-                    <QrCode className="h-4 w-4 mr-2" /> View QR to Redeem
+                    <QrCode className="h-4 w-4 mr-2" /> View QR
+                  </button>
+                  <button
+                    onClick={() => setShowSendModal(voucher)}
+                    className="flex-1 px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg hover:from-orange-600 hover:to-amber-600 transition-colors text-sm font-semibold flex items-center justify-center"
+                  >
+                    <Mail className="h-4 w-4 mr-2" /> Send Email
                   </button>
                 </div>
               )}
@@ -448,6 +456,14 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
 
       {showQRCode && (
         <QRCodeModal voucher={showQRCode} onClose={() => setShowQRCode(null)} />
+      )}
+
+      {showSendModal && (
+        <SendVoucherModal 
+          voucher={showSendModal} 
+          isOpen={!!showSendModal}
+          onClose={() => setShowSendModal(null)} 
+        />
       )}
     </div>
   )

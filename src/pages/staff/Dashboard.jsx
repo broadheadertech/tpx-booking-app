@@ -422,23 +422,103 @@ function StaffDashboard() {
 
     if (currentLoading) {
       return (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-          <div className="ml-3 text-gray-500">Loading {activeTab}...</div>
+        <div className="space-y-6">
+          {/* Loading header */}
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#FF8C42]"></div>
+            <div className="ml-4 text-[#6B6B6B] text-lg">Loading {activeTab} data...</div>
+          </div>
+          
+          {/* Skeleton loading based on tab */}
+          {activeTab === 'overview' && (
+            <div className="space-y-6">
+              {/* Stats cards skeleton */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[1,2,3,4].map(i => (
+                  <div key={i} className="bg-white rounded-2xl p-6 shadow-sm border border-[#F5F5F5]">
+                    <div className="animate-pulse">
+                      <div className="h-4 bg-gray-200 rounded w-3/4 mb-3"></div>
+                      <div className="h-8 bg-gray-200 rounded w-1/2 mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Recent activity skeleton */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#F5F5F5]">
+                <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+                <div className="space-y-3">
+                  {[1,2,3,4].map(i => (
+                    <div key={i} className="animate-pulse flex items-center space-x-4">
+                      <div className="h-10 w-10 bg-gray-200 rounded-full"></div>
+                      <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                        <div className="h-3 bg-gray-200 rounded w-1/4"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {(activeTab === 'customers' || activeTab === 'vouchers' || activeTab === 'bookings' || activeTab === 'services' || activeTab === 'barbers') && (
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#F5F5F5]">
+              <div className="animate-pulse">
+                {/* Table header skeleton */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+                  <div className="h-10 bg-gray-200 rounded w-32"></div>
+                </div>
+                
+                {/* Table rows skeleton */}
+                <div className="space-y-4">
+                  {[1,2,3,4,5].map(i => (
+                    <div key={i} className="flex items-center space-x-4 py-3 border-b border-gray-100">
+                      <div className="h-10 w-10 bg-gray-200 rounded-full"></div>
+                      <div className="flex-1 grid grid-cols-4 gap-4">
+                        <div className="h-4 bg-gray-200 rounded"></div>
+                        <div className="h-4 bg-gray-200 rounded"></div>
+                        <div className="h-4 bg-gray-200 rounded"></div>
+                        <div className="h-4 bg-gray-200 rounded w-20"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )
     }
 
     if (currentError) {
       return (
-        <div className="flex items-center justify-center py-12">
-          <div className="text-red-500">{currentError}</div>
-          <button 
-            onClick={() => loadTabData(activeTab)}
-            className="ml-4 px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600"
-          >
-            Retry
-          </button>
+        <div className="bg-white rounded-2xl p-8 shadow-sm border border-red-200">
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-[#1A1A1A] mb-2">Failed to Load {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</h3>
+            <p className="text-[#6B6B6B] mb-6 max-w-md mx-auto">{currentError}</p>
+            <div className="flex items-center justify-center space-x-4">
+              <button 
+                onClick={() => loadTabData(activeTab)}
+                className="px-6 py-2 bg-[#FF8C42] text-white rounded-xl hover:bg-[#FF7A2B] transition-colors"
+              >
+                Try Again
+              </button>
+              <button 
+                onClick={() => setActiveTab('overview')}
+                className="px-6 py-2 border-2 border-[#F5F5F5] text-[#6B6B6B] rounded-xl hover:border-[#FF8C42] hover:text-[#FF8C42] transition-colors"
+              >
+                Go to Overview
+              </button>
+            </div>
+          </div>
         </div>
       )
     }

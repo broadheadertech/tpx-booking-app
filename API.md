@@ -1,7 +1,9 @@
 # TPX Booking System API
 
-Version: 1.0
-Base URL: /api/
+Version: 1.0.0
+
+const API_BASE_URL = 'https://tpx-web-service.onrender.com/api'
+path: src/services/api.js
 Auth: JWT Bearer (Authorization: Bearer <access_token>)
 Docs:
 - OpenAPI JSON: GET /api/schema/
@@ -13,6 +15,7 @@ Conventions:
 - Timezone: UTC (server)
 - Monetary values: decimal strings (DB Decimal)
 - Date/time format: date YYYY-MM-DD, time HH:MM[:SS]
+- Custom User Model: CustomUser with roles (client, barber, administrator, staff)
 
 Global errors:
 - 401 Unauthorized when token missing/invalid
@@ -32,7 +35,7 @@ Authentication
 POST /api/register/
 Public
 
-Creates a new user and sends a welcome email (non-blocking; failures don’t break registration).
+Creates a new user with default role "client" and returns JWT tokens immediately.
 
 Request body
 {
@@ -46,12 +49,13 @@ Request body
 
 Success 201
 {
-  "id": number,
-  "username": "string",
-  "email": "string",
-  "nickname": "string",
-  "mobile_number": "string",
-  "birthday": "YYYY-MM-DD|null"
+  "refresh": "<jwt_refresh_token>",
+  "access": "<jwt_access_token>",
+  "user": {
+    "id": number,
+    "username": "string",
+    "email": "string"
+  }
 }
 
 Possible errors
@@ -87,6 +91,7 @@ Success 200
 {
   "refresh": "<jwt>",
   "access": "<jwt>",
+  "user_id": number,
   "role": "client|barber|administrator|staff",
   "is_staff": true|false
 }
@@ -136,7 +141,7 @@ Services
 
 Base: /api/services/
 View: ServiceViewSet
-Auth: Public (no permission class configured)
+Auth: Public (no authentication required)
 
 Model fields
 - id: int
@@ -220,7 +225,7 @@ Barbers
 
 Base: /api/barbers/
 View: BarberViewSet
-Auth: Public (no permission class configured) — consider protecting
+Auth: Public (no authentication required) — consider protecting
 
 Model fields
 - id: int
@@ -304,14 +309,15 @@ Bookings
 
 Base: /api/bookings/
 View: BookingViewSet
-Auth: Public (current code has no permission class)
+Auth: Public (no authentication required)
 Notes:
-- Serializer fields do not include `user`; POST may fail due to missing owner assignment.
+- User assignment needs to be handled in view logic for authenticated users
+- booking_code is auto-generated using utils.generate_booking_code()
 
 Model fields
 - id: int
-- booking_code: string (auto, read-only)
-- user: FK (implicit, not in serializer)
+- booking_code: string (auto-generated, read-only, unique)
+- user: FK CustomUser (not in serializer, handled by view)
 - service: FK Service (required)
 - barber: FK Barber (optional)
 - date: "YYYY-MM-DD"
@@ -375,6 +381,7 @@ Create/Update body
 Success 200/201
 {
   "id": 10,
+  "booking_code": "BK-A1B2C3D4",
   "service": 1,
   "barber": 2,
   "barber_name": "John Smith",
@@ -402,10 +409,11 @@ Clients
 
 Base: /api/clients/
 View: ClientViewSet (ReadOnlyModelViewSet)
-Auth: Public (no permission class configured)
+Auth: Public (no authentication required)
 
 Description
-- Returns users with `role = "client"`.
+- Returns CustomUser instances with `role = "client"`.
+- Read-only endpoints (GET only)
 
 Serializer fields (UserSerializer)
 - id: number
@@ -413,8 +421,7 @@ Serializer fields (UserSerializer)
 - nickname: string|null
 - email: string
 - mobile_number: string
-- birthday: YYYY-MM-DD|null
-- role: string ("client"|"barber"|"administrator"|"staff")
+- role: string (always "client" for this endpoint)
 
 Endpoints
 - GET /api/clients/
@@ -457,7 +464,7 @@ Loyalty Points
 
 Base: /api/points/
 View: LoyaltyPointViewSet
-Auth: Public (no permission class configured) — consider protecting
+Auth: Public (no authentication required) — consider protecting
 
 Model fields
 - id: int
@@ -533,18 +540,22 @@ Vouchers
 ------------------------------------------------------------
 
 Base: /api/vouchers/
-View: VoucherViewSet (ModelViewSet + custom action)
-Auth: Required (IsAuthenticated)
+View: VoucherViewSet (ModelViewSet)
+Auth: Public (no authentication required) — consider protecting
 
 Model fields
 - id: int
 - code: string (unique, <=12)
-- user: FK user
 - value: decimal string (e.g., "50.00")
 - points_required: int
-- redeemed: bool
+- redeemed: bool (default false)
+- max_uses: int (default 10)
+- used_count: int (default 0)
 - expires_at: datetime
-- created_at: datetime
+- created_at: datetime (auto_now_add)
+
+Methods
+- is_valid(): returns bool (checks redeemed, used_count < max_uses, not expired)
 
 Endpoints
 - GET /api/vouchers/
@@ -595,10 +606,11 @@ Delete (DELETE /api/vouchers/{id}/)
 Create/Update body
 {
   "code": "ABC123",
-  "user": 3,
   "value": "50.00",
   "points_required": 100,
   "redeemed": false,
+  "max_uses": 10,
+  "used_count": 0,
   "expires_at": "2025-12-31T23:59:59Z"
 }
 
@@ -606,10 +618,11 @@ Success (example)
 {
   "id": 12,
   "code": "ABC123",
-  "user": 3,
   "value": "50.00",
   "points_required": 100,
   "redeemed": false,
+  "max_uses": 10,
+  "used_count": 0,
   "expires_at": "2025-12-31T23:59:59Z",
   "created_at": "2025-08-11T06:28:58Z"
 }
@@ -619,36 +632,75 @@ Errors
 - 400: field validation errors
 - 404: not found
 
-Custom Action: Redeem
+Custom Endpoint: Redeem Voucher
 POST /api/vouchers/redeem/
-Auth: Required
+Auth: Required (IsAuthenticated)
 
-Body
+Body (Normal User)
 {
-  "code": "ABC123",
-  "total_amount": "100.00"
+  "code": "ABC123"
 }
 
-Success 200
+Body (Staff User)
 {
-  "message": "Voucher redeemed successfully for user <username>.",
-  "original_amount": 100.0,
-  "discounted_amount": 50.0,
-  "voucher_code": "ABC123"
+  "code": "ABC123",
+  "username": "target_user"  // Required for staff
+}
+
+Success 200 (Normal User)
+{
+  "message": "Voucher redeemed successfully",
+  "value": "50.00"
+}
+
+Success 200 (Staff User)
+{
+  "username": "target_user",
+  "code": "ABC123",
+  "value": "50.00",
+  "status": "claimed by staff" | "already claimed"
 }
 
 Errors
-- 400: { "detail": "code and total_amount are required." }
-- 400: { "detail": "Voucher already redeemed." }
-- 400: { "detail": "Voucher has expired." }
-- 403: { "detail": "You are not allowed to redeem this voucher." }
-- 404: { "detail": "Voucher not found." }
+- 400: { "error": "Voucher code is required" }
+- 400: { "error": "Username is required for staff claim" }
+- 400: { "error": "Voucher has expired" }
+- 400: { "error": "Voucher usage limit reached" }
+- 400: { "error": "You have already redeemed this voucher" }
+- 404: { "error": "Invalid voucher code" }
+- 404: { "error": "Target user not found" }
 
-Curl
+Curl (Normal User)
 curl -X POST http://localhost:8000/api/vouchers/redeem/ \
   -H "Authorization: Bearer <ACCESS>" \
   -H "Content-Type: application/json" \
-  -d '{"code":"ABC123","total_amount":"100.00"}'
+  -d '{"code":"ABC123"}'
+
+Curl (Staff User)
+curl -X POST http://localhost:8000/api/vouchers/redeem/ \
+  -H "Authorization: Bearer <ACCESS>" \
+  -H "Content-Type: application/json" \
+  -d '{"code":"ABC123","username":"target_user"}'
+
+Voucher Usage History
+GET /api/vouchers/history/
+Auth: Required (IsAuthenticated)
+
+Description
+- Returns voucher usage history for the authenticated user
+- Ordered by most recent usage first
+
+Success 200
+[
+  {
+    "voucher_code": "ABC123",
+    "used_at": "2025-08-11T06:28:58Z"
+  }
+]
+
+Curl
+curl http://localhost:8000/api/vouchers/history/ \
+  -H "Authorization: Bearer <ACCESS>"
 
 ------------------------------------------------------------
 Sales
@@ -656,7 +708,7 @@ Sales
 
 Base: /api/sales/
 View: SaleViewSet
-Auth: Public (no permission class configured) — consider protecting
+Auth: Public (no authentication required) — consider protecting
 
 Model fields
 - id: int
@@ -733,6 +785,41 @@ Errors
 - 404: record not found
 
 ------------------------------------------------------------
+Custom User Model
+------------------------------------------------------------
+
+Model: CustomUser (extends AbstractUser)
+Description: Enhanced user model with additional fields and role-based access
+
+Additional fields beyond Django's AbstractUser:
+- role: string (choices: "client", "barber", "administrator", "staff", default: "client")
+- nickname: string (max 50 chars, optional)
+- mobile_number: string (max 15 chars, unique, required)
+- birthday: date (optional)
+- email: email (unique, required - overrides AbstractUser to make it unique)
+
+Role descriptions:
+- client: Regular customers who book services
+- barber: Service providers who can be assigned to bookings
+- administrator: Full system access
+- staff: Can redeem vouchers on behalf of users
+
+------------------------------------------------------------
+Voucher Usage Tracking
+------------------------------------------------------------
+
+Model: VoucherUsage
+Description: Tracks individual voucher redemptions by users
+
+Model fields
+- id: int
+- voucher: FK Voucher (related_name="usages")
+- user: FK CustomUser
+- used_at: datetime (auto_now_add)
+
+Note: This model is used internally to track voucher usage and enforce per-user redemption limits.
+
+------------------------------------------------------------
 Pagination & Filtering
 ------------------------------------------------------------
 
@@ -745,12 +832,30 @@ Pagination & Filtering
   }
 
 ------------------------------------------------------------
+Utility Functions
+------------------------------------------------------------
+
+Booking Code Generation:
+- Function: generate_booking_code(length=8, prefix="BK-")
+- Location: core/utils.py
+- Format: "BK-" + 8 random uppercase letters/digits
+- Example: "BK-A1B2C3D4"
+- Uniqueness: Checked during booking creation with fallback to timestamp-based code
+
+------------------------------------------------------------
 Integration Notes
 ------------------------------------------------------------
 
 - Do not send Authorization header on /api/register/ or /api/login/.
-- Always send Authorization for protected endpoints (bookings, vouchers, redeem).
+- Send Authorization for protected endpoints: /api/vouchers/redeem/, /api/vouchers/history/
+- Most endpoints are currently public but should be protected in production
 - Convert decimal strings to numbers in UI if needed.
 - Handle 401 by redirecting to login and refreshing tokens if applicable.
 - Handle 403 by showing a permission error.
 - Show validation messages from 400 responses near the relevant fields.
+- JWT tokens include custom claims: user_id, role, is_staff
+- Registration returns JWT tokens immediately (no separate login required)
+- Booking codes are auto-generated and unique
+- Voucher redemption supports both user and staff workflows
+- Database: PostgreSQL (Supabase)
+- CORS enabled for localhost:3000

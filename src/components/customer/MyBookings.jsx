@@ -1,17 +1,78 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { ArrowLeft, Calendar, Clock, User, QrCode, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import QRCode from 'qrcode'
+import bookingService from '../../services/customer/bookingService'
+import { useAuth } from '../../context/AuthContext'
 
 const MyBookings = ({ onBack }) => {
+  const { user, isAuthenticated } = useAuth()
   const [bookings, setBookings] = useState([])
   const [activeFilter, setActiveFilter] = useState('all')
   const [showQRCode, setShowQRCode] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [services, setServices] = useState([])
+  const [barbers, setBarbers] = useState([])
 
   useEffect(() => {
-    // Load bookings from localStorage (in real app, this would be from API)
-    const savedBookings = JSON.parse(localStorage.getItem('userBookings') || '[]')
-    setBookings(savedBookings)
-  }, [])
+    if (isAuthenticated && user) {
+      loadBookingsData()
+    }
+  }, [isAuthenticated, user])
+
+  const loadBookingsData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      // Verify user is authenticated
+      if (!isAuthenticated || !user) {
+        setError('Please log in to view your bookings')
+        return
+      }
+      
+      // Use the new user-specific bookings endpoint
+      const bookingsData = await bookingService.getUserBookings()
+      
+      // The new API returns bookings with nested service and barber data
+      const bookingList = Array.isArray(bookingsData) ? bookingsData : []
+      setBookings(bookingList)
+      
+      // No need to load separate services and barbers data as they're included in bookings
+      setServices([])
+      setBarbers([])
+    } catch (error) {
+      console.error('Error loading bookings data:', error)
+      if (error.message.includes('not authenticated')) {
+        setError('Authentication required. Please log in again.')
+      } else {
+        setError('Failed to load bookings')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Helper functions are no longer needed as data is nested in booking objects
+  // Service and barber data are now included directly in each booking
+
+  const handleCancelBooking = async (bookingId) => {
+    if (window.confirm('Are you sure you want to cancel this booking?')) {
+      try {
+        const result = await bookingService.cancelBooking(bookingId)
+        if (result.success) {
+          // Reload bookings after successful cancellation
+          await loadBookingsData()
+          alert('Booking cancelled successfully')
+        } else {
+          alert(`Failed to cancel booking: ${result.error}`)
+        }
+      } catch (error) {
+        console.error('Error cancelling booking:', error)
+        alert('Failed to cancel booking. Please try again.')
+      }
+    }
+  }
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -108,130 +169,168 @@ const MyBookings = ({ onBack }) => {
           </div>
         </div>
 
-        {/* Bookings List */}
-        <div className="space-y-3">
-          {filteredBookings.length === 0 ? (
-            <div className="text-center py-8">
-              <Calendar className="w-12 h-12 mx-auto mb-3" style={{color: '#8B8B8B'}} />
-              <h3 className="text-lg font-bold mb-2" style={{color: '#36454F'}}>No Bookings Found</h3>
-              <p className="mb-4" style={{color: '#8B8B8B'}}>
-                {activeFilter === 'all' 
-                  ? "You haven't made any bookings yet"
-                  : `No ${activeFilter} bookings found`
-                }
-              </p>
-              <button
-                onClick={onBack}
-                className="px-6 py-3 text-white font-bold rounded-xl transition-all duration-200"
-                style={{backgroundColor: '#F68B24'}}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
-              >
-                Book Your First Service
-              </button>
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12">
+            <div className="rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4" style={{backgroundColor: '#F68B24', opacity: 0.1}}>
+              <Calendar className="w-8 h-8" style={{color: '#F68B24'}} />
             </div>
-          ) : (
-            filteredBookings.map((booking) => (
-              <div key={booking.id} className="bg-white rounded-xl p-4 border shadow-sm hover:shadow-lg transition-all duration-200" style={{borderColor: '#E0E0E0'}}>
-                {/* Booking Header */}
-                <div className="flex justify-between items-start mb-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{backgroundColor: '#F68B24'}}>
-                      <span className="text-white text-lg">{booking.service?.image || '✂️'}</span>
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold" style={{color: '#36454F'}}>{booking.service?.name}</h3>
-                      <p className="text-xs" style={{color: '#8B8B8B'}}>ID: {booking.id}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {getStatusIcon(booking.status)}
-                    <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getStatusColor(booking.status)}`}>
-                      {booking.status.toUpperCase()}
-                    </span>
-                  </div>
-                </div>
+            <p className="text-sm" style={{color: '#8B8B8B'}}>Loading bookings...</p>
+          </div>
+        )}
 
-                {/* Booking Details */}
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="w-3 h-3" style={{color: '#F68B24'}} />
-                    <div>
-                      <p className="text-xs" style={{color: '#8B8B8B'}}>Date</p>
-                      <p className="text-sm font-bold" style={{color: '#36454F'}}>{new Date(booking.date).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-3 h-3" style={{color: '#F68B24'}} />
-                    <div>
-                      <p className="text-xs" style={{color: '#8B8B8B'}}>Time</p>
-                      <p className="text-sm font-bold" style={{color: '#36454F'}}>{booking.time}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <User className="w-3 h-3" style={{color: '#F68B24'}} />
-                    <div>
-                      <p className="text-xs" style={{color: '#8B8B8B'}}>Barber</p>
-                      <p className="text-sm font-bold" style={{color: '#36454F'}}>{booking.staff?.name}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 rounded" style={{backgroundColor: '#F68B24'}}></div>
-                    <div>
-                      <p className="text-xs" style={{color: '#8B8B8B'}}>Price</p>
-                      <p className="text-sm font-bold" style={{color: '#F68B24'}}>₱{booking.service?.price?.toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
+        {/* Error State */}
+        {error && (
+          <div className="text-center py-12">
+            <div className="rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4" style={{backgroundColor: '#dc3545', opacity: 0.1}}>
+              <XCircle className="w-8 h-8 text-red-500" />
+            </div>
+            <p className="text-sm text-red-600 mb-4">{error}</p>
+            <button 
+              onClick={loadBookingsData}
+              className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
 
-                {/* Action Buttons */}
-                <div className="flex space-x-2">
-                  {booking.status === 'confirmed' && (
-                    <button
-                      onClick={() => setShowQRCode(booking)}
-                      className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
-                      style={{backgroundColor: '#F68B24'}}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
-                    >
-                      <QrCode className="w-3 h-3" />
-                      <span className="text-sm">Show QR</span>
-                    </button>
-                  )}
-                  {booking.status === 'pending' && (
-                    <>
-                      <button 
-                        className="flex-1 py-2 bg-red-500 text-white font-bold rounded-lg transition-all duration-200 text-sm"
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#DC2626'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = '#EF4444'}
-                      >
-                        Cancel
-                      </button>
-                      <button 
-                        className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 text-sm"
-                        style={{backgroundColor: '#F68B24'}}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
-                      >
-                        Reschedule
-                      </button>
-                    </>
-                  )}
-                  {booking.status === 'cancelled' && (
-                    <button 
-                      className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 text-sm"
-                      style={{backgroundColor: '#F68B24'}}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
-                    >
-                      Book Again
-                    </button>
-                  )}
-                </div>
+        {/* Bookings List */}
+        {!loading && !error && (
+          <div className="space-y-3">
+            {filteredBookings.length === 0 ? (
+              <div className="text-center py-8">
+                <Calendar className="w-12 h-12 mx-auto mb-3" style={{color: '#8B8B8B'}} />
+                <h3 className="text-lg font-bold mb-2" style={{color: '#36454F'}}>No Bookings Found</h3>
+                <p className="mb-4" style={{color: '#8B8B8B'}}>
+                  {activeFilter === 'all' 
+                    ? "You haven't made any bookings yet"
+                    : `No ${activeFilter} bookings found`
+                  }
+                </p>
+                <button
+                  onClick={onBack}
+                  className="px-6 py-3 text-white font-bold rounded-xl transition-all duration-200"
+                  style={{backgroundColor: '#F68B24'}}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
+                >
+                  Book Your First Service
+                </button>
               </div>
-            ))
-          )}
-        </div>
+            ) : (
+              filteredBookings.map((booking) => {
+                // Service and barber data are now nested in the booking object
+                const service = booking.service || {}
+                const barber = booking.barber || {}
+                
+                return (
+                  <div key={booking.id} className="bg-white rounded-xl p-4 border shadow-sm hover:shadow-lg transition-all duration-200" style={{borderColor: '#E0E0E0'}}>
+                    {/* Booking Header */}
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{backgroundColor: '#F68B24'}}>
+                          <span className="text-white text-lg">✂️</span>
+                        </div>
+                        <div>
+                          <h3 className="text-base font-bold" style={{color: '#36454F'}}>{service.name || 'Service'}</h3>
+                          <p className="text-xs" style={{color: '#8B8B8B'}}>Code: {booking.booking_code}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {getStatusIcon(booking.status)}
+                        <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getStatusColor(booking.status)}`}>
+                          {booking.status.toUpperCase()}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Booking Details */}
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="w-3 h-3" style={{color: '#F68B24'}} />
+                        <div>
+                          <p className="text-xs" style={{color: '#8B8B8B'}}>Date</p>
+                          <p className="text-sm font-bold" style={{color: '#36454F'}}>{bookingService.formatBookingDate(booking.date)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Clock className="w-3 h-3" style={{color: '#F68B24'}} />
+                        <div>
+                          <p className="text-xs" style={{color: '#8B8B8B'}}>Time</p>
+                          <p className="text-sm font-bold" style={{color: '#36454F'}}>{bookingService.formatBookingTime(booking.time)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <User className="w-3 h-3" style={{color: '#F68B24'}} />
+                        <div>
+                          <p className="text-xs" style={{color: '#8B8B8B'}}>Barber</p>
+                          <p className="text-sm font-bold" style={{color: '#36454F'}}>{barber.name || 'Any Barber'}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 rounded" style={{backgroundColor: '#F68B24'}}></div>
+                        <div>
+                          <p className="text-xs" style={{color: '#8B8B8B'}}>Price</p>
+                          <p className="text-sm font-bold" style={{color: '#F68B24'}}>₱{service.price ? parseFloat(service.price).toLocaleString() : '--'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+
+
+                    {/* Action Buttons */}
+                    <div className="flex space-x-2">
+                      {booking.status === 'confirmed' && (
+                        <button
+                          onClick={() => setShowQRCode({...booking, service, barber})}
+                          className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
+                          style={{backgroundColor: '#F68B24'}}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
+                        >
+                          <QrCode className="w-3 h-3" />
+                          <span className="text-sm">Show QR</span>
+                        </button>
+                      )}
+                      {booking.status === 'pending' && (
+                        <>
+                          <button 
+                            onClick={() => handleCancelBooking(booking.id)}
+                            className="flex-1 py-2 bg-red-500 text-white font-bold rounded-lg transition-all duration-200 text-sm"
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#DC2626'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = '#EF4444'}
+                          >
+                            Cancel
+                          </button>
+                          <button 
+                            className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 text-sm"
+                            style={{backgroundColor: '#F68B24'}}
+                            onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
+                            onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
+                          >
+                            Reschedule
+                          </button>
+                        </>
+                      )}
+                      {booking.status === 'cancelled' && (
+                        <button 
+                          onClick={onBack}
+                          className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 text-sm"
+                          style={{backgroundColor: '#F68B24'}}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
+                        >
+                          Book Again
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )}
       </div>
 
       {/* QR Code Modal */}
@@ -247,9 +346,10 @@ const QRCodeModal = ({ booking, onClose }) => {
   // Generate QR code data
   const qrData = JSON.stringify({
     bookingId: booking.id,
+    bookingCode: booking.booking_code,
     service: booking.service?.name,
     time: booking.time,
-    staff: booking.staff?.name,
+    barber: booking.barber?.name || 'Any Barber',
     date: booking.date,
     barbershop: 'TPX Barbershop'
   })
@@ -308,7 +408,11 @@ const QRCodeModal = ({ booking, onClose }) => {
               </div>
               <div className="flex justify-between">
                 <span style={{color: '#36454F'}}>Barber:</span>
-                <span className="font-bold" style={{color: '#36454F'}}>{booking.staff?.name}</span>
+                <span className="font-bold" style={{color: '#36454F'}}>{booking.barber?.name || 'Any Barber'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{color: '#36454F'}}>Code:</span>
+                <span className="font-bold" style={{color: '#36454F'}}>{booking.booking_code}</span>
               </div>
             </div>
           </div>

@@ -1,0 +1,349 @@
+import React, { useState, useEffect, useRef } from 'react'
+import Modal from '../common/Modal'
+import Button from '../common/Button'
+import { Mail, Users, Search, X, CheckCircle, QrCode } from 'lucide-react'
+import QRCode from 'qrcode'
+import emailjs from '@emailjs/browser'
+import apiService from '../../services/api.js'
+
+const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
+  const [clients, setClients] = useState([])
+  const [filteredClients, setFilteredClients] = useState([])
+  const [selectedUsers, setSelectedUsers] = useState([])
+  const [customerSearch, setCustomerSearch] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [isSending, setIsSending] = useState(false)
+  const [sentCount, setSentCount] = useState(0)
+  const [qrCodeUrl, setQrCodeUrl] = useState('')
+  const dropdownRef = useRef(null)
+
+  // EmailJS configuration - you'll need to update these with your actual values
+  const EMAILJS_SERVICE_ID = 'service_4y8wlo6'
+  const EMAILJS_TEMPLATE_ID = 'template_vj10o2t'
+  const EMAILJS_PUBLIC_KEY = 'LdJKCGcFqSk3IAdnu'
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchClients()
+      generateQRCode()
+    }
+  }, [isOpen, voucher])
+
+  useEffect(() => {
+    const filtered = clients.filter(client => 
+      client.username?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+      client.email?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+      (client.nickname && client.nickname.toLowerCase().includes(customerSearch.toLowerCase()))
+    )
+    setFilteredClients(filtered)
+  }, [customerSearch, clients])
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setCustomerSearch('')
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const fetchClients = async () => {
+    setIsLoading(true)
+    try {
+      const response = await apiService.get('/clients/')
+      const clientsData = Array.isArray(response) ? response : []
+      setClients(clientsData)
+      setFilteredClients(clientsData)
+    } catch (error) {
+      console.error('Failed to fetch clients:', error)
+      setClients([])
+      setFilteredClients([])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const generateQRCode = async () => {
+    if (!voucher) return
+    try {
+      const qrData = {
+        username: "", // Will be filled when sent to specific users
+        code: voucher.code,
+        value: voucher.value
+      }
+      
+      const url = await QRCode.toDataURL(JSON.stringify(qrData), {
+        width: 300,
+        margin: 2,
+        color: {
+          dark: '#1A1A1A',
+          light: '#FFFFFF'
+        }
+      })
+      setQrCodeUrl(url)
+    } catch (err) {
+      console.error('Failed to generate QR code:', err)
+    }
+  }
+
+  const toggleUserSelection = (user) => {
+    setSelectedUsers(prev => {
+      const isSelected = prev.find(u => u.id === user.id)
+      if (isSelected) {
+        return prev.filter(u => u.id !== user.id)
+      } else {
+        return [...prev, user]
+      }
+    })
+  }
+
+  const selectAllUsers = () => {
+    setSelectedUsers([...filteredClients])
+  }
+
+  const clearAllUsers = () => {
+    setSelectedUsers([])
+  }
+
+  const sendVoucherEmails = async () => {
+    if (selectedUsers.length === 0) {
+      alert('Please select at least one user to send the voucher to.')
+      return
+    }
+
+    setIsSending(true)
+    setSentCount(0)
+    
+    try {
+      // Initialize EmailJS (you'll need to call this once in your app)
+      emailjs.init(EMAILJS_PUBLIC_KEY)
+
+      for (const user of selectedUsers) {
+        try {
+          // Generate personalized QR code for this user
+          const personalizedQrData = {
+            username: user.username,
+            code: voucher.code,
+            value: voucher.value
+          }
+          
+          const personalizedQrUrl = await QRCode.toDataURL(JSON.stringify(personalizedQrData), {
+            width: 300,
+            margin: 2,
+            color: {
+              dark: '#1A1A1A',
+              light: '#FFFFFF'
+            }
+          })
+
+          // Email template parameters
+          const templateParams = {
+            to_name: user.nickname || user.username,
+            to_email: user.email,
+            voucher_code: voucher.code,
+            voucher_value: `₱${parseFloat(voucher.value).toFixed(2)}`,
+            points_required: voucher.points_required || 0,
+            expires_at: new Date(voucher.expires_at).toLocaleDateString(),
+            qr_code_image: personalizedQrUrl,
+            business_name: 'TPX Barbershop'
+          }
+
+          await emailjs.send(
+            EMAILJS_SERVICE_ID,
+            EMAILJS_TEMPLATE_ID,
+            templateParams
+          )
+
+          setSentCount(prev => prev + 1)
+        } catch (error) {
+          console.error(`Failed to send email to ${user.email}:`, error)
+        }
+      }
+
+      alert(`Successfully sent voucher to ${sentCount} out of ${selectedUsers.length} users!`)
+      onClose()
+    } catch (error) {
+      console.error('Failed to send voucher emails:', error)
+      alert('Failed to send voucher emails. Please try again.')
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  if (!voucher) return null
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Send Voucher via Email" size="lg">
+      <div className="space-y-6">
+        {/* Voucher Info */}
+        <div className="bg-[#FF8C42]/10 border-2 border-[#FF8C42]/20 rounded-2xl p-4">
+          <div className="flex items-center space-x-4">
+            <div className="flex-shrink-0">
+              {qrCodeUrl && (
+                <img src={qrCodeUrl} alt="Voucher QR Code" className="w-20 h-20 rounded-lg" />
+              )}
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-black text-[#1A1A1A] mb-1">Voucher {voucher.code}</h3>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div><span className="text-[#6B6B6B]">Value:</span> <span className="font-semibold">₱{parseFloat(voucher.value).toFixed(2)}</span></div>
+                <div><span className="text-[#6B6B6B]">Points:</span> <span className="font-semibold">{voucher.points_required || 0}</span></div>
+                <div><span className="text-[#6B6B6B]">Max Uses:</span> <span className="font-semibold">{voucher.max_uses || 1}</span></div>
+                <div><span className="text-[#6B6B6B]">Expires:</span> <span className="font-semibold">{new Date(voucher.expires_at).toLocaleDateString()}</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* User Selection */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-base font-bold text-[#1A1A1A] flex items-center">
+              <Users className="w-5 h-5 text-[#FF8C42] mr-2" />
+              Select Recipients ({selectedUsers.length} selected)
+            </h4>
+            <div className="flex space-x-2">
+              <button
+                onClick={selectAllUsers}
+                className="text-xs px-3 py-1 border border-[#FF8C42] text-[#FF8C42] rounded-lg hover:bg-[#FF8C42]/10"
+              >
+                Select All
+              </button>
+              <button
+                onClick={clearAllUsers}
+                className="text-xs px-3 py-1 border border-[#6B6B6B] text-[#6B6B6B] rounded-lg hover:bg-[#6B6B6B]/10"
+              >
+                Clear All
+              </button>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="relative" ref={dropdownRef}>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search customers..."
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+                className="w-full h-10 px-4 pr-10 border-2 border-[#F5F5F5] rounded-xl text-sm focus:outline-none focus:border-[#FF8C42] transition-colors duration-200"
+              />
+              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#6B6B6B] w-4 h-4" />
+            </div>
+          </div>
+
+          {/* Selected Users Preview */}
+          {selectedUsers.length > 0 && (
+            <div className="border-2 border-[#F5F5F5] rounded-xl p-3">
+              <div className="flex flex-wrap gap-2">
+                {selectedUsers.map(user => (
+                  <div key={user.id} className="flex items-center space-x-1 bg-[#FF8C42]/10 border border-[#FF8C42]/20 rounded-lg px-2 py-1 text-xs">
+                    <span className="text-[#1A1A1A] font-medium">{user.username}</span>
+                    <button
+                      onClick={() => toggleUserSelection(user)}
+                      className="text-[#FF8C42] hover:text-[#FF7A2B]"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* User List */}
+          <div className="border-2 border-[#F5F5F5] rounded-xl max-h-64 overflow-y-auto">
+            {isLoading ? (
+              <div className="p-4 text-center text-[#6B6B6B]">Loading customers...</div>
+            ) : filteredClients.length > 0 ? (
+              <div className="p-2 space-y-1">
+                {filteredClients.map(client => {
+                  const isSelected = selectedUsers.find(u => u.id === client.id)
+                  return (
+                    <div
+                      key={client.id}
+                      onClick={() => toggleUserSelection(client)}
+                      className={`flex items-center space-x-3 p-2 rounded-lg cursor-pointer transition-colors ${
+                        isSelected 
+                          ? 'bg-[#FF8C42]/10 border-[#FF8C42]/20 border' 
+                          : 'hover:bg-[#F5F5F5]'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                        isSelected 
+                          ? 'bg-[#FF8C42] border-[#FF8C42]' 
+                          : 'border-[#D1D5DB]'
+                      }`}>
+                        {isSelected && <CheckCircle className="w-3 h-3 text-white" />}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-[#1A1A1A] text-sm">{client.username}</div>
+                        <div className="text-xs text-[#6B6B6B]">{client.email}</div>
+                        {client.nickname && (
+                          <div className="text-xs text-[#FF8C42]">"{client.nickname}"</div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="p-4 text-center text-[#6B6B6B]">
+                {customerSearch ? 'No customers found matching your search.' : 'No customers available.'}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Progress */}
+        {isSending && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div className="flex items-center space-x-3">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+              <div className="text-blue-700">
+                Sending emails... ({sentCount}/{selectedUsers.length})
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex space-x-4 pt-6 border-t border-[#F5F5F5]">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isSending}
+            className="flex-1 border-[#6B6B6B] text-[#6B6B6B] hover:bg-[#6B6B6B] hover:text-white"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            onClick={sendVoucherEmails}
+            disabled={selectedUsers.length === 0 || isSending}
+            className="flex-1 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white hover:shadow-lg flex items-center justify-center"
+          >
+            {isSending ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Sending...
+              </>
+            ) : (
+              <>
+                <Mail className="w-4 h-4 mr-2" />
+                Send to {selectedUsers.length} User{selectedUsers.length !== 1 ? 's' : ''}
+              </>
+            )}
+          </Button>
+        </div>
+
+        {/* EmailJS Setup Notice */}
+      
+      </div>
+    </Modal>
+  )
+}
+
+export default SendVoucherModal
