@@ -11,40 +11,58 @@ const TOKEN_KEYS = {
 
 class AuthService {
   async login(username, password) {
-    try {
-      const response = await apiService.post('/login/', {
-        username,
-        password
-      })
-      
-      if (response.access && response.refresh) {
-        this.setTokens(response.access, response.refresh)
-        this.setUserInfo(response.user_id, response.role, response.is_staff)
-        // Store the username that was used for login
-        localStorage.setItem(TOKEN_KEYS.USERNAME, username)
-        // Also store as 'username' for compatibility
-        localStorage.setItem('username', username)
-        return {
-          success: true,
-          data: response
+    const maxAttempts = 2
+    let attempt = 0
+    let lastError = null
+
+    while (attempt < maxAttempts) {
+      attempt++
+      try {
+        const response = await apiService.post('/login/', {
+          username,
+          password
+        }, { timeout: 45000 })
+        
+        if (response?.access && response?.refresh) {
+          this.setTokens(response.access, response.refresh)
+          this.setUserInfo(response.user_id, response.role, response.is_staff)
+          // Store the username that was used for login
+          localStorage.setItem(TOKEN_KEYS.USERNAME, username)
+          // Also store as 'username' for compatibility
+          localStorage.setItem('username', username)
+          return {
+            success: true,
+            data: response
+          }
         }
+        
+        return {
+          success: false,
+          error: 'Invalid response format'
+        }
+      } catch (error) {
+        lastError = error
+        const retriable = error?.code === 'ECONNABORTED' || error?.code === 'NETWORK_ERROR'
+        if (!retriable || attempt >= maxAttempts) {
+          return {
+            success: false,
+            error: error?.message
+          }
+        }
+        // backoff before retry
+        await new Promise(res => setTimeout(res, 800 * attempt))
       }
-      
-      return {
-        success: false,
-        error: 'Invalid response format'
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message
-      }
+    }
+
+    return {
+      success: false,
+      error: lastError?.message || 'Login failed'
     }
   }
 
   async register(userData) {
     try {
-      const response = await apiService.post('/register/', userData)
+      const response = await apiService.post('/register/', userData, { timeout: 45000 })
       return {
         success: true,
         data: response
@@ -115,7 +133,7 @@ class AuthService {
     }
 
     try {
-      const response = await apiService.post('/token/refresh', {
+      const response = await apiService.post('/token/refresh/', {
         refresh: refreshToken
       })
       

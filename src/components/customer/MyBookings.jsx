@@ -9,6 +9,8 @@ const MyBookings = ({ onBack }) => {
   const [bookings, setBookings] = useState([])
   const [activeFilter, setActiveFilter] = useState('all')
   const [showQRCode, setShowQRCode] = useState(null)
+  const [showCancelModal, setShowCancelModal] = useState(null)
+  const [cancelLoading, setCancelLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [services, setServices] = useState([])
@@ -57,20 +59,27 @@ const MyBookings = ({ onBack }) => {
   // Service and barber data are now included directly in each booking
 
   const handleCancelBooking = async (bookingId) => {
-    if (window.confirm('Are you sure you want to cancel this booking?')) {
-      try {
-        const result = await bookingService.cancelBooking(bookingId)
-        if (result.success) {
-          // Reload bookings after successful cancellation
-          await loadBookingsData()
-          alert('Booking cancelled successfully')
-        } else {
-          alert(`Failed to cancel booking: ${result.error}`)
-        }
-      } catch (error) {
-        console.error('Error cancelling booking:', error)
-        alert('Failed to cancel booking. Please try again.')
+    try {
+      setCancelLoading(true)
+      const result = await bookingService.cancelBooking(bookingId)
+      if (result.success) {
+        // Remove the booking from local state immediately for better UX
+        setBookings(prevBookings => prevBookings.filter(booking => booking.id !== bookingId))
+        setShowCancelModal(null)
+        // Show success message briefly
+        const successMsg = document.createElement('div')
+        successMsg.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50'
+        successMsg.textContent = 'Booking cancelled successfully'
+        document.body.appendChild(successMsg)
+        setTimeout(() => document.body.removeChild(successMsg), 3000)
+      } else {
+        alert(`Failed to cancel booking: ${result.error}`)
       }
+    } catch (error) {
+      console.error('Error cancelling booking:', error)
+      alert('Failed to cancel booking. Please try again.')
+    } finally {
+      setCancelLoading(false)
     }
   }
 
@@ -296,20 +305,22 @@ const MyBookings = ({ onBack }) => {
                       {booking.status === 'pending' && (
                         <>
                           <button 
-                            onClick={() => handleCancelBooking(booking.id)}
+                            onClick={() => setShowCancelModal({...booking, service, barber})}
                             className="flex-1 py-2 bg-red-500 text-white font-bold rounded-lg transition-all duration-200 text-sm"
                             onMouseEnter={(e) => e.target.style.backgroundColor = '#DC2626'}
                             onMouseLeave={(e) => e.target.style.backgroundColor = '#EF4444'}
                           >
                             Cancel
                           </button>
-                          <button 
-                            className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 text-sm"
+                          <button
+                            onClick={() => setShowQRCode({...booking, service, barber})}
+                            className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 text-sm"
                             style={{backgroundColor: '#F68B24'}}
                             onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
                             onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
                           >
-                            Reschedule
+                            <QrCode className="w-3 h-3" />
+                            <span>View QR</span>
                           </button>
                         </>
                       )}
@@ -335,6 +346,16 @@ const MyBookings = ({ onBack }) => {
 
       {/* QR Code Modal */}
       {showQRCode && <QRCodeModal booking={showQRCode} onClose={() => setShowQRCode(null)} />}
+      
+      {/* Cancel Confirmation Modal */}
+      {showCancelModal && (
+        <CancelBookingModal 
+          booking={showCancelModal} 
+          onConfirm={() => handleCancelBooking(showCancelModal.id)}
+          onClose={() => setShowCancelModal(null)}
+          loading={cancelLoading}
+        />
+      )}
     </div>
   )
 }
@@ -355,20 +376,27 @@ const QRCodeModal = ({ booking, onClose }) => {
   })
 
   useEffect(() => {
-    if (qrRef.current) {
-      // Generate QR code as canvas
-      QRCode.toCanvas(qrRef.current, qrData, {
-        width: 160,
-        margin: 2,
-        color: {
-          dark: '#36454F',
-          light: '#ffffff'
-        },
-        errorCorrectionLevel: 'H'
-      }, (error) => {
-        if (error) console.error('QR Code generation error:', error)
-      })
-    }
+    // Small delay to ensure canvas is rendered in DOM
+    const timer = setTimeout(() => {
+      if (qrRef.current) {
+        // Generate QR code as canvas
+        QRCode.toCanvas(qrRef.current, qrData, {
+          width: 160,
+          margin: 2,
+          color: {
+            dark: '#36454F',
+            light: '#ffffff'
+          },
+          errorCorrectionLevel: 'H'
+        }, (error) => {
+          if (error) console.error('QR Code generation error:', error)
+        })
+      } else {
+        console.error('Canvas ref not available in MyBookings QR modal')
+      }
+    }, 100)
+    
+    return () => clearTimeout(timer)
   }, [qrData])
 
   return (
@@ -427,6 +455,91 @@ const QRCodeModal = ({ booking, onClose }) => {
           >
             Close
           </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Cancel Booking Modal Component
+const CancelBookingModal = ({ booking, onConfirm, onClose, loading }) => {
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border" style={{borderColor: '#E0E0E0'}}>
+        <div className="text-center space-y-4">
+          {/* Warning Icon */}
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto bg-red-100">
+            <XCircle className="w-8 h-8 text-red-600" />
+          </div>
+          
+          {/* Title and Message */}
+          <div>
+            <h3 className="text-xl font-bold mb-2" style={{color: '#36454F'}}>Cancel Booking?</h3>
+            <p className="text-sm mb-4" style={{color: '#8B8B8B'}}>
+              Are you sure you want to cancel this booking? This action cannot be undone.
+            </p>
+          </div>
+
+          {/* Booking Details */}
+          <div className="rounded-xl p-4 text-left" style={{backgroundColor: '#FEF2F2', border: '1px solid #FECACA'}}>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span style={{color: '#36454F'}}>Service:</span>
+                <span className="font-bold" style={{color: '#36454F'}}>{booking.service?.name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{color: '#36454F'}}>Date:</span>
+                <span className="font-bold" style={{color: '#36454F'}}>
+                  {booking.date ? new Date(booking.date).toLocaleDateString() : 'Today'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{color: '#36454F'}}>Time:</span>
+                <span className="font-bold" style={{color: '#36454F'}}>{booking.time}</span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{color: '#36454F'}}>Barber:</span>
+                <span className="font-bold" style={{color: '#36454F'}}>{booking.barber?.name || 'Any Barber'}</span>
+              </div>
+              <div className="flex justify-between border-t pt-2" style={{borderColor: '#FECACA'}}>
+                <span style={{color: '#36454F'}}>Code:</span>
+                <span className="font-bold" style={{color: '#36454F'}}>{booking.booking_code}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex space-x-3">
+            <button
+              onClick={onClose}
+              disabled={loading}
+              className="flex-1 py-3 border-2 font-bold rounded-xl transition-all duration-200"
+              style={{ borderColor: '#E0E0E0', color: '#8B8B8B' }}
+              onMouseEnter={(e) => !loading && (e.target.style.backgroundColor = '#F5F5F5')}
+              onMouseLeave={(e) => !loading && (e.target.style.backgroundColor = 'transparent')}
+            >
+              Keep Booking
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={loading}
+              className={`flex-1 py-3 text-white font-bold rounded-xl transition-all duration-200 ${
+                loading ? 'opacity-75 cursor-not-allowed' : ''
+              }`}
+              style={{ backgroundColor: loading ? '#CCCCCC' : '#EF4444' }}
+              onMouseEnter={(e) => !loading && (e.target.style.backgroundColor = '#DC2626')}
+              onMouseLeave={(e) => !loading && (e.target.style.backgroundColor = '#EF4444')}
+            >
+              {loading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                  <span>Cancelling...</span>
+                </div>
+              ) : (
+                'Yes, Cancel'
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

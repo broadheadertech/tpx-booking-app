@@ -6,7 +6,7 @@ class ApiService {
   constructor() {
     this.axios = axios.create({
       baseURL: API_BASE_URL,
-      timeout: 30000,
+      timeout: 45000,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -60,6 +60,15 @@ class ApiService {
       async (error) => {
         console.error('API Response error:', error)
         
+        const isTimeout = error?.code === 'ECONNABORTED'
+        if (isTimeout) {
+          const enriched = Object.assign(
+            new Error('Request timed out. Please try again.'),
+            { code: 'ECONNABORTED', isNetwork: true, original: error }
+          )
+          return Promise.reject(enriched)
+        }
+
         if (error.response) {
           const errorData = error.response.data
           
@@ -102,7 +111,10 @@ class ApiService {
               
               // Redirect to login
               window.location.href = '/auth/login'
-              return Promise.reject(new Error('Authentication expired. Please log in again.'))
+              return Promise.reject(Object.assign(
+                new Error('Authentication expired. Please log in again.'),
+                { status: 401 }
+              ))
             }
           }
           
@@ -114,17 +126,23 @@ class ApiService {
                 fieldErrors.push(`${field}: ${messages.join(', ')}`)
               }
             }
-            throw new Error(fieldErrors.length > 0 ? fieldErrors.join('; ') : 'Validation error')
+            return Promise.reject(Object.assign(
+              new Error(fieldErrors.length > 0 ? fieldErrors.join('; ') : 'Validation error'),
+              { status: 400, data: errorData }
+            ))
           }
           
           const errorMessage = errorData?.detail || 
                               errorData?.message || 
                               `HTTP error! status: ${error.response.status}`
-          throw new Error(errorMessage)
+          return Promise.reject(Object.assign(new Error(errorMessage), { status: error.response.status, data: errorData }))
         } else if (error.request) {
-          throw new Error('Network error: Unable to connect to the server. Please check your internet connection and try again.')
+          return Promise.reject(Object.assign(
+            new Error('Network error: Unable to connect to the server. Please check your internet connection and try again.'),
+            { code: 'NETWORK_ERROR', isNetwork: true, original: error }
+          ))
         } else {
-          throw new Error('An unexpected error occurred')
+          return Promise.reject(new Error('An unexpected error occurred'))
         }
       }
     )

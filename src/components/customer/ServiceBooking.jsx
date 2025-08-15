@@ -9,15 +9,17 @@ const ServiceBooking = ({ onBack }) => {
   const [services, setServices] = useState([])
   const [barbers, setBarbers] = useState([])
   const [selectedService, setSelectedService] = useState(null)
-  const [selectedDate, setSelectedDate] = useState('')
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [selectedTime, setSelectedTime] = useState(null)
   const [selectedStaff, setSelectedStaff] = useState(null)
-  const [step, setStep] = useState(1) // 1: services, 2: date & time, 3: staff, 4: confirmation, 5: success
+  const [step, setStep] = useState(1) // 1: services, 2: date & time & staff, 3: confirmation, 4: success
   const [loading, setLoading] = useState(true)
   const [bookingLoading, setBookingLoading] = useState(false)
   const [error, setError] = useState(null)
   const [createdBooking, setCreatedBooking] = useState(null)
   const [qrCodeLoading, setQrCodeLoading] = useState(true)
+  const [showPaymentMethods, setShowPaymentMethods] = useState(false)
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null)
   const qrRef = useRef(null)
 
   useEffect(() => {
@@ -28,64 +30,58 @@ const ServiceBooking = ({ onBack }) => {
 
   // Reset QR code loading state when step changes
   useEffect(() => {
-    if (step === 5) {
+    if (step === 4) {
       setQrCodeLoading(true)
     }
   }, [step])
 
-  // Generate QR code when booking is successful
+  // Generate QR code when we reach step 4 and have booking data
   useEffect(() => {
-    if (step === 5 && qrRef.current && createdBooking) {
-      // Add a small delay to ensure the canvas is properly rendered
-      setTimeout(() => {
-        const qrData = JSON.stringify({
-          bookingId: createdBooking.id,
-          bookingCode: createdBooking.booking_code,
-          service: selectedService?.name,
-          time: createdBooking.time,
-          barber: selectedStaff?.full_name || selectedStaff?.name || 'Any Barber',
-          date: createdBooking.date,
-          barbershop: 'TPX Barbershop'
-        })
-        
-        // Generate QR code as canvas
-        QRCode.toCanvas(qrRef.current, qrData, {
-          width: 192,
-          margin: 2,
-          color: {
-            dark: '#000000',
-            light: '#ffffff'
-          },
-          errorCorrectionLevel: 'H'
-        }, (error) => {
-          if (error) {
-            console.error('QR Code generation error:', error)
-            // Retry once after a short delay
-            setTimeout(() => {
-              QRCode.toCanvas(qrRef.current, qrData, {
-                width: 192,
-                margin: 2,
-                color: {
-                  dark: '#000000',
-                  light: '#ffffff'
-                },
-                errorCorrectionLevel: 'M'
-              }, (retryError) => {
-                if (retryError) {
-                  console.error('QR Code retry failed:', retryError)
-                  setQrCodeLoading(false)
-                } else {
-                  setQrCodeLoading(false)
-                }
-              })
-            }, 500)
-          } else {
+    if (step === 4 && createdBooking?.booking_code) {
+      console.log('Step 4 reached with booking code:', createdBooking.booking_code)
+      
+      // Small delay to ensure canvas is rendered in DOM
+      const timer = setTimeout(() => {
+        if (qrRef.current) {
+          console.log('Canvas found, generating QR code')
+          
+          // Generate QR code data matching MyBookings format exactly
+          const qrData = JSON.stringify({
+            bookingId: createdBooking.id,
+            bookingCode: createdBooking.booking_code,
+            service: selectedService?.name,
+            time: createdBooking.time,
+            barber: selectedStaff?.full_name || selectedStaff?.name || 'Any Barber',
+            date: createdBooking.date,
+            barbershop: 'TPX Barbershop'
+          })
+          
+          // Generate QR code as canvas
+          QRCode.toCanvas(qrRef.current, qrData, {
+            width: 192,
+            margin: 2,
+            color: {
+              dark: '#36454F',
+              light: '#ffffff'
+            },
+            errorCorrectionLevel: 'H'
+          }, (error) => {
+            if (error) {
+              console.error('QR Code generation error:', error)
+            } else {
+              console.log('QR Code generated successfully')
+            }
             setQrCodeLoading(false)
-          }
-        })
-      }, 100)
+          })
+        } else {
+          console.error('Canvas ref still not available after timeout')
+          setQrCodeLoading(false)
+        }
+      }, 300)
+      
+      return () => clearTimeout(timer)
     }
-  }, [step, createdBooking, selectedService, selectedStaff])
+  }, [step, createdBooking?.booking_code, selectedService, selectedStaff])
 
   const loadBookingData = async () => {
     try {
@@ -158,7 +154,7 @@ const ServiceBooking = ({ onBack }) => {
     return '✂️'
   }
 
-  const handleCreateBooking = async () => {
+  const handleCreateBooking = async (paymentType = 'pay_later', paymentMethod = null) => {
     if (!selectedService || !selectedDate || !selectedTime) {
       alert('Please fill in all booking details')
       return
@@ -167,18 +163,31 @@ const ServiceBooking = ({ onBack }) => {
     try {
       setBookingLoading(true)
       
+      // Format time to include seconds for API compatibility
+      const formattedTime = selectedTime.includes(':') ? `${selectedTime}:00` : selectedTime
+      
       const bookingData = {
         service: selectedService.id,
         barber: selectedStaff?.id || null,
         date: selectedDate,
-        time: selectedTime
+        time: formattedTime,
+        payment_type: paymentType,
+        payment_method: paymentMethod
       }
 
+      console.log('Creating booking with data:', bookingData)
       const result = await bookingService.createBooking(bookingData)
       
       if (result.success) {
         setCreatedBooking(result.data)
-        setStep(5) // Success step
+        setStep(4) // Success step
+        
+        // Show payment confirmation message
+        if (paymentType === 'pay_now') {
+          setTimeout(() => {
+            alert(`Payment via ${paymentMethod?.toUpperCase()} will be processed. (Demo mode - no actual payment)`)
+          }, 1000)
+        }
       } else {
         alert(`Failed to create booking: ${result.error}`)
       }
@@ -202,20 +211,18 @@ const ServiceBooking = ({ onBack }) => {
 
   const handleStaffSelect = (staffMember) => {
     setSelectedStaff(staffMember)
-    setStep(4) // Go to confirmation
   }
 
-  const handleConfirmBooking = async () => {
-    await handleCreateBooking()
+  const handleConfirmBooking = async (paymentType = 'pay_later', paymentMethod = null) => {
+    await handleCreateBooking(paymentType, paymentMethod)
   }
 
   const getStepTitle = () => {
     switch (step) {
       case 1: return 'Choose Service'
-      case 2: return 'Select Date & Time'
-      case 3: return 'Choose Barber'
-      case 4: return 'Confirm Booking'
-      case 5: return 'Booking Confirmed'
+      case 2: return 'Select Date, Time & Barber'
+      case 3: return 'Confirm Booking'
+      case 4: return 'Booking Confirmed'
       default: return 'Book Service'
     }
   }
@@ -223,7 +230,7 @@ const ServiceBooking = ({ onBack }) => {
   const renderStepIndicator = () => (
     <div className="flex justify-center mb-4 px-4 py-2">
       <div className="flex items-center space-x-3">
-        {[1, 2, 3, 4].map((stepNumber) => (
+        {[1, 2, 3].map((stepNumber) => (
           <div key={stepNumber} className="flex items-center">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
               step >= stepNumber 
@@ -234,7 +241,7 @@ const ServiceBooking = ({ onBack }) => {
             }}>
               {step > stepNumber ? '✓' : stepNumber}
             </div>
-            {stepNumber < 4 && (
+            {stepNumber < 3 && (
               <div className={`w-8 h-0.5 mx-1 rounded transition-all duration-300`} style={{
                 backgroundColor: step > stepNumber ? '#F68B24' : '#E0E0E0'
               }}></div>
@@ -413,7 +420,7 @@ const ServiceBooking = ({ onBack }) => {
       {/* Continue Button */}
       {selectedTime && selectedStaff && (
         <button
-          onClick={() => handleTimeAndStaffSelect(selectedTime, selectedStaff)}
+          onClick={() => setStep(3)}
           className="w-full py-3 text-white font-bold rounded-xl transition-all duration-200 shadow-lg"
           style={{ backgroundColor: '#F68B24' }}
           onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
@@ -437,7 +444,9 @@ const ServiceBooking = ({ onBack }) => {
           <button
             key={barber.id}
             onClick={() => handleStaffSelect(barber)}
-            className="group bg-white rounded-3xl p-6 shadow-xl border-2 border-[#F5F5F5] hover:border-[#FF8C42] hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
+            className={`group bg-white rounded-3xl p-6 shadow-xl border-2 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 ${
+              selectedStaff?.id === barber.id ? 'border-[#FF8C42]' : 'border-[#F5F5F5] hover:border-[#FF8C42]'
+            }`}
           >
             <div className="text-center">
               <div className="text-6xl mb-4">👨‍💼</div>
@@ -496,31 +505,157 @@ const ServiceBooking = ({ onBack }) => {
                 <User className="w-4 h-4" style={{ color: '#F68B24' }} />
                 <span className="font-semibold text-sm" style={{ color: '#36454F' }}>Your Barber</span>
               </div>
-              <span className="font-bold text-sm" style={{ color: '#36454F' }}>{selectedStaff?.name}</span>
+              <span className="font-bold text-sm" style={{ color: '#36454F' }}>{selectedStaff?.full_name || selectedStaff?.name || 'Any Barber'}</span>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex space-x-3 pt-2">
-            <button
-              onClick={() => setStep(2)}
-              className="flex-1 py-2 px-3 border font-bold rounded-lg transition-all duration-200 text-sm"
-              style={{ borderColor: '#E0E0E0', color: '#8B8B8B' }}
-              onMouseEnter={(e) => { e.target.style.backgroundColor = '#F5F5F5'; e.target.style.color = '#36454F'; }}
-              onMouseLeave={(e) => { e.target.style.backgroundColor = 'transparent'; e.target.style.color = '#8B8B8B'; }}
-            >
-              Go Back
-            </button>
-            <button
-              onClick={handleConfirmBooking}
-              className="flex-1 py-2 px-3 text-white font-bold rounded-lg transition-all duration-200 shadow-lg text-sm"
-              style={{ backgroundColor: '#F68B24' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
-            >
-              Confirm Booking
-            </button>
+          {/* Payment Options */}
+          <div className="border-t pt-3" style={{ borderColor: '#E0E0E0' }}>
+            <h4 className="text-sm font-bold mb-3" style={{ color: '#36454F' }}>Complete Your Booking</h4>
+            
+            {!showPaymentMethods ? (
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <button
+                  onClick={() => setShowPaymentMethods(true)}
+                  disabled={bookingLoading}
+                  className={`py-3 px-4 bg-green-500 text-white font-bold rounded-lg transition-all duration-200 text-sm flex items-center justify-center space-x-2 ${
+                    bookingLoading ? 'opacity-75 cursor-not-allowed' : ''
+                  }`}
+                  onMouseEnter={(e) => !bookingLoading && (e.target.style.backgroundColor = '#16A34A')}
+                  onMouseLeave={(e) => !bookingLoading && (e.target.style.backgroundColor = '#22C55E')}
+                >
+                  <span>💳</span>
+                  <span>Pay Now</span>
+                </button>
+                <button
+                  onClick={() => handleConfirmBooking('pay_later')}
+                  disabled={bookingLoading}
+                  className={`py-3 px-4 border-2 font-bold rounded-lg transition-all duration-200 text-sm flex items-center justify-center space-x-2 ${
+                    bookingLoading ? 'opacity-75 cursor-not-allowed' : ''
+                  }`}
+                  style={{ borderColor: '#F68B24', color: bookingLoading ? '#CCCCCC' : '#F68B24' }}
+                  onMouseEnter={(e) => !bookingLoading && (e.target.style.backgroundColor = '#F68B24', e.target.style.color = 'white')}
+                  onMouseLeave={(e) => !bookingLoading && (e.target.style.backgroundColor = 'transparent', e.target.style.color = '#F68B24')}
+                >
+                  {bookingLoading ? (
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="animate-spin w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                      <span>Booking...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <span>🏪</span>
+                      <span>Pay Later</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <h5 className="text-sm font-bold mb-2" style={{ color: '#36454F' }}>Select Payment Method</h5>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => setSelectedPaymentMethod('gcash')}
+                      className={`w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-3 ${
+                        selectedPaymentMethod === 'gcash' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'
+                      }`}
+                    >
+                      <div className="w-8 h-8 bg-blue-500 rounded flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">G</span>
+                      </div>
+                      <div className="text-left">
+                        <p className="font-bold text-sm" style={{ color: '#36454F' }}>GCash</p>
+                        <p className="text-xs" style={{ color: '#8B8B8B' }}>Digital wallet payment</p>
+                      </div>
+                    </button>
+                    
+                    <button
+                      onClick={() => setSelectedPaymentMethod('maya')}
+                      className={`w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-3 ${
+                        selectedPaymentMethod === 'maya' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-green-300'
+                      }`}
+                    >
+                      <div className="w-8 h-8 bg-green-500 rounded flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">M</span>
+                      </div>
+                      <div className="text-left">
+                        <p className="font-bold text-sm" style={{ color: '#36454F' }}>Maya</p>
+                        <p className="text-xs" style={{ color: '#8B8B8B' }}>Digital wallet payment</p>
+                      </div>
+                    </button>
+                    
+                    <button
+                      onClick={() => setSelectedPaymentMethod('card')}
+                      className={`w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-3 ${
+                        selectedPaymentMethod === 'card' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-purple-300'
+                      }`}
+                    >
+                      <div className="w-8 h-8 bg-purple-500 rounded flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">💳</span>
+                      </div>
+                      <div className="text-left">
+                        <p className="font-bold text-sm" style={{ color: '#36454F' }}>Credit/Debit Card</p>
+                        <p className="text-xs" style={{ color: '#8B8B8B' }}>Visa, Mastercard, etc.</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => { setShowPaymentMethods(false); setSelectedPaymentMethod(null); }}
+                    className="flex-1 py-2 px-3 border font-bold rounded-lg transition-all duration-200 text-sm"
+                    style={{ borderColor: '#E0E0E0', color: '#8B8B8B' }}
+                    onMouseEnter={(e) => { e.target.style.backgroundColor = '#F5F5F5'; e.target.style.color = '#36454F'; }}
+                    onMouseLeave={(e) => { e.target.style.backgroundColor = 'transparent'; e.target.style.color = '#8B8B8B'; }}
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={() => handleConfirmBooking('pay_now', selectedPaymentMethod)}
+                    disabled={!selectedPaymentMethod || bookingLoading}
+                    className={`flex-1 py-2 px-3 text-white font-bold rounded-lg transition-all duration-200 shadow-lg text-sm ${
+                      (!selectedPaymentMethod || bookingLoading) ? 'opacity-75 cursor-not-allowed' : ''
+                    }`}
+                    style={{ backgroundColor: (!selectedPaymentMethod || bookingLoading) ? '#CCCCCC' : '#22C55E' }}
+                    onMouseEnter={(e) => (!selectedPaymentMethod || bookingLoading) || (e.target.style.backgroundColor = '#16A34A')}
+                    onMouseLeave={(e) => (!selectedPaymentMethod || bookingLoading) || (e.target.style.backgroundColor = '#22C55E')}
+                  >
+                    {bookingLoading ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                        <span>Processing...</span>
+                      </div>
+                    ) : (
+                      'Confirm & Pay'
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {!showPaymentMethods && (
+              <p className="text-xs text-center mb-3" style={{ color: '#8B8B8B' }}>
+                Choose your preferred payment option to complete booking
+              </p>
+            )}
           </div>
+
+          {/* Go Back Button */}
+          {!showPaymentMethods && (
+            <div className="pt-2">
+              <button
+                onClick={() => setStep(2)}
+                className="w-full py-2 px-3 border font-bold rounded-lg transition-all duration-200 text-sm"
+                style={{ borderColor: '#E0E0E0', color: '#8B8B8B' }}
+                onMouseEnter={(e) => { e.target.style.backgroundColor = '#F5F5F5'; e.target.style.color = '#36454F'; }}
+                onMouseLeave={(e) => { e.target.style.backgroundColor = 'transparent'; e.target.style.color = '#8B8B8B'; }}
+              >
+                ← Go Back to Edit Details
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -600,8 +735,10 @@ const ServiceBooking = ({ onBack }) => {
           </button>
           <button
             onClick={() => {
-              // In a real app, this would navigate to bookings page
-              alert('View My Bookings feature coming soon!')
+              // Navigate to bookings section in dashboard
+              if (onBack) {
+                onBack('bookings') // Pass 'bookings' to indicate which section to show
+              }
             }}
             className="w-full py-3 border-2 font-bold rounded-2xl transition-all duration-200"
             style={{ borderColor: '#F68B24', color: '#F68B24' }}

@@ -66,7 +66,7 @@ const Dashboard = () => {
   const renderContent = () => {
     switch (activeSection) {
       case 'booking':
-        return <ServiceBooking onBack={() => setActiveSection('home')} />
+        return <ServiceBooking onBack={(section) => setActiveSection(section || 'home')} />
       case 'bookings':
         return <MyBookings onBack={() => setActiveSection('home')} />
       case 'vouchers':

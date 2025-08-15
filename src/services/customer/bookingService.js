@@ -10,34 +10,35 @@ class CustomerBookingService {
       }
 
       // Use the new user-specific bookings endpoint
-      const response = await apiService.get('/bookings/my/')
+      const response = await apiService.get('/bookings/my/', { timeout: 30000 })
       
       // The API returns an array of bookings with nested service and barber data
       return Array.isArray(response) ? response : []
     } catch (error) {
       console.error('Error fetching user bookings:', error)
-      throw error
+      throw new Error('Failed to load your bookings. Please try again.')
     }
   }
 
   async getServices() {
     try {
-      const response = await apiService.get('/services/')
-      return response
+      const response = await apiService.get('/services/', { timeout: 30000 })
+      return Array.isArray(response) ? response : []
     } catch (error) {
       console.error('Error fetching services:', error)
-      throw error
+      throw new Error('Failed to load services. Please try again.')
     }
   }
 
   async getBarbers() {
     try {
-      const response = await apiService.get('/barbers/')
+      const response = await apiService.get('/barbers/', { timeout: 30000 })
       // Filter only active barbers
-      return response.filter(barber => barber.is_active)
+      const barbers = Array.isArray(response) ? response : []
+      return barbers.filter(barber => barber.is_active)
     } catch (error) {
       console.error('Error fetching barbers:', error)
-      throw error
+      throw new Error('Failed to load barbers. Please try again.')
     }
   }
 
@@ -55,23 +56,41 @@ class CustomerBookingService {
   }
 
   async createBooking(bookingData) {
-    try {
-      const response = await apiService.post('/bookings/', bookingData)
-      return {
-        success: true,
-        data: response
+    const maxAttempts = 2
+    let attempt = 0
+    let lastError = null
+
+    while (attempt < maxAttempts) {
+      attempt++
+      try {
+        const response = await apiService.post('/bookings/', bookingData, { timeout: 45000 })
+        return {
+          success: true,
+          data: response
+        }
+      } catch (error) {
+        lastError = error
+        const retriable = error?.code === 'ECONNABORTED' || error?.code === 'NETWORK_ERROR'
+        if (!retriable || attempt >= maxAttempts) {
+          return {
+            success: false,
+            error: error?.message || 'Failed to create booking'
+          }
+        }
+        // backoff before retry
+        await new Promise(res => setTimeout(res, 1000 * attempt))
       }
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message
-      }
+    }
+
+    return {
+      success: false,
+      error: lastError?.message || 'Booking creation failed'
     }
   }
 
   async updateBooking(bookingId, updates) {
     try {
-      const response = await apiService.patch(`/bookings/${bookingId}/`, updates)
+      const response = await apiService.patch(`/bookings/${bookingId}/`, updates, { timeout: 30000 })
       return {
         success: true,
         data: response
@@ -79,21 +98,21 @@ class CustomerBookingService {
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error?.message || 'Failed to update booking'
       }
     }
   }
 
   async cancelBooking(bookingId) {
     try {
-      await apiService.delete(`/bookings/${bookingId}/`)
+      await apiService.delete(`/bookings/${bookingId}/`, { timeout: 30000 })
       return {
         success: true
       }
     } catch (error) {
       return {
         success: false,
-        error: error.message
+        error: error?.message || 'Failed to cancel booking'
       }
     }
   }
