@@ -2,6 +2,7 @@ import React from 'react'
 import { X } from 'lucide-react'
 
 const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
+  console.log('Modal render - isOpen:', isOpen, 'title:', title)
   if (!isOpen) return null
 
   const sizeClasses = {
@@ -12,13 +13,13 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] overflow-y-auto">
       <div className="flex min-h-full items-center justify-center p-4">
         <div 
           className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
           onClick={onClose}
         />
-        <div className={`relative w-full ${sizeClasses[size]} transform rounded-3xl bg-white shadow-2xl transition-all`}>
+        <div className={`relative w-full ${sizeClasses[size]} transform rounded-3xl bg-white shadow-2xl transition-all z-[10000]`}>
           <div className="flex items-center justify-between p-8 border-b border-[#F5F5F5]">
             <h2 className="text-2xl font-black text-[#1A1A1A]">{title}</h2>
             <button

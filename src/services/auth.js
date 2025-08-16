@@ -21,7 +21,7 @@ class AuthService {
         const response = await apiService.post('/login/', {
           username,
           password
-        }, { timeout: 45000 })
+        }, { timeout: 10000 })
         
         if (response?.access && response?.refresh) {
           this.setTokens(response.access, response.refresh)
@@ -43,6 +43,7 @@ class AuthService {
       } catch (error) {
         lastError = error
         const retriable = error?.code === 'ECONNABORTED' || error?.code === 'NETWORK_ERROR'
+        
         if (!retriable || attempt >= maxAttempts) {
           return {
             success: false,
@@ -62,7 +63,7 @@ class AuthService {
 
   async register(userData) {
     try {
-      const response = await apiService.post('/register/', userData, { timeout: 45000 })
+      const response = await apiService.post('/register/', userData, { timeout: 10000 })
       return {
         success: true,
         data: response

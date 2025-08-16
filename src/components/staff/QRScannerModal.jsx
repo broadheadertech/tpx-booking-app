@@ -1,52 +1,102 @@
 import React, { useState, useEffect } from 'react'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
+import QRScannerCamera from './QRScannerCamera'
 import { QrCode, Camera, CheckCircle, XCircle, RefreshCw } from 'lucide-react'
 
 const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
-  const [isScanning, setIsScanning] = useState(false)
   const [scanResult, setScanResult] = useState(null)
   const [error, setError] = useState(null)
+  const [isProcessingVoucher, setIsProcessingVoucher] = useState(false)
 
-  // Mock QR scanner simulation
-  const simulateQRScan = () => {
-    setIsScanning(true)
-    setError(null)
-    setScanResult(null)
-
-    // Simulate scanning delay
-    setTimeout(() => {
-      const mockVouchers = [
-        { code: 'SAVE20', customer: 'John Doe', value: '₱1,000', status: 'active', expires: '2024-12-31' },
-        { code: 'FIRST10', customer: 'Jane Smith', value: '₱500', status: 'active', expires: '2024-11-15' },
-        { code: 'WELCOME15', customer: 'Mike Johnson', value: '₱750', status: 'expired', expires: '2024-01-15' },
-        { code: 'INVALID', customer: 'Unknown', value: '₱100', status: 'redeemed', expires: '2024-06-30' }
-      ]
-
-      // Randomly select a voucher or show error
-      const randomChoice = Math.random()
+  const handleQRDetected = async (qrData) => {
+    try {
+      setIsProcessingVoucher(true)
+      setError(null)
       
-      if (randomChoice < 0.1) {
-        // 10% chance of scan error
-        setError('Could not read QR code. Please try again.')
-        setScanResult(null)
-      } else {
-        const selectedVoucher = mockVouchers[Math.floor(Math.random() * mockVouchers.length)]
-        setScanResult(selectedVoucher)
-        
-        if (selectedVoucher.status === 'active') {
-          onVoucherScanned(selectedVoucher)
+      // Try to parse the QR data as a voucher code
+      let voucherCode = qrData
+      
+      // If it's a URL or JSON, try to extract the voucher code
+      if (qrData.startsWith('http')) {
+        const url = new URL(qrData)
+        voucherCode = url.searchParams.get('code') || url.pathname.split('/').pop()
+      } else if (qrData.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(qrData)
+          voucherCode = parsed.code || parsed.voucher || qrData
+        } catch {
+          // Use original data if JSON parsing fails
         }
       }
+
+      // Use actual voucher service to validate and redeem
+      const { vouchersService } = await import('../../services/staff')
       
-      setIsScanning(false)
-    }, 2000)
+      try {
+        // Get all vouchers and find the matching one
+        const allVouchers = await vouchersService.getAllVouchers()
+        const voucher = allVouchers.find(v => 
+          v.code && v.code.toLowerCase() === voucherCode.toLowerCase()
+        )
+
+        if (!voucher) {
+          setScanResult({
+            code: voucherCode,
+            customer: 'Unknown',
+            value: '₱0',
+            status: 'invalid',
+            expires: 'N/A'
+          })
+          setError('Voucher code not found.')
+          return
+        }
+
+        // Check voucher status
+        const now = new Date()
+        const expiresAt = new Date(voucher.expires_at)
+        let status = 'active'
+        
+        if (voucher.redeemed) {
+          status = 'redeemed'
+        } else if (expiresAt < now) {
+          status = 'expired'
+        } else if (voucher.used_count >= voucher.max_uses) {
+          status = 'used_up'
+        }
+
+        const voucherResult = {
+          code: voucher.code,
+          customer: voucher.customer_name || 'N/A',
+          value: vouchersService.formatValue(voucher.value),
+          status: status,
+          expires: expiresAt.toLocaleDateString('en-PH'),
+          description: voucher.description || 'Discount voucher'
+        }
+
+        setScanResult(voucherResult)
+
+        // If voucher is valid, proceed with redemption
+        if (status === 'active') {
+          await onVoucherScanned(voucher.code, voucher.value)
+        }
+
+      } catch (apiError) {
+        console.error('API Error:', apiError)
+        setError('Failed to validate voucher. Please try again.')
+      }
+    } catch (err) {
+      console.error('Error processing QR code:', err)
+      setError('Failed to process QR code. Please try again.')
+    } finally {
+      setIsProcessingVoucher(false)
+    }
   }
 
   const handleClose = () => {
-    setIsScanning(false)
     setScanResult(null)
     setError(null)
+    setIsProcessingVoucher(false)
     onClose()
   }
 
@@ -55,6 +105,8 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
       case 'active': return 'text-green-700 bg-green-100 border-green-200'
       case 'expired': return 'text-red-700 bg-red-100 border-red-200'
       case 'redeemed': return 'text-gray-700 bg-gray-100 border-gray-200'
+      case 'used_up': return 'text-orange-700 bg-orange-100 border-orange-200'
+      case 'invalid': return 'text-red-700 bg-red-100 border-red-200'
       default: return 'text-gray-700 bg-gray-100 border-gray-200'
     }
   }
@@ -63,41 +115,33 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
     switch (status) {
       case 'active': return <CheckCircle className="w-5 h-5 text-green-600" />
       case 'expired': 
-      case 'redeemed': return <XCircle className="w-5 h-5 text-red-600" />
+      case 'redeemed':
+      case 'used_up':
+      case 'invalid': return <XCircle className="w-5 h-5 text-red-600" />
       default: return <XCircle className="w-5 h-5 text-gray-600" />
     }
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="QR Code Scanner" size="md">
-      <div className="text-center space-y-6">
-        {/* Scanner Area */}
-        <div className="relative bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-3xl p-8 h-80 flex flex-col items-center justify-center">
-          {isScanning ? (
-            <div className="flex flex-col items-center space-y-4">
-              <div className="relative">
-                <div className="w-32 h-32 border-4 border-[#FF8C42] rounded-2xl animate-pulse" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <RefreshCw className="w-12 h-12 text-[#FF8C42] animate-spin" />
-                </div>
-              </div>
-              <p className="text-white font-bold text-lg">Scanning QR Code...</p>
-              <div className="w-48 bg-white/20 rounded-full h-2">
-                <div className="bg-[#FF8C42] h-2 rounded-full animate-pulse w-full" />
-              </div>
+    <Modal isOpen={isOpen} onClose={handleClose} title="Voucher QR Scanner" size="lg">
+      <div className="space-y-6">
+        {/* Camera Scanner */}
+        <QRScannerCamera
+          onQRDetected={handleQRDetected}
+          onClose={handleClose}
+          isOpen={isOpen}
+          title="Voucher Scanner"
+        />
+
+        {/* Processing Indicator */}
+        {isProcessingVoucher && (
+          <div className="text-center py-4">
+            <div className="flex items-center justify-center space-x-3">
+              <RefreshCw className="w-6 h-6 text-[#FF8C42] animate-spin" />
+              <span className="text-[#6B6B6B] font-medium">Processing voucher...</span>
             </div>
-          ) : (
-            <div className="flex flex-col items-center space-y-4">
-              <div className="w-32 h-32 border-4 border-white/30 rounded-2xl flex items-center justify-center">
-                <QrCode className="w-16 h-16 text-white/60" />
-              </div>
-              <div className="text-center">
-                <p className="text-white font-bold text-lg mb-2">Ready to Scan</p>
-                <p className="text-white/70 text-sm">Position QR code within the frame</p>
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Scan Result */}
         {scanResult && (
@@ -138,6 +182,18 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
                     <p className="text-gray-800 font-bold text-sm">✗ This voucher has already been redeemed</p>
                   </div>
                 )}
+                
+                {scanResult.status === 'used_up' && (
+                  <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-xl">
+                    <p className="text-orange-800 font-bold text-sm">✗ This voucher has reached its usage limit</p>
+                  </div>
+                )}
+                
+                {scanResult.status === 'invalid' && (
+                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+                    <p className="text-red-800 font-bold text-sm">✗ Invalid voucher code</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -154,22 +210,14 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
         )}
 
         {/* Action Buttons */}
-        <div className="flex space-x-4 pt-4 border-t border-[#F5F5F5]">
+        <div className="flex justify-center pt-4 border-t border-[#F5F5F5]">
           <Button
             variant="outline"
             onClick={handleClose}
-            className="flex-1 border-[#6B6B6B] text-[#6B6B6B] hover:bg-[#6B6B6B] hover:text-white"
-            disabled={isScanning}
+            className="px-8 border-[#6B6B6B] text-[#6B6B6B] hover:bg-[#6B6B6B] hover:text-white"
+            disabled={isProcessingVoucher}
           >
-            Close
-          </Button>
-          <Button
-            onClick={simulateQRScan}
-            className="flex-1 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white hover:shadow-lg flex items-center justify-center space-x-2"
-            disabled={isScanning}
-          >
-            <Camera className="w-5 h-5" />
-            <span>{isScanning ? 'Scanning...' : 'Start Scanning'}</span>
+            Return to Selection
           </Button>
         </div>
       </div>

@@ -1,58 +1,156 @@
-import { CheckCircle } from 'lucide-react'
+import { CheckCircle, XCircle, RefreshCw, Calendar, User, Clock, QrCode } from 'lucide-react'
 
-const BookingDetails = ({ scannedBooking, onDone }) => {
+const BookingDetails = ({ scannedBooking, onDone, onValidateAndConfirm, isProcessingBooking }) => {
+  console.log('BookingDetails rendering with:', scannedBooking)
   if (!scannedBooking) return null
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'confirmed': return 'text-green-700 bg-green-100 border-green-200'
+      case 'pending': return 'text-yellow-700 bg-yellow-100 border-yellow-200'
+      case 'completed': return 'text-blue-700 bg-blue-100 border-blue-200'
+      case 'cancelled': return 'text-red-700 bg-red-100 border-red-200'
+      case 'scanned': return 'text-blue-700 bg-blue-100 border-blue-200'
+      default: return 'text-gray-700 bg-gray-100 border-gray-200'
+    }
+  }
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'confirmed': 
+      case 'pending': return <CheckCircle className="w-5 h-5 text-green-600" />
+      case 'completed': return <CheckCircle className="w-5 h-5 text-blue-600" />
+      case 'cancelled':
+      case 'invalid': return <XCircle className="w-5 h-5 text-red-600" />
+      case 'scanned': return <QrCode className="w-5 h-5 text-blue-600" />
+      default: return <XCircle className="w-5 h-5 text-gray-600" />
+    }
+  }
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-lg" style={{border: '1px solid #E0E0E0'}}>
-      <div className="text-center space-y-6">
-        {/* Success Icon */}
-        <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto shadow-xl" style={{backgroundColor: '#4CAF50'}}>
-          <CheckCircle className="w-10 h-10 text-white" />
-        </div>
-        
-        <div>
-          <h3 className="text-2xl font-bold mb-2" style={{color: '#36454F'}}>Booking Confirmed!</h3>
-          <p className="text-lg" style={{color: '#4CAF50'}}>Welcome to TPX Barbershop</p>
-        </div>
-
-        {/* Booking Details */}
-        <div className="rounded-xl p-4 text-left" style={{backgroundColor: '#F0F8FF', border: '1px solid #E0E0E0'}}>
-          <h4 className="font-bold mb-3" style={{color: '#36454F'}}>Appointment Details</h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span style={{color: '#8B8B8B'}}>Service:</span>
-              <span className="font-medium" style={{color: '#36454F'}}>{scannedBooking.service?.name}</span>
+      <div className="space-y-6">
+        {/* Booking Header with Status */}
+        <div className="flex items-start space-x-4">
+          <div className="flex-shrink-0">
+            {getStatusIcon(scannedBooking.status)}
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-black text-[#1A1A1A] font-mono">
+                {scannedBooking.id}
+              </h3>
+              <span className={`px-3 py-1 text-sm font-bold rounded-full border-2 uppercase ${getStatusColor(scannedBooking.status)}`}>
+                {scannedBooking.status}
+              </span>
             </div>
-            <div className="flex justify-between">
-              <span style={{color: '#8B8B8B'}}>Date:</span>
-              <span className="font-medium" style={{color: '#36454F'}}>{new Date(scannedBooking.date).toLocaleDateString()}</span>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <User className="w-4 h-4 text-[#6B6B6B]" />
+                  <div>
+                    <span className="font-bold text-[#6B6B6B] text-sm">Customer:</span>
+                    <p className="text-[#1A1A1A] font-semibold">{scannedBooking.customer}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <QrCode className="w-4 h-4 text-[#6B6B6B]" />
+                  <div>
+                    <span className="font-bold text-[#6B6B6B] text-sm">Service:</span>
+                    <p className="text-[#1A1A1A] font-semibold">{scannedBooking.service?.name}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <Calendar className="w-4 h-4 text-[#6B6B6B]" />
+                  <div>
+                    <span className="font-bold text-[#6B6B6B] text-sm">Date & Time:</span>
+                    <p className="text-[#1A1A1A] font-semibold">{scannedBooking.date} at {scannedBooking.time}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <User className="w-4 h-4 text-[#6B6B6B]" />
+                  <div>
+                    <span className="font-bold text-[#6B6B6B] text-sm">Staff:</span>
+                    <p className="text-[#1A1A1A] font-semibold">{scannedBooking.barber?.name}</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span style={{color: '#8B8B8B'}}>Time:</span>
-              <span className="font-medium" style={{color: '#36454F'}}>{scannedBooking.time}</span>
-            </div>
-            <div className="flex justify-between">
-              <span style={{color: '#8B8B8B'}}>Barber:</span>
-              <span className="font-medium" style={{color: '#36454F'}}>{scannedBooking.barber?.name || 'Any Barber'}</span>
-            </div>
-            <div className="flex justify-between pt-2" style={{borderTop: '1px solid #E0E0E0'}}>
-              <span style={{color: '#8B8B8B'}}>Booking ID:</span>
-              <span className="font-bold" style={{color: '#4CAF50'}}>{scannedBooking.booking_code}</span>
-            </div>
+            
+            {scannedBooking.phone !== 'N/A' && (
+              <div className="mt-4 pt-3 border-t border-[#F5F5F5]">
+                <span className="font-bold text-[#6B6B6B] text-sm">Phone:</span>
+                <p className="text-[#1A1A1A] font-semibold">{scannedBooking.phone}</p>
+              </div>
+            )}
+            
+            {/* Status Messages */}
+            {scannedBooking.status === 'confirmed' && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-xl">
+                <p className="text-green-800 font-bold text-sm">✓ Booking confirmed - Ready for service!</p>
+              </div>
+            )}
+            
+            {scannedBooking.status === 'scanned' && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                <p className="text-blue-800 font-bold text-sm">📱 Booking scanned - Ready to validate</p>
+              </div>
+            )}
+            
+            {scannedBooking.status === 'pending' && (
+              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                <p className="text-yellow-800 font-bold text-sm">⏳ Confirming booking...</p>
+              </div>
+            )}
+            
+            {scannedBooking.status === 'completed' && (
+              <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-xl">
+                <p className="text-gray-800 font-bold text-sm">✓ This booking has already been completed</p>
+              </div>
+            )}
+            
+            {scannedBooking.status === 'cancelled' && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+                <p className="text-red-800 font-bold text-sm">✗ This booking has been cancelled</p>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="space-y-3">
-          <p className="text-lg font-medium" style={{color: '#36454F'}}>Please have a seat and wait to be called</p>
+        {/* Action Buttons */}
+        <div className="flex justify-center space-x-4 pt-4 border-t border-[#F5F5F5]">
+          {scannedBooking.status === 'scanned' && onValidateAndConfirm && (
+            <button
+              onClick={onValidateAndConfirm}
+              className="px-8 bg-[#F68B24] hover:bg-[#E67A1A] text-white font-semibold py-3 rounded-xl transition-colors duration-200 flex items-center space-x-2"
+              disabled={isProcessingBooking}
+            >
+              {isProcessingBooking ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Validating...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Validate & Confirm Booking
+                </>
+              )}
+            </button>
+          )}
+          
           <button
             onClick={onDone}
-            className="w-full py-3 text-white font-bold rounded-xl transition-colors duration-200"
-            style={{backgroundColor: '#36454F'}}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#2A3640'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#36454F'}
+            className="px-8 border-[#6B6B6B] text-[#6B6B6B] hover:bg-[#6B6B6B] hover:text-white py-3 rounded-xl border-2 transition-colors duration-200"
+            disabled={isProcessingBooking}
           >
-            Done
+            {scannedBooking.status === 'confirmed' ? 'Continue' : 'Back to Scanner'}
           </button>
         </div>
       </div>

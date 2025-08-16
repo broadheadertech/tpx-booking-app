@@ -1,13 +1,23 @@
 import React, { useState } from 'react'
 import Card from '../common/Card'
 import { QrCode, UserPlus, Calendar, Gift } from 'lucide-react'
+import ScannerTypeModal from './ScannerTypeModal'
 import QRScannerModal from './QRScannerModal'
+import BookingQRScannerModal from './BookingQRScannerModal'
 import AddCustomerModal from './AddCustomerModal'
 import CreateBookingModal from './CreateBookingModal'
 import CreateVoucherModal from './CreateVoucherModal'
 
-const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVoucherScanned }) => {
+const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVoucherScanned, onBookingScanned }) => {
   const [activeModal, setActiveModal] = useState(null)
+  
+  console.log('QuickActions render - activeModal:', activeModal)
+  
+  // Add useEffect to debug state changes
+  React.useEffect(() => {
+    console.log('activeModal changed to:', activeModal)
+  }, [activeModal])
+  
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {/* Primary Action - Scan Voucher */}
@@ -20,9 +30,12 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
             <div className="w-16 h-16 mx-auto mb-6 bg-white/20 backdrop-blur-xl rounded-[20px] flex items-center justify-center shadow-2xl ring-1 ring-white/30 group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
               <QrCode className="w-8 h-8 text-white" />
             </div>
-            <h3 className="font-bold mb-4 text-lg tracking-tight">Scan Voucher</h3>
+            <h3 className="font-bold mb-4 text-lg tracking-tight">QR Scanner</h3>
             <button 
-              onClick={() => setActiveModal('scanner')}
+              onClick={() => {
+                console.log('Scanner button clicked')
+                setActiveModal('scannerType')
+              }}
               className="w-full py-3 px-6 bg-white/15 backdrop-blur-xl text-white font-semibold rounded-[16px] border border-white/20 hover:bg-white/25 transition-all duration-300 text-sm shadow-lg"
             >
               Open Scanner
@@ -89,15 +102,62 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
         </Card>
       </div>
 
+      {/* Debug activeModal state */}
+      {activeModal && (
+        <div className="fixed top-4 right-4 bg-red-500 text-white p-2 rounded z-[10001]">
+          Active Modal: {activeModal}
+        </div>
+      )}
+
       {/* Modals */}
-      <QRScannerModal 
-        isOpen={activeModal === 'scanner'} 
-        onClose={() => setActiveModal(null)}
-        onVoucherScanned={(voucher) => {
-          onVoucherScanned?.(voucher)
-          setActiveModal(null)
-        }}
-      />
+      {activeModal === 'scannerType' && (
+        <ScannerTypeModal 
+          isOpen={true}
+          onClose={() => {
+            console.log('ScannerTypeModal onClose called')
+            setActiveModal(null)
+          }}
+          onSelectType={(type) => {
+            console.log('ScannerTypeModal onSelectType called with:', type)
+            console.log('About to set activeModal to:', type === 'voucher' ? 'voucherScanner' : 'bookingScanner')
+            
+            // Use setTimeout to ensure state update happens after current render cycle
+            setTimeout(() => {
+              if (type === 'voucher') {
+                setActiveModal('voucherScanner')
+              } else if (type === 'booking') {
+                setActiveModal('bookingScanner')
+              }
+            }, 0)
+          }}
+        />
+      )}
+      
+      {activeModal === 'voucherScanner' && (
+        <QRScannerModal 
+          isOpen={true}
+          onClose={() => setActiveModal('scannerType')}
+          onVoucherScanned={(voucher) => {
+            onVoucherScanned?.(voucher)
+            setActiveModal(null)
+          }}
+        />
+      )}
+      
+      {activeModal === 'bookingScanner' && (
+        <BookingQRScannerModal 
+          isOpen={true}
+          onClose={() => {
+            console.log('BookingQRScannerModal onClose called')
+            setActiveModal('scannerType')
+          }}
+          onBookingScanned={(booking) => {
+            console.log('BookingQRScannerModal onBookingScanned called with:', booking)
+            onBookingScanned?.(booking)
+            setActiveModal(null)
+          }}
+        />
+      )}
       
       <AddCustomerModal 
         isOpen={activeModal === 'customer'} 

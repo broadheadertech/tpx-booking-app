@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { User, Calendar, Gift, Star, Clock, MapPin, Phone, History } from 'lucide-react'
+import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User } from 'lucide-react'
 import ServiceBooking from '../../components/customer/ServiceBooking'
 import CustomerProfile from '../../components/customer/CustomerProfile'
 import VoucherManagement from '../../components/customer/VoucherManagement'
 import LoyaltyPoints from '../../components/customer/LoyaltyPoints'
 import MyBookings from '../../components/customer/MyBookings'
+import Profile from './Profile'
 import bannerImage from '../../assets/img/banner.jpg'
 import loyaltyService from '../../services/customer/loyaltyService'
 import voucherService from '../../services/customer/voucherService'
@@ -19,10 +20,11 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true)
 
   const sections = [
-    { id: 'home', label: 'Dashboard', icon: User },
+    { id: 'home', label: 'Home', icon: Home },
     { id: 'booking', label: 'Book', icon: Calendar },
-    { id: 'bookings', label: 'My Bookings', icon: History },
-    { id: 'vouchers', label: 'Vouchers', icon: Gift }
+    { id: 'bookings', label: 'Bookings', icon: History },
+    { id: 'vouchers', label: 'Vouchers', icon: Gift },
+    { id: 'profile', label: 'Profile', icon: User }
   ]
 
   useEffect(() => {
@@ -74,7 +76,7 @@ const Dashboard = () => {
       case 'loyalty':
         return <LoyaltyPoints onBack={() => setActiveSection('home')} />
       case 'profile':
-        return <CustomerProfile onBack={() => setActiveSection('home')} customerData={customerData} />
+        return <Profile />
       default:
         return (
           <div className="space-y-6">
@@ -231,9 +233,9 @@ const Dashboard = () => {
       </div>
 
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t" style={{borderColor: '#E0E0E0'}}>
-        <div className="max-w-md mx-auto px-4">
-          <div className="grid grid-cols-4 py-2">
+      <div className="fixed bottom-0 left-0 right-0 bg-white shadow-2xl" style={{borderTop: '1px solid #E0E0E0'}}>
+        <div className="max-w-md mx-auto px-3">
+          <div className="grid grid-cols-5 py-2">
             {sections.map((section) => {
               const IconComponent = section.icon
               const isActive = activeSection === section.id
@@ -241,14 +243,24 @@ const Dashboard = () => {
                 <button
                   key={section.id}
                   onClick={() => setActiveSection(section.id)}
-                  className="flex flex-col items-center space-y-1 py-2 px-1 rounded-lg transition-all duration-200"
+                  className="flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-300 relative"
                   style={{
                     backgroundColor: isActive ? '#F68B24' : 'transparent',
                     color: isActive ? 'white' : '#8B8B8B'
                   }}
                 >
-                  <IconComponent className="w-4 h-4" />
-                  <span className="text-xs font-medium">{section.label}</span>
+                  {/* Active indicator dot */}
+                  {isActive && (
+                    <div 
+                      className="absolute -top-1 w-1 h-1 rounded-full"
+                      style={{backgroundColor: '#36454F'}}
+                    />
+                  )}
+                  
+                  <div className={`p-2 rounded-xl mb-1 transition-all duration-300 ${isActive ? 'bg-white/20 scale-110' : 'bg-transparent'}`}>
+                    <IconComponent className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-medium tracking-wide">{section.label}</span>
                 </button>
               )
             })}

@@ -142,7 +142,7 @@ function Login() {
             {/* Development Navigation */}
             <div className="border-t px-8 py-6 space-y-3" style={{borderColor: '#E0E0E0', backgroundColor: '#FAFAFA'}}>
               <p className="text-xs font-medium text-center mb-4" style={{color: '#8B8B8B'}}>Quick Access (Development)</p>
-              
+              <div className="space-y-3">
               <Link 
                 to="/staff/dashboard" 
                 className="block w-full h-10 bg-gray-100 hover:bg-gray-200 text-center leading-10 text-sm font-medium rounded-lg transition-colors duration-200"
@@ -166,9 +166,11 @@ function Login() {
                 Kiosk Mode
               </Link>
             </div>
+            </div>
           </div>
         </div>
       </div>
+
     </div>
   )
 }

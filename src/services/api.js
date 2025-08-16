@@ -6,7 +6,7 @@ class ApiService {
   constructor() {
     this.axios = axios.create({
       baseURL: API_BASE_URL,
-      timeout: 45000,
+      timeout: 10000,
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -79,14 +79,18 @@ class ApiService {
             try {
               const refreshToken = localStorage.getItem('refresh_token')
               if (refreshToken) {
-                const refreshResponse = await this.axios.post('/token/refresh/', {
-                  refresh: refreshToken
-                }, {
-                  // Don't add auth headers for refresh request
+                // Create a new axios instance without interceptors for refresh request
+                const refreshAxios = axios.create({
+                  baseURL: API_BASE_URL,
+                  timeout: 10000,
                   headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                   }
+                })
+                
+                const refreshResponse = await refreshAxios.post('/token/refresh/', {
+                  refresh: refreshToken
                 })
                 
                 if (refreshResponse.data.access) {
@@ -103,11 +107,16 @@ class ApiService {
               }
             } catch (refreshError) {
               console.error('Token refresh failed:', refreshError)
-              // Clear invalid tokens
+              // Clear invalid tokens and user data
               localStorage.removeItem('access_token')
               localStorage.removeItem('refresh_token')
               localStorage.removeItem('user_role')
               localStorage.removeItem('is_staff')
+              localStorage.removeItem('user_id')
+              localStorage.removeItem('username')
+              
+              // Show user-friendly error message
+              alert('Your session has expired. Please log in again.')
               
               // Redirect to login
               window.location.href = '/auth/login'

@@ -404,6 +404,25 @@ function StaffDashboard() {
     }
   }
 
+  const handleBookingScanned = async (booking) => {
+    try {
+      console.log('Booking scanned:', booking)
+      
+      // Mock booking check-in process (replace with actual API call)
+      // This would typically update the booking status to 'checked-in'
+      
+      // Refresh bookings data if loaded
+      if (data.bookings) {
+        await loadBookingsData()
+      }
+      
+      return { success: true, data: booking }
+    } catch (error) {
+      console.error('Error processing booking check-in:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
   const handleLogout = () => {
     // Clear any session data, tokens, etc.
     localStorage.removeItem('userToken')
@@ -604,6 +623,7 @@ function StaffDashboard() {
             onCreateBooking={handleCreateBooking}
             onCreateVoucher={handleCreateVoucher}
             onVoucherScanned={handleVoucherScanned}
+            onBookingScanned={handleBookingScanned}
           />
           <TabNavigation 
             tabs={tabs} 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import QRCode from 'qrcode'
-import { QrCode, Download } from 'lucide-react'
+import { QrCode, Download, RefreshCw, XCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import bookingService from '../services/customer/bookingService.js'
 import BookingQRGenerator from './kiosk/BookingQRGenerator.jsx'
@@ -17,6 +17,7 @@ function Kiosk() {
   const [scannedBooking, setScannedBooking] = useState(null)
   const [scannerLoading, setScannerLoading] = useState(false)
   const [scannerError, setScannerError] = useState('')
+  const [isProcessingBooking, setIsProcessingBooking] = useState(false)
 
   // Generate QR Code with loading
   const generateQRCode = async () => {
@@ -70,28 +71,105 @@ function Kiosk() {
       setScannedBooking(null)
       setScannerError('')
       setScannerLoading(false)
+      setIsProcessingBooking(false)
     }
   }
 
-  // Handle QR Code Scan
+  // Handle booking validation and confirmation
+  const handleValidateAndConfirm = async () => {
+    if (!scannedBooking || !scannedBooking.id) {
+      setScannerError('No booking to validate.')
+      return
+    }
+
+    try {
+      setIsProcessingBooking(true)
+      setScannerError('')
+
+      // Use API service to update booking status
+      const apiService = (await import('../services/api.js')).default
+      
+      // PATCH /api/bookings/{id}/ with status: "confirmed"
+      const response = await apiService.patch(`/bookings/${scannedBooking.id}/`, {
+        status: 'confirmed'
+      })
+
+      console.log('Booking confirmed:', response)
+
+      // Update the scan result with confirmed status
+      const updatedResult = {
+        ...scannedBooking,
+        status: 'confirmed'
+      }
+      
+      setScannedBooking(updatedResult)
+      setScannerError('')
+      
+    } catch (error) {
+      console.error('Error confirming booking:', error)
+      setScannerError('Failed to confirm booking. Please try again.')
+    } finally {
+      setIsProcessingBooking(false)
+    }
+  }
+
+  // Handle QR Code Scan - Parse JSON QR data like BookingQRScannerModal
   const handleQRScan = async (qrData) => {
+    console.log('Kiosk QR Data:', qrData)
     setScannerLoading(true)
     setScannerError('')
     
     try {
-      // Try to get booking by QR code
-      const booking = await bookingService.getBookingByCode(qrData)
+      // Parse QR data to extract booking information
+      let bookingData = null
       
-      if (booking) {
-        setScannedBooking(booking)
-        setScannerLoading(false)
+      if (qrData.startsWith('{')) {
+        try {
+          bookingData = JSON.parse(qrData)
+          console.log('Parsed booking data:', bookingData)
+        } catch {
+          setScannerError('Invalid QR code format.')
+          setScannerLoading(false)
+          return
+        }
       } else {
-        setScannerError('Invalid booking QR code. Please check your code and try again.')
+        setScannerError('Invalid QR code format. Expected JSON data.')
         setScannerLoading(false)
+        return
       }
+      
+      if (!bookingData.bookingId) {
+        setScannerError('Missing booking ID in QR code.')
+        setScannerLoading(false)
+        return
+      }
+
+      // Display booking data directly from QR code (no API fetch initially)
+      const bookingResult = {
+        id: bookingData.bookingId,
+        booking_code: bookingData.bookingCode || 'N/A',
+        customer: 'Customer', // Will be populated after validation
+        service: {
+          name: bookingData.service || 'N/A'
+        },
+        date: bookingData.date || 'N/A',
+        time: bookingData.time || 'N/A',
+        barber: {
+          name: bookingData.barber || 'N/A'
+        },
+        status: 'scanned', // Initial status before validation
+        phone: 'N/A',
+        barbershop: bookingData.barbershop || 'N/A'
+      }
+
+      console.log('Setting scannedBooking:', bookingResult)
+      setScannedBooking(bookingResult)
+      setScannerLoading(false)
+      console.log('Scanner loading set to false')
+      
     } catch (error) {
-      console.error('Error validating booking:', error)
-      setScannerError('Failed to validate booking. Please try again.')
+      console.error('Error processing booking QR code:', error)
+      setScannerError('Failed to process booking QR code. Please try again.')
       setScannerLoading(false)
     }
   }
@@ -99,7 +177,7 @@ function Kiosk() {
   return (
     <div className="min-h-screen" style={{backgroundColor: '#F4F0E6'}}>
       {/* Mobile viewport meta tag handling */}
-      <style jsx>{`
+      <style>{`
         @media screen and (max-width: 768px) {
           .kiosk-container {
             padding: 1rem;
@@ -168,6 +246,26 @@ function Kiosk() {
                   setShowCamera={setShowHomeCamera}
                 />
               </div>
+              
+              {/* Processing Indicator */}
+              {isProcessingBooking && (
+                <div className="text-center py-4">
+                  <div className="flex items-center justify-center space-x-3">
+                    <RefreshCw className="w-6 h-6 text-[#F68B24] animate-spin" />
+                    <span className="text-[#6B6B6B] font-medium">Processing booking...</span>
+                  </div>
+                </div>
+              )}
+              
+              {/* Error Message */}
+              {scannerError && (
+                <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-4 mt-4">
+                  <div className="flex items-center space-x-3">
+                    <XCircle className="w-6 h-6 text-red-600" />
+                    <p className="text-red-800 font-bold">{scannerError}</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Show booking details if QR code was scanned */}
@@ -178,7 +276,10 @@ function Kiosk() {
                   setScannedBooking(null)
                   setScannerError('')
                   setScannerLoading(false)
+                  setIsProcessingBooking(false)
                 }}
+                onValidateAndConfirm={handleValidateAndConfirm}
+                isProcessingBooking={isProcessingBooking}
               />
             )}
 
