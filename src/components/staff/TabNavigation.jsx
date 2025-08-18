@@ -35,7 +35,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
     const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
     
     setDropdownPosition({
-      top: rect.bottom + scrollTop + 8,
+      top: rect.bottom + scrollTop - 2,
       left: rect.left + scrollLeft,
       width: Math.max(200, rect.width)
     })

@@ -1,121 +1,77 @@
 import React, { useState, useEffect } from 'react'
 import { Bell, BellRing, Check, X, Trash2, Filter, Search, RefreshCw, Eye, EyeOff, Calendar, User, AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react'
 import Button from '../common/Button'
+import NotificationService from '../../services/staff/notificationService'
 
 const NotificationsManagement = ({ onRefresh }) => {
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
   const [selectedNotifications, setSelectedNotifications] = useState([])
 
-  // Mock notifications data
-  const mockNotifications = [
-    {
-      id: 1,
-      title: 'New Booking Received',
-      message: 'John Doe has booked a haircut appointment for tomorrow at 2:00 PM',
-      type: 'booking',
-      status: 'unread',
-      priority: 'high',
-      timestamp: '2024-02-15T14:30:00Z',
-      actionUrl: '/bookings',
-      metadata: {
-        customerName: 'John Doe',
-        serviceType: 'Haircut',
-        appointmentTime: '2024-02-16T14:00:00Z'
-      }
-    },
-    {
-      id: 2,
-      title: 'Low Stock Alert',
-      message: 'Hair Pomade inventory is running low (5 units remaining)',
-      type: 'inventory',
-      status: 'unread',
-      priority: 'medium',
-      timestamp: '2024-02-15T12:15:00Z',
-      actionUrl: '/products',
-      metadata: {
-        productName: 'Hair Pomade',
-        currentStock: 5,
-        minStock: 10
-      }
-    },
-    {
-      id: 3,
-      title: 'Event Registration',
-      message: '8 new registrations for the Beard Styling Workshop',
-      type: 'event',
-      status: 'read',
-      priority: 'low',
-      timestamp: '2024-02-15T10:45:00Z',
-      actionUrl: '/events',
-      metadata: {
-        eventName: 'Beard Styling Workshop',
-        registrations: 8
-      }
-    },
-    {
-      id: 4,
-      title: 'Payment Received',
-      message: 'Payment of ₱450 received from Sarah Wilson',
-      type: 'payment',
-      status: 'read',
-      priority: 'low',
-      timestamp: '2024-02-15T09:20:00Z',
-      actionUrl: '/reports',
-      metadata: {
-        customerName: 'Sarah Wilson',
-        amount: 450,
-        paymentMethod: 'Cash'
-      }
-    },
-    {
-      id: 5,
-      title: 'System Update',
-      message: 'New features have been added to the booking system',
-      type: 'system',
-      status: 'read',
-      priority: 'low',
-      timestamp: '2024-02-14T16:00:00Z',
-      actionUrl: null,
-      metadata: {
-        version: '2.1.0',
-        features: ['Enhanced booking flow', 'New payment options']
-      }
-    },
-    {
-      id: 6,
-      title: 'Booking Cancelled',
-      message: 'Mike Johnson cancelled his appointment scheduled for today',
-      type: 'booking',
-      status: 'unread',
-      priority: 'medium',
-      timestamp: '2024-02-15T08:30:00Z',
-      actionUrl: '/bookings',
-      metadata: {
-        customerName: 'Mike Johnson',
-        appointmentTime: '2024-02-15T15:00:00Z',
-        reason: 'Personal emergency'
-      }
-    }
-  ]
-
   useEffect(() => {
     loadNotifications()
+    
+    // Set up polling for real-time updates every 30 seconds
+    const pollInterval = setInterval(() => {
+      loadNotifications(false) // Silent loading to prevent flickering
+    }, 30000) // 30 seconds
+    
+    // Cleanup interval on unmount
+    return () => {
+      clearInterval(pollInterval)
+    }
   }, [])
 
-  const loadNotifications = async () => {
-    setLoading(true)
+  const loadNotifications = async (showLoading = true) => {
+    // Prevent multiple simultaneous calls
+    if (loading) return
+    
+    if (showLoading) {
+      setLoading(true)
+    }
+    setError(null)
+    
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      setNotifications(mockNotifications)
+      console.log('NotificationsManagement: Starting to load notifications...')
+      const notifications = await NotificationService.getNotifications()
+      console.log('NotificationsManagement: Received notifications:', notifications)
+      
+      if (Array.isArray(notifications)) {
+        setNotifications(notifications)
+        console.log('NotificationsManagement: Successfully set notifications')
+      } else {
+        console.warn('NotificationsManagement: Received non-array notifications:', notifications)
+        setNotifications([])
+      }
     } catch (error) {
-      console.error('Error loading notifications:', error)
+      console.error('NotificationsManagement: Error loading notifications:', {
+        message: error.message,
+        status: error.status,
+        data: error.data,
+        isNetwork: error.isNetwork,
+        original: error.original
+      })
+      
+      let errorMessage = 'Failed to load notifications'
+      if (error.isNetwork) {
+        errorMessage = 'Network error: Unable to connect to the server. Please check your internet connection.'
+      } else if (error.status === 401) {
+        errorMessage = 'Authentication error: Please log in again.'
+      } else if (error.status === 403) {
+        errorMessage = 'Access denied: You do not have permission to view notifications.'
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      setError(errorMessage)
     } finally {
-      setLoading(false)
+      if (showLoading) {
+        setLoading(false)
+      }
     }
   }
 
@@ -203,44 +159,21 @@ const NotificationsManagement = ({ onRefresh }) => {
   }
 
   const handleMarkAsRead = async (notificationIds) => {
-    try {
-      setNotifications(prev => 
-        prev.map(notification => 
-          notificationIds.includes(notification.id)
-            ? { ...notification, status: 'read' }
-            : notification
-        )
-      )
-    } catch (error) {
-      console.error('Error marking notifications as read:', error)
-    }
+    // Backend doesn't support mark as read according to API docs
+    setError('Mark as read is not supported by the backend API yet. This feature will be available in a future update.')
+    console.log(`Mark as read not supported for notifications: ${notificationIds}`)
   }
 
   const handleMarkAsUnread = async (notificationIds) => {
-    try {
-      setNotifications(prev => 
-        prev.map(notification => 
-          notificationIds.includes(notification.id)
-            ? { ...notification, status: 'unread' }
-            : notification
-        )
-      )
-    } catch (error) {
-      console.error('Error marking notifications as unread:', error)
-    }
+    // Backend doesn't support mark as unread according to API docs
+    setError('Mark as unread is not supported by the backend API yet. This feature will be available in a future update.')
+    console.log(`Mark as unread not supported for notifications: ${notificationIds}`)
   }
 
   const handleDelete = async (notificationIds) => {
-    if (!confirm(`Are you sure you want to delete ${notificationIds.length} notification(s)?`)) return
-    
-    try {
-      setNotifications(prev => 
-        prev.filter(notification => !notificationIds.includes(notification.id))
-      )
-      setSelectedNotifications([])
-    } catch (error) {
-      console.error('Error deleting notifications:', error)
-    }
+    // Backend doesn't support delete according to API docs
+    setError('Delete notifications is not supported by the backend API yet. This feature will be available in a future update.')
+    console.log(`Delete not supported for notifications: ${notificationIds}`)
   }
 
   const handleSelectNotification = (notificationId) => {
@@ -289,13 +222,33 @@ const NotificationsManagement = ({ onRefresh }) => {
         <div className="flex items-center space-x-3">
           <button
             onClick={() => { loadNotifications(); onRefresh?.() }}
-            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+            disabled={loading}
+            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <RefreshCw className="h-4 w-4" />
-            <span>Refresh</span>
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <span>{loading ? 'Loading...' : 'Refresh'}</span>
           </button>
         </div>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center space-x-2">
+            <AlertCircle className="h-5 w-5 text-red-600" />
+            <div>
+              <h3 className="text-sm font-medium text-red-800">Error</h3>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="ml-auto text-red-600 hover:text-red-800"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -389,21 +342,27 @@ const NotificationsManagement = ({ onRefresh }) => {
               </span>
               <button
                 onClick={() => handleMarkAsRead(selectedNotifications)}
-                className="flex items-center space-x-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm"
+                disabled
+                className="flex items-center space-x-1 px-3 py-1 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed text-sm"
+                title="Not supported by backend API"
               >
                 <Eye className="h-3 w-3" />
                 <span>Mark Read</span>
               </button>
               <button
                 onClick={() => handleMarkAsUnread(selectedNotifications)}
-                className="flex items-center space-x-1 px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+                disabled
+                className="flex items-center space-x-1 px-3 py-1 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed text-sm"
+                title="Not supported by backend API"
               >
                 <EyeOff className="h-3 w-3" />
                 <span>Mark Unread</span>
               </button>
               <button
                 onClick={() => handleDelete(selectedNotifications)}
-                className="flex items-center space-x-1 px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm"
+                disabled
+                className="flex items-center space-x-1 px-3 py-1 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed text-sm"
+                title="Not supported by backend API"
               >
                 <Trash2 className="h-3 w-3" />
                 <span>Delete</span>
@@ -503,24 +462,27 @@ const NotificationsManagement = ({ onRefresh }) => {
                         {notification.status === 'unread' ? (
                           <button
                             onClick={() => handleMarkAsRead([notification.id])}
-                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Mark as read"
+                            disabled
+                            className="p-2 text-gray-300 cursor-not-allowed rounded-lg"
+                            title="Mark as read - Not supported by backend API"
                           >
                             <Eye className="h-4 w-4" />
                           </button>
                         ) : (
                           <button
                             onClick={() => handleMarkAsUnread([notification.id])}
-                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                            title="Mark as unread"
+                            disabled
+                            className="p-2 text-gray-300 cursor-not-allowed rounded-lg"
+                            title="Mark as unread - Not supported by backend API"
                           >
                             <EyeOff className="h-4 w-4" />
                           </button>
                         )}
                         <button
                           onClick={() => handleDelete([notification.id])}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete notification"
+                          disabled
+                          className="p-2 text-gray-300 cursor-not-allowed rounded-lg"
+                          title="Delete notification - Not supported by backend API"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -542,7 +504,7 @@ const NotificationsManagement = ({ onRefresh }) => {
         </div>
       )}
 
-      {filteredNotifications.length === 0 && !loading && (
+      {filteredNotifications.length === 0 && !loading && !error && (
         <div className="text-center py-12">
           <Bell className="mx-auto h-12 w-12 text-gray-300" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No notifications found</h3>
@@ -552,6 +514,31 @@ const NotificationsManagement = ({ onRefresh }) => {
               : 'You\'re all caught up! No new notifications.'
             }
           </p>
+          {notifications.length === 0 && (
+            <button
+              onClick={loadNotifications}
+              className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
+            >
+              Refresh Notifications
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && notifications.length === 0 && (
+        <div className="text-center py-12">
+          <AlertCircle className="mx-auto h-12 w-12 text-red-300" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Failed to load notifications</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            There was an error loading your notifications. Please try again.
+          </p>
+          <button
+            onClick={loadNotifications}
+            className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
+          >
+            Try Again
+          </button>
         </div>
       )}
     </div>
