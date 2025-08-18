@@ -37,18 +37,17 @@ const ServiceBooking = ({ onBack }) => {
 
   // Generate QR code when we reach step 4 and have booking data
   useEffect(() => {
-    if (step === 4 && createdBooking?.booking_code) {
-      console.log('Step 4 reached with booking code:', createdBooking.booking_code)
+    if (step === 4 && createdBooking?.id) {
+      console.log('Step 4 reached with booking ID:', createdBooking.id, 'booking code:', createdBooking.booking_code)
       
-      // Small delay to ensure canvas is rendered in DOM
-      const timer = setTimeout(() => {
+      const generateQRCode = (retryCount = 0) => {
         if (qrRef.current) {
           console.log('Canvas found, generating QR code')
           
           // Generate QR code data matching MyBookings format exactly
           const qrData = JSON.stringify({
             bookingId: createdBooking.id,
-            bookingCode: createdBooking.booking_code,
+            bookingCode: createdBooking.booking_code || `BK-${createdBooking.id}`,
             service: selectedService?.name,
             time: createdBooking.time,
             barber: selectedStaff?.full_name || selectedStaff?.name || 'Any Barber',
@@ -73,15 +72,21 @@ const ServiceBooking = ({ onBack }) => {
             }
             setQrCodeLoading(false)
           })
+        } else if (retryCount < 5) {
+          console.log(`Canvas ref not available, retrying... (${retryCount + 1}/5)`)
+          setTimeout(() => generateQRCode(retryCount + 1), 200)
         } else {
-          console.error('Canvas ref still not available after timeout')
+          console.error('Canvas ref still not available after 5 retries')
           setQrCodeLoading(false)
         }
-      }, 300)
+      }
+      
+      // Start QR code generation with initial delay
+      const timer = setTimeout(() => generateQRCode(), 100)
       
       return () => clearTimeout(timer)
     }
-  }, [step, createdBooking?.booking_code, selectedService, selectedStaff])
+  }, [step, createdBooking?.id, createdBooking?.booking_code, selectedService, selectedStaff])
 
   const loadBookingData = async () => {
     try {
@@ -138,9 +143,15 @@ const ServiceBooking = ({ onBack }) => {
   const getAvailableBarbers = () => {
     if (!selectedService) return barbers
     
-    return barbers.filter(barber => 
-      barber.services && barber.services.includes(selectedService.id)
+    // Filter barbers who provide the specific service
+    const serviceBarbers = barbers.filter(barber => 
+      barber.services && Array.isArray(barber.services) && barber.services.includes(selectedService.id)
     )
+    
+    // Only return barbers that specifically offer this service
+    // Don't fallback to all barbers to prevent validation errors
+    console.log(`Found ${serviceBarbers.length} barbers for service ${selectedService.name} (ID: ${selectedService.id})`)
+    return serviceBarbers
   }
 
   // Helper function to get service icon
@@ -189,7 +200,14 @@ const ServiceBooking = ({ onBack }) => {
           }, 1000)
         }
       } else {
-        alert(`Failed to create booking: ${result.error}`)
+        // Show a more user-friendly error message
+        const errorMsg = result.error || 'Failed to create booking'
+        
+        if (errorMsg.includes('does not offer the service')) {
+          alert(`⚠️ The selected barber doesn't provide this service. Please choose a different barber or service.`)
+        } else {
+          alert(`❌ ${errorMsg}`)
+        }
       }
     } catch (error) {
       console.error('Error creating booking:', error)
@@ -201,6 +219,8 @@ const ServiceBooking = ({ onBack }) => {
 
   const handleServiceSelect = (service) => {
     setSelectedService(service)
+    // Reset selected staff when changing service to avoid validation errors
+    setSelectedStaff(null)
     setStep(2)
   }
 
@@ -391,29 +411,63 @@ const ServiceBooking = ({ onBack }) => {
       <div className="bg-white rounded-xl p-4 border shadow-sm" style={{ borderColor: '#E0E0E0' }}>
         <h3 className="text-base font-bold mb-3" style={{ color: '#36454F' }}>Choose Your Barber</h3>
         <div className="space-y-2">
-          {getAvailableBarbers().map((barber) => (
-            <button
-              key={barber.id}
-              onClick={() => handleStaffSelect(barber)}
-              className="w-full p-3 rounded-lg border transition-all duration-200 text-left"
-              style={{
-                borderColor: selectedStaff?.id === barber.id ? '#F68B24' : '#E0E0E0',
-                backgroundColor: selectedStaff?.id === barber.id ? 'rgba(246, 139, 36, 0.1)' : 'white'
-              }}
-            >
-              <div className="flex items-center space-x-2">
-                <div className="text-xl">👨‍💼</div>
-                <div className="flex-1">
-                  <h4 className="font-bold text-sm" style={{ color: '#36454F' }}>{barber.full_name}</h4>
-                  <p className="text-xs" style={{ color: '#8B8B8B' }}>Professional Barber</p>
-                  <div className="flex items-center space-x-1 mt-0.5">
-                    <div className="flex text-yellow-400 text-xs">★★★★★</div>
-                    <span className="text-xs" style={{ color: '#8B8B8B' }}>5.0</span>
+          {getAvailableBarbers().length > 0 ? (
+            getAvailableBarbers().map((barber) => (
+              <button
+                key={barber.id}
+                onClick={() => handleStaffSelect(barber)}
+                className="w-full p-3 rounded-lg border transition-all duration-200 text-left hover:shadow-md"
+                style={{
+                  borderColor: selectedStaff?.id === barber.id ? '#F68B24' : '#E0E0E0',
+                  backgroundColor: selectedStaff?.id === barber.id ? 'rgba(246, 139, 36, 0.1)' : 'white',
+                  borderWidth: '2px'
+                }}
+                onMouseEnter={(e) => {
+                  if (selectedStaff?.id !== barber.id) {
+                    e.target.style.borderColor = '#F68B24'
+                    e.target.style.backgroundColor = 'rgba(246, 139, 36, 0.05)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (selectedStaff?.id !== barber.id) {
+                    e.target.style.borderColor = '#E0E0E0'
+                    e.target.style.backgroundColor = 'white'
+                  }
+                }}
+              >
+                <div className="flex items-center space-x-2">
+                  <div className="text-xl">👨‍💼</div>
+                  <div className="flex-1">
+                    <h4 className="font-bold text-sm" style={{ color: '#36454F' }}>{barber.full_name || barber.name || 'Professional Barber'}</h4>
+                    <p className="text-xs" style={{ color: '#8B8B8B' }}>Professional Barber</p>
+                    <div className="flex items-center space-x-1 mt-0.5">
+                      <div className="flex text-yellow-400 text-xs">★★★★★</div>
+                      <span className="text-xs" style={{ color: '#8B8B8B' }}>5.0</span>
+                    </div>
                   </div>
+                  {selectedStaff?.id === barber.id && (
+                    <div className="text-orange-500">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            ))
+          ) : (
+            <div className="text-center py-6">
+              <div className="text-4xl mb-2">⚠️</div>
+              <p className="text-sm font-medium" style={{ color: '#F68B24' }}>No barbers available for "{selectedService?.name}"</p>
+              <p className="text-xs mt-1" style={{ color: '#8B8B8B' }}>This service may not be offered by our current staff</p>
+              <button
+                onClick={() => setStep(1)}
+                className="mt-3 px-4 py-2 bg-orange-500 text-white text-xs font-medium rounded-lg hover:bg-orange-600 transition-colors"
+              >
+                Choose Different Service
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -556,6 +610,7 @@ const ServiceBooking = ({ onBack }) => {
                   <h5 className="text-sm font-bold mb-2" style={{ color: '#36454F' }}>Select Payment Method</h5>
                   <div className="space-y-2">
                     <button
+                      key="gcash"
                       onClick={() => setSelectedPaymentMethod('gcash')}
                       className={`w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-3 ${
                         selectedPaymentMethod === 'gcash' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'
@@ -571,6 +626,7 @@ const ServiceBooking = ({ onBack }) => {
                     </button>
                     
                     <button
+                      key="maya"
                       onClick={() => setSelectedPaymentMethod('maya')}
                       className={`w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-3 ${
                         selectedPaymentMethod === 'maya' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-green-300'
@@ -586,6 +642,7 @@ const ServiceBooking = ({ onBack }) => {
                     </button>
                     
                     <button
+                      key="card"
                       onClick={() => setSelectedPaymentMethod('card')}
                       className={`w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-3 ${
                         selectedPaymentMethod === 'card' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-purple-300'
@@ -679,16 +736,21 @@ const ServiceBooking = ({ onBack }) => {
           {/* Real QR Code */}
           <div className="flex justify-center mb-4">
             <div className="p-4 bg-white rounded-2xl border-2 shadow-sm" style={{ borderColor: '#E0E0E0' }}>
-              {qrCodeLoading ? (
-                <div className="w-48 h-48 flex items-center justify-center">
-                  <div className="text-center space-y-3">
-                    <div className="animate-spin w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full mx-auto"></div>
-                    <p className="text-sm" style={{ color: '#8B8B8B' }}>Generating QR Code...</p>
+              <div className="relative w-48 h-48">
+                {qrCodeLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
+                    <div className="text-center space-y-3">
+                      <div className="animate-spin w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full mx-auto"></div>
+                      <p className="text-sm" style={{ color: '#8B8B8B' }}>Generating QR Code...</p>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <canvas ref={qrRef} className="rounded-xl"></canvas>
-              )}
+                )}
+                <canvas 
+                  ref={qrRef} 
+                  className="rounded-xl w-full h-full"
+                  style={{ display: qrCodeLoading ? 'none' : 'block' }}
+                ></canvas>
+              </div>
             </div>
           </div>
           

@@ -13,7 +13,6 @@ import CustomersManagement from '../../components/staff/CustomersManagement'
 import ReportsManagement from '../../components/staff/ReportsManagement'
 import EventsManagement from '../../components/staff/EventsManagement'
 import ProductsManagement from '../../components/staff/ProductsManagement'
-import NotificationsManagement from '../../components/staff/NotificationsManagement'
 import { bookingsService, servicesService, vouchersService, salesService, loyaltyService, usersService, overviewService } from '../../services/staff'
 import barbersService from '../../services/staff/barbersService'
 import clientsService from '../../services/staff/clientsService'
@@ -31,8 +30,7 @@ function StaffDashboard() {
     barbers: null,
     reports: null,
     events: null,
-    products: null,
-    notifications: null
+    products: null
   })
   const [loading, setLoading] = useState({
     overview: false,
@@ -43,8 +41,7 @@ function StaffDashboard() {
     barbers: false,
     reports: false,
     events: false,
-    products: false,
-    notifications: false
+    products: false
   })
   const [error, setError] = useState({
     overview: null,
@@ -55,8 +52,7 @@ function StaffDashboard() {
     barbers: null,
     reports: null,
     events: null,
-    products: null,
-    notifications: null
+    products: null
   })
 
   // Load overview data on mount
@@ -132,10 +128,6 @@ function StaffDashboard() {
       case 'products':
         console.log('Calling loadProductsData()')
         await loadProductsData()
-        break
-      case 'notifications':
-        console.log('Calling loadNotificationsData()')
-        await loadNotificationsData()
         break
       default:
         console.log('Unknown tab:', tab)
@@ -289,57 +281,6 @@ function StaffDashboard() {
     }
   }
 
-  const loadEventsData = async () => {
-    try {
-      setTabLoading('events', true)
-      setTabError('events', null)
-
-      // Mock events data - in a real app, this would come from an API
-      const eventsData = []
-      
-      setTabData('events', eventsData)
-
-    } catch (err) {
-      setTabError('events', 'Failed to load events data')
-    } finally {
-      setTabLoading('events', false)
-    }
-  }
-
-  const loadProductsData = async () => {
-    try {
-      setTabLoading('products', true)
-      setTabError('products', null)
-
-      // Mock products data - in a real app, this would come from an API
-      const productsData = []
-      
-      setTabData('products', productsData)
-
-    } catch (err) {
-      setTabError('products', 'Failed to load products data')
-    } finally {
-      setTabLoading('products', false)
-    }
-  }
-
-  const loadNotificationsData = async () => {
-    try {
-      setTabLoading('notifications', true)
-      setTabError('notifications', null)
-
-      // Mock notifications data - in a real app, this would come from an API
-      const notificationsData = []
-      
-      setTabData('notifications', notificationsData)
-
-    } catch (err) {
-      setTabError('notifications', 'Failed to load notifications data')
-    } finally {
-      setTabLoading('notifications', false)
-    }
-  }
-
   const generateRecentActivity = (bookings = [], vouchers = [], sales = []) => {
     const activities = []
     
@@ -406,8 +347,7 @@ function StaffDashboard() {
     { id: 'barbers', label: 'Barbers', icon: 'M16 11c1.66 0 3-1.34 3-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C18 14.17 13.33 13 11 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h4v-2.5c0-2.33-4.67-3.5-7-3.5z' },
     { id: 'reports', label: 'Reports', icon: 'M3 3v18h18v-2H5V3H3zm4 14h2v-6H7v6zm4 0h2V9h-2v8zm4 0h2v-4h-2v4z' },
     { id: 'events', label: 'Events', icon: 'M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z' },
-    { id: 'products', label: 'Products', icon: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z' },
-    { id: 'notifications', label: 'Notifications', icon: 'M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0' }
+    { id: 'products', label: 'Products', icon: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z' }
   ]
 
   const mockData = {
@@ -538,9 +478,9 @@ function StaffDashboard() {
     sessionStorage.clear()
     
     // Redirect to login page
-    // In a real app with React Router, you'd use navigate('/login')
+    // In a real app with React Router, you'd use navigate('/auth/login')
     console.log('User logged out - redirecting to login...')
-    window.location.href = '/login' // Simple redirect for demo
+    window.location.href = '/auth/login' // Redirect to actual login page
   }
 
   const renderTabContent = () => {
@@ -591,7 +531,7 @@ function StaffDashboard() {
             </div>
           )}
           
-          {(activeTab === 'customers' || activeTab === 'vouchers' || activeTab === 'bookings' || activeTab === 'services' || activeTab === 'barbers' || activeTab === 'reports' || activeTab === 'events' || activeTab === 'products' || activeTab === 'notifications') && (
+          {(activeTab === 'customers' || activeTab === 'vouchers' || activeTab === 'bookings' || activeTab === 'services' || activeTab === 'barbers' || activeTab === 'reports') && (
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#F5F5F5]">
               <div className="animate-pulse">
                 {/* Table header skeleton */}
@@ -684,18 +624,6 @@ function StaffDashboard() {
 
     if (activeTab === 'reports') {
       return <ReportsManagement onRefresh={loadReportsData} />
-    }
-
-    if (activeTab === 'events') {
-      return <EventsManagement onRefresh={loadEventsData} />
-    }
-
-    if (activeTab === 'products') {
-      return <ProductsManagement onRefresh={loadProductsData} />
-    }
-
-    if (activeTab === 'notifications') {
-      return <NotificationsManagement onRefresh={loadNotificationsData} />
     }
 
     return (

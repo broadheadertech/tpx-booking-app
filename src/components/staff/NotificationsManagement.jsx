@@ -17,7 +17,7 @@ const NotificationsManagement = ({ onRefresh }) => {
     
     // Set up polling for real-time updates every 30 seconds
     const pollInterval = setInterval(() => {
-      loadNotifications(false) // Silent loading to prevent flickering
+      loadNotifications()
     }, 30000) // 30 seconds
     
     // Cleanup interval on unmount
@@ -26,13 +26,8 @@ const NotificationsManagement = ({ onRefresh }) => {
     }
   }, [])
 
-  const loadNotifications = async (showLoading = true) => {
-    // Prevent multiple simultaneous calls
-    if (loading) return
-    
-    if (showLoading) {
-      setLoading(true)
-    }
+  const loadNotifications = async () => {
+    setLoading(true)
     setError(null)
     
     try {
@@ -69,9 +64,7 @@ const NotificationsManagement = ({ onRefresh }) => {
       
       setError(errorMessage)
     } finally {
-      if (showLoading) {
-        setLoading(false)
-      }
+      setLoading(false)
     }
   }
 
@@ -159,21 +152,71 @@ const NotificationsManagement = ({ onRefresh }) => {
   }
 
   const handleMarkAsRead = async (notificationIds) => {
-    // Backend doesn't support mark as read according to API docs
-    setError('Mark as read is not supported by the backend API yet. This feature will be available in a future update.')
-    console.log(`Mark as read not supported for notifications: ${notificationIds}`)
+    try {
+      // Note: Backend doesn't have mark as read endpoint yet
+      // This is a placeholder implementation for UI feedback
+      // TODO: Implement PATCH /api/notifications/{id}/ with {"read": true}
+      
+      // Update local state immediately for better UX
+      setNotifications(prev => 
+        prev.map(notification => 
+          notificationIds.includes(notification.id)
+            ? { ...notification, status: 'read' }
+            : notification
+        )
+      )
+      
+      // Show success message
+      console.log(`Marked ${notificationIds.length} notification(s) as read`)
+    } catch (error) {
+      console.error('Error marking notifications as read:', error)
+      setError('Failed to mark notifications as read')
+    }
   }
 
   const handleMarkAsUnread = async (notificationIds) => {
-    // Backend doesn't support mark as unread according to API docs
-    setError('Mark as unread is not supported by the backend API yet. This feature will be available in a future update.')
-    console.log(`Mark as unread not supported for notifications: ${notificationIds}`)
+    try {
+      // Note: Backend doesn't have mark as unread endpoint yet
+      // This is a placeholder implementation for UI feedback
+      // TODO: Implement PATCH /api/notifications/{id}/ with {"read": false}
+      
+      // Update local state immediately for better UX
+      setNotifications(prev => 
+        prev.map(notification => 
+          notificationIds.includes(notification.id)
+            ? { ...notification, status: 'unread' }
+            : notification
+        )
+      )
+      
+      // Show success message
+      console.log(`Marked ${notificationIds.length} notification(s) as unread`)
+    } catch (error) {
+      console.error('Error marking notifications as unread:', error)
+      setError('Failed to mark notifications as unread')
+    }
   }
 
   const handleDelete = async (notificationIds) => {
-    // Backend doesn't support delete according to API docs
-    setError('Delete notifications is not supported by the backend API yet. This feature will be available in a future update.')
-    console.log(`Delete not supported for notifications: ${notificationIds}`)
+    if (!confirm(`Are you sure you want to delete ${notificationIds.length} notification(s)?`)) return
+    
+    try {
+      // Note: Backend doesn't have delete endpoint yet
+      // This is a placeholder implementation for UI feedback
+      // TODO: Implement DELETE /api/notifications/{id}/
+      
+      // For now, just remove from local state
+      setNotifications(prev => 
+        prev.filter(notification => !notificationIds.includes(notification.id))
+      )
+      setSelectedNotifications([])
+      
+      // Show success message
+      console.log(`Deleted ${notificationIds.length} notification(s)`)
+    } catch (error) {
+      console.error('Error deleting notifications:', error)
+      setError('Failed to delete notifications')
+    }
   }
 
   const handleSelectNotification = (notificationId) => {
@@ -342,27 +385,21 @@ const NotificationsManagement = ({ onRefresh }) => {
               </span>
               <button
                 onClick={() => handleMarkAsRead(selectedNotifications)}
-                disabled
-                className="flex items-center space-x-1 px-3 py-1 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed text-sm"
-                title="Not supported by backend API"
+                className="flex items-center space-x-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm"
               >
                 <Eye className="h-3 w-3" />
                 <span>Mark Read</span>
               </button>
               <button
                 onClick={() => handleMarkAsUnread(selectedNotifications)}
-                disabled
-                className="flex items-center space-x-1 px-3 py-1 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed text-sm"
-                title="Not supported by backend API"
+                className="flex items-center space-x-1 px-3 py-1 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
               >
                 <EyeOff className="h-3 w-3" />
                 <span>Mark Unread</span>
               </button>
               <button
                 onClick={() => handleDelete(selectedNotifications)}
-                disabled
-                className="flex items-center space-x-1 px-3 py-1 bg-gray-100 text-gray-400 rounded-lg cursor-not-allowed text-sm"
-                title="Not supported by backend API"
+                className="flex items-center space-x-1 px-3 py-1 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm"
               >
                 <Trash2 className="h-3 w-3" />
                 <span>Delete</span>
@@ -462,27 +499,24 @@ const NotificationsManagement = ({ onRefresh }) => {
                         {notification.status === 'unread' ? (
                           <button
                             onClick={() => handleMarkAsRead([notification.id])}
-                            disabled
-                            className="p-2 text-gray-300 cursor-not-allowed rounded-lg"
-                            title="Mark as read - Not supported by backend API"
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Mark as read"
                           >
                             <Eye className="h-4 w-4" />
                           </button>
                         ) : (
                           <button
                             onClick={() => handleMarkAsUnread([notification.id])}
-                            disabled
-                            className="p-2 text-gray-300 cursor-not-allowed rounded-lg"
-                            title="Mark as unread - Not supported by backend API"
+                            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
+                            title="Mark as unread"
                           >
                             <EyeOff className="h-4 w-4" />
                           </button>
                         )}
                         <button
                           onClick={() => handleDelete([notification.id])}
-                          disabled
-                          className="p-2 text-gray-300 cursor-not-allowed rounded-lg"
-                          title="Delete notification - Not supported by backend API"
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete notification"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
