@@ -13,6 +13,7 @@ import CustomersManagement from '../../components/staff/CustomersManagement'
 import ReportsManagement from '../../components/staff/ReportsManagement'
 import EventsManagement from '../../components/staff/EventsManagement'
 import ProductsManagement from '../../components/staff/ProductsManagement'
+import NotificationsManagement from '../../components/staff/NotificationsManagement'
 import { bookingsService, servicesService, vouchersService, salesService, loyaltyService, usersService, overviewService } from '../../services/staff'
 import barbersService from '../../services/staff/barbersService'
 import clientsService from '../../services/staff/clientsService'
@@ -30,7 +31,8 @@ function StaffDashboard() {
     barbers: null,
     reports: null,
     events: null,
-    products: null
+    products: null,
+    notifications: null
   })
   const [loading, setLoading] = useState({
     overview: false,
@@ -41,7 +43,8 @@ function StaffDashboard() {
     barbers: false,
     reports: false,
     events: false,
-    products: false
+    products: false,
+    notifications: false
   })
   const [error, setError] = useState({
     overview: null,
@@ -52,7 +55,8 @@ function StaffDashboard() {
     barbers: null,
     reports: null,
     events: null,
-    products: null
+    products: null,
+    notifications: null
   })
 
   // Load overview data on mount
@@ -128,6 +132,10 @@ function StaffDashboard() {
       case 'products':
         console.log('Calling loadProductsData()')
         await loadProductsData()
+        break
+      case 'notifications':
+        console.log('Calling loadNotificationsData()')
+        await loadNotificationsData()
         break
       default:
         console.log('Unknown tab:', tab)
@@ -281,6 +289,69 @@ function StaffDashboard() {
     }
   }
 
+  const loadEventsData = async () => {
+    try {
+      setTabLoading('events', true)
+      setTabError('events', null)
+
+      // Mock events data - in a real app, this would come from an API
+      const eventsData = [
+        { id: 1, title: 'Beard Styling Workshop', date: '2024-02-15', time: '14:00', attendees: 8, maxAttendees: 12, status: 'upcoming' },
+        { id: 2, title: 'Grand Opening Celebration', date: '2024-02-20', time: '10:00', attendees: 25, maxAttendees: 50, status: 'upcoming' },
+        { id: 3, title: 'Hair Care Seminar', date: '2024-02-10', time: '16:00', attendees: 15, maxAttendees: 20, status: 'completed' }
+      ]
+      
+      setTabData('events', eventsData)
+
+    } catch (err) {
+      setTabError('events', 'Failed to load events data')
+    } finally {
+      setTabLoading('events', false)
+    }
+  }
+
+  const loadProductsData = async () => {
+    try {
+      setTabLoading('products', true)
+      setTabError('products', null)
+
+      // Mock products data - in a real app, this would come from an API
+      const productsData = [
+        { id: 1, name: 'Hair Pomade', category: 'Hair Care', price: '₱450', stock: 25, sales: 15 },
+        { id: 2, name: 'Beard Oil', category: 'Beard Care', price: '₱350', stock: 18, sales: 12 },
+        { id: 3, name: 'Hair Wax', category: 'Hair Care', price: '₱380', stock: 30, sales: 20 }
+      ]
+      
+      setTabData('products', productsData)
+
+    } catch (err) {
+      setTabError('products', 'Failed to load products data')
+    } finally {
+      setTabLoading('products', false)
+    }
+  }
+
+  const loadNotificationsData = async () => {
+    try {
+      setTabLoading('notifications', true)
+      setTabError('notifications', null)
+
+      // Mock notifications data - in a real app, this would come from an API
+      const notificationsData = [
+        { id: 1, title: 'New Booking', message: 'John Doe booked a haircut for tomorrow', type: 'booking', read: false, createdAt: '2024-01-15T10:30:00Z' },
+        { id: 2, title: 'Payment Received', message: 'Payment of ₱500 received from Jane Smith', type: 'payment', read: true, createdAt: '2024-01-15T09:15:00Z' },
+        { id: 3, title: 'Staff Schedule', message: 'Reminder: Staff meeting at 3 PM today', type: 'reminder', read: false, createdAt: '2024-01-15T08:00:00Z' }
+      ]
+      
+      setTabData('notifications', notificationsData)
+
+    } catch (err) {
+      setTabError('notifications', 'Failed to load notifications data')
+    } finally {
+      setTabLoading('notifications', false)
+    }
+  }
+
   const generateRecentActivity = (bookings = [], vouchers = [], sales = []) => {
     const activities = []
     
@@ -347,7 +418,8 @@ function StaffDashboard() {
     { id: 'barbers', label: 'Barbers', icon: 'M16 11c1.66 0 3-1.34 3-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C18 14.17 13.33 13 11 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h4v-2.5c0-2.33-4.67-3.5-7-3.5z' },
     { id: 'reports', label: 'Reports', icon: 'M3 3v18h18v-2H5V3H3zm4 14h2v-6H7v6zm4 0h2V9h-2v8zm4 0h2v-4h-2v4z' },
     { id: 'events', label: 'Events', icon: 'M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z' },
-    { id: 'products', label: 'Products', icon: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z' }
+    { id: 'products', label: 'Products', icon: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z' },
+    { id: 'notifications', label: 'Notifications', icon: 'M12 22c1.1 0 2-.9 2-2h-4c0 1.1.89 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z' }
   ]
 
   const mockData = {
@@ -624,6 +696,18 @@ function StaffDashboard() {
 
     if (activeTab === 'reports') {
       return <ReportsManagement onRefresh={loadReportsData} />
+    }
+
+    if (activeTab === 'events') {
+      return <EventsManagement onRefresh={loadEventsData} />
+    }
+
+    if (activeTab === 'products') {
+      return <ProductsManagement onRefresh={loadProductsData} />
+    }
+
+    if (activeTab === 'notifications') {
+      return <NotificationsManagement onRefresh={loadNotificationsData} />
     }
 
     return (

@@ -33,7 +33,7 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
             <button 
               onClick={() => {
                 console.log('Scanner button clicked')
-                setActiveModal('voucherScanner')
+                setActiveModal('scannerSelection')
               }}
               className="w-full py-3 px-6 bg-white/15 backdrop-blur-xl text-white font-semibold rounded-[16px] border border-white/20 hover:bg-white/25 transition-all duration-300 text-sm shadow-lg"
             >
@@ -109,6 +109,63 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
       )}
 
       {/* Modals */}
+      {/* Scanner Selection Modal */}
+       {activeModal === 'scannerSelection' && (
+         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl border border-gray-200">
+            <div className="text-center space-y-6">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B]">
+                <QrCode className="w-8 h-8 text-white" />
+              </div>
+              
+              <div>
+                <h3 className="text-2xl font-bold mb-2 text-[#1A1A1A]">Choose Scanner Type</h3>
+                <p className="text-[#6B6B6B]">Select what type of QR code you want to scan</p>
+              </div>
+
+              <div className="space-y-4">
+                <button
+                  onClick={() => setActiveModal('bookingScanner')}
+                  className="w-full p-4 border-2 border-[#FF8C42]/20 rounded-xl hover:border-[#FF8C42] hover:bg-[#FF8C42]/5 transition-all duration-300 group"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                      <Calendar className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="text-left">
+                      <h4 className="font-bold text-[#1A1A1A] text-lg">Booking QR</h4>
+                      <p className="text-[#6B6B6B] text-sm">Scan customer booking QR codes</p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => setActiveModal('voucherScanner')}
+                  className="w-full p-4 border-2 border-[#FF8C42]/20 rounded-xl hover:border-[#FF8C42] hover:bg-[#FF8C42]/5 transition-all duration-300 group"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                      <Gift className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="text-left">
+                      <h4 className="font-bold text-[#1A1A1A] text-lg">Voucher QR</h4>
+                      <p className="text-[#6B6B6B] text-sm">Scan and redeem voucher QR codes</p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setActiveModal(null)}
+                className="w-full py-3 px-6 border-2 border-[#6B6B6B]/20 text-[#6B6B6B] font-semibold rounded-xl hover:bg-[#6B6B6B] hover:text-white transition-all duration-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeModal === 'voucherScanner' && (
         <QRScannerModal 
           isOpen={true}
