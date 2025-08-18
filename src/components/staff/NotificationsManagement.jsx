@@ -153,21 +153,21 @@ const NotificationsManagement = ({ onRefresh }) => {
 
   const handleMarkAsRead = async (notificationIds) => {
     try {
-      // Note: Backend doesn't have mark as read endpoint yet
-      // This is a placeholder implementation for UI feedback
+      // Note: Backend doesn't have mark as read endpoint yet according to API docs
+      // This is a placeholder implementation for UI feedback only
       // TODO: Implement PATCH /api/notifications/{id}/ with {"read": true}
       
       // Update local state immediately for better UX
       setNotifications(prev => 
         prev.map(notification => 
           notificationIds.includes(notification.id)
-            ? { ...notification, status: 'read' }
+            ? { ...notification, read: true }
             : notification
         )
       )
       
       // Show success message
-      console.log(`Marked ${notificationIds.length} notification(s) as read`)
+      console.log(`Marked ${notificationIds.length} notification(s) as read (UI only - backend doesn't support this yet)`)
     } catch (error) {
       console.error('Error marking notifications as read:', error)
       setError('Failed to mark notifications as read')
@@ -176,21 +176,21 @@ const NotificationsManagement = ({ onRefresh }) => {
 
   const handleMarkAsUnread = async (notificationIds) => {
     try {
-      // Note: Backend doesn't have mark as unread endpoint yet
-      // This is a placeholder implementation for UI feedback
+      // Note: Backend doesn't have mark as unread endpoint yet according to API docs
+      // This is a placeholder implementation for UI feedback only
       // TODO: Implement PATCH /api/notifications/{id}/ with {"read": false}
       
       // Update local state immediately for better UX
       setNotifications(prev => 
         prev.map(notification => 
           notificationIds.includes(notification.id)
-            ? { ...notification, status: 'unread' }
+            ? { ...notification, read: false }
             : notification
         )
       )
       
       // Show success message
-      console.log(`Marked ${notificationIds.length} notification(s) as unread`)
+      console.log(`Marked ${notificationIds.length} notification(s) as unread (UI only - backend doesn't support this yet)`)
     } catch (error) {
       console.error('Error marking notifications as unread:', error)
       setError('Failed to mark notifications as unread')
@@ -239,17 +239,19 @@ const NotificationsManagement = ({ onRefresh }) => {
     const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          notification.message.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesType = filterType === 'all' || notification.type === filterType
-    const matchesStatus = filterStatus === 'all' || notification.status === filterStatus
+    const matchesStatus = filterStatus === 'all' || 
+                         (filterStatus === 'read' && notification.read) ||
+                         (filterStatus === 'unread' && !notification.read)
     return matchesSearch && matchesType && matchesStatus
   })
 
   const stats = {
     total: notifications.length,
-    unread: notifications.filter(n => n.status === 'unread').length,
+    unread: notifications.filter(n => !n.read).length,
     high: notifications.filter(n => n.priority === 'high').length,
     today: notifications.filter(n => {
       const today = new Date().toDateString()
-      return new Date(n.timestamp).toDateString() === today
+      return new Date(n.created_at).toDateString() === today
     }).length
   }
 
@@ -455,7 +457,7 @@ const NotificationsManagement = ({ onRefresh }) => {
               <div
                 key={notification.id}
                 className={`bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow p-6 ${
-                  notification.status === 'unread' ? 'border-l-4 border-l-orange-500' : 'border-gray-200'
+                  !notification.read ? 'border-l-4 border-l-orange-500' : 'border-gray-200'
                 } ${isSelected ? 'ring-2 ring-orange-500 ring-opacity-50' : ''}`}
               >
                 <div className="flex items-start space-x-4">
@@ -479,7 +481,7 @@ const NotificationsManagement = ({ onRefresh }) => {
                           <h3 className={`text-base font-semibold ${colors.text}`}>
                             {notification.title}
                           </h3>
-                          {notification.status === 'unread' && (
+                          {!notification.read && (
                             <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
                           )}
                           {notification.priority === 'high' && (
@@ -490,17 +492,17 @@ const NotificationsManagement = ({ onRefresh }) => {
                         </div>
                         <p className="text-gray-600 text-sm mb-2">{notification.message}</p>
                         <div className="flex items-center space-x-4 text-xs text-gray-500">
-                          <span>{formatTimestamp(notification.timestamp)}</span>
+                          <span>{formatTimestamp(notification.created_at)}</span>
                           <span className="capitalize">{notification.type}</span>
                         </div>
                       </div>
 
                       <div className="flex items-center space-x-2 ml-4">
-                        {notification.status === 'unread' ? (
+                        {!notification.read ? (
                           <button
                             onClick={() => handleMarkAsRead([notification.id])}
                             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Mark as read"
+                            title="Mark as read (UI only)"
                           >
                             <Eye className="h-4 w-4" />
                           </button>
@@ -508,7 +510,7 @@ const NotificationsManagement = ({ onRefresh }) => {
                           <button
                             onClick={() => handleMarkAsUnread([notification.id])}
                             className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition-colors"
-                            title="Mark as unread"
+                            title="Mark as unread (UI only)"
                           >
                             <EyeOff className="h-4 w-4" />
                           </button>
