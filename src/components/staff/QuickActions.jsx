@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import Card from '../common/Card'
 import { QrCode, UserPlus, Calendar, Gift } from 'lucide-react'
-import ScannerTypeModal from './ScannerTypeModal'
 import QRScannerModal from './QRScannerModal'
 import BookingQRScannerModal from './BookingQRScannerModal'
 import AddCustomerModal from './AddCustomerModal'
@@ -34,7 +33,7 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
             <button 
               onClick={() => {
                 console.log('Scanner button clicked')
-                setActiveModal('scannerType')
+                setActiveModal('voucherScanner')
               }}
               className="w-full py-3 px-6 bg-white/15 backdrop-blur-xl text-white font-semibold rounded-[16px] border border-white/20 hover:bg-white/25 transition-all duration-300 text-sm shadow-lg"
             >
@@ -110,33 +109,10 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
       )}
 
       {/* Modals */}
-      {activeModal === 'scannerType' && (
-        <ScannerTypeModal 
-          isOpen={true}
-          onClose={() => {
-            console.log('ScannerTypeModal onClose called')
-            setActiveModal(null)
-          }}
-          onSelectType={(type) => {
-            console.log('ScannerTypeModal onSelectType called with:', type)
-            console.log('About to set activeModal to:', type === 'voucher' ? 'voucherScanner' : 'bookingScanner')
-            
-            // Use setTimeout to ensure state update happens after current render cycle
-            setTimeout(() => {
-              if (type === 'voucher') {
-                setActiveModal('voucherScanner')
-              } else if (type === 'booking') {
-                setActiveModal('bookingScanner')
-              }
-            }, 0)
-          }}
-        />
-      )}
-      
       {activeModal === 'voucherScanner' && (
         <QRScannerModal 
           isOpen={true}
-          onClose={() => setActiveModal('scannerType')}
+          onClose={() => setActiveModal(null)}
           onVoucherScanned={(voucher) => {
             onVoucherScanned?.(voucher)
             setActiveModal(null)
@@ -147,10 +123,7 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
       {activeModal === 'bookingScanner' && (
         <BookingQRScannerModal 
           isOpen={true}
-          onClose={() => {
-            console.log('BookingQRScannerModal onClose called')
-            setActiveModal('scannerType')
-          }}
+          onClose={() => setActiveModal(null)}
           onBookingScanned={(booking) => {
             console.log('BookingQRScannerModal onBookingScanned called with:', booking)
             onBookingScanned?.(booking)

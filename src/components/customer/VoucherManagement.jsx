@@ -116,11 +116,9 @@ const VoucherManagement = ({ onBack }) => {
   }
 
   const handleVoucherClick = (voucher) => {
-    const status = getVoucherStatus(voucher)
-    if (status === 'available') {
-      setSelectedVoucher(voucher)
-      setShowQRCode(true)
-    }
+    // Allow all vouchers to show QR codes, regardless of status
+    setSelectedVoucher(voucher)
+    setShowQRCode(true)
   }
 
   const handleRedeemVoucher = async (voucherCode, voucherValue = null) => {
@@ -699,7 +697,7 @@ const VoucherManagement = ({ onBack }) => {
                   </div>
 
                   {/* Voucher Details */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3 mb-3">
                     <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 bg-blue-500 rounded"></div>
                       <div>
@@ -717,6 +715,22 @@ const VoucherManagement = ({ onBack }) => {
                       </div>
                     </div>
                   </div>
+
+                  {/* View QR Code Button */}
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedVoucher(voucher)
+                      setShowQRCode(true)
+                    }}
+                    className="w-full py-2 text-white font-bold rounded-xl transition-all duration-200 flex items-center justify-center space-x-2"
+                    style={{backgroundColor: '#6B7280'}}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#4B5563'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#6B7280'}
+                  >
+                    <QrCode className="w-4 h-4" />
+                    <span>View QR Code</span>
+                  </button>
                 </div>
               ))}
             </div>
@@ -754,7 +768,7 @@ const VoucherManagement = ({ onBack }) => {
                   </div>
 
                   {/* Voucher Details */}
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3 mb-3">
                     <div className="flex items-center space-x-2">
                       <div className="w-3 h-3 bg-red-500 rounded"></div>
                       <div>
@@ -772,6 +786,22 @@ const VoucherManagement = ({ onBack }) => {
                       </div>
                     </div>
                   </div>
+
+                  {/* View QR Code Button */}
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedVoucher(voucher)
+                      setShowQRCode(true)
+                    }}
+                    className="w-full py-2 text-white font-bold rounded-xl transition-all duration-200 flex items-center justify-center space-x-2"
+                    style={{backgroundColor: '#DC2626'}}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#B91C1C'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#DC2626'}
+                  >
+                    <QrCode className="w-4 h-4" />
+                    <span>View QR Code</span>
+                  </button>
                 </div>
               ))}
             </div>
@@ -1117,13 +1147,6 @@ const VoucherManagement = ({ onBack }) => {
               {/* Action Buttons */}
               <div className="space-y-3">
                 <button
-                  onClick={() => handleRedeemVoucher(selectedVoucher.code, selectedVoucher.value)}
-                  disabled={redeemLoading}
-                  className="w-full py-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-2xl hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {redeemLoading ? 'Redeeming...' : 'Redeem Voucher'}
-                </button>
-                <button
                   onClick={() => setShowQRCode(false)}
                   className="w-full py-4 bg-gradient-to-r from-gray-500 to-gray-600 text-white font-bold rounded-2xl hover:shadow-xl transition-all duration-200"
                 >
@@ -1146,12 +1169,24 @@ const VoucherManagement = ({ onBack }) => {
 
 // QR Code Display Component
 const QRCodeDisplay = ({ voucher }) => {
+  const { user } = useAuth()
   const qrRef = useRef(null)
+  
+  // Get username from localStorage or user context
+  const getUsername = () => {
+    // First try to get from localStorage
+    const storedUsername = localStorage.getItem('username')
+    if (storedUsername) return storedUsername
+    
+    // Fallback to user context if available
+    return user?.username || 'N/A'
+  }
   
   // Generate QR code data for voucher
   const qrData = JSON.stringify({
     voucherId: voucher.id,
     code: voucher.code,
+    username: getUsername(),
     value: voucher.value,
     expiresAt: voucher.expires_at,
     barbershop: 'TPX Barbershop'

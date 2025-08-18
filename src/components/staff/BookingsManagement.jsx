@@ -3,12 +3,13 @@ import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filte
 import { bookingsService, servicesService } from '../../services/staff'
 import barbersService from '../../services/staff/barbersService'
 import QRCode from 'qrcode'
+import CreateBookingModal from './CreateBookingModal'
 
 const BookingsManagement = ({ bookings = [], onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('date')
-  const [isCreating, setIsCreating] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingBooking, setEditingBooking] = useState(null)
   const [services, setServices] = useState([])
   const [barbers, setBarbers] = useState([])
@@ -49,6 +50,15 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
 
   const getStatusConfig = (status) => {
     switch (status) {
+      case 'booked':
+        return {
+          label: 'Booked',
+          icon: CheckCircle,
+          bg: 'bg-blue-50',
+          text: 'text-blue-700',
+          border: 'border-blue-200',
+          iconColor: 'text-blue-500'
+        }
       case 'confirmed':
         return {
           label: 'Confirmed',
@@ -107,6 +117,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
   const stats = {
     total: bookings.length,
     pending: bookings.filter(b => b.status === 'pending').length,
+    booked: bookings.filter(b => b.status === 'booked').length,
     confirmed: bookings.filter(b => b.status === 'confirmed').length,
     cancelled: bookings.filter(b => b.status === 'cancelled').length,
     today: bookings.filter(b => {
@@ -127,9 +138,12 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
   }
 
   const handleCreate = () => {
-    resetForm()
-    setIsCreating(true)
-    setEditingBooking(null)
+    setShowCreateModal(true)
+  }
+
+  const handleCreateBooking = async (newBooking) => {
+    console.log('New booking created:', newBooking)
+    onRefresh()
   }
 
   const handleEdit = (booking) => {
@@ -145,7 +159,6 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
   }
 
   const handleCancel = () => {
-    setIsCreating(false)
     setEditingBooking(null)
     resetForm()
   }
@@ -371,11 +384,11 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
     return <canvas ref={miniQrRef} className="rounded" />
   }
 
-  const BookingForm = () => (
+  const EditBookingForm = () => (
     <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900">
-          {editingBooking ? 'Edit Booking' : 'Create New Booking'}
+          Edit Booking
         </h3>
         <button
           onClick={handleCancel}
@@ -471,7 +484,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -499,6 +512,16 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
               <p className="text-2xl font-bold text-orange-600">{stats.pending}</p>
             </div>
             <AlertCircle className="h-8 w-8 text-orange-500" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Booked</p>
+              <p className="text-2xl font-bold text-blue-600">{stats.booked}</p>
+            </div>
+            <CheckCircle className="h-8 w-8 text-blue-500" />
           </div>
         </div>
 
@@ -547,6 +570,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
+                <option value="booked">Booked</option>
                 <option value="confirmed">Confirmed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
@@ -582,8 +606,8 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
         </div>
       </div>
 
-      {/* Booking Form */}
-      {(isCreating || editingBooking) && <BookingForm />}
+      {/* Edit Booking Form */}
+      {editingBooking && <EditBookingForm />}
 
       {/* Bookings Table */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
@@ -684,6 +708,24 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
                         {booking.status === 'pending' && (
                           <>
                             <button
+                              onClick={() => handleStatusChange(booking, 'booked')}
+                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                              disabled={loading}
+                            >
+                              Book
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(booking, 'cancelled')}
+                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                              disabled={loading}
+                            >
+                              Cancel
+                            </button>
+                          </>
+                        )}
+                        {booking.status === 'booked' && (
+                          <>
+                            <button
                               onClick={() => handleStatusChange(booking, 'confirmed')}
                               className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-green-700 bg-green-100 hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                               disabled={loading}
@@ -746,6 +788,13 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
           </div>
         )}
       </div>
+
+      {/* Create Booking Modal */}
+      <CreateBookingModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSubmit={handleCreateBooking}
+      />
 
       {/* QR Code Modal */}
       {showQRCode && <QRCodeModal booking={showQRCode} onClose={() => setShowQRCode(null)} />}

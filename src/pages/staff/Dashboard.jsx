@@ -10,6 +10,7 @@ import ServicesManagement from '../../components/staff/ServicesManagement'
 import BookingsManagement from '../../components/staff/BookingsManagement'
 import BarbersManagement from '../../components/staff/BarbersManagement'
 import CustomersManagement from '../../components/staff/CustomersManagement'
+import ReportsManagement from '../../components/staff/ReportsManagement'
 import { bookingsService, servicesService, vouchersService, salesService, loyaltyService, usersService, overviewService } from '../../services/staff'
 import barbersService from '../../services/staff/barbersService'
 import clientsService from '../../services/staff/clientsService'
@@ -24,7 +25,8 @@ function StaffDashboard() {
     bookings: null,
     services: null,
     vouchers: null,
-    barbers: null
+    barbers: null,
+    reports: null
   })
   const [loading, setLoading] = useState({
     overview: false,
@@ -32,7 +34,8 @@ function StaffDashboard() {
     bookings: false,
     services: false,
     vouchers: false,
-    barbers: false
+    barbers: false,
+    reports: false
   })
   const [error, setError] = useState({
     overview: null,
@@ -40,7 +43,8 @@ function StaffDashboard() {
     bookings: null,
     services: null,
     vouchers: null,
-    barbers: null
+    barbers: null,
+    reports: null
   })
 
   // Load overview data on mount
@@ -104,6 +108,10 @@ function StaffDashboard() {
       case 'barbers':
         console.log('Calling loadBarbersData()')
         await loadBarbersData()
+        break
+      case 'reports':
+        console.log('Calling loadReportsData()')
+        await loadReportsData()
         break
       default:
         console.log('Unknown tab:', tab)
@@ -235,6 +243,28 @@ function StaffDashboard() {
     }
   }
 
+  const loadReportsData = async () => {
+    try {
+      setTabLoading('reports', true)
+      setTabError('reports', null)
+
+      // Mock reports data - in a real app, this would come from an API
+      const reportsData = {
+        revenue: { current: 125430, previous: 98750, change: 27.0, trend: 'up' },
+        customers: { current: 342, previous: 298, change: 14.8, trend: 'up' },
+        bookings: { current: 156, previous: 142, change: 9.9, trend: 'up' },
+        vouchers: { current: 89, previous: 76, change: 17.1, trend: 'up' }
+      }
+      
+      setTabData('reports', reportsData)
+
+    } catch (err) {
+      setTabError('reports', 'Failed to load reports data')
+    } finally {
+      setTabLoading('reports', false)
+    }
+  }
+
   const generateRecentActivity = (bookings = [], vouchers = [], sales = []) => {
     const activities = []
     
@@ -298,7 +328,8 @@ function StaffDashboard() {
     { id: 'bookings', label: 'Bookings', icon: 'M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z' },
     { id: 'services', label: 'Services', icon: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z' },
     { id: 'vouchers', label: 'Vouchers', icon: 'M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z' },
-    { id: 'barbers', label: 'Barbers', icon: 'M16 11c1.66 0 3-1.34 3-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C18 14.17 13.33 13 11 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h4v-2.5c0-2.33-4.67-3.5-7-3.5z' }
+    { id: 'barbers', label: 'Barbers', icon: 'M16 11c1.66 0 3-1.34 3-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C18 14.17 13.33 13 11 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h4v-2.5c0-2.33-4.67-3.5-7-3.5z' },
+    { id: 'reports', label: 'Reports', icon: 'M3 3v18h18v-2H5V3H3zm4 14h2v-6H7v6zm4 0h2V9h-2v8zm4 0h2v-4h-2v4z' }
   ]
 
   const mockData = {
@@ -482,7 +513,7 @@ function StaffDashboard() {
             </div>
           )}
           
-          {(activeTab === 'customers' || activeTab === 'vouchers' || activeTab === 'bookings' || activeTab === 'services' || activeTab === 'barbers') && (
+          {(activeTab === 'customers' || activeTab === 'vouchers' || activeTab === 'bookings' || activeTab === 'services' || activeTab === 'barbers' || activeTab === 'reports') && (
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#F5F5F5]">
               <div className="animate-pulse">
                 {/* Table header skeleton */}
@@ -571,6 +602,10 @@ function StaffDashboard() {
 
     if (activeTab === 'customers') {
       return <CustomersManagement customers={currentData} onRefresh={loadCustomersData} />
+    }
+
+    if (activeTab === 'reports') {
+      return <ReportsManagement onRefresh={loadReportsData} />
     }
 
     return (

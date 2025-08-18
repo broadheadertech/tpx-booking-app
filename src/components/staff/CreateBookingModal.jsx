@@ -72,6 +72,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit }) => {
         service: parseInt(formData.service),
         date: formData.date,
         time: convertTo24Hour(formData.time),
+        status: 'booked',
         ...(formData.barber && { barber: parseInt(formData.barber) })
       }
 
@@ -283,7 +284,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit }) => {
                   </h3>
                   <div className="mt-2 text-sm text-green-700">
                     <ul className="list-disc pl-5">
-                      <li>Status will be set to "Pending"</li>
+                      <li>Status will be set to "Booked"</li>
                       <li>Customer will receive confirmation</li>
                       <li>Booking can be managed from the Bookings tab</li>
                     </ul>

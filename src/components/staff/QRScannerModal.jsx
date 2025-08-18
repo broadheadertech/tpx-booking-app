@@ -2,92 +2,113 @@ import React, { useState, useEffect } from 'react'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 import QRScannerCamera from './QRScannerCamera'
-import { QrCode, Camera, CheckCircle, XCircle, RefreshCw } from 'lucide-react'
+import { QrCode, Camera, CheckCircle, XCircle, RefreshCw, Gift, Calendar, User, DollarSign } from 'lucide-react'
 
 const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
   const [scanResult, setScanResult] = useState(null)
   const [error, setError] = useState(null)
   const [isProcessingVoucher, setIsProcessingVoucher] = useState(false)
+  const [voucherData, setVoucherData] = useState(null)
 
   const handleQRDetected = async (qrData) => {
+    console.log('Voucher QR Data:', qrData)
     try {
       setIsProcessingVoucher(true)
       setError(null)
       
-      // Try to parse the QR data as a voucher code
-      let voucherCode = qrData
+      // Parse QR data to extract voucher information
+      let voucherInfo = null
       
-      // If it's a URL or JSON, try to extract the voucher code
-      if (qrData.startsWith('http')) {
-        const url = new URL(qrData)
-        voucherCode = url.searchParams.get('code') || url.pathname.split('/').pop()
-      } else if (qrData.startsWith('{')) {
+      if (qrData.startsWith('{')) {
         try {
-          const parsed = JSON.parse(qrData)
-          voucherCode = parsed.code || parsed.voucher || qrData
+          voucherInfo = JSON.parse(qrData)
+          console.log('Parsed voucher data:', voucherInfo)
         } catch {
-          // Use original data if JSON parsing fails
-        }
-      }
-
-      // Use actual voucher service to validate and redeem
-      const { vouchersService } = await import('../../services/staff')
-      
-      try {
-        // Get all vouchers and find the matching one
-        const allVouchers = await vouchersService.getAllVouchers()
-        const voucher = allVouchers.find(v => 
-          v.code && v.code.toLowerCase() === voucherCode.toLowerCase()
-        )
-
-        if (!voucher) {
-          setScanResult({
-            code: voucherCode,
-            customer: 'Unknown',
-            value: '₱0',
-            status: 'invalid',
-            expires: 'N/A'
-          })
-          setError('Voucher code not found.')
+          setError('Invalid QR code format.')
+          setIsProcessingVoucher(false)
           return
         }
-
-        // Check voucher status
-        const now = new Date()
-        const expiresAt = new Date(voucher.expires_at)
-        let status = 'active'
-        
-        if (voucher.redeemed) {
-          status = 'redeemed'
-        } else if (expiresAt < now) {
-          status = 'expired'
-        } else if (voucher.used_count >= voucher.max_uses) {
-          status = 'used_up'
-        }
-
-        const voucherResult = {
-          code: voucher.code,
-          customer: voucher.customer_name || 'N/A',
-          value: vouchersService.formatValue(voucher.value),
-          status: status,
-          expires: expiresAt.toLocaleDateString('en-PH'),
-          description: voucher.description || 'Discount voucher'
-        }
-
-        setScanResult(voucherResult)
-
-        // If voucher is valid, proceed with redemption
-        if (status === 'active') {
-          await onVoucherScanned(voucher.code, voucher.value)
-        }
-
-      } catch (apiError) {
-        console.error('API Error:', apiError)
-        setError('Failed to validate voucher. Please try again.')
+      } else {
+        // Treat as plain voucher code
+        voucherInfo = { code: qrData }
       }
+      
+      if (!voucherInfo.code) {
+        setError('Missing voucher code in QR data.')
+        setIsProcessingVoucher(false)
+        return
+      }
+
+      // Display voucher data directly from QR code (no API fetch initially)
+      const voucherResult = {
+        id: voucherInfo.voucherId || 'N/A',
+        code: voucherInfo.code,
+        value: voucherInfo.value || 'N/A',
+        expires_at: voucherInfo.expires_at || 'N/A',
+        user: voucherInfo.user || voucherInfo.username || 'N/A',
+        redeemed: voucherInfo.redeemed || false,
+        status: 'scanned', // Initial status before validation
+        type: voucherInfo.type || 'voucher',
+        brand: voucherInfo.brand || 'TPX Barbershop'
+      }
+
+      setScanResult(voucherResult)
+       setVoucherData(voucherInfo)
+       setIsProcessingVoucher(false)
     } catch (err) {
       console.error('Error processing QR code:', err)
       setError('Failed to process QR code. Please try again.')
+    } finally {
+      setIsProcessingVoucher(false)
+    }
+  }
+
+  // Handle voucher validation and redemption
+  const handleValidateAndRedeem = async () => {
+    if (!scanResult || !scanResult.code) {
+      setError('No voucher to validate.')
+      return
+    }
+
+    try {
+      setIsProcessingVoucher(true)
+      setError(null)
+
+      // Use API service to redeem voucher
+      const apiService = (await import('../../services/api.js')).default
+        
+      // POST /api/vouchers/redeem/ with voucher code and username
+      const response = await apiService.post('/vouchers/redeem/', {
+        code: scanResult.code,
+        username: scanResult.user
+      })
+
+      console.log('Voucher redeemed:', response)
+
+      // Update the scan result based on API response
+      const updatedResult = {
+        ...scanResult,
+        status: response.status === 'already claimed' ? 'redeemed' : 'redeemed',
+        value: response.value || scanResult.value,
+        user: response.username || scanResult.user
+      }
+      
+      setScanResult(updatedResult)
+      
+      // Show appropriate success message based on status
+      if (response.status === 'already claimed') {
+        setError('This voucher has already been claimed by this user.')
+      } else {
+        setError('')
+      }
+      
+    } catch (error) {
+      console.error('Error redeeming voucher:', error)
+      if (error.response?.data?.error) {
+        setError(error.response.data.error)
+      } else {
+        setError('Failed to redeem voucher. Please try again.')
+      }
     } finally {
       setIsProcessingVoucher(false)
     }
@@ -97,14 +118,15 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
     setScanResult(null)
     setError(null)
     setIsProcessingVoucher(false)
+    setVoucherData(null)
     onClose()
   }
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'active': return 'text-green-700 bg-green-100 border-green-200'
+      case 'redeemed': return 'text-green-700 bg-green-100 border-green-200'
+      case 'scanned': return 'text-blue-700 bg-blue-100 border-blue-200'
       case 'expired': return 'text-red-700 bg-red-100 border-red-200'
-      case 'redeemed': return 'text-gray-700 bg-gray-100 border-gray-200'
       case 'used_up': return 'text-orange-700 bg-orange-100 border-orange-200'
       case 'invalid': return 'text-red-700 bg-red-100 border-red-200'
       default: return 'text-gray-700 bg-gray-100 border-gray-200'
@@ -113,9 +135,9 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'active': return <CheckCircle className="w-5 h-5 text-green-600" />
+      case 'redeemed': return <CheckCircle className="w-5 h-5 text-green-600" />
+      case 'scanned': return <QrCode className="w-5 h-5 text-blue-600" />
       case 'expired': 
-      case 'redeemed':
       case 'used_up':
       case 'invalid': return <XCircle className="w-5 h-5 text-red-600" />
       default: return <XCircle className="w-5 h-5 text-gray-600" />
@@ -151,7 +173,7 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
                 {getStatusIcon(scanResult.status)}
               </div>
               <div className="flex-1">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-black text-[#1A1A1A] font-mono">
                     {scanResult.code}
                   </h3>
@@ -159,27 +181,68 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
                     {scanResult.status}
                   </span>
                 </div>
-                <div className="space-y-2">
-                  <p><span className="font-bold text-[#6B6B6B]">Customer:</span> {scanResult.customer}</p>
-                  <p><span className="font-bold text-[#6B6B6B]">Value:</span> <span className="text-[#FF8C42] font-black">{scanResult.value}</span></p>
-                  <p><span className="font-bold text-[#6B6B6B]">Expires:</span> {scanResult.expires}</p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <User className="w-4 h-4 text-[#6B6B6B]" />
+                      <div>
+                        <span className="font-bold text-[#6B6B6B] text-sm">User:</span>
+                        <p className="text-[#1A1A1A] font-semibold">{scanResult.user}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-3">
+                      <DollarSign className="w-4 h-4 text-[#6B6B6B]" />
+                      <div>
+                        <span className="font-bold text-[#6B6B6B] text-sm">Value:</span>
+                        <p className="text-[#FF8C42] font-black text-lg">₱{scanResult.value}</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <Calendar className="w-4 h-4 text-[#6B6B6B]" />
+                      <div>
+                        <span className="font-bold text-[#6B6B6B] text-sm">Expires:</span>
+                        <p className="text-[#1A1A1A] font-semibold">{new Date(scanResult.expires_at).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-3">
+                      <Gift className="w-4 h-4 text-[#6B6B6B]" />
+                      <div>
+                        <span className="font-bold text-[#6B6B6B] text-sm">Type:</span>
+                        <p className="text-[#1A1A1A] font-semibold">{scanResult.type}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 
-                {scanResult.status === 'active' && (
+                {scanResult.brand !== 'N/A' && (
+                  <div className="mt-4 pt-3 border-t border-[#F5F5F5]">
+                    <span className="font-bold text-[#6B6B6B] text-sm">Brand:</span>
+                    <p className="text-[#1A1A1A] font-semibold">{scanResult.brand}</p>
+                  </div>
+                )}
+                
+                {/* Status Messages */}
+                {scanResult.status === 'redeemed' && (
                   <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-xl">
-                    <p className="text-green-800 font-bold text-sm">✓ Voucher is valid and ready to redeem!</p>
+                    <p className="text-green-800 font-bold text-sm">✓ Voucher redeemed successfully!</p>
+                  </div>
+                )}
+                
+                {scanResult.status === 'scanned' && (
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                    <p className="text-blue-800 font-bold text-sm">📱 Voucher scanned - Ready to validate and redeem</p>
                   </div>
                 )}
                 
                 {scanResult.status === 'expired' && (
                   <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl">
                     <p className="text-red-800 font-bold text-sm">✗ This voucher has expired</p>
-                  </div>
-                )}
-                
-                {scanResult.status === 'redeemed' && (
-                  <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-xl">
-                    <p className="text-gray-800 font-bold text-sm">✗ This voucher has already been redeemed</p>
                   </div>
                 )}
                 
@@ -210,7 +273,27 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
         )}
 
         {/* Action Buttons */}
-        <div className="flex justify-center pt-4 border-t border-[#F5F5F5]">
+        <div className="flex justify-center space-x-4 pt-4 border-t border-[#F5F5F5]">
+          {scanResult && scanResult.status === 'scanned' && (
+            <Button
+              onClick={handleValidateAndRedeem}
+              className="px-8 bg-[#F68B24] hover:bg-[#E67A1A] text-white font-semibold"
+              disabled={isProcessingVoucher}
+            >
+              {isProcessingVoucher ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Redeeming...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Validate & Redeem Voucher
+                </>
+              )}
+            </Button>
+          )}
+          
           <Button
             variant="outline"
             onClick={handleClose}
