@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { Scissors, User, Settings, LogOut } from 'lucide-react'
+import { Scissors, User, Settings, LogOut, Monitor } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import SettingsModal from './SettingsModal'
 import LogoutConfirmModal from './LogoutConfirmModal'
 
@@ -32,6 +33,15 @@ const DashboardHeader = ({ onLogout }) => {
             
             {/* Action Buttons */}
             <div className="flex items-center space-x-3">
+              <Link
+                to="/kiosk"
+                className="bg-blue-500/20 backdrop-blur-sm rounded-2xl flex items-center space-x-2 px-4 py-3 hover:bg-blue-500/30 transition-all duration-300 border border-blue-500/30 group"
+                title="Kiosk Mode"
+              >
+                <Monitor className="w-5 h-5 text-blue-300 group-hover:text-blue-200 transition-colors duration-300" />
+                <span className="text-blue-300 group-hover:text-blue-200 font-semibold text-sm transition-colors duration-300">Kiosk Mode</span>
+              </Link>
+              
               <button
                 onClick={() => setShowSettingsModal(true)}
                 className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center hover:bg-white/20 transition-all duration-300 border border-white/20 group"
