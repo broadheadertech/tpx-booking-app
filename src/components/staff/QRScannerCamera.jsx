@@ -13,6 +13,7 @@ const QRScannerCamera = ({ onQRDetected, onClose, isOpen, title }) => {
   const [showSettings, setShowSettings] = useState(false)
   const [scanResult, setScanResult] = useState(null)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [voucherError, setVoucherError] = useState(null)
 
   // Initialize camera list on component mount
   useEffect(() => {
@@ -57,6 +58,7 @@ const QRScannerCamera = ({ onQRDetected, onClose, isOpen, title }) => {
       setIsScanning(true)
       setCameraError('')
       setHasPermission(null)
+      setVoucherError(null) // Clear any previous voucher errors
 
       // Create QR Scanner instance
       qrScannerRef.current = new QrScanner(
@@ -104,6 +106,7 @@ const QRScannerCamera = ({ onQRDetected, onClose, isOpen, title }) => {
     setIsScanning(false)
     setScanResult(null)
     setIsProcessing(false)
+    setVoucherError(null)
   }
 
   const handleQRResult = async (result) => {
@@ -111,6 +114,7 @@ const QRScannerCamera = ({ onQRDetected, onClose, isOpen, title }) => {
     
     setIsProcessing(true)
     setScanResult(result.data)
+    setVoucherError(null) // Clear any previous errors
     
     // Add haptic feedback on mobile
     if (navigator.vibrate) {
@@ -119,16 +123,38 @@ const QRScannerCamera = ({ onQRDetected, onClose, isOpen, title }) => {
 
     try {
       // Pass the QR result to parent component
-      await onQRDetected(result.data)
+      const response = await onQRDetected(result.data)
+      
+      // Check if the response contains an error
+      if (response && response.error) {
+        setVoucherError(response.error)
+        setScanResult(null) // Clear success result if there's an error
+        
+        // Vibrate differently for errors
+        if (navigator.vibrate) {
+          navigator.vibrate([100, 50, 100]) // Error vibration pattern
+        }
+      }
     } catch (error) {
       console.error('Error processing QR result:', error)
+      setVoucherError('Failed to process QR code. Please try again.')
+      setScanResult(null)
+      
+      // Error vibration
+      if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100])
+      }
     }
     
     // Reset processing state after a delay
     setTimeout(() => {
       setIsProcessing(false)
-      setScanResult(null)
-    }, 2000)
+      // Only clear scan result if there's no error
+      setScanResult((currentResult) => {
+        // If we have an error, don't clear the result here
+        return currentResult
+      })
+    }, 3000) // Longer delay to show error message
   }
 
   const switchCamera = async (camera) => {
@@ -239,7 +265,7 @@ const QRScannerCamera = ({ onQRDetected, onClose, isOpen, title }) => {
         )}
 
         {/* Scan Result Overlay */}
-        {scanResult && (
+        {scanResult && !voucherError && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
             <div className="bg-white rounded-xl p-6 mx-4 max-w-sm">
               <div className="flex items-center space-x-3 mb-3">
@@ -249,6 +275,30 @@ const QRScannerCamera = ({ onQRDetected, onClose, isOpen, title }) => {
               <div className="text-sm text-[#6B6B6B] break-all">
                 {scanResult}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Voucher Error Overlay */}
+        {voucherError && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <div className="bg-white rounded-xl p-6 mx-4 max-w-sm border-2 border-red-200">
+              <div className="flex items-center space-x-3 mb-3">
+                <XCircle className="w-6 h-6 text-red-600" />
+                <span className="font-bold text-[#1A1A1A]">Voucher Error</span>
+              </div>
+              <div className="text-sm text-red-700 mb-4">
+                {voucherError}
+              </div>
+              <button
+                onClick={() => {
+                  setVoucherError(null)
+                  setIsProcessing(false)
+                }}
+                className="w-full bg-red-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-red-700 transition-colors"
+              >
+                Try Again
+              </button>
             </div>
           </div>
         )}

@@ -234,6 +234,70 @@ class CustomerVoucherService {
     }
   }
 
+  async confirmVoucherRedemption(code) {
+    try {
+      const userId = authService.getUserId()
+      if (!userId) {
+        return {
+          success: false,
+          error: 'User not authenticated'
+        }
+      }
+
+      const requestBody = {
+        code: code.toUpperCase().trim()
+      }
+
+      const response = await apiService.post('/vouchers/confirm-voucher-redeem/', requestBody, { timeout: 30000 })
+      
+      // Clear relevant caches after successful confirmation
+      this.clearUserCache(userId)
+      this.clearVoucherCaches()
+      
+      return {
+        success: true,
+        data: {
+          value: response.value,
+          message: response.success || 'Voucher redeemed successfully'
+        },
+        message: 'Voucher redeemed successfully'
+      }
+    } catch (error) {
+      console.error('Error confirming voucher redemption:', error)
+      
+      // Handle API validation errors
+      if (error.response?.data) {
+        const errorData = error.response.data
+        if (typeof errorData === 'string') {
+          return {
+            success: false,
+            error: errorData
+          }
+        }
+        if (typeof errorData === 'object' && errorData.error) {
+          return {
+            success: false,
+            error: errorData.error
+          }
+        }
+        if (typeof errorData === 'object' && !Array.isArray(errorData)) {
+          const errorMessages = Object.entries(errorData)
+            .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
+            .join('; ')
+          return {
+            success: false,
+            error: errorMessages
+          }
+        }
+      }
+      
+      return {
+        success: false,
+        error: error?.message || 'Failed to confirm voucher redemption. Please try again.'
+      }
+    }
+  }
+
   prepareRedemptionData(code, username, value) {
     const requestBody = {
       code: code.toUpperCase().trim()
@@ -282,9 +346,17 @@ class CustomerVoucherService {
       const request = this._fetchUserVouchers(userId, cacheKey)
       this.pendingRequests.set(cacheKey, request)
       
-      return request
+      const result = await request
+      return result || [] // Ensure we always return an array
     } catch (error) {
       console.error('Error fetching user vouchers:', error)
+      
+      // For 500 errors, return empty array instead of throwing
+      if (error.status === 500) {
+        console.warn('Voucher service returned 500, returning empty voucher list')
+        return []
+      }
+      
       throw new Error('Failed to load your vouchers. Please try again.')
     }
   }
@@ -305,6 +377,48 @@ class CustomerVoucherService {
       return transformedVouchers
     } catch (error) {
       this.pendingRequests.delete(cacheKey)
+      
+      // If the /vouchers/my/ endpoint is not available, try alternative approaches
+      if (error.status === 500 || error.status === 404 || error.status === 405) {
+        console.warn('Vouchers /my/ endpoint failed with status:', error.status)
+        console.warn('Attempting fallback to history endpoint')
+        
+        try {
+          const historyResponse = await apiService.get('/vouchers/history/', { timeout: 30000 })
+          const history = Array.isArray(historyResponse) ? historyResponse : []
+          
+          // Transform history data to voucher format
+          const transformedVouchers = history.map(item => this.transformVoucherHistoryToVoucher(item))
+          
+          // Cache for 1 minute
+          shortCache.set(cacheKey, transformedVouchers, 60 * 1000)
+          
+          console.info(`Fallback successful: loaded ${transformedVouchers.length} vouchers from history`)
+          return transformedVouchers
+        } catch (fallbackError) {
+          console.error('History endpoint also failed, trying basic vouchers endpoint')
+          
+          try {
+            // Last resort: try to get all vouchers and filter client-side
+            const allVouchersResponse = await apiService.get('/vouchers/', { timeout: 30000 })
+            const allVouchers = Array.isArray(allVouchersResponse) ? allVouchersResponse : allVouchersResponse.results || []
+            
+            // For now, return empty array since we can't filter by user without more info
+            console.warn('Basic vouchers endpoint worked but user filtering not implemented')
+            return []
+          } catch (basicError) {
+            console.error('All voucher endpoints failed:', { 
+              my: { status: error.status, message: error.message },
+              history: { status: fallbackError.status, message: fallbackError.message },
+              basic: { status: basicError.status, message: basicError.message }
+            })
+            // Return empty array to avoid breaking the UI
+            console.warn('Returning empty voucher array due to all API failures')
+            return []
+          }
+        }
+      }
+      
       throw error
     }
   }
@@ -437,27 +551,33 @@ class CustomerVoucherService {
 
   // Data transformation methods
   transformVoucherData(apiVoucher) {
+    // Handle the actual API response structure: {code, value, status, assigned_at, redeemed_at, expired}
     return {
-      id: apiVoucher.id,
+      id: apiVoucher.id || apiVoucher.code, // Use code as ID if id not available
       code: apiVoucher.code,
       value: apiVoucher.value,
-      description: apiVoucher.description || '',
-      expires_at: apiVoucher.expires_at,
-      redeemed: apiVoucher.redeemed || false,
-      used_count: apiVoucher.used_count || 0,
-      max_uses: apiVoucher.max_uses || 1,
+      description: apiVoucher.description || 'Voucher',
+      expires_at: apiVoucher.expires_at || null,
+      expired: apiVoucher.expired || false,
+      status: apiVoucher.status, // Use actual status from API: "assigned" or "redeemed"
+      redeemed: apiVoucher.status === 'redeemed',
+      assigned: apiVoucher.status === 'assigned',
+      used_count: apiVoucher.status === 'redeemed' ? 1 : 0,
+      max_uses: 1,
       user: apiVoucher.user,
-      user_specific: apiVoucher.user_specific || false,
-      created_at: apiVoucher.created_at,
-      updated_at: apiVoucher.updated_at,
+      user_specific: true,
+      created_at: apiVoucher.created_at || apiVoucher.assigned_at,
+      updated_at: apiVoucher.updated_at || apiVoucher.redeemed_at || apiVoucher.assigned_at,
+      used_at: apiVoucher.redeemed_at || apiVoucher.assigned_at,
+      assigned_at: apiVoucher.assigned_at,
+      redeemed_at: apiVoucher.redeemed_at,
       // UI-friendly formatted data
       displayValue: this.formatVoucherValue(apiVoucher.value),
-      displayExpiry: this.formatVoucherExpiry(apiVoucher.expires_at),
-      isExpired: this.isVoucherExpired(apiVoucher.expires_at),
-      isAvailable: this.isVoucherAvailable(apiVoucher),
-      usageText: `${apiVoucher.used_count || 0}/${apiVoucher.max_uses || 1}`,
-      daysUntilExpiry: this.getDaysUntilExpiry(apiVoucher.expires_at),
-      status: this.getVoucherStatus(apiVoucher)
+      displayExpiry: apiVoucher.expires_at ? this.formatVoucherExpiry(apiVoucher.expires_at) : 'No expiry',
+      isExpired: apiVoucher.expired || false,
+      isAvailable: false, // Vouchers from /my/ are already assigned/redeemed
+      usageText: apiVoucher.status === 'redeemed' ? '1/1' : '0/1',
+      daysUntilExpiry: apiVoucher.expires_at ? this.getDaysUntilExpiry(apiVoucher.expires_at) : 0
     }
   }
 
@@ -488,6 +608,35 @@ class CustomerVoucherService {
       displayDate: this.formatDate(apiHistory.created_at),
       displayTime: this.formatTime(apiHistory.created_at),
       actionText: this.getActionText(apiHistory.action)
+    }
+  }
+
+  transformVoucherHistoryToVoucher(historyItem) {
+    // Transform history item to voucher format for fallback compatibility
+    const voucher = historyItem.voucher || {}
+    return {
+      id: historyItem.id,
+      code: historyItem.voucher?.code || voucher.code || 'UNKNOWN',
+      value: historyItem.voucher?.value || voucher.value || '0.00',
+      description: '',
+      expires_at: historyItem.voucher?.expires_at || voucher.expires_at || null,
+      redeemed: historyItem.status === 'redeemed',
+      used_count: historyItem.status === 'redeemed' ? 1 : 0,
+      max_uses: 1,
+      user: historyItem.user,
+      user_specific: true,
+      created_at: historyItem.assigned_at || historyItem.created_at,
+      updated_at: historyItem.redeemed_at || historyItem.updated_at,
+      used_at: historyItem.redeemed_at || (historyItem.status === 'redeemed' ? historyItem.assigned_at : null),
+      expired: historyItem.voucher?.expires_at ? new Date(historyItem.voucher.expires_at) < new Date() : false,
+      // UI-friendly formatted data
+      displayValue: this.formatVoucherValue(historyItem.voucher?.value || voucher.value || '0.00'),
+      displayExpiry: this.formatVoucherExpiry(historyItem.voucher?.expires_at || voucher.expires_at || new Date()),
+      isExpired: historyItem.voucher?.expires_at ? this.isVoucherExpired(historyItem.voucher.expires_at) : false,
+      isAvailable: false, // History items are already used
+      usageText: historyItem.status === 'redeemed' ? '1/1' : '0/1',
+      daysUntilExpiry: historyItem.voucher?.expires_at ? this.getDaysUntilExpiry(historyItem.voucher.expires_at) : 0,
+      status: historyItem.status === 'redeemed' ? 'redeemed' : 'assigned'
     }
   }
 
@@ -600,6 +749,39 @@ class CustomerVoucherService {
     apiCache.clear()
     shortCache.clear()
     this.pendingRequests.clear()
+  }
+
+  // Diagnostic method to test voucher endpoints
+  async testVoucherEndpoints() {
+    const endpoints = [
+      '/vouchers/my/',
+      '/vouchers/history/',
+      '/vouchers/',
+    ]
+    
+    const results = {}
+    
+    for (const endpoint of endpoints) {
+      try {
+        console.log(`Testing endpoint: ${endpoint}`)
+        const response = await apiService.get(endpoint, { timeout: 10000 })
+        results[endpoint] = {
+          status: 'success',
+          dataType: Array.isArray(response) ? 'array' : typeof response,
+          itemCount: Array.isArray(response) ? response.length : 'N/A'
+        }
+        console.log(`✅ ${endpoint} - Success:`, results[endpoint])
+      } catch (error) {
+        results[endpoint] = {
+          status: 'error',
+          errorStatus: error.status,
+          errorMessage: error.message
+        }
+        console.log(`❌ ${endpoint} - Error:`, results[endpoint])
+      }
+    }
+    
+    return results
   }
 }
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, Gift, Clock, CheckCircle, XCircle, QrCode, Ticket, Plus, Camera, Upload, Keyboard, X } from 'lucide-react'
+import { ArrowLeft, Gift, Clock, CheckCircle, XCircle, QrCode, Ticket, Plus, Camera, Upload, Keyboard, X, RefreshCw } from 'lucide-react'
 import QRCode from 'qrcode'
 import jsQR from 'jsqr'
 import voucherService from '../../services/customer/voucherService'
@@ -11,11 +11,11 @@ const VoucherManagement = ({ onBack }) => {
   const [selectedVoucher, setSelectedVoucher] = useState(null)
   const [showQRCode, setShowQRCode] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [redeemLoading, setRedeemLoading] = useState(false)
+  const [claimLoading, setClaimLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [showRedeemModal, setShowRedeemModal] = useState(false)
-  const [redeemCode, setRedeemCode] = useState('')
-  const [redeemMethod, setRedeemMethod] = useState('code') // 'code', 'scan', 'upload'
+  const [showClaimModal, setShowClaimModal] = useState(false)
+  const [claimCode, setClaimCode] = useState('')
+  const [claimMethod, setClaimMethod] = useState('code') // 'code', 'scan', 'upload'
   const [isScanning, setIsScanning] = useState(false)
   const [scanError, setScanError] = useState(null)
   const [validatedVoucher, setValidatedVoucher] = useState(null)
@@ -49,10 +49,18 @@ const VoucherManagement = ({ onBack }) => {
       setVouchers(voucherList)
     } catch (error) {
       console.error('Error loading vouchers:', error)
+      
+      // Handle specific error cases
       if (error.message.includes('not authenticated')) {
         setError('Authentication required. Please log in again.')
+      } else if (error.status === 500) {
+        setError('Server error. The voucher service is temporarily unavailable.')
+      } else if (error.status === 404) {
+        setError('Voucher service not found. Please contact support.')
+      } else if (error.message.includes('Failed to load your vouchers')) {
+        setError('Unable to load vouchers. Please check your connection and try again.')
       } else {
-        setError('Failed to load vouchers')
+        setError('Failed to load vouchers. Please try again later.')
       }
     } finally {
       setLoading(false)
@@ -61,7 +69,7 @@ const VoucherManagement = ({ onBack }) => {
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'available':
+      case 'claimed':
         return <CheckCircle className="w-5 h-5 text-green-500" />
       case 'redeemed':
         return <Gift className="w-5 h-5 text-blue-500" />
@@ -74,7 +82,7 @@ const VoucherManagement = ({ onBack }) => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'available':
+      case 'claimed':
         return 'bg-green-50 text-green-700 border-green-200'
       case 'redeemed':
         return 'bg-blue-50 text-blue-700 border-blue-200'
@@ -103,9 +111,11 @@ const VoucherManagement = ({ onBack }) => {
   }
 
   const getVoucherStatus = (voucher) => {
-    // For the new API structure, all vouchers are already redeemed (used)
+    // Based on the actual API response: {code, value, status, assigned_at, redeemed_at, expired}
     if (voucher.expired) return 'expired'
-    return 'redeemed'
+    if (voucher.status === 'assigned') return 'claimed' // Show "claimed" for assigned status
+    if (voucher.status === 'redeemed') return 'redeemed'
+    return voucher.status || 'unknown'
   }
 
   const isExpiringSoon = (expiresAt) => {
@@ -121,60 +131,61 @@ const VoucherManagement = ({ onBack }) => {
     setShowQRCode(true)
   }
 
-  const handleRedeemVoucher = async (voucherCode, voucherValue = null) => {
+  const handleClaimVoucher = async (voucherCode, voucherValue = null) => {
     try {
-      setRedeemLoading(true)
+      setClaimLoading(true)
       
-      // Call the updated redeemVoucher service with required parameters
-      // The service will automatically get the username from authService
-      const result = await voucherService.redeemVoucher(voucherCode, null, voucherValue)
+      // Only assign/claim the voucher using the redeem endpoint (no confirmation step)
+      const claimResult = await voucherService.redeemVoucher(voucherCode, null, voucherValue)
       
-      if (result.success) {
-        // Reload vouchers to reflect the redemption
+      if (claimResult.success) {
+        // Reload vouchers to reflect the changes
         await loadVouchers()
         setShowQRCode(false)
         setSelectedVoucher(null)
         // Show success message with voucher details
-        const value = result.data?.value || voucherValue || 'Unknown'
+        const value = claimResult.data?.value || voucherValue || 'Unknown'
         setNotification({
           type: 'success',
-          title: '🎉 Voucher Redeemed Successfully!',
-          message: `Code: ${voucherCode}\nValue: ₱${parseFloat(value).toLocaleString()}`
+          title: '🎉 Voucher Claimed Successfully!',
+          message: `Code: ${voucherCode}\nValue: ₱${parseFloat(value).toLocaleString()}\nYou can now use this voucher at the barbershop.`
         })
       } else {
-        // More specific error messages
-        let errorMessage = result.error
+        // Handle assignment/claim error
+        let errorMessage = claimResult.error
         if (errorMessage.includes('expired')) {
           errorMessage = '⏰ This voucher has expired'
-        } else if (errorMessage.includes('already redeemed')) {
-          errorMessage = '✅ This voucher has already been redeemed'
+        } else if (errorMessage.includes('already assigned')) {
+          errorMessage = '✅ This voucher has already been claimed'
         } else if (errorMessage.includes('Invalid voucher')) {
           errorMessage = '❌ Invalid voucher code. Please check and try again.'
         } else if (errorMessage.includes('usage limit')) {
           errorMessage = '🚫 This voucher has reached its usage limit'
         } else if (errorMessage.includes('Username is required')) {
           errorMessage = '❌ User authentication error. Please log in again.'
+        } else if (errorMessage.includes('Target user not found')) {
+          errorMessage = '❌ User account not found. Please log in again.'
         }
         setNotification({
           type: 'error',
-          title: 'Redemption Failed',
+          title: 'Claim Failed',
           message: errorMessage
         })
       }
     } catch (error) {
-      console.error('Error redeeming voucher:', error)
+      console.error('Error claiming voucher:', error)
       setNotification({
         type: 'error',
         title: 'Network Error',
         message: 'Please check your connection and try again.'
       })
     } finally {
-      setRedeemLoading(false)
+      setClaimLoading(false)
     }
   }
 
   const handleValidateVoucher = async () => {
-    if (!redeemCode.trim()) {
+    if (!claimCode.trim()) {
       setNotification({
         type: 'warning',
         title: 'Missing Code',
@@ -188,7 +199,7 @@ const VoucherManagement = ({ onBack }) => {
       setValidationError(null)
       setValidatedVoucher(null)
       
-      const result = await voucherService.validateVoucherCode(redeemCode.trim())
+      const result = await voucherService.validateVoucherCode(claimCode.trim())
       
       if (result.success) {
         setValidatedVoucher(result.data)
@@ -206,22 +217,22 @@ const VoucherManagement = ({ onBack }) => {
     }
   }
 
-  const handleRedeemValidatedVoucher = async () => {
+  const handleClaimValidatedVoucher = async () => {
     if (!validatedVoucher) return
     
     try {
-      await handleRedeemVoucher(validatedVoucher.code, validatedVoucher.value)
-      setRedeemCode('')
+      await handleClaimVoucher(validatedVoucher.code, validatedVoucher.value)
+      setClaimCode('')
       setValidatedVoucher(null)
       setValidationError(null)
-      setShowRedeemModal(false)
+      setShowClaimModal(false)
     } catch (error) {
-      // Error is already handled in handleRedeemVoucher
+      // Error is already handled in handleClaimVoucher
     }
   }
 
-  const handleRedeemByCode = async () => {
-    if (!redeemCode.trim()) {
+  const handleClaimByCode = async () => {
+    if (!claimCode.trim()) {
       setNotification({
         type: 'warning',
         title: 'Missing Code',
@@ -231,11 +242,11 @@ const VoucherManagement = ({ onBack }) => {
     }
     
     try {
-      await handleRedeemVoucher(redeemCode.trim())
-      setRedeemCode('')
-      setShowRedeemModal(false)
+      await handleClaimVoucher(claimCode.trim())
+      setClaimCode('')
+      setShowClaimModal(false)
     } catch (error) {
-      // Error is already handled in handleRedeemVoucher
+      // Error is already handled in handleClaimVoucher
     }
   }
 
@@ -256,10 +267,10 @@ const VoucherManagement = ({ onBack }) => {
         
         try {
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-          const code = await decodeQRFromImageData(imageData)
-          if (code) {
-            await handleRedeemVoucher(code)
-            setShowRedeemModal(false)
+                      const code = await decodeQRFromImageData(imageData)
+            if (code) {
+              await handleClaimVoucher(code)
+              setShowClaimModal(false)
           } else {
             setNotification({
               type: 'warning',
@@ -394,8 +405,8 @@ const VoucherManagement = ({ onBack }) => {
             if (code) {
               clearInterval(scanInterval)
               stopScanning()
-              await handleRedeemVoucher(code)
-              setShowRedeemModal(false)
+              await handleClaimVoucher(code)
+              setShowClaimModal(false)
             }
           } catch (error) {
             // Continue scanning if no QR code found
@@ -452,7 +463,8 @@ const VoucherManagement = ({ onBack }) => {
     }
   }
 
-  const availableVouchers = vouchers.filter(v => getVoucherStatus(v) === 'available')
+  // Filter vouchers by status
+  const claimedVouchers = vouchers.filter(v => getVoucherStatus(v) === 'claimed')
   const redeemedVouchers = vouchers.filter(v => getVoucherStatus(v) === 'redeemed')
   const expiredVouchers = vouchers.filter(v => getVoucherStatus(v) === 'expired')
 
@@ -543,7 +555,7 @@ const VoucherManagement = ({ onBack }) => {
             </button>
             <div className="text-right">
               <p className="text-lg font-bold text-white">My Vouchers</p>
-              <p className="text-xs" style={{color: '#F68B24'}}>{availableVouchers.length} available</p>
+              <p className="text-xs" style={{color: '#F68B24'}}>{claimedVouchers.length + redeemedVouchers.length} total</p>
             </div>
           </div>
         </div>
@@ -556,19 +568,28 @@ const VoucherManagement = ({ onBack }) => {
             <Gift className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-xl font-black mb-1" style={{color: '#36454F'}}>Your Vouchers</h1>
-          <p className="text-sm font-medium mb-4" style={{color: '#8B8B8B'}}>Tap active vouchers to redeem</p>
+          <p className="text-sm font-medium mb-4" style={{color: '#8B8B8B'}}>View your claimed and redeemed vouchers</p>
           
-          {/* Redeem Voucher Button */}
-          <button
-            onClick={() => setShowRedeemModal(true)}
-            className="w-full py-4 text-white font-bold rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg mb-4 flex items-center justify-center space-x-2"
-            style={{backgroundColor: '#F68B24'}}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
-          >
-            <Plus className="w-5 h-5" />
-            <span>Redeem New Voucher</span>
-          </button>
+          {/* Action Buttons */}
+          <div className="flex space-x-3 mb-4">
+            <button
+              onClick={() => setShowClaimModal(true)}
+              className="flex-1 py-4 text-white font-bold rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg flex items-center justify-center space-x-2"
+              style={{backgroundColor: '#F68B24'}}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
+            >
+              <Plus className="w-5 h-5" />
+              <span>Claim New Voucher</span>
+            </button>
+            <button
+              onClick={loadVouchers}
+              disabled={loading}
+              className="px-4 py-4 bg-gray-600 text-white font-bold rounded-xl transition-all duration-200 hover:bg-gray-700 shadow-lg flex items-center justify-center disabled:opacity-50"
+            >
+              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
 
         {/* Loading State */}
@@ -588,44 +609,54 @@ const VoucherManagement = ({ onBack }) => {
               <XCircle className="w-8 h-8 text-red-500" />
             </div>
             <p className="text-sm text-red-600 mb-4">{error}</p>
-            <button 
-              onClick={loadVouchers}
-              className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
-            >
-              Try Again
-            </button>
+            <div className="space-y-2">
+              <button 
+                onClick={loadVouchers}
+                className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors mr-2"
+              >
+                Try Again
+              </button>
+              <button 
+                onClick={async () => {
+                  console.log('=== VOUCHER ENDPOINT DIAGNOSTIC ===')
+                  const results = await voucherService.testVoucherEndpoints()
+                  console.log('Diagnostic results:', results)
+                  alert('Check browser console for endpoint diagnostic results')
+                }}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
+              >
+                Debug API
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Available Vouchers */}
-        {!loading && !error && availableVouchers.length > 0 && (
+        {/* Claimed Vouchers */}
+        {!loading && !error && claimedVouchers.length > 0 && (
           <div className="space-y-3 mb-4">
             <h2 className="text-lg font-black flex items-center" style={{color: '#36454F'}}>
               <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
-              Available Vouchers ({availableVouchers.length})
+              Claimed Vouchers ({claimedVouchers.length})
             </h2>
             <div className="space-y-3">
-              {availableVouchers.map((voucher) => (
+              {claimedVouchers.map((voucher) => (
                 <div
                   key={voucher.id}
-                  onClick={() => handleVoucherClick(voucher)}
-                  className="bg-white rounded-xl p-4 shadow-sm hover:shadow-lg transition-all duration-200 cursor-pointer relative" style={{border: '1px solid #E0E0E0'}}
+                  className="bg-white rounded-xl p-4 shadow-sm" style={{border: '1px solid #E0E0E0'}}
                 >
-                  {/* No expiring soon badge for redeemed vouchers */}
-                  
                   {/* Voucher Header */}
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center space-x-3">
                       <div className="text-xl">{getTypeIcon(voucher.type)}</div>
                       <div>
                         <h3 className="text-base font-black" style={{color: '#36454F'}}>{voucher.code}</h3>
-                        <p className="text-sm" style={{color: '#8B8B8B'}}>{voucher.description || 'Discount voucher'}</p>
+                        <p className="text-sm" style={{color: '#8B8B8B'}}>{voucher.description || 'Voucher'}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       {getStatusIcon(getVoucherStatus(voucher))}
                       <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getStatusColor(getVoucherStatus(voucher))}`}>
-                        {getVoucherStatus(voucher).toUpperCase()}
+                        CLAIMED
                       </span>
                     </div>
                   </div>
@@ -633,32 +664,37 @@ const VoucherManagement = ({ onBack }) => {
                   {/* Voucher Details */}
                   <div className="grid grid-cols-2 gap-3 mb-3">
                     <div className="flex items-center space-x-2">
-                      <div className="w-3 h-3 rounded" style={{backgroundColor: '#F68B24'}}></div>
+                      <div className="w-3 h-3 bg-green-500 rounded"></div>
                       <div>
                         <p className="text-xs" style={{color: '#8B8B8B'}}>Value</p>
-                        <p className="text-sm font-bold" style={{color: '#F68B24'}}>{formatValue(voucher)}</p>
+                        <p className="text-sm font-bold text-green-600">{formatValue(voucher)}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Clock className="w-3 h-3" style={{color: '#F68B24'}} />
+                      <CheckCircle className="w-3 h-3 text-green-500" />
                       <div>
-                        <p className="text-xs" style={{color: '#8B8B8B'}}>Expires</p>
+                        <p className="text-xs" style={{color: '#8B8B8B'}}>Claimed on</p>
                         <p className="text-sm font-bold" style={{color: '#36454F'}}>
-                          {voucher.used_at ? new Date(voucher.used_at).toLocaleDateString() : 'N/A'}
+                          {voucher.assigned_at ? new Date(voucher.assigned_at).toLocaleDateString() : 'N/A'}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Action Button */}
+                  {/* View QR Code Button - Only for claimed vouchers */}
                   <button 
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedVoucher(voucher)
+                      setShowQRCode(true)
+                    }}
                     className="w-full py-2 text-white font-bold rounded-xl transition-all duration-200 flex items-center justify-center space-x-2"
-                    style={{backgroundColor: '#F68B24'}}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
+                    style={{backgroundColor: '#22C55E'}}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#16A34A'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#22C55E'}
                   >
                     <QrCode className="w-4 h-4" />
-                    <span>Show QR Code</span>
+                    <span>View QR Code</span>
                   </button>
                 </div>
               ))}
@@ -710,27 +746,16 @@ const VoucherManagement = ({ onBack }) => {
                       <div>
                         <p className="text-xs" style={{color: '#8B8B8B'}}>Redeemed on</p>
                         <p className="text-sm font-bold" style={{color: '#36454F'}}>
-                          {voucher.used_at ? new Date(voucher.used_at).toLocaleDateString() : 'N/A'}
+                          {voucher.assigned_at ? new Date(voucher.assigned_at).toLocaleDateString() : 'N/A'}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  {/* View QR Code Button */}
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelectedVoucher(voucher)
-                      setShowQRCode(true)
-                    }}
-                    className="w-full py-2 text-white font-bold rounded-xl transition-all duration-200 flex items-center justify-center space-x-2"
-                    style={{backgroundColor: '#6B7280'}}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#4B5563'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = '#6B7280'}
-                  >
-                    <QrCode className="w-4 h-4" />
-                    <span>View QR Code</span>
-                  </button>
+                  {/* No QR Code button for redeemed vouchers */}
+                  <div className="text-center py-2 text-gray-500 text-sm">
+                    This voucher has been redeemed
+                  </div>
                 </div>
               ))}
             </div>
@@ -762,7 +787,7 @@ const VoucherManagement = ({ onBack }) => {
                     <div className="flex items-center space-x-2">
                       {getStatusIcon(getVoucherStatus(voucher))}
                       <span className={`px-2 py-1 rounded-full text-xs font-bold border ${getStatusColor(getVoucherStatus(voucher))}`}>
-                        EXPIRED
+                        {getVoucherStatus(voucher).toUpperCase()}
                       </span>
                     </div>
                   </div>
@@ -787,21 +812,10 @@ const VoucherManagement = ({ onBack }) => {
                     </div>
                   </div>
 
-                  {/* View QR Code Button */}
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelectedVoucher(voucher)
-                      setShowQRCode(true)
-                    }}
-                    className="w-full py-2 text-white font-bold rounded-xl transition-all duration-200 flex items-center justify-center space-x-2"
-                    style={{backgroundColor: '#DC2626'}}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#B91C1C'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = '#DC2626'}
-                  >
-                    <QrCode className="w-4 h-4" />
-                    <span>View QR Code</span>
-                  </button>
+                  {/* No QR Code button for expired vouchers */}
+                  <div className="text-center py-2 text-red-500 text-sm">
+                    This voucher has expired
+                  </div>
                 </div>
               ))}
             </div>
@@ -809,7 +823,7 @@ const VoucherManagement = ({ onBack }) => {
         )}
 
         {/* Empty State */}
-        {!loading && !error && availableVouchers.length === 0 && redeemedVouchers.length === 0 && expiredVouchers.length === 0 && (
+        {!loading && !error && claimedVouchers.length === 0 && redeemedVouchers.length === 0 && expiredVouchers.length === 0 && (
           <div className="text-center py-12">
             <div className="rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4" style={{backgroundColor: '#F68B24', opacity: 0.1}}>
               <Ticket className="w-8 h-8" style={{color: '#F68B24'}} />
@@ -817,15 +831,15 @@ const VoucherManagement = ({ onBack }) => {
             <h3 className="text-lg font-black mb-3" style={{color: '#36454F'}}>
               No Vouchers Yet
             </h3>
-            <p className="text-sm max-w-md mx-auto" style={{color: '#8B8B8B'}}>
-              Your vouchers will appear here once you earn them through bookings and special promotions.
+            <p className="text-sm max-w-md mx-auto mb-4" style={{color: '#8B8B8B'}}>
+              Your redeemed vouchers will appear here. Click "Claim New Voucher" above to redeem a voucher code.
             </p>
           </div>
         )}
       </div>
 
-      {/* Redeem Voucher Modal */}
-      {showRedeemModal && (
+      {/* Claim Voucher Modal */}
+      {showClaimModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl" style={{backgroundColor: '#F4F0E6'}}>
             <div className="text-center space-y-6">
@@ -834,41 +848,41 @@ const VoucherManagement = ({ onBack }) => {
               </div>
               
               <div>
-                <h3 className="text-2xl font-black mb-2" style={{color: '#36454F'}}>Redeem Voucher</h3>
-                <p className="font-medium" style={{color: '#8B8B8B'}}>Enter your voucher code to redeem</p>
+                <h3 className="text-2xl font-black mb-2" style={{color: '#36454F'}}>Claim Voucher</h3>
+                <p className="font-medium" style={{color: '#8B8B8B'}}>Enter your voucher code to claim</p>
               </div>
 
-              {/* Redemption Method Tabs */}
+              {/* Claim Method Tabs */}
               <div className="rounded-xl p-1" style={{backgroundColor: '#E0E0E0'}}>
                 <div className="grid grid-cols-3 gap-1">
                   <button
-                    onClick={() => setRedeemMethod('code')}
+                    onClick={() => setClaimMethod('code')}
                     className="py-2 px-3 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center space-x-1"
                     style={{
-                      backgroundColor: redeemMethod === 'code' ? '#F68B24' : 'transparent',
-                      color: redeemMethod === 'code' ? 'white' : '#8B8B8B'
+                      backgroundColor: claimMethod === 'code' ? '#F68B24' : 'transparent',
+                      color: claimMethod === 'code' ? 'white' : '#8B8B8B'
                     }}
                   >
                     <Keyboard className="w-4 h-4" />
                     <span>Code</span>
                   </button>
                   <button
-                    onClick={() => setRedeemMethod('scan')}
+                    onClick={() => setClaimMethod('scan')}
                     className="py-2 px-3 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center space-x-1"
                     style={{
-                      backgroundColor: redeemMethod === 'scan' ? '#F68B24' : 'transparent',
-                      color: redeemMethod === 'scan' ? 'white' : '#8B8B8B'
+                      backgroundColor: claimMethod === 'scan' ? '#F68B24' : 'transparent',
+                      color: claimMethod === 'scan' ? 'white' : '#8B8B8B'
                     }}
                   >
                     <Camera className="w-4 h-4" />
                     <span>Scan</span>
                   </button>
                   <button
-                    onClick={() => setRedeemMethod('upload')}
+                    onClick={() => setClaimMethod('upload')}
                     className="py-2 px-3 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center space-x-1"
                     style={{
-                      backgroundColor: redeemMethod === 'upload' ? '#F68B24' : 'transparent',
-                      color: redeemMethod === 'upload' ? 'white' : '#8B8B8B'
+                      backgroundColor: claimMethod === 'upload' ? '#F68B24' : 'transparent',
+                      color: claimMethod === 'upload' ? 'white' : '#8B8B8B'
                     }}
                   >
                     <Upload className="w-4 h-4" />
@@ -877,15 +891,15 @@ const VoucherManagement = ({ onBack }) => {
                 </div>
               </div>
 
-              {/* Redemption Content */}
-              {redeemMethod === 'code' && (
+              {/* Claim Content */}
+              {claimMethod === 'code' && (
                 <div className="space-y-4">
                   <div>
                     <input
                       type="text"
-                      value={redeemCode}
+                      value={claimCode}
                       onChange={(e) => {
-                        setRedeemCode(e.target.value.toUpperCase())
+                        setClaimCode(e.target.value.toUpperCase())
                         setValidatedVoucher(null)
                         setValidationError(null)
                       }}
@@ -905,7 +919,7 @@ const VoucherManagement = ({ onBack }) => {
                   {!validatedVoucher && (
                     <button
                       onClick={handleValidateVoucher}
-                      disabled={isValidating || !redeemCode.trim()}
+                      disabled={isValidating || !claimCode.trim()}
                       className="w-full py-4 text-white font-bold rounded-2xl hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       style={{backgroundColor: '#36454F'}}
                       onMouseEnter={(e) => !e.target.disabled && (e.target.style.backgroundColor = '#2D3748')}
@@ -949,16 +963,16 @@ const VoucherManagement = ({ onBack }) => {
                         </div>
                       </div>
                       
-                      {/* Redeem Button */}
+                      {/* Claim Button */}
                       <button
-                        onClick={handleRedeemValidatedVoucher}
-                        disabled={redeemLoading}
+                        onClick={handleClaimValidatedVoucher}
+                        disabled={claimLoading}
                         className="w-full py-4 text-white font-bold rounded-2xl hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         style={{backgroundColor: '#F68B24'}}
                         onMouseEnter={(e) => !e.target.disabled && (e.target.style.backgroundColor = '#E67E22')}
                         onMouseLeave={(e) => !e.target.disabled && (e.target.style.backgroundColor = '#F68B24')}
                       >
-                        {redeemLoading ? 'Redeeming...' : 'Redeem This Voucher'}
+                        {claimLoading ? 'Claiming...' : 'Claim This Voucher'}
                       </button>
                       
                       {/* Reset Button */}
@@ -966,7 +980,7 @@ const VoucherManagement = ({ onBack }) => {
                         onClick={() => {
                           setValidatedVoucher(null)
                           setValidationError(null)
-                          setRedeemCode('')
+                          setClaimCode('')
                         }}
                         className="w-full py-2 text-gray-600 font-medium rounded-xl hover:bg-gray-100 transition-all duration-200"
                       >
@@ -977,7 +991,7 @@ const VoucherManagement = ({ onBack }) => {
                 </div>
               )}
 
-              {redeemMethod === 'scan' && (
+              {claimMethod === 'scan' && (
                 <div className="space-y-4">
                   {!isScanning ? (
                     <div className="space-y-4">
@@ -1058,7 +1072,7 @@ const VoucherManagement = ({ onBack }) => {
                 </div>
               )}
 
-              {redeemMethod === 'upload' && (
+              {claimMethod === 'upload' && (
                 <div className="space-y-4">
                   <div 
                     onClick={() => fileInputRef.current?.click()}
@@ -1095,9 +1109,9 @@ const VoucherManagement = ({ onBack }) => {
                   if (isScanning) {
                     stopScanning()
                   }
-                  setShowRedeemModal(false)
-                  setRedeemCode('')
-                  setRedeemMethod('code')
+                  setShowClaimModal(false)
+                  setClaimCode('')
+                  setClaimMethod('code')
                   setScanError(null)
                   setValidatedVoucher(null)
                   setValidationError(null)
@@ -1124,7 +1138,7 @@ const VoucherManagement = ({ onBack }) => {
               </div>
               
               <div>
-                <h3 className="text-2xl font-black text-primary-black mb-2">Redeem Voucher</h3>
+                <h3 className="text-2xl font-black text-primary-black mb-2">Voucher QR Code</h3>
         <p className="text-gray-dark font-medium">Show this QR code to staff</p>
               </div>
 

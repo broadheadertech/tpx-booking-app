@@ -24,17 +24,20 @@ const BookingQRScannerModal = ({ isOpen, onClose, onBookingScanned }) => {
           bookingData = JSON.parse(qrData)
           console.log('Parsed booking data:', bookingData)
         } catch {
-          setError('Invalid QR code format.')
-          return
+          const errorMessage = 'Invalid QR code format.'
+          setError(errorMessage)
+          return { error: errorMessage }
         }
       } else {
-        setError('Invalid QR code format. Expected JSON data.')
-        return
+        const errorMessage = 'Invalid QR code format. Expected JSON data.'
+        setError(errorMessage)
+        return { error: errorMessage }
       }
       
       if (!bookingData.bookingId) {
-        setError('Missing booking ID in QR code.')
-        return
+        const errorMessage = 'Missing booking ID in QR code.'
+        setError(errorMessage)
+        return { error: errorMessage }
       }
 
       // Display booking data directly from QR code (no API fetch)
@@ -55,10 +58,13 @@ const BookingQRScannerModal = ({ isOpen, onClose, onBookingScanned }) => {
       
       // Don't call onBookingScanned here - only call it after manual validation
       // await onBookingScanned(bookingResult)
+      return { success: true, data: bookingResult }
 
     } catch (error) {
       console.error('Error processing booking QR code:', error)
-      setError('Failed to process booking QR code. Please try again.')
+      const errorMessage = 'Failed to process booking QR code. Please try again.'
+      setError(errorMessage)
+      return { error: errorMessage }
     } finally {
       setIsProcessingBooking(false)
     }

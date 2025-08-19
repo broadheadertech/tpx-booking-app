@@ -112,32 +112,75 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
       return
     }
 
+    // Validate EmailJS configuration
+    if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
+      alert('EmailJS configuration is missing. Please check the service configuration.')
+      return
+    }
+
+    // Check if selected users have email addresses
+    const usersWithoutEmail = selectedUsers.filter(user => !user.email || user.email.trim() === '')
+    if (usersWithoutEmail.length > 0) {
+      const usernames = usersWithoutEmail.map(u => u.username).join(', ')
+      alert(`The following users don't have email addresses: ${usernames}`)
+      return
+    }
+
     setIsSending(true)
     setSentCount(0)
+    let successfulSends = 0 // Local counter for immediate tracking
     
     try {
       // Initialize EmailJS (you'll need to call this once in your app)
+      console.log('Initializing EmailJS with service:', EMAILJS_SERVICE_ID)
       emailjs.init(EMAILJS_PUBLIC_KEY)
 
       for (const user of selectedUsers) {
         try {
-          // Generate personalized QR code for this user
-          const personalizedQrData = {
+          // Step 1: Assign voucher to user via API
+          const assignData = {
             username: user.username,
-            code: voucher.code,
-            value: voucher.value
+            code: voucher.code
           }
           
+          console.log('Assigning voucher to user:', assignData)
+          await apiService.post('/vouchers/assign/', assignData)
+          console.log(`Voucher ${voucher.code} assigned to ${user.username}`)
+
+          // Step 2: Generate personalized QR code for this user
+          const personalizedQrData = {
+            voucherId: voucher.id,
+            username: user.username,
+            code: voucher.code,
+            value: voucher.value,
+            expires_at: voucher.expires_at,
+            type: 'voucher',
+            brand: 'TPX Barbershop'
+          }
+          
+          console.log('Generating QR code for user:', user.username, 'with data:', personalizedQrData)
+          
           const personalizedQrUrl = await QRCode.toDataURL(JSON.stringify(personalizedQrData), {
-            width: 300,
-            margin: 2,
+            width: 200,
+            margin: 1,
             color: {
               dark: '#1A1A1A',
               light: '#FFFFFF'
-            }
+            },
+            errorCorrectionLevel: 'M',
+            type: 'image/png',
+            quality: 0.6
           })
+          
+          // Validate QR code generation
+          if (!personalizedQrUrl || !personalizedQrUrl.startsWith('data:image/png;base64,')) {
+            throw new Error('Failed to generate QR code for user: ' + user.username)
+          }
 
-          // Email template parameters
+          // Step 3: Send email with voucher details
+          console.log('Generated QR Code URL length:', personalizedQrUrl.length)
+          console.log('QR Code URL preview:', personalizedQrUrl.substring(0, 100) + '...')
+          
           const templateParams = {
             to_name: user.nickname || user.username,
             to_email: user.email,
@@ -148,24 +191,52 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
             qr_code_image: personalizedQrUrl,
             business_name: 'TPX Barbershop'
           }
+          
+          console.log('Email template parameters:', {
+            ...templateParams,
+            qr_code_image: `QR_CODE_DATA_URL (${personalizedQrUrl.length} chars)`
+          })
 
-          await emailjs.send(
+          const emailResult = await emailjs.send(
             EMAILJS_SERVICE_ID,
             EMAILJS_TEMPLATE_ID,
             templateParams
           )
-
-          setSentCount(prev => prev + 1)
+          
+          console.log(`Email sent successfully to ${user.email}:`, emailResult)
+          successfulSends++
+          setSentCount(prev => {
+            const newCount = prev + 1
+            console.log(`Incrementing sent count from ${prev} to ${newCount}`)
+            return newCount
+          })
         } catch (error) {
-          console.error(`Failed to send email to ${user.email}:`, error)
+          console.error(`Failed to assign/send voucher to ${user.username}:`, error)
+          
+          // Check if it's an EmailJS error
+          if (error.text) {
+            console.error('EmailJS Error:', error.text)
+            alert(`Failed to send email to ${user.email}: ${error.text}`)
+          } else if (error.message) {
+            console.error('General Error:', error.message)
+            alert(`Failed to process voucher for ${user.username}: ${error.message}`)
+          }
+          // Continue with other users even if one fails
         }
       }
 
-      alert(`Successfully sent voucher to ${sentCount} out of ${selectedUsers.length} users!`)
+      // Show final result
+      console.log('Final email send count:', successfulSends, 'out of', selectedUsers.length)
+      if (successfulSends > 0) {
+        alert(`Successfully assigned vouchers and sent ${successfulSends} out of ${selectedUsers.length} emails!`)
+      } else if (selectedUsers.length > 0) {
+        alert('Vouchers were assigned but no emails were sent. Please check the console for errors.')
+      }
+      
       onClose()
     } catch (error) {
-      console.error('Failed to send voucher emails:', error)
-      alert('Failed to send voucher emails. Please try again.')
+      console.error('Failed to assign vouchers:', error)
+      alert('Failed to assign vouchers. Please try again.')
     } finally {
       setIsSending(false)
     }
@@ -302,7 +373,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
             <div className="flex items-center space-x-3">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
               <div className="text-blue-700">
-                Sending emails... ({sentCount}/{selectedUsers.length})
+                Assigning vouchers and sending emails... ({sentCount}/{selectedUsers.length})
               </div>
             </div>
           </div>
@@ -328,12 +399,12 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
             {isSending ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Sending...
+                Assigning...
               </>
             ) : (
               <>
                 <Mail className="w-4 h-4 mr-2" />
-                Send to {selectedUsers.length} User{selectedUsers.length !== 1 ? 's' : ''}
+                Assign & Send to {selectedUsers.length} User{selectedUsers.length !== 1 ? 's' : ''}
               </>
             )}
           </Button>

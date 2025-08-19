@@ -24,9 +24,10 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
           voucherInfo = JSON.parse(qrData)
           console.log('Parsed voucher data:', voucherInfo)
         } catch {
-          setError('Invalid QR code format.')
+          const errorMessage = 'Invalid QR code format.'
+          setError(errorMessage)
           setIsProcessingVoucher(false)
-          return
+          return { error: errorMessage }
         }
       } else {
         // Treat as plain voucher code
@@ -34,12 +35,16 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
       }
       
       if (!voucherInfo.code) {
-        setError('Missing voucher code in QR data.')
+        const errorMessage = 'Missing voucher code in QR data.'
+        setError(errorMessage)
         setIsProcessingVoucher(false)
-        return
+        return { error: errorMessage }
       }
 
-      // Display voucher data directly from QR code (no API fetch initially)
+      // Parse and display voucher data without immediate API validation
+      // Staff will validate during the redeem process
+      console.log('Parsed voucher info:', voucherInfo)
+      
       const voucherResult = {
         id: voucherInfo.voucherId || 'N/A',
         code: voucherInfo.code,
@@ -47,23 +52,28 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
         expires_at: voucherInfo.expires_at || 'N/A',
         user: voucherInfo.user || voucherInfo.username || 'N/A',
         redeemed: voucherInfo.redeemed || false,
-        status: 'scanned', // Initial status before validation
+        status: voucherInfo.redeemed ? 'redeemed' : 'scanned',
         type: voucherInfo.type || 'voucher',
         brand: voucherInfo.brand || 'TPX Barbershop'
       }
+      
+      console.log('Created voucher result:', voucherResult)
 
       setScanResult(voucherResult)
-       setVoucherData(voucherInfo)
-       setIsProcessingVoucher(false)
+      setVoucherData(voucherInfo)
+      setIsProcessingVoucher(false)
+      return { success: true, data: voucherResult }
+
     } catch (err) {
       console.error('Error processing QR code:', err)
-      setError('Failed to process QR code. Please try again.')
-    } finally {
+      const errorMessage = 'Failed to process QR code. Please try again.'
+      setError(errorMessage)
       setIsProcessingVoucher(false)
+      return { error: errorMessage }
     }
   }
 
-  // Handle voucher validation and redemption
+  // Handle voucher assignment (single-step process)
   const handleValidateAndRedeem = async () => {
     if (!scanResult || !scanResult.code) {
       setError('No voucher to validate.')
@@ -74,41 +84,71 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
       setIsProcessingVoucher(true)
       setError(null)
 
-      // Use API service to redeem voucher
       const apiService = (await import('../../services/api.js')).default
-        
-      // POST /api/vouchers/redeem/ with voucher code and username
-      const response = await apiService.post('/vouchers/redeem/', {
-        code: scanResult.code,
-        username: scanResult.user
-      })
+      
+      // Only call the redeem API to assign voucher to user
+      const assignmentData = {
+        code: scanResult.code
+      }
+      
+      // Only add username if we have a valid one from the QR code
+      if (scanResult.user && scanResult.user !== 'N/A' && scanResult.user.trim()) {
+        assignmentData.username = scanResult.user
+      }
+      
+      console.log('Attempting voucher assignment with:', assignmentData)
+      const assignResponse = await apiService.post('/vouchers/redeem/', assignmentData)
+      console.log('Voucher assignment response:', assignResponse)
 
-      console.log('Voucher redeemed:', response)
+      // Step 2: Immediately redeem the assigned voucher
+      console.log('Attempting voucher redemption for code:', scanResult.code)
+      const redeemData = {
+        code: scanResult.code
+      }
+      
+      // Add username if available
+      if (assignResponse.username || scanResult.user && scanResult.user !== 'N/A' && scanResult.user.trim()) {
+        redeemData.username = assignResponse.username || scanResult.user
+      }
+      
+      const redeemResponse = await apiService.post('/vouchers/confirm-voucher-redeem/', redeemData)
+      console.log('Voucher redemption response:', redeemResponse)
 
-      // Update the scan result based on API response
+      // Update the scan result based on redemption response
       const updatedResult = {
         ...scanResult,
-        status: response.status === 'already claimed' ? 'redeemed' : 'redeemed',
-        value: response.value || scanResult.value,
-        user: response.username || scanResult.user
+        status: 'redeemed', // Set to redeemed after successful redemption
+        value: redeemResponse.value || assignResponse.value || scanResult.value,
+        user: assignResponse.username || scanResult.user
       }
       
       setScanResult(updatedResult)
-      
-      // Show appropriate success message based on status
-      if (response.status === 'already claimed') {
-        setError('This voucher has already been claimed by this user.')
-      } else {
-        setError('')
-      }
+      setError('') // Clear any errors on success
       
     } catch (error) {
-      console.error('Error redeeming voucher:', error)
+      console.error('Error processing voucher:', error)
+      let errorMessage = 'Failed to process voucher. Please try again.'
+      
       if (error.response?.data?.error) {
-        setError(error.response.data.error)
-      } else {
-        setError('Failed to redeem voucher. Please try again.')
+        errorMessage = error.response.data.error
+      } else if (error.response?.data?.detail) {
+        errorMessage = error.response.data.detail
       }
+      
+      // Handle specific error cases based on API documentation
+      if (errorMessage.includes('expired') || errorMessage.includes('Voucher has expired')) {
+        errorMessage = 'This voucher has expired and cannot be assigned.'
+      } else if (errorMessage.includes('Invalid voucher code')) {
+        errorMessage = 'Invalid voucher code. Please verify the QR code.'
+      } else if (errorMessage.includes('Target user not found')) {
+        errorMessage = 'Target user not found. Please check the username.'
+      } else if (errorMessage.includes('already assigned') || errorMessage.includes('Voucher already assigned')) {
+        errorMessage = 'This voucher has already been assigned to the user.'
+      } else if (errorMessage.includes('Voucher code is required')) {
+        errorMessage = 'Voucher code is missing. Please scan a valid QR code.'
+      }
+      
+      setError(errorMessage)
     } finally {
       setIsProcessingVoucher(false)
     }
@@ -125,6 +165,7 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'redeemed': return 'text-green-700 bg-green-100 border-green-200'
+      case 'assigned': return 'text-emerald-700 bg-emerald-100 border-emerald-200'
       case 'scanned': return 'text-blue-700 bg-blue-100 border-blue-200'
       case 'expired': return 'text-red-700 bg-red-100 border-red-200'
       case 'used_up': return 'text-orange-700 bg-orange-100 border-orange-200'
@@ -136,6 +177,7 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'redeemed': return <CheckCircle className="w-5 h-5 text-green-600" />
+      case 'assigned': return <CheckCircle className="w-5 h-5 text-emerald-600" />
       case 'scanned': return <QrCode className="w-5 h-5 text-blue-600" />
       case 'expired': 
       case 'used_up':
@@ -234,9 +276,15 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
                   </div>
                 )}
                 
+                {scanResult.status === 'assigned' && (
+                  <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                    <p className="text-emerald-800 font-bold text-sm">✓ Voucher assigned successfully!</p>
+                  </div>
+                )}
+                
                 {scanResult.status === 'scanned' && (
                   <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
-                    <p className="text-blue-800 font-bold text-sm">📱 Voucher scanned - Ready to validate and redeem</p>
+                    <p className="text-blue-800 font-bold text-sm">📱 Voucher scanned - Ready to redeem</p>
                   </div>
                 )}
                 
@@ -283,12 +331,12 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
               {isProcessingVoucher ? (
                 <>
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Redeeming...
+                  Processing...
                 </>
               ) : (
                 <>
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Validate & Redeem Voucher
+                  Redeem Voucher
                 </>
               )}
             </Button>
