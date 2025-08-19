@@ -2,7 +2,7 @@
 
 Version: 1.0.0
 
-const API_BASE_URL = 'https://tpx-web-service.onrender.com/api'
+const API_BASE_URL = 'http://localhost:8000/api'
 path: src/services/api.js
 Auth: JWT Bearer (Authorization: Bearer <access_token>)
 Docs:
