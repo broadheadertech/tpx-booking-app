@@ -5,7 +5,7 @@ The Notification API provides endpoints to retrieve user notifications for booki
 
 ## Base URL
 ```
-https://tpx-web-service.onrender.com/api/
+https://tpx-web-service-a26o.onrender.com/api/
 ```
 
 ## Authentication
@@ -76,7 +76,7 @@ Retrieve all notifications for the authenticated user.
 
 ### Fetch User Notifications
 ```bash
-curl -X GET "https://tpx-web-service.onrender.com/api/notifications/" \
+curl -X GET "https://tpx-web-service-a26o.onrender.com/api/notifications/" \
   -H "Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
 ```
 
