@@ -97,7 +97,7 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
       }
       
       console.log('Attempting voucher assignment with:', assignmentData)
-      const assignResponse = await apiService.post('/vouchers/redeem/', assignmentData)
+      const assignResponse = await apiService.post('/vouchers/confirm-voucher-redeem/', assignmentData)
       console.log('Voucher assignment response:', assignResponse)
 
       // Step 2: Immediately redeem the assigned voucher
