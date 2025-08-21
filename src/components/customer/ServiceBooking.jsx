@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, Clock, DollarSign, User, Calendar, CheckCircle, XCircle } from 'lucide-react'
+import { ArrowLeft, Clock, DollarSign, User, Calendar, CheckCircle, XCircle, Gift } from 'lucide-react'
 import QRCode from 'qrcode'
 import bookingService from '../../services/customer/bookingService'
+import voucherService from '../../services/customer/voucherService'
 import { useAuth } from '../../context/AuthContext'
 
 const ServiceBooking = ({ onBack }) => {
@@ -9,7 +10,10 @@ const ServiceBooking = ({ onBack }) => {
   const [services, setServices] = useState([])
   const [barbers, setBarbers] = useState([])
   const [selectedService, setSelectedService] = useState(null)
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date()
+    return today.toISOString().split('T')[0]
+  })
   const [selectedTime, setSelectedTime] = useState(null)
   const [selectedStaff, setSelectedStaff] = useState(null)
   const [step, setStep] = useState(1) // 1: services, 2: date & time & staff, 3: confirmation, 4: success
@@ -20,6 +24,9 @@ const ServiceBooking = ({ onBack }) => {
   const [qrCodeLoading, setQrCodeLoading] = useState(true)
   const [showPaymentMethods, setShowPaymentMethods] = useState(false)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null)
+  const [vouchers, setVouchers] = useState([])
+  const [selectedVoucher, setSelectedVoucher] = useState(null)
+  const [loadingVouchers, setLoadingVouchers] = useState(false)
   const qrRef = useRef(null)
 
   useEffect(() => {
@@ -108,36 +115,59 @@ const ServiceBooking = ({ onBack }) => {
     }
   }
 
-  // Generate available time slots for booking
-  const generateTimeSlots = () => {
-    const slots = []
-    const startHour = 9
-    const endHour = 18
-    
-    for (let hour = startHour; hour < endHour; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-        const displayTime = new Date(`2000-01-01T${time}`).toLocaleTimeString('en-PH', {
-          hour: 'numeric',
-          minute: '2-digit',
-          hour12: true
-        })
-        
-        // Randomly mark some slots as unavailable for demo
-        const available = Math.random() > 0.3
-        
-        slots.push({
-          time: time,
-          displayTime: displayTime,
-          available: available
-        })
-      }
+  // State for time slots
+  const [timeSlots, setTimeSlots] = useState([])
+  const [loadingTimeSlots, setLoadingTimeSlots] = useState(false)
+
+  // Load available time slots when date, service, or barber changes
+  useEffect(() => {
+    if (selectedDate && step === 2) {
+      loadAvailableTimeSlots()
     }
-    
-    return slots
+  }, [selectedDate, selectedService?.id, selectedStaff?.id, step])
+
+  // Load available vouchers when reaching confirmation step
+  useEffect(() => {
+    if (step === 3 && isAuthenticated && user) {
+      loadAvailableVouchers()
+    }
+  }, [step, isAuthenticated, user])
+
+  const loadAvailableTimeSlots = async () => {
+    try {
+      setLoadingTimeSlots(true)
+      const slots = await bookingService.getAvailableTimeSlots(
+        selectedDate,
+        selectedService?.id,
+        selectedStaff?.id
+      )
+      setTimeSlots(slots)
+    } catch (error) {
+      console.error('Error loading time slots:', error)
+      // Fallback to base slots if API fails
+      const baseSlots = bookingService.generateBaseTimeSlots()
+      setTimeSlots(baseSlots)
+    } finally {
+      setLoadingTimeSlots(false)
+    }
   }
 
-  const timeSlots = generateTimeSlots()
+  const loadAvailableVouchers = async () => {
+    try {
+      setLoadingVouchers(true)
+      const userVouchers = await voucherService.getUserVouchers()
+      // Filter only claimed/assigned vouchers that are not redeemed or expired
+      const availableVouchers = userVouchers.filter(voucher => 
+        voucher.status === 'assigned' && !voucher.expired && !voucher.redeemed
+      )
+      setVouchers(availableVouchers)
+    } catch (error) {
+      console.error('Error loading vouchers:', error)
+      setVouchers([])
+    } finally {
+      setLoadingVouchers(false)
+    }
+  }
 
   // Get available barbers for selected service
   const getAvailableBarbers = () => {
@@ -174,6 +204,36 @@ const ServiceBooking = ({ onBack }) => {
     try {
       setBookingLoading(true)
       
+      // Validate time slot before booking
+      const timeValidationErrors = bookingService.validateTimeSlot(
+        selectedDate,
+        selectedTime,
+        selectedService.id,
+        selectedStaff?.id
+      )
+      
+      if (timeValidationErrors.length > 0) {
+        alert(`❌ Booking validation failed:\n${timeValidationErrors.join('\n')}`)
+        setBookingLoading(false)
+        return
+      }
+      
+      // Check if time slot is still available
+      const currentSlots = await bookingService.getAvailableTimeSlots(
+        selectedDate,
+        selectedService.id,
+        selectedStaff?.id
+      )
+      
+      const selectedSlot = currentSlots.find(slot => slot.time === selectedTime)
+      if (!selectedSlot || !selectedSlot.available) {
+        alert('⚠️ This time slot is no longer available. Please select a different time.')
+        // Refresh time slots
+        loadAvailableTimeSlots()
+        setBookingLoading(false)
+        return
+      }
+      
       // Format time to include seconds for API compatibility
       const formattedTime = selectedTime.includes(':') ? `${selectedTime}:00` : selectedTime
       
@@ -183,7 +243,8 @@ const ServiceBooking = ({ onBack }) => {
         date: selectedDate,
         time: formattedTime,
         payment_type: paymentType,
-        payment_method: paymentMethod
+        payment_method: paymentMethod,
+        voucher_code: selectedVoucher?.code || null
       }
 
       console.log('Creating booking with data:', bookingData)
@@ -192,6 +253,9 @@ const ServiceBooking = ({ onBack }) => {
       if (result.success) {
         setCreatedBooking(result.data)
         setStep(4) // Success step
+        
+        // Clear time slots cache to reflect the new booking
+        bookingService.clearUserCache()
         
         // Show payment confirmation message
         if (paymentType === 'pay_now') {
@@ -205,6 +269,10 @@ const ServiceBooking = ({ onBack }) => {
         
         if (errorMsg.includes('does not offer the service')) {
           alert(`⚠️ The selected barber doesn't provide this service. Please choose a different barber or service.`)
+        } else if (errorMsg.includes('time slot')) {
+          alert(`⚠️ ${errorMsg}. Please select a different time.`)
+          // Refresh time slots
+          loadAvailableTimeSlots()
         } else {
           alert(`❌ ${errorMsg}`)
         }
@@ -372,86 +440,133 @@ const ServiceBooking = ({ onBack }) => {
         </div>
       </div>
 
+      {/* Date Selection */}
+      <div className="bg-white rounded-xl p-4 border shadow-sm" style={{ borderColor: '#E0E0E0' }}>
+        <h3 className="text-base font-bold mb-3" style={{ color: '#36454F' }}>Select Date</h3>
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(e) => {
+            setSelectedDate(e.target.value)
+            setSelectedTime(null) // Reset selected time when date changes
+          }}
+          min={new Date().toISOString().split('T')[0]} // Prevent past dates
+          max={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // 30 days ahead
+          className="w-full p-3 border-2 border-gray-200 rounded-lg text-base font-medium focus:outline-none focus:border-orange-500 transition-colors"
+          style={{ color: '#36454F' }}
+        />
+      </div>
+
       {/* Time Slots */}
       <div className="bg-white rounded-xl p-4 border shadow-sm" style={{ borderColor: '#E0E0E0' }}>
-        <h3 className="text-base font-bold mb-3" style={{ color: '#36454F' }}>Available Times - Today</h3>
-        <div className="grid grid-cols-3 gap-2">
-          {timeSlots.slice(0, 9).map((slot) => (
-            <button
-              key={slot.time}
-              onClick={() => slot.available && setSelectedTime(slot.time)}
-              disabled={!slot.available}
-              className="p-2 rounded-lg font-semibold text-center transition-all duration-200 border text-sm"
-              style={{
-                backgroundColor: slot.available 
-                  ? selectedTime === slot.time 
-                    ? '#F68B24' 
-                    : '#F5F5F5'
-                  : '#F0F0F0',
-                color: slot.available 
-                  ? selectedTime === slot.time 
-                    ? 'white' 
-                    : '#36454F'
-                  : '#CCCCCC',
-                borderColor: slot.available 
-                  ? selectedTime === slot.time 
-                    ? '#F68B24' 
-                    : 'transparent'
-                  : 'transparent',
-                cursor: slot.available ? 'pointer' : 'not-allowed'
-              }}
-            >
-              {slot.time}
-            </button>
-          ))}
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-base font-bold" style={{ color: '#36454F' }}>Available Times</h3>
+          <span className="text-xs" style={{ color: '#8B8B8B' }}>
+            {new Date(selectedDate).toLocaleDateString('en-PH', { 
+              weekday: 'short', 
+              month: 'short', 
+              day: 'numeric' 
+            })}
+          </span>
         </div>
+        
+        {loadingTimeSlots ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="flex items-center space-x-3">
+              <div className="animate-spin w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full"></div>
+              <span className="text-sm" style={{ color: '#8B8B8B' }}>Loading available times...</span>
+            </div>
+          </div>
+        ) : timeSlots.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="text-4xl mb-2">📅</div>
+            <p className="text-sm font-medium" style={{ color: '#F68B24' }}>No available times</p>
+            <p className="text-xs mt-1" style={{ color: '#8B8B8B' }}>Please select a different date</p>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {timeSlots.map((slot) => (
+                <button
+                  key={slot.time}
+                  onClick={() => slot.available && setSelectedTime(slot.time)}
+                  disabled={!slot.available}
+                  className="p-2 rounded-lg font-semibold text-center transition-all duration-200 border text-sm relative"
+                  style={{
+                    backgroundColor: slot.available 
+                      ? selectedTime === slot.time 
+                        ? '#F68B24' 
+                        : '#F5F5F5'
+                      : '#F0F0F0',
+                    color: slot.available 
+                      ? selectedTime === slot.time 
+                        ? 'white' 
+                        : '#36454F'
+                      : '#CCCCCC',
+                    borderColor: slot.available 
+                      ? selectedTime === slot.time 
+                        ? '#F68B24' 
+                        : 'transparent'
+                      : 'transparent',
+                    cursor: slot.available ? 'pointer' : 'not-allowed'
+                  }}
+                  title={slot.available ? `Book at ${slot.displayTime}` : `${slot.displayTime} - ${slot.reason || 'Unavailable'}`}
+                >
+                  {slot.displayTime}
+                  {!slot.available && (
+                    <div className="absolute top-1 right-1">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+            
+            {/* Legend */}
+            <div className="flex items-center justify-center space-x-4 text-xs">
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 rounded" style={{ backgroundColor: '#F5F5F5' }}></div>
+                <span style={{ color: '#8B8B8B' }}>Available</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 rounded" style={{ backgroundColor: '#F68B24' }}></div>
+                <span style={{ color: '#8B8B8B' }}>Selected</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-3 h-3 rounded" style={{ backgroundColor: '#F0F0F0' }}></div>
+                <span style={{ color: '#8B8B8B' }}>Booked</span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Staff Selection */}
       <div className="bg-white rounded-xl p-4 border shadow-sm" style={{ borderColor: '#E0E0E0' }}>
         <h3 className="text-base font-bold mb-3" style={{ color: '#36454F' }}>Choose Your Barber</h3>
-        <div className="space-y-2">
+        <div className="grid grid-cols-1 gap-2">
           {getAvailableBarbers().length > 0 ? (
             getAvailableBarbers().map((barber) => (
               <button
                 key={barber.id}
                 onClick={() => handleStaffSelect(barber)}
-                className="w-full p-3 rounded-lg border transition-all duration-200 text-left hover:shadow-md"
+                className="w-full p-3 rounded-lg border-2 transition-all duration-200 text-left hover:shadow-sm"
                 style={{
                   borderColor: selectedStaff?.id === barber.id ? '#F68B24' : '#E0E0E0',
-                  backgroundColor: selectedStaff?.id === barber.id ? 'rgba(246, 139, 36, 0.1)' : 'white',
-                  borderWidth: '2px'
-                }}
-                onMouseEnter={(e) => {
-                  if (selectedStaff?.id !== barber.id) {
-                    e.target.style.borderColor = '#F68B24'
-                    e.target.style.backgroundColor = 'rgba(246, 139, 36, 0.05)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (selectedStaff?.id !== barber.id) {
-                    e.target.style.borderColor = '#E0E0E0'
-                    e.target.style.backgroundColor = 'white'
-                  }
+                  backgroundColor: selectedStaff?.id === barber.id ? 'rgba(246, 139, 36, 0.1)' : 'white'
                 }}
               >
-                <div className="flex items-center space-x-2">
-                  <div className="text-xl">👨‍💼</div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: selectedStaff?.id === barber.id ? '#F68B24' : '#F5F5F5' }}>
+                    <span className="text-lg">{selectedStaff?.id === barber.id ? '✓' : '👨‍💼'}</span>
+                  </div>
                   <div className="flex-1">
                     <h4 className="font-bold text-sm" style={{ color: '#36454F' }}>{barber.full_name || barber.name || 'Professional Barber'}</h4>
-                    <p className="text-xs" style={{ color: '#8B8B8B' }}>Professional Barber</p>
-                    <div className="flex items-center space-x-1 mt-0.5">
+                    <div className="flex items-center space-x-2 mt-1">
                       <div className="flex text-yellow-400 text-xs">★★★★★</div>
-                      <span className="text-xs" style={{ color: '#8B8B8B' }}>5.0</span>
+                      <span className="text-xs" style={{ color: '#8B8B8B' }}>5.0 • Professional</span>
                     </div>
                   </div>
-                  {selectedStaff?.id === barber.id && (
-                    <div className="text-orange-500">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  )}
                 </div>
               </button>
             ))
@@ -561,6 +676,61 @@ const ServiceBooking = ({ onBack }) => {
               </div>
               <span className="font-bold text-sm" style={{ color: '#36454F' }}>{selectedStaff?.full_name || selectedStaff?.name || 'Any Barber'}</span>
             </div>
+          </div>
+
+          {/* Voucher Selection */}
+          <div className="border-t pt-3" style={{ borderColor: '#E0E0E0' }}>
+            <h4 className="text-sm font-bold mb-3 flex items-center" style={{ color: '#36454F' }}>
+              <Gift className="w-4 h-4 mr-2" style={{ color: '#F68B24' }} />
+              Apply Voucher (Optional)
+            </h4>
+            
+            {loadingVouchers ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full mr-2"></div>
+                <span className="text-sm" style={{ color: '#8B8B8B' }}>Loading vouchers...</span>
+              </div>
+            ) : vouchers.length > 0 ? (
+              <div className="space-y-2 mb-3">
+                <div className="max-h-32 overflow-y-auto space-y-2">
+                  {vouchers.map((voucher) => (
+                    <button
+                      key={voucher.id}
+                      onClick={() => setSelectedVoucher(selectedVoucher?.id === voucher.id ? null : voucher)}
+                      className="w-full p-2 rounded-lg border-2 transition-all duration-200 text-left"
+                      style={{
+                        borderColor: selectedVoucher?.id === voucher.id ? '#F68B24' : '#E0E0E0',
+                        backgroundColor: selectedVoucher?.id === voucher.id ? 'rgba(246, 139, 36, 0.1)' : 'white'
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <div className="text-sm">🎁</div>
+                          <div>
+                            <p className="text-xs font-bold" style={{ color: '#36454F' }}>{voucher.code}</p>
+                            <p className="text-xs" style={{ color: '#F68B24' }}>₱{parseFloat(voucher.value || 0).toFixed(2)}</p>
+                          </div>
+                        </div>
+                        {selectedVoucher?.id === voucher.id && (
+                          <div className="w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: '#F68B24' }}>
+                            <span className="text-white text-xs">✓</span>
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                {selectedVoucher && (
+                  <div className="text-xs text-center p-2 rounded" style={{ backgroundColor: '#F0F8FF', color: '#36454F' }}>
+                    💰 You'll save ₱{parseFloat(selectedVoucher.value || 0).toFixed(2)} with this voucher
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-3">
+                <p className="text-xs" style={{ color: '#8B8B8B' }}>No vouchers available</p>
+              </div>
+            )}
           </div>
 
           {/* Payment Options */}
@@ -777,9 +947,23 @@ const ServiceBooking = ({ onBack }) => {
               <span className="font-medium" style={{ color: '#36454F' }}>Barber:</span>
               <span className="font-bold" style={{ color: '#36454F' }}>{selectedStaff?.full_name || selectedStaff?.name || 'Any Barber'}</span>
             </div>
+            {selectedVoucher && (
+              <div className="flex justify-between">
+                <span className="font-medium" style={{ color: '#36454F' }}>Subtotal:</span>
+                <span className="font-bold line-through" style={{ color: '#8B8B8B' }}>₱{selectedService?.price.toLocaleString()}</span>
+              </div>
+            )}
+            {selectedVoucher && (
+              <div className="flex justify-between">
+                <span className="font-medium" style={{ color: '#36454F' }}>Voucher Discount:</span>
+                <span className="font-bold" style={{ color: '#22C55E' }}>-₱{parseFloat(selectedVoucher.value || 0).toLocaleString()}</span>
+              </div>
+            )}
             <div className="flex justify-between border-t pt-3" style={{ borderColor: 'rgba(246, 139, 36, 0.2)' }}>
               <span className="font-bold" style={{ color: '#36454F' }}>Total:</span>
-              <span className="font-black text-lg" style={{ color: '#F68B24' }}>₱{selectedService?.price.toLocaleString()}</span>
+              <span className="font-black text-lg" style={{ color: '#F68B24' }}>
+                ₱{Math.max(0, (selectedService?.price || 0) - (selectedVoucher?.value || 0)).toLocaleString()}
+              </span>
             </div>
           </div>
         </div>

@@ -578,6 +578,182 @@ class CustomerBookingService {
     return serviceIds.map(id => specialtyMap[id] || 'General Styling')
   }
 
+  // Time slot management methods
+  async getAvailableTimeSlots(date, serviceId = null, barberId = null) {
+    try {
+      const cacheKey = `time-slots-${date}-${serviceId || 'any'}-${barberId || 'any'}`
+      
+      // Check cache first (5 minutes for time slots)
+      const cached = apiCache.get(cacheKey)
+      if (cached) {
+        return cached
+      }
+
+      // Generate base time slots
+      const baseSlots = this.generateBaseTimeSlots()
+      
+      // Get existing bookings for the date
+      const existingBookings = await this.getBookingsForDate(date, barberId)
+      
+      // Mark unavailable slots based on existing bookings
+      const availableSlots = this.markUnavailableSlots(baseSlots, existingBookings, serviceId)
+      
+      // Cache for 5 minutes
+      apiCache.set(cacheKey, availableSlots, 5 * 60 * 1000)
+      
+      return availableSlots
+    } catch (error) {
+      console.error('Error fetching available time slots:', error)
+      // Return base slots if API fails
+      return this.generateBaseTimeSlots()
+    }
+  }
+
+  generateBaseTimeSlots() {
+    const slots = []
+    const businessHours = {
+      start: 9, // 9 AM
+      end: 18,  // 6 PM
+      interval: 30, // 30 minutes
+      lunchBreak: { start: 12, end: 13 } // 12 PM - 1 PM lunch break
+    }
+    
+    for (let hour = businessHours.start; hour < businessHours.end; hour++) {
+      for (let minute = 0; minute < 60; minute += businessHours.interval) {
+        // Skip lunch break
+        if (hour >= businessHours.lunchBreak.start && hour < businessHours.lunchBreak.end) {
+          continue
+        }
+        
+        const time24 = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+        const timeObj = new Date(`2000-01-01T${time24}:00`)
+        const displayTime = timeObj.toLocaleTimeString('en-PH', {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        })
+        
+        slots.push({
+          time: time24,
+          displayTime: displayTime,
+          available: true,
+          timeObj: timeObj,
+          hour: hour,
+          minute: minute
+        })
+      }
+    }
+    
+    return slots
+  }
+
+  async getBookingsForDate(date, barberId = null) {
+    try {
+      const cacheKey = `bookings-date-${date}-${barberId || 'all'}`
+      
+      // Check cache first
+      const cached = shortCache.get(cacheKey)
+      if (cached) {
+        return cached
+      }
+
+      // Fetch bookings from API with date filter
+      const response = await apiService.get('/bookings/', {
+        params: {
+          date: date,
+          barber: barberId || undefined
+        },
+        timeout: 30000
+      })
+      
+      const bookings = Array.isArray(response) ? response : response.results || []
+      
+      // Cache for 2 minutes
+      shortCache.set(cacheKey, bookings, 2 * 60 * 1000)
+      
+      return bookings
+    } catch (error) {
+      console.error('Error fetching bookings for date:', error)
+      return []
+    }
+  }
+
+  markUnavailableSlots(baseSlots, existingBookings, serviceId = null) {
+    return baseSlots.map(slot => {
+      // Check if this time slot conflicts with existing bookings
+      const hasConflict = existingBookings.some(booking => {
+        if (booking.status === 'cancelled') return false
+        
+        const bookingTime = booking.time.substring(0, 5) // Get HH:MM format
+        const slotTime = slot.time
+        
+        // Direct time match
+        if (bookingTime === slotTime) return true
+        
+        // Check for service duration overlap if serviceId is provided
+        if (serviceId && booking.service === serviceId) {
+          const bookingStart = this.timeToMinutes(bookingTime)
+          const slotStart = this.timeToMinutes(slotTime)
+          const serviceDuration = this.getServiceDuration(serviceId) || 30
+          
+          // Check if slot falls within booking duration
+          return slotStart >= bookingStart && slotStart < (bookingStart + serviceDuration)
+        }
+        
+        return false
+      })
+      
+      return {
+        ...slot,
+        available: !hasConflict,
+        reason: hasConflict ? 'booked' : null
+      }
+    })
+  }
+
+  timeToMinutes(timeString) {
+    const [hours, minutes] = timeString.split(':').map(Number)
+    return hours * 60 + minutes
+  }
+
+  getServiceDuration(serviceId) {
+    // This should ideally come from the services cache
+    // For now, return default duration
+    return 30 // 30 minutes default
+  }
+
+  validateTimeSlot(date, time, serviceId = null, barberId = null) {
+    const errors = []
+    
+    // Validate date
+    const bookingDate = new Date(date)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    if (bookingDate < today) {
+      errors.push('Cannot book appointments in the past')
+    }
+    
+    // Validate time format
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/
+    if (!timeRegex.test(time)) {
+      errors.push('Invalid time format')
+    }
+    
+    // Validate business hours
+    const [hours, minutes] = time.split(':').map(Number)
+    if (hours < 9 || hours >= 18 || (hours >= 12 && hours < 13)) {
+      errors.push('Time must be within business hours (9 AM - 6 PM, excluding lunch 12-1 PM)')
+    }
+    
+    // Validate time intervals (30-minute slots)
+    if (minutes !== 0 && minutes !== 30) {
+      errors.push('Appointments must be booked in 30-minute intervals')
+    }
+    
+    return errors
+  }
+
   // Cache management
   clearUserCache(userId = null) {
     const userIdToUse = userId || authService.getUserId()
