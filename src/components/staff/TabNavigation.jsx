@@ -59,98 +59,38 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
           {/* Primary Tabs */}
           {primaryTabs.map((tab) => {
             const IconComponent = getIconComponent(tab.id)
-            const isManagement = tab.id === 'management'
-            const managementTabs = isManagement ? tabs.find(t => t.id === 'management')?.dropdown || [] : []
-            const isManagementActive = managementTabs.some(t => t.id === activeTab)
 
             return (
               <div key={tab.id} className="relative">
-                {isManagement ? (
-                  <div className="relative" ref={managementDropdownRef}>
-                    <button
-                      onClick={() => setIsManagementDropdownOpen(!isManagementDropdownOpen)}
-                      className={`relative flex items-center space-x-3 px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-300 group min-w-0 ${
-                        isManagementActive
-                          ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg shadow-[#FF8C42]/25 transform scale-105'
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-white/80 hover:shadow-sm'
-                      }`}
-                    >
-                      {/* Active indicator */}
-                      {isManagementActive && (
-                        <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full" />
-                      )}
+                <button
+                  onClick={() => handleTabClick(tab.id)}
+                  className={`relative flex items-center space-x-3 px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-300 group min-w-0 ${
+                    activeTab === tab.id
+                      ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg shadow-[#FF8C42]/25 transform scale-105'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/80 hover:shadow-sm'
+                  }`}
+                >
+                  {/* Active indicator */}
+                  {activeTab === tab.id && (
+                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full" />
+                  )}
 
-                      <div className={`flex items-center justify-center w-5 h-5 transition-all duration-200 ${
-                        isManagementActive
-                          ? 'text-white'
-                          : 'text-gray-500 group-hover:text-[#FF8C42]'
-                      }`}>
-                        <IconComponent className="w-5 h-5" />
-                      </div>
-                      <span className="font-semibold whitespace-nowrap">{tab.label}</span>
-                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
-                        isManagementActive ? 'text-white' : 'text-gray-500 group-hover:text-[#FF8C42]'
-                      } ${isManagementDropdownOpen ? 'rotate-180' : ''}`} />
-                    </button>
-
-                    {/* Management Dropdown */}
-                    {isManagementDropdownOpen && (
-                      <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200/50 py-2" style={{zIndex: 99999, position: 'absolute'}}>
-                        {managementTabs.map((managementTab) => {
-                          const ManagementIconComponent = getIconComponent(managementTab.id)
-                          return (
-                            <button
-                              key={managementTab.id}
-                              onClick={() => handleTabClick(managementTab.id)}
-                              className={`w-full flex items-center space-x-3 px-4 py-3 text-left transition-all duration-200 ${
-                                activeTab === managementTab.id
-                                  ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white'
-                                  : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF8C42]'
-                              }`}
-                            >
-                              <div className={`flex items-center justify-center w-5 h-5 ${
-                                activeTab === managementTab.id ? 'text-white' : 'text-gray-500'
-                              }`}>
-                                <ManagementIconComponent className="w-5 h-5" />
-                              </div>
-                              <span className="font-semibold">{managementTab.label}</span>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
+                  <div className={`flex items-center justify-center w-5 h-5 transition-all duration-200 ${
+                    activeTab === tab.id
+                      ? 'text-white'
+                      : 'text-gray-500 group-hover:text-[#FF8C42]'
+                  }`}>
+                    <IconComponent className="w-5 h-5" />
                   </div>
-                ) : (
-                  <button
-                    onClick={() => handleTabClick(tab.id)}
-                    className={`relative flex items-center space-x-3 px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-300 group min-w-0 ${
-                      activeTab === tab.id
-                        ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg shadow-[#FF8C42]/25 transform scale-105'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/80 hover:shadow-sm'
-                    }`}
-                  >
-                    {/* Active indicator */}
-                    {activeTab === tab.id && (
-                      <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full" />
-                    )}
+                  <span className="font-semibold whitespace-nowrap">{tab.label}</span>
 
-                    <div className={`flex items-center justify-center w-5 h-5 transition-all duration-200 ${
-                      activeTab === tab.id
-                        ? 'text-white'
-                        : 'text-gray-500 group-hover:text-[#FF8C42]'
-                    }`}>
-                      <IconComponent className="w-5 h-5" />
-                    </div>
-                    <span className="font-semibold whitespace-nowrap">{tab.label}</span>
-
-                    {/* Badge for bookings */}
-                    {tab.badge > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                        {tab.badge > 99 ? '99+' : tab.badge}
-                      </span>
-                    )}
-                  </button>
-                )}
+                  {/* Badge for bookings */}
+                  {tab.badge > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                      {tab.badge > 99 ? '99+' : tab.badge}
+                    </span>
+                  )}
+                </button>
               </div>
             )
           })}
