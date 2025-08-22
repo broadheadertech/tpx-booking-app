@@ -84,62 +84,44 @@ function StaffDashboard() {
   }
 
   const loadTabData = async (tab) => {
-    console.log('loadTabData called with tab:', tab)
-    console.log('Current data state:', data)
-    console.log('Does data[tab] exist?', !!data[tab])
-    console.log('data[tab] value:', data[tab])
-    
-    // Don't reload if data already exists
-    if (data[tab] && tab !== 'overview') {
-      console.log('Data already exists for tab:', tab, ', skipping reload')
+    // Don't reload if data already exists (except for overview which should always refresh)
+    if (data[tab] && tab !== 'overview' && tab !== 'services') {
       return
     }
-
-    console.log('Loading data for tab:', tab)
     switch (tab) {
-      case 'overview':
-        console.log('Calling loadOverviewData()')
-        await loadOverviewData()
-        break
-      case 'vouchers':
-        console.log('Calling loadVouchersData()')
-        await loadVouchersData()
-        break
-      case 'services':
-        console.log('Calling loadServicesData()')
-        await loadServicesData()
-        break
-      case 'bookings':
-        console.log('Calling loadBookingsData()')
-        await loadBookingsData()
-        break
-      case 'customers':
-        console.log('Calling loadCustomersData()')
-        await loadCustomersData()
-        break
-      case 'barbers':
-        console.log('Calling loadBarbersData()')
-        await loadBarbersData()
-        break
-      case 'reports':
-        console.log('Calling loadReportsData()')
-        await loadReportsData()
-        break
-      case 'events':
-        console.log('Calling loadEventsData()')
-        await loadEventsData()
-        break
-      case 'products':
-        console.log('Calling loadProductsData()')
-        await loadProductsData()
-        break
-      case 'notifications':
-        console.log('Calling loadNotificationsData()')
-        await loadNotificationsData()
-        break
-      default:
-        console.log('Unknown tab:', tab)
-    }
+        case 'overview':
+          await loadOverviewData()
+          break
+        case 'vouchers':
+          await loadVouchersData()
+          break
+        case 'services':
+          await loadServicesData()
+          break
+        case 'bookings':
+          await loadBookingsData()
+          break
+        case 'customers':
+          await loadCustomersData()
+          break
+        case 'barbers':
+          await loadBarbersData()
+          break
+        case 'reports':
+          await loadReportsData()
+          break
+        case 'events':
+          await loadEventsData()
+          break
+        case 'products':
+          await loadProductsData()
+          break
+        case 'notifications':
+          await loadNotificationsData()
+          break
+        default:
+          break
+      }
   }
 
   const loadOverviewData = async () => {
@@ -186,8 +168,6 @@ function StaffDashboard() {
   }
 
   const loadServicesData = async () => {
-    console.log('🚨 loadServicesData called - THIS SHOULD NOT HAPPEN FOR BOOKINGS TAB!')
-    console.trace('loadServicesData: Call stack trace')
     try {
       setTabLoading('services', true)
       setTabError('services', null)
@@ -409,13 +389,24 @@ function StaffDashboard() {
     return activities.slice(0, 4)
   }
 
+  // Calculate booking counts for badge
+  const getBookedCount = () => {
+    const bookings = data.bookings || []
+    return bookings.filter(booking => booking.status === 'booked').length
+  }
+
   const tabs = [
     { id: 'overview', label: 'Overview', icon: 'M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586l-2 2V5H5v14h7v2H4a1 1 0 01-1-1V4z' },
+    {
+      id: 'bookings',
+      label: 'Bookings',
+      icon: 'M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z',
+      badge: getBookedCount()
+    },
+    { id: 'barbers', label: 'Barbers', icon: 'M16 11c1.66 0 3-1.34 3-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C18 14.17 13.33 13 11 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h4v-2.5c0-2.33-4.67-3.5-7-3.5z' },
     { id: 'customers', label: 'Customers', icon: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z' },
-    { id: 'bookings', label: 'Bookings', icon: 'M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z' },
     { id: 'services', label: 'Services', icon: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z' },
     { id: 'vouchers', label: 'Vouchers', icon: 'M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z' },
-    { id: 'barbers', label: 'Barbers', icon: 'M16 11c1.66 0 3-1.34 3-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C18 14.17 13.33 13 11 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h4v-2.5c0-2.33-4.67-3.5-7-3.5z' },
     { id: 'reports', label: 'Reports', icon: 'M3 3v18h18v-2H5V3H3zm4 14h2v-6H7v6zm4 0h2V9h-2v8zm4 0h2v-4h-2v4z' },
     { id: 'events', label: 'Events', icon: 'M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z' },
     { id: 'products', label: 'Products', icon: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z' },

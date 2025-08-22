@@ -423,16 +423,42 @@ class CustomerBookingService {
   }
 
   formatBookingTime(time) {
-    return new Date(`2000-01-01T${time}`).toLocaleTimeString('en-PH', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    })
+    // Handle both ISO format and HH:MM format
+    if (time.includes('T')) {
+      // ISO format like "2025-08-22T06:30:48.138Z"
+      return new Date(time).toLocaleTimeString('en-PH', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })
+    } else {
+      // HH:MM format like "09:30"
+      return new Date(`2000-01-01T${time}`).toLocaleTimeString('en-PH', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      })
+    }
   }
 
   // Data transformation methods
   transformBookingData(apiBooking) {
     const status = apiBooking.status || 'booked'
+
+    // Debug logging for API response
+    console.log('API booking data:', apiBooking)
+    console.log('Available fields in booking:', Object.keys(apiBooking))
+    console.log('Voucher-related fields:', {
+      voucher_code: apiBooking.voucher_code,
+      voucherCode: apiBooking.voucherCode,
+      voucher: apiBooking.voucher,
+      voucher_code_in_voucher: apiBooking.voucher?.code,
+      total_amount: apiBooking.total_amount,
+      totalAmount: apiBooking.totalAmount,
+      payment: apiBooking.payment,
+      payment_amount: apiBooking.payment?.amount
+    })
+
     return {
       id: apiBooking.id,
       booking_code: apiBooking.booking_code,
@@ -443,6 +469,8 @@ class CustomerBookingService {
       date: apiBooking.date,
       time: apiBooking.time,
       status: status,
+      voucher_code: apiBooking.voucher_code || apiBooking.voucher?.code,
+      total_amount: apiBooking.total_amount || apiBooking.totalAmount || apiBooking.payment?.amount,
       created_at: apiBooking.created_at,
       updated_at: apiBooking.updated_at,
       // UI-friendly formatted data
@@ -489,27 +517,40 @@ class CustomerBookingService {
 
   transformBookingToAPI(uiData, isPartial = false) {
     const apiData = {}
-    
+
     if (uiData.service || uiData.service_id) {
       apiData.service = uiData.service || uiData.service_id
     }
-    
+
     if (uiData.barber || uiData.barber_id) {
       apiData.barber = uiData.barber || uiData.barber_id
     }
-    
+
     if (uiData.date) {
       apiData.date = uiData.date
     }
-    
+
     if (uiData.time) {
-      apiData.time = uiData.time
+      // Keep time in HH:MM:SS format as expected by API
+      const timeStr = uiData.time.includes(':') ? uiData.time : `${uiData.time}:00`
+      // Ensure it has seconds
+      const timeParts = timeStr.split(':')
+      if (timeParts.length === 2) {
+        apiData.time = `${timeStr}:00`
+      } else {
+        apiData.time = timeStr
+      }
     }
-    
+
     if (uiData.status) {
       apiData.status = uiData.status
     }
-    
+
+    // Handle voucher_code parameter
+    if (uiData.voucher_code) {
+      apiData.voucher_code = uiData.voucher_code
+    }
+
     return apiData
   }
 
@@ -595,8 +636,8 @@ class CustomerBookingService {
       // Get existing bookings for the date
       const existingBookings = await this.getBookingsForDate(date, barberId)
       
-      // Mark unavailable slots based on existing bookings
-      const availableSlots = this.markUnavailableSlots(baseSlots, existingBookings, serviceId)
+      // Mark unavailable slots based on existing bookings and past times
+      const availableSlots = this.markUnavailableSlots(baseSlots, existingBookings, serviceId, date)
       
       // Cache for 5 minutes
       apiCache.set(cacheKey, availableSlots, 5 * 60 * 1000)
@@ -678,7 +719,11 @@ class CustomerBookingService {
     }
   }
 
-  markUnavailableSlots(baseSlots, existingBookings, serviceId = null) {
+  markUnavailableSlots(baseSlots, existingBookings, serviceId = null, selectedDate = null) {
+    const today = new Date()
+    const isToday = selectedDate && new Date(selectedDate).toDateString() === today.toDateString()
+    const currentTime = today.getHours() * 60 + today.getMinutes()
+    
     return baseSlots.map(slot => {
       // Check if this time slot conflicts with existing bookings
       const hasConflict = existingBookings.some(booking => {
@@ -703,10 +748,25 @@ class CustomerBookingService {
         return false
       })
       
+      // Check if slot is in the past (only for today)
+      const isPastTime = isToday && this.timeToMinutes(slot.time) <= currentTime
+      
+      // Determine availability and reason
+      let available = true
+      let reason = null
+      
+      if (hasConflict) {
+        available = false
+        reason = 'booked'
+      } else if (isPastTime) {
+        available = false
+        reason = 'past'
+      }
+      
       return {
         ...slot,
-        available: !hasConflict,
-        reason: hasConflict ? 'booked' : null
+        available,
+        reason
       }
     })
   }

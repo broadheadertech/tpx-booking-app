@@ -96,34 +96,26 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
         assignmentData.username = scanResult.user
       }
       
-      console.log('Attempting voucher assignment with:', assignmentData)
-      const assignResponse = await apiService.post('/vouchers/confirm-voucher-redeem/', assignmentData)
-      console.log('Voucher assignment response:', assignResponse)
-
-      // Step 2: Immediately redeem the assigned voucher
-      console.log('Attempting voucher redemption for code:', scanResult.code)
-      const redeemData = {
-        code: scanResult.code
-      }
-      
-      // Add username if available
-      if (assignResponse.username || scanResult.user && scanResult.user !== 'N/A' && scanResult.user.trim()) {
-        redeemData.username = assignResponse.username || scanResult.user
-      }
-      
-      const redeemResponse = await apiService.post('/vouchers/confirm-voucher-redeem/', redeemData)
+      console.log('Attempting voucher redemption with:', assignmentData)
+      const redeemResponse = await apiService.post('/vouchers/confirm-voucher-redeem/', assignmentData)
       console.log('Voucher redemption response:', redeemResponse)
 
-      // Update the scan result based on redemption response
-      const updatedResult = {
-        ...scanResult,
-        status: 'redeemed', // Set to redeemed after successful redemption
-        value: redeemResponse.value || assignResponse.value || scanResult.value,
-        user: assignResponse.username || scanResult.user
+      // Check if the response indicates success
+      if (redeemResponse.success || redeemResponse.value) {
+        // Update the scan result based on redemption response
+        const updatedResult = {
+          ...scanResult,
+          status: 'redeemed', // Set to redeemed after successful redemption
+          value: redeemResponse.value || scanResult.value,
+          user: scanResult.user
+        }
+        
+        setScanResult(updatedResult)
+        setError('') // Clear any errors on success
+      } else {
+        // Handle case where response doesn't indicate success
+        throw new Error('Voucher redemption failed - no success indicator in response')
       }
-      
-      setScanResult(updatedResult)
-      setError('') // Clear any errors on success
       
     } catch (error) {
       console.error('Error processing voucher:', error)

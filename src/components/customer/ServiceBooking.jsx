@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, Clock, DollarSign, User, Calendar, CheckCircle, XCircle, Gift } from 'lucide-react'
+import { ArrowLeft, Clock, DollarSign, User, Calendar, CheckCircle, XCircle, Gift, Scissors, Shield, Zap, Star, Crown, Sparkles } from 'lucide-react'
 import QRCode from 'qrcode'
 import bookingService from '../../services/customer/bookingService'
 import voucherService from '../../services/customer/voucherService'
@@ -56,10 +56,12 @@ const ServiceBooking = ({ onBack }) => {
             bookingId: createdBooking.id,
             bookingCode: createdBooking.booking_code || `BK-${createdBooking.id}`,
             service: selectedService?.name,
-            time: createdBooking.time,
+            time: createdBooking.time ? new Date(createdBooking.time).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true }) : selectedTime,
             barber: selectedStaff?.full_name || selectedStaff?.name || 'Any Barber',
             date: createdBooking.date,
-            barbershop: 'TPX Barbershop'
+            barbershop: 'TPX Barbershop',
+            voucher_code: createdBooking.voucher_code,
+            total_amount: createdBooking.total_amount
           })
           
           // Generate QR code as canvas
@@ -121,7 +123,7 @@ const ServiceBooking = ({ onBack }) => {
 
   // Load available time slots when date, service, or barber changes
   useEffect(() => {
-    if (selectedDate && step === 2) {
+    if (selectedDate && selectedStaff && step === 2) {
       loadAvailableTimeSlots()
     }
   }, [selectedDate, selectedService?.id, selectedStaff?.id, step])
@@ -156,10 +158,22 @@ const ServiceBooking = ({ onBack }) => {
     try {
       setLoadingVouchers(true)
       const userVouchers = await voucherService.getUserVouchers()
-      // Filter only claimed/assigned vouchers that are not redeemed or expired
-      const availableVouchers = userVouchers.filter(voucher => 
-        voucher.status === 'assigned' && !voucher.expired && !voucher.redeemed
-      )
+
+      console.log('Raw user vouchers:', userVouchers)
+
+      // Filter only vouchers with status "assigned" (not redeemed) and not expired
+      const availableVouchers = userVouchers.filter(voucher => {
+        const isAssigned = voucher.status === 'assigned'
+        const isNotExpired = !voucher.expired
+        const isNotRedeemed = !voucher.redeemed
+
+        console.log(`Voucher ${voucher.code}: status=${voucher.status}, expired=${voucher.expired}, redeemed=${voucher.redeemed}, will show=${isAssigned && isNotExpired && isNotRedeemed}`)
+
+        return isAssigned && isNotExpired && isNotRedeemed
+      })
+
+      console.log('Filtered available vouchers:', availableVouchers)
+
       setVouchers(availableVouchers)
     } catch (error) {
       console.error('Error loading vouchers:', error)
@@ -187,12 +201,22 @@ const ServiceBooking = ({ onBack }) => {
   // Helper function to get service icon
   const getServiceIcon = (serviceName) => {
     const name = serviceName?.toLowerCase() || ''
-    if (name.includes('haircut') || name.includes('cut')) return '💇‍♂️'
-    if (name.includes('beard')) return '🧔'
-    if (name.includes('shave')) return '🪒'
-    if (name.includes('wash')) return '🧴'
-    if (name.includes('package') || name.includes('complete')) return '⭐'
-    return '✂️'
+    if (name.includes('haircut') || name.includes('cut')) {
+      return <Scissors className="w-5 h-5 text-white" />
+    }
+    if (name.includes('beard')) {
+      return <Shield className="w-5 h-5 text-white" />
+    }
+    if (name.includes('shave')) {
+      return <Zap className="w-5 h-5 text-white" />
+    }
+    if (name.includes('wash')) {
+      return <Sparkles className="w-5 h-5 text-white" />
+    }
+    if (name.includes('package') || name.includes('complete')) {
+      return <Crown className="w-5 h-5 text-white" />
+    }
+    return <Star className="w-5 h-5 text-white" />
   }
 
   const handleCreateBooking = async (paymentType = 'pay_later', paymentMethod = null) => {
@@ -224,7 +248,7 @@ const ServiceBooking = ({ onBack }) => {
         selectedService.id,
         selectedStaff?.id
       )
-      
+
       const selectedSlot = currentSlots.find(slot => slot.time === selectedTime)
       if (!selectedSlot || !selectedSlot.available) {
         alert('⚠️ This time slot is no longer available. Please select a different time.')
@@ -232,6 +256,18 @@ const ServiceBooking = ({ onBack }) => {
         loadAvailableTimeSlots()
         setBookingLoading(false)
         return
+      }
+
+      // Double-check voucher availability if one is selected
+      if (selectedVoucher) {
+        const isVoucherStillAvailable = vouchers.some(v => v.code === selectedVoucher.code)
+        if (!isVoucherStillAvailable) {
+          alert('⚠️ The selected voucher is no longer available. Please select a different voucher or proceed without one.')
+          // Refresh vouchers
+          loadAvailableVouchers()
+          setBookingLoading(false)
+          return
+        }
       }
       
       // Format time to include seconds for API compatibility
@@ -242,8 +278,7 @@ const ServiceBooking = ({ onBack }) => {
         barber: selectedStaff?.id || null,
         date: selectedDate,
         time: formattedTime,
-        payment_type: paymentType,
-        payment_method: paymentMethod,
+        status: 'booked',
         voucher_code: selectedVoucher?.code || null
       }
 
@@ -253,10 +288,44 @@ const ServiceBooking = ({ onBack }) => {
       if (result.success) {
         setCreatedBooking(result.data)
         setStep(4) // Success step
-        
+
         // Clear time slots cache to reflect the new booking
         bookingService.clearUserCache()
-        
+
+        // Redeem voucher if one was selected
+        if (selectedVoucher?.code) {
+          try {
+            console.log('Redeeming voucher:', selectedVoucher.code)
+            const voucherRedemption = await voucherService.confirmVoucherRedemption(selectedVoucher.code)
+
+            if (voucherRedemption.success) {
+              console.log('Voucher redeemed successfully:', voucherRedemption.data)
+              // Update the created booking with redeemed voucher info
+              setCreatedBooking(prev => ({
+                ...prev,
+                voucher_redeemed: true,
+                voucher_value: voucherRedemption.data.value
+              }))
+
+              // Clear voucher caches to reflect the redemption
+              voucherService.clearUserCache()
+
+              // Optional: Show success message for voucher redemption
+              setTimeout(() => {
+                console.log(`✅ Voucher ${selectedVoucher.code} redeemed successfully!`)
+              }, 1500)
+            } else {
+              console.warn('Voucher redemption failed:', voucherRedemption.error)
+              // Don't break the booking flow - the booking is still successful
+              // User can try to redeem the voucher manually later
+            }
+          } catch (voucherError) {
+            console.error('Error during voucher redemption:', voucherError)
+            // Don't break the booking flow - the booking is still successful
+            // The voucher remains unredeemed and user can try again later
+          }
+        }
+
         // Show payment confirmation message
         if (paymentType === 'pay_now') {
           setTimeout(() => {
@@ -266,13 +335,23 @@ const ServiceBooking = ({ onBack }) => {
       } else {
         // Show a more user-friendly error message
         const errorMsg = result.error || 'Failed to create booking'
-        
+
+        console.log('Booking error details:', result)
+
         if (errorMsg.includes('does not offer the service')) {
           alert(`⚠️ The selected barber doesn't provide this service. Please choose a different barber or service.`)
         } else if (errorMsg.includes('time slot')) {
           alert(`⚠️ ${errorMsg}. Please select a different time.`)
           // Refresh time slots
           loadAvailableTimeSlots()
+        } else if (errorMsg.includes('Voucher usage limit reached')) {
+          alert(`❌ The selected voucher has already been used or has reached its usage limit. Please select a different voucher or proceed without one.`)
+          // Refresh vouchers to show only available ones
+          loadAvailableVouchers()
+        } else if (errorMsg.includes('voucher')) {
+          alert(`❌ Voucher error: ${errorMsg}. Please try selecting a different voucher or proceed without one.`)
+          // Refresh vouchers
+          loadAvailableVouchers()
         } else {
           alert(`❌ ${errorMsg}`)
         }
@@ -299,6 +378,8 @@ const ServiceBooking = ({ onBack }) => {
 
   const handleStaffSelect = (staffMember) => {
     setSelectedStaff(staffMember)
+    // Reset time selection when barber changes to ensure fresh availability check
+    setSelectedTime(null)
   }
 
   const handleConfirmBooking = async (paymentType = 'pay_later', paymentMethod = null) => {
@@ -343,25 +424,25 @@ const ServiceBooking = ({ onBack }) => {
   const renderServiceSelection = () => {
     if (loading) {
       return (
-        <div className="text-center py-12 px-4">
-          <div className="rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4" style={{backgroundColor: '#F68B24', opacity: 0.1}}>
-            <Calendar className="w-8 h-8" style={{color: '#F68B24'}} />
+        <div className="text-center py-8 px-4 min-h-[200px] flex flex-col justify-center">
+          <div className="rounded-full w-14 h-14 flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'rgba(246, 139, 36, 0.1)' }}>
+            <Calendar className="w-7 h-7" style={{ color: '#F68B24' }} />
           </div>
-          <p className="text-sm" style={{color: '#8B8B8B'}}>Loading services...</p>
+          <p className="text-sm font-medium" style={{ color: '#8B8B8B' }}>Loading premium services...</p>
         </div>
       )
     }
 
     if (error) {
       return (
-        <div className="text-center py-12 px-4">
-          <div className="rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4" style={{backgroundColor: '#dc3545', opacity: 0.1}}>
-            <XCircle className="w-8 h-8 text-red-500" />
+        <div className="text-center py-8 px-4 min-h-[200px] flex flex-col justify-center">
+          <div className="rounded-full w-14 h-14 flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'rgba(220, 53, 69, 0.1)' }}>
+            <XCircle className="w-7 h-7 text-red-500" />
           </div>
-          <p className="text-sm text-red-600 mb-4">{error}</p>
-          <button 
+          <p className="text-sm text-red-600 mb-4 font-medium px-4">{error}</p>
+          <button
             onClick={loadBookingData}
-            className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
+            className="w-full max-w-xs mx-auto px-6 py-3 bg-gradient-to-r from-[#F68B24] to-orange-500 text-white rounded-xl font-semibold hover:from-orange-500 hover:to-[#F68B24] transition-all duration-300 shadow-lg active:shadow-md active:scale-95 min-h-[44px] touch-manipulation"
           >
             Try Again
           </button>
@@ -370,50 +451,97 @@ const ServiceBooking = ({ onBack }) => {
     }
 
     return (
-      <div className="space-y-3 px-4">
-        <div className="text-center mb-3">
-          <h2 className="text-xl font-bold mb-1" style={{ color: '#36454F' }}>Choose Your Service</h2>
-          <p className="text-sm font-medium" style={{ color: '#8B8B8B' }}>Select from our premium grooming services</p>
+      <div className="px-4 pb-4">
+        {/* Mobile-First Header */}
+        <div className="text-center mb-5">
+          <div className="flex items-center justify-center mb-3">
+            <div className="rounded-full w-10 h-10 flex items-center justify-center mr-3" style={{ backgroundColor: 'rgba(246, 139, 36, 0.1)' }}>
+              <Star className="w-5 h-5" style={{ color: '#F68B24' }} />
+            </div>
+            <div className="text-left">
+              <h2 className="text-lg font-bold leading-tight" style={{ color: '#36454F' }}>Choose Your Service</h2>
+              <p className="text-xs font-medium" style={{ color: '#8B8B8B' }}>Premium grooming services</p>
+            </div>
+          </div>
         </div>
-        
-        <div className="space-y-2">
+
+        {/* Mobile-Optimized Service Cards */}
+        <div className="space-y-3">
           {services.map((service) => (
             <button
               key={service.id}
               onClick={() => handleServiceSelect(service)}
-              className="w-full bg-white rounded-xl p-4 border hover:shadow-md transition-all duration-200 text-left group"
+              className="group relative w-full bg-white rounded-2xl shadow-sm active:shadow-md border-2 hover:border-[#F68B24] active:border-[#F68B24] transition-all duration-200 overflow-hidden touch-manipulation min-h-[88px]"
               style={{ borderColor: '#E0E0E0' }}
-              onMouseEnter={(e) => e.target.style.borderColor = '#F68B24'}
-              onMouseLeave={(e) => e.target.style.borderColor = '#E0E0E0'}
             >
-              <div className="flex items-center space-x-3">
-                <div className="text-2xl">{getServiceIcon(service.name)}</div>
-                <div className="flex-1 min-w-0">
+              {/* Mobile-Optimized Background Effects */}
+              <div className="absolute inset-0 bg-gradient-to-r from-white via-gray-50 to-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-[#F68B24] to-orange-400 opacity-0 group-hover:opacity-3 transition-opacity duration-200"></div>
+
+              {/* Touch-Friendly Content */}
+              <div className="relative p-4">
+                <div className="flex items-center space-x-3">
+                  {/* Mobile-Optimized Icon Badge */}
+                  <div className="flex-shrink-0">
+                    <div className="rounded-full w-11 h-11 flex items-center justify-center shadow-md group-hover:shadow-lg transition-all duration-200 group-hover:scale-105"
+                         style={{ backgroundColor: '#F68B24' }}>
+                      {getServiceIcon(service.name)}
+                    </div>
+                  </div>
+
+                  {/* Mobile-First Content Layout */}
+                  <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start mb-1">
-                      <h3 className="text-base font-bold transition-colors duration-200 truncate" style={{ color: '#36454F' }}>
-                        {service.name}
-                      </h3>
-                      <div className="text-right ml-2">
-                        <div className="text-lg font-bold" style={{ color: '#F68B24' }}>
-                          ₱{parseFloat(service.price || 0).toLocaleString()}
-                        </div>
-                        <div className="text-xs font-medium" style={{ color: '#8B8B8B' }}>
-                          {service.duration_minutes ? `${service.duration_minutes} min` : 'Duration varies'}
-                        </div>
+                      <div className="flex-1 min-w-0 pr-2">
+                        <h3 className="text-sm font-bold leading-tight group-hover:text-[#F68B24] transition-colors duration-200" style={{ color: '#36454F' }}>
+                          {service.name}
+                        </h3>
+                        <p className="text-xs mt-1 line-clamp-2 leading-relaxed" style={{ color: '#8B8B8B' }}>
+                          {service.description || 'Professional grooming service tailored to your needs'}
+                        </p>
                       </div>
                     </div>
-                    <div className="mb-2">
-                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold" style={{ backgroundColor: '#F68B24', color: 'white' }}>
-                        Service
-                      </span>
+
+                    {/* Mobile-Optimized Meta Info */}
+                    <div className="flex items-center space-x-3 mt-2">
+                      <div className="flex items-center space-x-1">
+                        <Clock className="w-3 h-3 flex-shrink-0" style={{ color: '#8B8B8B' }} />
+                        <span className="text-xs font-medium truncate" style={{ color: '#8B8B8B' }}>
+                          {service.duration_minutes ? `${service.duration_minutes} min` : 'Duration varies'}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Star className="w-3 h-3 flex-shrink-0" style={{ color: '#F68B24' }} />
+                        <span className="text-xs font-medium" style={{ color: '#8B8B8B' }}>5.0</span>
+                      </div>
                     </div>
-                    <p className="text-xs font-medium leading-relaxed" style={{ color: '#8B8B8B' }}>
-                      {service.description || 'Professional grooming service'}
-                    </p>
+                  </div>
+
+                  {/* Mobile-Friendly Price Display */}
+                  <div className="flex-shrink-0">
+                    <div className="rounded-lg px-2 py-1.5 shadow-sm text-center min-w-[60px]" style={{ backgroundColor: 'rgba(246, 139, 36, 0.1)' }}>
+                      <div className="text-sm font-bold leading-tight" style={{ color: '#F68B24' }}>
+                        ₱{parseFloat(service.price || 0).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Mobile-Optimized Accent Line */}
+                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-[#F68B24] to-orange-400 scale-x-0 group-hover:scale-x-100 group-active:scale-x-100 transition-transform duration-200 origin-left"></div>
               </div>
             </button>
           ))}
+        </div>
+
+        {/* Mobile-Optimized Footer */}
+        <div className="text-center mt-5">
+          <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full shadow-sm" style={{ backgroundColor: 'rgba(246, 139, 36, 0.1)' }}>
+            <Crown className="w-3.5 h-3.5" style={{ color: '#F68B24' }} />
+            <span className="text-xs font-semibold" style={{ color: '#F68B24' }}>
+              {services.length} Premium Services Available
+            </span>
+          </div>
         </div>
       </div>
     )
@@ -422,8 +550,8 @@ const ServiceBooking = ({ onBack }) => {
   const renderTimeAndStaffSelection = () => (
     <div className="space-y-3 px-4">
       <div className="text-center mb-3">
-        <h2 className="text-xl font-bold mb-1" style={{ color: '#36454F' }}>Select Time & Barber</h2>
-        <p className="text-sm font-medium" style={{ color: '#8B8B8B' }}>Choose your preferred time and barber</p>
+        <h2 className="text-xl font-bold mb-1" style={{ color: '#36454F' }}>Select Barber & Time</h2>
+        <p className="text-sm font-medium" style={{ color: '#8B8B8B' }}>Choose your preferred barber, then pick a time</p>
       </div>
 
       {/* Selected Service Summary */}
@@ -440,116 +568,19 @@ const ServiceBooking = ({ onBack }) => {
         </div>
       </div>
 
-      {/* Date Selection */}
+      {/* Staff Selection - Now First */}
       <div className="bg-white rounded-xl p-4 border shadow-sm" style={{ borderColor: '#E0E0E0' }}>
-        <h3 className="text-base font-bold mb-3" style={{ color: '#36454F' }}>Select Date</h3>
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => {
-            setSelectedDate(e.target.value)
-            setSelectedTime(null) // Reset selected time when date changes
-          }}
-          min={new Date().toISOString().split('T')[0]} // Prevent past dates
-          max={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // 30 days ahead
-          className="w-full p-3 border-2 border-gray-200 rounded-lg text-base font-medium focus:outline-none focus:border-orange-500 transition-colors"
-          style={{ color: '#36454F' }}
-        />
-      </div>
-
-      {/* Time Slots */}
-      <div className="bg-white rounded-xl p-4 border shadow-sm" style={{ borderColor: '#E0E0E0' }}>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-base font-bold" style={{ color: '#36454F' }}>Available Times</h3>
-          <span className="text-xs" style={{ color: '#8B8B8B' }}>
-            {new Date(selectedDate).toLocaleDateString('en-PH', { 
-              weekday: 'short', 
-              month: 'short', 
-              day: 'numeric' 
-            })}
-          </span>
-        </div>
-        
-        {loadingTimeSlots ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="flex items-center space-x-3">
-              <div className="animate-spin w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full"></div>
-              <span className="text-sm" style={{ color: '#8B8B8B' }}>Loading available times...</span>
-            </div>
-          </div>
-        ) : timeSlots.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="text-4xl mb-2">📅</div>
-            <p className="text-sm font-medium" style={{ color: '#F68B24' }}>No available times</p>
-            <p className="text-xs mt-1" style={{ color: '#8B8B8B' }}>Please select a different date</p>
-          </div>
-        ) : (
-          <>
-            <div className="grid grid-cols-3 gap-2 mb-3">
-              {timeSlots.map((slot) => (
-                <button
-                  key={slot.time}
-                  onClick={() => slot.available && setSelectedTime(slot.time)}
-                  disabled={!slot.available}
-                  className="p-2 rounded-lg font-semibold text-center transition-all duration-200 border text-sm relative"
-                  style={{
-                    backgroundColor: slot.available 
-                      ? selectedTime === slot.time 
-                        ? '#F68B24' 
-                        : '#F5F5F5'
-                      : '#F0F0F0',
-                    color: slot.available 
-                      ? selectedTime === slot.time 
-                        ? 'white' 
-                        : '#36454F'
-                      : '#CCCCCC',
-                    borderColor: slot.available 
-                      ? selectedTime === slot.time 
-                        ? '#F68B24' 
-                        : 'transparent'
-                      : 'transparent',
-                    cursor: slot.available ? 'pointer' : 'not-allowed'
-                  }}
-                  title={slot.available ? `Book at ${slot.displayTime}` : `${slot.displayTime} - ${slot.reason || 'Unavailable'}`}
-                >
-                  {slot.displayTime}
-                  {!slot.available && (
-                    <div className="absolute top-1 right-1">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-            
-            {/* Legend */}
-            <div className="flex items-center justify-center space-x-4 text-xs">
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 rounded" style={{ backgroundColor: '#F5F5F5' }}></div>
-                <span style={{ color: '#8B8B8B' }}>Available</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 rounded" style={{ backgroundColor: '#F68B24' }}></div>
-                <span style={{ color: '#8B8B8B' }}>Selected</span>
-              </div>
-              <div className="flex items-center space-x-1">
-                <div className="w-3 h-3 rounded" style={{ backgroundColor: '#F0F0F0' }}></div>
-                <span style={{ color: '#8B8B8B' }}>Booked</span>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Staff Selection */}
-      <div className="bg-white rounded-xl p-4 border shadow-sm" style={{ borderColor: '#E0E0E0' }}>
-        <h3 className="text-base font-bold mb-3" style={{ color: '#36454F' }}>Choose Your Barber</h3>
+        <h3 className="text-base font-bold mb-3" style={{ color: '#36454F' }}>Step 1: Choose Your Barber</h3>
         <div className="grid grid-cols-1 gap-2">
           {getAvailableBarbers().length > 0 ? (
             getAvailableBarbers().map((barber) => (
               <button
                 key={barber.id}
-                onClick={() => handleStaffSelect(barber)}
+                onClick={() => {
+                  handleStaffSelect(barber)
+                  // Reset date and time when barber changes
+                  setSelectedTime(null)
+                }}
                 className="w-full p-3 rounded-lg border-2 transition-all duration-200 text-left hover:shadow-sm"
                 style={{
                   borderColor: selectedStaff?.id === barber.id ? '#F68B24' : '#E0E0E0',
@@ -586,8 +617,119 @@ const ServiceBooking = ({ onBack }) => {
         </div>
       </div>
 
-      {/* Continue Button */}
-      {selectedTime && selectedStaff && (
+      {/* Date Selection - Now Second, only show if barber is selected */}
+      {selectedStaff && (
+        <div className="bg-white rounded-xl p-4 border shadow-sm" style={{ borderColor: '#E0E0E0' }}>
+          <h3 className="text-base font-bold mb-3" style={{ color: '#36454F' }}>Step 2: Select Date</h3>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => {
+              setSelectedDate(e.target.value)
+              setSelectedTime(null) // Reset selected time when date changes
+            }}
+            min={new Date().toISOString().split('T')[0]} // Prevent past dates
+            max={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // 30 days ahead
+            className="w-full p-3 border-2 border-gray-200 rounded-lg text-base font-medium focus:outline-none focus:border-orange-500 transition-colors"
+            style={{ color: '#36454F' }}
+          />
+        </div>
+      )}
+
+      {/* Time Slots - Now Third, only show if both barber and date are selected */}
+      {selectedStaff && selectedDate && (
+        <div className="bg-white rounded-xl p-4 border shadow-sm" style={{ borderColor: '#E0E0E0' }}>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-base font-bold" style={{ color: '#36454F' }}>Step 3: Available Times</h3>
+            <span className="text-xs" style={{ color: '#8B8B8B' }}>
+              {new Date(selectedDate).toLocaleDateString('en-PH', { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric' 
+              })}
+            </span>
+          </div>
+          
+          {loadingTimeSlots ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="flex items-center space-x-3">
+                <div className="animate-spin w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full"></div>
+                <span className="text-sm" style={{ color: '#8B8B8B' }}>Loading available times...</span>
+              </div>
+            </div>
+          ) : timeSlots.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-4xl mb-2">📅</div>
+              <p className="text-sm font-medium" style={{ color: '#F68B24' }}>No available times</p>
+              <p className="text-xs mt-1" style={{ color: '#8B8B8B' }}>Please select a different date</p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                {timeSlots.map((slot) => (
+                  <button
+                    key={slot.time}
+                    onClick={() => slot.available && setSelectedTime(slot.time)}
+                    disabled={!slot.available}
+                    className="p-2 rounded-lg font-semibold text-center transition-all duration-200 border text-sm relative"
+                    style={{
+                      backgroundColor: slot.available 
+                        ? selectedTime === slot.time 
+                          ? '#F68B24' 
+                          : '#F5F5F5'
+                        : '#F0F0F0',
+                      color: slot.available 
+                        ? selectedTime === slot.time 
+                          ? 'white' 
+                          : '#36454F'
+                        : '#CCCCCC',
+                      borderColor: slot.available 
+                        ? selectedTime === slot.time 
+                          ? '#F68B24' 
+                          : 'transparent'
+                        : 'transparent',
+                      cursor: slot.available ? 'pointer' : 'not-allowed'
+                    }}
+                    title={slot.available ? `Book at ${slot.displayTime}` : `${slot.displayTime} - ${slot.reason === 'past' ? 'Past time' : slot.reason === 'booked' ? 'Already booked' : 'Unavailable'}`}
+                   >
+                     {slot.displayTime}
+                     {!slot.available && (
+                       <div className="absolute top-1 right-1">
+                         <div className={`w-2 h-2 rounded-full ${
+                           slot.reason === 'past' ? 'bg-gray-400' : 'bg-red-500'
+                         }`}></div>
+                       </div>
+                     )}
+                  </button>
+                ))}
+              </div>
+              
+              {/* Legend */}
+               <div className="flex items-center justify-center space-x-3 text-xs">
+                 <div className="flex items-center space-x-1">
+                   <div className="w-3 h-3 rounded" style={{ backgroundColor: '#F5F5F5' }}></div>
+                   <span style={{ color: '#8B8B8B' }}>Available</span>
+                 </div>
+                 <div className="flex items-center space-x-1">
+                   <div className="w-3 h-3 rounded" style={{ backgroundColor: '#F68B24' }}></div>
+                   <span style={{ color: '#8B8B8B' }}>Selected</span>
+                 </div>
+                 <div className="flex items-center space-x-1">
+                   <div className="w-3 h-3 rounded" style={{ backgroundColor: '#F0F0F0' }}></div>
+                   <span style={{ color: '#8B8B8B' }}>Booked</span>
+                 </div>
+                 <div className="flex items-center space-x-1">
+                   <div className="w-3 h-3 rounded bg-gray-300"></div>
+                   <span style={{ color: '#8B8B8B' }}>Past</span>
+                 </div>
+               </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Continue Button - Only show when all selections are made */}
+      {selectedTime && selectedStaff && selectedDate && (
         <button
           onClick={() => setStep(3)}
           className="w-full py-3 text-white font-bold rounded-xl transition-all duration-200 shadow-lg"
@@ -597,6 +739,19 @@ const ServiceBooking = ({ onBack }) => {
         >
           Continue to Confirmation
         </button>
+      )}
+
+      {/* Progress Indicator */}
+      {selectedStaff && (
+        <div className="text-center">
+          <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full shadow-sm" style={{ backgroundColor: 'rgba(246, 139, 36, 0.1)' }}>
+            <span className="text-xs font-semibold" style={{ color: '#F68B24' }}>
+              {selectedStaff && !selectedDate ? 'Step 2: Select Date' : 
+               selectedStaff && selectedDate && !selectedTime ? 'Step 3: Select Time' :
+               selectedStaff && selectedDate && selectedTime ? 'Ready to Continue!' : 'Step 1: Choose Barber'}
+            </span>
+          </div>
+        </div>
       )}
     </div>
   )
@@ -962,7 +1117,7 @@ const ServiceBooking = ({ onBack }) => {
             <div className="flex justify-between border-t pt-3" style={{ borderColor: 'rgba(246, 139, 36, 0.2)' }}>
               <span className="font-bold" style={{ color: '#36454F' }}>Total:</span>
               <span className="font-black text-lg" style={{ color: '#F68B24' }}>
-                ₱{Math.max(0, (selectedService?.price || 0) - (selectedVoucher?.value || 0)).toLocaleString()}
+                ₱{createdBooking?.total_amount ? parseFloat(createdBooking.total_amount).toLocaleString() : Math.max(0, (selectedService?.price || 0) - (selectedVoucher?.value || 0)).toLocaleString()}
               </span>
             </div>
           </div>

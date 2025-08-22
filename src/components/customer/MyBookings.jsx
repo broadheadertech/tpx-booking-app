@@ -38,6 +38,19 @@ const MyBookings = ({ onBack }) => {
       
       // The new API returns bookings with nested service and barber data
       const bookingList = Array.isArray(bookingsData) ? bookingsData : []
+      console.log('Raw bookings data:', bookingList)
+
+      // Check if any bookings have voucher information
+      bookingList.forEach((booking, index) => {
+        console.log(`Booking ${index + 1} (${booking.id}):`, {
+          voucher_code: booking.voucher_code,
+          voucherCode: booking.voucherCode,
+          voucher: booking.voucher,
+          total_amount: booking.total_amount,
+          totalAmount: booking.totalAmount
+        })
+      })
+
       setBookings(bookingList)
       
       // No need to load separate services and barbers data as they're included in bookings
@@ -232,7 +245,15 @@ const MyBookings = ({ onBack }) => {
                 // Service and barber data are now nested in the booking object
                 const service = booking.service || {}
                 const barber = booking.barber || {}
-                
+
+                // Debug logging for voucher information
+                console.log(`Booking ${booking.id}:`, {
+                  voucher_code: booking.voucher_code,
+                  total_amount: booking.total_amount,
+                  voucherCode: booking.voucherCode,
+                  voucher: booking.voucher
+                })
+
                 return (
                   <div key={booking.id} className="bg-white rounded-xl p-4 border shadow-sm hover:shadow-lg transition-all duration-200" style={{borderColor: '#E0E0E0'}}>
                     {/* Booking Header */}
@@ -255,42 +276,79 @@ const MyBookings = ({ onBack }) => {
                     </div>
 
                     {/* Booking Details */}
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="w-3 h-3" style={{color: '#F68B24'}} />
-                        <div>
-                          <p className="text-xs" style={{color: '#8B8B8B'}}>Date</p>
-                          <p className="text-sm font-bold" style={{color: '#36454F'}}>{bookingService.formatBookingDate(booking.date)}</p>
+                    <div className="space-y-2 mb-3">
+                      {/* Date and Time Row */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="w-3 h-3" style={{color: '#F68B24'}} />
+                          <div>
+                            <p className="text-xs" style={{color: '#8B8B8B'}}>Date</p>
+                            <p className="text-sm font-bold" style={{color: '#36454F'}}>{bookingService.formatBookingDate(booking.date)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Clock className="w-3 h-3" style={{color: '#F68B24'}} />
+                          <div>
+                            <p className="text-xs" style={{color: '#8B8B8B'}}>Time</p>
+                            <p className="text-sm font-bold" style={{color: '#36454F'}}>{bookingService.formatBookingTime(booking.time)}</p>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Clock className="w-3 h-3" style={{color: '#F68B24'}} />
-                        <div>
-                          <p className="text-xs" style={{color: '#8B8B8B'}}>Time</p>
-                          <p className="text-sm font-bold" style={{color: '#36454F'}}>{bookingService.formatBookingTime(booking.time)}</p>
+
+                      {/* Barber and Service Price Row */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="flex items-center space-x-2">
+                          <User className="w-3 h-3" style={{color: '#F68B24'}} />
+                          <div>
+                            <p className="text-xs" style={{color: '#8B8B8B'}}>Barber</p>
+                            <p className="text-sm font-bold" style={{color: '#36454F'}}>{barber.name || 'Any Barber'}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 rounded" style={{backgroundColor: '#F68B24'}}></div>
+                          <div>
+                            <p className="text-xs" style={{color: '#8B8B8B'}}>Service Price</p>
+                            <p className="text-sm font-bold" style={{color: '#F68B24'}}>₱{service.price ? parseFloat(service.price).toLocaleString() : '--'}</p>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <User className="w-3 h-3" style={{color: '#F68B24'}} />
-                        <div>
-                          <p className="text-xs" style={{color: '#8B8B8B'}}>Barber</p>
-                          <p className="text-sm font-bold" style={{color: '#36454F'}}>{barber.name || 'Any Barber'}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 rounded" style={{backgroundColor: '#F68B24'}}></div>
-                        <div>
-                          <p className="text-xs" style={{color: '#8B8B8B'}}>Price</p>
-                          <p className="text-sm font-bold" style={{color: '#F68B24'}}>₱{service.price ? parseFloat(service.price).toLocaleString() : '--'}</p>
-                        </div>
-                      </div>
+
+                      {/* Voucher and Total Amount Row */}
+                      {(() => {
+                        // Check for voucher code in different possible field names
+                        const voucherCode = booking.voucher_code || booking.voucherCode || booking.voucher?.code
+                        const totalAmount = booking.total_amount || booking.totalAmount
+
+                        return (voucherCode || totalAmount) && (
+                          <div className="grid grid-cols-2 gap-3 pt-2 border-t" style={{borderColor: '#E0E0E0'}}>
+                            {voucherCode && (
+                              <div className="flex items-center space-x-2">
+                                <div className="w-3 h-3 rounded bg-green-500"></div>
+                                <div>
+                                  <p className="text-xs" style={{color: '#8B8B8B'}}>Voucher Used</p>
+                                  <p className="text-sm font-bold" style={{color: '#22C55E'}}>{voucherCode}</p>
+                                </div>
+                              </div>
+                            )}
+                            {totalAmount && (
+                              <div className="flex items-center space-x-2">
+                                <div className="w-3 h-3 rounded bg-blue-500"></div>
+                                <div>
+                                  <p className="text-xs" style={{color: '#8B8B8B'}}>Total Paid</p>
+                                  <p className="text-sm font-bold" style={{color: '#3B82F6'}}>₱{parseFloat(totalAmount).toLocaleString()}</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })()}
                     </div>
 
 
 
                     {/* Action Buttons */}
                     <div className="flex space-x-2">
-                      {booking.status === 'confirmed' && (
+                      {booking.status === 'booked' && (
                         <button
                           onClick={() => setShowQRCode({...booking, service, barber})}
                           className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
@@ -304,7 +362,7 @@ const MyBookings = ({ onBack }) => {
                       )}
                       {booking.status === 'pending' && (
                         <>
-                          <button 
+                          <button
                             onClick={() => setShowCancelModal({...booking, service, barber})}
                             className="flex-1 py-2 bg-red-500 text-white font-bold rounded-lg transition-all duration-200 text-sm"
                             onMouseEnter={(e) => e.target.style.backgroundColor = '#DC2626'}
@@ -325,7 +383,7 @@ const MyBookings = ({ onBack }) => {
                         </>
                       )}
                       {booking.status === 'cancelled' && (
-                        <button 
+                        <button
                           onClick={onBack}
                           className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 text-sm"
                           style={{backgroundColor: '#F68B24'}}
@@ -333,6 +391,18 @@ const MyBookings = ({ onBack }) => {
                           onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
                         >
                           Book Again
+                        </button>
+                      )}
+                      {(booking.status === 'confirmed' || booking.status === 'completed') && (
+                        <button
+                          onClick={() => setShowQRCode({...booking, service, barber})}
+                          className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 text-sm"
+                          style={{backgroundColor: '#10B981'}}
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#059669'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = '#10B981'}
+                        >
+                          <QrCode className="w-3 h-3" />
+                          <span>Show QR</span>
                         </button>
                       )}
                     </div>
@@ -372,7 +442,9 @@ const QRCodeModal = ({ booking, onClose }) => {
     time: booking.time,
     barber: booking.barber?.name || 'Any Barber',
     date: booking.date,
-    barbershop: 'TPX Barbershop'
+    barbershop: 'TPX Barbershop',
+    voucher_code: booking.voucher_code || booking.voucherCode || booking.voucher?.code,
+    total_amount: booking.total_amount || booking.totalAmount
   })
 
   useEffect(() => {
@@ -442,6 +514,27 @@ const QRCodeModal = ({ booking, onClose }) => {
                 <span style={{color: '#36454F'}}>Code:</span>
                 <span className="font-bold" style={{color: '#36454F'}}>{booking.booking_code}</span>
               </div>
+              {(() => {
+                const voucherCode = booking.voucher_code || booking.voucherCode || booking.voucher?.code
+                const totalAmount = booking.total_amount || booking.totalAmount
+
+                return (
+                  <>
+                    {voucherCode && (
+                      <div className="flex justify-between border-t pt-2" style={{borderColor: '#E0E0E0'}}>
+                        <span style={{color: '#22C55E'}}>Voucher:</span>
+                        <span className="font-bold" style={{color: '#22C55E'}}>{voucherCode}</span>
+                      </div>
+                    )}
+                    {totalAmount && (
+                      <div className="flex justify-between">
+                        <span style={{color: '#3B82F6'}}>Total Paid:</span>
+                        <span className="font-bold" style={{color: '#3B82F6'}}>₱{parseFloat(totalAmount).toLocaleString()}</span>
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
             </div>
           </div>
 
