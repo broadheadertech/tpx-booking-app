@@ -1,151 +1,157 @@
-import React, { useState, useEffect, useRef } from 'react'
-import Modal from '../common/Modal'
-import Button from '../common/Button'
-import { Mail, Users, Search, X, CheckCircle, QrCode } from 'lucide-react'
-import QRCode from 'qrcode'
-import emailjs from '@emailjs/browser'
-import apiService from '../../services/api.js'
+import React, { useState, useEffect, useRef } from "react";
+import Modal from "../common/Modal";
+import Button from "../common/Button";
+import { Mail, Users, Search, X, CheckCircle, QrCode } from "lucide-react";
+import QRCode from "qrcode";
+import emailjs from "@emailjs/browser";
+import apiService from "../../services/api.js";
 
 const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
-  const [clients, setClients] = useState([])
-  const [filteredClients, setFilteredClients] = useState([])
-  const [selectedUsers, setSelectedUsers] = useState([])
-  const [customerSearch, setCustomerSearch] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSending, setIsSending] = useState(false)
-  const [sentCount, setSentCount] = useState(0)
-  const [qrCodeUrl, setQrCodeUrl] = useState('')
-  const dropdownRef = useRef(null)
+  const [clients, setClients] = useState([]);
+  const [filteredClients, setFilteredClients] = useState([]);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [sentCount, setSentCount] = useState(0);
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
+  const dropdownRef = useRef(null);
 
   // EmailJS configuration - you'll need to update these with your actual values
-  const EMAILJS_SERVICE_ID = 'service_4y8wlo6'
-  const EMAILJS_TEMPLATE_ID = 'template_vj10o2t'
-  const EMAILJS_PUBLIC_KEY = 'LdJKCGcFqSk3IAdnu'
+  const EMAILJS_SERVICE_ID = "service_4y8wlo6";
+  const EMAILJS_TEMPLATE_ID = "template_vj10o2t";
+  const EMAILJS_PUBLIC_KEY = "LdJKCGcFqSk3IAdnu";
 
   useEffect(() => {
     if (isOpen) {
-      fetchClients()
-      generateQRCode()
+      fetchClients();
+      generateQRCode();
     }
-  }, [isOpen, voucher])
+  }, [isOpen, voucher]);
 
   useEffect(() => {
-    const filtered = clients.filter(client => 
-      client.username?.toLowerCase().includes(customerSearch.toLowerCase()) ||
-      client.email?.toLowerCase().includes(customerSearch.toLowerCase()) ||
-      (client.nickname && client.nickname.toLowerCase().includes(customerSearch.toLowerCase()))
-    )
-    setFilteredClients(filtered)
-  }, [customerSearch, clients])
+    const filtered = clients.filter(
+      (client) =>
+        client.username?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        client.email?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        (client.nickname &&
+          client.nickname.toLowerCase().includes(customerSearch.toLowerCase()))
+    );
+    setFilteredClients(filtered);
+  }, [customerSearch, clients]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setCustomerSearch('')
+        setCustomerSearch("");
       }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const fetchClients = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      const response = await apiService.get('/clients/')
-      const clientsData = Array.isArray(response) ? response : []
-      setClients(clientsData)
-      setFilteredClients(clientsData)
+      const response = await apiService.get("/clients/");
+      const clientsData = Array.isArray(response) ? response : [];
+      setClients(clientsData);
+      setFilteredClients(clientsData);
     } catch (error) {
-      console.error('Failed to fetch clients:', error)
-      setClients([])
-      setFilteredClients([])
+      console.error("Failed to fetch clients:", error);
+      setClients([]);
+      setFilteredClients([]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const generateQRCode = async () => {
-    if (!voucher) return
+    if (!voucher) return;
     try {
       const qrData = {
         username: "", // Will be filled when sent to specific users
         code: voucher.code,
-        value: voucher.value
-      }
-      
+        value: voucher.value,
+      };
+
       const url = await QRCode.toDataURL(JSON.stringify(qrData), {
         width: 300,
         margin: 2,
         color: {
-          dark: '#1A1A1A',
-          light: '#FFFFFF'
-        }
-      })
-      setQrCodeUrl(url)
+          dark: "#1A1A1A",
+          light: "#FFFFFF",
+        },
+      });
+      setQrCodeUrl(url);
     } catch (err) {
-      console.error('Failed to generate QR code:', err)
+      console.error("Failed to generate QR code:", err);
     }
-  }
+  };
 
   const toggleUserSelection = (user) => {
-    setSelectedUsers(prev => {
-      const isSelected = prev.find(u => u.id === user.id)
+    setSelectedUsers((prev) => {
+      const isSelected = prev.find((u) => u.id === user.id);
       if (isSelected) {
-        return prev.filter(u => u.id !== user.id)
+        return prev.filter((u) => u.id !== user.id);
       } else {
-        return [...prev, user]
+        return [...prev, user];
       }
-    })
-  }
+    });
+  };
 
   const selectAllUsers = () => {
-    setSelectedUsers([...filteredClients])
-  }
+    setSelectedUsers([...filteredClients]);
+  };
 
   const clearAllUsers = () => {
-    setSelectedUsers([])
-  }
+    setSelectedUsers([]);
+  };
 
   const sendVoucherEmails = async () => {
     if (selectedUsers.length === 0) {
-      alert('Please select at least one user to send the voucher to.')
-      return
+      alert("Please select at least one user to send the voucher to.");
+      return;
     }
 
     // Validate EmailJS configuration
     if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
-      alert('EmailJS configuration is missing. Please check the service configuration.')
-      return
+      alert(
+        "EmailJS configuration is missing. Please check the service configuration."
+      );
+      return;
     }
 
     // Check if selected users have email addresses
-    const usersWithoutEmail = selectedUsers.filter(user => !user.email || user.email.trim() === '')
+    const usersWithoutEmail = selectedUsers.filter(
+      (user) => !user.email || user.email.trim() === ""
+    );
     if (usersWithoutEmail.length > 0) {
-      const usernames = usersWithoutEmail.map(u => u.username).join(', ')
-      alert(`The following users don't have email addresses: ${usernames}`)
-      return
+      const usernames = usersWithoutEmail.map((u) => u.username).join(", ");
+      alert(`The following users don't have email addresses: ${usernames}`);
+      return;
     }
 
-    setIsSending(true)
-    setSentCount(0)
-    let successfulSends = 0 // Local counter for immediate tracking
-    
+    setIsSending(true);
+    setSentCount(0);
+    let successfulSends = 0; // Local counter for immediate tracking
+
     try {
       // Initialize EmailJS (you'll need to call this once in your app)
-      console.log('Initializing EmailJS with service:', EMAILJS_SERVICE_ID)
-      emailjs.init(EMAILJS_PUBLIC_KEY)
+      console.log("Initializing EmailJS with service:", EMAILJS_SERVICE_ID);
+      emailjs.init(EMAILJS_PUBLIC_KEY);
 
       for (const user of selectedUsers) {
         try {
           // Step 1: Assign voucher to user via API
           const assignData = {
             username: user.username,
-            code: voucher.code
-          }
-          
-          console.log('Assigning voucher to user:', assignData)
-          await apiService.post('/vouchers/assign/', assignData)
-          console.log(`Voucher ${voucher.code} assigned to ${user.username}`)
+            code: voucher.code,
+          };
+
+          console.log("Assigning voucher to user:", assignData);
+          await apiService.post("/vouchers/assign/", assignData);
+          console.log(`Voucher ${voucher.code} assigned to ${user.username}`);
 
           // Step 2: Generate personalized QR code for this user
           const personalizedQrData = {
@@ -154,33 +160,52 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
             code: voucher.code,
             value: voucher.value,
             expires_at: voucher.expires_at,
-            type: 'voucher',
-            brand: 'TPX Barbershop'
-          }
-          
-          console.log('Generating QR code for user:', user.username, 'with data:', personalizedQrData)
-          
-          const personalizedQrUrl = await QRCode.toDataURL(JSON.stringify(personalizedQrData), {
-            width: 200,
-            margin: 1,
-            color: {
-              dark: '#1A1A1A',
-              light: '#FFFFFF'
-            },
-            errorCorrectionLevel: 'M',
-            type: 'image/png',
-            quality: 0.6
-          })
-          
+            type: "voucher",
+            brand: "TPX Barbershop",
+          };
+
+          console.log(
+            "Generating QR code for user:",
+            user.username,
+            "with data:",
+            personalizedQrData
+          );
+
+          const personalizedQrUrl = await QRCode.toDataURL(
+            JSON.stringify(personalizedQrData),
+            {
+              width: 200,
+              margin: 1,
+              color: {
+                dark: "#1A1A1A",
+                light: "#FFFFFF",
+              },
+              errorCorrectionLevel: "M",
+              type: "image/png",
+              quality: 0.6,
+            }
+          );
+
           // Validate QR code generation
-          if (!personalizedQrUrl || !personalizedQrUrl.startsWith('data:image/png;base64,')) {
-            throw new Error('Failed to generate QR code for user: ' + user.username)
+          if (
+            !personalizedQrUrl ||
+            !personalizedQrUrl.startsWith("data:image/png;base64,")
+          ) {
+            throw new Error(
+              "Failed to generate QR code for user: " + user.username
+            );
           }
 
           // Step 3: Send email with voucher details
-          console.log('Generated QR Code URL length:', personalizedQrUrl.length)
-          console.log('QR Code URL preview:', personalizedQrUrl.substring(0, 100) + '...')
-          
+          console.log(
+            "Generated QR Code URL length:",
+            personalizedQrUrl.length
+          );
+          console.log(
+            "QR Code URL preview:",
+            personalizedQrUrl.substring(0, 100) + "..."
+          );
+
           const templateParams = {
             to_name: user.nickname || user.username,
             to_email: user.email,
@@ -189,79 +214,122 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
             points_required: voucher.points_required || 0,
             expires_at: new Date(voucher.expires_at).toLocaleDateString(),
             qr_code_image: personalizedQrUrl,
-            business_name: 'TPX Barbershop'
-          }
-          
-          console.log('Email template parameters:', {
+            business_name: "TPX Barbershop",
+          };
+
+          console.log("Email template parameters:", {
             ...templateParams,
-            qr_code_image: `QR_CODE_DATA_URL (${personalizedQrUrl.length} chars)`
-          })
+            qr_code_image: `QR_CODE_DATA_URL (${personalizedQrUrl.length} chars)`,
+          });
 
           const emailResult = await emailjs.send(
             EMAILJS_SERVICE_ID,
             EMAILJS_TEMPLATE_ID,
             templateParams
-          )
-          
-          console.log(`Email sent successfully to ${user.email}:`, emailResult)
-          successfulSends++
-          setSentCount(prev => {
-            const newCount = prev + 1
-            console.log(`Incrementing sent count from ${prev} to ${newCount}`)
-            return newCount
-          })
+          );
+
+          console.log(`Email sent successfully to ${user.email}:`, emailResult);
+          successfulSends++;
+          setSentCount((prev) => {
+            const newCount = prev + 1;
+            console.log(`Incrementing sent count from ${prev} to ${newCount}`);
+            return newCount;
+          });
         } catch (error) {
-          console.error(`Failed to assign/send voucher to ${user.username}:`, error)
-          
+          console.error(
+            `Failed to assign/send voucher to ${user.username}:`,
+            error
+          );
+
           // Check if it's an EmailJS error
           if (error.text) {
-            console.error('EmailJS Error:', error.text)
-            alert(`Failed to send email to ${user.email}: ${error.text}`)
+            console.error("EmailJS Error:", error.text);
+            alert(`Failed to send email to ${user.email}: ${error.text}`);
           } else if (error.message) {
-            console.error('General Error:', error.message)
-            alert(`Failed to process voucher for ${user.username}: ${error.message}`)
+            console.error("General Error:", error.message);
+            alert(
+              `Failed to process voucher for ${user.username}: ${error.message}`
+            );
           }
           // Continue with other users even if one fails
         }
       }
 
       // Show final result
-      console.log('Final email send count:', successfulSends, 'out of', selectedUsers.length)
+      console.log(
+        "Final email send count:",
+        successfulSends,
+        "out of",
+        selectedUsers.length
+      );
       if (successfulSends > 0) {
-        alert(`Successfully assigned vouchers and sent ${successfulSends} out of ${selectedUsers.length} emails!`)
+        alert(
+          `Successfully assigned vouchers and sent ${successfulSends} out of ${selectedUsers.length} emails!`
+        );
       } else if (selectedUsers.length > 0) {
-        alert('Vouchers were assigned but no emails were sent. Please check the console for errors.')
+        alert(
+          "Vouchers were assigned but no emails were sent. Please check the console for errors."
+        );
       }
-      
-      onClose()
-    } catch (error) {
-      console.error('Failed to assign vouchers:', error)
-      alert('Failed to assign vouchers. Please try again.')
-    } finally {
-      setIsSending(false)
-    }
-  }
 
-  if (!voucher) return null
+      onClose();
+    } catch (error) {
+      console.error("Failed to assign vouchers:", error);
+      alert("Failed to assign vouchers. Please try again.");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  if (!voucher) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Send Voucher via Email" size="lg">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Send Voucher via Email"
+      size="lg"
+    >
       <div className="space-y-6">
         {/* Voucher Info */}
         <div className="bg-[#FF8C42]/10 border-2 border-[#FF8C42]/20 rounded-2xl p-4">
           <div className="flex items-center space-x-4">
             <div className="flex-shrink-0">
               {qrCodeUrl && (
-                <img src={qrCodeUrl} alt="Voucher QR Code" className="w-20 h-20 rounded-lg" />
+                <img
+                  src={qrCodeUrl}
+                  alt="Voucher QR Code"
+                  className="w-20 h-20 rounded-lg"
+                />
               )}
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-black text-[#1A1A1A] mb-1">Voucher {voucher.code}</h3>
+              <h3 className="text-lg font-black text-[#1A1A1A] mb-1">
+                Voucher {voucher.code}
+              </h3>
               <div className="grid grid-cols-2 gap-2 text-sm">
-                <div><span className="text-[#6B6B6B]">Value:</span> <span className="font-semibold">₱{parseFloat(voucher.value).toFixed(2)}</span></div>
-                <div><span className="text-[#6B6B6B]">Points:</span> <span className="font-semibold">{voucher.points_required || 0}</span></div>
-                <div><span className="text-[#6B6B6B]">Max Uses:</span> <span className="font-semibold">{voucher.max_uses || 1}</span></div>
-                <div><span className="text-[#6B6B6B]">Expires:</span> <span className="font-semibold">{new Date(voucher.expires_at).toLocaleDateString()}</span></div>
+                <div>
+                  <span className="text-[#6B6B6B]">Value:</span>{" "}
+                  <span className="font-semibold">
+                    ₱{parseFloat(voucher.value).toFixed(2)}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[#6B6B6B]">Points:</span>{" "}
+                  <span className="font-semibold">
+                    {voucher.points_required || 0}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[#6B6B6B]">Max Uses:</span>{" "}
+                  <span className="font-semibold">{voucher.max_uses || 1}</span>
+                </div>
+                <div>
+                  <span className="text-[#6B6B6B]">Expires:</span>{" "}
+                  <span className="font-semibold">
+                    {new Date(voucher.expires_at).toLocaleDateString()}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -308,9 +376,14 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
           {selectedUsers.length > 0 && (
             <div className="border-2 border-[#F5F5F5] rounded-xl p-3">
               <div className="flex flex-wrap gap-2">
-                {selectedUsers.map(user => (
-                  <div key={user.id} className="flex items-center space-x-1 bg-[#FF8C42]/10 border border-[#FF8C42]/20 rounded-lg px-2 py-1 text-xs">
-                    <span className="text-[#1A1A1A] font-medium">{user.username}</span>
+                {selectedUsers.map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex items-center space-x-1 bg-[#FF8C42]/10 border border-[#FF8C42]/20 rounded-lg px-2 py-1 text-xs"
+                  >
+                    <span className="text-[#1A1A1A] font-medium">
+                      {user.username}
+                    </span>
                     <button
                       onClick={() => toggleUserSelection(user)}
                       className="text-[#FF8C42] hover:text-[#FF7A2B]"
@@ -326,42 +399,58 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
           {/* User List */}
           <div className="border-2 border-[#F5F5F5] rounded-xl max-h-64 overflow-y-auto">
             {isLoading ? (
-              <div className="p-4 text-center text-[#6B6B6B]">Loading customers...</div>
+              <div className="p-4 text-center text-[#6B6B6B]">
+                Loading customers...
+              </div>
             ) : filteredClients.length > 0 ? (
               <div className="p-2 space-y-1">
-                {filteredClients.map(client => {
-                  const isSelected = selectedUsers.find(u => u.id === client.id)
+                {filteredClients.map((client) => {
+                  const isSelected = selectedUsers.find(
+                    (u) => u.id === client.id
+                  );
                   return (
                     <div
                       key={client.id}
                       onClick={() => toggleUserSelection(client)}
                       className={`flex items-center space-x-3 p-2 rounded-lg cursor-pointer transition-colors ${
-                        isSelected 
-                          ? 'bg-[#FF8C42]/10 border-[#FF8C42]/20 border' 
-                          : 'hover:bg-[#F5F5F5]'
+                        isSelected
+                          ? "bg-[#FF8C42]/10 border-[#FF8C42]/20 border"
+                          : "hover:bg-[#F5F5F5]"
                       }`}
                     >
-                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                        isSelected 
-                          ? 'bg-[#FF8C42] border-[#FF8C42]' 
-                          : 'border-[#D1D5DB]'
-                      }`}>
-                        {isSelected && <CheckCircle className="w-3 h-3 text-white" />}
+                      <div
+                        className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                          isSelected
+                            ? "bg-[#FF8C42] border-[#FF8C42]"
+                            : "border-[#D1D5DB]"
+                        }`}
+                      >
+                        {isSelected && (
+                          <CheckCircle className="w-3 h-3 text-white" />
+                        )}
                       </div>
                       <div className="flex-1">
-                        <div className="font-medium text-[#1A1A1A] text-sm">{client.username}</div>
-                        <div className="text-xs text-[#6B6B6B]">{client.email}</div>
+                        <div className="font-medium text-[#1A1A1A] text-sm">
+                          {client.username}
+                        </div>
+                        <div className="text-xs text-[#6B6B6B]">
+                          {client.email}
+                        </div>
                         {client.nickname && (
-                          <div className="text-xs text-[#FF8C42]">"{client.nickname}"</div>
+                          <div className="text-xs text-[#FF8C42]">
+                            "{client.nickname}"
+                          </div>
                         )}
                       </div>
                     </div>
-                  )
+                  );
                 })}
               </div>
             ) : (
               <div className="p-4 text-center text-[#6B6B6B]">
-                {customerSearch ? 'No customers found matching your search.' : 'No customers available.'}
+                {customerSearch
+                  ? "No customers found matching your search."
+                  : "No customers available."}
               </div>
             )}
           </div>
@@ -373,7 +462,8 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
             <div className="flex items-center space-x-3">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
               <div className="text-blue-700">
-                Assigning vouchers and sending emails... ({sentCount}/{selectedUsers.length})
+                Assigning vouchers and sending emails... ({sentCount}/
+                {selectedUsers.length})
               </div>
             </div>
           </div>
@@ -404,17 +494,17 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
             ) : (
               <>
                 <Mail className="w-4 h-4 mr-2" />
-                Assign & Send to {selectedUsers.length} User{selectedUsers.length !== 1 ? 's' : ''}
+                Assign & Send to {selectedUsers.length} User
+                {selectedUsers.length !== 1 ? "s" : ""}
               </>
             )}
           </Button>
         </div>
 
         {/* EmailJS Setup Notice */}
-      
       </div>
     </Modal>
-  )
-}
+  );
+};
 
-export default SendVoucherModal
+export default SendVoucherModal;
