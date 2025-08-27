@@ -2,17 +2,15 @@ import React, { useState, useEffect, useRef } from 'react'
 import { ArrowLeft, Gift, Clock, CheckCircle, XCircle, QrCode, Ticket, Plus, Camera, Upload, Keyboard, X, RefreshCw } from 'lucide-react'
 import QRCode from 'qrcode'
 import jsQR from 'jsqr'
-import voucherService from '../../services/customer/voucherService'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
 
 const VoucherManagement = ({ onBack }) => {
   const { user, isAuthenticated } = useAuth()
-  const [vouchers, setVouchers] = useState([])
   const [selectedVoucher, setSelectedVoucher] = useState(null)
   const [showQRCode, setShowQRCode] = useState(false)
-  const [loading, setLoading] = useState(true)
   const [claimLoading, setClaimLoading] = useState(false)
-  const [error, setError] = useState(null)
   const [showClaimModal, setShowClaimModal] = useState(false)
   const [claimCode, setClaimCode] = useState('')
   const [claimMethod, setClaimMethod] = useState('code') // 'code', 'scan', 'upload'
@@ -26,46 +24,14 @@ const VoucherManagement = ({ onBack }) => {
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
 
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      loadVouchers()
-    }
-  }, [isAuthenticated, user])
+  // Convex queries - only call when user exists
+  const vouchers = user?.id ? useQuery(api.services.vouchers.getVouchersByUser, { userId: user.id }) : undefined
 
-  const loadVouchers = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      // Verify user is authenticated
-      if (!isAuthenticated || !user) {
-        setError('Please log in to view your vouchers')
-        return
-      }
-      
-      // Get user-specific vouchers only
-      const userVouchers = await voucherService.getUserVouchers()
-      const voucherList = Array.isArray(userVouchers) ? userVouchers : userVouchers.results || []
-      setVouchers(voucherList)
-    } catch (error) {
-      console.error('Error loading vouchers:', error)
-      
-      // Handle specific error cases
-      if (error.message.includes('not authenticated')) {
-        setError('Authentication required. Please log in again.')
-      } else if (error.status === 500) {
-        setError('Server error. The voucher service is temporarily unavailable.')
-      } else if (error.status === 404) {
-        setError('Voucher service not found. Please contact support.')
-      } else if (error.message.includes('Failed to load your vouchers')) {
-        setError('Unable to load vouchers. Please check your connection and try again.')
-      } else {
-        setError('Failed to load vouchers. Please try again later.')
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Convex mutations
+  const validateVoucher = useMutation(api.services.vouchers.validateVoucher)
+  const redeemVoucher = useMutation(api.services.vouchers.redeemVoucher)
+
+  // Convex handles data loading automatically
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -152,51 +118,42 @@ const VoucherManagement = ({ onBack }) => {
     try {
       setClaimLoading(true)
       
-      // Only assign/claim the voucher using the redeem endpoint (no confirmation step)
-      const claimResult = await voucherService.redeemVoucher(voucherCode, null, voucherValue)
-      
-      if (claimResult.success) {
-        // Reload vouchers to reflect the changes
-        await loadVouchers()
-        setShowQRCode(false)
-        setSelectedVoucher(null)
-        // Show success message with voucher details
-        const value = claimResult.data?.value || voucherValue || 'Unknown'
-        setNotification({
-          type: 'success',
-          title: '🎉 Voucher Claimed Successfully!',
-          message: `Code: ${voucherCode}\nValue: ₱${parseFloat(value).toLocaleString()}\nYou can now use this voucher at the barbershop.`
-        })
-      } else {
-        // Handle assignment/claim error
-        let errorMessage = claimResult.error
+      // Redeem the voucher using Convex
+      const redeemedVoucher = await redeemVoucher({
+        code: voucherCode,
+        redeemed_by: user.id
+      })
+
+      // Show success message with voucher details
+      const value = redeemedVoucher.value || voucherValue || 'Unknown'
+      setNotification({
+        type: 'success',
+        title: '🎉 Voucher Claimed Successfully!',
+        message: `Code: ${voucherCode}\nValue: ₱${parseFloat(value).toLocaleString()}\nYou can now use this voucher at the barbershop.`
+      })
+
+      setShowQRCode(false)
+      setSelectedVoucher(null)
+    } catch (error) {
+        // Handle redeem error
+        let errorMessage = error.message
         if (errorMessage.includes('expired')) {
           errorMessage = '⏰ This voucher has expired'
-        } else if (errorMessage.includes('already assigned')) {
+        } else if (errorMessage.includes('already') || errorMessage.includes('redeemed')) {
           errorMessage = '✅ This voucher has already been claimed'
-        } else if (errorMessage.includes('Invalid voucher')) {
+        } else if (errorMessage.includes('Invalid') || errorMessage.includes('not found')) {
           errorMessage = '❌ Invalid voucher code. Please check and try again.'
-        } else if (errorMessage.includes('usage limit')) {
+        } else if (errorMessage.includes('usage') || errorMessage.includes('limit')) {
           errorMessage = '🚫 This voucher has reached its usage limit'
-        } else if (errorMessage.includes('Username is required')) {
-          errorMessage = '❌ User authentication error. Please log in again.'
-        } else if (errorMessage.includes('Target user not found')) {
-          errorMessage = '❌ User account not found. Please log in again.'
+        } else {
+          errorMessage = errorMessage || 'Failed to claim voucher. Please try again.'
         }
         setNotification({
           type: 'error',
           title: 'Claim Failed',
           message: errorMessage
         })
-      }
-    } catch (error) {
-      console.error('Error claiming voucher:', error)
-      setNotification({
-        type: 'error',
-        title: 'Network Error',
-        message: 'Please check your connection and try again.'
-      })
-    } finally {
+      } finally {
       setClaimLoading(false)
     }
   }
@@ -216,13 +173,13 @@ const VoucherManagement = ({ onBack }) => {
       setValidationError(null)
       setValidatedVoucher(null)
       
-      const result = await voucherService.validateVoucherCode(claimCode.trim())
-      
-      if (result.success) {
-        setValidatedVoucher(result.data)
+      const result = await validateVoucher({ code: claimCode.trim() })
+
+      if (result.valid) {
+        setValidatedVoucher(result.voucher)
         setValidationError(null)
       } else {
-        setValidationError(result.error)
+        setValidationError(result.error || 'Invalid voucher code')
         setValidatedVoucher(null)
       }
     } catch (error) {
@@ -480,10 +437,10 @@ const VoucherManagement = ({ onBack }) => {
     }
   }
 
-  // Filter vouchers by status
-  const claimedVouchers = vouchers.filter(v => getVoucherStatus(v) === 'claimed')
-  const redeemedVouchers = vouchers.filter(v => getVoucherStatus(v) === 'redeemed')
-  const expiredVouchers = vouchers.filter(v => getVoucherStatus(v) === 'expired')
+  // Filter vouchers by status - handle undefined vouchers
+  const claimedVouchers = vouchers ? vouchers.filter(v => getVoucherStatus(v) === 'claimed') : []
+  const redeemedVouchers = vouchers ? vouchers.filter(v => getVoucherStatus(v) === 'redeemed') : []
+  const expiredVouchers = vouchers ? vouchers.filter(v => getVoucherStatus(v) === 'expired') : []
 
   // Notification Modal Component
   const NotificationModal = ({ notification, onClose }) => {

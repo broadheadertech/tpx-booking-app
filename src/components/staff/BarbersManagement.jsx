@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { User, Star, Clock, Calendar, DollarSign, Search, Filter, UserCheck, UserX, Phone, Mail, Scissors, Plus, Edit, Trash2, RotateCcw, Save, X, Eye, BookOpen } from 'lucide-react'
-import barbersService from '../../services/staff/barbersService'
-import { servicesService } from '../../services/staff'
-import { bookingsService } from '../../services/staff'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 
 const BarbersManagement = ({ barbers = [], onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -347,30 +346,20 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
 
     // Initialize form data only when barber ID changes  
     useEffect(() => {
-      if (!barber?.id) return
-      const nextData = {
-        full_name: barber.full_name || barber.name || '',
-        is_active: barber.is_active !== undefined ? barber.is_active : (barber.status === 'active'),
-        services: Array.isArray(barber.services) ? barber.services : []
+      if (barber?.id) {
+        setFormData({
+          full_name: barber.full_name || barber.name,
+          is_active: barber.is_active !== undefined ? barber.is_active : (barber.status === 'active'),
+          services: barber.services || []
+        })
+        setError('')
       }
-      setFormData(prev => {
-        const sameName = prev.full_name === nextData.full_name
-        const sameActive = prev.is_active === nextData.is_active
-        const sameServices = Array.isArray(prev.services)
-          && prev.services.length === nextData.services.length
-          && prev.services.every((s, i) => s === nextData.services[i])
-        if (sameName && sameActive && sameServices) {
-          return prev
-        }
-        return nextData
-      })
-      if (error) setError('')
     }, [barber?.id])
     
-    // Set initial tab when modal opens or when requested tab changes
+    // Set initial tab only once when modal opens
     useEffect(() => {
       setActiveTab(initialTab)
-    }, [initialTab])
+    }, [])
 
     // Load services only when edit tab is clicked
     const loadServicesIfNeeded = async () => {

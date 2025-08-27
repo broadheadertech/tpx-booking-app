@@ -3,49 +3,31 @@ import Modal from '../common/Modal'
 import Button from '../common/Button'
 import Input from '../common/Input'
 import { Calendar, Clock, User, Scissors, RefreshCw } from 'lucide-react'
-import apiService from '../../services/api'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 
 const CreateBookingModal = ({ isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
+    customer: '',
     service: '',
     barber: '',
     date: '',
     time: ''
   })
-  
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [fieldErrors, setFieldErrors] = useState({})
-  
-  // Data for dropdowns
-  const [services, setServices] = useState([])
-  const [barbers, setBarbers] = useState([])
-  const [loadingData, setLoadingData] = useState(false)
 
-  // Load services and barbers when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      loadDropdownData()
-    }
-  }, [isOpen])
+  // Convex queries for dropdown data
+  const services = useQuery(api.services.services.getAllServices)
+  const barbers = useQuery(api.services.barbers.getActiveBarbers)
+  const customers = useQuery(api.services.auth.getAllUsers)
 
-  const loadDropdownData = async () => {
-    setLoadingData(true)
-    try {
-      const [servicesRes, barbersRes] = await Promise.all([
-        apiService.get('/services/'),
-        apiService.get('/barbers/')
-      ])
-      
-      setServices(servicesRes || [])
-      setBarbers(barbersRes || [])
-    } catch (err) {
-      console.error('Error loading dropdown data:', err)
-      setError('Failed to load services and barbers')
-    } finally {
-      setLoadingData(false)
-    }
-  }
+  // Convex mutation for creating booking
+  const createBooking = useMutation(api.services.bookings.createBooking)
+
+  // Convex handles data loading automatically
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -54,6 +36,12 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit }) => {
     setFieldErrors({})
     
     try {
+      // Validate required fields
+      if (!formData.customer) {
+        setFieldErrors({ customer: 'Please select a customer' })
+        return
+      }
+
       // Convert 12-hour time to 24-hour format for API
       const convertTo24Hour = (time12h) => {
         const [time, modifier] = time12h.split(' ')
@@ -67,25 +55,26 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit }) => {
         return `${hours.toString().padStart(2, '0')}:${minutes}`
       }
 
-      // Prepare booking data according to API specification
+      // Prepare booking data for Convex
       const bookingData = {
-        service: parseInt(formData.service),
+        customer: formData.customer,
+        service: formData.service,
+        barber: formData.barber || undefined,
         date: formData.date,
         time: convertTo24Hour(formData.time),
-        status: 'booked',
-        ...(formData.barber && { barber: parseInt(formData.barber) })
+        status: 'booked'
       }
 
       console.log('Creating booking:', bookingData)
-      
-      // Create booking via API
-      const newBooking = await apiService.post('/bookings/', bookingData)
-      
-      console.log('Booking created successfully:', newBooking)
-      
+
+      // Create booking via Convex
+      const bookingId = await createBooking(bookingData)
+
+      console.log('Booking created successfully:', bookingId)
+
       // Call parent success handler
       if (onSubmit) {
-        await onSubmit(newBooking)
+        await onSubmit({ _id: bookingId, ...bookingData })
       }
       
       // Reset form and close modal
@@ -121,6 +110,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit }) => {
 
   const resetForm = () => {
     setFormData({
+      customer: '',
       service: '',
       barber: '',
       date: '',

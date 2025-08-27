@@ -10,99 +10,45 @@ import {
   AlertCircle,
 } from "lucide-react";
 import QRCode from "qrcode";
-import bookingService from "../../services/customer/bookingService";
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import { useAuth } from "../../context/AuthContext";
 
 const MyBookings = ({ onBack }) => {
   const { user, isAuthenticated } = useAuth();
-  const [bookings, setBookings] = useState([]);
   const [activeFilter, setActiveFilter] = useState("all");
   const [showQRCode, setShowQRCode] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(null);
   const [cancelLoading, setCancelLoading] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [services, setServices] = useState([]);
-  const [barbers, setBarbers] = useState([]);
 
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      loadBookingsData();
-    }
-  }, [isAuthenticated, user]);
+  // Convex queries - only call when user exists
+  const bookings = user?.id ? useQuery(api.services.bookings.getBookingsByCustomer, { customerId: user.id }) : undefined;
+  const services = useQuery(api.services.services.getAllServices);
+  const barbers = useQuery(api.services.barbers.getAllBarbers);
 
-  const loadBookingsData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Verify user is authenticated
-      if (!isAuthenticated || !user) {
-        setError("Please log in to view your bookings");
-        return;
-      }
-
-      // Use the new user-specific bookings endpoint
-      const bookingsData = await bookingService.getUserBookings();
-
-      // The new API returns bookings with nested service and barber data
-      const bookingList = Array.isArray(bookingsData) ? bookingsData : [];
-      console.log("Raw bookings data:", bookingList);
-
-      // Check if any bookings have voucher information
-      bookingList.forEach((booking, index) => {
-        console.log(`Booking ${index + 1} (${booking.id}):`, {
-          voucher_code: booking.voucher_code,
-          voucherCode: booking.voucherCode,
-          voucher: booking.voucher,
-          total_amount: booking.total_amount,
-          totalAmount: booking.totalAmount,
-        });
-      });
-
-      setBookings(bookingList);
-
-      // No need to load separate services and barbers data as they're included in bookings
-      setServices([]);
-      setBarbers([]);
-    } catch (error) {
-      console.error("Error loading bookings data:", error);
-      if (error.message.includes("not authenticated")) {
-        setError("Authentication required. Please log in again.");
-      } else {
-        setError("Failed to load bookings");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Helper functions are no longer needed as data is nested in booking objects
-  // Service and barber data are now included directly in each booking
+  // Convex mutations
+  const updateBookingStatus = useMutation(api.services.bookings.updateBooking);
+  const deleteBooking = useMutation(api.services.bookings.deleteBooking);
 
   const handleCancelBooking = async (bookingId) => {
     try {
       setCancelLoading(true);
-      const result = await bookingService.cancelBooking(bookingId);
-      if (result.success) {
-        // Remove the booking from local state immediately for better UX
-        setBookings((prevBookings) =>
-          prevBookings.filter((booking) => booking.id !== bookingId)
-        );
-        setShowCancelModal(null);
-        // Show success message briefly
-        const successMsg = document.createElement("div");
-        successMsg.className =
-          "fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50";
-        successMsg.textContent = "Booking cancelled successfully";
-        document.body.appendChild(successMsg);
-        setTimeout(() => document.body.removeChild(successMsg), 3000);
-      } else {
-        alert(`Failed to cancel booking: ${result.error}`);
-      }
+      await updateBookingStatus({
+        id: bookingId,
+        status: "cancelled"
+      });
+
+      setShowCancelModal(null);
+      // Show success message briefly
+      const successMsg = document.createElement("div");
+      successMsg.className =
+        "fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50";
+      successMsg.textContent = "Booking cancelled successfully";
+      document.body.appendChild(successMsg);
+      setTimeout(() => document.body.removeChild(successMsg), 3000);
     } catch (error) {
       console.error("Error cancelling booking:", error);
-      alert("Failed to cancel booking. Please try again.");
+      alert(error.message || "Failed to cancel booking. Please try again.");
     } finally {
       setCancelLoading(false);
     }
@@ -134,27 +80,27 @@ const MyBookings = ({ onBack }) => {
     }
   };
 
-  const filteredBookings = bookings.filter((booking) => {
+  const filteredBookings = bookings ? bookings.filter((booking) => {
     if (activeFilter === "all") return true;
     return booking.status === activeFilter;
-  });
+  }) : [];
 
   const filters = [
-    { id: "all", label: "All Bookings", count: bookings.length },
+    { id: "all", label: "All Bookings", count: bookings ? bookings.length : 0 },
     {
       id: "confirmed",
       label: "Confirmed",
-      count: bookings.filter((b) => b.status === "confirmed").length,
+      count: bookings ? bookings.filter((b) => b.status === "confirmed").length : 0,
     },
     {
       id: "pending",
       label: "Pending",
-      count: bookings.filter((b) => b.status === "pending").length,
+      count: bookings ? bookings.filter((b) => b.status === "pending").length : 0,
     },
     {
       id: "cancelled",
       label: "Cancelled",
-      count: bookings.filter((b) => b.status === "cancelled").length,
+      count: bookings ? bookings.filter((b) => b.status === "cancelled").length : 0,
     },
   ];
 
@@ -291,9 +237,9 @@ const MyBookings = ({ onBack }) => {
               </div>
             ) : (
               filteredBookings.map((booking) => {
-                // Service and barber data are now nested in the booking object
-                const service = booking.service || {};
-                const barber = booking.barber || {};
+                // Get service and barber data from Convex queries
+                const service = services?.find(s => s._id === booking.service) || {};
+                const barber = barbers?.find(b => b._id === booking.barber) || {};
 
                 // Debug logging for voucher information
                 console.log(`Booking ${booking.id}:`, {

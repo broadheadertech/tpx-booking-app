@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 
 function Login() {
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: ''
   })
   const [loading, setLoading] = useState(false)
@@ -26,12 +26,12 @@ function Login() {
     setError('')
 
     try {
-      const result = await login(formData.username, formData.password)
-      
+      const result = await login(formData.email, formData.password)
+
       if (result.success) {
-        const { role, is_staff } = result.data
-        
-        if (is_staff) {
+        const { role } = result.data
+
+        if (role === 'staff' || role === 'admin') {
           navigate('/staff/dashboard')
         } else {
           navigate('/customer/dashboard')
@@ -85,13 +85,13 @@ function Login() {
               )}
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium mb-2" style={{color: '#36454F'}}>Username</label>
+                  <label className="block text-sm font-medium mb-2" style={{color: '#36454F'}}>Email</label>
                   <input
-                    type="text"
-                    name="username"
-                    value={formData.username}
+                    type="email"
+                    name="email"
+                    value={formData.email}
                     onChange={handleChange}
-                    placeholder="Enter your username"
+                    placeholder="Enter your email"
                     required
                     className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent transition-all duration-200 text-sm"
                     style={{color: '#36454F'}}

@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import QRCode from 'qrcode'
 import { QrCode, Download, RefreshCw, XCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import bookingService from '../services/customer/bookingService.js'
+import { useMutation } from 'convex/react'
+import { api } from '../../convex/_generated/api'
 import BookingQRGenerator from './kiosk/BookingQRGenerator.jsx'
 import QRScannerCamera from './kiosk/QRScanner.jsx'
 import BookingDetails from './kiosk/BookingDetails.jsx'
@@ -18,6 +19,9 @@ function Kiosk() {
   const [scannerLoading, setScannerLoading] = useState(false)
   const [scannerError, setScannerError] = useState('')
   const [isProcessingBooking, setIsProcessingBooking] = useState(false)
+
+  // Convex mutations
+  const updateBookingStatus = useMutation(api.services.bookings.updateBooking)
 
   // Generate QR Code with loading
   const generateQRCode = async () => {
@@ -86,25 +90,23 @@ function Kiosk() {
       setIsProcessingBooking(true)
       setScannerError('')
 
-      // Use API service to update booking status
-      const apiService = (await import('../services/api.js')).default
-      
-      // PATCH /api/bookings/{id}/ with status: "confirmed"
-      const response = await apiService.patch(`/bookings/${scannedBooking.id}/`, {
+      // Use Convex mutation to update booking status
+      await updateBookingStatus({
+        id: scannedBooking.id,
         status: 'confirmed'
       })
 
-      console.log('Booking confirmed:', response)
+      console.log('Booking confirmed successfully')
 
       // Update the scan result with confirmed status
       const updatedResult = {
         ...scannedBooking,
         status: 'confirmed'
       }
-      
+
       setScannedBooking(updatedResult)
       setScannerError('')
-      
+
     } catch (error) {
       console.error('Error confirming booking:', error)
       setScannerError('Failed to confirm booking. Please try again.')

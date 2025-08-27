@@ -4,15 +4,19 @@ import Button from "../common/Button";
 import { Mail, Users, Search, X, CheckCircle, QrCode } from "lucide-react";
 import QRCode from "qrcode";
 import emailjs from "@emailjs/browser";
-import apiService from "../../services/api.js";
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 
 const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
-  const [clients, setClients] = useState([]);
   const [filteredClients, setFilteredClients] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+
+  // Convex queries and mutations
+  const clients = useQuery(api.services.auth.getAllUsers)
+  const redeemVoucherMutation = useMutation(api.services.vouchers.redeemVoucher)
   const [sentCount, setSentCount] = useState(0);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const dropdownRef = useRef(null);
@@ -50,21 +54,17 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const fetchClients = async () => {
-    setIsLoading(true);
-    try {
-      const response = await apiService.get("/clients/");
-      const clientsData = Array.isArray(response) ? response : [];
-      setClients(clientsData);
-      setFilteredClients(clientsData);
-    } catch (error) {
-      console.error("Failed to fetch clients:", error);
-      setClients([]);
-      setFilteredClients([]);
-    } finally {
-      setIsLoading(false);
+  // Filter clients based on search term
+  useEffect(() => {
+    if (clients) {
+      const filtered = clients.filter(client =>
+        client.role === 'customer' &&
+        (client.username?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+         client.email?.toLowerCase().includes(customerSearch.toLowerCase()))
+      );
+      setFilteredClients(filtered);
     }
-  };
+  }, [clients, customerSearch]);
 
   const generateQRCode = async () => {
     if (!voucher) return;
@@ -143,14 +143,14 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
 
       for (const user of selectedUsers) {
         try {
-          // Step 1: Assign voucher to user via API
+          // Step 1: Assign voucher to user via Convex
           const assignData = {
-            username: user.username,
             code: voucher.code,
+            redeemed_by: user.username,
           };
 
           console.log("Assigning voucher to user:", assignData);
-          await apiService.post("/vouchers/assign/", assignData);
+          await redeemVoucherMutation(assignData);
           console.log(`Voucher ${voucher.code} assigned to ${user.username}`);
 
           // Step 2: Generate personalized QR code for this user

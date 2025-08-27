@@ -3,7 +3,8 @@ import Modal from '../common/Modal'
 import Button from '../common/Button'
 import Input from '../common/Input'
 import { User, Mail, Phone, Lock, Calendar } from 'lucide-react'
-import apiService from '../../services/api'
+import { useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 
 const AddCustomerModal = ({ isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
@@ -14,6 +15,9 @@ const AddCustomerModal = ({ isOpen, onClose, onSubmit }) => {
     mobile_number: '',
     birthday: ''
   })
+
+  // Convex mutation
+  const registerUserMutation = useMutation(api.services.auth.registerUser)
   
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -38,9 +42,14 @@ const AddCustomerModal = ({ isOpen, onClose, onSubmit }) => {
 
       console.log('Creating new customer:', customerData)
       
-      // Call the register API to create new user
-      const newCustomer = await apiService.post('/register/', customerData)
-      
+      // Call the Convex registerUser mutation to create new user
+      const customerDataWithRole = {
+        ...customerData,
+        role: 'customer'
+      }
+
+      const newCustomer = await registerUserMutation(customerDataWithRole)
+
       console.log('Customer created successfully:', newCustomer)
       
       // Call parent success handler

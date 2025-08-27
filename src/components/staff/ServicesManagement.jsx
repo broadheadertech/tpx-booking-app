@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X } from 'lucide-react'
-import { servicesService } from '../../services/staff'
+import { useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 
 const ServicesManagement = ({ services = [], onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -11,10 +12,17 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
     name: '',
     description: '',
     duration_minutes: 30,
-    price: ''
+    price: '',
+    category: 'General',
+    is_active: true
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Convex mutations
+  const createService = useMutation(api.services.services.createService)
+  const updateService = useMutation(api.services.services.updateService)
+  const deleteService = useMutation(api.services.services.deleteService)
 
   const filteredServices = services
     .filter(service => 

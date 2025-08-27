@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import bannerImage from '../../assets/img/banner.jpg'
-import authService from '../../services/auth.js'
+import { useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 
 function Register() {
   const [formData, setFormData] = useState({
@@ -17,6 +18,9 @@ function Register() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const navigate = useNavigate()
+
+  // Convex mutation
+  const registerUser = useMutation(api.services.auth.registerUser)
 
   const handleChange = (e) => {
     setFormData({
@@ -38,25 +42,26 @@ function Register() {
     }
 
     try {
-      const result = await authService.register({
+      // Determine user role (default to customer for registration)
+      const userRole = 'customer' // You can add role selection later
+
+      await registerUser({
         username: formData.username,
         password: formData.password,
-        nickname: formData.nickname,
+        nickname: formData.nickname || undefined,
         mobile_number: formData.mobile_number,
         email: formData.email,
-        birthday: formData.birthday
+        birthday: formData.birthday || undefined,
+        role: userRole
       })
-      
-      if (result.success) {
-        setSuccess('Registration successful! Please log in with your credentials.')
-        setTimeout(() => {
-          navigate('/auth/login')
-        }, 2000)
-      } else {
-        setError(result.error)
-      }
+
+      setSuccess('Registration successful! Please log in with your credentials.')
+      setTimeout(() => {
+        navigate('/auth/login')
+      }, 2000)
     } catch (error) {
-      setError('An unexpected error occurred. Please try again.')
+      console.error('Registration error:', error)
+      setError(error.message || 'An unexpected error occurred. Please try again.')
     } finally {
       setLoading(false)
     }

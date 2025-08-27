@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode } from 'lucide-react'
-import { bookingsService, servicesService } from '../../services/staff'
-import barbersService from '../../services/staff/barbersService'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import QRCode from 'qrcode'
 import CreateBookingModal from './CreateBookingModal'
 
@@ -11,8 +11,6 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
   const [sortBy, setSortBy] = useState('date')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingBooking, setEditingBooking] = useState(null)
-  const [services, setServices] = useState([])
-  const [barbers, setBarbers] = useState([])
   const [showQRCode, setShowQRCode] = useState(null)
   const [formData, setFormData] = useState({
     service: '',
@@ -23,30 +21,13 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    loadServices()
-    loadBarbers()
-  }, [])
+  // Convex queries
+  const services = useQuery(api.services.services.getAllServices)
+  const barbers = useQuery(api.services.barbers.getActiveBarbers)
 
-  const loadServices = async () => {
-    try {
-      const servicesData = await servicesService.getAllServices()
-      setServices(servicesData)
-    } catch (err) {
-      console.error('Failed to load services:', err)
-      setError('Failed to load services. Please refresh the page.')
-    }
-  }
-
-  const loadBarbers = async () => {
-    try {
-      const barbersData = await barbersService.getAllBarbers()
-      setBarbers(barbersData.filter(b => b.is_active))
-    } catch (err) {
-      console.error('Failed to load barbers:', err)
-      setError('Failed to load barbers. Please refresh the page.')
-    }
-  }
+  // Convex mutations
+  const updateBookingStatus = useMutation(api.services.bookings.updateBooking)
+  const deleteBooking = useMutation(api.services.bookings.deleteBooking)
 
   const getStatusConfig = (status) => {
     switch (status) {

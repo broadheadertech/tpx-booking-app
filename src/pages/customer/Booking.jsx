@@ -4,21 +4,26 @@ import QRCode from 'qrcode'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import { useAuth } from '../../context/AuthContext'
-import bookingService from '../../services/customer/bookingService'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 
 function CustomerBooking() {
   const [selectedService, setSelectedService] = useState(null)
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedTime, setSelectedTime] = useState('')
   const [selectedBarber, setSelectedBarber] = useState(null)
-  const [services, setServices] = useState([])
-  const [barbers, setBarbers] = useState([])
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [bookingResult, setBookingResult] = useState(null)
   const [qrCodeUrl, setQrCodeUrl] = useState('')
   const navigate = useNavigate()
   const { user, isAuthenticated } = useAuth()
+
+  // Convex queries and mutations
+  const services = useQuery(api.services.services.getActiveServices)
+  const barbers = useQuery(api.services.barbers.getActiveBarbers)
+  const createBookingMutation = useMutation(api.services.bookings.createBooking)
+
+  const loading = services === undefined || barbers === undefined
 
   const availableTimes = [
     '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -31,26 +36,7 @@ function CustomerBooking() {
       navigate('/auth/login')
       return
     }
-    loadInitialData()
   }, [isAuthenticated, navigate])
-
-  const loadInitialData = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const [servicesData, barbersData] = await Promise.all([
-        bookingService.getServices(),
-        bookingService.getBarbers()
-      ])
-      setServices(servicesData || [])
-      setBarbers(barbersData || [])
-    } catch (err) {
-      setError('Failed to load booking data. Please try again.')
-      console.error('Error loading booking data:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const formatPrice = (price) => {
     return `₱${parseFloat(price).toFixed(2)}`
@@ -100,15 +86,18 @@ function CustomerBooking() {
         ...(selectedBarber && { barber: selectedBarber.id })
       }
 
-      const result = await bookingService.createBooking(bookingData)
-      
-      if (result.success) {
-        setBookingResult(result.data)
-        if (result.data.booking_code) {
-          await generateQRCode(result.data.booking_code)
-        }
-      } else {
-        setError(result.error || 'Failed to create booking')
+      const result = await createBookingMutation({
+        customer: user.id,
+        service: selectedService._id,
+        barber: selectedBarber ? selectedBarber._id : undefined,
+        date: selectedDate,
+        time: formattedTime,
+        status: 'pending'
+      })
+
+      setBookingResult(result)
+      if (result.booking_code) {
+        await generateQRCode(result.booking_code)
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.')

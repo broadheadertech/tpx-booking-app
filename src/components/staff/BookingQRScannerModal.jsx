@@ -3,12 +3,17 @@ import Modal from '../common/Modal'
 import Button from '../common/Button'
 import QRScannerCamera from './QRScannerCamera'
 import { QrCode, CheckCircle, XCircle, RefreshCw, Calendar, User, Clock } from 'lucide-react'
+import { useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 
 const BookingQRScannerModal = ({ isOpen, onClose, onBookingScanned }) => {
   console.log('BookingQRScannerModal render - isOpen:', isOpen)
   const [scanResult, setScanResult] = useState(null)
   const [error, setError] = useState(null)
   const [isProcessingBooking, setIsProcessingBooking] = useState(false)
+
+  // Convex mutation
+  const updateBookingStatus = useMutation(api.services.bookings.updateBooking)
 
   const handleQRDetected = async (qrData) => {
     console.log('Booking QR Data:', qrData)
@@ -80,11 +85,9 @@ const BookingQRScannerModal = ({ isOpen, onClose, onBookingScanned }) => {
       setIsProcessingBooking(true)
       setError(null)
 
-      // Use API service to update booking status
-      const apiService = (await import('../../services/api.js')).default
-      
-      // PATCH /api/bookings/{id}/ with status: "confirmed"
-      const response = await apiService.patch(`/bookings/${scanResult.id}/`, {
+      // Use Convex mutation to update booking status
+      const response = await updateBookingStatus({
+        id: scanResult.id,
         status: 'confirmed'
       })
 
@@ -232,7 +235,7 @@ const BookingQRScannerModal = ({ isOpen, onClose, onBookingScanned }) => {
                   </div>
                 )}
                 
-                {scanResult.status === 'in_progress' && (
+                {scanResult.status === 'confirmed' && (
                   <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
                     <p className="text-blue-800 font-bold text-sm">🔄 Customer checked in - Service in progress</p>
                   </div>

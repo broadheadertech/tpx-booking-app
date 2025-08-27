@@ -16,14 +16,12 @@ import {
   Sparkles,
 } from "lucide-react";
 import QRCode from "qrcode";
-import bookingService from "../../services/customer/bookingService";
-import voucherService from "../../services/customer/voucherService";
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import { useAuth } from "../../context/AuthContext";
 
 const ServiceBooking = ({ onBack }) => {
   const { user, isAuthenticated } = useAuth();
-  const [services, setServices] = useState([]);
-  const [barbers, setBarbers] = useState([]);
   const [selectedService, setSelectedService] = useState(null);
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
@@ -32,23 +30,24 @@ const ServiceBooking = ({ onBack }) => {
   const [selectedTime, setSelectedTime] = useState(null);
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [step, setStep] = useState(1); // 1: services, 2: date & time & staff, 3: confirmation, 4: success
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [error, setError] = useState(null);
   const [createdBooking, setCreatedBooking] = useState(null);
   const [qrCodeLoading, setQrCodeLoading] = useState(true);
   const [showPaymentMethods, setShowPaymentMethods] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
-  const [vouchers, setVouchers] = useState([]);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
-  const [loadingVouchers, setLoadingVouchers] = useState(false);
   const qrRef = useRef(null);
 
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      loadBookingData();
-    }
-  }, [isAuthenticated, user]);
+  // Convex queries
+  const services = useQuery(api.services.services.getActiveServices)
+  const barbers = useQuery(api.services.barbers.getActiveBarbers)
+  const vouchers = user?.id ? useQuery(api.services.vouchers.getVouchersByUser, { userId: user.id }) : undefined
+
+  // Convex mutations
+  const createBooking = useMutation(api.services.bookings.createBooking)
+  const redeemVoucher = useMutation(api.services.vouchers.redeemVoucher)
 
   // Reset QR code loading state when step changes
   useEffect(() => {
@@ -138,114 +137,35 @@ const ServiceBooking = ({ onBack }) => {
     selectedStaff,
   ]);
 
-  const loadBookingData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
 
-      const [servicesData, barbersData] = await Promise.all([
-        bookingService.getServices(),
-        bookingService.getBarbers(),
-      ]);
 
-      setServices(servicesData);
-      setBarbers(barbersData);
-    } catch (error) {
-      console.error("Error loading booking data:", error);
-      setError("Failed to load services and barbers");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Filter available vouchers from Convex data
+  const getAvailableVouchers = () => {
+    if (!vouchers) return [];
 
-  // State for time slots
-  const [timeSlots, setTimeSlots] = useState([]);
-  const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
+    return vouchers.filter((voucher) => {
+      const isNotExpired = voucher.expires_at > Date.now();
+      const isNotRedeemed = !voucher.redeemed;
 
-  // Load available time slots when date, service, or barber changes
-  useEffect(() => {
-    if (selectedDate && selectedStaff && step === 2) {
-      loadAvailableTimeSlots();
-    }
-  }, [selectedDate, selectedService?.id, selectedStaff?.id, step]);
-
-  // Load available vouchers when reaching confirmation step
-  useEffect(() => {
-    if (step === 3 && isAuthenticated && user) {
-      loadAvailableVouchers();
-    }
-  }, [step, isAuthenticated, user]);
-
-  const loadAvailableTimeSlots = async () => {
-    try {
-      setLoadingTimeSlots(true);
-      const slots = await bookingService.getAvailableTimeSlots(
-        selectedDate,
-        selectedService?.id,
-        selectedStaff?.id
-      );
-      setTimeSlots(slots);
-    } catch (error) {
-      console.error("Error loading time slots:", error);
-      // Fallback to base slots if API fails
-      const baseSlots = bookingService.generateBaseTimeSlots();
-      setTimeSlots(baseSlots);
-    } finally {
-      setLoadingTimeSlots(false);
-    }
-  };
-
-  const loadAvailableVouchers = async () => {
-    try {
-      setLoadingVouchers(true);
-      const userVouchers = await voucherService.getUserVouchers();
-
-      console.log("Raw user vouchers:", userVouchers);
-
-      // Filter only vouchers with status "assigned" (not redeemed) and not expired
-      const availableVouchers = userVouchers.filter((voucher) => {
-        const isAssigned = voucher.status === "assigned";
-        const isNotExpired = !voucher.expired;
-        const isNotRedeemed = !voucher.redeemed;
-
-        console.log(
-          `Voucher ${voucher.code}: status=${voucher.status}, expired=${
-            voucher.expired
-          }, redeemed=${voucher.redeemed}, will show=${
-            isAssigned && isNotExpired && isNotRedeemed
-          }`
-        );
-
-        return isAssigned && isNotExpired && isNotRedeemed;
-      });
-
-      console.log("Filtered available vouchers:", availableVouchers);
-
-      setVouchers(availableVouchers);
-    } catch (error) {
-      console.error("Error loading vouchers:", error);
-      setVouchers([]);
-    } finally {
-      setLoadingVouchers(false);
-    }
+      return isNotExpired && isNotRedeemed;
+    });
   };
 
   // Get available barbers for selected service
   const getAvailableBarbers = () => {
-    if (!selectedService) return barbers;
+    if (!selectedService || !barbers) return barbers || [];
 
     // Filter barbers who provide the specific service
     const serviceBarbers = barbers.filter(
       (barber) =>
         barber.services &&
         Array.isArray(barber.services) &&
-        barber.services.includes(selectedService.id)
+        barber.services.some(serviceId => serviceId === selectedService._id)
     );
 
     // Only return barbers that specifically offer this service
-    // Don't fallback to all barbers to prevent validation errors
     console.log(
-      `Found ${serviceBarbers.length} barbers for service ${selectedService.name} Barber ID`
+      `Found ${serviceBarbers.length} barbers for service ${selectedService.name}`
     );
     return serviceBarbers;
   };
@@ -283,168 +203,71 @@ const ServiceBooking = ({ onBack }) => {
     try {
       setBookingLoading(true);
 
-      // Validate time slot before booking
-      const timeValidationErrors = bookingService.validateTimeSlot(
-        selectedDate,
-        selectedTime,
-        selectedService.id,
-        selectedStaff?.id
-      );
-
-      if (timeValidationErrors.length > 0) {
-        alert(
-          `❌ Booking validation failed:\n${timeValidationErrors.join("\n")}`
-        );
-        setBookingLoading(false);
-        return;
-      }
-
-      // Check if time slot is still available
-      const currentSlots = await bookingService.getAvailableTimeSlots(
-        selectedDate,
-        selectedService.id,
-        selectedStaff?.id
-      );
-
-      const selectedSlot = currentSlots.find(
-        (slot) => slot.time === selectedTime
-      );
-      if (!selectedSlot || !selectedSlot.available) {
-        alert(
-          "⚠️ This time slot is no longer available. Please select a different time."
-        );
-        // Refresh time slots
-        loadAvailableTimeSlots();
-        setBookingLoading(false);
-        return;
-      }
-
-      // Double-check voucher availability if one is selected
-      if (selectedVoucher) {
-        const isVoucherStillAvailable = vouchers.some(
-          (v) => v.code === selectedVoucher.code
-        );
-        if (!isVoucherStillAvailable) {
-          alert(
-            "⚠️ The selected voucher is no longer available. Please select a different voucher or proceed without one."
-          );
-          // Refresh vouchers
-          loadAvailableVouchers();
-          setBookingLoading(false);
-          return;
-        }
-      }
-
       // Format time to include seconds for API compatibility
       const formattedTime = selectedTime.includes(":")
         ? `${selectedTime}:00`
         : selectedTime;
 
       const bookingData = {
-        service: selectedService.id,
-        barber: selectedStaff?.id || null,
+        customer: user.id,
+        service: selectedService._id,
+        barber: selectedStaff?.id || undefined,
         date: selectedDate,
         time: formattedTime,
         status: "booked",
-        voucher_code: selectedVoucher?.code || null,
+        notes: selectedVoucher ? `Used voucher: ${selectedVoucher.code}` : undefined,
       };
 
       console.log("Creating booking with data:", bookingData);
-      const result = await bookingService.createBooking(bookingData);
+      const bookingId = await createBooking(bookingData);
 
-      if (result.success) {
-        setCreatedBooking(result.data);
-        setStep(4); // Success step
+      // For now, create a basic booking object since we can't use useQuery in async function
+      const booking = {
+        _id: bookingId,
+        booking_code: `BK-${bookingId}`,
+        service: selectedService,
+        barber: selectedStaff,
+        date: selectedDate,
+        time: formattedTime,
+        status: "booked",
+        voucher_code: selectedVoucher?.code
+      };
+      setCreatedBooking(booking);
+      setStep(4); // Success step
 
-        // Clear time slots cache to reflect the new booking
-        bookingService.clearUserCache();
+      // Redeem voucher if one was selected
+      if (selectedVoucher?.code) {
+        try {
+          console.log("Redeeming voucher:", selectedVoucher.code);
+          await redeemVoucher({
+            code: selectedVoucher.code,
+            redeemed_by: user.id
+          });
 
-        // Redeem voucher if one was selected
-        if (selectedVoucher?.code) {
-          try {
-            console.log("Redeeming voucher:", selectedVoucher.code);
-            const voucherRedemption =
-              await voucherService.confirmVoucherRedemption(
-                selectedVoucher.code
-              );
+          console.log("Voucher redeemed successfully");
 
-            if (voucherRedemption.success) {
-              console.log(
-                "Voucher redeemed successfully:",
-                voucherRedemption.data
-              );
-              // Update the created booking with redeemed voucher info
-              setCreatedBooking((prev) => ({
-                ...prev,
-                voucher_redeemed: true,
-                voucher_value: voucherRedemption.data.value,
-              }));
-
-              // Clear voucher caches to reflect the redemption
-              voucherService.clearUserCache();
-
-              // Optional: Show success message for voucher redemption
-              setTimeout(() => {
-                console.log(
-                  `✅ Voucher ${selectedVoucher.code} redeemed successfully!`
-                );
-              }, 1500);
-            } else {
-              console.warn(
-                "Voucher redemption failed:",
-                voucherRedemption.error
-              );
-              // Don't break the booking flow - the booking is still successful
-              // User can try to redeem the voucher manually later
-            }
-          } catch (voucherError) {
-            console.error("Error during voucher redemption:", voucherError);
-            // Don't break the booking flow - the booking is still successful
-            // The voucher remains unredeemed and user can try again later
-          }
-        }
-
-        // Show payment confirmation message
-        if (paymentType === "pay_now") {
+          // Show success message for voucher redemption
           setTimeout(() => {
-            alert(
-              `Payment via ${paymentMethod?.toUpperCase()} will be processed. (Demo mode - no actual payment)`
-            );
-          }, 1000);
+            console.log(`✅ Voucher ${selectedVoucher.code} redeemed successfully!`);
+          }, 1500);
+        } catch (voucherError) {
+          console.error("Error during voucher redemption:", voucherError);
+          // Don't break the booking flow - the booking is still successful
+          // The voucher remains unredeemed and user can try again later
         }
-      } else {
-        // Show a more user-friendly error message
-        const errorMsg = result.error || "Failed to create booking";
+      }
 
-        console.log("Booking error details:", result);
-
-        if (errorMsg.includes("does not offer the service")) {
+      // Show payment confirmation message
+      if (paymentType === "pay_now") {
+        setTimeout(() => {
           alert(
-            `⚠️ The selected barber doesn't provide this service. Please choose a different barber or service.`
+            `Payment via ${paymentMethod?.toUpperCase()} will be processed. (Demo mode - no actual payment)`
           );
-        } else if (errorMsg.includes("time slot")) {
-          alert(`⚠️ ${errorMsg}. Please select a different time.`);
-          // Refresh time slots
-          loadAvailableTimeSlots();
-        } else if (errorMsg.includes("Voucher usage limit reached")) {
-          alert(
-            `❌ The selected voucher has already been used or has reached its usage limit. Please select a different voucher or proceed without one.`
-          );
-          // Refresh vouchers to show only available ones
-          loadAvailableVouchers();
-        } else if (errorMsg.includes("voucher")) {
-          alert(
-            `❌ Voucher error: ${errorMsg}. Please try selecting a different voucher or proceed without one.`
-          );
-          // Refresh vouchers
-          loadAvailableVouchers();
-        } else {
-          alert(`❌ ${errorMsg}`);
-        }
+        }, 1000);
       }
     } catch (error) {
       console.error("Error creating booking:", error);
-      alert("Failed to create booking. Please try again.");
+      alert(error.message || "Failed to create booking. Please try again.");
     } finally {
       setBookingLoading(false);
     }
@@ -1140,17 +963,10 @@ const ServiceBooking = ({ onBack }) => {
               Apply Voucher (Optional)
             </h4>
 
-            {loadingVouchers ? (
-              <div className="flex items-center justify-center py-4">
-                <div className="animate-spin w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full mr-2"></div>
-                <span className="text-sm" style={{ color: "#8B8B8B" }}>
-                  Loading vouchers...
-                </span>
-              </div>
-            ) : vouchers.length > 0 ? (
+            {getAvailableVouchers().length > 0 ? (
               <div className="space-y-2 mb-3">
                 <div className="max-h-32 overflow-y-auto space-y-2">
-                  {vouchers.map((voucher) => (
+                  {getAvailableVouchers().map((voucher) => (
                     <button
                       key={voucher.id}
                       onClick={() =>

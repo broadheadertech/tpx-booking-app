@@ -3,12 +3,17 @@ import Modal from '../common/Modal'
 import Button from '../common/Button'
 import QRScannerCamera from './QRScannerCamera'
 import { QrCode, Camera, CheckCircle, XCircle, RefreshCw, Gift, Calendar, User, DollarSign } from 'lucide-react'
+import { useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 
 const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
   const [scanResult, setScanResult] = useState(null)
   const [error, setError] = useState(null)
   const [isProcessingVoucher, setIsProcessingVoucher] = useState(false)
   const [voucherData, setVoucherData] = useState(null)
+
+  // Convex mutation
+  const redeemVoucherMutation = useMutation(api.services.vouchers.redeemVoucher)
 
   const handleQRDetected = async (qrData) => {
     console.log('Voucher QR Data:', qrData)
@@ -84,20 +89,18 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
       setIsProcessingVoucher(true)
       setError(null)
 
-      const apiService = (await import('../../services/api.js')).default
-      
-      // Only call the redeem API to assign voucher to user
-      const assignmentData = {
+      // Prepare voucher redemption data
+      const redemptionData = {
         code: scanResult.code
       }
-      
-      // Only add username if we have a valid one from the QR code
+
+      // Only add user information if we have a valid user from the QR code
       if (scanResult.user && scanResult.user !== 'N/A' && scanResult.user.trim()) {
-        assignmentData.username = scanResult.user
+        redemptionData.redeemed_by = scanResult.user
       }
-      
-      console.log('Attempting voucher redemption with:', assignmentData)
-      const redeemResponse = await apiService.post('/vouchers/confirm-voucher-redeem/', assignmentData)
+
+      console.log('Attempting voucher redemption with:', redemptionData)
+      const redeemResponse = await redeemVoucherMutation(redemptionData)
       console.log('Voucher redemption response:', redeemResponse)
 
       // Check if the response indicates success
