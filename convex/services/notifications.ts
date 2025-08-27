@@ -26,7 +26,12 @@ export const getUserNotifications = query({
     // Enrich notifications with sender information
     const enrichedNotifications = await Promise.all(
       notifications.map(async (notification) => {
-        let senderInfo = null;
+        let senderInfo: {
+          _id: Id<"users">;
+          username: string;
+          email: string;
+          role: "staff" | "customer" | "admin";
+        } | null = null;
         if (notification.sender_id) {
           const sender = await ctx.db.get(notification.sender_id);
           if (sender) {

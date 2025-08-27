@@ -35,33 +35,33 @@ const NotificationsManagement = ({ onRefresh }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Convex queries
+  // Convex queries with null checks
   const notifications = useQuery(
-    user?.id ? api.services.notifications.getUserNotifications : undefined,
+    user?.id && api?.services_notifications?.getUserNotifications ? api.services_notifications.getUserNotifications : undefined,
     user?.id ? {
       userId: user.id,
-      limit: 100,
+      limit: 50,
       includeArchived: showArchived
     } : undefined
   )
   
   const unreadCount = useQuery(
-    user?.id ? api.services.notifications.getUnreadCount : undefined,
+    user?.id && api?.services_notifications?.getUnreadCount ? api.services_notifications.getUnreadCount : undefined,
     user?.id ? { userId: user.id } : undefined
   )
   
   const notificationStats = useQuery(
-    user?.role === 'admin' ? api.services.notifications.getNotificationStats : undefined,
+    user?.role === 'admin' && user?.id && api?.services_notifications?.getNotificationStats ? api.services_notifications.getNotificationStats : undefined,
     user?.role === 'admin' && user?.id ? { userId: user.id } : undefined
   )
 
-  // Convex mutations
-  const markAsRead = useMutation(api.services.notifications.markAsRead)
-  const markAllAsRead = useMutation(api.services.notifications.markAllAsRead)
-  const archiveNotification = useMutation(api.services.notifications.archiveNotification)
-  const deleteNotification = useMutation(api.services.notifications.deleteNotification)
-  const createNotification = useMutation(api.services.notifications.createNotification)
-  const broadcastNotification = useMutation(api.services.notifications.broadcastNotification)
+  // Convex mutations with null checks
+  const markAsRead = useMutation(api?.services_notifications?.markAsRead || (() => Promise.resolve()))
+  const markAllAsRead = useMutation(api?.services_notifications?.markAllAsRead || (() => Promise.resolve()))
+  const archiveNotification = useMutation(api?.services_notifications?.archiveNotification || (() => Promise.resolve()))
+  const deleteNotification = useMutation(api?.services_notifications?.deleteNotification || (() => Promise.resolve()))
+  const createNotification = useMutation(api?.services_notifications?.createNotification || (() => Promise.resolve()))
+  const broadcastNotification = useMutation(api?.services_notifications?.broadcastNotification || (() => Promise.resolve()))
 
   // Filter notifications based on search and filters
   const filteredNotifications = notifications?.filter(notification => {

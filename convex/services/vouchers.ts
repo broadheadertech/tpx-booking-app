@@ -592,18 +592,20 @@ export const getVoucherAssignedUsers = query({
 
     const assignedUsers: any[] = [];
     for (const assignment of assignments) {
-      const user = await ctx.db.get(assignment.user_id);
-      if (user) {
-        assignedUsers.push({
-          _id: user._id,
-          username: user.username,
-          email: user.email,
-          nickname: user.nickname,
-          role: user.role,
-          assignment_status: assignment.status,
-          assigned_at: assignment.assigned_at,
-          redeemed_at: assignment.redeemed_at,
-        });
+      if (assignment.user_id) {
+        const user = await ctx.db.get(assignment.user_id);
+        if (user) {
+          assignedUsers.push({
+            _id: user._id,
+            username: user.username,
+            email: user.email,
+            nickname: user.nickname,
+            role: user.role,
+            assignment_status: assignment.status,
+            assigned_at: assignment.assigned_at,
+            redeemed_at: assignment.redeemed_at,
+          });
+        }
       }
     }
 
@@ -628,7 +630,6 @@ export const assignVoucherByCode = mutation({
       throw new Error("Voucher not found");
     }
 
-    // Call assignVoucher directly
     if (voucher.expires_at < Date.now()) {
       throw new Error("Voucher has expired");
     }
@@ -664,6 +665,53 @@ export const assignVoucherByCode = mutation({
       assigned_by: args.assigned_by,
     });
 
-    return assignmentId;
+    return { voucher, assignmentId };
+  },
+});
+
+// Staff redemption - for QR scanner use (finds existing assignment and redeems it)
+export const redeemVoucherByStaff = mutation({
+  args: {
+    code: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const voucher = await ctx.db
+      .query("vouchers")
+      .withIndex("by_code", (q) => q.eq("code", args.code.toUpperCase()))
+      .first();
+
+    if (!voucher) {
+      throw new Error("Voucher not found");
+    }
+
+    if (voucher.expires_at < Date.now()) {
+      throw new Error("Voucher has expired");
+    }
+
+    // Find an assigned voucher that hasn't been redeemed yet
+    const assignments = await ctx.db
+      .query("user_vouchers")
+      .withIndex("by_voucher", (q) => q.eq("voucher_id", voucher._id))
+      .collect();
+
+    // Look for an assigned (not redeemed) voucher
+    const assignedVoucher = assignments.find(a => a.status === "assigned");
+    
+    if (!assignedVoucher) {
+      throw new Error("No available voucher assignment found to redeem");
+    }
+
+    // Update the assignment to redeemed
+    await ctx.db.patch(assignedVoucher._id, {
+      status: "redeemed",
+      redeemed_at: Date.now(),
+    });
+
+    return { 
+      success: true, 
+      voucher, 
+      value: voucher.value,
+      assignment: assignedVoucher 
+    };
   },
 });

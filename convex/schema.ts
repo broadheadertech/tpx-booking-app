@@ -112,17 +112,17 @@ export default defineSchema({
     .index("by_code", ["code"])
     .index("by_created_by", ["created_by"]),
 
-  // User Vouchers table - tracks individual voucher assignments
+  // User vouchers relationship table
   user_vouchers: defineTable({
     voucher_id: v.id("vouchers"),
-    user_id: v.id("users"),
+    user_id: v.optional(v.id("users")), // Optional for staff redemptions
     status: v.union(
       v.literal("assigned"),
       v.literal("redeemed")
     ),
     assigned_at: v.number(),
     redeemed_at: v.optional(v.number()),
-    assigned_by: v.id("users"), // Staff member who assigned the voucher
+    assigned_by: v.optional(v.id("users")), // Optional for staff redemptions
   })
     .index("by_voucher", ["voucher_id"])
     .index("by_user", ["user_id"])

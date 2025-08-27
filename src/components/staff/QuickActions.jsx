@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import Card from '../common/Card'
 import { QrCode, UserPlus, Calendar, Gift } from 'lucide-react'
 import QRScannerModal from './QRScannerModal'
-import BookingQRScannerModal from './BookingQRScannerModal'
+
 import AddCustomerModal from './AddCustomerModal'
 import CreateBookingModal from './CreateBookingModal'
 import CreateVoucherModal from './CreateVoucherModal'
@@ -181,14 +181,9 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
       )}
       
       {currentModal === 'bookingScanner' && (
-        <BookingQRScannerModal 
+        <QRScannerModal 
           isOpen={true}
           onClose={() => setCurrentModal(null)}
-          onBookingScanned={(booking) => {
-            console.log('BookingQRScannerModal onBookingScanned called with:', booking)
-            onBookingScanned?.(booking)
-            setCurrentModal(null)
-          }}
         />
       )}
       
