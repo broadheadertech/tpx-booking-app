@@ -90,7 +90,7 @@ const Profile = () => {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen" style={{backgroundColor: '#F4F0E6'}} className="flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{backgroundColor: '#F4F0E6'}}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{borderColor: '#F68B24'}}></div>
           <p style={{color: '#8B8B8B'}}>Loading profile...</p>

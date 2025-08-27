@@ -36,19 +36,23 @@ const NotificationsManagement = ({ onRefresh }) => {
   const [error, setError] = useState('')
 
   // Convex queries
-  const notifications = useQuery(api.services.notifications.getUserNotifications, {
-    userId: user?.id,
-    limit: 100,
-    includeArchived: showArchived
-  })
+  const notifications = useQuery(
+    user?.id ? api.services.notifications.getUserNotifications : undefined,
+    user?.id ? {
+      userId: user.id,
+      limit: 100,
+      includeArchived: showArchived
+    } : undefined
+  )
   
-  const unreadCount = useQuery(api.services.notifications.getUnreadCount, {
-    userId: user?.id
-  })
+  const unreadCount = useQuery(
+    user?.id ? api.services.notifications.getUnreadCount : undefined,
+    user?.id ? { userId: user.id } : undefined
+  )
   
   const notificationStats = useQuery(
     user?.role === 'admin' ? api.services.notifications.getNotificationStats : undefined,
-    user?.role === 'admin' ? { userId: user.id } : undefined
+    user?.role === 'admin' && user?.id ? { userId: user.id } : undefined
   )
 
   // Convex mutations
@@ -72,6 +76,7 @@ const NotificationsManagement = ({ onRefresh }) => {
   }) || []
 
   const handleMarkAsRead = async (notificationId) => {
+    if (!user?.id) return
     try {
       await markAsRead({ notificationId, userId: user.id })
     } catch (err) {
@@ -80,6 +85,7 @@ const NotificationsManagement = ({ onRefresh }) => {
   }
 
   const handleMarkAllAsRead = async () => {
+    if (!user?.id) return
     try {
       setLoading(true)
       await markAllAsRead({ userId: user.id })
@@ -91,6 +97,7 @@ const NotificationsManagement = ({ onRefresh }) => {
   }
 
   const handleArchive = async (notificationId) => {
+    if (!user?.id) return
     try {
       await archiveNotification({ notificationId, userId: user.id })
     } catch (err) {
@@ -99,6 +106,7 @@ const NotificationsManagement = ({ onRefresh }) => {
   }
 
   const handleDelete = async (notificationId) => {
+    if (!user?.id) return
     try {
       await deleteNotification({ notificationId, userId: user.id })
     } catch (err) {
