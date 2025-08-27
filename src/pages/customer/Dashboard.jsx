@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User } from 'lucide-react'
+import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User, ShoppingBag } from 'lucide-react'
 import ServiceBooking from '../../components/customer/ServiceBooking'
 import CustomerProfile from '../../components/customer/CustomerProfile'
 import VoucherManagement from '../../components/customer/VoucherManagement'
 import LoyaltyPoints from '../../components/customer/LoyaltyPoints'
 import MyBookings from '../../components/customer/MyBookings'
+import ProductShop from '../../components/customer/ProductShop'
 import Profile from './Profile'
 import bannerImage from '../../assets/img/banner.jpg'
 import { useQuery } from 'convex/react'
@@ -18,15 +19,12 @@ const Dashboard = () => {
   // Convex queries
   const services = useQuery(api.services.services.getActiveServices)
   const barbers = useQuery(api.services.barbers.getActiveBarbers)
-  // Temporarily disable user-specific queries to prevent errors
-  // const bookings = user?.id ? useQuery(api.services.bookings.getBookingsByCustomer, { customerId: user.id }) : undefined
-  // const vouchers = user?.id ? useQuery(api.services.vouchers.getVouchersByUser, { userId: user.id }) : undefined
-  const bookings = undefined // Placeholder until user data issues are resolved
-  const vouchers = undefined // Placeholder until user data issues are resolved
+  const bookings = user?.id ? useQuery(api.services.bookings.getBookingsByCustomer, { customerId: user.id }) : undefined
+  const vouchers = user?.id ? useQuery(api.services.vouchers.getVouchersByUser, { userId: user.id }) : undefined
 
   const sections = [
     { id: 'home', label: 'Home', icon: Home },
-    { id: 'booking', label: 'Book', icon: Calendar },
+    { id: 'shop', label: 'Shop', icon: ShoppingBag },
     { id: 'bookings', label: 'Bookings', icon: History },
     { id: 'vouchers', label: 'Vouchers', icon: Gift },
     { id: 'profile', label: 'Profile', icon: User }
@@ -34,10 +32,16 @@ const Dashboard = () => {
 
   // Calculate dashboard stats from Convex data
   const calculateStats = () => {
+    const totalBookings = bookings ? bookings.length : 0
+    
+    // Count active vouchers (assigned and not expired)
+    const activeVouchers = vouchers ? vouchers.filter(v => 
+      v.status === 'assigned' && !v.isExpired
+    ).length : 0
+    
     return {
-      totalBookings: 0, // Will show actual data once user queries are fixed
-      activeVouchers: 0, // Will show actual data once user queries are fixed
-      loyaltyPoints: 0 // TODO: Implement loyalty points in Convex
+      totalBookings,
+      activeVouchers
     }
   }
 
@@ -53,18 +57,15 @@ const Dashboard = () => {
       label: 'Active Vouchers',
       value: stats.activeVouchers.toString(),
       icon: Gift
-    },
-    {
-      label: 'Loyalty Points',
-      value: stats.loyaltyPoints.toLocaleString(),
-      icon: Star
     }
   ]
 
   const renderContent = () => {
     switch (activeSection) {
+      case 'shop':
+        return <ProductShop onBack={() => setActiveSection('home')} />
       case 'booking':
-        return <ServiceBooking onBack={(section) => setActiveSection(section || 'home')} />
+        return <ServiceBooking onBack={() => setActiveSection('home')} />
       case 'bookings':
         return <MyBookings onBack={() => setActiveSection('home')} />
       case 'vouchers':
