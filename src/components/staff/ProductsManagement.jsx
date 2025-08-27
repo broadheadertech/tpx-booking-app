@@ -1,11 +1,42 @@
-import React, { useState, useEffect } from 'react'
-import { Package, DollarSign, TrendingUp, TrendingDown, Plus, Edit, Trash2, Search, Filter, RefreshCw, Save, X, AlertCircle, Image, ShoppingCart, BarChart3 } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { Package, DollarSign, TrendingUp, TrendingDown, Plus, Edit, Trash2, Search, Filter, RefreshCw, Save, X, AlertCircle, Image, ShoppingCart, BarChart3, Upload, Camera } from 'lucide-react'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 
+// Component to handle product image display from Convex storage or URL
+const ProductImage = ({ imageUrl, imageStorageId, productName, className }) => {
+  const imageUrlFromStorage = useQuery(
+    imageStorageId ? api.services.products.getImageUrl : undefined,
+    imageStorageId ? { storageId: imageStorageId } : undefined
+  )
+  
+  const [imageError, setImageError] = useState(false)
+  
+  const imageSrc = imageUrl || imageUrlFromStorage
+  
+  if (imageError || !imageSrc) {
+    return (
+      <div className="flex flex-col items-center justify-center text-gray-400 w-full h-full">
+        <Package className="w-16 h-16 mb-2" />
+        <span className="text-sm font-medium">No Image</span>
+      </div>
+    )
+  }
+  
+  return (
+    <img 
+      src={imageSrc}
+      alt={productName}
+      className={className}
+      onError={() => setImageError(true)}
+      onLoad={() => setImageError(false)}
+    />
+  )
+}
+
 const ProductsManagement = ({ onRefresh }) => {
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('all')
   const [filterStock, setFilterStock] = useState('all')
@@ -21,110 +52,101 @@ const ProductsManagement = ({ onRefresh }) => {
     sku: '',
     stock: '',
     minStock: '',
-    imageUrl: '',
+    imageStorageId: '',
     status: 'active'
   })
   const [formErrors, setFormErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Mock products data
-  const mockProducts = [
-    {
-      id: 1,
-      name: 'Premium Hair Pomade',
-      description: 'High-hold, medium-shine pomade for classic styling',
-      price: 450,
-      cost: 200,
-      category: 'hair-care',
-      brand: 'TPX Professional',
-      sku: 'TPX-POM-001',
-      stock: 25,
-      minStock: 10,
-      imageUrl: '/api/placeholder/300/300',
-      status: 'active',
-      soldThisMonth: 15,
-      createdAt: '2024-01-15'
-    },
-    {
-      id: 2,
-      name: 'Beard Oil - Sandalwood',
-      description: 'Nourishing beard oil with sandalwood scent',
-      price: 350,
-      cost: 150,
-      category: 'beard-care',
-      brand: 'TPX Professional',
-      sku: 'TPX-BO-002',
-      stock: 8,
-      minStock: 15,
-      imageUrl: '/api/placeholder/300/300',
-      status: 'active',
-      soldThisMonth: 22,
-      createdAt: '2024-01-10'
-    },
-    {
-      id: 3,
-      name: 'Professional Scissors',
-      description: 'High-quality stainless steel cutting scissors',
-      price: 2500,
-      cost: 1200,
-      category: 'tools',
-      brand: 'Jaguar',
-      sku: 'JAG-SC-003',
-      stock: 5,
-      minStock: 3,
-      imageUrl: '/api/placeholder/300/300',
-      status: 'active',
-      soldThisMonth: 2,
-      createdAt: '2024-01-05'
-    },
-    {
-      id: 4,
-      name: 'Aftershave Balm',
-      description: 'Soothing aftershave balm with aloe vera',
-      price: 280,
-      cost: 120,
-      category: 'shaving',
-      brand: 'TPX Professional',
-      sku: 'TPX-AB-004',
-      stock: 0,
-      minStock: 12,
-      imageUrl: '/api/placeholder/300/300',
-      status: 'out-of-stock',
-      soldThisMonth: 18,
-      createdAt: '2024-01-01'
-    },
-    {
-      id: 5,
-      name: 'Hair Wax - Strong Hold',
-      description: 'Matte finish hair wax for textured styles',
-      price: 380,
-      cost: 180,
-      category: 'hair-care',
-      brand: 'TPX Professional',
-      sku: 'TPX-WAX-005',
-      stock: 32,
-      minStock: 8,
-      imageUrl: '/api/placeholder/300/300',
-      status: 'active',
-      soldThisMonth: 28,
-      createdAt: '2023-12-20'
+  // Convex queries and mutations
+  const products = useQuery(api.services.products.getAllProducts) || []
+  const createProductMutation = useMutation(api.services.products.createProduct)
+  const updateProductMutation = useMutation(api.services.products.updateProduct)
+  const deleteProductMutation = useMutation(api.services.products.deleteProduct)
+  const generateUploadUrl = useMutation(api.services.products.generateUploadUrl)
+  const deleteImage = useMutation(api.services.products.deleteImage)
+
+  // File upload state
+  const [selectedImage, setSelectedImage] = useState(null)
+  const [imagePreview, setImagePreview] = useState('')
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const fileInputRef = useRef(null)
+
+  const loading = !products
+
+  // Image handling functions
+  const handleImageSelect = (event) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        setFormErrors(prev => ({ ...prev, image: 'Image size must be less than 5MB' }))
+        return
+      }
+      
+      if (!file.type.startsWith('image/')) {
+        setFormErrors(prev => ({ ...prev, image: 'Please select a valid image file' }))
+        return
+      }
+      
+      setSelectedImage(file)
+      setFormErrors(prev => ({ ...prev, image: '' }))
+      
+      // Create preview
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        if (e.target && e.target.result && typeof e.target.result === 'string') {
+          console.log('Setting image preview:', e.target.result.substring(0, 50) + '...')
+          setImagePreview(e.target.result)
+        } else {
+          console.error('Invalid FileReader result:', e.target?.result)
+          setFormErrors(prev => ({ ...prev, image: 'Failed to process image file' }))
+        }
+      }
+      reader.onerror = (error) => {
+        console.error('FileReader error:', error)
+        setFormErrors(prev => ({ ...prev, image: 'Failed to read image file' }))
+      }
+      reader.readAsDataURL(file)
     }
-  ]
+  }
 
-  useEffect(() => {
-    loadProducts()
-  }, [])
-
-  const loadProducts = async () => {
-    setLoading(true)
+  const handleImageUpload = async () => {
+    if (!selectedImage) return null
+    
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      setProducts(mockProducts)
+      setUploadingImage(true)
+      
+      // Get upload URL
+      const uploadUrl = await generateUploadUrl()
+      
+      // Upload file
+      const result = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': selectedImage.type },
+        body: selectedImage,
+      })
+      
+      if (!result.ok) {
+        throw new Error('Failed to upload image')
+      }
+      
+      const { storageId } = await result.json()
+      return storageId
     } catch (error) {
-      console.error('Error loading products:', error)
+      console.error('Error uploading image:', error)
+      setFormErrors(prev => ({ ...prev, image: 'Failed to upload image' }))
+      return null
     } finally {
-      setLoading(false)
+      setUploadingImage(false)
+    }
+  }
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null)
+    setImagePreview('')
+    setFormData(prev => ({ ...prev, imageStorageId: '' }))
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
     }
   }
 
@@ -148,7 +170,7 @@ const ProductsManagement = ({ onRefresh }) => {
     // SKU uniqueness check (excluding current product when editing)
     const existingSku = products.find(p => 
       p.sku.toLowerCase() === formData.sku.toLowerCase() && 
-      (!editingProduct || p.id !== editingProduct.id)
+      (!editingProduct || p._id !== editingProduct._id)
     )
     if (existingSku) {
       errors.sku = 'SKU already exists'
@@ -164,38 +186,45 @@ const ProductsManagement = ({ onRefresh }) => {
 
     setIsSubmitting(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      // Upload image if selected
+      let imageStorageId = formData.imageStorageId
+      if (selectedImage) {
+        imageStorageId = await handleImageUpload()
+        if (!imageStorageId) {
+          return // Upload failed, error already set
+        }
+      }
       
       const productData = {
-        ...formData,
+        name: formData.name,
+        description: formData.description,
         price: parseFloat(formData.price),
         cost: parseFloat(formData.cost),
+        category: formData.category,
+        brand: formData.brand,
+        sku: formData.sku,
         stock: parseInt(formData.stock),
-        minStock: parseInt(formData.minStock)
+        minStock: parseInt(formData.minStock),
+        imageStorageId: imageStorageId || undefined,
+        status: formData.status
       }
       
       if (editingProduct) {
         // Update existing product
-        setProducts(prev => prev.map(product => 
-          product.id === editingProduct.id 
-            ? { ...product, ...productData, id: editingProduct.id }
-            : product
-        ))
+        await updateProductMutation({
+          id: editingProduct._id,
+          ...productData
+        })
       } else {
         // Create new product
-        const newProduct = {
-          ...productData,
-          id: Date.now(),
-          soldThisMonth: 0,
-          createdAt: new Date().toISOString().split('T')[0]
-        }
-        setProducts(prev => [newProduct, ...prev])
+        await createProductMutation(productData)
       }
       
       handleCloseModal()
+      onRefresh?.()
     } catch (error) {
       console.error('Error saving product:', error)
+      setFormErrors({ submit: error.message || 'Failed to save product' })
     } finally {
       setIsSubmitting(false)
     }
@@ -212,9 +241,15 @@ const ProductsManagement = ({ onRefresh }) => {
       sku: product.sku,
       stock: product.stock.toString(),
       minStock: product.minStock.toString(),
-      imageUrl: product.imageUrl || '',
+      imageStorageId: product.imageStorageId || '',
       status: product.status
     })
+    
+    // Set image preview if product has an image URL (for existing products)
+    if (product.imageUrl) {
+      setImagePreview(product.imageUrl)
+    }
+    
     setEditingProduct(product)
     setShowCreateModal(true)
   }
@@ -222,15 +257,11 @@ const ProductsManagement = ({ onRefresh }) => {
   const handleDelete = async (productId) => {
     if (!confirm('Are you sure you want to delete this product?')) return
     
-    setLoading(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500))
-      setProducts(prev => prev.filter(product => product.id !== productId))
+      await deleteProductMutation({ id: productId })
+      onRefresh?.()
     } catch (error) {
       console.error('Error deleting product:', error)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -247,10 +278,18 @@ const ProductsManagement = ({ onRefresh }) => {
       sku: '',
       stock: '',
       minStock: '',
-      imageUrl: '',
+      imageStorageId: '',
       status: 'active'
     })
     setFormErrors({})
+    
+    // Reset image state
+    setSelectedImage(null)
+    setImagePreview('')
+    setUploadingImage(false)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
 
   const getStockStatus = (product) => {
@@ -278,16 +317,7 @@ const ProductsManagement = ({ onRefresh }) => {
     }
   }
 
-  const getCategoryIcon = (category) => {
-    switch (category) {
-      case 'hair-care': return '💇'
-      case 'beard-care': return '🧔'
-      case 'shaving': return '🪒'
-      case 'tools': return '✂️'
-      case 'accessories': return '🎒'
-      default: return '📦'
-    }
-  }
+
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -321,7 +351,7 @@ const ProductsManagement = ({ onRefresh }) => {
         
         <div className="flex items-center space-x-3">
           <button
-            onClick={() => { loadProducts(); onRefresh?.() }}
+            onClick={() => onRefresh?.()}
             className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
           >
             <RefreshCw className="h-4 w-4" />
@@ -466,17 +496,21 @@ const ProductsManagement = ({ onRefresh }) => {
             const profitMargin = ((product.price - product.cost) / product.price * 100).toFixed(1)
             
             return (
-              <div key={product.id} className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+              <div key={product._id} className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
                 {/* Product Image */}
                 <div className="h-48 bg-gray-100 flex items-center justify-center relative">
-                  {product.imageUrl ? (
-                    <img 
-                      src={product.imageUrl} 
-                      alt={product.name}
+                  {product.imageUrl || product.imageStorageId ? (
+                    <ProductImage 
+                      imageUrl={product.imageUrl}
+                      imageStorageId={product.imageStorageId}
+                      productName={product.name}
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="text-6xl">{getCategoryIcon(product.category)}</div>
+                    <div className="flex flex-col items-center justify-center text-gray-400">
+                      <Package className="w-16 h-16 mb-2" />
+                      <span className="text-sm font-medium">No Image</span>
+                    </div>
                   )}
                   <span className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-medium border ${stockStatus.bg} ${stockStatus.text} ${stockStatus.border}`}>
                     {stockStatus.label}
@@ -549,7 +583,7 @@ const ProductsManagement = ({ onRefresh }) => {
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(product.id)}
+                        onClick={() => handleDelete(product._id)}
                         className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Delete Product"
                       >
@@ -593,256 +627,370 @@ const ProductsManagement = ({ onRefresh }) => {
         isOpen={showCreateModal} 
         onClose={handleCloseModal} 
         title={editingProduct ? 'Edit Product' : 'Add New Product'}
-        size="lg"
+        size="xl"
       >
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Product Name *
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-                  formErrors.name ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="Enter product name"
-              />
-              {formErrors.name && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  {formErrors.name}
-                </p>
-              )}
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Product Image Section */}
+          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 border border-orange-100">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+              <Camera className="w-5 h-5 mr-2 text-orange-600" />
+              Product Image
+            </h3>
+            
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* Image Preview */}
+              <div className="flex-1">
+                <div className="relative">
+                  {imagePreview ? (
+                     <div className="relative group bg-white rounded-xl overflow-hidden">
+                       <img 
+                         src={imagePreview} 
+                         alt="Product preview" 
+                         className="w-full h-48 object-cover border-2 border-orange-200 shadow-lg"
+                         style={{ display: 'block', maxWidth: '100%', height: '192px' }}
+                         onError={(e) => {
+                           console.error('Image failed to load:', imagePreview)
+                           console.error('Image error event:', e)
+                           setImagePreview('')
+                           setFormErrors(prev => ({ ...prev, image: 'Failed to load image. Please try a different image.' }))
+                         }}
+                         onLoad={(e) => {
+                           console.log('Image loaded successfully:', e.target.src.substring(0, 50) + '...')
+                           setFormErrors(prev => ({ ...prev, image: '' }))
+                         }}
+                       />
+                       <div className="absolute inset-0 bg-transparent group-hover:bg-black group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
+                         <button
+                           type="button"
+                           onClick={handleRemoveImage}
+                           className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                         >
+                           <X className="w-4 h-4" />
+                         </button>
+                       </div>
+                     </div>
+                   ) : (
+                    <div className="w-full h-48 border-2 border-dashed border-orange-300 rounded-xl flex flex-col items-center justify-center bg-white/50 hover:bg-white/80 transition-colors duration-200">
+                      <Upload className="w-12 h-12 text-orange-400 mb-2" />
+                      <p className="text-sm text-gray-600 text-center">
+                        <span className="font-semibold text-orange-600">Click to upload</span> or drag and drop
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 5MB</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Upload Controls */}
+               <div className="flex-1 space-y-4">
+                 <div>
+                   <input
+                     ref={fileInputRef}
+                     type="file"
+                     accept="image/*"
+                     onChange={handleImageSelect}
+                     className="hidden"
+                   />
+                   <button
+                     type="button"
+                     onClick={() => fileInputRef.current?.click()}
+                     disabled={uploadingImage}
+                     className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-4 rounded-xl transition-colors duration-200 flex items-center justify-center space-x-2 disabled:opacity-50"
+                   >
+                     {uploadingImage ? (
+                       <>
+                         <RefreshCw className="w-4 h-4 animate-spin" />
+                         <span>Uploading...</span>
+                       </>
+                     ) : (
+                       <>
+                         <Upload className="w-4 h-4" />
+                         <span>Choose Image</span>
+                       </>
+                     )}
+                   </button>
+                 </div>
+                 
+                 {formErrors.image && (
+                   <p className="text-sm text-red-600 flex items-center">
+                     <AlertCircle className="h-4 w-4 mr-1" />
+                     {formErrors.image}
+                   </p>
+                 )}
+               </div>
+            </div>
+          </div>
+
+          {/* Product Information */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Basic Information */}
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-900 mb-3">
+                  Product Name *
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
+                    formErrors.name ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                  }`}
+                  placeholder="Enter product name"
+                />
+                {formErrors.name && (
+                  <p className="mt-2 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {formErrors.name}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-900 mb-3">
+                  Description *
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  rows={4}
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 resize-none ${
+                    formErrors.description ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                  }`}
+                  placeholder="Describe the product features and benefits"
+                />
+                {formErrors.description && (
+                  <p className="mt-2 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {formErrors.description}
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-3">
+                    Category
+                  </label>
+                  <select
+                    value={formData.category}
+                    onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 hover:border-orange-300"
+                  >
+                    <option value="hair-care">Hair Care</option>
+                    <option value="beard-care">Beard Care</option>
+                    <option value="shaving">Shaving</option>
+                    <option value="tools">Tools</option>
+                    <option value="accessories">Accessories</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-3">
+                    Brand *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.brand}
+                    onChange={(e) => setFormData(prev => ({ ...prev, brand: e.target.value }))}
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
+                      formErrors.brand ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                    }`}
+                    placeholder="Product brand"
+                  />
+                  {formErrors.brand && (
+                    <p className="mt-2 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {formErrors.brand}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description *
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                rows={3}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-                  formErrors.description ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="Describe the product"
-              />
-              {formErrors.description && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  {formErrors.description}
-                </p>
-              )}
-            </div>
+            {/* Pricing & Inventory */}
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-3">
+                    Selling Price (₱) *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.price}
+                    onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                    min="0"
+                    step="0.01"
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
+                      formErrors.price ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                    }`}
+                    placeholder="0.00"
+                  />
+                  {formErrors.price && (
+                    <p className="mt-2 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {formErrors.price}
+                    </p>
+                  )}
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Selling Price (₱) *
-              </label>
-              <input
-                type="number"
-                value={formData.price}
-                onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                min="0"
-                step="0.01"
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-                  formErrors.price ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="0.00"
-              />
-              {formErrors.price && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  {formErrors.price}
-                </p>
-              )}
-            </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-3">
+                    Cost Price (₱) *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.cost}
+                    onChange={(e) => setFormData(prev => ({ ...prev, cost: e.target.value }))}
+                    min="0"
+                    step="0.01"
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
+                      formErrors.cost ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                    }`}
+                    placeholder="0.00"
+                  />
+                  {formErrors.cost && (
+                    <p className="mt-2 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {formErrors.cost}
+                    </p>
+                  )}
+                </div>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Cost Price (₱) *
-              </label>
-              <input
-                type="number"
-                value={formData.cost}
-                onChange={(e) => setFormData(prev => ({ ...prev, cost: e.target.value }))}
-                min="0"
-                step="0.01"
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-                  formErrors.cost ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="0.00"
-              />
-              {formErrors.cost && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  {formErrors.cost}
-                </p>
-              )}
-            </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-900 mb-3">
+                  SKU *
+                </label>
+                <input
+                  type="text"
+                  value={formData.sku}
+                  onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value.toUpperCase() }))}
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono transition-all duration-200 ${
+                    formErrors.sku ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                  }`}
+                  placeholder="PROD-001"
+                />
+                {formErrors.sku && (
+                  <p className="mt-2 text-sm text-red-600 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {formErrors.sku}
+                  </p>
+                )}
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category
-              </label>
-              <select
-                value={formData.category}
-                onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              >
-                <option value="hair-care">Hair Care</option>
-                <option value="beard-care">Beard Care</option>
-                <option value="shaving">Shaving</option>
-                <option value="tools">Tools</option>
-                <option value="accessories">Accessories</option>
-              </select>
-            </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-3">
+                    Current Stock *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.stock}
+                    onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
+                    min="0"
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
+                      formErrors.stock ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                    }`}
+                    placeholder="0"
+                  />
+                  {formErrors.stock && (
+                    <p className="mt-2 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {formErrors.stock}
+                    </p>
+                  )}
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Brand *
-              </label>
-              <input
-                type="text"
-                value={formData.brand}
-                onChange={(e) => setFormData(prev => ({ ...prev, brand: e.target.value }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-                  formErrors.brand ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="Product brand"
-              />
-              {formErrors.brand && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  {formErrors.brand}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                SKU *
-              </label>
-              <input
-                type="text"
-                value={formData.sku}
-                onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value.toUpperCase() }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono ${
-                  formErrors.sku ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="PROD-001"
-              />
-              {formErrors.sku && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  {formErrors.sku}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Current Stock *
-              </label>
-              <input
-                type="number"
-                value={formData.stock}
-                onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
-                min="0"
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-                  formErrors.stock ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="0"
-              />
-              {formErrors.stock && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  {formErrors.stock}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Minimum Stock *
-              </label>
-              <input
-                type="number"
-                value={formData.minStock}
-                onChange={(e) => setFormData(prev => ({ ...prev, minStock: e.target.value }))}
-                min="0"
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-                  formErrors.minStock ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="0"
-              />
-              {formErrors.minStock && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  {formErrors.minStock}
-                </p>
-              )}
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Image URL
-              </label>
-              <input
-                type="url"
-                value={formData.imageUrl}
-                onChange={(e) => setFormData(prev => ({ ...prev, imageUrl: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                placeholder="https://example.com/image.jpg"
-              />
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-3">
+                    Minimum Stock *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.minStock}
+                    onChange={(e) => setFormData(prev => ({ ...prev, minStock: e.target.value }))}
+                    min="0"
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
+                      formErrors.minStock ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                    }`}
+                    placeholder="0"
+                  />
+                  {formErrors.minStock && (
+                    <p className="mt-2 text-sm text-red-600 flex items-center">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {formErrors.minStock}
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Profit Margin Preview */}
           {formData.price && formData.cost && parseFloat(formData.price) > parseFloat(formData.cost) && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="flex items-center space-x-2">
-                <BarChart3 className="h-5 w-5 text-green-600" />
-                <span className="text-sm font-medium text-green-800">
-                  Profit Margin: {(((parseFloat(formData.price) - parseFloat(formData.cost)) / parseFloat(formData.price)) * 100).toFixed(1)}%
-                </span>
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-green-100 p-2 rounded-xl">
+                    <BarChart3 className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-bold text-green-800">
+                      Profit Margin: {(((parseFloat(formData.price) - parseFloat(formData.cost)) / parseFloat(formData.price)) * 100).toFixed(1)}%
+                    </h4>
+                    <p className="text-sm text-green-700">
+                      Profit per unit: ₱{(parseFloat(formData.price) - parseFloat(formData.cost)).toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-green-600">
+                    ₱{(parseFloat(formData.price) - parseFloat(formData.cost)).toFixed(2)}
+                  </div>
+                  <div className="text-sm text-green-600">per unit</div>
+                </div>
               </div>
-              <p className="text-sm text-green-700 mt-1">
-                Profit per unit: ₱{(parseFloat(formData.price) - parseFloat(formData.cost)).toFixed(2)}
+            </div>
+          )}
+
+          {/* Form Errors */}
+          {formErrors.submit && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+              <p className="text-sm text-red-600 flex items-center">
+                <AlertCircle className="h-4 w-4 mr-2" />
+                {formErrors.submit}
               </p>
             </div>
           )}
 
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-            <Button
+          {/* Action Buttons */}
+          <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+            <button
               type="button"
-              variant="outline"
               onClick={handleCloseModal}
-              disabled={isSubmitting}
+              disabled={isSubmitting || uploadingImage}
+              className="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50"
             >
               Cancel
-            </Button>
-            <Button
+            </button>
+            <button
               type="submit"
-              disabled={isSubmitting}
-              className="bg-orange-500 hover:bg-orange-600"
+              disabled={isSubmitting || uploadingImage}
+              className="px-8 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all duration-200 flex items-center space-x-2 disabled:opacity-50 shadow-lg hover:shadow-xl"
             >
-              {isSubmitting ? (
+              {isSubmitting || uploadingImage ? (
                 <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  {editingProduct ? 'Updating...' : 'Adding...'}
+                  <RefreshCw className="w-5 h-5 animate-spin" />
+                  <span>{uploadingImage ? 'Uploading...' : (editingProduct ? 'Updating...' : 'Adding...')}</span>
                 </>
               ) : (
                 <>
-                  <Save className="w-4 h-4 mr-2" />
-                  {editingProduct ? 'Update Product' : 'Add Product'}
+                  <Save className="w-5 h-5" />
+                  <span>{editingProduct ? 'Update Product' : 'Add Product'}</span>
                 </>
               )}
-            </Button>
+            </button>
           </div>
         </form>
       </Modal>

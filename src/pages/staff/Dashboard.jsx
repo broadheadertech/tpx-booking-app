@@ -39,6 +39,11 @@ function StaffDashboard() {
   const events = useQuery(api.services.events.getAllEvents)
   const customers = useQuery(api.services.auth.getAllUsers) // We'll need to create this query
 
+  // Calculate incomplete bookings count (pending, booked, confirmed - not completed or cancelled)
+  const incompleteBookingsCount = bookings ? bookings.filter(booking => 
+    booking.status !== 'completed' && booking.status !== 'cancelled'
+  ).length : 0
+
   // Helper functions for refresh actions
   const refreshData = () => {
     // Convex queries will automatically refresh
@@ -203,7 +208,8 @@ function StaffDashboard() {
           <TabNavigation 
             tabs={tabs} 
             activeTab={activeTab} 
-            onTabChange={setActiveTab} 
+            onTabChange={setActiveTab}
+            incompleteBookingsCount={incompleteBookingsCount}
           />
           <div className="bg-white rounded-3xl shadow-2xl border-2 border-[#F5F5F5] p-10 backdrop-blur-sm">
             {renderTabContent()}

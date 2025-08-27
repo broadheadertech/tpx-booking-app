@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { LayoutDashboard, Users, Calendar, Scissors, Gift, BarChart3, UserCheck, CalendarDays, Package, Bell, ChevronDown, MoreHorizontal } from 'lucide-react'
 
-const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
+const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount = 0 }) => {
   const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false)
   const moreDropdownRef = useRef(null)
 
@@ -84,9 +84,9 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
                   <span className="font-semibold whitespace-nowrap">{tab.label}</span>
 
                   {/* Badge for bookings */}
-                  {tab.badge > 0 && (
+                  {tab.id === 'bookings' && incompleteBookingsCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                      {tab.badge > 99 ? '99+' : tab.badge}
+                      {incompleteBookingsCount > 99 ? '99+' : incompleteBookingsCount}
                     </span>
                   )}
                 </button>

@@ -3,9 +3,10 @@ import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filte
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import QRCode from 'qrcode'
+import { createPortal } from 'react-dom'
 import CreateBookingModal from './CreateBookingModal'
 
-const BookingsManagement = ({ bookings = [], onRefresh }) => {
+const BookingsManagement = ({ onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('date')
@@ -20,14 +21,16 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [confirmModal, setConfirmModal] = useState({ show: false, booking: null, action: null })
 
   // Convex queries
-  const services = useQuery(api.services.services.getAllServices)
-  const barbers = useQuery(api.services.barbers.getActiveBarbers)
+  const bookings = useQuery(api.services.bookings.getAllBookings) || []
+  const services = useQuery(api.services.services.getAllServices) || []
+  const barbers = useQuery(api.services.barbers.getActiveBarbers) || []
 
   // Convex mutations
   const updateBookingStatus = useMutation(api.services.bookings.updateBooking)
-  const deleteBooking = useMutation(api.services.bookings.deleteBooking)
+  const deleteBookingMutation = useMutation(api.services.bookings.deleteBooking)
 
   const getStatusConfig = (status) => {
     switch (status) {
@@ -48,6 +51,15 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
           text: 'text-green-700',
           border: 'border-green-200',
           iconColor: 'text-green-500'
+        }
+      case 'completed':
+        return {
+          label: 'Completed',
+          icon: CheckCircle,
+          bg: 'bg-orange-50',
+          text: 'text-orange-700',
+          border: 'border-orange-200',
+          iconColor: 'text-orange-500'
         }
       case 'cancelled':
         return {
@@ -72,7 +84,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
 
   const filteredBookings = bookings
     .filter(booking => {
-      const serviceName = services.find(s => s.id === booking.service)?.name || ''
+      const serviceName = services.find(s => s._id === booking.service)?.name || ''
       const matchesSearch = 
         serviceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (booking.barber_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -88,11 +100,11 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
       }
       if (sortBy === 'status') return a.status.localeCompare(b.status)
       if (sortBy === 'service') {
-        const serviceA = services.find(s => s.id === a.service)?.name || ''
-        const serviceB = services.find(s => s.id === b.service)?.name || ''
+        const serviceA = services.find(s => s._id === a.service)?.name || ''
+        const serviceB = services.find(s => s._id === b.service)?.name || ''
         return serviceA.localeCompare(serviceB)
       }
-      return a.id - b.id
+      return a._id.localeCompare(b._id)
     })
 
   const stats = {
@@ -100,6 +112,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
     pending: bookings.filter(b => b.status === 'pending').length,
     booked: bookings.filter(b => b.status === 'booked').length,
     confirmed: bookings.filter(b => b.status === 'confirmed').length,
+    completed: bookings.filter(b => b.status === 'completed').length,
     cancelled: bookings.filter(b => b.status === 'cancelled').length,
     today: bookings.filter(b => {
       const bookingDate = new Date(b.date).toDateString()
@@ -155,20 +168,18 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
 
     try {
       const bookingData = {
-        service: parseInt(formData.service),
+        service: formData.service,
         date: formData.date,
         time: formData.time
       }
 
-      // Only include barber if one is selected (API.md shows barber is optional)
+      // Only include barber if one is selected
       if (formData.barber) {
-        bookingData.barber = parseInt(formData.barber)
+        bookingData.barber = formData.barber
       }
 
       if (editingBooking) {
-        await bookingsService.updateBooking(editingBooking.id, bookingData)
-      } else {
-        await bookingsService.createBooking(bookingData)
+        await updateBookingStatus({ id: editingBooking._id, ...bookingData })
       }
 
       handleCancel()
@@ -182,11 +193,11 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
   }
 
   const handleDelete = async (booking) => {
-    if (!confirm(`Are you sure you want to delete booking #${booking.booking_code || booking.id}?`)) return
+    if (!confirm(`Are you sure you want to delete booking #${booking.booking_code || booking._id}?`)) return
 
     setLoading(true)
     try {
-      await bookingsService.deleteBooking(booking.id)
+      await deleteBookingMutation({ id: booking._id })
       onRefresh()
     } catch (err) {
       console.error('Error deleting booking:', err)
@@ -199,7 +210,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
   const handleStatusChange = async (booking, newStatus) => {
     setLoading(true)
     try {
-      await bookingsService.patchBooking(booking.id, { status: newStatus })
+      await updateBookingStatus({ id: booking._id, status: newStatus })
       onRefresh()
     } catch (err) {
       console.error('Error updating booking status:', err)
@@ -207,6 +218,16 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleConfirmAction = async () => {
+    if (!confirmModal.booking || !confirmModal.action) return
+    
+    const { booking, action } = confirmModal
+    const newStatus = action === 'confirm' ? 'confirmed' : 'completed'
+    
+    setConfirmModal({ show: false, booking: null, action: null })
+    await handleStatusChange(booking, newStatus)
   }
 
   const formatDate = (dateString) => {
@@ -247,9 +268,9 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
     
     // Generate QR code data
     const qrData = JSON.stringify({
-      bookingId: booking.id,
+      bookingId: booking._id,
       bookingCode: booking.booking_code,
-      service: services.find(s => s.id === booking.service)?.name,
+      service: services.find(s => s._id === booking.service)?.name,
       barber: booking.barber_name,
       date: booking.date,
       time: booking.time,
@@ -274,13 +295,18 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
       }
     }, [qrData])
 
-    return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border" style={{borderColor: '#E0E0E0'}}>
-          <div className="text-center space-y-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{backgroundColor: '#F68B24'}}>
-              <QrCode className="w-6 h-6 text-white" />
-            </div>
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+            onClick={onClose}
+          />
+          <div className="relative w-full max-w-sm transform rounded-2xl bg-white shadow-2xl transition-all z-[10000]" style={{borderColor: '#E0E0E0', border: '1px solid'}}>
+            <div className="text-center space-y-4 p-6">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{backgroundColor: '#F68B24'}}>
+                <QrCode className="w-6 h-6 text-white" />
+              </div>
             
             <div>
               <h3 className="text-lg font-bold mb-1" style={{color: '#36454F'}}>Booking QR Code</h3>
@@ -300,7 +326,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
               <div className="flex justify-between">
                 <span className="text-sm font-medium" style={{color: '#8B8B8B'}}>Service:</span>
                 <span className="text-sm font-bold" style={{color: '#36454F'}}>
-                  {services.find(s => s.id === booking.service)?.name}
+                  {services.find(s => s._id === booking.service)?.name}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -323,16 +349,18 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
               </div>
             </div>
 
-            <button
-              onClick={onClose}
-              className="w-full py-2 px-4 rounded-xl font-medium text-white transition-colors"
-              style={{backgroundColor: '#F68B24'}}
-            >
-              Close
-            </button>
+              <button
+                onClick={onClose}
+                className="w-full py-2 px-4 rounded-xl font-medium text-white transition-colors"
+                style={{backgroundColor: '#F68B24'}}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     )
   }
 
@@ -341,7 +369,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
     const miniQrRef = useRef(null)
     
     const qrData = JSON.stringify({
-      bookingId: booking.id,
+      bookingId: booking._id,
       bookingCode: booking.booking_code,
       barbershop: 'TPX Barbershop'
     })
@@ -349,8 +377,8 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
     useEffect(() => {
       if (miniQrRef.current) {
         QRCode.toCanvas(miniQrRef.current, qrData, {
-          width: 40,
-          margin: 1,
+          width: 28,
+          margin: 0,
           color: {
             dark: '#36454F',
             light: '#ffffff'
@@ -397,7 +425,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
             <option value="">Select a service</option>
             {services?.map(service => (
               <option key={service._id} value={service._id}>
-                {service.name} - ₱{parseFloat(service.price).toFixed(2)} ({service.duration_minutes}min)
+                {service.name} - ₱{parseFloat(service.price || 0).toFixed(2)} ({service.duration_minutes}min)
               </option>
             )) || []}
           </select>
@@ -553,6 +581,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
                 <option value="pending">Pending</option>
                 <option value="booked">Booked</option>
                 <option value="confirmed">Confirmed</option>
+                <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
             </div>
@@ -623,25 +652,13 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
               {filteredBookings.map((booking) => {
                 const statusConfig = getStatusConfig(booking.status)
                 const StatusIcon = statusConfig.icon
-                const service = services.find(s => s.id === booking.service)
+                const service = services.find(s => s._id === booking.service)
 
                 return (
-                  <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={booking._id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-lg bg-orange-50 border-2 border-orange-200 flex items-center justify-center p-1">
-                            <MiniQRCode booking={booking} />
-                          </div>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-mono font-bold text-gray-900">
-                            #{booking.booking_code || booking.id}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            ID: {booking.id}
-                          </div>
-                        </div>
+                      <div className="text-sm font-mono font-bold text-gray-900">
+                        #{booking.booking_code}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -707,7 +724,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
                         {booking.status === 'booked' && (
                           <>
                             <button
-                              onClick={() => handleStatusChange(booking, 'confirmed')}
+                              onClick={() => setConfirmModal({ show: true, booking, action: 'confirm' })}
                               className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-green-700 bg-green-100 hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                               disabled={loading}
                             >
@@ -721,6 +738,15 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
                               Cancel
                             </button>
                           </>
+                        )}
+                        {booking.status === 'confirmed' && (
+                          <button
+                            onClick={() => setConfirmModal({ show: true, booking, action: 'complete' })}
+                            className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-orange-700 bg-orange-100 hover:bg-orange-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                            disabled={loading}
+                          >
+                            Complete
+                          </button>
                         )}
                         <button
                           onClick={() => handleEdit(booking)}
@@ -779,6 +805,68 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
 
       {/* QR Code Modal */}
       {showQRCode && <QRCodeModal booking={showQRCode} onClose={() => setShowQRCode(null)} />}
+
+      {/* Confirmation Modal */}
+      {confirmModal.show && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{zIndex: 99999}}>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border">
+            <div className="text-center space-y-4">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{backgroundColor: '#F68B24'}}>
+                 <CheckCircle className="w-6 h-6 text-white" />
+               </div>
+              
+              <div>
+                <h3 className="text-lg font-bold mb-2 text-gray-900">
+                  {confirmModal.action === 'confirm' ? 'Confirm Booking' : 'Complete Booking'}
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Are you sure you want to {confirmModal.action === 'confirm' ? 'confirm' : 'mark as completed'} booking #{confirmModal.booking?.booking_code}?
+                </p>
+                
+                {confirmModal.booking && (
+                  <div className="text-left space-y-2 p-4 rounded-xl bg-gray-50">
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-600">Service:</span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {services.find(s => s._id === confirmModal.booking.service)?.name}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-600">Date & Time:</span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {formatDate(confirmModal.booking.date)} at {formatTime(confirmModal.booking.time)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-600">Barber:</span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {confirmModal.booking.barber_name || 'Not assigned'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setConfirmModal({ show: false, booking: null, action: null })}
+                  className="flex-1 py-2 px-4 rounded-xl font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                   onClick={handleConfirmAction}
+                   disabled={loading}
+                   className="flex-1 py-2 px-4 rounded-xl font-medium text-white transition-colors bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                   style={{backgroundColor: loading ? undefined : '#F68B24'}}
+                 >
+                   {loading ? 'Processing...' : (confirmModal.action === 'confirm' ? 'Confirm' : 'Complete')}
+                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

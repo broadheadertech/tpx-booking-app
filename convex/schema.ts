@@ -203,4 +203,37 @@ export default defineSchema({
     .index("by_created_at", ["createdAt"])
     .index("by_recipient_read", ["recipient_id", "is_read"])
     .index("by_recipient_archived", ["recipient_id", "is_archived"]),
+
+  // Products table
+  products: defineTable({
+    name: v.string(),
+    description: v.string(),
+    price: v.number(),
+    cost: v.number(),
+    category: v.union(
+      v.literal("hair-care"),
+      v.literal("beard-care"),
+      v.literal("shaving"),
+      v.literal("tools"),
+      v.literal("accessories")
+    ),
+    brand: v.string(),
+    sku: v.string(),
+    stock: v.number(),
+    minStock: v.number(),
+    imageUrl: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")),
+    status: v.union(
+      v.literal("active"),
+      v.literal("inactive"),
+      v.literal("out-of-stock")
+    ),
+    soldThisMonth: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_category", ["category"])
+    .index("by_sku", ["sku"])
+    .index("by_status", ["status"])
+    .index("by_stock", ["stock"]),
 });

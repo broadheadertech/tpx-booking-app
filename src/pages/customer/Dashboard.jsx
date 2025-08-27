@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Home, Calendar, Gift, Clock, MapPin, Phone, History, User } from 'lucide-react'
+import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User } from 'lucide-react'
 import ServiceBooking from '../../components/customer/ServiceBooking'
 import CustomerProfile from '../../components/customer/CustomerProfile'
 import VoucherManagement from '../../components/customer/VoucherManagement'
@@ -12,22 +12,17 @@ import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
 
 const Dashboard = () => {
-  const { user } = useAuth()
-  const [activeSection, setActiveSection] = useState(() => {
-    // Restore active section from localStorage on component mount
-    return localStorage.getItem('customer_dashboard_active_section') || 'home'
-  })
-
-  // Save active section to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem('customer_dashboard_active_section', activeSection)
-  }, [activeSection])
+  const { user, isAuthenticated } = useAuth()
+  const [activeSection, setActiveSection] = useState('home')
 
   // Convex queries
   const services = useQuery(api.services.services.getActiveServices)
   const barbers = useQuery(api.services.barbers.getActiveBarbers)
-  const bookings = user?.id ? useQuery(api.services.bookings.getBookingsByCustomer, { customerId: user.id }) : undefined
-  const vouchers = user?.id ? useQuery(api.services.vouchers.getVouchersByUser, { userId: user.id }) : undefined
+  // Temporarily disable user-specific queries to prevent errors
+  // const bookings = user?.id ? useQuery(api.services.bookings.getBookingsByCustomer, { customerId: user.id }) : undefined
+  // const vouchers = user?.id ? useQuery(api.services.vouchers.getVouchersByUser, { userId: user.id }) : undefined
+  const bookings = undefined // Placeholder until user data issues are resolved
+  const vouchers = undefined // Placeholder until user data issues are resolved
 
   const sections = [
     { id: 'home', label: 'Home', icon: Home },
@@ -39,16 +34,10 @@ const Dashboard = () => {
 
   // Calculate dashboard stats from Convex data
   const calculateStats = () => {
-    const totalBookings = bookings ? bookings.length : 0
-    
-    // Count active vouchers (assigned and not expired)
-    const activeVouchers = vouchers ? vouchers.filter(v => 
-      v.status === 'assigned' && !v.isExpired
-    ).length : 0
-    
     return {
-      totalBookings,
-      activeVouchers
+      totalBookings: 0, // Will show actual data once user queries are fixed
+      activeVouchers: 0, // Will show actual data once user queries are fixed
+      loyaltyPoints: 0 // TODO: Implement loyalty points in Convex
     }
   }
 
@@ -64,6 +53,11 @@ const Dashboard = () => {
       label: 'Active Vouchers',
       value: stats.activeVouchers.toString(),
       icon: Gift
+    },
+    {
+      label: 'Loyalty Points',
+      value: stats.loyaltyPoints.toLocaleString(),
+      icon: Star
     }
   ]
 
