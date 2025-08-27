@@ -221,10 +221,13 @@ export const createBooking = mutation({
 
     // Create notification for booking creation
     try {
-      await ctx.runMutation(api.services.notifications.createBookingNotification, {
-        bookingId,
-        type: "booking_created",
-        recipientId: args.customer,
+      await ctx.runMutation(api.services.notifications.createNotification, {
+        title: "Booking Created",
+        message: `Your booking has been created with code: ${bookingCode}`,
+        type: "booking",
+        priority: "medium",
+        recipient_id: args.customer,
+        recipient_type: "customer",
       });
     } catch (error) {
       console.error("Failed to create booking notification:", error);
@@ -285,10 +288,32 @@ export const updateBooking = mutation({
         }
         
         if (notificationType) {
-           await ctx.runMutation(api.services.notifications.createBookingNotification, {
-             bookingId: id,
-             type: notificationType,
-             recipientId: currentBooking.customer,
+           let title, message;
+           switch (notificationType) {
+             case "booking_confirmed":
+               title = "Booking Confirmed";
+               message = "Your booking has been confirmed.";
+               break;
+             case "booking_cancelled":
+               title = "Booking Cancelled";
+               message = "Your booking has been cancelled.";
+               break;
+             case "booking_completed":
+               title = "Booking Completed";
+               message = "Your booking has been completed.";
+               break;
+             default:
+               title = "Booking Updated";
+               message = "Your booking status has been updated.";
+           }
+           
+           await ctx.runMutation(api.services.notifications.createNotification, {
+             title,
+             message,
+             type: "booking",
+             priority: "medium",
+             recipient_id: currentBooking.customer,
+             recipient_type: "customer",
            });
          }
        } catch (error) {
