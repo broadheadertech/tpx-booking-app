@@ -395,11 +395,11 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
             required
           >
             <option value="">Select a service</option>
-            {services.map(service => (
-              <option key={service.id} value={service.id}>
+            {services?.map(service => (
+              <option key={service._id} value={service._id}>
                 {service.name} - ₱{parseFloat(service.price).toFixed(2)} ({service.duration_minutes}min)
               </option>
-            ))}
+            )) || []}
           </select>
         </div>
 
@@ -411,11 +411,11 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           >
             <option value="">Any available barber</option>
-            {barbers.map(barber => (
-              <option key={barber.id} value={barber.id}>
+            {barbers?.map(barber => (
+              <option key={barber._id} value={barber._id}>
                 {barber.full_name}
               </option>
-            ))}
+            )) || []}
           </select>
         </div>
 

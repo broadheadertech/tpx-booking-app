@@ -410,7 +410,7 @@ const ServiceBooking = ({ onBack }) => {
         <div className="space-y-3">
           {services.map((service) => (
             <button
-              key={service.id}
+              key={service._id}
               onClick={() => handleServiceSelect(service)}
               className="group relative w-full bg-white rounded-2xl shadow-sm active:shadow-md border-2 hover:border-[#F68B24] active:border-[#F68B24] transition-all duration-200 overflow-hidden touch-manipulation min-h-[88px]"
               style={{ borderColor: "#E0E0E0" }}
@@ -571,7 +571,7 @@ const ServiceBooking = ({ onBack }) => {
           {getAvailableBarbers().length > 0 ? (
             getAvailableBarbers().map((barber) => (
               <button
-                key={barber.id}
+                key={barber._id}
                 onClick={() => {
                   handleStaffSelect(barber);
                   // Reset date and time when barber changes
@@ -968,10 +968,10 @@ const ServiceBooking = ({ onBack }) => {
                 <div className="max-h-32 overflow-y-auto space-y-2">
                   {getAvailableVouchers().map((voucher) => (
                     <button
-                      key={voucher.id}
+                      key={voucher._id}
                       onClick={() =>
                         setSelectedVoucher(
-                          selectedVoucher?.id === voucher.id ? null : voucher
+                          selectedVoucher?._id === voucher._id ? null : voucher
                         )
                       }
                       className="w-full p-2 rounded-lg border-2 transition-all duration-200 text-left"

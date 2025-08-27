@@ -1,14 +1,26 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Gift, Calendar, User, DollarSign, CheckCircle, XCircle, Clock, Search, Filter, Plus, RotateCcw, QrCode, Download, Printer, Copy, Mail } from 'lucide-react'
+import { Gift, Calendar, User, DollarSign, CheckCircle, XCircle, Clock, Search, Filter, Plus, RotateCcw, QrCode, Download, Printer, Copy, Mail, Trash2, Edit, Users } from 'lucide-react'
 import QRCode from 'qrcode'
 import SendVoucherModal from './SendVoucherModal'
+import ViewVoucherUsersModal from './ViewVoucherUsersModal'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 
-const VoucherManagement = ({ vouchers = [], onRefresh }) => {
+const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('created_at')
   const [showQRCode, setShowQRCode] = useState(null)
   const [showSendModal, setShowSendModal] = useState(null)
+  const [showUsersModal, setShowUsersModal] = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  // Convex queries and mutations
+  const deleteVoucher = useMutation(api.services.vouchers.deleteVoucher)
+  const assignedUsers = useQuery(
+    api.services.vouchers.getVoucherAssignedUsers,
+    showUsersModal ? { voucherId: showUsersModal._id } : "skip"
+  )
 
   const getStatusConfig = (voucher) => {
     if (voucher.redeemed) {
@@ -22,7 +34,8 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
         iconColor: 'text-green-500'
       }
     }
-    if (voucher.isExpired) {
+    const isExpired = voucher.expires_at < Date.now()
+    if (isExpired) {
       return {
         status: 'expired',
         label: 'Expired',
@@ -41,6 +54,21 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
       text: 'text-orange-700',
       border: 'border-orange-200',
       iconColor: 'text-orange-500'
+    }
+  }
+
+  const handleDelete = async (voucher) => {
+    if (!confirm(`Are you sure you want to delete voucher "${voucher.code}"?`)) return
+
+    setLoading(true)
+    try {
+      await deleteVoucher({ id: voucher._id })
+      onRefresh()
+    } catch (err) {
+      console.error('Failed to delete voucher:', err)
+      alert('Failed to delete voucher. Please try again.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -77,15 +105,15 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
     useEffect(() => {
       if (qrRef.current) {
         QRCode.toCanvas(qrRef.current, qrData, {
-          width: 40,
-          margin: 1,
+          width: 32,
+          margin: 0,
           color: { dark: '#36454F', light: '#ffffff' },
           errorCorrectionLevel: 'M'
         }, (err) => { if (err) console.error('Mini QR error:', err) })
       }
     }, [qrData])
 
-    return <canvas ref={qrRef} className="rounded" />
+    return <canvas ref={qrRef} className="rounded w-8 h-8" style={{ maxWidth: '32px', maxHeight: '32px' }} />
   }
 
   // QR Code Modal for full-size display
@@ -343,7 +371,10 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
               <RotateCcw className="h-4 w-4" />
               <span>Refresh</span>
             </button>
-            <button className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm">
+            <button 
+              onClick={onCreateVoucher}
+              className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
+            >
               <Plus className="h-4 w-4" />
               <span>New Voucher</span>
             </button>
@@ -359,7 +390,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
 
           return (
             <div
-              key={voucher.id}
+              key={voucher._id}
               className={`bg-white rounded-lg border-2 ${statusConfig.border} shadow-sm hover:shadow-md transition-shadow p-4`}
             >
               <div className="flex items-start justify-between mb-3">
@@ -369,7 +400,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
                   </div>
                   <div>
                     <p className="font-mono text-sm font-bold text-gray-900">{voucher.code}</p>
-                    <p className="text-xs text-gray-500">ID: {voucher.id}</p>
+                    <p className="text-xs text-gray-500">Points: {voucher.points_required}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -380,11 +411,11 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
                     </span>
                   </div>
                   <button
-                    onClick={() => setShowSendModal(voucher)}
-                    className="inline-flex items-center px-2.5 py-1 border border-orange-300 text-xs font-medium rounded text-orange-700 bg-orange-50 hover:bg-orange-100"
-                    title="Send via Email"
+                    onClick={() => handleDelete(voucher)}
+                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                    title="Delete Voucher"
                   >
-                    <Mail className="h-3 w-3 mr-1" /> Send
+                    <Trash2 className="h-3 w-3" />
                   </button>
                 </div>
               </div>
@@ -392,7 +423,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-500">Value</span>
-                  <span className="text-lg font-bold text-gray-900">{voucher.formattedValue}</span>
+                  <span className="text-lg font-bold text-gray-900">₱{parseFloat(voucher.value).toFixed(2)}</span>
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -401,41 +432,57 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">User</span>
-                  <span className="text-sm font-medium text-gray-900">User {voucher.user}</span>
+                  <span className="text-sm text-gray-500">Assignments</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {voucher.assignedCount || 0}/{voucher.max_uses}
+                    {voucher.redeemedCount > 0 && (
+                      <span className="text-green-600 ml-1">({voucher.redeemedCount} redeemed)</span>
+                    )}
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-500">Created</span>
                   <span className="text-sm text-gray-600">
-                    {new Date(voucher.created_at).toLocaleDateString()}
+                    {new Date(voucher.createdAt).toLocaleDateString()}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-500">Expires</span>
-                  <span className={`text-sm ${voucher.isExpired ? 'text-red-600' : 'text-gray-600'}`}>
+                  <span className={`text-sm ${voucher.expires_at < Date.now() ? 'text-red-600' : 'text-gray-600'}`}>
                     {new Date(voucher.expires_at).toLocaleDateString()}
                   </span>
                 </div>
               </div>
 
-              {!voucher.redeemed && !voucher.isExpired && (
-                <div className="mt-4 pt-3 border-t border-gray-200 flex space-x-2">
-                  <button
-                    onClick={() => setShowQRCode(voucher)}
-                    className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium flex items-center justify-center"
-                  >
-                    <QrCode className="h-4 w-4 mr-2" /> View QR
-                  </button>
-                  <button
-                    onClick={() => setShowSendModal(voucher)}
-                    className="flex-1 px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg hover:from-orange-600 hover:to-amber-600 transition-colors text-sm font-semibold flex items-center justify-center"
-                  >
-                    <Mail className="h-4 w-4 mr-2" /> Send Email
-                  </button>
-                </div>
-              )}
+              <div className="mt-4 pt-3 border-t border-gray-200">
+                {/* Always show View Users button */}
+                <button
+                  onClick={() => setShowUsersModal(voucher)}
+                  className="w-full mb-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium flex items-center justify-center"
+                >
+                  <Users className="h-4 w-4 mr-2" /> View Assigned Users
+                </button>
+                
+                {/* Show action buttons only for active vouchers */}
+                {!voucher.redeemed && voucher.expires_at >= Date.now() && (
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => setShowQRCode(voucher)}
+                      className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium flex items-center justify-center"
+                    >
+                      <QrCode className="h-4 w-4 mr-2" /> View QR
+                    </button>
+                    <button
+                      onClick={() => setShowSendModal(voucher)}
+                      className="flex-1 px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg hover:from-orange-600 hover:to-amber-600 transition-colors text-sm font-semibold flex items-center justify-center"
+                    >
+                      <Mail className="h-4 w-4 mr-2" /> Send Email
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )
         })}
@@ -463,6 +510,15 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
           voucher={showSendModal} 
           isOpen={!!showSendModal}
           onClose={() => setShowSendModal(null)} 
+        />
+      )}
+
+      {showUsersModal && (
+        <ViewVoucherUsersModal
+          voucher={showUsersModal}
+          isOpen={!!showUsersModal}
+          onClose={() => setShowUsersModal(null)}
+          assignedUsers={assignedUsers || []}
         />
       )}
     </div>

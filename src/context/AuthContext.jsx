@@ -22,16 +22,19 @@ export const AuthProvider = ({ children }) => {
     const storedToken = localStorage.getItem('session_token')
     if (storedToken) {
       setSessionToken(storedToken)
-      // Don't set loading to false here - wait for the query to complete
+      // Keep loading true until query completes
     } else {
+      // No stored token, we can safely set loading to false
       setLoading(false)
+      setIsAuthenticated(false)
+      setUser(null)
     }
   }, [])
 
-  // Query current user - always call the hook but only when we have a session token
+  // Query current user - only call when we have a session token
   const currentUser = useQuery(
     api.services.auth.getCurrentUser,
-    sessionToken ? { sessionToken } : { sessionToken: null }
+    sessionToken ? { sessionToken } : "skip"
   )
 
   // Mutations
@@ -39,10 +42,11 @@ export const AuthProvider = ({ children }) => {
   const logoutMutation = useMutation(api.services.auth.logoutUser)
 
   useEffect(() => {
-    // Only process currentUser result if we have a session token
+    // Only process when we have a session token and the query has completed
     if (sessionToken && currentUser !== undefined) {
       setLoading(false)
       if (currentUser) {
+        // Valid session and user data
         setIsAuthenticated(true)
         setUser({
           id: currentUser.id,
@@ -60,10 +64,9 @@ export const AuthProvider = ({ children }) => {
         setSessionToken(null)
         localStorage.removeItem('session_token')
       }
-    } else if (!sessionToken) {
-      // No session token, we're done loading
-      setLoading(false)
     }
+    // If sessionToken exists but currentUser is undefined, keep loading
+    // If no sessionToken, loading state is handled in the first useEffect
   }, [currentUser, sessionToken])
 
   const login = async (email, password) => {

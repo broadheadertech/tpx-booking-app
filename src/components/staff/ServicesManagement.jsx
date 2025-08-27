@@ -1,27 +1,17 @@
 import React, { useState } from 'react'
-import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X } from 'lucide-react'
+import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw } from 'lucide-react'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import CreateServiceModal from './CreateServiceModal'
 
 const ServicesManagement = ({ services = [], onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('name')
-  const [isCreating, setIsCreating] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingService, setEditingService] = useState(null)
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    duration_minutes: 30,
-    price: '',
-    category: 'General',
-    is_active: true
-  })
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
 
   // Convex mutations
-  const createService = useMutation(api.services.services.createService)
-  const updateService = useMutation(api.services.services.updateService)
   const deleteService = useMutation(api.services.services.deleteService)
 
   const filteredServices = services
@@ -43,69 +33,25 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
     avgDuration: services.length ? services.reduce((sum, s) => sum + s.duration_minutes, 0) / services.length : 0
   }
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      description: '',
-      duration_minutes: 30,
-      price: ''
-    })
-    setError('')
-  }
-
   const handleCreate = () => {
-    resetForm()
-    setIsCreating(true)
     setEditingService(null)
+    setShowCreateModal(true)
   }
 
   const handleEdit = (service) => {
-    setFormData({
-      name: service.name,
-      description: service.description,
-      duration_minutes: service.duration_minutes,
-      price: service.price
-    })
     setEditingService(service)
-    setIsCreating(false)
-    setError('')
+    setShowCreateModal(true)
   }
 
-  const handleCancel = () => {
-    setIsCreating(false)
+  const handleCloseModal = () => {
+    setShowCreateModal(false)
     setEditingService(null)
-    resetForm()
   }
 
-  const handleSave = async () => {
-    if (!formData.name.trim() || !formData.price) {
-      setError('Name and price are required')
-      return
-    }
-
-    setLoading(true)
-    setError('')
-
-    try {
-      const serviceData = {
-        ...formData,
-        price: parseFloat(formData.price).toFixed(2),
-        duration_minutes: parseInt(formData.duration_minutes)
-      }
-
-      if (editingService) {
-        await servicesService.updateService(editingService.id, serviceData)
-      } else {
-        await servicesService.createService(serviceData)
-      }
-
-      handleCancel()
-      onRefresh()
-    } catch (err) {
-      setError(err.message || 'Failed to save service')
-    } finally {
-      setLoading(false)
-    }
+  const handleModalSubmit = () => {
+    setShowCreateModal(false)
+    setEditingService(null)
+    onRefresh()
   }
 
   const handleDelete = async (service) => {
@@ -113,102 +59,17 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
 
     setLoading(true)
     try {
-      await servicesService.deleteService(service.id)
+      await deleteService({ id: service._id })
       onRefresh()
     } catch (err) {
-      setError(err.message || 'Failed to delete service')
+      console.error('Failed to delete service:', err)
+      alert('Failed to delete service. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  const ServiceForm = () => (
-    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">
-          {editingService ? 'Edit Service' : 'Create New Service'}
-        </h3>
-        <button
-          onClick={handleCancel}
-          className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-        >
-          <X className="h-5 w-5" />
-        </button>
-      </div>
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-600">{error}</p>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Service Name</label>
-          <input
-            type="text"
-            value={formData.name}
-            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-            placeholder="Enter service name"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Price (₱)</label>
-          <input
-            type="number"
-            value={formData.price}
-            onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-            placeholder="0.00"
-            step="0.01"
-            min="0"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Duration (minutes)</label>
-          <input
-            type="number"
-            value={formData.duration_minutes}
-            onChange={(e) => setFormData(prev => ({ ...prev, duration_minutes: e.target.value }))}
-            placeholder="30"
-            min="1"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-          <input
-            type="text"
-            value={formData.description}
-            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-            placeholder="Enter service description"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-
-      <div className="flex justify-end space-x-3">
-        <button
-          onClick={handleCancel}
-          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <Save className="h-4 w-4" />
-          <span>{loading ? 'Saving...' : 'Save Service'}</span>
-        </button>
-      </div>
-    </div>
-  )
 
   return (
     <div className="space-y-6">
@@ -300,14 +161,19 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
         </div>
       </div>
 
-      {/* Service Form */}
-      {(isCreating || editingService) && <ServiceForm />}
+      {/* Create/Edit Service Modal */}
+      <CreateServiceModal
+        isOpen={showCreateModal}
+        onClose={handleCloseModal}
+        onSubmit={handleModalSubmit}
+        editingService={editingService}
+      />
 
       {/* Services Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredServices.map((service) => (
           <div
-            key={service.id}
+            key={service._id}
             className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-6"
           >
             <div className="flex items-start justify-between mb-4">
@@ -317,7 +183,7 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900">{service.name}</h3>
-                  <p className="text-sm text-gray-500">ID: {service.id}</p>
+                  <p className="text-sm text-gray-500">{service.category}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-1">
@@ -344,7 +210,7 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
                   <DollarSign className="h-4 w-4 text-green-500" />
                   <span className="text-sm font-medium text-gray-700">Price</span>
                 </div>
-                <span className="text-lg font-bold text-green-600">{service.formattedPrice}</span>
+                <span className="text-lg font-bold text-green-600">₱{parseFloat(service.price).toFixed(2)}</span>
               </div>
 
               <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
@@ -352,7 +218,20 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
                   <Clock className="h-4 w-4 text-orange-500" />
                   <span className="text-sm font-medium text-gray-700">Duration</span>
                 </div>
-                <span className="text-sm font-medium text-gray-900">{service.formattedDuration}</span>
+                <span className="text-sm font-medium text-gray-900">{service.duration_minutes} mins</span>
+              </div>
+
+              <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-medium text-gray-700">Status</span>
+                </div>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  service.is_active 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  {service.is_active ? 'Active' : 'Inactive'}
+                </span>
               </div>
             </div>
 

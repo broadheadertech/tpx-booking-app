@@ -5,8 +5,10 @@ import { Gift, User, QrCode } from 'lucide-react'
 import QRCode from 'qrcode'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { useAuth } from '../../context/AuthContext'
 
 const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
     code: '',
     value: '',
@@ -17,7 +19,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
   })
 
   // Convex mutation
-  const createVoucherMutation = useMutation(api.services.vouchers.createVoucher)
+  const createVoucherMutation = useMutation(api.services.vouchers.createVoucherWithCode)
   
   const [qrCodeUrl, setQrCodeUrl] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -66,13 +68,19 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
     setIsLoading(true)
     
     try {
+      if (!user?.id) {
+        alert('You must be logged in to create vouchers')
+        return
+      }
+
       const voucherData = {
         code: formData.code,
         value: parseFloat(formData.value) || 0,
         points_required: parseInt(formData.points_required) || 0,
         max_uses: parseInt(formData.max_uses) || 1,
-        expires_at: formData.expires_at,
-        description: formData.description || undefined
+        expires_at: new Date(formData.expires_at).getTime(),
+        description: formData.description || undefined,
+        created_by: user.id
       }
 
       const response = await createVoucherMutation(voucherData)

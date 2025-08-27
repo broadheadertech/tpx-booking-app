@@ -177,19 +177,19 @@ const ManagementSection = ({ activeTab, data }) => {
       {/* Grid Layout for Services */}
       {activeTab === 'services' ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {data.map((item) => (
+          {data?.map((item) => (
             <Card 
               key={item.id} 
               className="p-8 bg-white border-2 border-[#F5F5F5] hover:border-[#FF8C42]/30 hover:shadow-2xl transition-all duration-300 rounded-3xl group hover:-translate-y-2"
             >
               {renderCardContent(item)}
             </Card>
-          ))}
+          )) || []}
         </div>
       ) : (
         /* List Layout for Other Tabs */
         <div className="grid gap-6">
-          {data.map((item) => (
+          {data?.map((item) => (
             <Card 
               key={item.id} 
               className="p-8 bg-white border-2 border-[#F5F5F5] hover:border-[#FF8C42]/30 hover:shadow-2xl transition-all duration-300 rounded-3xl group hover:-translate-y-1"
@@ -210,7 +210,7 @@ const ManagementSection = ({ activeTab, data }) => {
                 </div>
               </div>
             </Card>
-          ))}
+          )) || []}
         </div>
       )}
     </div>

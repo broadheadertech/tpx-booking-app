@@ -99,18 +99,35 @@ export default defineSchema({
     value: v.number(),
     points_required: v.number(),
     max_uses: v.number(),
-    redeemed: v.boolean(),
     expires_at: v.number(),
     description: v.optional(v.string()),
     created_by: v.id("users"),
-    redeemed_by: v.optional(v.id("users")),
-    redeemed_at: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
+    // Legacy fields for backward compatibility
+    redeemed: v.optional(v.boolean()),
+    redeemed_by: v.optional(v.id("users")),
+    redeemed_at: v.optional(v.number()),
   })
     .index("by_code", ["code"])
-    .index("by_created_by", ["created_by"])
-    .index("by_redeemed", ["redeemed"]),
+    .index("by_created_by", ["created_by"]),
+
+  // User Vouchers table - tracks individual voucher assignments
+  user_vouchers: defineTable({
+    voucher_id: v.id("vouchers"),
+    user_id: v.id("users"),
+    status: v.union(
+      v.literal("assigned"),
+      v.literal("redeemed")
+    ),
+    assigned_at: v.number(),
+    redeemed_at: v.optional(v.number()),
+    assigned_by: v.id("users"), // Staff member who assigned the voucher
+  })
+    .index("by_voucher", ["voucher_id"])
+    .index("by_user", ["user_id"])
+    .index("by_status", ["status"])
+    .index("by_voucher_user", ["voucher_id", "user_id"]),
 
   // Sessions table for authentication
   sessions: defineTable({

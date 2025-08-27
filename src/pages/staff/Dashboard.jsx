@@ -19,8 +19,9 @@ import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
 
 function StaffDashboard() {
-  const { isAuthenticated, user, loading: authLoading } = useAuth()
+  const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('overview')
+  const [activeModal, setActiveModal] = useState(null)
 
   // Convex queries for data
   const bookings = useQuery(api.services.bookings.getAllBookings)
@@ -104,13 +105,13 @@ function StaffDashboard() {
         return <ServicesManagement services={services || []} onRefresh={handleRefresh} />
 
       case 'vouchers':
-        return <VoucherManagement vouchers={vouchers || []} onRefresh={handleRefresh} />
+        return <VoucherManagement vouchers={vouchers || []} onRefresh={handleRefresh} onCreateVoucher={() => setActiveModal('voucher')} />
 
       case 'barbers':
         return <BarbersManagement barbers={barbers || []} onRefresh={handleRefresh} />
 
       case 'customers':
-        return <CustomersManagement customers={customers || []} onRefresh={handleRefresh} />
+        return <CustomersManagement customers={customers || []} onRefresh={handleRefresh} onAddCustomer={() => setActiveModal('customer')} />
 
       case 'events':
         return <EventsManagement events={events || []} onRefresh={handleRefresh} />
@@ -174,32 +175,7 @@ function StaffDashboard() {
     { id: 'notifications', label: 'Notifications', icon: 'bell' }
   ]
 
-  // Debug logging
-  console.log('Staff Dashboard - Auth State:', {
-    authLoading,
-    isAuthenticated,
-    user,
-    userIsStaff: user?.is_staff
-  })
-
-  // Show loading while checking authentication
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-[#F5F5F5] to-white flex items-center justify-center">
-        <div className="text-gray-500">Loading authentication...</div>
-      </div>
-    )
-  }
-
-  // Redirect to login if not authenticated or not staff
-  if (!isAuthenticated || !user?.is_staff) {
-    console.log('Redirecting to login - Not authenticated or not staff:', {
-      isAuthenticated,
-      isStaff: user?.is_staff
-    })
-    window.location.href = '/auth/login'
-    return null
-  }
+  console.log('StaffDashboard - User:', user)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F5F5F5] to-white">
@@ -213,6 +189,8 @@ function StaffDashboard() {
             onCreateVoucher={handleCreateVoucher}
             onVoucherScanned={handleVoucherScanned}
             onBookingScanned={handleBookingScanned}
+            activeModal={activeModal}
+            setActiveModal={setActiveModal}
           />
           <TabNavigation 
             tabs={tabs} 

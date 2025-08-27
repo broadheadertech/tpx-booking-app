@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { User, Mail, Phone, Calendar, Search, Filter, Plus, RotateCcw } from 'lucide-react'
 
-const CustomersManagement = ({ customers = [], onRefresh }) => {
+const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('name')
@@ -171,7 +171,10 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
               <RotateCcw className="h-4 w-4" />
               <span>Refresh</span>
             </button>
-            <button className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm">
+            <button 
+              onClick={onAddCustomer}
+              className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
+            >
               <Plus className="h-4 w-4" />
               <span>Add Customer</span>
             </button>

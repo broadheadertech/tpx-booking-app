@@ -148,7 +148,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit }) => {
         )}
 
         {/* Loading State */}
-        {loadingData && (
+        {(!services || !barbers || !customers) && (
           <div className="flex items-center justify-center py-4">
             <RefreshCw className="w-5 h-5 animate-spin text-orange-500 mr-2" />
             <span className="text-gray-600">Loading services and staff...</span>
@@ -170,15 +170,15 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit }) => {
                 value={formData.service}
                 onChange={(e) => handleInputChange('service', e.target.value)}
                 required
-                disabled={loadingData}
+                disabled={!services || !barbers || !customers}
                 className="w-full h-12 px-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200 disabled:opacity-50"
               >
                 <option value="">Select a service</option>
-                {services.map(service => (
-                  <option key={service.id} value={service.id}>
+                {services?.map(service => (
+                  <option key={service._id} value={service._id}>
                     {formatServiceOption(service)}
                   </option>
-                ))}
+                )) || []}
               </select>
               {fieldErrors.service && (
                 <p className="text-red-500 text-sm mt-1">{fieldErrors.service[0]}</p>
@@ -192,15 +192,15 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit }) => {
               <select
                 value={formData.barber}
                 onChange={(e) => handleInputChange('barber', e.target.value)}
-                disabled={loadingData}
+                disabled={!services || !barbers || !customers}
                 className="w-full h-12 px-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200 disabled:opacity-50"
               >
                 <option value="">Any available barber</option>
-                {barbers.filter(barber => barber.is_active).map(barber => (
-                  <option key={barber.id} value={barber.id}>
+                {barbers?.filter(barber => barber.is_active).map(barber => (
+                  <option key={barber._id} value={barber._id}>
                     {barber.full_name}
                   </option>
-                ))}
+                )) || []}
               </select>
               {fieldErrors.barber && (
                 <p className="text-red-500 text-sm mt-1">{fieldErrors.barber[0]}</p>
@@ -300,7 +300,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit }) => {
           </Button>
           <Button
             type="submit"
-            disabled={loading || loadingData}
+            disabled={loading || !services || !barbers || !customers}
             className="flex-1 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white hover:shadow-lg disabled:opacity-50"
           >
             {loading ? 'Creating...' : 'Create Booking'}

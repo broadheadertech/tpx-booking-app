@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 
-// Generate voucher code
+// Generate a random voucher code
 function generateVoucherCode() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let code = '';
@@ -11,29 +11,42 @@ function generateVoucherCode() {
   return code;
 }
 
-// Get all vouchers
+// Get all vouchers with assignment statistics
 export const getAllVouchers = query({
   args: {},
   handler: async (ctx) => {
     const vouchers = await ctx.db.query("vouchers").collect();
-
-    // Get creator information
-    const vouchersWithCreators = await Promise.all(
+    
+    // Enrich vouchers with user information and assignment statistics
+    const enrichedVouchers = await Promise.all(
       vouchers.map(async (voucher) => {
-        const creator = await ctx.db.get(voucher.created_by);
-        const redeemer = voucher.redeemed_by ? await ctx.db.get(voucher.redeemed_by) : undefined;
-
+        const createdBy = voucher.created_by ? await ctx.db.get(voucher.created_by) : null;
+        
+        // Get assignment statistics
+        const assignments = await ctx.db
+          .query("user_vouchers")
+          .withIndex("by_voucher", (q) => q.eq("voucher_id", voucher._id))
+          .collect();
+        
+        const assignedCount = assignments.length;
+        const redeemedCount = assignments.filter(a => a.status === "redeemed").length;
+        
         return {
           ...voucher,
-          created_by_name: creator?.username || 'Unknown',
-          redeemed_by_name: redeemer?.username || undefined,
-          is_expired: voucher.expires_at < Date.now(),
-          is_active: !voucher.redeemed && voucher.expires_at > Date.now(),
+          id: voucher._id,
+          created_by_username: createdBy?.username || 'Unknown',
+          assignedCount,
+          redeemedCount,
+          availableCount: voucher.max_uses - assignedCount,
+          isExpired: voucher.expires_at < Date.now(),
+          isFullyAssigned: assignedCount >= voucher.max_uses,
+          formattedValue: `₱${parseFloat(voucher.value.toString()).toFixed(2)}`,
+          formattedExpiresAt: new Date(voucher.expires_at).toLocaleDateString(),
         };
       })
     );
-
-    return vouchersWithCreators.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    
+    return enrichedVouchers;
   },
 });
 
@@ -42,17 +55,29 @@ export const getVoucherById = query({
   args: { id: v.id("vouchers") },
   handler: async (ctx, args) => {
     const voucher = await ctx.db.get(args.id);
-    if (!voucher) return undefined;
+    if (!voucher) {
+      return null;
+    }
 
-    const creator = await ctx.db.get(voucher.created_by);
-    const redeemer = voucher.redeemed_by ? await ctx.db.get(voucher.redeemed_by) : undefined;
+    const createdBy = await ctx.db.get(voucher.created_by);
+    
+    // Get assignment statistics
+    const assignments = await ctx.db
+      .query("user_vouchers")
+      .withIndex("by_voucher", (q) => q.eq("voucher_id", voucher._id))
+      .collect();
+    
+    const assignedCount = assignments.length;
+    const redeemedCount = assignments.filter(a => a.status === "redeemed").length;
 
     return {
       ...voucher,
-      created_by_name: creator?.username || 'Unknown',
-      redeemed_by_name: redeemer?.username || undefined,
-      is_expired: voucher.expires_at < Date.now(),
-      is_active: !voucher.redeemed && voucher.expires_at > Date.now(),
+      created_by_username: createdBy?.username || 'Unknown',
+      assignedCount,
+      redeemedCount,
+      availableCount: voucher.max_uses - assignedCount,
+      isExpired: voucher.expires_at < Date.now(),
+      isFullyAssigned: assignedCount >= voucher.max_uses,
     };
   },
 });
@@ -66,82 +91,91 @@ export const getVoucherByCode = query({
       .withIndex("by_code", (q) => q.eq("code", args.code.toUpperCase()))
       .first();
 
-    if (!voucher) return undefined;
+    if (!voucher) {
+      return null;
+    }
 
-    const creator = await ctx.db.get(voucher.created_by);
-    const redeemer = voucher.redeemed_by ? await ctx.db.get(voucher.redeemed_by) : undefined;
+    const createdBy = await ctx.db.get(voucher.created_by);
+    
+    // Get assignment statistics
+    const assignments = await ctx.db
+      .query("user_vouchers")
+      .withIndex("by_voucher", (q) => q.eq("voucher_id", voucher._id))
+      .collect();
+    
+    const assignedCount = assignments.length;
+    const redeemedCount = assignments.filter(a => a.status === "redeemed").length;
 
     return {
       ...voucher,
-      created_by_name: creator?.username || 'Unknown',
-      redeemed_by_name: redeemer?.username || undefined,
-      is_expired: voucher.expires_at < Date.now(),
-      is_active: !voucher.redeemed && voucher.expires_at > Date.now(),
+      created_by_username: createdBy?.username || 'Unknown',
+      assignedCount,
+      redeemedCount,
+      availableCount: voucher.max_uses - assignedCount,
+      isExpired: voucher.expires_at < Date.now(),
+      isFullyAssigned: assignedCount >= voucher.max_uses,
     };
   },
 });
 
-// Get active vouchers
+// Get active vouchers (not expired and have available assignments)
 export const getActiveVouchers = query({
   args: {},
   handler: async (ctx) => {
+    const vouchers = await ctx.db.query("vouchers").collect();
     const now = Date.now();
-    const vouchers = await ctx.db
-      .query("vouchers")
-      .filter((q) => q.and(
-        q.eq(q.field("redeemed"), false),
-        q.gt(q.field("expires_at"), now)
-      ))
-      .collect();
-
-    // Get creator information
-    const vouchersWithCreators = await Promise.all(
-      vouchers.map(async (voucher) => {
-        const creator = await ctx.db.get(voucher.created_by);
-        return {
-          ...voucher,
-          created_by_name: creator?.username || 'Unknown',
-        };
-      })
-    );
-
-    return vouchersWithCreators;
+    
+    const activeVouchers: any[] = [];
+    
+    for (const voucher of vouchers) {
+      if (voucher.expires_at > now) {
+        // Get assignment count
+        const assignments = await ctx.db
+          .query("user_vouchers")
+          .withIndex("by_voucher", (q) => q.eq("voucher_id", voucher._id))
+          .collect();
+        
+        if (assignments.length < voucher.max_uses) {
+          activeVouchers.push({
+            ...voucher,
+            assignedCount: assignments.length,
+            availableCount: voucher.max_uses - assignments.length,
+          });
+        }
+      }
+    }
+    
+    return activeVouchers;
   },
 });
 
-// Get vouchers by user
+// Get vouchers assigned to a specific user
 export const getVouchersByUser = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
-    const vouchers = await ctx.db
-      .query("vouchers")
-      .filter((q) => q.or(
-        q.eq(q.field("created_by"), args.userId),
-        q.eq(q.field("redeemed_by"), args.userId)
-      ))
+    const assignments = await ctx.db
+      .query("user_vouchers")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
       .collect();
-
-    // Get additional information
-    const vouchersWithData = await Promise.all(
-      vouchers.map(async (voucher) => {
-        const creator = await ctx.db.get(voucher.created_by);
-        const redeemer = voucher.redeemed_by ? await ctx.db.get(voucher.redeemed_by) : undefined;
-
+    
+    const userVouchers = await Promise.all(
+      assignments.map(async (assignment) => {
+        const voucher = await ctx.db.get(assignment.voucher_id);
+        if (!voucher) return null;
+        
         return {
           ...voucher,
-          created_by_name: creator?.username || 'Unknown',
-          redeemed_by_name: redeemer?.username || undefined,
-          is_expired: voucher.expires_at < Date.now(),
-          is_active: !voucher.redeemed && voucher.expires_at > Date.now(),
+          assignment,
+          isExpired: voucher.expires_at < Date.now(),
         };
       })
     );
-
-    return vouchersWithData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    
+    return userVouchers.filter(v => v !== null);
   },
 });
 
-// Create new voucher
+// Create voucher with auto-generated code
 export const createVoucher = mutation({
   args: {
     value: v.number(),
@@ -159,12 +193,9 @@ export const createVoucher = mutation({
       value: args.value,
       points_required: args.points_required,
       max_uses: args.max_uses,
-      redeemed: false,
       expires_at: args.expires_at,
       description: args.description || undefined,
       created_by: args.created_by,
-      redeemed_by: undefined,
-      redeemed_at: undefined,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -200,12 +231,9 @@ export const createVoucherWithCode = mutation({
       value: args.value,
       points_required: args.points_required,
       max_uses: args.max_uses,
-      redeemed: false,
       expires_at: args.expires_at,
       description: args.description || undefined,
       created_by: args.created_by,
-      redeemed_by: undefined,
-      redeemed_at: undefined,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -214,11 +242,63 @@ export const createVoucherWithCode = mutation({
   },
 });
 
-// Redeem voucher
+// Assign voucher to a user
+export const assignVoucher = mutation({
+  args: {
+    voucher_id: v.id("vouchers"),
+    user_id: v.id("users"),
+    assigned_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const voucher = await ctx.db.get(args.voucher_id);
+    if (!voucher) {
+      throw new Error("Voucher not found");
+    }
+
+    if (voucher.expires_at < Date.now()) {
+      throw new Error("Voucher has expired");
+    }
+
+    // Check if voucher is already assigned to this user
+    const existingAssignment = await ctx.db
+      .query("user_vouchers")
+      .withIndex("by_voucher_user", (q) => 
+        q.eq("voucher_id", args.voucher_id).eq("user_id", args.user_id)
+      )
+      .first();
+
+    if (existingAssignment) {
+      throw new Error("Voucher already assigned to this user");
+    }
+
+    // Check if voucher has reached max uses
+    const assignments = await ctx.db
+      .query("user_vouchers")
+      .withIndex("by_voucher", (q) => q.eq("voucher_id", args.voucher_id))
+      .collect();
+
+    if (assignments.length >= voucher.max_uses) {
+      throw new Error("Voucher has reached maximum assignments");
+    }
+
+    // Create assignment
+    const assignmentId = await ctx.db.insert("user_vouchers", {
+      voucher_id: args.voucher_id,
+      user_id: args.user_id,
+      status: "assigned",
+      assigned_at: Date.now(),
+      assigned_by: args.assigned_by,
+    });
+
+    return assignmentId;
+  },
+});
+
+// Redeem an assigned voucher
 export const redeemVoucher = mutation({
   args: {
     code: v.string(),
-    redeemed_by: v.id("users"),
+    user_id: v.id("users"),
   },
   handler: async (ctx, args) => {
     const voucher = await ctx.db
@@ -230,23 +310,33 @@ export const redeemVoucher = mutation({
       throw new Error("Voucher not found");
     }
 
-    if (voucher.redeemed) {
-      throw new Error("Voucher has already been redeemed");
-    }
-
     if (voucher.expires_at < Date.now()) {
       throw new Error("Voucher has expired");
     }
 
-    // Mark voucher as redeemed
-    await ctx.db.patch(voucher._id, {
-      redeemed: true,
-      redeemed_by: args.redeemed_by,
+    // Find the user's assignment for this voucher
+    const assignment = await ctx.db
+      .query("user_vouchers")
+      .withIndex("by_voucher_user", (q) => 
+        q.eq("voucher_id", voucher._id).eq("user_id", args.user_id)
+      )
+      .first();
+
+    if (!assignment) {
+      throw new Error("Voucher not assigned to this user");
+    }
+
+    if (assignment.status === "redeemed") {
+      throw new Error("Voucher has already been redeemed");
+    }
+
+    // Mark assignment as redeemed
+    await ctx.db.patch(assignment._id, {
+      status: "redeemed",
       redeemed_at: Date.now(),
-      updatedAt: Date.now(),
     });
 
-    return voucher;
+    return { voucher, assignment };
   },
 });
 
@@ -262,13 +352,10 @@ export const updateVoucher = mutation({
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
-
     await ctx.db.patch(id, {
       ...updates,
       updatedAt: Date.now(),
     });
-
-    return id;
   },
 });
 
@@ -276,12 +363,22 @@ export const updateVoucher = mutation({
 export const deleteVoucher = mutation({
   args: { id: v.id("vouchers") },
   handler: async (ctx, args) => {
+    // Delete all assignments first
+    const assignments = await ctx.db
+      .query("user_vouchers")
+      .withIndex("by_voucher", (q) => q.eq("voucher_id", args.id))
+      .collect();
+    
+    for (const assignment of assignments) {
+      await ctx.db.delete(assignment._id);
+    }
+    
+    // Delete the voucher
     await ctx.db.delete(args.id);
-    return { success: true };
   },
 });
 
-// Validate voucher
+// Validate voucher (query)
 export const validateVoucher = query({
   args: { code: v.string() },
   handler: async (ctx, args) => {
@@ -291,27 +388,171 @@ export const validateVoucher = query({
       .first();
 
     if (!voucher) {
-      return { valid: false, error: "Voucher not found" };
-    }
-
-    if (voucher.redeemed) {
-      return { valid: false, error: "Voucher has already been redeemed" };
+      return { valid: false, message: "Voucher not found" };
     }
 
     if (voucher.expires_at < Date.now()) {
-      return { valid: false, error: "Voucher has expired" };
+      return { valid: false, message: "Voucher has expired" };
     }
 
-    return {
-      valid: true,
-      voucher: {
-        id: voucher._id,
-        code: voucher.code,
-        value: voucher.value,
-        points_required: voucher.points_required,
-        description: voucher.description,
-        expires_at: voucher.expires_at,
+    // Check if voucher has available assignments
+    const assignments = await ctx.db
+      .query("user_vouchers")
+      .withIndex("by_voucher", (q) => q.eq("voucher_id", voucher._id))
+      .collect();
+
+    if (assignments.length >= voucher.max_uses) {
+      return { valid: false, message: "Voucher has reached maximum assignments" };
+    }
+
+    return { valid: true, voucher };
+  },
+});
+
+// Claim voucher mutation (for customers claiming vouchers via code)
+export const claimVoucher = mutation({
+  args: {
+    code: v.string(),
+    user_id: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const voucher = await ctx.db
+      .query("vouchers")
+      .withIndex("by_code", (q) => q.eq("code", args.code.toUpperCase()))
+      .first();
+
+    if (!voucher) {
+      throw new Error("Invalid voucher code");
+    }
+
+    if (voucher.expires_at < Date.now()) {
+      throw new Error("Voucher has expired");
+    }
+
+    // Check if voucher is already assigned to this user
+    const existingAssignment = await ctx.db
+      .query("user_vouchers")
+      .withIndex("by_voucher_user", (q) => 
+        q.eq("voucher_id", voucher._id).eq("user_id", args.user_id)
+      )
+      .first();
+
+    if (existingAssignment) {
+      throw new Error("Voucher already assigned to this user");
+    }
+
+    // Check if voucher has reached max uses
+    const assignments = await ctx.db
+      .query("user_vouchers")
+      .withIndex("by_voucher", (q) => q.eq("voucher_id", voucher._id))
+      .collect();
+
+    if (assignments.length >= voucher.max_uses) {
+      throw new Error("Voucher has reached maximum assignments");
+    }
+
+    // Create assignment (claim the voucher)
+    const assignmentId = await ctx.db.insert("user_vouchers", {
+      voucher_id: voucher._id,
+      user_id: args.user_id,
+      status: "assigned",
+      assigned_at: Date.now(),
+      assigned_by: args.user_id, // Self-assigned when claiming
+    });
+
+    return { voucher, assignmentId };
+  },
+});
+
+// Get users assigned to a specific voucher
+export const getVoucherAssignedUsers = query({
+  args: { voucherId: v.id("vouchers") },
+  handler: async (ctx, args) => {
+    const voucher = await ctx.db.get(args.voucherId);
+    if (!voucher) {
+      return [];
+    }
+
+    // Get all assignments for this voucher
+    const assignments = await ctx.db
+      .query("user_vouchers")
+      .withIndex("by_voucher", (q) => q.eq("voucher_id", args.voucherId))
+      .collect();
+
+    const assignedUsers: any[] = [];
+    for (const assignment of assignments) {
+      const user = await ctx.db.get(assignment.user_id);
+      if (user) {
+        assignedUsers.push({
+          _id: user._id,
+          username: user.username,
+          email: user.email,
+          nickname: user.nickname,
+          role: user.role,
+          assignment_status: assignment.status,
+          assigned_at: assignment.assigned_at,
+          redeemed_at: assignment.redeemed_at,
+        });
       }
-    };
+    }
+
+    return assignedUsers;
+  },
+});
+
+// Assign voucher by code (for SendVoucherModal)
+export const assignVoucherByCode = mutation({
+  args: {
+    code: v.string(),
+    user_id: v.id("users"),
+    assigned_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const voucher = await ctx.db
+      .query("vouchers")
+      .withIndex("by_code", (q) => q.eq("code", args.code.toUpperCase()))
+      .first();
+
+    if (!voucher) {
+      throw new Error("Voucher not found");
+    }
+
+    // Call assignVoucher directly
+    if (voucher.expires_at < Date.now()) {
+      throw new Error("Voucher has expired");
+    }
+
+    // Check if voucher is already assigned to this user
+    const existingAssignment = await ctx.db
+      .query("user_vouchers")
+      .withIndex("by_voucher_user", (q) => 
+        q.eq("voucher_id", voucher._id).eq("user_id", args.user_id)
+      )
+      .first();
+
+    if (existingAssignment) {
+      throw new Error("Voucher already assigned to this user");
+    }
+
+    // Check if voucher has reached max uses
+    const assignments = await ctx.db
+      .query("user_vouchers")
+      .withIndex("by_voucher", (q) => q.eq("voucher_id", voucher._id))
+      .collect();
+
+    if (assignments.length >= voucher.max_uses) {
+      throw new Error("Voucher has reached maximum assignments");
+    }
+
+    // Create assignment
+    const assignmentId = await ctx.db.insert("user_vouchers", {
+      voucher_id: voucher._id,
+      user_id: args.user_id,
+      status: "assigned",
+      assigned_at: Date.now(),
+      assigned_by: args.assigned_by,
+    });
+
+    return assignmentId;
   },
 });

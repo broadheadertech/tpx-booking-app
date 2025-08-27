@@ -20,15 +20,18 @@ const MyBookings = ({ onBack }) => {
   const [showQRCode, setShowQRCode] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(null);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Convex queries - only call when user exists
   const bookings = user?.id ? useQuery(api.services.bookings.getBookingsByCustomer, { customerId: user.id }) : undefined;
   const services = useQuery(api.services.services.getAllServices);
   const barbers = useQuery(api.services.barbers.getAllBarbers);
 
+  // Loading state - true when user exists but data not loaded yet
+  const loading = user?.id && (bookings === undefined || services === undefined || barbers === undefined);
+
   // Convex mutations
   const updateBookingStatus = useMutation(api.services.bookings.updateBooking);
-  const deleteBooking = useMutation(api.services.bookings.deleteBooking);
 
   const handleCancelBooking = async (bookingId) => {
     try {
@@ -123,7 +126,7 @@ const MyBookings = ({ onBack }) => {
             <div className="text-right">
               <p className="text-sm font-bold text-white">My Bookings</p>
               <p className="text-xs" style={{ color: "#F68B24" }}>
-                {bookings.length} total
+                {bookings?.length || 0} total
               </p>
             </div>
           </div>

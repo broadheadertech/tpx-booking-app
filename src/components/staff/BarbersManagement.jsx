@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import { User, Star, Clock, Calendar, DollarSign, Search, Filter, UserCheck, UserX, Phone, Mail, Scissors, Plus, Edit, Trash2, RotateCcw, Save, X, Eye, BookOpen } from 'lucide-react'
+import { User, Star, Clock, Calendar, DollarSign, Search, Filter, UserCheck, UserX, Phone, Mail, Scissors, Plus, Edit, Trash2, RotateCcw, Eye, BookOpen } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import CreateBarberModal from './CreateBarberModal'
 
 const BarbersManagement = ({ barbers = [], onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -9,43 +10,25 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
   const [sortBy, setSortBy] = useState('name')
   const [selectedBarber, setSelectedBarber] = useState(null)
   const [initialTab, setInitialTab] = useState('view')
-  const [isCreating, setIsCreating] = useState(false)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingBarber, setEditingBarber] = useState(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
-  const [formData, setFormData] = useState({
-    full_name: '',
-    is_active: true,
-    services: []
-  })
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [services, setServices] = useState([])
-  const [loadingServices, setLoadingServices] = useState(false)
   const [showBookingsModal, setShowBookingsModal] = useState(false)
   const [selectedBarberBookings, setSelectedBarberBookings] = useState([])
   const [loadingBookings, setLoadingBookings] = useState(false)
   const [bookingsFilter, setBookingsFilter] = useState('all')
   const [bookingsSearchTerm, setBookingsSearchTerm] = useState('')
 
-  // Load services for form only when creating new barber
-  useEffect(() => {
-    const loadServices = async () => {
-      if (isCreating) {
-        setLoadingServices(true)
-        try {
-          const servicesData = await servicesService.getAllServices()
-          setServices(servicesData)
-        } catch (error) {
-          console.error('Error loading services:', error)
-          setError('Failed to load services')
-        } finally {
-          setLoadingServices(false)
-        }
-      }
-    }
-    
-    loadServices()
-  }, [isCreating])
+  // Convex queries
+  const services = useQuery(api.services.services.getAllServices)
+  const allBookings = useQuery(api.services.bookings.getAllBookings)
+
+  // Convex mutations
+  const createBarber = useMutation(api.services.barbers.createBarber)
+  const deleteBarber = useMutation(api.services.barbers.deleteBarber)
+
+
 
   const getStatusConfig = (status) => {
     switch (status) {
@@ -116,65 +99,33 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
     }).format(amount)
   }
 
-  const resetForm = () => {
-    setFormData({
-      full_name: '',
-      is_active: true,
-      services: []
-    })
-    setError('')
-  }
-
   const handleCreate = () => {
-    resetForm()
-    setIsCreating(true)
     setEditingBarber(null)
+    setShowCreateModal(true)
   }
 
   const handleEdit = (barber) => {
-    // Open the modal with the selected barber in edit mode
-    setInitialTab('edit')
-    setSelectedBarber(barber)
+    setEditingBarber(barber)
+    setShowCreateModal(true)
   }
 
-  const handleCancel = () => {
-    setIsCreating(false)
+  const handleCloseModal = () => {
+    setShowCreateModal(false)
     setEditingBarber(null)
-    resetForm()
   }
 
-  const handleSave = async () => {
-    if (!formData.full_name.trim()) {
-      setError('Full name is required')
-      return
-    }
-
-    setLoading(true)
-    setError('')
-
-    try {
-      const barberData = {
-        user: 1, // For now, using a default user ID - this should be the authenticated user
-        full_name: formData.full_name.trim(),
-        is_active: formData.is_active,
-        services: formData.services
-      }
-
-      await barbersService.createBarber(barberData)
-
-      handleCancel()
-      onRefresh()
-    } catch (err) {
-      setError(err.message || 'Failed to save barber')
-    } finally {
-      setLoading(false)
-    }
+  const handleModalSubmit = () => {
+    setShowCreateModal(false)
+    setEditingBarber(null)
+    onRefresh()
   }
+
+
 
   const handleDelete = async (barber) => {
     setLoading(true)
     try {
-      await barbersService.deleteBarber(barber.id)
+      await deleteBarber({ id: barber.id })
       setShowDeleteConfirm(null)
       onRefresh()
     } catch (err) {
@@ -184,7 +135,7 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
     }
   }
 
-  const handleViewBookings = async (barber) => {
+  const handleViewBookings = (barber) => {
     console.log('View bookings for barber:', barber)
     // Close the detail modal first if it's open
     if (selectedBarber) {
@@ -193,12 +144,10 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
     
     setLoadingBookings(true)
     setShowBookingsModal(true)
-    try {
-      const bookings = await bookingsService.getAllBookings()
-      console.log('All bookings received:', bookings)
-      
+    
+    if (allBookings) {
       // Filter bookings for the selected barber using proper field matching
-      const barberBookings = bookings.filter(booking => {
+      const barberBookings = allBookings.filter(booking => {
         const matches = (
           booking.barber === barber.id ||
           booking.barber_id === barber.id ||
@@ -215,127 +164,14 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
       
       console.log('Filtered barber bookings:', barberBookings)
       setSelectedBarberBookings(barberBookings)
-    } catch (err) {
-      console.error('Error loading bookings:', err)
-      setError(err.message || 'Failed to load bookings')
+    } else {
       setSelectedBarberBookings([])
-    } finally {
-      setLoadingBookings(false)
     }
+    
+    setLoadingBookings(false)
   }
 
-  const BarberForm = () => (
-    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">
-          Create New Barber
-        </h3>
-        <button
-          onClick={handleCancel}
-          className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-        >
-          <X className="h-5 w-5" />
-        </button>
-      </div>
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-600">{error}</p>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
-          <input
-            type="text"
-            value={formData.full_name}
-            onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
-            placeholder="Enter barber's full name"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Services</label>
-          <div className="max-h-32 overflow-y-auto border border-gray-300 rounded-lg p-2">
-            {loadingServices ? (
-              <p className="text-sm text-gray-500 p-2">Loading services...</p>
-            ) : services.length > 0 ? (
-              services.map(service => (
-                <label key={service.id} className="flex items-center py-1">
-                  <input
-                    type="checkbox"
-                    checked={formData.services.includes(service.id)}
-                    onChange={(e) => {
-                      const serviceId = service.id
-                      setFormData(prev => ({
-                        ...prev,
-                        services: e.target.checked 
-                          ? [...prev.services, serviceId]
-                          : prev.services.filter(id => id !== serviceId)
-                      }))
-                    }}
-                    className="h-4 w-4 text-orange-600 focus:ring-orange-500 rounded"
-                  />
-                  <span className="ml-2 text-sm text-gray-700">
-                    {service.name} - ₱{parseFloat(service.price).toFixed(2)}
-                  </span>
-                </label>
-              ))
-            ) : (
-              <p className="text-sm text-gray-500 p-2">No services available</p>
-            )}
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-          <div className="flex items-center space-x-4">
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="is_active"
-                checked={formData.is_active === true}
-                onChange={() => setFormData(prev => ({ ...prev, is_active: true }))}
-                className="h-4 w-4 text-orange-600 focus:ring-orange-500"
-              />
-              <span className="ml-2 text-sm text-gray-700">Active</span>
-            </label>
-            <label className="flex items-center">
-              <input
-                type="radio"
-                name="is_active"
-                checked={formData.is_active === false}
-                onChange={() => setFormData(prev => ({ ...prev, is_active: false }))}
-                className="h-4 w-4 text-orange-600 focus:ring-orange-500"
-              />
-              <span className="ml-2 text-sm text-gray-700">Inactive</span>
-            </label>
-          </div>
-        </div>
-
-      </div>
-
-      <div className="flex justify-end space-x-3">
-        <button
-          onClick={handleCancel}
-          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <Save className="h-4 w-4" />
-          <span>{loading ? 'Saving...' : 'Save Barber'}</span>
-        </button>
-      </div>
-    </div>
-  )
 
   const BarberDetailModal = ({ barber, onClose }) => {
     if (!barber) return null
@@ -587,11 +423,11 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
                   <div>
                     <h3 className="font-semibold text-gray-900 mb-2">Specialties</h3>
                     <div className="flex flex-wrap gap-2">
-                      {barber.specialties.map((specialty, index) => (
+                      {barber.specialties?.map((specialty, index) => (
                         <span key={index} className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm">
                           {specialty}
                         </span>
-                      ))}
+                      )) || []}
                     </div>
                   </div>
 
@@ -992,8 +828,13 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
         </div>
       </div>
 
-      {/* Barber Form */}
-      {isCreating && <BarberForm />}
+      {/* Create/Edit Barber Modal */}
+      <CreateBarberModal
+        isOpen={showCreateModal}
+        onClose={handleCloseModal}
+        onSubmit={handleModalSubmit}
+        editingBarber={editingBarber}
+      />
 
       {/* Barbers Table */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">

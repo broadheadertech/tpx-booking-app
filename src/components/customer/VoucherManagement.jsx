@@ -26,9 +26,12 @@ const VoucherManagement = ({ onBack }) => {
 
   // Convex queries - only call when user exists
   const vouchers = user?.id ? useQuery(api.services.vouchers.getVouchersByUser, { userId: user.id }) : undefined
+  const loading = vouchers === undefined && user?.id // Loading when user exists but vouchers not loaded yet
+  const error = null // No global error state needed for vouchers - handled individually
 
-  // Convex mutations
-  const validateVoucher = useMutation(api.services.vouchers.validateVoucher)
+  // Convex queries and mutations
+  const validateVoucherQuery = useQuery
+  const claimVoucher = useMutation(api.services.vouchers.claimVoucher)
   const redeemVoucher = useMutation(api.services.vouchers.redeemVoucher)
 
   // Convex handles data loading automatically
@@ -73,12 +76,12 @@ const VoucherManagement = ({ onBack }) => {
   }
 
   const formatValue = (voucher) => {
-    return voucherService.formatVoucherValue(voucher.value)
+    return `₱${parseFloat(voucher.value).toFixed(2)}`
   }
 
   const getVoucherStatus = (voucher) => {
-    // Based on the actual API response: {code, value, status, assigned_at, redeemed_at, expired}
-    if (voucher.expired) return 'expired'
+    // Based on the actual API response: {code, value, status, assigned_at, redeemed_at, isExpired}
+    if (voucher.isExpired) return 'expired'
     if (voucher.status === 'assigned') return 'claimed' // Show "claimed" for assigned status
     if (voucher.status === 'redeemed') return 'redeemed'
     return voucher.status || 'unknown'
@@ -108,11 +111,6 @@ const VoucherManagement = ({ onBack }) => {
     })
   }
 
-  const handleVoucherClick = (voucher) => {
-    // Allow all vouchers to show QR codes, regardless of status
-    setSelectedVoucher(voucher)
-    setShowQRCode(true)
-  }
 
   const handleClaimVoucher = async (voucherCode, voucherValue = null) => {
     try {
@@ -205,24 +203,6 @@ const VoucherManagement = ({ onBack }) => {
     }
   }
 
-  const handleClaimByCode = async () => {
-    if (!claimCode.trim()) {
-      setNotification({
-        type: 'warning',
-        title: 'Missing Code',
-        message: 'Please enter a voucher code'
-      })
-      return
-    }
-    
-    try {
-      await handleClaimVoucher(claimCode.trim())
-      setClaimCode('')
-      setShowClaimModal(false)
-    } catch (error) {
-      // Error is already handled in handleClaimVoucher
-    }
-  }
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0]
@@ -552,7 +532,7 @@ const VoucherManagement = ({ onBack }) => {
               <span className="text-xs">Claim New</span>
             </button>
             <button
-              onClick={loadVouchers}
+              onClick={() => window.location.reload()}
               disabled={loading}
               className="px-3 py-2.5 bg-gray-600 text-white font-bold rounded-lg transition-all duration-200 hover:bg-gray-700 shadow-lg flex items-center justify-center disabled:opacity-50 touch-manipulation"
             >
@@ -580,7 +560,7 @@ const VoucherManagement = ({ onBack }) => {
             <p className="text-sm text-red-600 mb-4">{error}</p>
             <div className="space-y-2">
               <button 
-                onClick={loadVouchers}
+                onClick={() => window.location.reload()}
                 className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors mr-2"
               >
                 Try Again
@@ -649,10 +629,10 @@ const VoucherManagement = ({ onBack }) => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${voucher.expired || isExpiringSoon(voucher.expires_at) ? 'bg-red-500' : 'bg-blue-500'}`}></div>
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${voucher.isExpired || isExpiringSoon(voucher.expires_at) ? 'bg-red-500' : 'bg-blue-500'}`}></div>
                       <div className="min-w-0">
                         <p className="text-[10px]" style={{color: '#8B8B8B'}}>Expires</p>
-                        <p className={`text-xs font-bold truncate ${voucher.expired || isExpiringSoon(voucher.expires_at) ? 'text-red-600' : 'text-blue-600'}`}>
+                        <p className={`text-xs font-bold truncate ${voucher.isExpired || isExpiringSoon(voucher.expires_at) ? 'text-red-600' : 'text-blue-600'}`}>
                           {formatExpiryDate(voucher.expires_at)}
                         </p>
                       </div>
@@ -729,10 +709,10 @@ const VoucherManagement = ({ onBack }) => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${voucher.expired || isExpiringSoon(voucher.expires_at) ? 'bg-red-500' : 'bg-blue-500'}`}></div>
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${voucher.isExpired || isExpiringSoon(voucher.expires_at) ? 'bg-red-500' : 'bg-blue-500'}`}></div>
                       <div className="min-w-0">
                         <p className="text-[10px]" style={{color: '#8B8B8B'}}>Expired</p>
-                        <p className={`text-xs font-bold truncate ${voucher.expired || isExpiringSoon(voucher.expires_at) ? 'text-red-600' : 'text-blue-600'}`}>
+                        <p className={`text-xs font-bold truncate ${voucher.isExpired || isExpiringSoon(voucher.expires_at) ? 'text-red-600' : 'text-blue-600'}`}>
                           {formatExpiryDate(voucher.expires_at)}
                         </p>
                       </div>
