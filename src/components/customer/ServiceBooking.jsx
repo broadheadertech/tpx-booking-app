@@ -38,6 +38,7 @@ const ServiceBooking = ({ onBack }) => {
   const [showPaymentMethods, setShowPaymentMethods] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
+  const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
   const qrRef = useRef(null);
 
   // Convex queries
@@ -47,6 +48,20 @@ const ServiceBooking = ({ onBack }) => {
 
   // Convex mutations
   const createBooking = useMutation(api.services.bookings.createBooking)
+  
+  // Query to get booking details after creation
+  const getBookingById = useQuery(
+    api.services.bookings.getBookingById, 
+    createdBooking?._id ? { id: createdBooking._id } : "skip"
+  )
+  
+  // Query to get existing bookings for selected barber and date
+  const existingBookings = useQuery(
+    api.services.bookings.getBookingsByBarberAndDate,
+    selectedStaff && selectedDate 
+      ? { barberId: selectedStaff._id, date: selectedDate }
+      : "skip"
+  )
   const redeemVoucher = useMutation(api.services.vouchers.redeemVoucher)
 
   // Reset QR code loading state when step changes
@@ -56,39 +71,30 @@ const ServiceBooking = ({ onBack }) => {
     }
   }, [step]);
 
-  // Generate QR code when we reach step 4 and have booking data
+  // Generate QR code when we reach step 4 and have actual booking data
   useEffect(() => {
-    if (step === 4 && createdBooking?.id) {
+    if (step === 4 && createdBooking?._id && getBookingById?.booking_code) {
       console.log(
         "Step 4 reached with booking ID:",
-        createdBooking.id,
-        "booking code:",
-        createdBooking.booking_code
+        createdBooking._id,
+        "actual booking code:",
+        getBookingById.booking_code
       );
 
       const generateQRCode = (retryCount = 0) => {
         if (qrRef.current) {
-          console.log("Canvas found, generating QR code");
+          console.log("Canvas found, generating QR code with actual booking data");
 
-          // Generate QR code data matching MyBookings format exactly
-          const qrData = JSON.stringify({
-            bookingId: createdBooking.id,
-            bookingCode:
-              createdBooking.booking_code || `BK-${createdBooking.id}`,
-            service: selectedService?.name,
-            time: createdBooking.time
-              ? new Date(createdBooking.time).toLocaleTimeString("en-PH", {
-                  hour: "numeric",
-                  minute: "2-digit",
-                  hour12: true,
-                })
-              : selectedTime,
-            barber:
-              selectedStaff?.full_name || selectedStaff?.name || "Any Barber",
-            date: createdBooking.date,
-            barbershop: "TPX Barbershop",
-            voucher_code: createdBooking.voucher_code,
-            total_amount: createdBooking.total_amount,
+          // Use actual booking data from database
+          const bookingData = getBookingById;
+          
+          // Generate QR code data - simplified to contain only booking code
+          const qrData = bookingData.booking_code;
+
+          console.log("Generating QR with data:", qrData);
+          console.log("QR Scanner expects format with bookingId and bookingCode fields:", {
+            bookingId: bookingData._id,
+            bookingCode: bookingData.booking_code
           });
 
           // Generate QR code as canvas
@@ -108,7 +114,7 @@ const ServiceBooking = ({ onBack }) => {
               if (error) {
                 console.error("QR Code generation error:", error);
               } else {
-                console.log("QR Code generated successfully");
+                console.log("QR Code generated successfully with booking code:", bookingData.booking_code);
               }
               setQrCodeLoading(false);
             }
@@ -131,10 +137,11 @@ const ServiceBooking = ({ onBack }) => {
     }
   }, [
     step,
-    createdBooking?.id,
-    createdBooking?.booking_code,
+    createdBooking?._id,
+    getBookingById?.booking_code, // Wait for actual booking code
     selectedService,
     selectedStaff,
+    selectedVoucher,
   ]);
 
 
@@ -150,6 +157,60 @@ const ServiceBooking = ({ onBack }) => {
       return isNotExpired && isNotRedeemed;
     });
   };
+
+  // Generate time slots for the selected date
+  const timeSlots = React.useMemo(() => {
+    if (!selectedDate || !selectedStaff) return [];
+    
+    const slots = [];
+    const startHour = 9; // 9 AM
+    const endHour = 18; // 6 PM
+    const currentDate = new Date();
+    const selectedDateObj = new Date(selectedDate);
+    const isToday = selectedDateObj.toDateString() === currentDate.toDateString();
+    const currentHour = currentDate.getHours();
+    const currentMinute = currentDate.getMinutes();
+    
+    // Get booked times for this barber on this date
+    const bookedTimes = existingBookings ? existingBookings
+      .filter(booking => booking.status !== 'cancelled')
+      .map(booking => booking.time.substring(0, 5)) // Remove seconds part
+      : [];
+    
+    for (let hour = startHour; hour < endHour; hour++) {
+      for (let minute of [0, 30]) {
+        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        const displayTime = hour === 12 ? `12:${minute.toString().padStart(2, '0')} PM` :
+                           hour > 12 ? `${hour - 12}:${minute.toString().padStart(2, '0')} PM` :
+                           `${hour}:${minute.toString().padStart(2, '0')} AM`;
+        
+        // Check availability
+        let available = true;
+        let reason = null;
+        
+        // Check if time slot is already booked
+        if (bookedTimes.includes(timeString)) {
+          available = false;
+          reason = 'booked';
+        }
+        
+        // Check if time slot is in the past (for today only)
+        if (isToday && (hour < currentHour || (hour === currentHour && minute <= currentMinute))) {
+          available = false;
+          reason = 'past';
+        }
+        
+        slots.push({
+          time: timeString,
+          displayTime: displayTime,
+          available: available,
+          reason: reason
+        });
+      }
+    }
+    
+    return slots;
+  }, [selectedDate, selectedStaff, existingBookings]);
 
   // Get available barbers for selected service
   const getAvailableBarbers = () => {
@@ -211,7 +272,7 @@ const ServiceBooking = ({ onBack }) => {
       const bookingData = {
         customer: user.id,
         service: selectedService._id,
-        barber: selectedStaff?.id || undefined,
+        barber: selectedStaff?._id || undefined,
         date: selectedDate,
         time: formattedTime,
         status: "booked",
@@ -221,10 +282,10 @@ const ServiceBooking = ({ onBack }) => {
       console.log("Creating booking with data:", bookingData);
       const bookingId = await createBooking(bookingData);
 
-      // For now, create a basic booking object since we can't use useQuery in async function
+      // Create initial booking object - actual data will be fetched via getBookingById
       const booking = {
         _id: bookingId,
-        booking_code: `BK-${bookingId}`,
+        booking_code: null, // Will be populated by getBookingById query
         service: selectedService,
         barber: selectedStaff,
         date: selectedDate,
@@ -287,8 +348,8 @@ const ServiceBooking = ({ onBack }) => {
 
   const handleStaffSelect = (barber) => {
     // console.log("Selected Barber:", barber);
-    console.log("Selected Barber ID:", barber.id);
-    sessionStorage.setItem('barberId', barber.id)
+    console.log("Selected Barber ID:", barber._id);
+    sessionStorage.setItem('barberId', barber._id)
     
     setSelectedStaff(barber); // keep full object
   };
@@ -345,7 +406,7 @@ const ServiceBooking = ({ onBack }) => {
   );
 
   const renderServiceSelection = () => {
-    if (loading) {
+    if (loading || !services) {
       return (
         <div className="text-center py-8 px-4 min-h-[200px] flex flex-col justify-center">
           <div
@@ -408,7 +469,7 @@ const ServiceBooking = ({ onBack }) => {
 
         {/* Mobile-Optimized Service Cards */}
         <div className="space-y-3">
-          {services.map((service) => (
+          {services && services.map((service) => (
             <button
               key={service._id}
               onClick={() => handleServiceSelect(service)}
@@ -580,9 +641,9 @@ const ServiceBooking = ({ onBack }) => {
                 className="w-full p-3 rounded-lg border-2 transition-all duration-200 text-left hover:shadow-sm"
                 style={{
                   borderColor:
-                    selectedStaff?.id === barber.id ? "#F68B24" : "#E0E0E0",
+                    selectedStaff?._id === barber._id ? "#F68B24" : "#E0E0E0",
                   backgroundColor:
-                    selectedStaff?.id === barber.id
+                    selectedStaff?._id === barber._id
                       ? "rgba(246, 139, 36, 0.1)"
                       : "white",
                 }}
@@ -592,13 +653,14 @@ const ServiceBooking = ({ onBack }) => {
                     className="w-10 h-10 rounded-full flex items-center justify-center"
                     style={{
                       backgroundColor:
-                        selectedStaff?.id === barber.id ? "#F68B24" : "#F5F5F5",
+                        selectedStaff?._id === barber._id ? "#F68B24" : "#F5F5F5",
                     }}
                   >
-                    <span className="text-lg">
-                      {selectedStaff?.id === barber.id ? "✓" : "👨‍💼"}
-                    </span>
-                    {barber.id}
+                    {selectedStaff?._id === barber._id ? (
+                      <CheckCircle className="w-5 h-5 text-white" />
+                    ) : (
+                      <User className="w-5 h-5" style={{ color: "#F68B24" }} />
+                    )}
                   </div>
                   <div className="flex-1">
                     <h4
@@ -843,16 +905,18 @@ const ServiceBooking = ({ onBack }) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {getAvailableBarbers().map((barber) => (
           <button
-            key={barber.id}
+            key={barber._id}
             onClick={() => handleStaffSelect(barber)}
             className={`group bg-white rounded-3xl p-6 shadow-xl border-2 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 ${
-              selectedStaff?.id === barber.id
+              selectedStaff?._id === barber._id
                 ? "border-[#FF8C42]"
                 : "border-[#F5F5F5] hover:border-[#FF8C42]"
             }`}
           >
             <div className="text-center">
-              <div className="text-6xl mb-4">👨‍💼</div>
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{backgroundColor: selectedStaff?._id === barber._id ? "#F68B24" : "#F5F5F5"}}>
+                <User className={`w-8 h-8 ${selectedStaff?._id === barber._id ? 'text-white' : 'text-gray-600'}`} />
+              </div>
               <h3 className="text-xl font-black text-[#1A1A1A] mb-2 group-hover:text-[#FF8C42] transition-colors duration-200">
                 {barber}
                 {barber.full_name}
@@ -977,11 +1041,11 @@ const ServiceBooking = ({ onBack }) => {
                       className="w-full p-2 rounded-lg border-2 transition-all duration-200 text-left"
                       style={{
                         borderColor:
-                          selectedVoucher?.id === voucher.id
+                          selectedVoucher?._id === voucher._id
                             ? "#F68B24"
                             : "#E0E0E0",
                         backgroundColor:
-                          selectedVoucher?.id === voucher.id
+                          selectedVoucher?._id === voucher._id
                             ? "rgba(246, 139, 36, 0.1)"
                             : "white",
                       }}
@@ -1001,7 +1065,7 @@ const ServiceBooking = ({ onBack }) => {
                             </p>
                           </div>
                         </div>
-                        {selectedVoucher?.id === voucher.id && (
+                        {selectedVoucher?._id === voucher._id && (
                           <div
                             className="w-4 h-4 rounded-full flex items-center justify-center"
                             style={{ backgroundColor: "#F68B24" }}
@@ -1308,12 +1372,12 @@ const ServiceBooking = ({ onBack }) => {
               style={{ borderColor: "#E0E0E0" }}
             >
               <div className="relative w-48 h-48">
-                {qrCodeLoading && (
+                {(qrCodeLoading || !getBookingById?.booking_code) && (
                   <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
                     <div className="text-center space-y-3">
                       <div className="animate-spin w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full mx-auto"></div>
                       <p className="text-sm" style={{ color: "#8B8B8B" }}>
-                        Generating QR Code...
+                        {!getBookingById?.booking_code ? "Loading booking details..." : "Generating QR Code..."}
                       </p>
                     </div>
                   </div>
@@ -1321,7 +1385,7 @@ const ServiceBooking = ({ onBack }) => {
                 <canvas
                   ref={qrRef}
                   className="rounded-xl w-full h-full"
-                  style={{ display: qrCodeLoading ? "none" : "block" }}
+                  style={{ display: (qrCodeLoading || !getBookingById?.booking_code) ? "none" : "block" }}
                 ></canvas>
               </div>
             </div>
@@ -1329,7 +1393,12 @@ const ServiceBooking = ({ onBack }) => {
 
           <div className="text-center space-y-2">
             <p className="text-lg font-black" style={{ color: "#36454F" }}>
-              Booking ID: {createdBooking?.booking_code || "Loading..."}
+              Booking Code: {getBookingById?.booking_code ? getBookingById.booking_code : 
+                <span className="inline-flex items-center space-x-2">
+                  <span>Generating...</span>
+                  <div className="animate-pulse w-2 h-2 bg-orange-500 rounded-full"></div>
+                </span>
+              }
             </p>
             <p className="text-sm" style={{ color: "#8B8B8B" }}>
               Show this QR code when you arrive

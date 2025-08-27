@@ -158,4 +158,49 @@ export default defineSchema({
     .index("by_date", ["date"])
     .index("by_status", ["status"])
     .index("by_category", ["category"]),
+
+  // Notifications table
+  notifications: defineTable({
+    title: v.string(),
+    message: v.string(),
+    type: v.union(
+      v.literal("booking"),
+      v.literal("payment"),
+      v.literal("system"),
+      v.literal("promotion"),
+      v.literal("reminder"),
+      v.literal("alert")
+    ),
+    priority: v.union(
+      v.literal("low"),
+      v.literal("medium"),
+      v.literal("high"),
+      v.literal("urgent")
+    ),
+    recipient_id: v.id("users"),
+    recipient_type: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin")),
+    sender_id: v.optional(v.id("users")),
+    is_read: v.boolean(),
+    is_archived: v.boolean(),
+    action_url: v.optional(v.string()),
+    action_label: v.optional(v.string()),
+    metadata: v.optional(v.object({
+      booking_id: v.optional(v.id("bookings")),
+      service_id: v.optional(v.id("services")),
+      barber_id: v.optional(v.id("barbers")),
+      event_id: v.optional(v.id("events")),
+      voucher_id: v.optional(v.id("vouchers")),
+    })),
+    expires_at: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_recipient", ["recipient_id"])
+    .index("by_recipient_type", ["recipient_type"])
+    .index("by_type", ["type"])
+    .index("by_priority", ["priority"])
+    .index("by_read_status", ["is_read"])
+    .index("by_created_at", ["createdAt"])
+    .index("by_recipient_read", ["recipient_id", "is_read"])
+    .index("by_recipient_archived", ["recipient_id", "is_archived"]),
 });

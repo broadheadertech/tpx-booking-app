@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
+import { api } from "../_generated/api";
 
 // Generate booking code
 function generateBookingCode() {
@@ -218,6 +219,18 @@ export const createBooking = mutation({
       updatedAt: Date.now(),
     });
 
+    // Create notification for booking creation
+    try {
+      await ctx.runMutation(api.services.notifications.createBookingNotification, {
+        bookingId,
+        type: "booking_created",
+        recipientId: args.customer,
+      });
+    } catch (error) {
+      console.error("Failed to create booking notification:", error);
+      // Don't fail the booking creation if notification fails
+    }
+
     return bookingId;
   },
 });
@@ -241,11 +254,48 @@ export const updateBooking = mutation({
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
+    
+    // Get the current booking to check for status changes
+    const currentBooking = await ctx.db.get(id);
+    if (!currentBooking) {
+      throw new Error("Booking not found");
+    }
 
     await ctx.db.patch(id, {
       ...updates,
       updatedAt: Date.now(),
     });
+
+    // Create notification if status changed
+    if (args.status && args.status !== currentBooking.status) {
+      try {
+        let notificationType;
+        switch (args.status) {
+          case "confirmed":
+            notificationType = "booking_confirmed";
+            break;
+          case "cancelled":
+            notificationType = "booking_cancelled";
+            break;
+          case "completed":
+            notificationType = "booking_completed";
+            break;
+          default:
+            notificationType = null;
+        }
+        
+        if (notificationType) {
+           await ctx.runMutation(api.services.notifications.createBookingNotification, {
+             bookingId: id,
+             type: notificationType,
+             recipientId: currentBooking.customer,
+           });
+         }
+       } catch (error) {
+         console.error("Failed to create booking status notification:", error);
+         // Don't fail the booking update if notification fails
+       }
+     }
 
     return id;
   },
@@ -334,6 +384,60 @@ export const getTodaysBookings = query({
     );
 
     return bookingsWithData;
+  },
+});
+
+// Get bookings by barber and date for availability checking
+export const getBookingsByBarberAndDate = query({
+  args: { 
+    barberId: v.id("barbers"),
+    date: v.string()
+  },
+  handler: async (ctx, args) => {
+    const bookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_barber", (q) => q.eq("barber", args.barberId))
+      .filter((q) => q.eq(q.field("date"), args.date))
+      .collect();
+
+    // Return just the times for availability checking
+    return bookings.map(booking => ({
+      _id: booking._id,
+      time: booking.time,
+      status: booking.status
+    }));
+  },
+});
+
+// Mutation to validate and get booking by code for QR scanning
+export const validateBookingByCode = mutation({
+  args: { bookingCode: v.string() },
+  handler: async (ctx, args) => {
+    const booking = await ctx.db
+      .query("bookings")
+      .withIndex("by_booking_code", (q) => q.eq("booking_code", args.bookingCode))
+      .first();
+
+    if (!booking) return null;
+
+    const [customer, service, barber] = await Promise.all([
+      ctx.db.get(booking.customer),
+      ctx.db.get(booking.service),
+      booking.barber ? ctx.db.get(booking.barber) : null,
+    ]);
+
+    return {
+      ...booking,
+      customer_name: customer?.username || 'Unknown',
+      customer_email: customer?.email || '',
+      customer_phone: customer?.mobile_number || '',
+      service_name: service?.name || 'Unknown Service',
+      service_price: service?.price || 0,
+      service_duration: service?.duration_minutes || 0,
+      barber_name: barber?.full_name || 'Not assigned',
+      formattedDate: new Date(booking.date).toLocaleDateString(),
+      formattedTime: formatTime(booking.time),
+    };
   },
 });
 

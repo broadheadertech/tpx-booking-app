@@ -20,7 +20,6 @@ const MyBookings = ({ onBack }) => {
   const [showQRCode, setShowQRCode] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(null);
   const [cancelLoading, setCancelLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   // Convex queries - only call when user exists
   const bookings = user?.id ? useQuery(api.services.bookings.getBookingsByCustomer, { customerId: user.id }) : undefined;
@@ -29,6 +28,9 @@ const MyBookings = ({ onBack }) => {
 
   // Loading state - true when user exists but data not loaded yet
   const loading = user?.id && (bookings === undefined || services === undefined || barbers === undefined);
+  
+  // Error state - currently no error handling implemented
+  const error = null;
 
   // Convex mutations
   const updateBookingStatus = useMutation(api.services.bookings.updateBooking);
@@ -194,9 +196,9 @@ const MyBookings = ({ onBack }) => {
             >
               <XCircle className="w-8 h-8 text-red-500" />
             </div>
-            <p className="text-sm text-red-600 mb-4">{error}</p>
+            <p className="text-sm text-red-600 mb-4">Failed to load bookings</p>
             <button
-              onClick={loadBookingsData}
+              onClick={() => window.location.reload()}
               className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
             >
               Try Again
@@ -245,7 +247,7 @@ const MyBookings = ({ onBack }) => {
                 const barber = barbers?.find(b => b._id === booking.barber) || {};
 
                 // Debug logging for voucher information
-                console.log(`Booking ${booking.id}:`, {
+                console.log(`Booking ${booking._id}:`, {
                   voucher_code: booking.voucher_code,
                   total_amount: booking.total_amount,
                   voucherCode: booking.voucherCode,
@@ -254,7 +256,7 @@ const MyBookings = ({ onBack }) => {
 
                 return (
                   <div
-                    key={booking.id}
+                    key={booking._id}
                     className="bg-white rounded-xl p-4 border shadow-sm hover:shadow-lg transition-all duration-200"
                     style={{ borderColor: "#E0E0E0" }}
                   >
@@ -308,7 +310,7 @@ const MyBookings = ({ onBack }) => {
                               className="text-sm font-bold"
                               style={{ color: "#36454F" }}
                             >
-                              {bookingService.formatBookingDate(booking.date)}
+                              {new Date(booking.date).toLocaleDateString()}
                             </p>
                           </div>
                         </div>
@@ -325,7 +327,7 @@ const MyBookings = ({ onBack }) => {
                               className="text-sm font-bold"
                               style={{ color: "#36454F" }}
                             >
-                              {bookingService.formatBookingTime(booking.time)}
+                              {booking.time}
                             </p>
                           </div>
                         </div>
@@ -543,7 +545,7 @@ const MyBookings = ({ onBack }) => {
       {showCancelModal && (
         <CancelBookingModal
           booking={showCancelModal}
-          onConfirm={() => handleCancelBooking(showCancelModal.id)}
+          onConfirm={() => handleCancelBooking(showCancelModal._id)}
           onClose={() => setShowCancelModal(null)}
           loading={cancelLoading}
         />
@@ -556,19 +558,8 @@ const MyBookings = ({ onBack }) => {
 const QRCodeModal = ({ booking, onClose }) => {
   const qrRef = useRef(null);
 
-  // Generate QR code data
-  const qrData = JSON.stringify({
-    bookingId: booking.id,
-    bookingCode: booking.booking_code,
-    service: booking.service?.name,
-    time: booking.time,
-    barber: booking.barber?.name || "Any Barber",
-    date: booking.date,
-    barbershop: "TPX Barbershop",
-    voucher_code:
-      booking.voucher_code || booking.voucherCode || booking.voucher?.code,
-    total_amount: booking.total_amount || booking.totalAmount,
-  });
+  // Generate QR code data - simplified to contain only booking code
+  const qrData = booking.booking_code;
 
   useEffect(() => {
     // Small delay to ensure canvas is rendered in DOM

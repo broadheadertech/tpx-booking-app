@@ -1,20 +1,47 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 import { User, Mail, Phone, Scissors } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { useAuth } from '../../context/AuthContext'
 
 const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) => {
+  const { user } = useAuth()
   const [formData, setFormData] = useState({
-    full_name: editingBarber?.full_name || '',
-    email: editingBarber?.email || '',
-    phone: editingBarber?.phone || '',
-    is_active: editingBarber?.is_active ?? true,
-    services: editingBarber?.services || [],
-    experience: editingBarber?.experience || '0 years',
-    specialties: editingBarber?.specialties || []
+    full_name: '',
+    email: '',
+    phone: '',
+    is_active: true,
+    services: [],
+    experience: '0 years',
+    specialties: []
   })
+
+  // Update form data when editingBarber changes
+  useEffect(() => {
+    if (editingBarber) {
+      setFormData({
+        full_name: editingBarber.full_name || '',
+        email: editingBarber.email || '',
+        phone: editingBarber.phone || '',
+        is_active: editingBarber.is_active ?? true,
+        services: editingBarber.services || [],
+        experience: editingBarber.experience || '0 years',
+        specialties: editingBarber.specialties || []
+      })
+    } else {
+      setFormData({
+        full_name: '',
+        email: '',
+        phone: '',
+        is_active: true,
+        services: [],
+        experience: '0 years',
+        specialties: []
+      })
+    }
+  }, [editingBarber])
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -40,8 +67,13 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
     setError('')
 
     try {
+      if (!user?.id) {
+        setError('You must be logged in to create a barber')
+        return
+      }
+
       const barberData = {
-        user: '1', // For now, using a default user ID - this should be the authenticated user
+        user: user.id,
         full_name: formData.full_name.trim(),
         email: formData.email.trim(),
         phone: formData.phone || '',

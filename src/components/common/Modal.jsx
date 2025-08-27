@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
-  console.log('Modal render - isOpen:', isOpen, 'title:', title)
   if (!isOpen) return null
 
   const sizeClasses = {

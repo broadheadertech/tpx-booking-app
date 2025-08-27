@@ -26,19 +26,16 @@ const VoucherManagement = ({ onBack }) => {
 
   // Convex queries - only call when user exists
   const vouchers = user?.id ? useQuery(api.services.vouchers.getVouchersByUser, { userId: user.id }) : undefined
+  const debugData = user?.id ? useQuery(api.services.vouchers.debugUserVouchers, { userId: user.id }) : undefined
   const loading = vouchers === undefined && user?.id // Loading when user exists but vouchers not loaded yet
   const error = null // No global error state needed for vouchers - handled individually
 
-  // Convex queries and mutations
-  const validateVoucherQuery = useQuery
+  // Convex mutations
   const claimVoucher = useMutation(api.services.vouchers.claimVoucher)
-  const redeemVoucher = useMutation(api.services.vouchers.redeemVoucher)
-
-  // Convex handles data loading automatically
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'claimed':
+      case 'available':
         return <CheckCircle className="w-5 h-5 text-green-500" />
       case 'redeemed':
         return <Gift className="w-5 h-5 text-blue-500" />
@@ -51,7 +48,7 @@ const VoucherManagement = ({ onBack }) => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'claimed':
+      case 'available':
         return 'bg-green-50 text-green-700 border-green-200'
       case 'redeemed':
         return 'bg-blue-50 text-blue-700 border-blue-200'
@@ -80,10 +77,14 @@ const VoucherManagement = ({ onBack }) => {
   }
 
   const getVoucherStatus = (voucher) => {
-    // Based on the actual API response: {code, value, status, assigned_at, redeemed_at, isExpired}
+    // Priority: expired first, then assignment status
     if (voucher.isExpired) return 'expired'
-    if (voucher.status === 'assigned') return 'claimed' // Show "claimed" for assigned status
+    
+    // Map assignment status to display status
+    if (voucher.status === 'assigned') return 'available' // Show "available" for assigned status
     if (voucher.status === 'redeemed') return 'redeemed'
+    
+    // Fallback
     return voucher.status || 'unknown'
   }
 
@@ -111,19 +112,51 @@ const VoucherManagement = ({ onBack }) => {
     })
   }
 
+  // Process vouchers into categories (after helper functions are defined)
+  const availableVouchers = vouchers ? vouchers.filter(v => {
+    // Show assigned (available) vouchers that are not expired
+    return v.status === 'assigned' && !v.isExpired
+  }) : []
+
+  const redeemedVouchers = vouchers ? vouchers.filter(v => {
+    // Show redeemed vouchers regardless of expiry
+    return v.status === 'redeemed'
+  }) : []
+
+  const expiredVouchers = vouchers ? vouchers.filter(v => {
+    // Show expired vouchers (regardless of assignment status)
+    return v.isExpired
+  }) : []
+
+  // Debug logging
+  console.log('=== VoucherManagement Debug ===')
+  console.log('User ID:', user?.id, typeof user?.id)
+  console.log('Raw vouchers from API:', vouchers)
+  console.log('Vouchers count:', vouchers?.length || 0)
+  console.log('Categorized vouchers:', {
+    available: availableVouchers.length,
+    redeemed: redeemedVouchers.length,
+    expired: expiredVouchers.length
+  })
+  console.log('Debug data from API:', debugData)
+
+  // Sample voucher structure debug
+  if (vouchers && vouchers.length > 0) {
+    console.log('First voucher structure:', vouchers[0])
+  }
 
   const handleClaimVoucher = async (voucherCode, voucherValue = null) => {
     try {
       setClaimLoading(true)
       
-      // Redeem the voucher using Convex
-      const redeemedVoucher = await redeemVoucher({
+      // Claim the voucher using Convex (assign it to the user)
+      const result = await claimVoucher({
         code: voucherCode,
-        redeemed_by: user.id
+        user_id: user.id
       })
 
       // Show success message with voucher details
-      const value = redeemedVoucher.value || voucherValue || 'Unknown'
+      const value = result.voucher.value || voucherValue || 'Unknown'
       setNotification({
         type: 'success',
         title: '🎉 Voucher Claimed Successfully!',
@@ -132,16 +165,18 @@ const VoucherManagement = ({ onBack }) => {
 
       setShowQRCode(false)
       setSelectedVoucher(null)
+      setShowClaimModal(false)
+      setClaimCode('')
     } catch (error) {
-        // Handle redeem error
+        // Handle claim error
         let errorMessage = error.message
         if (errorMessage.includes('expired')) {
           errorMessage = '⏰ This voucher has expired'
-        } else if (errorMessage.includes('already') || errorMessage.includes('redeemed')) {
+        } else if (errorMessage.includes('already') || errorMessage.includes('assigned')) {
           errorMessage = '✅ This voucher has already been claimed'
         } else if (errorMessage.includes('Invalid') || errorMessage.includes('not found')) {
           errorMessage = '❌ Invalid voucher code. Please check and try again.'
-        } else if (errorMessage.includes('usage') || errorMessage.includes('limit')) {
+        } else if (errorMessage.includes('maximum') || errorMessage.includes('limit')) {
           errorMessage = '🚫 This voucher has reached its usage limit'
         } else {
           errorMessage = errorMessage || 'Failed to claim voucher. Please try again.'
@@ -171,15 +206,8 @@ const VoucherManagement = ({ onBack }) => {
       setValidationError(null)
       setValidatedVoucher(null)
       
-      const result = await validateVoucher({ code: claimCode.trim() })
-
-      if (result.valid) {
-        setValidatedVoucher(result.voucher)
-        setValidationError(null)
-      } else {
-        setValidationError(result.error || 'Invalid voucher code')
-        setValidatedVoucher(null)
-      }
+      // Just try to claim the voucher directly
+      await handleClaimVoucher(claimCode.trim())
     } catch (error) {
       console.error('Error validating voucher:', error)
       setValidationError('Failed to validate voucher. Please try again.')
@@ -417,10 +445,6 @@ const VoucherManagement = ({ onBack }) => {
     }
   }
 
-  // Filter vouchers by status - handle undefined vouchers
-  const claimedVouchers = vouchers ? vouchers.filter(v => getVoucherStatus(v) === 'claimed') : []
-  const redeemedVouchers = vouchers ? vouchers.filter(v => getVoucherStatus(v) === 'redeemed') : []
-  const expiredVouchers = vouchers ? vouchers.filter(v => getVoucherStatus(v) === 'expired') : []
 
   // Notification Modal Component
   const NotificationModal = ({ notification, onClose }) => {
@@ -504,7 +528,7 @@ const VoucherManagement = ({ onBack }) => {
             </button>
             <div className="text-right">
               <p className="text-base font-bold text-white">My Vouchers</p>
-              <p className="text-[10px]" style={{color: '#F68B24'}}>{claimedVouchers.length + redeemedVouchers.length} total</p>
+              <p className="text-[10px]" style={{color: '#F68B24'}}>{availableVouchers.length + redeemedVouchers.length} total</p>
             </div>
           </div>
         </div>
@@ -581,16 +605,16 @@ const VoucherManagement = ({ onBack }) => {
         )}
 
         {/* Claimed Vouchers */}
-        {!loading && !error && claimedVouchers.length > 0 && (
+        {!loading && !error && availableVouchers.length > 0 && (
           <div className="space-y-2 mb-3">
             <h2 className="text-base font-black flex items-center px-2" style={{color: '#36454F'}}>
               <CheckCircle className="w-3.5 h-3.5 text-green-500 mr-2" />
-              Claimed Vouchers ({claimedVouchers.length})
+              Available Vouchers ({availableVouchers.length})
             </h2>
             <div className="space-y-2">
-              {claimedVouchers.map((voucher) => (
+              {availableVouchers.map((voucher) => (
                 <div
-                  key={voucher.id}
+                  key={voucher._id}
                   className="bg-white rounded-lg p-3 shadow-sm touch-manipulation" style={{border: '1px solid #E0E0E0'}}
                 >
                   {/* Voucher Header */}
@@ -605,7 +629,7 @@ const VoucherManagement = ({ onBack }) => {
                     <div className="flex items-center space-x-1 flex-shrink-0">
                       {getStatusIcon(getVoucherStatus(voucher))}
                       <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${getStatusColor(getVoucherStatus(voucher))}`}>
-                        CLAIMED
+                        {getVoucherStatus(voucher).toUpperCase()}
                       </span>
                     </div>
                   </div>
@@ -670,7 +694,7 @@ const VoucherManagement = ({ onBack }) => {
             <div className="space-y-2">
               {redeemedVouchers.map((voucher) => (
                 <div
-                  key={voucher.id}
+                  key={voucher._id}
                   className="bg-white rounded-lg p-3 shadow-sm opacity-75 touch-manipulation" style={{border: '1px solid #E0E0E0'}}
                 >
                   {/* Voucher Header */}
@@ -739,7 +763,7 @@ const VoucherManagement = ({ onBack }) => {
             <div className="space-y-2">
               {expiredVouchers.map((voucher) => (
                 <div
-                  key={voucher.id}
+                  key={voucher._id}
                   className="bg-white rounded-lg p-3 shadow-sm opacity-50 touch-manipulation" style={{border: '1px solid #E0E0E0'}}
                 >
                   {/* Voucher Header */}
@@ -797,7 +821,7 @@ const VoucherManagement = ({ onBack }) => {
         )}
 
         {/* Empty State */}
-        {!loading && !error && claimedVouchers.length === 0 && redeemedVouchers.length === 0 && expiredVouchers.length === 0 && (
+        {!loading && !error && availableVouchers.length === 0 && redeemedVouchers.length === 0 && expiredVouchers.length === 0 && (
           <div className="text-center py-8">
             <div className="rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3" style={{backgroundColor: '#F68B24', opacity: 0.1}}>
               <Ticket className="w-6 h-6" style={{color: '#F68B24'}} />
@@ -1172,7 +1196,7 @@ const QRCodeDisplay = ({ voucher }) => {
   
   // Generate QR code data for voucher
   const qrData = JSON.stringify({
-    voucherId: voucher.id,
+    voucherId: voucher._id,
     code: voucher.code,
     username: getUsername(),
     value: voucher.value,

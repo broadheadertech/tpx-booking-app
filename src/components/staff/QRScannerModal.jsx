@@ -11,6 +11,7 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned }) => {
   const [error, setError] = useState(null)
   const [isProcessingVoucher, setIsProcessingVoucher] = useState(false)
   const [voucherData, setVoucherData] = useState(null)
+  const [scanType, setScanType] = useState(null) // 'booking' or 'voucher'
 
   // Convex mutation
   const redeemVoucherMutation = useMutation(api.services.vouchers.redeemVoucher)

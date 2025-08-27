@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'
 import QrScanner from 'qr-scanner'
-import { Camera, RotateCcw, Settings, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { Camera, RotateCcw, Settings, CheckCircle, XCircle, AlertCircle, Calendar, Gift } from 'lucide-react'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 
 const QRScannerCamera = ({ onQRDetected, onClose, isOpen, title }) => {
   const videoRef = useRef(null)
@@ -13,7 +15,14 @@ const QRScannerCamera = ({ onQRDetected, onClose, isOpen, title }) => {
   const [showSettings, setShowSettings] = useState(false)
   const [scanResult, setScanResult] = useState(null)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [voucherError, setVoucherError] = useState(null)
+  const [qrError, setQrError] = useState(null)
+  const [qrType, setQrType] = useState(null) // 'booking' or 'voucher'
+  const [qrData, setQrData] = useState(null)
+
+  // Convex mutations
+  const updateBookingStatus = useMutation(api.services.bookings.updateBooking)
+  const redeemVoucher = useMutation(api.services.vouchers.redeemVoucher)
+  const validateBookingByCode = useMutation(api.services.bookings.validateBookingByCode)
 
   // Initialize camera list on component mount
   useEffect(() => {
@@ -58,7 +67,7 @@ const QRScannerCamera = ({ onQRDetected, onClose, isOpen, title }) => {
       setIsScanning(true)
       setCameraError('')
       setHasPermission(null)
-      setVoucherError(null) // Clear any previous voucher errors
+      setQrError(null) // Clear any previous errors
 
       // Create QR Scanner instance
       qrScannerRef.current = new QrScanner(
@@ -106,7 +115,9 @@ const QRScannerCamera = ({ onQRDetected, onClose, isOpen, title }) => {
     setIsScanning(false)
     setScanResult(null)
     setIsProcessing(false)
-    setVoucherError(null)
+    setQrError(null)
+    setQrType(null)
+    setQrData(null)
   }
 
   const handleQRResult = async (result) => {
@@ -114,7 +125,9 @@ const QRScannerCamera = ({ onQRDetected, onClose, isOpen, title }) => {
     
     setIsProcessing(true)
     setScanResult(result.data)
-    setVoucherError(null) // Clear any previous errors
+    setQrError(null) // Clear any previous errors
+    setQrType(null)
+    setQrData(null)
     
     // Add haptic feedback on mobile
     if (navigator.vibrate) {
@@ -122,22 +135,37 @@ const QRScannerCamera = ({ onQRDetected, onClose, isOpen, title }) => {
     }
 
     try {
-      // Pass the QR result to parent component
-      const response = await onQRDetected(result.data)
+      // Try to parse the QR code data
+      let parsedData
+      let isSimpleBookingCode = false
       
-      // Check if the response contains an error
-      if (response && response.error) {
-        setVoucherError(response.error)
-        setScanResult(null) // Clear success result if there's an error
-        
-        // Vibrate differently for errors
-        if (navigator.vibrate) {
-          navigator.vibrate([100, 50, 100]) // Error vibration pattern
+      try {
+        parsedData = JSON.parse(result.data)
+      } catch (parseError) {
+        // If JSON parsing fails, check if it's a simple booking code (8 characters, alphanumeric)
+        const bookingCodePattern = /^[A-Z0-9]{8}$/
+        if (bookingCodePattern.test(result.data)) {
+          isSimpleBookingCode = true
+          parsedData = { bookingCode: result.data }
+        } else {
+          throw new Error('Invalid QR code format. Please scan a valid booking or voucher QR code.')
         }
       }
+
+      // Determine QR code type and validate
+      if (isSimpleBookingCode || (parsedData.bookingId && parsedData.bookingCode) || parsedData.bookingCode) {
+        // This is a booking QR code (either simple code or complex JSON)
+        await handleBookingQR(parsedData)
+      } else if (parsedData.voucherId && parsedData.code) {
+        // This is a voucher QR code
+        await handleVoucherQR(parsedData)
+      } else {
+        throw new Error('Unknown QR code type. Please scan a valid booking or voucher QR code.')
+      }
+
     } catch (error) {
       console.error('Error processing QR result:', error)
-      setVoucherError('Failed to process QR code. Please try again.')
+      setQrError(error.message || 'Failed to process QR code. Please try again.')
       setScanResult(null)
       
       // Error vibration
@@ -150,11 +178,117 @@ const QRScannerCamera = ({ onQRDetected, onClose, isOpen, title }) => {
     setTimeout(() => {
       setIsProcessing(false)
       // Only clear scan result if there's no error
-      setScanResult((currentResult) => {
-        // If we have an error, don't clear the result here
-        return currentResult
+      if (!qrError) {
+        setScanResult(null)
+        setQrData(null)
+      }
+    }, 4000) // Longer delay to show success/error message
+  }
+
+  const handleBookingQR = async (parsedData) => {
+    setQrType('booking')
+    console.log('Processing booking QR:', parsedData)
+
+    try {
+      // Extract booking code (works for both simple string and complex object)
+      const bookingCode = parsedData.bookingCode || parsedData
+      
+      // First, verify the booking exists and get its current status
+      const booking = await validateBookingByCode({ bookingCode: bookingCode })
+      
+      if (!booking) {
+        throw new Error(`Booking not found with code: ${bookingCode}`)
+      }
+
+      if (booking.status === 'confirmed') {
+        throw new Error('This booking is already confirmed.')
+      }
+
+      if (booking.status === 'cancelled') {
+        throw new Error('This booking has been cancelled and cannot be confirmed.')
+      }
+
+      if (booking.status === 'completed') {
+        throw new Error('This booking is already completed.')
+      }
+
+      // Update booking status to confirmed
+      await updateBookingStatus({
+        id: booking._id,
+        status: 'confirmed'
       })
-    }, 3000) // Longer delay to show error message
+
+      setQrData({
+        type: 'booking',
+        bookingCode: bookingCode,
+        service: booking.service_name,
+        customerName: booking.customer_name,
+        date: booking.formattedDate,
+        time: booking.formattedTime,
+        barber: booking.barber_name
+      })
+
+      // Success vibration
+      if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200])
+      }
+
+      // Call parent callback if provided
+      if (onQRDetected) {
+        await onQRDetected({
+          type: 'booking',
+          success: true,
+          data: parsedData,
+          booking: booking
+        })
+      }
+
+    } catch (error) {
+      throw new Error(error.message || 'Failed to confirm booking. Please try again.')
+    }
+  }
+
+  const handleVoucherQR = async (parsedData) => {
+    setQrType('voucher')
+    console.log('Processing voucher QR:', parsedData)
+
+    try {
+      // Redeem the voucher
+      const result = await redeemVoucher({
+        code: parsedData.code,
+        redeemed_by: 'staff', // You might want to pass actual staff ID
+        redeemed_at: Date.now()
+      })
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to redeem voucher')
+      }
+
+      setQrData({
+        type: 'voucher',
+        code: parsedData.code,
+        value: parsedData.value,
+        username: parsedData.username
+      })
+
+      // Success vibration
+      if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200])
+      }
+
+      // Call parent callback if provided
+      if (onQRDetected) {
+        await onQRDetected({
+          type: 'voucher',
+          success: true,
+          data: parsedData,
+          result: result
+        })
+      }
+
+    } catch (error) {
+      throw new Error(error.message || 'Failed to redeem voucher. Please try again.')
+    }
   }
 
   const switchCamera = async (camera) => {
@@ -264,36 +398,89 @@ const QRScannerCamera = ({ onQRDetected, onClose, isOpen, title }) => {
           </div>
         )}
 
-        {/* Scan Result Overlay */}
-        {scanResult && !voucherError && (
+        {/* Success Result Overlay */}
+        {qrData && !qrError && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <div className="bg-white rounded-xl p-6 mx-4 max-w-sm">
-              <div className="flex items-center space-x-3 mb-3">
+            <div className="bg-white rounded-xl p-6 mx-4 max-w-sm border-2 border-green-200">
+              <div className="flex items-center space-x-3 mb-4">
                 <CheckCircle className="w-6 h-6 text-green-600" />
-                <span className="font-bold text-[#1A1A1A]">QR Code Detected!</span>
+                <span className="font-bold text-[#1A1A1A]">
+                  {qrData.type === 'booking' ? 'Booking Confirmed!' : 'Voucher Redeemed!'}
+                </span>
               </div>
-              <div className="text-sm text-[#6B6B6B] break-all">
-                {scanResult}
-              </div>
+              
+              {qrData.type === 'booking' && (
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-[#6B6B6B]">Code:</span>
+                    <span className="font-semibold text-[#1A1A1A]">{qrData.bookingCode}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6B6B6B]">Service:</span>
+                    <span className="font-semibold text-[#1A1A1A]">{qrData.service}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6B6B6B]">Customer:</span>
+                    <span className="font-semibold text-[#1A1A1A]">{qrData.customerName}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6B6B6B]">Time:</span>
+                    <span className="font-semibold text-[#1A1A1A]">{qrData.time}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6B6B6B]">Barber:</span>
+                    <span className="font-semibold text-[#1A1A1A]">{qrData.barber}</span>
+                  </div>
+                </div>
+              )}
+              
+              {qrData.type === 'voucher' && (
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-[#6B6B6B]">Code:</span>
+                    <span className="font-semibold text-[#1A1A1A]">{qrData.code}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6B6B6B]">Value:</span>
+                    <span className="font-semibold text-green-600">₱{qrData.value}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#6B6B6B]">Customer:</span>
+                    <span className="font-semibold text-[#1A1A1A]">{qrData.username}</span>
+                  </div>
+                </div>
+              )}
+              
+              <button
+                onClick={() => {
+                  setQrData(null)
+                  setIsProcessing(false)
+                  setScanResult(null)
+                }}
+                className="w-full mt-4 bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 transition-colors"
+              >
+                Continue Scanning
+              </button>
             </div>
           </div>
         )}
 
-        {/* Voucher Error Overlay */}
-        {voucherError && (
+        {/* Error Overlay */}
+        {qrError && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
             <div className="bg-white rounded-xl p-6 mx-4 max-w-sm border-2 border-red-200">
               <div className="flex items-center space-x-3 mb-3">
                 <XCircle className="w-6 h-6 text-red-600" />
-                <span className="font-bold text-[#1A1A1A]">Voucher Error</span>
+                <span className="font-bold text-[#1A1A1A]">Scan Error</span>
               </div>
               <div className="text-sm text-red-700 mb-4">
-                {voucherError}
+                {qrError}
               </div>
               <button
                 onClick={() => {
-                  setVoucherError(null)
+                  setQrError(null)
                   setIsProcessing(false)
+                  setScanResult(null)
                 }}
                 className="w-full bg-red-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-red-700 transition-colors"
               >
@@ -366,8 +553,21 @@ const QRScannerCamera = ({ onQRDetected, onClose, isOpen, title }) => {
 
       {/* Instructions */}
       <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
-        <p className="text-blue-800 text-sm">
-          <strong>Tips:</strong> Hold your device steady and ensure the QR code is well-lit and clearly visible within the scanning area.
+        <p className="text-blue-800 text-sm mb-2">
+          <strong>Supported QR Codes:</strong>
+        </p>
+        <div className="flex items-center space-x-4 text-xs text-blue-700">
+          <div className="flex items-center space-x-1">
+            <Calendar className="w-4 h-4" />
+            <span>Booking QRs → Confirms booking</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <Gift className="w-4 h-4" />
+            <span>Voucher QRs → Redeems voucher</span>
+          </div>
+        </div>
+        <p className="text-blue-800 text-xs mt-2">
+          Hold steady and ensure the QR code is well-lit and clearly visible.
         </p>
       </div>
     </div>

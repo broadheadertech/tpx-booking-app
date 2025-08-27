@@ -153,25 +153,136 @@ export const getActiveVouchers = query({
 export const getVouchersByUser = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
+    console.log('getVouchersByUser called with userId:', args.userId);
+    
+    // Step 1: Find all active assignments for this user in user_vouchers table
     const assignments = await ctx.db
       .query("user_vouchers")
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
       .collect();
     
+    console.log('Found user_vouchers assignments:', assignments.length, assignments);
+    
+    if (assignments.length === 0) {
+      console.log('No voucher assignments found for user:', args.userId);
+      return [];
+    }
+    
+    // Step 2: For each assignment, get the voucher details from vouchers table
     const userVouchers = await Promise.all(
       assignments.map(async (assignment) => {
+        // Get voucher details from vouchers table
         const voucher = await ctx.db.get(assignment.voucher_id);
-        if (!voucher) return null;
         
-        return {
-          ...voucher,
-          assignment,
-          isExpired: voucher.expires_at < Date.now(),
+        if (!voucher) {
+          console.log('Voucher not found in vouchers table for assignment:', assignment);
+          return null;
+        }
+        
+        // Calculate voucher status based on assignment and expiry
+        const now = Date.now();
+        const isExpired = voucher.expires_at < now;
+        
+        // Keep original assignment status ("assigned" or "redeemed")
+        // We'll handle expired logic separately in the UI
+        const voucherStatus = assignment.status;
+        
+        const result = {
+          // Voucher data from vouchers table
+          _id: voucher._id,
+          code: voucher.code,
+          value: voucher.value,
+          points_required: voucher.points_required,
+          max_uses: voucher.max_uses,
+          expires_at: voucher.expires_at,
+          description: voucher.description,
+          created_by: voucher.created_by,
+          createdAt: voucher.createdAt,
+          updatedAt: voucher.updatedAt,
+          
+          // Assignment data from user_vouchers table
+          assignment_id: assignment._id,
+          assigned_at: assignment.assigned_at,
+          redeemed_at: assignment.redeemed_at,
+          assigned_by: assignment.assigned_by,
+          
+          // Computed fields
+          status: voucherStatus, // "assigned", "redeemed", or "expired"
+          isExpired: isExpired,
+          
+          // Debug info
+          _debug: {
+            originalAssignmentStatus: assignment.status,
+            voucherId: voucher._id,
+            assignmentId: assignment._id,
+            voucherCode: voucher.code,
+            expiresAt: voucher.expires_at,
+            now: now,
+            computedStatus: voucherStatus
+          }
         };
+        
+        console.log('Processed voucher:', {
+          code: result.code,
+          status: result.status,
+          isExpired: result.isExpired,
+          assignmentStatus: assignment.status
+        });
+        
+        return result;
       })
     );
     
-    return userVouchers.filter(v => v !== null);
+    // Filter out any null vouchers (where voucher was deleted but assignment remains)
+    const validVouchers = userVouchers.filter(v => v !== null);
+    
+    console.log('Returning vouchers count:', validVouchers.length);
+    console.log('Voucher summary:', validVouchers.map(v => ({
+      code: v.code,
+      status: v.status,
+      isExpired: v.isExpired
+    })));
+    
+    return validVouchers;
+  },
+});
+
+// Debug function to check user existence and assignments
+export const debugUserVouchers = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    // Check if user exists
+    const user = await ctx.db.get(args.userId);
+    
+    // Get all user_vouchers records to see what's in the table
+    const allAssignments = await ctx.db.query("user_vouchers").collect();
+    
+    // Get assignments for this specific user
+    const userAssignments = await ctx.db
+      .query("user_vouchers")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .collect();
+      
+    // Get all vouchers to see what's available
+    const allVouchers = await ctx.db.query("vouchers").collect();
+    
+    return {
+      userId: args.userId,
+      userExists: !!user,
+      userInfo: user ? { id: user._id, email: user.email, username: user.username } : null,
+      totalAssignments: allAssignments.length,
+      userAssignments: userAssignments.length,
+      userAssignmentsData: userAssignments,
+      totalVouchers: allVouchers.length,
+      allAssignmentUserIds: allAssignments.map(a => a.user_id),
+      debug: {
+        searchingFor: args.userId,
+        foundMatches: userAssignments.map(ua => ({
+          assignmentUserId: ua.user_id,
+          matches: ua.user_id === args.userId
+        }))
+      }
+    };
   },
 });
 

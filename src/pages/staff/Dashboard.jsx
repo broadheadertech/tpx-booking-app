@@ -20,8 +20,16 @@ import { useAuth } from '../../context/AuthContext'
 
 function StaffDashboard() {
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState('overview')
+  const [activeTab, setActiveTab] = useState(() => {
+    // Restore active tab from localStorage on component mount
+    return localStorage.getItem('staff_dashboard_active_tab') || 'overview'
+  })
   const [activeModal, setActiveModal] = useState(null)
+
+  // Save active tab to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('staff_dashboard_active_tab', activeTab)
+  }, [activeTab])
 
   // Convex queries for data
   const bookings = useQuery(api.services.bookings.getAllBookings)
