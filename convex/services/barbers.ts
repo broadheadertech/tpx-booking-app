@@ -142,10 +142,10 @@ export const deleteBarber = mutation({
 export const getBarbersByService = query({
   args: { serviceId: v.id("services") },
   handler: async (ctx, args) => {
-    const barbers = await ctx.db
-      .query("barbers")
-      .filter((q) => q.contains(q.field("services"), args.serviceId))
-      .collect();
+    const allBarbers = await ctx.db.query("barbers").collect();
+    const barbers = allBarbers.filter(barber => 
+      barber.services.includes(args.serviceId)
+    );
 
     // Get associated user data
     const barbersWithUsers = await Promise.all(
@@ -173,7 +173,7 @@ export const getActiveBarbers = query({
       .withIndex("by_active", (q) => q.eq("is_active", true))
       .collect();
 
-    // Get associated user data
+    // Get associated user data for each barber
     const barbersWithUsers = await Promise.all(
       barbers.map(async (barber) => {
         const user = await ctx.db.get(barber.user);
@@ -187,5 +187,62 @@ export const getActiveBarbers = query({
     );
 
     return barbersWithUsers;
+  },
+});
+
+// Create barber profile for user with barber role
+export const createBarberProfile = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Get user data
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (user.role !== "barber") {
+      throw new Error("User is not a barber");
+    }
+
+    // Check if user already has a barber profile
+    const existingBarber = await ctx.db
+      .query("barbers")
+      .withIndex("by_user", (q) => q.eq("user", args.userId))
+      .first();
+
+    if (existingBarber) {
+      return existingBarber._id; // Return existing profile
+    }
+
+    // Create new barber profile
+    const barberId = await ctx.db.insert("barbers", {
+      user: args.userId,
+      full_name: user.username, // Use username as default full name
+      is_active: true,
+      services: [], // Empty services array initially
+      email: user.email,
+      phone: user.mobile_number || undefined,
+      avatar: user.avatar || undefined,
+      experience: '0 years',
+      rating: 0,
+      totalBookings: 0,
+      monthlyRevenue: 0,
+      specialties: [],
+      schedule: {
+        monday: { available: true, start: '09:00', end: '17:00' },
+        tuesday: { available: true, start: '09:00', end: '17:00' },
+        wednesday: { available: true, start: '09:00', end: '17:00' },
+        thursday: { available: true, start: '09:00', end: '17:00' },
+        friday: { available: true, start: '09:00', end: '17:00' },
+        saturday: { available: true, start: '09:00', end: '17:00' },
+        sunday: { available: false, start: '09:00', end: '17:00' },
+      },
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    return barberId;
   },
 });

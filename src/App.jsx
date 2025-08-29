@@ -8,6 +8,7 @@ import StaffDashboard from './pages/staff/Dashboard'
 import POS from './pages/staff/POS'
 import CustomerDashboard from './pages/customer/Dashboard'
 import CustomerBooking from './pages/customer/Booking'
+import BarberDashboard from './components/barber/BarberDashboard'
 import Kiosk from './pages/Kiosk'
 
 function App() {
@@ -47,6 +48,15 @@ function App() {
               element={
                 <ProtectedRoute requireStaff={true}>
                   <POS />
+                </ProtectedRoute>
+              } 
+            />
+            <Route path="/barber" element={<Navigate to="/barber/dashboard" replace />} />
+            <Route 
+              path="/barber/dashboard" 
+              element={
+                <ProtectedRoute requireBarber={true}>
+                  <BarberDashboard />
                 </ProtectedRoute>
               } 
             />

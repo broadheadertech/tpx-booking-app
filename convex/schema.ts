@@ -10,7 +10,7 @@ export default defineSchema({
     nickname: v.optional(v.string()),
     mobile_number: v.string(),
     birthday: v.optional(v.string()),
-    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin")),
+    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber")),
     is_active: v.boolean(),
     avatar: v.optional(v.string()),
     bio: v.optional(v.string()),

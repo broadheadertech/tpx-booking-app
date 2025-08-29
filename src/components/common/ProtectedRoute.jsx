@@ -1,7 +1,7 @@
 import { useAuth } from '../../context/AuthContext'
 import { Navigate, useLocation } from 'react-router-dom'
 
-const ProtectedRoute = ({ children, requireStaff = false }) => {
+const ProtectedRoute = ({ children, requireStaff = false, requireBarber = false }) => {
   const { isAuthenticated, user, loading } = useAuth()
   const location = useLocation()
 
@@ -23,11 +23,30 @@ const ProtectedRoute = ({ children, requireStaff = false }) => {
   }
 
   // Check staff requirement
-  if (requireStaff && !user?.is_staff) {
-    return <Navigate to="/customer/dashboard" replace />
+  if (requireStaff && user?.role !== 'staff' && user?.role !== 'admin') {
+    return <Navigate to={getRoleBasedRedirect(user?.role)} replace />
+  }
+
+  // Check barber requirement
+  if (requireBarber && user?.role !== 'barber') {
+    return <Navigate to={getRoleBasedRedirect(user?.role)} replace />
   }
 
   return children
+}
+
+// Helper function to get role-based redirect
+const getRoleBasedRedirect = (role) => {
+  switch (role) {
+    case 'staff':
+    case 'admin':
+      return '/staff/dashboard'
+    case 'barber':
+      return '/barber/dashboard'
+    case 'customer':
+    default:
+      return '/customer/dashboard'
+  }
 }
 
 export default ProtectedRoute

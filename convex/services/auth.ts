@@ -15,7 +15,7 @@ export const registerUser = mutation({
     mobile_number: v.string(),
     nickname: v.optional(v.string()),
     birthday: v.optional(v.string()),
-    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin")),
+    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber")),
   },
   handler: async (ctx, args) => {
     // Check if user already exists

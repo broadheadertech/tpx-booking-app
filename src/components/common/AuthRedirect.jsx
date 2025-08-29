@@ -16,12 +16,17 @@ const AuthRedirect = ({ children }) => {
     )
   }
 
-  // Redirect authenticated users to their dashboard
+  // Redirect authenticated users to their dashboard based on role
   if (isAuthenticated && user) {
-    if (user.is_staff) {
-      return <Navigate to="/staff/dashboard" replace />
-    } else {
-      return <Navigate to="/customer/dashboard" replace />
+    switch (user.role) {
+      case 'staff':
+      case 'admin':
+        return <Navigate to="/staff/dashboard" replace />
+      case 'barber':
+        return <Navigate to="/barber/dashboard" replace />
+      case 'customer':
+      default:
+        return <Navigate to="/customer/dashboard" replace />
     }
   }
 
