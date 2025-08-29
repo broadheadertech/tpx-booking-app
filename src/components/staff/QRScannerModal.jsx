@@ -6,7 +6,7 @@ import { QrCode, Camera, CheckCircle, XCircle, RefreshCw, User, DollarSign, Cale
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 
-const QRScannerModal = ({ isOpen, onClose }) => {
+const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned }) => {
   const videoRef = useRef(null)
   const qrScannerRef = useRef(null)
   const [isScanning, setIsScanning] = useState(false)
@@ -208,12 +208,36 @@ const QRScannerModal = ({ isOpen, onClose }) => {
 
     try {
       if (scanResult.type === 'booking') {
+        // If we have a callback for booking scanned, use it (for POS)
+        if (onBookingScanned) {
+          onBookingScanned(scanResult)
+          handleClose()
+          return
+        }
+        
+        // Otherwise, confirm the booking (original functionality)
         await updateBookingMutation({
           id: scanResult.id,
           status: 'confirmed'
         })
         setScanResult(prev => ({ ...prev, status: 'confirmed' }))
       } else {
+        // If we have a callback for voucher scanned, use it (for POS)
+        if (onVoucherScanned) {
+          // For POS, just pass the voucher data without redeeming
+          // The voucher will be redeemed when the transaction is completed
+          const voucherData = {
+            _id: scanResult.id || scanResult.code, // Will be converted to proper ID in POS
+            code: scanResult.code,
+            value: scanResult.value,
+            expires_at: scanResult.expires_at
+          }
+          onVoucherScanned(voucherData)
+          handleClose()
+          return
+        }
+        
+        // Otherwise, redeem the voucher (original functionality)
         const result = await redeemVoucherMutation({ code: scanResult.code })
         if (result.success) {
           setScanResult(prev => ({ ...prev, status: 'redeemed', value: result.value || prev.value }))
@@ -488,7 +512,7 @@ const QRScannerModal = ({ isOpen, onClose }) => {
                 <div className="flex items-center space-x-2">
                   <QrCode className="w-4 h-4 text-blue-600" />
                   <p className="text-sm font-medium text-blue-800">
-                    {scanResult.type === 'booking' ? 'Booking' : 'Voucher'} scanned successfully — Ready to {scanResult.type === 'booking' ? 'confirm' : 'redeem'}
+                    {scanResult.type === 'booking' ? 'Booking' : 'Voucher'} scanned successfully — Ready to {scanResult.type === 'booking' ? 'confirm' : 'use'}
                   </p>
                 </div>
               </div>
@@ -499,7 +523,7 @@ const QRScannerModal = ({ isOpen, onClose }) => {
                 <div className="flex items-center space-x-2">
                   <CheckCircle className="w-4 h-4 text-green-600" />
                   <p className="text-sm font-medium text-green-800">
-                    ✓ {scanResult.type === 'booking' ? 'Booking confirmed!' : 'Voucher redeemed!'} Transaction completed successfully.
+                    ✓ {scanResult.type === 'booking' ? 'Booking confirmed!' : 'Voucher used!'} Transaction completed successfully.
                   </p>
                 </div>
               </div>
@@ -537,7 +561,7 @@ const QRScannerModal = ({ isOpen, onClose }) => {
                ) : (
                  <>
                    <CheckCircle className="w-5 h-5 mr-3" />
-                   <span>{scanResult.type === 'booking' ? 'Confirm Booking' : 'Redeem Voucher'}</span>
+                   <span>{scanResult.type === 'booking' ? 'Confirm Booking' : 'Use Voucher'}</span>
                  </>
                )}
              </Button>

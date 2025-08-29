@@ -49,7 +49,8 @@ export const AuthProvider = ({ children }) => {
         // Valid session and user data
         setIsAuthenticated(true)
         setUser({
-          id: currentUser.id,
+          _id: currentUser._id,
+          id: currentUser._id, // Keep both for compatibility
           username: currentUser.username,
           email: currentUser.email,
           nickname: currentUser.nickname,
@@ -85,7 +86,8 @@ export const AuthProvider = ({ children }) => {
         // Set user state immediately
         setIsAuthenticated(true)
         setUser({
-          id: result.user.id,
+          _id: result.user._id,
+          id: result.user._id, // Keep both for compatibility
           username: result.user.username,
           email: result.user.email,
           nickname: result.user.nickname,

@@ -236,4 +236,97 @@ export default defineSchema({
     .index("by_sku", ["sku"])
     .index("by_status", ["status"])
     .index("by_stock", ["stock"]),
+
+  // POS Transactions table
+  transactions: defineTable({
+    transaction_id: v.string(),
+    customer: v.optional(v.id("users")), // Optional for walk-in customers
+    customer_name: v.optional(v.string()), // For walk-in customers
+    customer_phone: v.optional(v.string()), // For walk-in customers
+    barber: v.id("barbers"),
+    services: v.array(v.object({
+      service_id: v.id("services"),
+      service_name: v.string(),
+      price: v.number(),
+      quantity: v.number()
+    })),
+    products: v.optional(v.array(v.object({
+      product_id: v.id("products"),
+      product_name: v.string(),
+      price: v.number(),
+      quantity: v.number()
+    }))),
+    subtotal: v.number(),
+    discount_amount: v.number(),
+    voucher_applied: v.optional(v.id("vouchers")),
+    tax_amount: v.number(),
+    total_amount: v.number(),
+    payment_method: v.union(
+      v.literal("cash"),
+      v.literal("card"),
+      v.literal("digital_wallet"),
+      v.literal("bank_transfer")
+    ),
+    payment_status: v.union(
+      v.literal("pending"),
+      v.literal("completed"),
+      v.literal("failed"),
+      v.literal("refunded")
+    ),
+    notes: v.optional(v.string()),
+    cash_received: v.optional(v.number()), // Amount of cash received for cash payments
+    change_amount: v.optional(v.number()), // Change given back for cash payments
+    receipt_number: v.string(),
+    processed_by: v.id("users"), // Staff member who processed the transaction
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_transaction_id", ["transaction_id"])
+    .index("by_customer", ["customer"])
+    .index("by_barber", ["barber"])
+    .index("by_receipt_number", ["receipt_number"])
+    .index("by_payment_status", ["payment_status"])
+    .index("by_created_at", ["createdAt"])
+    .index("by_processed_by", ["processed_by"]),
+
+  // POS Sessions table for tracking active POS sessions
+  pos_sessions: defineTable({
+    session_id: v.string(),
+    staff_member: v.id("users"),
+    barber: v.optional(v.id("barbers")), // Current barber selected
+    status: v.union(
+      v.literal("active"),
+      v.literal("paused"),
+      v.literal("closed")
+    ),
+    current_transaction: v.optional(v.object({
+      customer: v.optional(v.id("users")),
+      customer_name: v.optional(v.string()),
+      customer_phone: v.optional(v.string()),
+      services: v.array(v.object({
+        service_id: v.id("services"),
+        service_name: v.string(),
+        price: v.number(),
+        quantity: v.number()
+      })),
+      products: v.optional(v.array(v.object({
+        product_id: v.id("products"),
+        product_name: v.string(),
+        price: v.number(),
+        quantity: v.number()
+      }))),
+      subtotal: v.number(),
+      discount_amount: v.number(),
+      voucher_applied: v.optional(v.id("vouchers")),
+      tax_amount: v.number(),
+      total_amount: v.number()
+    })),
+    started_at: v.number(),
+    last_activity: v.number(),
+    closed_at: v.optional(v.number()),
+  })
+    .index("by_session_id", ["session_id"])
+    .index("by_staff_member", ["staff_member"])
+    .index("by_status", ["status"])
+    .index("by_started_at", ["started_at"]),
 });

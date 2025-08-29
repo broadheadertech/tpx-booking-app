@@ -6,7 +6,7 @@ import { User, Mail, Phone, Lock, Calendar } from 'lucide-react'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 
-const AddCustomerModal = ({ isOpen, onClose, onSubmit }) => {
+const AddCustomerModal = ({ isOpen, onClose, onSubmit, onCustomerAdded }) => {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -55,6 +55,18 @@ const AddCustomerModal = ({ isOpen, onClose, onSubmit }) => {
       // Call parent success handler
       if (onSubmit) {
         await onSubmit(newCustomer)
+      }
+      
+      // Call POS-specific customer added handler
+      if (onCustomerAdded) {
+        onCustomerAdded({
+          _id: newCustomer,
+          username: customerData.username,
+          email: customerData.email,
+          mobile_number: customerData.mobile_number,
+          nickname: customerData.nickname,
+          role: 'customer'
+        })
       }
       
       // Reset form

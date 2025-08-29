@@ -122,7 +122,8 @@ export const loginUser = mutation({
       userId: user._id,
       sessionToken,
       user: {
-        id: user._id,
+        _id: user._id,
+        id: user._id, // Keep both for compatibility
         username: user.username,
         email: user.email,
         nickname: user.nickname,
@@ -146,10 +147,10 @@ export const getCurrentUser = query({
     // Find valid session
     const session = await ctx.db
       .query("sessions")
-      .withIndex("by_token", (q) => q.eq("token", args.sessionToken))
+      .withIndex("by_token", (q) => q.eq("token", args.sessionToken!))
       .first();
 
-    if (!session || session.expiresAt < Date.now()) {
+    if (!session || session.expiresAt < Date.now() || !session.userId) {
       return null; // Invalid or expired session
     }
 
@@ -160,7 +161,8 @@ export const getCurrentUser = query({
     }
 
     return {
-      id: user._id,
+      _id: user._id,
+      id: user._id, // Keep both for compatibility
       username: user.username,
       email: user.email,
       nickname: user.nickname,

@@ -7,7 +7,9 @@ export * from "./events";
 export * from "./notifications";
 export * from "./products";
 export * from "./vouchers";
+export * from "./transactions";
 
 export * as vouchers from './vouchers'
 export * as notifications from './notifications'
 export * as products from './products'
+export * as transactions from './transactions'

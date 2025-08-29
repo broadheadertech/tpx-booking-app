@@ -5,6 +5,7 @@ import AuthRedirect from './components/common/AuthRedirect'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import StaffDashboard from './pages/staff/Dashboard'
+import POS from './pages/staff/POS'
 import CustomerDashboard from './pages/customer/Dashboard'
 import CustomerBooking from './pages/customer/Booking'
 import Kiosk from './pages/Kiosk'
@@ -32,11 +33,20 @@ function App() {
                 </AuthRedirect>
               } 
             />
+            <Route path="/staff" element={<Navigate to="/staff/dashboard" replace />} />
             <Route 
               path="/staff/dashboard" 
               element={
                 <ProtectedRoute requireStaff={true}>
                   <StaffDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/staff/pos" 
+              element={
+                <ProtectedRoute requireStaff={true}>
+                  <POS />
                 </ProtectedRoute>
               } 
             />

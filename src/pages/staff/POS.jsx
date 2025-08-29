@@ -1,0 +1,731 @@
+import React, { useState, useEffect } from 'react'
+import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
+import { useAuth } from '../../context/AuthContext'
+import QRScannerModal from '../../components/staff/QRScannerModal'
+import AddCustomerModal from '../../components/staff/AddCustomerModal'
+import PaymentConfirmationModal from '../../components/staff/PaymentConfirmationModal'
+import CustomerSelectionModal from '../../components/staff/CustomerSelectionModal'
+import Modal from '../../components/common/Modal'
+
+const POS = () => {
+  const { user } = useAuth()
+  const [selectedBarber, setSelectedBarber] = useState(null)
+  const [currentTransaction, setCurrentTransaction] = useState({
+    customer: null,
+    customer_name: '',
+    customer_phone: '',
+    services: [],
+    products: [],
+    subtotal: 0,
+    discount_amount: 0,
+    voucher_applied: null,
+    tax_amount: 0,
+    total_amount: 0
+  })
+  const [activeModal, setActiveModal] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [activeTab, setActiveTab] = useState('services') // 'services' or 'products'
+  const [paymentMethod, setPaymentMethod] = useState('cash')
+
+  // Convex queries
+  const services = useQuery(api.services.services.getAllServices)
+  const products = useQuery(api.services.products.getAllProducts)
+  const barbers = useQuery(api.services.barbers.getAllBarbers)
+  const customers = useQuery(api.services.auth.getAllUsers)
+
+  // Convex mutations
+  const createTransaction = useMutation(api.services.transactions.createTransaction)
+  const getVoucherByCode = useQuery(api.services.vouchers.getVoucherByCode, 
+    currentTransaction.voucher_applied && typeof currentTransaction.voucher_applied === 'string' 
+      ? { code: currentTransaction.voucher_applied } 
+      : "skip"
+  )
+
+  // Filter active services and products
+  const activeServices = services?.filter(service => service.is_active) || []
+  const activeProducts = products?.filter(product => product.status === 'active') || []
+  const activeBarbers = barbers?.filter(barber => barber.is_active) || []
+  const customerUsers = customers?.filter(customer => customer.role === 'customer') || []
+
+  // Filter items based on search term
+  const filteredServices = activeServices.filter(service => 
+    service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    service.category.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+  
+  const filteredProducts = activeProducts.filter(product => 
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.category.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  // Calculate totals
+  useEffect(() => {
+    const servicesTotal = currentTransaction.services.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+    const productsTotal = currentTransaction.products.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+    const subtotal = servicesTotal + productsTotal
+    const taxRate = 0.1 // 10% tax
+    const taxAmount = (subtotal - currentTransaction.discount_amount) * taxRate
+    const totalAmount = subtotal - currentTransaction.discount_amount + taxAmount
+
+    setCurrentTransaction(prev => ({
+      ...prev,
+      subtotal,
+      tax_amount: taxAmount,
+      total_amount: totalAmount
+    }))
+  }, [currentTransaction.services, currentTransaction.products, currentTransaction.discount_amount])
+
+  // Add service to transaction
+  const addService = (service) => {
+    setCurrentTransaction(prev => {
+      const existingIndex = prev.services.findIndex(item => item.service_id === service._id)
+      if (existingIndex >= 0) {
+        const updatedServices = [...prev.services]
+        updatedServices[existingIndex].quantity += 1
+        return { ...prev, services: updatedServices }
+      } else {
+        return {
+          ...prev,
+          services: [...prev.services, {
+            service_id: service._id,
+            service_name: service.name,
+            price: service.price,
+            quantity: 1
+          }]
+        }
+      }
+    })
+  }
+
+  // Add product to transaction
+  const addProduct = (product) => {
+    setCurrentTransaction(prev => {
+      const existingIndex = prev.products.findIndex(item => item.product_id === product._id)
+      if (existingIndex >= 0) {
+        const updatedProducts = [...prev.products]
+        updatedProducts[existingIndex].quantity += 1
+        return { ...prev, products: updatedProducts }
+      } else {
+        return {
+          ...prev,
+          products: [...prev.products, {
+            product_id: product._id,
+            product_name: product.name,
+            price: product.price,
+            quantity: 1
+          }]
+        }
+      }
+    })
+  }
+
+  // Update item quantity
+  const updateQuantity = (type, index, change) => {
+    setCurrentTransaction(prev => {
+      const items = [...prev[type]]
+      items[index].quantity = Math.max(0, items[index].quantity + change)
+      if (items[index].quantity === 0) {
+        items.splice(index, 1)
+      }
+      return { ...prev, [type]: items }
+    })
+  }
+
+  // Remove item from transaction
+  const removeItem = (type, index) => {
+    setCurrentTransaction(prev => {
+      const items = [...prev[type]]
+      items.splice(index, 1)
+      return { ...prev, [type]: items }
+    })
+  }
+
+  // Clear transaction
+  const clearTransaction = () => {
+    setCurrentTransaction({
+      customer: null,
+      customer_name: '',
+      customer_phone: '',
+      services: [],
+      products: [],
+      subtotal: 0,
+      discount_amount: 0,
+      voucher_applied: null,
+      tax_amount: 0,
+      total_amount: 0
+    })
+  }
+
+  // Open payment confirmation modal
+  const openPaymentModal = () => {
+    if (!user || !user._id) {
+      alert('User not authenticated. Please log in again.')
+      return
+    }
+
+    if (!selectedBarber) {
+      alert('Please select a barber')
+      return
+    }
+
+    if (currentTransaction.services.length === 0 && currentTransaction.products.length === 0) {
+      alert('Please add at least one service or product')
+      return
+    }
+
+    setActiveModal('paymentConfirmation')
+  }
+
+  // Process payment after confirmation
+  const processPayment = async (paymentData) => {
+    try {
+      // Debug logging
+      console.log('Current transaction voucher_applied:', currentTransaction.voucher_applied)
+      console.log('Current transaction voucher_applied type:', typeof currentTransaction.voucher_applied)
+      
+      // Handle voucher ID conversion if needed
+      let voucherApplied = currentTransaction.voucher_applied
+      if (typeof currentTransaction.voucher_applied === 'string' && getVoucherByCode) {
+        console.log('Converting voucher code to ID:', currentTransaction.voucher_applied)
+        console.log('Voucher lookup result:', getVoucherByCode)
+        voucherApplied = getVoucherByCode._id
+      }
+      
+      const transactionData = {
+        customer: currentTransaction.customer?._id || undefined,
+        customer_name: currentTransaction.customer_name || undefined,
+        customer_phone: currentTransaction.customer_phone || undefined,
+        barber: selectedBarber._id,
+        services: currentTransaction.services,
+        products: currentTransaction.products.length > 0 ? currentTransaction.products : undefined,
+        subtotal: currentTransaction.subtotal,
+        discount_amount: currentTransaction.discount_amount,
+        voucher_applied: voucherApplied || undefined,
+        tax_amount: currentTransaction.tax_amount,
+        total_amount: currentTransaction.total_amount,
+        payment_method: paymentData.payment_method,
+        payment_status: 'completed',
+        processed_by: user._id,
+        cash_received: paymentData.cash_received,
+        change_amount: paymentData.change_amount
+      }
+      
+      console.log('Final voucher_applied value:', voucherApplied)
+      console.log('Final voucher_applied type:', typeof voucherApplied)
+      console.log('Transaction data voucher_applied:', transactionData.voucher_applied)
+
+      await createTransaction(transactionData)
+      setActiveModal('paymentSuccess')
+      
+      // Auto-close success modal and clear transaction after 3 seconds
+      setTimeout(() => {
+        setActiveModal(null)
+        clearTransaction()
+      }, 3000)
+    } catch (error) {
+      console.error('Transaction failed:', error)
+      alert('Transaction failed. Please try again.')
+      setActiveModal(null)
+    }
+  }
+
+  // Handle customer selection
+  const handleCustomerSelection = (customerData) => {
+    setCurrentTransaction(prev => ({
+      ...prev,
+      customer: customerData.customer,
+      customer_name: customerData.customer_name,
+      customer_phone: customerData.customer_phone
+    }))
+  }
+
+  // Handle voucher scanning with discount application
+  const handleVoucherScanned = (voucher) => {
+    console.log('Voucher scanned:', voucher) // Debug log
+    
+    // Ensure we have a valid voucher ID
+    const voucherId = voucher._id || voucher.id
+    if (!voucherId) {
+      alert('Invalid voucher: No ID found')
+      return
+    }
+    
+    // Apply voucher discount
+    setCurrentTransaction(prev => ({
+      ...prev,
+      voucher_applied: voucherId,
+      discount_amount: voucher.value || 0
+    }))
+    setActiveModal(null)
+    alert(`Voucher applied! Discount: ₱${voucher.value || 0}`)
+  }
+
+  // Show loading if user is not loaded yet
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F5F5F5] to-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF8C42] mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading POS system...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#F5F5F5] to-white">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A] shadow-xl">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-6">
+            <div className="flex items-center space-x-6">
+              <Link
+                to="/staff"
+                className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center hover:bg-white/20 transition-all duration-300 border border-white/20 group"
+                title="Back to Dashboard"
+              >
+                <ArrowLeft className="w-5 h-5 text-white group-hover:text-[#FF8C42] transition-colors duration-300" />
+              </Link>
+              <div className="w-16 h-16 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-3xl flex items-center justify-center shadow-2xl ring-4 ring-[#FF8C42]/20">
+                <CreditCard className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-white tracking-tight">POS System</h1>
+                <p className="text-sm font-medium text-[#FF8C42] mt-1">Point of Sale</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="text-right">
+                <p className="text-base font-semibold text-white">Welcome, {user?.username}</p>
+                <p className="text-xs text-gray-300 font-medium">{new Date().toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Panel - Product/Service Selection */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Barber Selection */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Select Barber</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {activeBarbers.map((barber) => (
+                  <button
+                    key={barber._id}
+                    onClick={() => setSelectedBarber(barber)}
+                    className={`p-3 rounded-xl border-2 transition-all duration-200 ${
+                      selectedBarber?._id === barber._id
+                        ? 'border-[#FF8C42] bg-[#FF8C42]/10 text-[#FF8C42]'
+                        : 'border-gray-200 hover:border-[#FF8C42]/50 text-gray-700'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className="w-8 h-8 bg-[#FF8C42]/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                        <Scissors className="w-4 h-4 text-[#FF8C42]" />
+                      </div>
+                      <p className="text-sm font-semibold">{barber.full_name}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Search and Tabs */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+                <div className="flex space-x-1 bg-gray-100 rounded-xl p-1 mb-4 sm:mb-0">
+                  <button
+                    onClick={() => setActiveTab('services')}
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                      activeTab === 'services'
+                        ? 'bg-[#FF8C42] text-white shadow-lg'
+                        : 'text-gray-600 hover:text-[#FF8C42]'
+                    }`}
+                  >
+                    <Scissors className="w-4 h-4 inline mr-2" />
+                    Services
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('products')}
+                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                      activeTab === 'products'
+                        ? 'bg-[#FF8C42] text-white shadow-lg'
+                        : 'text-gray-600 hover:text-[#FF8C42]'
+                    }`}
+                  >
+                    <Package className="w-4 h-4 inline mr-2" />
+                    Products
+                  </button>
+                </div>
+                
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder={`Search ${activeTab}...`}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Services/Products Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {activeTab === 'services' ? (
+                  filteredServices.map((service) => (
+                    <button
+                      key={service._id}
+                      onClick={() => addService(service)}
+                      className="p-4 border border-gray-200 rounded-xl hover:border-[#FF8C42] hover:shadow-lg transition-all duration-200 text-left group"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-gray-900 group-hover:text-[#FF8C42]">{service.name}</h4>
+                        <Plus className="w-4 h-4 text-gray-400 group-hover:text-[#FF8C42]" />
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2">{service.description}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg font-bold text-[#FF8C42]">₱{service.price}</span>
+                        <span className="text-xs text-gray-500">{service.duration_minutes} min</span>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  filteredProducts.map((product) => (
+                    <button
+                      key={product._id}
+                      onClick={() => addProduct(product)}
+                      className="p-4 border border-gray-200 rounded-xl hover:border-[#FF8C42] hover:shadow-lg transition-all duration-200 text-left group"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-gray-900 group-hover:text-[#FF8C42]">{product.name}</h4>
+                        <Plus className="w-4 h-4 text-gray-400 group-hover:text-[#FF8C42]" />
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2">{product.description}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg font-bold text-[#FF8C42]">₱{product.price}</span>
+                        <span className="text-xs text-gray-500">Stock: {product.stock}</span>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Panel - Transaction Summary */}
+          <div className="space-y-6">
+            {/* Customer Selection */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-gray-900">Customer</h3>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setActiveModal('scanner')}
+                    className="p-2 bg-blue-500/10 text-blue-600 rounded-lg hover:bg-blue-500/20 transition-colors"
+                    title="Scan QR"
+                  >
+                    <QrCode className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setActiveModal('customerSelection')}
+                    className="p-2 bg-[#FF8C42]/10 text-[#FF8C42] rounded-lg hover:bg-[#FF8C42]/20 transition-colors"
+                    title="Select Customer"
+                  >
+                    <User className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              
+              {currentTransaction.customer ? (
+                <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
+                        <User className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">{currentTransaction.customer.username}</p>
+                        <p className="text-sm text-gray-600">{currentTransaction.customer.email}</p>
+                        {currentTransaction.customer.mobile_number && (
+                          <p className="text-sm text-gray-600">{currentTransaction.customer.mobile_number}</p>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '' }))}
+                      className="text-red-500 hover:text-red-700 transition-colors"
+                      title="Remove Customer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ) : currentTransaction.customer_name ? (
+                <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                        <UserPlus className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">{currentTransaction.customer_name}</p>
+                        <p className="text-sm text-gray-600">Walk-in Customer</p>
+                        {currentTransaction.customer_phone && (
+                          <p className="text-sm text-gray-600">{currentTransaction.customer_phone}</p>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '' }))}
+                      className="text-red-500 hover:text-red-700 transition-colors"
+                      title="Remove Customer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setActiveModal('customerSelection')}
+                  className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-[#FF8C42] hover:bg-[#FF8C42]/5 transition-all duration-200 flex items-center justify-center space-x-2 text-gray-600 hover:text-[#FF8C42]"
+                >
+                  <User className="w-5 h-5" />
+                  <span className="font-medium">Select Customer</span>
+                </button>
+              )}
+            </div>
+
+            {/* Transaction Items */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-gray-900">Order Summary</h3>
+                {(currentTransaction.services.length > 0 || currentTransaction.products.length > 0) && (
+                  <button
+                    onClick={clearTransaction}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Clear All"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {/* Services */}
+                {currentTransaction.services.map((service, index) => (
+                  <div key={`service-${index}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900">{service.service_name}</p>
+                      <p className="text-sm text-gray-600">₱{service.price} each</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => updateQuantity('services', index, -1)}
+                        className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <span className="w-8 text-center font-semibold">{service.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity('services', index, 1)}
+                        className="w-6 h-6 bg-[#FF8C42] rounded-full flex items-center justify-center hover:bg-[#FF7A2B] text-white"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Products */}
+                {currentTransaction.products.map((product, index) => (
+                  <div key={`product-${index}`} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900">{product.product_name}</p>
+                      <p className="text-sm text-gray-600">₱{product.price} each</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => updateQuantity('products', index, -1)}
+                        className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300"
+                      >
+                        <Minus className="w-3 h-3" />
+                      </button>
+                      <span className="w-8 text-center font-semibold">{product.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity('products', index, 1)}
+                        className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center hover:bg-blue-600 text-white"
+                      >
+                        <Plus className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {currentTransaction.services.length === 0 && currentTransaction.products.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Calculator className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p>No items added yet</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Payment Summary */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Payment</h3>
+              
+              {/* Totals */}
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between text-gray-600">
+                  <span>Subtotal:</span>
+                  <span>₱{currentTransaction.subtotal.toFixed(2)}</span>
+                </div>
+                {currentTransaction.discount_amount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount:</span>
+                    <span>-₱{currentTransaction.discount_amount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-gray-600">
+                  <span>Tax (10%):</span>
+                  <span>₱{currentTransaction.tax_amount.toFixed(2)}</span>
+                </div>
+                <div className="border-t pt-2">
+                  <div className="flex justify-between text-xl font-bold text-gray-900">
+                    <span>Total:</span>
+                    <span>₱{currentTransaction.total_amount.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Method */}
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Payment Method</label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="card">Card</option>
+                  <option value="digital_wallet">Digital Wallet</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                </select>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <button
+                onClick={openPaymentModal}
+                disabled={!selectedBarber || (currentTransaction.services.length === 0 && currentTransaction.products.length === 0)}
+                className="w-full py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white font-bold rounded-xl hover:from-[#FF7A2B] hover:to-[#E67E37] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              >
+                <CreditCard className="w-5 h-5" />
+                <span>Process Payment</span>
+              </button>
+                
+                <button
+                  onClick={() => alert('Receipt functionality coming soon!')}
+                  className="w-full py-2 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2"
+                >
+                  <Receipt className="w-4 h-4" />
+                  <span>Print Receipt</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      {activeModal === 'scanner' && (
+        <QRScannerModal
+          isOpen={true}
+          onClose={() => setActiveModal(null)}
+          onVoucherScanned={handleVoucherScanned}
+          onBookingScanned={(booking) => {
+            // Load booking details
+            if (booking.customer) {
+              setCurrentTransaction(prev => ({
+                ...prev,
+                customer: booking.customer
+              }))
+            }
+            setActiveModal(null)
+          }}
+        />
+      )}
+
+      {activeModal === 'customerSelection' && (
+        <CustomerSelectionModal
+          isOpen={true}
+          onClose={() => setActiveModal(null)}
+          onCustomerSelected={handleCustomerSelection}
+          onScanQR={() => setActiveModal('scanner')}
+          onAddNewCustomer={() => setActiveModal('addCustomer')}
+        />
+      )}
+
+      {activeModal === 'addCustomer' && (
+        <AddCustomerModal
+          isOpen={true}
+          onClose={() => setActiveModal('customerSelection')}
+          onCustomerAdded={(customer) => {
+            setCurrentTransaction(prev => ({
+              ...prev,
+              customer: customer
+            }))
+            setActiveModal(null)
+          }}
+        />
+      )}
+
+      {activeModal === 'paymentConfirmation' && (
+        <PaymentConfirmationModal
+          isOpen={true}
+          onClose={() => setActiveModal(null)}
+          onConfirm={processPayment}
+          transactionData={{
+            subtotal: currentTransaction.subtotal,
+            discount_amount: currentTransaction.discount_amount,
+            tax_amount: currentTransaction.tax_amount,
+            total_amount: currentTransaction.total_amount,
+            services: currentTransaction.services,
+            products: currentTransaction.products
+          }}
+          paymentMethod={paymentMethod}
+          setPaymentMethod={setPaymentMethod}
+        />
+      )}
+
+      {activeModal === 'paymentSuccess' && (
+        <Modal isOpen={true} onClose={() => {}} title="Payment Successful" size="sm">
+          <div className="text-center py-8">
+            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Payment Successful!</h3>
+            <p className="text-gray-600 mb-4">Transaction completed successfully.</p>
+            <div className="text-2xl font-bold text-green-600">₱{currentTransaction.total_amount.toFixed(2)}</div>
+            <p className="text-sm text-gray-500 mt-2">Receipt will be generated automatically</p>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+export default POS
