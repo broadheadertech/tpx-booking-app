@@ -208,8 +208,15 @@ const Dashboard = () => {
         <div className="max-w-md mx-auto px-4">
           <div className="flex justify-between items-center py-3">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{backgroundColor: '#F68B24'}}>
-                <User className="w-4 h-4 text-white" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center p-1" style={{backgroundColor: '#F68B24'}}>
+                <img 
+                  src="/img/pnglog.png" 
+                  alt="TPX Barbershop Logo" 
+                  className="w-full h-full object-contain"
+                  style={{
+                    filter: 'brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(7500%) hue-rotate(106deg) brightness(109%) contrast(103%)'
+                  }}
+                />
               </div>
               <div>
                 <h1 className="text-sm font-bold text-white">TPX Barbershop</h1>
