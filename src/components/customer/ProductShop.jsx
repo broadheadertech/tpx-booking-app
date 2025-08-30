@@ -93,8 +93,8 @@ const ProductShop = ({ onBack }) => {
     
     if (imageError || !imageSrc) {
       return (
-        <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center">
-          <Package className="w-8 h-8 text-gray-400" />
+        <div className="w-full h-32 bg-[#2A2A2A] rounded-xl flex items-center justify-center">
+          <Package className="w-8 h-8 text-gray-500" />
         </div>
       )
     }
@@ -103,7 +103,7 @@ const ProductShop = ({ onBack }) => {
       <img 
         src={imageSrc}
         alt={productName}
-        className="w-full h-32 object-cover rounded-lg"
+        className="w-full h-32 object-cover rounded-xl"
         onError={() => setImageError(true)}
       />
     )
@@ -231,14 +231,14 @@ const ProductShop = ({ onBack }) => {
                   />
                   
                   <div className="mt-3">
-                    <h3 className="font-bold text-sm text-gray-900 line-clamp-2">
+                    <h3 className="font-bold text-sm text-white line-clamp-2">
                       {product.name}
                     </h3>
-                    <p className="text-xs text-gray-500 mt-1">{product.brand}</p>
+                    <p className="text-xs text-gray-400 mt-1">{product.brand}</p>
                     
                     <div className="flex items-center justify-between mt-2">
                       <div>
-                        <p className="text-lg font-bold" style={{ color: '#F68B24' }}>
+                        <p className="text-lg font-bold text-[#FF8C42]">
                           ₱{product.price.toLocaleString()}
                         </p>
                         <p className="text-xs text-gray-500">
@@ -255,8 +255,7 @@ const ProductShop = ({ onBack }) => {
                             e.stopPropagation()
                             addToCart(product)
                           }}
-                          className="w-full py-2 px-3 rounded-lg text-white font-medium text-sm transition-colors duration-200"
-                          style={{ backgroundColor: '#F68B24' }}
+                          className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white font-medium text-sm transition-colors duration-200 hover:from-[#FF7A2B] hover:to-[#FF6B1A]"
                         >
                           Add to Cart
                         </button>
@@ -267,20 +266,18 @@ const ProductShop = ({ onBack }) => {
                               e.stopPropagation()
                               removeFromCart(product._id)
                             }}
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-white"
-                            style={{ backgroundColor: '#F68B24' }}
+                            className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center text-white"
                           >
                             <Minus className="w-4 h-4" />
                           </button>
-                          <span className="font-bold text-gray-900">{quantityInCart}</span>
+                          <span className="font-bold text-white">{quantityInCart}</span>
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
                               addToCart(product)
                             }}
                             disabled={quantityInCart >= product.stock}
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-white disabled:opacity-50"
-                            style={{ backgroundColor: '#F68B24' }}
+                            className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center text-white disabled:opacity-50"
                           >
                             <Plus className="w-4 h-4" />
                           </button>
