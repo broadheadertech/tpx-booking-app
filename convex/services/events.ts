@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
+import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 
 // Get all events
 export const getAllEvents = query({
@@ -82,7 +83,7 @@ export const createEvent = mutation({
     today.setHours(0, 0, 0, 0);
 
     if (eventDate < today) {
-      throw new Error("Event date cannot be in the past");
+      throwUserError(ERROR_CODES.EVENT_PAST_DATE);
     }
 
     const eventId = await ctx.db.insert("events", {
@@ -145,15 +146,15 @@ export const registerForEvent = mutation({
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
     if (!event) {
-      throw new Error("Event not found");
+      throwUserError(ERROR_CODES.EVENT_NOT_FOUND);
     }
 
     if (event.currentAttendees >= event.maxAttendees) {
-      throw new Error("Event is full");
+      throwUserError(ERROR_CODES.EVENT_FULL);
     }
 
     if (event.status !== "upcoming") {
-      throw new Error("Cannot register for this event");
+      throwUserError(ERROR_CODES.EVENT_REGISTRATION_CLOSED, "Registration is closed for this event.", "This event is no longer accepting new registrations.");
     }
 
     await ctx.db.patch(args.eventId, {
@@ -171,11 +172,11 @@ export const unregisterFromEvent = mutation({
   handler: async (ctx, args) => {
     const event = await ctx.db.get(args.eventId);
     if (!event) {
-      throw new Error("Event not found");
+      throwUserError(ERROR_CODES.EVENT_NOT_FOUND);
     }
 
     if (event.currentAttendees <= 0) {
-      throw new Error("No attendees to unregister");
+      throwUserError(ERROR_CODES.EVENT_NOT_FOUND, "No registrations to cancel.", "There are no active registrations for this event to cancel.");
     }
 
     await ctx.db.patch(args.eventId, {

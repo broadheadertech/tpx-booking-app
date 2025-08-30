@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw } from 'lucide-react'
+import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw, Grid3X3, List } from 'lucide-react'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import CreateServiceModal from './CreateServiceModal'
@@ -10,6 +10,7 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingService, setEditingService] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [viewMode, setViewMode] = useState('cards') // 'cards' or 'table'
 
   // Convex mutations
   const deleteService = useMutation(api.services.services.deleteService)
@@ -75,66 +76,66 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Total Services</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-sm font-medium text-gray-400">Total Services</p>
+              <p className="text-2xl font-bold text-white">{stats.total}</p>
             </div>
-            <Scissors className="h-8 w-8 text-blue-500" />
+            <Scissors className="h-8 w-8 text-blue-400" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Avg. Price</p>
-              <p className="text-2xl font-bold text-green-600">₱{stats.avgPrice.toFixed(0)}</p>
+              <p className="text-sm font-medium text-gray-400">Avg. Price</p>
+              <p className="text-2xl font-bold text-green-400">₱{stats.avgPrice.toFixed(0)}</p>
             </div>
-            <DollarSign className="h-8 w-8 text-green-500" />
+            <DollarSign className="h-8 w-8 text-green-400" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Avg. Duration</p>
-              <p className="text-2xl font-bold text-orange-600">{Math.round(stats.avgDuration)}m</p>
+              <p className="text-sm font-medium text-gray-400">Avg. Duration</p>
+              <p className="text-2xl font-bold text-orange-400">{Math.round(stats.avgDuration)}m</p>
             </div>
-            <Clock className="h-8 w-8 text-orange-500" />
+            <Clock className="h-8 w-8 text-orange-400" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Total Value</p>
-              <p className="text-2xl font-bold text-blue-600">₱{stats.totalRevenue.toFixed(0)}</p>
+              <p className="text-sm font-medium text-gray-400">Total Value</p>
+              <p className="text-2xl font-bold text-blue-400">₱{stats.totalRevenue.toFixed(0)}</p>
             </div>
-            <DollarSign className="h-8 w-8 text-blue-500" />
+            <DollarSign className="h-8 w-8 text-blue-400" />
           </div>
         </div>
       </div>
 
       {/* Controls */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
               <input
                 type="text"
                 placeholder="Search services..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
               />
             </div>
 
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             >
               <option value="name">Sort by Name</option>
               <option value="price">Sort by Price</option>
@@ -143,16 +144,42 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
           </div>
 
           <div className="flex items-center space-x-2">
+            {/* View Toggle */}
+            <div className="flex items-center bg-[#1A1A1A] rounded-lg p-1 border border-[#444444]">
+              <button
+                onClick={() => setViewMode('cards')}
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === 'cards'
+                    ? 'bg-[#FF8C42] text-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+                title="Card View"
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === 'table'
+                    ? 'bg-[#FF8C42] text-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+                title="Table View"
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
+            
             <button
               onClick={onRefresh}
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+              className="flex items-center space-x-2 px-4 py-2 bg-[#444444] text-gray-300 rounded-lg hover:bg-[#555555] transition-colors text-sm"
             >
               <RotateCcw className="h-4 w-4" />
               <span>Refresh</span>
             </button>
             <button
               onClick={handleCreate}
-              className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
+              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors text-sm"
             >
               <Plus className="h-4 w-4" />
               <span>New Service</span>

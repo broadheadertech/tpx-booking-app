@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
+import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 
 // Get all barbers
 export const getAllBarbers = query({
@@ -62,7 +63,7 @@ export const createBarber = mutation({
       .first();
 
     if (existingBarber) {
-      throw new Error("User already has a barber profile");
+      throwUserError(ERROR_CODES.BARBER_PROFILE_EXISTS);
     }
 
     const barberId = await ctx.db.insert("barbers", {
@@ -199,11 +200,11 @@ export const createBarberProfile = mutation({
     // Get user data
     const user = await ctx.db.get(args.userId);
     if (!user) {
-      throw new Error("User not found");
+      throwUserError(ERROR_CODES.BARBER_NOT_FOUND, "User account not found.", "The user account you're trying to create a barber profile for doesn't exist.");
     }
 
     if (user.role !== "barber") {
-      throw new Error("User is not a barber");
+      throwUserError(ERROR_CODES.BARBER_INVALID_ROLE);
     }
 
     // Check if user already has a barber profile
@@ -244,5 +245,90 @@ export const createBarberProfile = mutation({
     });
 
     return barberId;
+  },
+});
+
+// Create barber with user account
+export const createBarberWithAccount = mutation({
+  args: {
+    username: v.string(),
+    email: v.string(),
+    password: v.string(),
+    mobile_number: v.string(),
+    full_name: v.string(),
+    is_active: v.boolean(),
+    services: v.array(v.id("services")),
+    phone: v.optional(v.string()),
+    avatar: v.optional(v.string()),
+    experience: v.optional(v.string()),
+    specialties: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    // Check if email already exists
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+
+    if (existingUser) {
+      throwUserError(ERROR_CODES.AUTH_EMAIL_EXISTS);
+    }
+
+    // Check if username already exists
+    const existingUsername = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .first();
+
+    if (existingUsername) {
+      throwUserError(ERROR_CODES.AUTH_USERNAME_EXISTS);
+    }
+
+    // Create user account
+    const userId = await ctx.db.insert("users", {
+      username: args.username,
+      email: args.email,
+      password: args.password, // In production, this should be hashed
+      mobile_number: args.mobile_number,
+      nickname: undefined,
+      birthday: undefined,
+      role: "barber",
+      is_active: true,
+      avatar: args.avatar,
+      bio: undefined,
+      skills: [],
+      isVerified: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    // Create barber profile
+    const barberId = await ctx.db.insert("barbers", {
+      user: userId,
+      full_name: args.full_name,
+      is_active: args.is_active,
+      services: args.services,
+      email: args.email,
+      phone: args.phone || undefined,
+      avatar: args.avatar || undefined,
+      experience: args.experience || '0 years',
+      rating: 0,
+      totalBookings: 0,
+      monthlyRevenue: 0,
+      specialties: args.specialties || [],
+      schedule: {
+        monday: { available: true, start: '09:00', end: '17:00' },
+        tuesday: { available: true, start: '09:00', end: '17:00' },
+        wednesday: { available: true, start: '09:00', end: '17:00' },
+        thursday: { available: true, start: '09:00', end: '17:00' },
+        friday: { available: true, start: '09:00', end: '17:00' },
+        saturday: { available: true, start: '09:00', end: '17:00' },
+        sunday: { available: false, start: '09:00', end: '17:00' },
+      },
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    return { userId, barberId };
   },
 });

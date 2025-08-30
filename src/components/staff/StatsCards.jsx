@@ -42,22 +42,22 @@ const StatsCards = ({ stats = [] }) => {
         const TrendIcon = changeType === 'positive' ? TrendingUp : changeType === 'negative' ? TrendingDown : null
         
         return (
-          <Card key={index} className="relative p-5 bg-white border border-[#E5E7EB] hover:border-[#FF8C42]/40 hover:shadow-lg transition-all duration-300 rounded-2xl group">
+          <Card key={index} className="relative p-5 bg-gradient-to-br from-[#2A2A2A] to-[#333333] border border-[#444444]/50 hover:border-[#FF8C42]/40 hover:shadow-lg transition-all duration-300 rounded-2xl group">
             {/* Header with icon and label */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-3">
                 <div className={`w-10 h-10 bg-gradient-to-r ${gradient} rounded-xl flex items-center justify-center shadow-sm`}>
                   <IconComponent className="w-5 h-5 text-white" />
                 </div>
-                <div className="text-xs font-bold text-[#6B6B6B] uppercase tracking-wider leading-tight">{stat.label}</div>
+                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider leading-tight">{stat.label}</div>
               </div>
             </div>
             
             {/* Main value */}
             <div className="mb-3">
-              <div className="text-2xl font-black text-[#1A1A1A] leading-none">{stat.value}</div>
+              <div className="text-2xl font-black text-white leading-none">{stat.value}</div>
               {stat.subtitle && (
-                <div className="text-xs text-[#9CA3AF] mt-1">{stat.subtitle}</div>
+                <div className="text-xs text-gray-500 mt-1">{stat.subtitle}</div>
               )}
             </div>
             

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { api } from "../_generated/api";
+import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 
 // Generate booking code
 function generateBookingCode() {
@@ -200,7 +201,16 @@ export const createBooking = mutation({
     // Get service details for price
     const service = await ctx.db.get(args.service);
     if (!service) {
-      throw new Error("Service not found");
+      throwUserError(ERROR_CODES.BOOKING_SERVICE_UNAVAILABLE);
+    }
+    
+    // Validate booking date is not in the past
+    const bookingDate = new Date(args.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (bookingDate < today) {
+      throwUserError(ERROR_CODES.BOOKING_PAST_DATE);
     }
 
     const bookingCode = generateBookingCode();
@@ -261,7 +271,7 @@ export const updateBooking = mutation({
     // Get the current booking to check for status changes
     const currentBooking = await ctx.db.get(id);
     if (!currentBooking) {
-      throw new Error("Booking not found");
+      throwUserError(ERROR_CODES.BOOKING_NOT_FOUND);
     }
 
     await ctx.db.patch(id, {

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
+import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { Id } from "../_generated/dataModel";
 
 // Get all products
@@ -83,7 +84,7 @@ export const createProduct = mutation({
       .first();
     
     if (existingProduct) {
-      throw new Error("SKU already exists");
+      throwUserError(ERROR_CODES.PRODUCT_SKU_EXISTS);
     }
     
     // Determine status based on stock
@@ -155,7 +156,7 @@ export const updateProduct = mutation({
     // Check if product exists
     const existingProduct = await ctx.db.get(id);
     if (!existingProduct) {
-      throw new Error("Product not found");
+      throwUserError(ERROR_CODES.PRODUCT_NOT_FOUND);
     }
     
     // Check SKU uniqueness if SKU is being updated
@@ -166,7 +167,7 @@ export const updateProduct = mutation({
         .first();
       
       if (skuExists && skuExists._id !== id) {
-        throw new Error("SKU already exists");
+        throwUserError(ERROR_CODES.PRODUCT_SKU_EXISTS);
       }
     }
     
@@ -205,7 +206,7 @@ export const deleteProduct = mutation({
     const product = await ctx.db.get(args.id);
     
     if (!product) {
-      throw new Error("Product not found");
+      throwUserError(ERROR_CODES.PRODUCT_NOT_FOUND);
     }
     
     await ctx.db.delete(args.id);

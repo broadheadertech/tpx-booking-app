@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
+import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { Id } from "../_generated/dataModel";
 
 // Get all notifications for a user
@@ -92,7 +93,7 @@ export const markAsRead = mutation({
     const notification = await ctx.db.get(args.notificationId);
     
     if (!notification || notification.recipient_id !== args.userId) {
-      throw new Error("Notification not found or unauthorized");
+      throwUserError(ERROR_CODES.PERMISSION_DENIED, "Notification not accessible.", "You don't have permission to access this notification.");
     }
     
     await ctx.db.patch(args.notificationId, {
@@ -142,7 +143,7 @@ export const deleteNotification = mutation({
     const notification = await ctx.db.get(args.notificationId);
     
     if (!notification || notification.recipient_id !== args.userId) {
-      throw new Error("Notification not found or unauthorized");
+      throwUserError(ERROR_CODES.PERMISSION_DENIED, "Notification not accessible.", "You don't have permission to delete this notification.");
     }
     
     await ctx.db.delete(args.notificationId);

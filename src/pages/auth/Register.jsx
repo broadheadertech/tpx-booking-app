@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import bannerImage from '../../assets/img/banner.jpg'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import ErrorDisplay from '../../components/common/ErrorDisplay'
 
 function Register() {
   const [formData, setFormData] = useState({
@@ -100,8 +101,12 @@ function Register() {
           <div className="bg-white rounded-2xl shadow-xl border" style={{borderColor: '#E0E0E0'}}>
             <div className="p-8">
               {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-600">{error}</p>
+                <div className="mb-4">
+                  <ErrorDisplay 
+                    error={error} 
+                    variant="compact"
+                    onClose={() => setError('')}
+                  />
                 </div>
               )}
               {success && (

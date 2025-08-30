@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
+import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 
 // Get all services
 export const getAllServices = query({

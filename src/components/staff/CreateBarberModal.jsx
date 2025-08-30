@@ -9,8 +9,11 @@ import { useAuth } from '../../context/AuthContext'
 const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) => {
   const { user } = useAuth()
   const [formData, setFormData] = useState({
-    full_name: '',
+    username: '',
     email: '',
+    password: '',
+    mobile_number: '',
+    full_name: '',
     phone: '',
     is_active: true,
     services: [],
@@ -22,8 +25,11 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
   useEffect(() => {
     if (editingBarber) {
       setFormData({
-        full_name: editingBarber.full_name || '',
+        username: '', // Don't populate username for editing
         email: editingBarber.email || '',
+        password: '', // Don't populate password for editing
+        mobile_number: editingBarber.phone || '',
+        full_name: editingBarber.full_name || '',
         phone: editingBarber.phone || '',
         is_active: editingBarber.is_active ?? true,
         services: editingBarber.services || [],
@@ -32,8 +38,11 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
       })
     } else {
       setFormData({
-        full_name: '',
+        username: '',
         email: '',
+        password: '',
+        mobile_number: '',
+        full_name: '',
         phone: '',
         is_active: true,
         services: [],
@@ -49,6 +58,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
   // Convex queries and mutations
   const services = useQuery(api.services.services.getAllServices)
   const createBarber = useMutation(api.services.barbers.createBarber)
+  const createBarberWithAccount = useMutation(api.services.barbers.createBarberWithAccount)
   const updateBarber = useMutation(api.services.barbers.updateBarber)
 
   const handleInputChange = (field, value) => {
@@ -58,36 +68,61 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    if (!formData.full_name.trim() || !formData.email.trim()) {
-      setError('Full name and email are required')
-      return
+    if (editingBarber) {
+      // For editing, only validate basic fields
+      if (!formData.full_name.trim() || !formData.email.trim()) {
+        setError('Full name and email are required')
+        return
+      }
+    } else {
+      // For creating new barber, validate all required fields
+      if (!formData.username.trim() || !formData.email.trim() || !formData.password.trim() || 
+          !formData.mobile_number.trim() || !formData.full_name.trim()) {
+        setError('Username, email, password, mobile number, and full name are required')
+        return
+      }
     }
 
     setLoading(true)
     setError('')
 
     try {
-      if (!user?.id) {
-        setError('You must be logged in to create a barber')
-        return
-      }
-
-      const barberData = {
-        user: user.id,
-        full_name: formData.full_name.trim(),
-        email: formData.email.trim(),
-        phone: formData.phone || '',
-        is_active: formData.is_active,
-        services: formData.services,
-        experience: formData.experience || '0 years',
-        specialties: formData.specialties,
-        avatar: ''
-      }
-
       if (editingBarber) {
+        // Update existing barber
+        if (!user?.id) {
+          setError('You must be logged in to update a barber')
+          return
+        }
+
+        const barberData = {
+          full_name: formData.full_name.trim(),
+          email: formData.email.trim(),
+          phone: formData.phone || '',
+          is_active: formData.is_active,
+          services: formData.services,
+          experience: formData.experience || '0 years',
+          specialties: formData.specialties,
+          avatar: ''
+        }
+
         await updateBarber({ id: editingBarber._id, ...barberData })
       } else {
-        await createBarber(barberData)
+        // Create new barber with account
+        const barberData = {
+          username: formData.username.trim(),
+          email: formData.email.trim(),
+          password: formData.password.trim(),
+          mobile_number: formData.mobile_number.trim(),
+          full_name: formData.full_name.trim(),
+          phone: formData.mobile_number.trim(), // Use mobile_number as phone for new barbers
+          is_active: formData.is_active,
+          services: formData.services,
+          experience: formData.experience || '0 years',
+          specialties: formData.specialties,
+          avatar: ''
+        }
+
+        await createBarberWithAccount(barberData)
       }
 
       // Call parent success handler
@@ -97,8 +132,11 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
       
       // Reset form and close modal
       setFormData({
-        full_name: '',
+        username: '',
         email: '',
+        password: '',
+        mobile_number: '',
+        full_name: '',
         phone: '',
         is_active: true,
         services: [],
@@ -116,8 +154,11 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
 
   const handleClose = () => {
     setFormData({
-      full_name: '',
+      username: '',
       email: '',
+      password: '',
+      mobile_number: '',
+      full_name: '',
       phone: '',
       is_active: true,
       services: [],
@@ -155,8 +196,57 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
           <div className="space-y-4">
             <h3 className="text-lg font-black text-[#1A1A1A] uppercase tracking-wide flex items-center">
               <User className="w-5 h-5 mr-2 text-[#FF8C42]" />
-              Personal Information
+              {editingBarber ? 'Personal Information' : 'Account & Personal Information'}
             </h3>
+
+            {!editingBarber && (
+              <>
+                <div>
+                  <label className="block text-[#1A1A1A] font-bold text-base mb-2">
+                    Username <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.username}
+                    onChange={(e) => handleInputChange('username', e.target.value)}
+                    placeholder="Enter username for login"
+                    required
+                    className="w-full h-12 px-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[#1A1A1A] font-bold text-base mb-2">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    placeholder="Enter password for login"
+                    required
+                    className="w-full h-12 px-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[#1A1A1A] font-bold text-base mb-2">
+                    Mobile Number <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#6B6B6B]" />
+                    <input
+                      type="tel"
+                      value={formData.mobile_number}
+                      onChange={(e) => handleInputChange('mobile_number', e.target.value)}
+                      placeholder="+63 XXX XXX XXXX"
+                      required
+                      className="w-full h-12 pl-12 pr-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
 
             <div>
               <label className="block text-[#1A1A1A] font-bold text-base mb-2">
@@ -189,21 +279,23 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
               </div>
             </div>
 
-            <div>
-              <label className="block text-[#1A1A1A] font-bold text-base mb-2">
-                Phone Number
-              </label>
-              <div className="relative">
-                <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#6B6B6B]" />
-                <input
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  placeholder="+63 XXX XXX XXXX"
-                  className="w-full h-12 pl-12 pr-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200"
-                />
+            {editingBarber && (
+              <div>
+                <label className="block text-[#1A1A1A] font-bold text-base mb-2">
+                  Phone Number
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#6B6B6B]" />
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    placeholder="+63 XXX XXX XXXX"
+                    className="w-full h-12 pl-12 pr-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200"
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             <div>
               <label className="block text-[#1A1A1A] font-bold text-base mb-2">

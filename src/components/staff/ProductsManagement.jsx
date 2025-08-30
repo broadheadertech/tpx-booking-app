@@ -345,21 +345,21 @@ const ProductsManagement = ({ onRefresh }) => {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
         <div>
-          <h2 className="text-3xl font-black text-gray-900">Products & Inventory</h2>
-          <p className="text-gray-600 mt-1">Manage your barbershop products and track inventory</p>
+          <h2 className="text-3xl font-black text-white">Products & Inventory</h2>
+          <p className="text-gray-400 mt-1">Manage your barbershop products and track inventory</p>
         </div>
         
         <div className="flex items-center space-x-3">
           <button
             onClick={() => onRefresh?.()}
-            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+            className="flex items-center space-x-2 px-4 py-2 bg-[#444444] text-gray-300 rounded-lg hover:bg-[#555555] transition-colors text-sm"
           >
             <RefreshCw className="h-4 w-4" />
             <span>Refresh</span>
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
+            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors text-sm"
           >
             <Plus className="h-4 w-4" />
             <span>New Product</span>
@@ -369,88 +369,88 @@ const ProductsManagement = ({ onRefresh }) => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Total Products</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-sm font-medium text-gray-400">Total Products</p>
+              <p className="text-2xl font-bold text-white">{stats.total}</p>
             </div>
-            <Package className="h-8 w-8 text-blue-500" />
+            <Package className="h-8 w-8 text-blue-400" />
           </div>
         </div>
         
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">In Stock</p>
-              <p className="text-2xl font-bold text-green-600">{stats.inStock}</p>
+              <p className="text-sm font-medium text-gray-400">In Stock</p>
+              <p className="text-2xl font-bold text-green-400">{stats.inStock}</p>
             </div>
-            <TrendingUp className="h-8 w-8 text-green-500" />
+            <TrendingUp className="h-8 w-8 text-green-400" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Low Stock</p>
-              <p className="text-2xl font-bold text-yellow-600">{stats.lowStock}</p>
+              <p className="text-sm font-medium text-gray-400">Low Stock</p>
+              <p className="text-2xl font-bold text-yellow-400">{stats.lowStock}</p>
             </div>
-            <AlertCircle className="h-8 w-8 text-yellow-500" />
+            <AlertCircle className="h-8 w-8 text-yellow-400" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Out of Stock</p>
-              <p className="text-2xl font-bold text-red-600">{stats.outOfStock}</p>
+              <p className="text-sm font-medium text-gray-400">Out of Stock</p>
+              <p className="text-2xl font-bold text-red-400">{stats.outOfStock}</p>
             </div>
-            <TrendingDown className="h-8 w-8 text-red-500" />
+            <TrendingDown className="h-8 w-8 text-red-400" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Inventory Value</p>
-              <p className="text-2xl font-bold text-purple-600">₱{stats.totalValue.toLocaleString()}</p>
+              <p className="text-sm font-medium text-gray-400">Inventory Value</p>
+              <p className="text-2xl font-bold text-purple-400">₱{stats.totalValue.toLocaleString()}</p>
             </div>
-            <DollarSign className="h-8 w-8 text-purple-500" />
+            <DollarSign className="h-8 w-8 text-purple-400" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Sold This Month</p>
-              <p className="text-2xl font-bold text-orange-600">{stats.totalSold}</p>
+              <p className="text-sm font-medium text-gray-400">Sold This Month</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.totalSold}</p>
             </div>
-            <ShoppingCart className="h-8 w-8 text-orange-500" />
+            <ShoppingCart className="h-8 w-8 text-[#FF8C42]" />
           </div>
         </div>
       </div>
 
       {/* Controls */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
               <input
                 type="text"
                 placeholder="Search products..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
               />
             </div>
 
             <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-gray-400" />
+              <Filter className="h-4 w-4 text-gray-500" />
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
                 <option value="all">All Categories</option>
                 <option value="hair-care">Hair Care</option>
@@ -464,7 +464,7 @@ const ProductsManagement = ({ onRefresh }) => {
             <select
               value={filterStock}
               onChange={(e) => setFilterStock(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             >
               <option value="all">All Stock Levels</option>
               <option value="in-stock">In Stock</option>
@@ -479,12 +479,12 @@ const ProductsManagement = ({ onRefresh }) => {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-            <div key={i} className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <div key={i} className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
               <div className="animate-pulse">
-                <div className="h-32 bg-gray-200 rounded mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-full mb-2"></div>
-                <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-32 bg-[#444444] rounded mb-4"></div>
+                <div className="h-4 bg-[#444444] rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-[#444444] rounded w-full mb-2"></div>
+                <div className="h-6 bg-[#444444] rounded w-1/2"></div>
               </div>
             </div>
           ))}
@@ -496,7 +496,7 @@ const ProductsManagement = ({ onRefresh }) => {
             const profitMargin = ((product.price - product.cost) / product.price * 100).toFixed(1)
             
             return (
-              <div key={product._id} className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+              <div key={product._id} className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
                 {/* Product Image */}
                 <div className="h-48 bg-gray-100 flex items-center justify-center relative">
                   {product.imageUrl || product.imageStorageId ? (
@@ -520,40 +520,40 @@ const ProductsManagement = ({ onRefresh }) => {
                 <div className="p-4">
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">{product.name}</h3>
-                      <p className="text-xs text-gray-500">{product.brand}</p>
+                      <h3 className="font-semibold text-white text-sm">{product.name}</h3>
+                      <p className="text-xs text-gray-400">{product.brand}</p>
                     </div>
                   </div>
 
-                  <p className="text-gray-600 text-xs mb-3 line-clamp-2">{product.description}</p>
+                  <p className="text-gray-400 text-xs mb-3 line-clamp-2">{product.description}</p>
 
                   <div className="space-y-2 mb-4">
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">SKU:</span>
-                      <span className="font-mono text-gray-700">{product.sku}</span>
+                      <span className="font-mono text-gray-300">{product.sku}</span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">Stock:</span>
                       <span className={`font-semibold ${
-                        product.stock === 0 ? 'text-red-600' : 
-                        product.stock <= product.minStock ? 'text-yellow-600' : 'text-green-600'
+                        product.stock === 0 ? 'text-red-400' : 
+                        product.stock <= product.minStock ? 'text-yellow-400' : 'text-green-400'
                       }`}>
                         {product.stock} units
                       </span>
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">Sold:</span>
-                      <span className="text-gray-700">{product.soldThisMonth} this month</span>
+                      <span className="text-gray-300">{product.soldThisMonth} this month</span>
                     </div>
                   </div>
 
                   {/* Stock Level Bar */}
                   <div className="mb-4">
-                    <div className="flex justify-between text-xs text-gray-600 mb-1">
+                    <div className="flex justify-between text-xs text-gray-400 mb-1">
                       <span>Stock Level</span>
                       <span>{Math.round((product.stock / (product.minStock * 2)) * 100)}%</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="w-full bg-[#444444] rounded-full h-2">
                       <div 
                         className={`h-2 rounded-full transition-all duration-300 ${
                           product.stock === 0 ? 'bg-red-500' :
@@ -566,9 +566,9 @@ const ProductsManagement = ({ onRefresh }) => {
 
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <div className="text-lg font-bold text-orange-600">₱{product.price.toLocaleString()}</div>
+                      <div className="text-lg font-bold text-[#FF8C42]">₱{product.price.toLocaleString()}</div>
                       <div className="text-xs text-gray-500">Cost: ₱{product.cost.toLocaleString()}</div>
-                      <div className="text-xs text-green-600">+{profitMargin}% margin</div>
+                      <div className="text-xs text-green-400">+{profitMargin}% margin</div>
                     </div>
                   </div>
 
@@ -577,14 +577,14 @@ const ProductsManagement = ({ onRefresh }) => {
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => handleEdit(product)}
-                        className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                        className="p-2 text-gray-400 hover:text-[#FF8C42] hover:bg-[#FF8C42]/20 rounded-lg transition-colors"
                         title="Edit Product"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(product._id)}
-                        className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/20 rounded-lg transition-colors"
                         title="Delete Product"
                       >
                         <Trash2 className="h-4 w-4" />

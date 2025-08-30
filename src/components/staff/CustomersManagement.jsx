@@ -68,80 +68,80 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
     <div className="space-y-6">
       {/* Header with Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Total</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-sm font-medium text-gray-300">Total</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.total}</p>
             </div>
-            <User className="h-8 w-8 text-blue-500" />
+            <User className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
         
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Active</p>
-              <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+              <p className="text-sm font-medium text-gray-300">Active</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.active}</p>
             </div>
-            <User className="h-8 w-8 text-green-500" />
+            <User className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">New</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.new}</p>
+              <p className="text-sm font-medium text-gray-300">New</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.new}</p>
             </div>
-            <User className="h-8 w-8 text-blue-500" />
+            <User className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Inactive</p>
-              <p className="text-2xl font-bold text-red-600">{stats.inactive}</p>
+              <p className="text-sm font-medium text-gray-300">Inactive</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.inactive}</p>
             </div>
-            <User className="h-8 w-8 text-red-500" />
+            <User className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Total Spent</p>
-              <p className="text-2xl font-bold text-gray-900">₱{stats.totalSpent.toFixed(0)}</p>
+              <p className="text-sm font-medium text-gray-300">Total Spent</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">₱{stats.totalSpent.toFixed(0)}</p>
             </div>
-            <Calendar className="h-8 w-8 text-blue-500" />
+            <Calendar className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
       </div>
 
       {/* Controls */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
               <input
                 type="text"
                 placeholder="Search customers..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
               />
             </div>
 
             {/* Filter */}
             <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-gray-400" />
+              <Filter className="h-4 w-4 text-gray-500" />
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -183,62 +183,62 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
       </div>
 
       {/* Customers Table */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gradient-to-r from-orange-50 to-orange-100 border-b border-orange-200">
+            <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A] border-b border-[#444444]/50">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                   <div className="flex items-center space-x-2">
-                    <User className="h-4 w-4 text-orange-500" />
+                    <User className="h-4 w-4 text-[#FF8C42]" />
                     <span>Customer</span>
                   </div>
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                   <div className="flex items-center space-x-2">
-                    <Mail className="h-4 w-4 text-orange-500" />
+                    <Mail className="h-4 w-4 text-[#FF8C42]" />
                     <span>Contact</span>
                   </div>
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                   <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-orange-500" />
+                    <Calendar className="h-4 w-4 text-[#FF8C42]" />
                     <span>Birthday</span>
                   </div>
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-center text-xs font-semibold text-gray-300 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-100">
+            <tbody className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] divide-y divide-[#444444]/30">
               {filteredCustomers.map((customer, index) => {
                 const statusConfig = getStatusConfig(customer)
                 return (
                   <tr 
                     key={customer.id}
-                    className={`hover:bg-gray-50 transition-colors ${
-                      index % 2 === 0 ? 'bg-white' : 'bg-gray-25'
+                    className={`hover:bg-[#333333]/50 transition-colors ${
+                      index % 2 === 0 ? 'bg-[#2A2A2A]' : 'bg-[#333333]/30'
                     }`}
                   >
                     {/* Customer Info */}
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
-                        <div className={`flex-shrink-0 w-10 h-10 rounded-full ${statusConfig.bg} flex items-center justify-center`}>
-                          <User className="h-5 w-5 text-orange-500" />
+                        <div className={`flex-shrink-0 w-10 h-10 rounded-full bg-[#FF8C42]/20 flex items-center justify-center`}>
+                          <User className="h-5 w-5 text-[#FF8C42]" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="text-sm font-semibold text-gray-900 truncate">
+                          <div className="text-sm font-semibold text-white truncate">
                             {customer.name || customer.username}
                           </div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-gray-400">
                             @{customer.username}
                             {customer.nickname && (
-                              <span className="ml-2 text-xs bg-gray-100 px-2 py-0.5 rounded-full">
+                              <span className="ml-2 text-xs bg-[#444444] text-gray-300 px-2 py-0.5 rounded-full">
                                 {customer.nickname}
                               </span>
                             )}
                           </div>
-                          <div className="text-xs text-gray-400">ID: {customer.id}</div>
+                          <div className="text-xs text-gray-500">ID: {customer.id}</div>
                         </div>
                       </div>
                     </td>
@@ -247,14 +247,14 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
                     <td className="px-6 py-4">
                       <div className="space-y-1">
                         <div className="flex items-center space-x-2">
-                          <Mail className="h-3 w-3 text-gray-400" />
-                          <span className="text-sm text-gray-900 truncate max-w-48" title={customer.email}>
+                          <Mail className="h-3 w-3 text-gray-500" />
+                          <span className="text-sm text-white truncate max-w-48" title={customer.email}>
                             {customer.email || 'No email'}
                           </span>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <Phone className="h-3 w-3 text-gray-400" />
-                          <span className="text-sm text-gray-600">
+                          <Phone className="h-3 w-3 text-gray-500" />
+                          <span className="text-sm text-gray-400">
                             {customer.phone || customer.mobile_number || 'No phone'}
                           </span>
                         </div>
@@ -263,10 +263,10 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
 
                     {/* Birthday */}
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
+                      <div className="text-sm text-white">
                         {customer.formattedBirthday || customer.birthday || 'Not provided'}
                       </div>
-                      <div className="text-xs text-gray-500 capitalize">
+                      <div className="text-xs text-gray-400 capitalize">
                         Role: {customer.role || 'client'}
                       </div>
                     </td>
@@ -282,11 +282,11 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
                     {/* Actions */}
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center space-x-2">
-                        <button className="inline-flex items-center px-3 py-1.5 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors text-xs font-medium">
+                        <button className="inline-flex items-center px-3 py-1.5 bg-[#FF8C42]/20 text-[#FF8C42] rounded-lg hover:bg-[#FF8C42]/30 transition-colors text-xs font-medium">
                           <User className="h-3 w-3 mr-1" />
                           View
                         </button>
-                        <button className="inline-flex items-center px-3 py-1.5 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors text-xs font-medium">
+                        <button className="inline-flex items-center px-3 py-1.5 bg-[#444444] text-gray-300 rounded-lg hover:bg-[#555555] transition-colors text-xs font-medium">
                           <Mail className="h-3 w-3 mr-1" />
                           Contact
                         </button>
@@ -302,9 +302,9 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
 
       {filteredCustomers.length === 0 && (
         <div className="text-center py-12">
-          <User className="mx-auto h-12 w-12 text-gray-300" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No customers found</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <User className="mx-auto h-12 w-12 text-gray-500" />
+          <h3 className="mt-2 text-sm font-medium text-white">No customers found</h3>
+          <p className="mt-1 text-sm text-gray-400">
             {searchTerm || filterStatus !== 'all' 
               ? 'Try adjusting your search or filter criteria.'
               : 'Get started by adding a new customer.'

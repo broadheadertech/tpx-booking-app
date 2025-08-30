@@ -17,9 +17,11 @@ import NotificationsManagement from '../../components/staff/NotificationsManagem
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
+import { useNavigate } from 'react-router-dom'
 
 function StaffDashboard() {
-  const { user } = useAuth()
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState(() => {
     // Restore active tab from localStorage on component mount
     return localStorage.getItem('staff_dashboard_active_tab') || 'overview'
@@ -169,9 +171,15 @@ function StaffDashboard() {
     console.log('Booking scanned')
   }
 
-  const handleLogout = () => {
-    // TODO: Implement logout
-    console.log('Logout clicked')
+  const handleLogout = async () => {
+    try {
+      await logout()
+      navigate('/auth/login')
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Force navigation even if logout fails
+      navigate('/auth/login')
+    }
   }
 
   // Tab configuration
@@ -191,7 +199,7 @@ function StaffDashboard() {
   console.log('StaffDashboard - User:', user)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F5F5F5] to-white">
+    <div className="min-h-screen bg-gradient-to-br from-[#0F0F0F] via-[#1A1A1A] to-[#2A2A2A]">
       <DashboardHeader onLogout={handleLogout} />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -211,7 +219,7 @@ function StaffDashboard() {
             onTabChange={setActiveTab}
             incompleteBookingsCount={incompleteBookingsCount}
           />
-          <div className="bg-white rounded-3xl shadow-2xl border-2 border-[#F5F5F5] p-10 backdrop-blur-sm">
+          <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-3xl shadow-2xl border border-[#333333]/50 p-10 backdrop-blur-sm">
             {renderTabContent()}
           </div>
         </div>

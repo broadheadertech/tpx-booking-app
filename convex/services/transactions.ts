@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { Id } from "../_generated/dataModel";
+import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 
 // Create a new transaction
 export const createTransaction = mutation({
@@ -298,11 +299,11 @@ export const refundTransaction = mutation({
   handler: async (ctx, args) => {
     const transaction = await ctx.db.get(args.transactionId);
     if (!transaction) {
-      throw new Error("Transaction not found");
+      throwUserError(ERROR_CODES.TRANSACTION_NOT_FOUND);
     }
 
     if (transaction.payment_status === "refunded") {
-      throw new Error("Transaction already refunded");
+      throwUserError(ERROR_CODES.TRANSACTION_ALREADY_REFUNDED);
     }
 
     const timestamp = Date.now();

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
+import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 
 // Generate a simple session token (in production, use proper JWT or similar)
 function generateSessionToken() {
@@ -25,7 +26,7 @@ export const registerUser = mutation({
       .first();
 
     if (existingUser) {
-      throw new Error("User with this email already exists");
+      throwUserError(ERROR_CODES.AUTH_EMAIL_EXISTS);
     }
 
     const existingUsername = await ctx.db
@@ -34,7 +35,7 @@ export const registerUser = mutation({
       .first();
 
     if (existingUsername) {
-      throw new Error("Username already taken");
+      throwUserError(ERROR_CODES.AUTH_USERNAME_EXISTS);
     }
 
     // Create new user
@@ -97,16 +98,16 @@ export const loginUser = mutation({
       .first();
 
     if (!user) {
-      throw new Error("Invalid email or password");
+      throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
     }
 
     if (!user.is_active) {
-      throw new Error("Account is inactive");
+      throwUserError(ERROR_CODES.AUTH_ACCOUNT_INACTIVE);
     }
 
     // Check password (in production, use proper password hashing)
     if (user.password !== args.password) {
-      throw new Error("Invalid email or password");
+      throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
     }
 
     // Create new session
@@ -214,7 +215,7 @@ export const updateUserProfile = mutation({
       .first();
 
     if (!session || session.expiresAt < Date.now()) {
-      throw new Error("Invalid or expired session");
+      throwUserError(ERROR_CODES.AUTH_SESSION_EXPIRED);
     }
 
     // Update user

@@ -182,78 +182,78 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
     <div className="space-y-6">
       {/* Header with Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Total</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-sm font-medium text-gray-300">Total</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.total}</p>
             </div>
-            <User className="h-8 w-8 text-blue-500" />
+            <User className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
         
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Active</p>
-              <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+              <p className="text-sm font-medium text-gray-300">Active</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.active}</p>
             </div>
-            <UserCheck className="h-8 w-8 text-green-500" />
+            <UserCheck className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Inactive</p>
-              <p className="text-2xl font-bold text-red-600">{stats.inactive}</p>
+              <p className="text-sm font-medium text-gray-300">Inactive</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.inactive}</p>
             </div>
-            <UserX className="h-8 w-8 text-red-500" />
+            <UserX className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Avg Rating</p>
-              <p className="text-2xl font-bold text-purple-600">{stats.avgRating.toFixed(1)}</p>
+              <p className="text-sm font-medium text-gray-300">Avg Rating</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.avgRating.toFixed(1)}</p>
             </div>
-            <Star className="h-8 w-8 text-purple-500" />
+            <Star className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Total Revenue</p>
-              <p className="text-2xl font-bold text-gray-900">{formatRevenue(stats.totalRevenue)}</p>
+              <p className="text-sm font-medium text-gray-300">Total Revenue</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{formatRevenue(stats.totalRevenue)}</p>
             </div>
-            <DollarSign className="h-8 w-8 text-blue-500" />
+            <DollarSign className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
       </div>
 
       {/* Controls */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
               <input
                 type="text"
                 placeholder="Search barbers..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
               />
             </div>
 
             <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-gray-400" />
+              <Filter className="h-4 w-4 text-gray-500" />
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -264,7 +264,7 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             >
               <option value="name">Sort by Name</option>
               <option value="rating">Sort by Rating</option>
@@ -276,14 +276,14 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
           <div className="flex items-center space-x-2">
             <button
               onClick={onRefresh}
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+              className="flex items-center space-x-2 px-4 py-2 bg-[#444444] text-gray-300 rounded-lg hover:bg-[#555555] transition-colors text-sm"
             >
               <RotateCcw className="h-4 w-4" />
               <span>Refresh</span>
             </button>
             <button
               onClick={handleCreate}
-              className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
+              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors text-sm"
             >
               <Plus className="h-4 w-4" />
               <span>Add Barber</span>
@@ -301,56 +301,56 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
       />
 
       {/* Barbers Table */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-[#444444]/30">
+            <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Barber</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Barber</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Contact</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Performance</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Schedule</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] divide-y divide-[#444444]/30">
               {filteredBarbers.map((barber) => {
                 const statusConfig = getStatusConfig(barber.is_active)
                 const StatusIcon = statusConfig.icon
                 const workingDays = getWorkingDays(barber.schedule || {})
 
                 return (
-                  <tr key={barber._id} className="hover:bg-gray-50">
+                  <tr key={barber._id} className="hover:bg-[#333333]/50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                            <User className="h-6 w-6 text-gray-500" />
+                          <div className="h-10 w-10 rounded-full bg-[#FF8C42]/20 flex items-center justify-center">
+                            <User className="h-6 w-6 text-[#FF8C42]" />
                           </div>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{barber.full_name}</div>
-                          <div className="text-sm text-gray-500">{barber.experience}</div>
+                          <div className="text-sm font-medium text-white">{barber.full_name}</div>
+                          <div className="text-sm text-gray-400">{barber.experience}</div>
                           <div className="flex items-center space-x-1 mt-1">
                             <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                            <span className="text-xs text-gray-600">{barber.rating || 0}</span>
+                            <span className="text-xs text-gray-400">{barber.rating || 0}</span>
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{barber.email}</div>
-                      <div className="text-sm text-gray-500">{barber.phone || 'N/A'}</div>
+                      <div className="text-sm text-white">{barber.email}</div>
+                      <div className="text-sm text-gray-400">{barber.phone || 'N/A'}</div>
                       <div className="text-xs text-gray-500 mt-1">{barber.specialties?.length || 0} specialties</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{formatRevenue(barber.monthlyRevenue || 0)}</div>
-                      <div className="text-sm text-gray-500">{barber.totalBookings || 0} bookings</div>
+                      <div className="text-sm font-medium text-white">{formatRevenue(barber.monthlyRevenue || 0)}</div>
+                      <div className="text-sm text-gray-400">{barber.totalBookings || 0} bookings</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{workingDays}/week</div>
-                      <div className="text-sm text-gray-500">Working days</div>
+                      <div className="text-sm text-white">{workingDays}/week</div>
+                      <div className="text-sm text-gray-400">Working days</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.bg} ${statusConfig.text}`}>
@@ -362,28 +362,28 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => handleViewDetails(barber)}
-                          className="text-orange-600 hover:text-orange-900 p-1 rounded"
+                          className="text-[#FF8C42] hover:text-[#FF7A2B] p-1 rounded"
                           title="View Details"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleViewBookings(barber)}
-                          className="text-blue-600 hover:text-blue-900 p-1 rounded"
+                          className="text-blue-400 hover:text-blue-300 p-1 rounded"
                           title="View Bookings"
                         >
                           <BookOpen className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleEdit(barber)}
-                          className="text-gray-600 hover:text-gray-900 p-1 rounded"
+                          className="text-gray-400 hover:text-gray-300 p-1 rounded"
                           title="Edit"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => setShowDeleteConfirm(barber)}
-                          className="text-red-600 hover:text-red-900 p-1 rounded"
+                          className="text-red-400 hover:text-red-300 p-1 rounded"
                           title="Delete"
                         >
                           <Trash2 className="h-4 w-4" />

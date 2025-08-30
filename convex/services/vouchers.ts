@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
+import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 
 // Generate a random voucher code
 function generateVoucherCode() {
@@ -334,7 +335,7 @@ export const createVoucherWithCode = mutation({
       .first();
 
     if (existingVoucher) {
-      throw new Error("Voucher code already exists");
+      throwUserError(ERROR_CODES.VOUCHER_CODE_EXISTS);
     }
 
     const voucherId = await ctx.db.insert("vouchers", {
@@ -363,11 +364,11 @@ export const assignVoucher = mutation({
   handler: async (ctx, args) => {
     const voucher = await ctx.db.get(args.voucher_id);
     if (!voucher) {
-      throw new Error("Voucher not found");
+      throwUserError(ERROR_CODES.VOUCHER_NOT_FOUND);
     }
 
     if (voucher.expires_at < Date.now()) {
-      throw new Error("Voucher has expired");
+      throwUserError(ERROR_CODES.VOUCHER_EXPIRED);
     }
 
     // Check if voucher is already assigned to this user
@@ -379,7 +380,7 @@ export const assignVoucher = mutation({
       .first();
 
     if (existingAssignment) {
-      throw new Error("Voucher already assigned to this user");
+      throwUserError(ERROR_CODES.VOUCHER_ALREADY_USED, "Voucher already assigned to this user.", "This voucher has already been assigned to your account.");
     }
 
     // Check if voucher has reached max uses
@@ -389,7 +390,7 @@ export const assignVoucher = mutation({
       .collect();
 
     if (assignments.length >= voucher.max_uses) {
-      throw new Error("Voucher has reached maximum assignments");
+      throwUserError(ERROR_CODES.VOUCHER_LIMIT_REACHED);
     }
 
     // Create assignment
