@@ -445,22 +445,16 @@ const ServiceBooking = ({ onBack }) => {
     return (
       <div className="px-4 pb-4">
         {/* Mobile-First Header */}
-        <div className="text-center mb-5">
-          <div className="flex items-center justify-center mb-3">
-            <div
-              className="rounded-full w-10 h-10 flex items-center justify-center mr-3"
-              style={{ backgroundColor: "rgba(246, 139, 36, 0.1)" }}
-            >
-              <Star className="w-5 h-5" style={{ color: "#F68B24" }} />
+        <div className="text-center mb-6">
+          <div className="flex items-center justify-center mb-4">
+            <div className="rounded-full w-12 h-12 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center mr-3 shadow-lg">
+              <Star className="w-6 h-6 text-white" />
             </div>
             <div className="text-left">
-              <h2
-                className="text-lg font-bold leading-tight"
-                style={{ color: "#36454F" }}
-              >
+              <h2 className="text-xl font-bold leading-tight text-white">
                 Choose Your Service
               </h2>
-              <p className="text-xs font-medium" style={{ color: "#8B8B8B" }}>
+              <p className="text-sm font-medium text-gray-400">
                 Premium grooming services
               </p>
             </div>
@@ -468,27 +462,23 @@ const ServiceBooking = ({ onBack }) => {
         </div>
 
         {/* Mobile-Optimized Service Cards */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           {services && services.map((service) => (
             <button
               key={service._id}
               onClick={() => handleServiceSelect(service)}
-              className="group relative w-full bg-white rounded-2xl shadow-sm active:shadow-md border-2 hover:border-[#F68B24] active:border-[#F68B24] transition-all duration-200 overflow-hidden touch-manipulation min-h-[88px]"
-              style={{ borderColor: "#E0E0E0" }}
+              className="group relative w-full bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl shadow-lg active:shadow-xl border-2 border-[#555555]/30 hover:border-[#FF8C42]/50 active:border-[#FF8C42] transition-all duration-200 overflow-hidden touch-manipulation min-h-[100px]"
             >
               {/* Mobile-Optimized Background Effects */}
-              <div className="absolute inset-0 bg-gradient-to-r from-white via-gray-50 to-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-              <div className="absolute inset-0 bg-gradient-to-br from-[#F68B24] to-orange-400 opacity-0 group-hover:opacity-3 transition-opacity duration-200"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-[#FF8C42]/5 via-transparent to-[#FF8C42]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-[#FF8C42]/10 to-[#FF7A2B]/10 opacity-0 group-active:opacity-100 transition-opacity duration-200"></div>
 
               {/* Touch-Friendly Content */}
               <div className="relative p-4">
                 <div className="flex items-center space-x-3">
                   {/* Mobile-Optimized Icon Badge */}
                   <div className="flex-shrink-0">
-                    <div
-                      className="rounded-full w-11 h-11 flex items-center justify-center shadow-md group-hover:shadow-lg transition-all duration-200 group-hover:scale-105"
-                      style={{ backgroundColor: "#F68B24" }}
-                    >
+                    <div className="rounded-full w-12 h-12 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:scale-105">
                       {getServiceIcon(service.name)}
                     </div>
                   </div>
@@ -497,16 +487,10 @@ const ServiceBooking = ({ onBack }) => {
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-start mb-1">
                       <div className="flex-1 min-w-0 pr-2">
-                        <h3
-                          className="text-sm font-bold leading-tight group-hover:text-[#F68B24] transition-colors duration-200"
-                          style={{ color: "#36454F" }}
-                        >
+                        <h3 className="text-base font-bold leading-tight text-white group-hover:text-[#FF8C42] transition-colors duration-200">
                           {service.name}
                         </h3>
-                        <p
-                          className="text-xs mt-1 line-clamp-2 leading-relaxed"
-                          style={{ color: "#8B8B8B" }}
-                        >
+                        <p className="text-sm mt-1 line-clamp-2 leading-relaxed text-gray-400">
                           {service.description ||
                             "Professional grooming service tailored to your needs"}
                         </p>
@@ -514,30 +498,18 @@ const ServiceBooking = ({ onBack }) => {
                     </div>
 
                     {/* Mobile-Optimized Meta Info */}
-                    <div className="flex items-center space-x-3 mt-2">
+                    <div className="flex items-center space-x-4 mt-3">
                       <div className="flex items-center space-x-1">
-                        <Clock
-                          className="w-3 h-3 flex-shrink-0"
-                          style={{ color: "#8B8B8B" }}
-                        />
-                        <span
-                          className="text-xs font-medium truncate"
-                          style={{ color: "#8B8B8B" }}
-                        >
+                        <Clock className="w-4 h-4 flex-shrink-0 text-gray-500" />
+                        <span className="text-sm font-medium truncate text-gray-400">
                           {service.duration_minutes
                             ? `${service.duration_minutes} min`
                             : "Duration varies"}
                         </span>
                       </div>
                       <div className="flex items-center space-x-1">
-                        <Star
-                          className="w-3 h-3 flex-shrink-0"
-                          style={{ color: "#F68B24" }}
-                        />
-                        <span
-                          className="text-xs font-medium"
-                          style={{ color: "#8B8B8B" }}
-                        >
+                        <Star className="w-4 h-4 flex-shrink-0 text-[#FF8C42]" />
+                        <span className="text-sm font-medium text-gray-400">
                           5.0
                         </span>
                       </div>
@@ -546,14 +518,8 @@ const ServiceBooking = ({ onBack }) => {
 
                   {/* Mobile-Friendly Price Display */}
                   <div className="flex-shrink-0">
-                    <div
-                      className="rounded-lg px-2 py-1.5 shadow-sm text-center min-w-[60px]"
-                      style={{ backgroundColor: "rgba(246, 139, 36, 0.1)" }}
-                    >
-                      <div
-                        className="text-sm font-bold leading-tight"
-                        style={{ color: "#F68B24" }}
-                      >
+                    <div className="rounded-xl px-3 py-2 bg-[#FF8C42]/20 border border-[#FF8C42]/30 text-center min-w-[70px]">
+                      <div className="text-base font-bold leading-tight text-[#FF8C42]">
                         ₱{parseFloat(service.price || 0).toLocaleString()}
                       </div>
                     </div>
@@ -561,23 +527,17 @@ const ServiceBooking = ({ onBack }) => {
                 </div>
 
                 {/* Mobile-Optimized Accent Line */}
-                <div className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-[#F68B24] to-orange-400 scale-x-0 group-hover:scale-x-100 group-active:scale-x-100 transition-transform duration-200 origin-left"></div>
+                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] scale-x-0 group-hover:scale-x-100 group-active:scale-x-100 transition-transform duration-200 origin-left rounded-b-2xl"></div>
               </div>
             </button>
           ))}
         </div>
 
         {/* Mobile-Optimized Footer */}
-        <div className="text-center mt-5">
-          <div
-            className="inline-flex items-center space-x-2 px-4 py-2 rounded-full shadow-sm"
-            style={{ backgroundColor: "rgba(246, 139, 36, 0.1)" }}
-          >
-            <Crown className="w-3.5 h-3.5" style={{ color: "#F68B24" }} />
-            <span
-              className="text-xs font-semibold"
-              style={{ color: "#F68B24" }}
-            >
+        <div className="text-center mt-6">
+          <div className="inline-flex items-center space-x-2 px-4 py-3 rounded-full bg-[#FF8C42]/20 border border-[#FF8C42]/30">
+            <Crown className="w-4 h-4 text-[#FF8C42]" />
+            <span className="text-sm font-semibold text-[#FF8C42]">
               {services.length} Premium Services Available
             </span>
           </div>
@@ -587,12 +547,12 @@ const ServiceBooking = ({ onBack }) => {
   };
 
   const renderTimeAndStaffSelection = () => (
-    <div className="space-y-3 px-4">
-      <div className="text-center mb-3">
-        <h2 className="text-xl font-bold mb-1" style={{ color: "#36454F" }}>
+    <div className="space-y-4 px-4">
+      <div className="text-center mb-4">
+        <h2 className="text-xl font-bold mb-2 text-white">
           Select Barber & Time
         </h2>
-        <p className="text-sm font-medium" style={{ color: "#8B8B8B" }}>
+        <p className="text-sm font-medium text-gray-400">
           Choose your preferred barber, then pick a time
         </p>
       </div>
@@ -1525,27 +1485,29 @@ const ServiceBooking = ({ onBack }) => {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#F4F0E6" }}>
+    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
+      </div>
+      
       {/* Header */}
-      <div
-        style={{ backgroundColor: "#36454F" }}
-        className="sticky top-0 z-40 shadow-lg"
-      >
+      <div className="sticky top-0 z-40 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30 shadow-lg">
         <div className="max-w-md mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             <button
               onClick={onBack}
               className="flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-xl hover:bg-white/10 transition-all duration-200"
-              style={{ color: "#F4F0E6" }}
             >
               <ArrowLeft className="w-5 h-5" />
               <span className="text-sm">Back</span>
             </button>
             <div className="text-right">
-              <p className="text-lg font-bold" style={{ color: "#F4F0E6" }}>
+              <p className="text-lg font-bold text-white">
                 Book Service
               </p>
-              <p className="text-xs" style={{ color: "#F68B24" }}>
+              <p className="text-xs text-[#FF8C42]">
                 Step {step} of 3
               </p>
             </div>
@@ -1554,10 +1516,12 @@ const ServiceBooking = ({ onBack }) => {
       </div>
 
       {/* Step Indicator */}
-      {renderStepIndicator()}
+      <div className="relative z-10">
+        {renderStepIndicator()}
+      </div>
 
       {/* Content */}
-      <div className="pb-8">
+      <div className="relative z-10 pb-8">
         {step === 1 && renderServiceSelection()}
         {step === 2 && renderTimeAndStaffSelection()}
         {step === 3 && renderConfirmation()}

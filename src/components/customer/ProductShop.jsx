@@ -129,31 +129,33 @@ const ProductShop = ({ onBack }) => {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F4F0E6' }}>
+    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
+      </div>
+      
       {/* Header */}
-      <div className="sticky top-0 z-40" style={{ backgroundColor: '#36454F' }}>
+      <div className="sticky top-0 z-40 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30">
         <div className="max-w-md mx-auto px-4">
-          <div className="flex items-center justify-between py-3">
+          <div className="flex items-center justify-between py-4">
             <button
               onClick={onBack}
-              className="flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-lg transition-all duration-200"
-              style={{ '&:hover': { color: '#F68B24' } }}
-              onMouseEnter={(e) => (e.target.style.color = '#F68B24')}
-              onMouseLeave={(e) => (e.target.style.color = 'white')}
+              className="flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-xl hover:bg-white/10 transition-all duration-200"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-5 h-5" />
               <span className="text-sm">Back</span>
             </button>
             <div className="text-center">
-              <p className="text-sm font-bold text-white">Product Shop</p>
-              <p className="text-xs" style={{ color: '#F68B24' }}>
+              <p className="text-lg font-bold text-white">Product Shop</p>
+              <p className="text-xs text-[#FF8C42]">
                 {filteredProducts.length} products
               </p>
             </div>
             <button
               onClick={() => setShowCart(!showCart)}
-              className="relative p-2 text-white rounded-lg transition-colors duration-200"
-              style={{ backgroundColor: '#F68B24' }}
+              className="relative p-2 text-white rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] transition-colors duration-200 shadow-lg"
             >
               <ShoppingCart className="w-5 h-5" />
               {getCartItemCount() > 0 && (
@@ -166,37 +168,33 @@ const ProductShop = ({ onBack }) => {
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-4 py-4">
+      <div className="relative z-10 max-w-md mx-auto px-4 py-6">
         {/* Search Bar */}
-        <div className="mb-4">
+        <div className="mb-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500" />
             <input
               type="text"
               placeholder="Search products..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              style={{ backgroundColor: 'white' }}
+              className="w-full pl-12 pr-4 py-3 rounded-xl bg-[#2A2A2A] border border-[#555555] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] transition-colors"
             />
           </div>
         </div>
 
         {/* Category Filter */}
         <div className="mb-6">
-          <div className="flex space-x-2 overflow-x-auto pb-2">
+          <div className="flex space-x-3 overflow-x-auto pb-2">
             {categories.map((category) => (
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
                 className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 ${
                   selectedCategory === category
-                    ? 'text-white'
-                    : 'text-gray-600 bg-white border border-gray-200'
+                    ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
+                    : 'text-gray-400 bg-[#333333] border border-[#555555] hover:text-gray-300 hover:bg-[#444444]'
                 }`}
-                style={{
-                  backgroundColor: selectedCategory === category ? '#F68B24' : 'white'
-                }}
               >
                 {formatCategoryName(category)}
               </button>
@@ -207,9 +205,9 @@ const ProductShop = ({ onBack }) => {
         {/* Products Grid */}
         {filteredProducts.length === 0 ? (
           <div className="text-center py-12">
-            <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-gray-600 mb-2">No Products Found</h3>
-            <p className="text-gray-500">
+            <Package className="w-16 h-16 text-gray-500 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-white mb-3">No Products Found</h3>
+            <p className="text-gray-400">
               {searchTerm || selectedCategory !== 'all'
                 ? 'Try adjusting your search or filter.'
                 : 'Products will appear here when available.'}
@@ -223,7 +221,7 @@ const ProductShop = ({ onBack }) => {
               return (
                 <div
                   key={product._id}
-                  className="bg-white rounded-xl p-3 shadow-sm border border-gray-100 cursor-pointer transition-transform duration-200 hover:scale-105"
+                  className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-[#555555]/30 cursor-pointer transition-all duration-200 hover:scale-105 hover:border-[#FF8C42]/50"
                   onClick={() => handleProductClick(product)}
                 >
                   <ProductImage 

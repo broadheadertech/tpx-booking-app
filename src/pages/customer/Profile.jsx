@@ -90,37 +90,42 @@ const Profile = () => {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{backgroundColor: '#F4F0E6'}}>
+      <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{borderColor: '#F68B24'}}></div>
-          <p style={{color: '#8B8B8B'}}>Loading profile...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF8C42] mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading profile...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen" style={{backgroundColor: '#F4F0E6'}}>
+    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
+      </div>
+      
       {/* Header */}
-      <div className="sticky top-0 z-40" style={{backgroundColor: '#36454F'}}>
+      <div className="sticky top-0 z-40 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30">
         <div className="max-w-md mx-auto px-4">
-          <div className="flex justify-between items-center py-3">
+          <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => navigate(-1)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center" 
-                style={{backgroundColor: '#F68B24'}}
+                className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center shadow-lg"
               >
-                <ArrowLeft className="w-4 h-4 text-white" />
+                <ArrowLeft className="w-5 h-5 text-white" />
               </button>
               <div>
                 <h1 className="text-sm font-bold text-white">My Profile</h1>
-                <p className="text-xs font-medium" style={{color: '#F68B24'}}>Account Settings</p>
+                <p className="text-xs font-medium text-[#FF8C42]">Account Settings</p>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center space-x-2 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm shadow-sm"
+              className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-colors text-sm shadow-lg"
             >
               <LogOut className="w-3 h-3" />
               <span>Logout</span>
@@ -130,10 +135,10 @@ const Profile = () => {
       </div>
 
       {/* Profile Content */}
-      <div className="max-w-md mx-auto px-4 py-6 pb-20">
+      <div className="relative z-10 max-w-md mx-auto px-4 py-6 pb-20">
         {/* Profile Header Card */}
-        <div className="bg-white rounded-2xl shadow-lg border border-[#E0E0E0] mb-6 overflow-hidden">
-          <div className="bg-gradient-to-r from-[#36454F] to-[#2A3439] px-6 py-6">
+        <div className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl shadow-lg border border-[#555555]/30 mb-6 overflow-hidden">
+          <div className="bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] px-6 py-6">
             <div className="text-center">
               <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
                 <User className="w-8 h-8 text-white" />
@@ -152,13 +157,13 @@ const Profile = () => {
         </div>
 
         {/* Personal Information Card */}
-        <div className="bg-white rounded-2xl shadow-lg border border-[#E0E0E0] mb-4">
-          <div className="px-4 py-4 border-b border-[#E0E0E0]">
-            <h3 className="text-lg font-semibold" style={{color: '#36454F'}}>Personal Information</h3>
+        <div className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl shadow-lg border border-[#555555]/30 mb-4">
+          <div className="px-4 py-4 border-b border-[#555555]/30">
+            <h3 className="text-lg font-semibold text-white">Personal Information</h3>
           </div>
           <div className="p-4 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
+              <label className="block text-sm font-medium text-gray-400 mb-2">
                 <User className="w-4 h-4 inline mr-2" />
                 Username
               </label>
@@ -167,15 +172,15 @@ const Profile = () => {
                   type="text"
                   value={profileData.username}
                   onChange={(e) => handleInputChange('username', e.target.value)}
-                  className="w-full px-4 py-3 border border-[#E0E0E0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F68B24]"
+                  className="w-full px-4 py-3 bg-[#2A2A2A] border border-[#555555] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
                 />
               ) : (
-                <p className="px-4 py-3 bg-[#F4F0E6] rounded-xl" style={{color: '#36454F'}}>{profileData.username}</p>
+                <p className="px-4 py-3 bg-[#2A2A2A] text-white rounded-xl">{profileData.username}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
+              <label className="block text-sm font-medium text-gray-400 mb-2">
                 <Mail className="w-4 h-4 inline mr-2" />
                 Email Address
               </label>
@@ -184,10 +189,10 @@ const Profile = () => {
                   type="email"
                   value={profileData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  className="w-full px-4 py-3 border border-[#E0E0E0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F68B24]"
+                  className="w-full px-4 py-3 bg-[#2A2A2A] border border-[#555555] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
                 />
               ) : (
-                <p className="px-4 py-3 bg-[#F4F0E6] rounded-xl" style={{color: '#36454F'}}>{profileData.email}</p>
+                <p className="px-4 py-3 bg-[#2A2A2A] text-white rounded-xl">{profileData.email}</p>
               )}
             </div>
 

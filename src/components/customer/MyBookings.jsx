@@ -62,26 +62,26 @@ const MyBookings = ({ onBack }) => {
   const getStatusIcon = (status) => {
     switch (status) {
       case "confirmed":
-        return <CheckCircle className="w-4 h-4 text-green-600" />;
+        return <CheckCircle className="w-4 h-4 text-green-400" />;
       case "pending":
-        return <AlertCircle className="w-4 h-4 text-yellow-600" />;
+        return <AlertCircle className="w-4 h-4 text-yellow-400" />;
       case "cancelled":
-        return <XCircle className="w-4 h-4 text-red-600" />;
+        return <XCircle className="w-4 h-4 text-red-400" />;
       default:
-        return <Calendar className="w-4 h-4" style={{ color: "#8B8B8B" }} />;
+        return <Calendar className="w-4 h-4 text-gray-400" />;
     }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
       case "confirmed":
-        return "bg-green-50 text-green-700 border-green-200";
+        return "bg-green-500/20 text-green-400 border-green-500/30";
       case "pending":
-        return "bg-yellow-50 text-yellow-700 border-yellow-200";
+        return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
       case "cancelled":
-        return "bg-red-50 text-red-700 border-red-200";
+        return "bg-red-500/20 text-red-400 border-red-500/30";
       default:
-        return "bg-gray-50 border-gray-200";
+        return "bg-gray-500/20 text-gray-400 border-gray-500/30";
     }
   };
 
@@ -110,24 +110,27 @@ const MyBookings = ({ onBack }) => {
   ];
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: "#F4F0E6" }}>
+    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
+      </div>
+      
       {/* Header */}
-      <div className="sticky top-0 z-40" style={{ backgroundColor: "#36454F" }}>
+      <div className="sticky top-0 z-40 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30">
         <div className="max-w-md mx-auto px-4">
-          <div className="flex items-center justify-between py-3">
+          <div className="flex items-center justify-between py-4">
             <button
               onClick={onBack}
-              className="flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-lg transition-all duration-200"
-              style={{ "&:hover": { color: "#F68B24" } }}
-              onMouseEnter={(e) => (e.target.style.color = "#F68B24")}
-              onMouseLeave={(e) => (e.target.style.color = "white")}
+              className="flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-xl hover:bg-white/10 transition-all duration-200"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-5 h-5" />
               <span className="text-sm">Back</span>
             </button>
             <div className="text-right">
-              <p className="text-sm font-bold text-white">My Bookings</p>
-              <p className="text-xs" style={{ color: "#F68B24" }}>
+              <p className="text-lg font-bold text-white">My Bookings</p>
+              <p className="text-xs text-[#FF8C42]">
                 {bookings?.length || 0} total
               </p>
             </div>
@@ -135,37 +138,23 @@ const MyBookings = ({ onBack }) => {
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-4 py-4">
+      <div className="relative z-10 max-w-md mx-auto px-4 py-6">
         {/* Filter Tabs */}
-        <div className="mb-4">
-          <div
-            className="bg-white rounded-xl p-2 border shadow-sm"
-            style={{ borderColor: "#E0E0E0" }}
-          >
-            <div className="grid grid-cols-4 gap-1">
+        <div className="mb-6">
+          <div className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl p-3 border border-[#555555]/30 shadow-lg">
+            <div className="grid grid-cols-4 gap-2">
               {filters.map((filter) => (
                 <button
                   key={filter.id}
                   onClick={() => setActiveFilter(filter.id)}
-                  className={`py-2 px-2 rounded-lg text-xs font-semibold transition-all duration-200`}
-                  style={{
-                    backgroundColor:
-                      activeFilter === filter.id ? "#F68B24" : "transparent",
-                    color: activeFilter === filter.id ? "white" : "#8B8B8B",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (activeFilter !== filter.id) {
-                      e.target.style.backgroundColor = "#F4F0E6";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (activeFilter !== filter.id) {
-                      e.target.style.backgroundColor = "transparent";
-                    }
-                  }}
+                  className={`py-3 px-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                    activeFilter === filter.id
+                      ? 'bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
+                      : 'text-gray-400 hover:text-gray-300 hover:bg-white/5'
+                  }`}
                 >
                   <div>{filter.label}</div>
-                  <div className="text-xs mt-1">({filter.count})</div>
+                  <div className="text-xs mt-1 opacity-80">({filter.count})</div>
                 </button>
               ))}
             </div>
@@ -175,13 +164,10 @@ const MyBookings = ({ onBack }) => {
         {/* Loading State */}
         {loading && (
           <div className="text-center py-12">
-            <div
-              className="rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4"
-              style={{ backgroundColor: "#F68B24", opacity: 0.1 }}
-            >
-              <Calendar className="w-8 h-8" style={{ color: "#F68B24" }} />
+            <div className="rounded-full w-16 h-16 bg-[#FF8C42]/20 flex items-center justify-center mx-auto mb-4">
+              <Calendar className="w-8 h-8 text-[#FF8C42]" />
             </div>
-            <p className="text-sm" style={{ color: "#8B8B8B" }}>
+            <p className="text-sm text-gray-400">
               Loading bookings...
             </p>
           </div>
@@ -190,13 +176,10 @@ const MyBookings = ({ onBack }) => {
         {/* Error State */}
         {error && (
           <div className="text-center py-12">
-            <div
-              className="rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4"
-              style={{ backgroundColor: "#dc3545", opacity: 0.1 }}
-            >
-              <XCircle className="w-8 h-8 text-red-500" />
+            <div className="rounded-full w-16 h-16 bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+              <XCircle className="w-8 h-8 text-red-400" />
             </div>
-            <p className="text-sm text-red-600 mb-4">Failed to load bookings</p>
+            <p className="text-sm text-red-400 mb-4">Failed to load bookings</p>
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors"
@@ -210,32 +193,19 @@ const MyBookings = ({ onBack }) => {
         {!loading && !error && (
           <div className="space-y-3">
             {filteredBookings.length === 0 ? (
-              <div className="text-center py-8">
-                <Calendar
-                  className="w-12 h-12 mx-auto mb-3"
-                  style={{ color: "#8B8B8B" }}
-                />
-                <h3
-                  className="text-lg font-bold mb-2"
-                  style={{ color: "#36454F" }}
-                >
+              <div className="text-center py-12">
+                <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-500" />
+                <h3 className="text-xl font-bold mb-3 text-white">
                   No Bookings Found
                 </h3>
-                <p className="mb-4" style={{ color: "#8B8B8B" }}>
+                <p className="mb-6 text-gray-400">
                   {activeFilter === "all"
                     ? "You haven't made any bookings yet"
                     : `No ${activeFilter} bookings found`}
                 </p>
                 <button
                   onClick={onBack}
-                  className="px-6 py-3 text-white font-bold rounded-xl transition-all duration-200"
-                  style={{ backgroundColor: "#F68B24" }}
-                  onMouseEnter={(e) =>
-                    (e.target.style.backgroundColor = "#E67E22")
-                  }
-                  onMouseLeave={(e) =>
-                    (e.target.style.backgroundColor = "#F68B24")
-                  }
+                  className="px-6 py-3 text-white font-bold rounded-xl bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-all duration-200 shadow-lg"
                 >
                   Book Your First Service
                 </button>
@@ -257,26 +227,19 @@ const MyBookings = ({ onBack }) => {
                 return (
                   <div
                     key={booking._id}
-                    className="bg-white rounded-xl p-4 border shadow-sm hover:shadow-lg transition-all duration-200"
-                    style={{ borderColor: "#E0E0E0" }}
+                    className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl p-5 border border-[#555555]/30 shadow-lg hover:shadow-xl transition-all duration-200 hover:border-[#FF8C42]/50"
                   >
                     {/* Booking Header */}
-                    <div className="flex justify-between items-start mb-3">
+                    <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center space-x-3">
-                        <div
-                          className="w-10 h-10 rounded-lg flex items-center justify-center"
-                          style={{ backgroundColor: "#F68B24" }}
-                        >
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center shadow-lg">
                           <span className="text-white text-lg">✂️</span>
                         </div>
                         <div>
-                          <h3
-                            className="text-base font-bold"
-                            style={{ color: "#36454F" }}
-                          >
+                          <h3 className="text-lg font-bold text-white">
                             {service.name || "Service"}
                           </h3>
-                          <p className="text-xs" style={{ color: "#8B8B8B" }}>
+                          <p className="text-sm text-gray-400">
                             Code: {booking.booking_code}
                           </p>
                         </div>
@@ -284,7 +247,7 @@ const MyBookings = ({ onBack }) => {
                       <div className="flex items-center space-x-2">
                         {getStatusIcon(booking.status)}
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-bold border ${getStatusColor(
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold border ${getStatusColor(
                             booking.status
                           )}`}
                         >
@@ -294,39 +257,27 @@ const MyBookings = ({ onBack }) => {
                     </div>
 
                     {/* Booking Details */}
-                    <div className="space-y-2 mb-3">
+                    <div className="space-y-3 mb-4">
                       {/* Date and Time Row */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="flex items-center space-x-2">
-                          <Calendar
-                            className="w-3 h-3"
-                            style={{ color: "#F68B24" }}
-                          />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex items-center space-x-3">
+                          <Calendar className="w-4 h-4 text-[#FF8C42]" />
                           <div>
-                            <p className="text-xs" style={{ color: "#8B8B8B" }}>
+                            <p className="text-xs text-gray-500">
                               Date
                             </p>
-                            <p
-                              className="text-sm font-bold"
-                              style={{ color: "#36454F" }}
-                            >
+                            <p className="text-sm font-bold text-white">
                               {new Date(booking.date).toLocaleDateString()}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Clock
-                            className="w-3 h-3"
-                            style={{ color: "#F68B24" }}
-                          />
+                        <div className="flex items-center space-x-3">
+                          <Clock className="w-4 h-4 text-[#FF8C42]" />
                           <div>
-                            <p className="text-xs" style={{ color: "#8B8B8B" }}>
+                            <p className="text-xs text-gray-500">
                               Time
                             </p>
-                            <p
-                              className="text-sm font-bold"
-                              style={{ color: "#36454F" }}
-                            >
+                            <p className="text-sm font-bold text-white">
                               {booking.time}
                             </p>
                           </div>
@@ -334,37 +285,25 @@ const MyBookings = ({ onBack }) => {
                       </div>
 
                       {/* Barber and Service Price Row */}
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="flex items-center space-x-2">
-                          <User
-                            className="w-3 h-3"
-                            style={{ color: "#F68B24" }}
-                          />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="flex items-center space-x-3">
+                          <User className="w-4 h-4 text-[#FF8C42]" />
                           <div>
-                            <p className="text-xs" style={{ color: "#8B8B8B" }}>
+                            <p className="text-xs text-gray-500">
                               Barber
                             </p>
-                            <p
-                              className="text-sm font-bold"
-                              style={{ color: "#36454F" }}
-                            >
+                            <p className="text-sm font-bold text-white">
                               {barber.name || "Any Barber"}
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <div
-                            className="w-3 h-3 rounded"
-                            style={{ backgroundColor: "#F68B24" }}
-                          ></div>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-4 h-4 rounded bg-[#FF8C42]"></div>
                           <div>
-                            <p className="text-xs" style={{ color: "#8B8B8B" }}>
+                            <p className="text-xs text-gray-500">
                               Service Price
                             </p>
-                            <p
-                              className="text-sm font-bold"
-                              style={{ color: "#F68B24" }}
-                            >
+                            <p className="text-sm font-bold text-[#FF8C42]">
                               ₱
                               {service.price
                                 ? parseFloat(service.price).toLocaleString()
