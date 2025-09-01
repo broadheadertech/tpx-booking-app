@@ -209,6 +209,13 @@ const Dashboard = () => {
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
+        <div 
+          className="h-full bg-cover bg-center bg-no-repeat opacity-5"
+          style={{
+            backgroundImage: `url(/img/pnglog.png)`,
+            filter: 'brightness(0.3)'
+          }}
+        ></div>
       </div>
       
       {/* Header */}
@@ -218,12 +225,9 @@ const Dashboard = () => {
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center shadow-lg">
                 <img 
-                  src="/img/pnglog.png" 
+                  src="/img/tipuno_x_logo_white.avif" 
                   alt="TPX Barbershop Logo" 
                   className="w-6 h-6 object-contain"
-                  style={{
-                    filter: 'brightness(0) saturate(100%) invert(100%) sepia(0%) saturate(7500%) hue-rotate(106deg) brightness(109%) contrast(103%)'
-                  }}
                 />
               </div>
               <div>

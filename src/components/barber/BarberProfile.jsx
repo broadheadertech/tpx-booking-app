@@ -125,47 +125,60 @@ const BarberProfile = () => {
 
   if (!currentBarber) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#F5F5F5] to-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] flex items-center justify-center p-4">
         <div className="text-center">
-          <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Barber Profile Not Found</h2>
-          <p className="text-gray-600">Please contact admin to set up your barber profile.</p>
+          <User className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-white mb-2">Barber Profile Not Found</h2>
+          <p className="text-gray-400">Please contact admin to set up your barber profile.</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F5F5F5] to-white">
+    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] pb-20 md:pb-0">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
+        <div 
+          className="h-full bg-cover bg-center bg-no-repeat opacity-5"
+          style={{
+            backgroundImage: `url(/img/pnglog.png)`,
+            filter: 'brightness(0.3)'
+          }}
+        ></div>
+      </div>
+      
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-4 flex items-center justify-between">
+      <div className="relative z-10 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30 sticky top-0">
+        <div className="px-4 md:max-w-7xl md:mx-auto md:px-6 lg:px-8">
+          <div className="py-4 md:py-6 flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">My Profile</h1>
-              <p className="text-gray-600 mt-1">Manage your professional profile and settings</p>
+              <h1 className="text-xl md:text-2xl font-bold text-white">My Profile</h1>
+              <p className="text-sm md:text-base text-gray-400 mt-1">Manage your professional profile and settings</p>
             </div>
             
             {!isEditing ? (
               <button
                 onClick={() => setIsEditing(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#E67A1A] transition-colors"
+                className="flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors active:scale-95 text-sm md:text-base"
               >
                 <Edit3 className="w-4 h-4" />
                 <span>Edit Profile</span>
               </button>
             ) : (
-              <div className="flex space-x-2">
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                 <button
                   onClick={handleSave}
-                  className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  className="flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors active:scale-95 text-sm md:text-base"
                 >
                   <Save className="w-4 h-4" />
                   <span>Save</span>
                 </button>
                 <button
                   onClick={handleCancel}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  className="flex items-center justify-center space-x-2 px-4 py-3 bg-[#444444] text-white rounded-lg hover:bg-[#555555] transition-colors active:scale-95 text-sm md:text-base"
                 >
                   <X className="w-4 h-4" />
                   <span>Cancel</span>
@@ -176,9 +189,9 @@ const BarberProfile = () => {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Profile Header */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-6 mb-6">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6 mb-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
             {/* Avatar */}
             <div className="relative">

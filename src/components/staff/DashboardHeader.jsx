@@ -8,18 +8,26 @@ const DashboardHeader = ({ onLogout }) => {
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   return (
-    <div className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A] shadow-xl">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="relative bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A] shadow-xl overflow-hidden">
+      {/* Background overlay */}
+      <div className="absolute inset-0">
+        <div 
+          className="h-full bg-cover bg-center bg-no-repeat opacity-5"
+          style={{
+            backgroundImage: `url(/img/pnglog.png)`,
+            filter: 'brightness(0.3)'
+          }}
+        ></div>
+      </div>
+      
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center py-4 lg:py-8 gap-4 lg:gap-0">
           <div className="flex items-center space-x-3 sm:space-x-6">
             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-[#FF8C42]/20 p-2">
               <img 
-                src="/img/pnglog.png" 
+                src="/img/tipuno_x_logo_white.avif" 
                 alt="TPX Barbershop Logo" 
-                className="w-full h-full object-contain filter brightness-0 saturate-100 invert-[0.5] sepia-[1] saturate-[10000%] hue-rotate-[25deg] brightness-[1.2] contrast-[1]"
-                style={{
-                  filter: 'brightness(0) saturate(100%) invert(64%) sepia(85%) saturate(1328%) hue-rotate(358deg) brightness(102%) contrast(102%)'
-                }}
+                className="w-full h-full object-contain"
               />
             </div>
             <div>

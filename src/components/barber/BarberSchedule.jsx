@@ -117,21 +117,34 @@ const BarberSchedule = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F5F5F5] to-white">
+    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] pb-20 md:pb-0">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
+        <div 
+          className="h-full bg-cover bg-center bg-no-repeat opacity-5"
+          style={{
+            backgroundImage: `url(/img/pnglog.png)`,
+            filter: 'brightness(0.3)'
+          }}
+        ></div>
+      </div>
+      
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-4 flex items-center justify-between">
+      <div className="relative z-10 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30 sticky top-0">
+        <div className="px-4 md:max-w-7xl md:mx-auto md:px-6 lg:px-8">
+          <div className="py-4 md:py-6 flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">My Schedule</h1>
-              <p className="text-gray-600 mt-1">Manage your availability and working hours</p>
+              <h1 className="text-xl md:text-2xl font-bold text-white">My Schedule</h1>
+              <p className="text-sm md:text-base text-gray-400 mt-1">Manage your availability and working hours</p>
             </div>
             
             {hasChanges && (
               <div className="flex space-x-2">
                 <button
                   onClick={handleReset}
-                  className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  className="flex items-center space-x-2 px-3 md:px-4 py-2 bg-[#444444] text-white rounded-lg hover:bg-[#555555] transition-colors text-sm md:text-base active:scale-95"
                 >
                   <RotateCcw className="w-4 h-4" />
                   <span>Reset</span>
@@ -139,7 +152,7 @@ const BarberSchedule = () => {
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#E67A1A] transition-colors disabled:opacity-50"
+                  className="flex items-center space-x-2 px-3 md:px-4 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors disabled:opacity-50 text-sm md:text-base active:scale-95"
                 >
                   <Save className="w-4 h-4" />
                   <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
@@ -150,21 +163,21 @@ const BarberSchedule = () => {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="relative z-10 px-4 md:max-w-4xl md:mx-auto md:px-6 lg:px-8 py-4 md:py-6">
         {/* Quick Actions */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-6 mb-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="flex flex-wrap gap-3">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl md:rounded-2xl shadow-lg border border-[#444444]/50 p-4 md:p-6 mb-4 md:mb-6">
+          <h3 className="text-base md:text-lg font-bold text-white mb-3 md:mb-4">Quick Actions</h3>
+          <div className="flex flex-col sm:flex-row gap-3">
             <button
               onClick={() => setAllDays(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors active:scale-95 text-sm md:text-base"
             >
               <CheckCircle className="w-4 h-4" />
               <span>Enable All Days</span>
             </button>
             <button
               onClick={() => setAllDays(false)}
-              className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              className="flex items-center justify-center space-x-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors active:scale-95 text-sm md:text-base"
             >
               <XCircle className="w-4 h-4" />
               <span>Disable All Days</span>
@@ -173,33 +186,33 @@ const BarberSchedule = () => {
         </div>
 
         {/* Schedule Grid */}
-        <div className="space-y-4">
+        <div className="space-y-3 md:space-y-4">
           {Object.entries(dayNames).map(([dayKey, dayName]) => {
             const daySchedule = schedule[dayKey]
             return (
-              <div key={dayKey} className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-6">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+              <div key={dayKey} className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl md:rounded-2xl shadow-lg border border-[#444444]/50 p-4 md:p-6">
+                <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-center md:justify-between">
                   {/* Day and Availability */}
-                  <div className="flex items-center space-x-4">
-                    <div className="w-24">
-                      <h3 className="text-lg font-bold text-gray-900">{dayName}</h3>
+                  <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+                    <div className="w-full sm:w-24">
+                      <h3 className="text-base md:text-lg font-bold text-white">{dayName}</h3>
                     </div>
                     
-                    <div className="flex items-center space-x-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
                       <label className="flex items-center space-x-2 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={daySchedule.available}
                           onChange={(e) => handleAvailabilityChange(dayKey, e.target.checked)}
-                          className="w-5 h-5 text-[#FF8C42] border-gray-300 rounded focus:ring-[#FF8C42] focus:ring-2"
+                          className="w-5 h-5 text-[#FF8C42] bg-[#1A1A1A] border-[#555555] rounded focus:ring-[#FF8C42] focus:ring-2"
                         />
-                        <span className="font-medium text-gray-700">
+                        <span className="font-medium text-gray-300 text-sm md:text-base">
                           {daySchedule.available ? 'Available' : 'Unavailable'}
                         </span>
                       </label>
                       
                       {daySchedule.available && (
-                        <div className="flex items-center space-x-1 text-sm text-gray-600">
+                        <div className="flex items-center space-x-1 text-sm text-gray-400">
                           <Clock className="w-4 h-4" />
                           <span>{daySchedule.start} - {daySchedule.end}</span>
                         </div>
@@ -209,36 +222,36 @@ const BarberSchedule = () => {
 
                   {/* Time Settings */}
                   {daySchedule.available && (
-                    <div className="flex items-center space-x-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 w-full md:w-auto">
                       <div className="flex items-center space-x-2">
-                        <label className="text-sm font-medium text-gray-700">Start:</label>
+                        <label className="text-sm font-medium text-gray-300 min-w-[40px]">Start:</label>
                         <select
                           value={daySchedule.start}
                           onChange={(e) => handleTimeChange(dayKey, 'start', e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                          className="px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] text-sm"
                         >
                           {timeSlots.map(time => (
-                            <option key={time} value={time}>{time}</option>
+                            <option key={time} value={time} className="bg-[#1A1A1A] text-white">{time}</option>
                           ))}
                         </select>
                       </div>
                       
                       <div className="flex items-center space-x-2">
-                        <label className="text-sm font-medium text-gray-700">End:</label>
+                        <label className="text-sm font-medium text-gray-300 min-w-[30px]">End:</label>
                         <select
                           value={daySchedule.end}
                           onChange={(e) => handleTimeChange(dayKey, 'end', e.target.value)}
-                          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                          className="px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] text-sm"
                         >
                           {timeSlots.map(time => (
-                            <option key={time} value={time}>{time}</option>
+                            <option key={time} value={time} className="bg-[#1A1A1A] text-white">{time}</option>
                           ))}
                         </select>
                       </div>
                       
                       <button
                         onClick={() => copyToAllDays(dayKey)}
-                        className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                        className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm active:scale-95 w-full sm:w-auto"
                         title="Copy to all days"
                       >
                         Copy to All
@@ -252,19 +265,19 @@ const BarberSchedule = () => {
         </div>
 
         {/* Schedule Summary */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-6 mt-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Schedule Summary</h3>
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl md:rounded-2xl shadow-lg border border-[#444444]/50 p-4 md:p-6 mt-4 md:mt-6">
+          <h3 className="text-base md:text-lg font-bold text-white mb-3 md:mb-4">Schedule Summary</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h4 className="font-semibold text-gray-700 mb-2">Available Days</h4>
-              <div className="space-y-1">
+              <h4 className="font-semibold text-gray-300 mb-2 text-sm md:text-base">Available Days</h4>
+              <div className="space-y-2">
                 {Object.entries(schedule)
                   .filter(([, daySchedule]) => daySchedule.available)
                   .map(([dayKey, daySchedule]) => (
-                    <div key={dayKey} className="flex items-center justify-between p-2 bg-green-50 rounded-lg">
-                      <span className="font-medium text-green-800">{dayNames[dayKey]}</span>
-                      <span className="text-green-600 text-sm">
+                    <div key={dayKey} className="flex items-center justify-between p-3 bg-green-600/20 border border-green-500/30 rounded-lg">
+                      <span className="font-medium text-green-300 text-sm md:text-base">{dayNames[dayKey]}</span>
+                      <span className="text-green-400 text-xs md:text-sm">
                         {daySchedule.start} - {daySchedule.end}
                       </span>
                     </div>
@@ -277,13 +290,13 @@ const BarberSchedule = () => {
             </div>
             
             <div>
-              <h4 className="font-semibold text-gray-700 mb-2">Unavailable Days</h4>
-              <div className="space-y-1">
+              <h4 className="font-semibold text-gray-300 mb-2 text-sm md:text-base">Unavailable Days</h4>
+              <div className="space-y-2">
                 {Object.entries(schedule)
                   .filter(([, daySchedule]) => !daySchedule.available)
                   .map(([dayKey]) => (
-                    <div key={dayKey} className="flex items-center p-2 bg-red-50 rounded-lg">
-                      <span className="font-medium text-red-800">{dayNames[dayKey]}</span>
+                    <div key={dayKey} className="flex items-center p-3 bg-red-600/20 border border-red-500/30 rounded-lg">
+                      <span className="font-medium text-red-300 text-sm md:text-base">{dayNames[dayKey]}</span>
                     </div>
                   ))
                 }

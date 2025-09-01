@@ -116,27 +116,40 @@ const BarberServices = () => {
 
   const getCategoryColor = (category) => {
     switch (category) {
-      case 'haircut': return 'bg-blue-100 text-blue-800'
-      case 'beard': return 'bg-green-100 text-green-800'
-      case 'styling': return 'bg-purple-100 text-purple-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'haircut': return 'bg-blue-600/20 border border-blue-500/30 text-blue-300'
+      case 'beard': return 'bg-green-600/20 border border-green-500/30 text-green-300'
+      case 'styling': return 'bg-purple-600/20 border border-purple-500/30 text-purple-300'
+      default: return 'bg-gray-600/20 border border-gray-500/30 text-gray-300'
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F5F5F5] to-white">
+    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] pb-20 md:pb-0">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
+        <div 
+          className="h-full bg-cover bg-center bg-no-repeat opacity-5"
+          style={{
+            backgroundImage: `url(/img/pnglog.png)`,
+            filter: 'brightness(0.3)'
+          }}
+        ></div>
+      </div>
+      
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-4 flex items-center justify-between">
+      <div className="relative z-10 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30 sticky top-0">
+        <div className="px-4 md:max-w-7xl md:mx-auto md:px-6 lg:px-8">
+          <div className="py-4 md:py-6 flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">My Services</h1>
-              <p className="text-gray-600 mt-1">Manage the services you offer to customers</p>
+              <h1 className="text-xl md:text-2xl font-bold text-white">My Services</h1>
+              <p className="text-sm md:text-base text-gray-400 mt-1">Manage the services you offer to customers</p>
             </div>
             
             <button
               onClick={() => setShowAddForm(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#E67A1A] transition-colors"
+              className="flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors active:scale-95 text-sm md:text-base"
             >
               <Plus className="w-4 h-4" />
               <span>Add Service</span>
@@ -145,15 +158,15 @@ const BarberServices = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="relative z-10 px-4 md:max-w-7xl md:mx-auto md:px-6 lg:px-8 py-4 md:py-6">
         {/* Add Service Form */}
         {showAddForm && (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-6 mb-6">
+          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl md:rounded-2xl shadow-lg border border-[#444444]/50 p-4 md:p-6 mb-4 md:mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">Add New Service</h3>
+              <h3 className="text-base md:text-lg font-bold text-white">Add New Service</h3>
               <button
                 onClick={() => setShowAddForm(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-400 hover:text-gray-300 p-1 rounded-lg hover:bg-[#444444] transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -161,37 +174,37 @@ const BarberServices = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Service Name *</label>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">Service Name *</label>
                 <input
                   type="text"
                   value={newService.name}
                   onChange={(e) => setNewService(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                  className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#555555] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] placeholder-gray-500"
                   placeholder="e.g., Classic Haircut"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">Category</label>
                 <select
                   value={newService.category}
                   onChange={(e) => setNewService(prev => ({ ...prev, category: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                  className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#555555] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
                 >
-                  <option value="haircut">Haircut</option>
-                  <option value="beard">Beard</option>
-                  <option value="styling">Styling</option>
-                  <option value="other">Other</option>
+                  <option value="haircut" className="bg-[#1A1A1A] text-white">Haircut</option>
+                  <option value="beard" className="bg-[#1A1A1A] text-white">Beard</option>
+                  <option value="styling" className="bg-[#1A1A1A] text-white">Styling</option>
+                  <option value="other" className="bg-[#1A1A1A] text-white">Other</option>
                 </select>
               </div>
               
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Price (₱) *</label>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">Price (₱) *</label>
                 <input
                   type="number"
                   value={newService.price}
                   onChange={(e) => setNewService(prev => ({ ...prev, price: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                  className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#555555] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] placeholder-gray-500"
                   placeholder="0"
                   min="0"
                   step="0.01"
@@ -199,39 +212,39 @@ const BarberServices = () => {
               </div>
               
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Duration (minutes) *</label>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">Duration (minutes) *</label>
                 <input
                   type="number"
                   value={newService.duration_minutes}
                   onChange={(e) => setNewService(prev => ({ ...prev, duration_minutes: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                  className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#555555] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] placeholder-gray-500"
                   placeholder="30"
                   min="1"
                 />
               </div>
               
               <div className="md:col-span-2">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">Description</label>
                 <textarea
                   value={newService.description}
                   onChange={(e) => setNewService(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent resize-none"
+                  className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#555555] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] resize-none placeholder-gray-500"
                   rows="3"
                   placeholder="Describe your service..."
                 />
               </div>
             </div>
             
-            <div className="flex justify-end space-x-3 mt-6">
+            <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-6">
               <button
                 onClick={() => setShowAddForm(false)}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-3 border border-[#555555] text-gray-300 rounded-lg hover:bg-[#444444] transition-colors active:scale-95 text-sm md:text-base"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddService}
-                className="px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#E67A1A] transition-colors"
+                className="px-4 py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors active:scale-95 text-sm md:text-base"
               >
                 Add Service
               </button>
@@ -240,38 +253,38 @@ const BarberServices = () => {
         )}
 
         {/* Services List */}
-        <div className="space-y-4">
+        <div className="space-y-3 md:space-y-4">
           {barberServices.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-8 text-center">
-              <Scissors className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Services Added</h3>
-              <p className="text-gray-600 mb-4">Start by adding services you offer to customers.</p>
+            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl md:rounded-2xl shadow-lg border border-[#444444]/50 p-6 md:p-8 text-center">
+              <Scissors className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+              <h3 className="text-base md:text-lg font-semibold text-white mb-2">No Services Added</h3>
+              <p className="text-gray-400 mb-4 text-sm md:text-base">Start by adding services you offer to customers.</p>
               <button
                 onClick={() => setShowAddForm(true)}
-                className="px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#E67A1A] transition-colors"
+                className="px-4 py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors active:scale-95 text-sm md:text-base"
               >
                 Add Your First Service
               </button>
             </div>
           ) : (
             barberServices.map((service) => (
-              <div key={service._id} className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-6">
+              <div key={service._id} className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl md:rounded-2xl shadow-lg border border-[#444444]/50 p-4 md:p-6">
                 {editingService && editingService._id === service._id ? (
                   // Edit Mode
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-bold text-gray-900">Edit Service</h3>
-                      <div className="flex space-x-2">
+                      <h3 className="text-base md:text-lg font-bold text-white">Edit Service</h3>
+                      <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                         <button
                           onClick={handleSaveEdit}
-                          className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                          className="flex items-center justify-center space-x-1 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm active:scale-95"
                         >
                           <Save className="w-4 h-4" />
                           <span>Save</span>
                         </button>
                         <button
                           onClick={handleCancelEdit}
-                          className="flex items-center space-x-1 px-3 py-1 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                          className="flex items-center justify-center space-x-1 px-3 py-2 bg-[#555555] text-white rounded-lg hover:bg-[#666666] transition-colors text-sm active:scale-95"
                         >
                           <X className="w-4 h-4" />
                           <span>Cancel</span>
@@ -281,58 +294,58 @@ const BarberServices = () => {
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Service Name</label>
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">Service Name</label>
                         <input
                           type="text"
                           value={editingService.name}
                           onChange={(e) => setEditingService(prev => ({ ...prev, name: e.target.value }))}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                          className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#555555] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
                         />
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">Category</label>
                         <select
                           value={editingService.category}
                           onChange={(e) => setEditingService(prev => ({ ...prev, category: e.target.value }))}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                          className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#555555] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
                         >
-                          <option value="haircut">Haircut</option>
-                          <option value="beard">Beard</option>
-                          <option value="styling">Styling</option>
-                          <option value="other">Other</option>
+                          <option value="haircut" className="bg-[#1A1A1A] text-white">Haircut</option>
+                          <option value="beard" className="bg-[#1A1A1A] text-white">Beard</option>
+                          <option value="styling" className="bg-[#1A1A1A] text-white">Styling</option>
+                          <option value="other" className="bg-[#1A1A1A] text-white">Other</option>
                         </select>
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Price (₱)</label>
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">Price (₱)</label>
                         <input
                           type="number"
                           value={editingService.price}
                           onChange={(e) => setEditingService(prev => ({ ...prev, price: e.target.value }))}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                          className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#555555] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
                           min="0"
                           step="0.01"
                         />
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Duration (minutes)</label>
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">Duration (minutes)</label>
                         <input
                           type="number"
                           value={editingService.duration_minutes}
                           onChange={(e) => setEditingService(prev => ({ ...prev, duration_minutes: e.target.value }))}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                          className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#555555] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
                           min="1"
                         />
                       </div>
                       
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">Description</label>
                         <textarea
                           value={editingService.description}
                           onChange={(e) => setEditingService(prev => ({ ...prev, description: e.target.value }))}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent resize-none"
+                          className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#555555] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] resize-none"
                           rows="3"
                         />
                       </div>
