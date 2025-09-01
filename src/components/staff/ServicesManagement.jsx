@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
-import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw, Grid, List } from 'lucide-react'
+import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw, Grid, List, Upload } from 'lucide-react'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import CreateServiceModal from './CreateServiceModal'
+import ImportServices from './ImportServices'
 
 const ServicesManagement = ({ services = [], onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -11,6 +12,7 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
   const [editingService, setEditingService] = useState(null)
   const [loading, setLoading] = useState(false)
   const [viewMode, setViewMode] = useState('card') // 'card' or 'table'
+  const [showImportModal, setShowImportModal] = useState(false)
 
   // Convex mutations
   const deleteService = useMutation(api.services.services.deleteService)
@@ -176,6 +178,13 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
               <span>Refresh</span>
             </button>
             <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
+            >
+              <Upload className="h-4 w-4" />
+              <span>Import CSV</span>
+            </button>
+            <button
               onClick={handleCreate}
               className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
             >
@@ -193,6 +202,18 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
         onSubmit={handleModalSubmit}
         editingService={editingService}
       />
+
+      {/* Import Services Modal */}
+      {showImportModal && (
+        <ImportServices
+          onClose={() => setShowImportModal(false)}
+          onSuccess={(result) => {
+            console.log('Import successful:', result)
+            setShowImportModal(false)
+            onRefresh()
+          }}
+        />
+      )}
 
       {/* Services Display */}
       {viewMode === 'card' ? (

@@ -101,6 +101,58 @@ export const deleteService = mutation({
   },
 });
 
+// Bulk insert services from CSV data
+export const bulkInsertServices = mutation({
+  args: {
+    services: v.array(v.object({
+      name: v.string(),
+      description: v.string(),
+      duration_minutes: v.number(),
+      price: v.number(),
+    }))
+  },
+  handler: async (ctx, args) => {
+    const insertedServices: string[] = [];
+    
+    for (const service of args.services) {
+      // Determine category based on service name/description
+      let category = "haircut"; // default category
+      
+      const serviceName = service.name.toLowerCase();
+      const serviceDesc = service.description.toLowerCase();
+      
+      if (serviceName.includes("beard") || serviceName.includes("mustache") || serviceDesc.includes("shav")) {
+        category = "beard-care";
+      } else if (serviceName.includes("hair spa") || serviceName.includes("treatment") || serviceName.includes("scalp")) {
+        category = "hair-treatment";
+      } else if (serviceName.includes("color") || serviceName.includes("perm") || serviceName.includes("tattoo")) {
+        category = "hair-styling";
+      } else if (serviceName.includes("package") || serviceName.includes("elite") || serviceName.includes("deluxe")) {
+        category = "premium-package";
+      }
+      
+      const serviceId = await ctx.db.insert("services", {
+        name: service.name,
+        description: service.description,
+        price: service.price,
+        duration_minutes: service.duration_minutes,
+        category: category,
+        is_active: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      
+      insertedServices.push(serviceId);
+    }
+    
+    return {
+      success: true,
+      insertedCount: insertedServices.length,
+      serviceIds: insertedServices
+    };
+  },
+});
+
 // Get service categories
 export const getServiceCategories = query({
   args: {},
