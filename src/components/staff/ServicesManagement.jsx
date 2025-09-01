@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw, Grid3X3, List } from 'lucide-react'
+import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw } from 'lucide-react'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import CreateServiceModal from './CreateServiceModal'
@@ -10,7 +10,6 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingService, setEditingService] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [viewMode, setViewMode] = useState('cards') // 'cards' or 'table'
 
   // Convex mutations
   const deleteService = useMutation(api.services.services.deleteService)
@@ -79,40 +78,40 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Total Services</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.total}</p>
+              <p className="text-sm font-medium text-gray-400">Total Services</p>
+              <p className="text-2xl font-bold text-white">{stats.total}</p>
             </div>
-            <Scissors className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <Scissors className="h-8 w-8 text-blue-400" />
           </div>
         </div>
 
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Avg. Price</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">₱{stats.avgPrice.toFixed(0)}</p>
+              <p className="text-sm font-medium text-gray-400">Avg. Price</p>
+              <p className="text-2xl font-bold text-green-400">₱{stats.avgPrice.toFixed(0)}</p>
             </div>
-            <DollarSign className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <DollarSign className="h-8 w-8 text-green-400" />
           </div>
         </div>
 
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Avg. Duration</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{Math.round(stats.avgDuration)}m</p>
+              <p className="text-sm font-medium text-gray-400">Avg. Duration</p>
+              <p className="text-2xl font-bold text-orange-400">{Math.round(stats.avgDuration)}m</p>
             </div>
-            <Clock className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <Clock className="h-8 w-8 text-orange-400" />
           </div>
         </div>
 
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Total Value</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">₱{stats.totalRevenue.toFixed(0)}</p>
+              <p className="text-sm font-medium text-gray-400">Total Value</p>
+              <p className="text-2xl font-bold text-blue-400">₱{stats.totalRevenue.toFixed(0)}</p>
             </div>
-            <DollarSign className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <DollarSign className="h-8 w-8 text-blue-400" />
           </div>
         </div>
       </div>
@@ -144,32 +143,6 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
           </div>
 
           <div className="flex items-center space-x-2">
-            {/* View Toggle */}
-            <div className="flex items-center bg-[#1A1A1A] rounded-lg p-1 border border-[#444444]">
-              <button
-                onClick={() => setViewMode('cards')}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'cards'
-                    ? 'bg-[#FF8C42] text-white'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-                title="Card View"
-              >
-                <Grid3X3 className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('table')}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'table'
-                    ? 'bg-[#FF8C42] text-white'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-                title="Table View"
-              >
-                <List className="h-4 w-4" />
-              </button>
-            </div>
-            
             <button
               onClick={onRefresh}
               className="flex items-center space-x-2 px-4 py-2 bg-[#444444] text-gray-300 rounded-lg hover:bg-[#555555] transition-colors text-sm"
@@ -179,7 +152,7 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
             </button>
             <button
               onClick={handleCreate}
-              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors text-sm"
+              className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
             >
               <Plus className="h-4 w-4" />
               <span>New Service</span>
@@ -196,175 +169,89 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
         editingService={editingService}
       />
 
-      {/* Services Display */}
-      {viewMode === 'cards' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredServices.map((service) => (
-            <div
-              key={service._id}
-              className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm hover:shadow-md hover:border-[#FF8C42]/30 transition-all p-6"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-[#FF8C42]/20 rounded-lg">
-                    <Scissors className="h-5 w-5 text-[#FF8C42]" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-white">{service.name}</h3>
-                    <p className="text-sm text-gray-400">{service.category}</p>
-                  </div>
+      {/* Services Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredServices.map((service) => (
+          <div
+            key={service._id}
+            className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow p-6"
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-orange-50 rounded-lg">
+                  <Scissors className="h-5 w-5 text-orange-500" />
                 </div>
-                <div className="flex items-center space-x-1">
-                  <button
-                    onClick={() => handleEdit(service)}
-                    className="p-2 text-gray-400 hover:text-[#FF8C42] hover:bg-[#FF8C42]/10 rounded-lg transition-colors"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(service)}
-                    className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                <div>
+                  <h3 className="font-semibold text-gray-900">{service.name}</h3>
+                  <p className="text-sm text-gray-500">{service.category}</p>
                 </div>
               </div>
-
-              <div className="space-y-3">
-                <p className="text-sm text-gray-400">{service.description}</p>
-                
-                <div className="flex items-center justify-between py-2 px-3 bg-[#1A1A1A] rounded-lg border border-[#444444]/30">
-                  <div className="flex items-center space-x-2">
-                    <DollarSign className="h-4 w-4 text-[#FF8C42] opacity-30" />
-                    <span className="text-sm font-medium text-gray-300">Price</span>
-                  </div>
-                  <span className="text-lg font-bold text-[#FF8C42]">₱{parseFloat(service.price).toFixed(2)}</span>
-                </div>
-
-                <div className="flex items-center justify-between py-2 px-3 bg-[#1A1A1A] rounded-lg border border-[#444444]/30">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-[#FF8C42] opacity-30" />
-                    <span className="text-sm font-medium text-gray-300">Duration</span>
-                  </div>
-                  <span className="text-sm font-medium text-[#FF8C42]">{service.duration_minutes} mins</span>
-                </div>
-
-                <div className="flex items-center justify-between py-2 px-3 bg-[#1A1A1A] rounded-lg border border-[#444444]/30">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium text-gray-300">Status</span>
-                  </div>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    service.is_active 
-                      ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                      : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                  }`}>
-                    {service.is_active ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-[#444444]/50">
-                <button 
+              <div className="flex items-center space-x-1">
+                <button
                   onClick={() => handleEdit(service)}
-                  className="w-full px-3 py-2 bg-[#FF8C42]/10 text-[#FF8C42] rounded-lg hover:bg-[#FF8C42]/20 border border-[#FF8C42]/20 hover:border-[#FF8C42]/40 transition-all text-sm font-medium"
+                  className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                 >
-                  Edit Service
+                  <Edit className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => handleDelete(service)}
+                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-[#444444]/30">
-              <thead className="bg-[#1A1A1A]">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Service
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Price
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Duration
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#444444]/20">
-                {filteredServices.map((service) => (
-                  <tr key={service._id} className="hover:bg-[#444444]/10 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="p-2 bg-[#FF8C42]/20 rounded-lg mr-3">
-                          <Scissors className="h-4 w-4 text-[#FF8C42]" />
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-white">{service.name}</div>
-                          <div className="text-sm text-gray-400 truncate max-w-[200px]" title={service.description}>
-                            {service.description}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                      {service.category}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#FF8C42]">
-                      ₱{parseFloat(service.price).toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#FF8C42]">
-                      {service.duration_minutes} mins
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        service.is_active 
-                          ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                          : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                      }`}>
-                        {service.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button
-                          onClick={() => handleEdit(service)}
-                          className="text-gray-400 hover:text-[#FF8C42] transition-colors p-1 rounded"
-                          title="Edit"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(service)}
-                          className="text-gray-400 hover:text-red-400 transition-colors p-1 rounded"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">{service.description}</p>
+              
+              <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <DollarSign className="h-4 w-4 text-green-500" />
+                  <span className="text-sm font-medium text-gray-700">Price</span>
+                </div>
+                <span className="text-lg font-bold text-green-600">₱{parseFloat(service.price).toFixed(2)}</span>
+              </div>
+
+              <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <Clock className="h-4 w-4 text-orange-500" />
+                  <span className="text-sm font-medium text-gray-700">Duration</span>
+                </div>
+                <span className="text-sm font-medium text-gray-900">{service.duration_minutes} mins</span>
+              </div>
+
+              <div className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm font-medium text-gray-700">Status</span>
+                </div>
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  service.is_active 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  {service.is_active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <button 
+                onClick={() => handleEdit(service)}
+                className="w-full px-3 py-2 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 transition-colors text-sm font-medium"
+              >
+                Edit Service
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
 
       {filteredServices.length === 0 && (
-        <div className="text-center py-12 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50">
-          <Scissors className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-white">No services found</h3>
-          <p className="mt-1 text-sm text-gray-400">
+        <div className="text-center py-12">
+          <Scissors className="mx-auto h-12 w-12 text-gray-300" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No services found</h3>
+          <p className="mt-1 text-sm text-gray-500">
             {searchTerm 
               ? 'Try adjusting your search criteria.'
               : 'Get started by creating your first service.'
@@ -374,7 +261,7 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
             <div className="mt-6">
               <button
                 onClick={handleCreate}
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors"
+                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700"
               >
                 <Plus className="-ml-1 mr-2 h-4 w-4" />
                 New Service

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Gift, Calendar, User, DollarSign, CheckCircle, XCircle, Clock, Search, Filter, Plus, RotateCcw, QrCode, Download, Printer, Copy, Mail, Trash2, Edit, Users, Grid3X3, List } from 'lucide-react'
+import { Gift, Calendar, User, DollarSign, CheckCircle, XCircle, Clock, Search, Filter, Plus, RotateCcw, QrCode, Download, Printer, Copy, Mail, Trash2, Edit, Users } from 'lucide-react'
 import QRCode from 'qrcode'
 import SendVoucherModal from './SendVoucherModal'
 import ViewVoucherUsersModal from './ViewVoucherUsersModal'
@@ -14,7 +14,6 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
   const [showSendModal, setShowSendModal] = useState(null)
   const [showUsersModal, setShowUsersModal] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [viewMode, setViewMode] = useState('cards')
 
   // Convex queries and mutations
   const deleteVoucher = useMutation(api.services.vouchers.deleteVoucher)
@@ -29,10 +28,10 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
         status: 'redeemed',
         label: 'Redeemed',
         icon: CheckCircle,
-        bg: 'bg-green-500/20',
-        text: 'text-green-400',
-        border: 'border-green-500/30',
-        iconColor: 'text-green-400'
+        bg: 'bg-green-50',
+        text: 'text-green-700',
+        border: 'border-green-200',
+        iconColor: 'text-green-500'
       }
     }
     const isExpired = voucher.expires_at < Date.now()
@@ -41,20 +40,20 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
         status: 'expired',
         label: 'Expired',
         icon: XCircle,
-        bg: 'bg-red-500/20',
-        text: 'text-red-400',
-        border: 'border-red-500/30',
-        iconColor: 'text-red-400'
+        bg: 'bg-red-50',
+        text: 'text-red-700',
+        border: 'border-red-200',
+        iconColor: 'text-red-500'
       }
     }
     return {
       status: 'active',
       label: 'Active',
       icon: Clock,
-      bg: 'bg-[#FF8C42]/20',
-      text: 'text-[#FF8C42]',
-      border: 'border-[#FF8C42]/30',
-      iconColor: 'text-[#FF8C42]'
+      bg: 'bg-orange-50',
+      text: 'text-orange-700',
+      border: 'border-orange-200',
+      iconColor: 'text-orange-500'
     }
   }
 
@@ -273,50 +272,50 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Total</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.total}</p>
+              <p className="text-sm font-medium text-gray-400">Total</p>
+              <p className="text-2xl font-bold text-white">{stats.total}</p>
             </div>
-            <Gift className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <Gift className="h-8 w-8 text-blue-400" />
           </div>
         </div>
         
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Active</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.active}</p>
+              <p className="text-sm font-medium text-gray-400">Active</p>
+              <p className="text-2xl font-bold text-orange-400">{stats.active}</p>
             </div>
-            <Clock className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <Clock className="h-8 w-8 text-orange-400" />
           </div>
         </div>
 
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Redeemed</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.redeemed}</p>
+              <p className="text-sm font-medium text-gray-400">Redeemed</p>
+              <p className="text-2xl font-bold text-green-400">{stats.redeemed}</p>
             </div>
-            <CheckCircle className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <CheckCircle className="h-8 w-8 text-green-400" />
           </div>
         </div>
 
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Expired</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.expired}</p>
+              <p className="text-sm font-medium text-gray-400">Expired</p>
+              <p className="text-2xl font-bold text-red-400">{stats.expired}</p>
             </div>
-            <XCircle className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <XCircle className="h-8 w-8 text-red-400" />
           </div>
         </div>
 
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Total Value</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">₱{stats.totalValue.toFixed(0)}</p>
+              <p className="text-sm font-medium text-gray-400">Total Value</p>
+              <p className="text-2xl font-bold text-white">₱{stats.totalValue.toFixed(0)}</p>
             </div>
-            <DollarSign className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <DollarSign className="h-8 w-8 text-blue-400" />
           </div>
         </div>
       </div>
@@ -356,7 +355,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             >
               <option value="created_at">Sort by Date</option>
               <option value="value">Sort by Value</option>
@@ -365,42 +364,16 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
           </div>
 
           <div className="flex items-center space-x-2">
-            {/* View Toggle */}
-            <div className="flex items-center bg-[#1A1A1A] rounded-lg p-1 border border-[#444444]">
-              <button
-                onClick={() => setViewMode('cards')}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'cards'
-                    ? 'bg-[#FF8C42] text-white'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-                title="Card View"
-              >
-                <Grid3X3 className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('table')}
-                className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'table'
-                    ? 'bg-[#FF8C42] text-white'
-                    : 'text-gray-400 hover:text-white'
-                }`}
-                title="Table View"
-              >
-                <List className="h-4 w-4" />
-              </button>
-            </div>
-            
             <button
               onClick={onRefresh}
-              className="flex items-center space-x-2 px-4 py-2 bg-[#444444] text-gray-300 rounded-lg hover:bg-[#555555] transition-colors text-sm"
+              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
             >
               <RotateCcw className="h-4 w-4" />
               <span>Refresh</span>
             </button>
             <button 
               onClick={onCreateVoucher}
-              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors text-sm"
+              className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
             >
               <Plus className="h-4 w-4" />
               <span>New Voucher</span>
@@ -409,230 +382,117 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
         </div>
       </div>
 
-      {/* Vouchers Display */}
-      {viewMode === 'cards' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredVouchers.map((voucher) => {
-            const statusConfig = getStatusConfig(voucher)
-            const StatusIcon = statusConfig.icon
+      {/* Vouchers Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredVouchers.map((voucher) => {
+          const statusConfig = getStatusConfig(voucher)
+          const StatusIcon = statusConfig.icon
 
-            return (
-              <div
-                key={voucher._id}
-                className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm hover:shadow-md hover:border-[#FF8C42]/30 transition-all p-4"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 rounded-lg bg-[#FF8C42]/20 border border-[#FF8C42]/30 flex items-center justify-center w-12 h-12">
-                      <MiniQRCode voucher={voucher} />
-                    </div>
-                    <div>
-                      <p className="font-mono text-sm font-bold text-white">{voucher.code}</p>
-                      <p className="text-xs text-gray-400">Points: {voucher.points_required}</p>
-                    </div>
+          return (
+            <div
+              key={voucher._id}
+              className={`bg-white rounded-lg border-2 ${statusConfig.border} shadow-sm hover:shadow-md transition-shadow p-4`}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 rounded-lg bg-orange-50 border-2 border-orange-200 flex items-center justify-center w-12 h-12">
+                    <MiniQRCode voucher={voucher} />
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <div className={`flex items-center space-x-1 px-2 py-1 rounded-full ${statusConfig.bg} ${statusConfig.border} border`}>
-                      <StatusIcon className={`h-3 w-3 ${statusConfig.iconColor}`} />
-                      <span className={`text-xs font-medium ${statusConfig.text}`}>
-                        {statusConfig.label}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => handleDelete(voucher)}
-                      className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
-                      title="Delete Voucher"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
+                  <div>
+                    <p className="font-mono text-sm font-bold text-gray-900">{voucher.code}</p>
+                    <p className="text-xs text-gray-500">Points: {voucher.points_required}</p>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between py-2 px-3 bg-[#1A1A1A] rounded-lg border border-[#444444]/30">
-                    <span className="text-sm font-medium text-gray-300">Value</span>
-                    <span className="text-lg font-bold text-[#FF8C42]">₱{parseFloat(voucher.value).toFixed(2)}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between py-2 px-3 bg-[#1A1A1A] rounded-lg border border-[#444444]/30">
-                    <span className="text-sm font-medium text-gray-300">Points Required</span>
-                    <span className="text-sm font-medium text-[#FF8C42]">{voucher.points_required}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between py-2 px-3 bg-[#1A1A1A] rounded-lg border border-[#444444]/30">
-                    <span className="text-sm font-medium text-gray-300">Assignments</span>
-                    <span className="text-sm font-medium text-[#FF8C42]">
-                      {voucher.assignedCount || 0}/{voucher.max_uses}
-                      {voucher.redeemedCount > 0 && (
-                        <span className="text-green-400 ml-1">({voucher.redeemedCount} redeemed)</span>
-                      )}
+                <div className="flex items-center space-x-2">
+                  <div className={`flex items-center space-x-1 px-2 py-1 rounded-full ${statusConfig.bg} ${statusConfig.border} border`}>
+                    <StatusIcon className={`h-3 w-3 ${statusConfig.iconColor}`} />
+                    <span className={`text-xs font-medium ${statusConfig.text}`}>
+                      {statusConfig.label}
                     </span>
                   </div>
-
-                  <div className="flex items-center justify-between py-2 px-3 bg-[#1A1A1A] rounded-lg border border-[#444444]/30">
-                    <span className="text-sm font-medium text-gray-300">Created</span>
-                    <span className="text-sm text-gray-400">
-                      {new Date(voucher.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between py-2 px-3 bg-[#1A1A1A] rounded-lg border border-[#444444]/30">
-                    <span className="text-sm font-medium text-gray-300">Expires</span>
-                    <span className={`text-sm ${voucher.expires_at < Date.now() ? 'text-red-400' : 'text-gray-400'}`}>
-                      {new Date(voucher.expires_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-[#444444]/50">
-                  {/* Always show View Users button */}
                   <button
-                    onClick={() => setShowUsersModal(voucher)}
-                    className="w-full mb-2 px-3 py-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 border border-blue-500/30 hover:border-blue-400/50 transition-all text-sm font-medium flex items-center justify-center"
+                    onClick={() => handleDelete(voucher)}
+                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                    title="Delete Voucher"
                   >
-                    <Users className="h-4 w-4 mr-2" /> View Assigned Users
+                    <Trash2 className="h-3 w-3" />
                   </button>
-                  
-                  {/* Show action buttons only for active vouchers */}
-                  {!voucher.redeemed && voucher.expires_at >= Date.now() && (
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => setShowQRCode(voucher)}
-                        className="flex-1 px-3 py-2 bg-[#444444]/50 text-gray-300 rounded-lg hover:bg-[#555555]/50 border border-[#555555]/30 hover:border-[#666666]/50 transition-all text-sm font-medium flex items-center justify-center"
-                      >
-                        <QrCode className="h-4 w-4 mr-2" /> View QR
-                      </button>
-                      <button
-                        onClick={() => setShowSendModal(voucher)}
-                        className="flex-1 px-3 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors text-sm font-semibold flex items-center justify-center"
-                      >
-                        <Mail className="h-4 w-4 mr-2" /> Send Email
-                      </button>
-                    </div>
-                  )}
                 </div>
               </div>
-            )
-          })}
-        </div>
-      ) : (
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-[#444444]/30">
-              <thead className="bg-[#1A1A1A]">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Voucher
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Value
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Points
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Usage
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Expires
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#444444]/20">
-                {filteredVouchers.map((voucher) => {
-                  const statusConfig = getStatusConfig(voucher)
-                  const StatusIcon = statusConfig.icon
 
-                  return (
-                    <tr key={voucher._id} className="hover:bg-[#444444]/10 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="p-2 bg-[#FF8C42]/20 rounded-lg mr-3 border border-[#FF8C42]/30">
-                            <MiniQRCode voucher={voucher} />
-                          </div>
-                          <div>
-                            <div className="text-sm font-mono font-medium text-white">{voucher.code}</div>
-                            <div className="text-sm text-gray-400">Points: {voucher.points_required}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#FF8C42]">
-                        ₱{parseFloat(voucher.value).toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[#FF8C42]">
-                        {voucher.points_required}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {voucher.assignedCount || 0}/{voucher.max_uses}
-                        {voucher.redeemedCount > 0 && (
-                          <div className="text-green-400 text-xs">({voucher.redeemedCount} redeemed)</div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                        {new Date(voucher.expires_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.bg} ${statusConfig.border} border ${statusConfig.text}`}>
-                          <StatusIcon className={`h-3 w-3 mr-1 ${statusConfig.iconColor}`} />
-                          {statusConfig.label}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end space-x-2">
-                          <button
-                            onClick={() => setShowUsersModal(voucher)}
-                            className="text-blue-400 hover:text-blue-300 transition-colors p-1 rounded"
-                            title="View Users"
-                          >
-                            <Users className="h-4 w-4" />
-                          </button>
-                          {!voucher.redeemed && voucher.expires_at >= Date.now() && (
-                            <>
-                              <button
-                                onClick={() => setShowQRCode(voucher)}
-                                className="text-gray-400 hover:text-white transition-colors p-1 rounded"
-                                title="View QR"
-                              >
-                                <QrCode className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => setShowSendModal(voucher)}
-                                className="text-[#FF8C42] hover:text-[#FF7A2B] transition-colors p-1 rounded"
-                                title="Send Email"
-                              >
-                                <Mail className="h-4 w-4" />
-                              </button>
-                            </>
-                          )}
-                          <button
-                            onClick={() => handleDelete(voucher)}
-                            className="text-gray-400 hover:text-red-400 transition-colors p-1 rounded"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Value</span>
+                  <span className="text-lg font-bold text-gray-900">₱{parseFloat(voucher.value).toFixed(2)}</span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Points Required</span>
+                  <span className="text-sm font-medium text-gray-900">{voucher.points_required}</span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Assignments</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {voucher.assignedCount || 0}/{voucher.max_uses}
+                    {voucher.redeemedCount > 0 && (
+                      <span className="text-green-600 ml-1">({voucher.redeemedCount} redeemed)</span>
+                    )}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Created</span>
+                  <span className="text-sm text-gray-600">
+                    {new Date(voucher.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Expires</span>
+                  <span className={`text-sm ${voucher.expires_at < Date.now() ? 'text-red-600' : 'text-gray-600'}`}>
+                    {new Date(voucher.expires_at).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-gray-200">
+                {/* Always show View Users button */}
+                <button
+                  onClick={() => setShowUsersModal(voucher)}
+                  className="w-full mb-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium flex items-center justify-center"
+                >
+                  <Users className="h-4 w-4 mr-2" /> View Assigned Users
+                </button>
+                
+                {/* Show action buttons only for active vouchers */}
+                {!voucher.redeemed && voucher.expires_at >= Date.now() && (
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => setShowQRCode(voucher)}
+                      className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium flex items-center justify-center"
+                    >
+                      <QrCode className="h-4 w-4 mr-2" /> View QR
+                    </button>
+                    <button
+                      onClick={() => setShowSendModal(voucher)}
+                      className="flex-1 px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg hover:from-orange-600 hover:to-amber-600 transition-colors text-sm font-semibold flex items-center justify-center"
+                    >
+                      <Mail className="h-4 w-4 mr-2" /> Send Email
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
 
       {filteredVouchers.length === 0 && (
-        <div className="text-center py-12 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50">
-          <Gift className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-white">No vouchers found</h3>
-          <p className="mt-1 text-sm text-gray-400">
+        <div className="text-center py-12">
+          <Gift className="mx-auto h-12 w-12 text-gray-300" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No vouchers found</h3>
+          <p className="mt-1 text-sm text-gray-500">
             {searchTerm || filterStatus !== 'all' 
               ? 'Try adjusting your search or filter criteria.'
               : 'Get started by creating a new voucher.'

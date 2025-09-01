@@ -49,7 +49,7 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
       {/* Secondary Actions */}
       <div className="group relative">
         <div className="absolute -inset-0.5 bg-gradient-to-r from-[#333333] to-[#444444] rounded-[28px] opacity-0 group-hover:opacity-30 blur-sm transition-all duration-500"></div>
-        <div className="relative text-center p-8 bg-gradient-to-br from-[#2A2A2A] to-[#333333] backdrop-blur-xl border-2 border-[#CC5A14] hover:border-[#FF8C42] hover:shadow-xl transform hover:-translate-y-2 transition-all duration-500 rounded-[24px] group">
+        <Card className="relative text-center p-8 bg-gradient-to-br from-[#2A2A2A] to-[#333333] backdrop-blur-xl border border-[#444444]/50 hover:border-[#FF8C42]/50 hover:shadow-xl transform hover:-translate-y-2 transition-all duration-500 rounded-[24px] group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#FF8C42]/10 to-transparent rounded-full -translate-y-12 translate-x-12"></div>
           <div className="relative z-10">
             <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-[20px] flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
@@ -63,12 +63,12 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
               New Customer
             </button>
           </div>
-        </div>
+        </Card>
       </div>
       
       <div className="group relative">
         <div className="absolute -inset-0.5 bg-gradient-to-r from-[#333333] to-[#444444] rounded-[28px] opacity-0 group-hover:opacity-30 blur-sm transition-all duration-500"></div>
-        <div className="relative text-center p-8 bg-gradient-to-br from-[#2A2A2A] to-[#333333] backdrop-blur-xl border-2 border-[#CC5A14] hover:border-[#FF8C42] hover:shadow-xl transform hover:-translate-y-2 transition-all duration-500 rounded-[24px] group">
+        <Card className="relative text-center p-8 bg-gradient-to-br from-[#2A2A2A] to-[#333333] backdrop-blur-xl border border-[#444444]/50 hover:border-[#6B6B6B]/50 hover:shadow-xl transform hover:-translate-y-2 transition-all duration-500 rounded-[24px] group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#6B6B6B]/10 to-transparent rounded-full -translate-y-12 translate-x-12"></div>
           <div className="relative z-10">
             <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-[#6B6B6B] to-[#4A4A4A] rounded-[20px] flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
@@ -82,12 +82,12 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
               Book Appointment
             </button>
           </div>
-        </div>
+        </Card>
       </div>
       
       <div className="group relative">
         <div className="absolute -inset-0.5 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-[28px] opacity-0 group-hover:opacity-30 blur-sm transition-all duration-500"></div>
-        <div className="relative text-center p-8 bg-gradient-to-br from-[#2A2A2A] to-[#333333] backdrop-blur-xl border-2 border-[#CC5A14] hover:border-[#FF8C42] hover:shadow-xl transform hover:-translate-y-2 transition-all duration-500 rounded-[24px] group">
+        <Card className="relative text-center p-8 bg-gradient-to-br from-[#2A2A2A] to-[#333333] backdrop-blur-xl border border-[#444444]/50 hover:border-[#FF8C42]/50 hover:shadow-xl transform hover:-translate-y-2 transition-all duration-500 rounded-[24px] group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#FF8C42]/10 to-transparent rounded-full -translate-y-12 translate-x-12"></div>
           <div className="relative z-10">
             <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-[20px] flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
@@ -101,7 +101,7 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
               New Voucher
             </button>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Debug currentModal state */}
