@@ -212,7 +212,12 @@ function Kiosk() {
             <span className="text-white font-bold text-lg md:text-xl">T</span>
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-bold" style={{color: '#36454F'}}>TPX Barbershop</h1>
+            <div className="flex items-center space-x-3">
+              <h1 className="text-xl md:text-2xl font-bold" style={{color: '#36454F'}}>TPX Barbershop</h1>
+              <div className="bg-[#F68B24]/20 rounded-full px-2 py-0.5 border border-[#F68B24]/30">
+                <span className="text-xs font-semibold text-[#F68B24]">v1.0.1</span>
+              </div>
+            </div>
             <p className="text-xs md:text-sm" style={{color: '#8B8B8B'}}>Self-Service Kiosk</p>
           </div>
         </div>

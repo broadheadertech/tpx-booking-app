@@ -362,11 +362,18 @@ const POS = () => {
       console.log('Final voucher_applied type:', typeof voucherApplied)
       console.log('Transaction data voucher_applied:', transactionData.voucher_applied)
 
-      await createTransaction(transactionData)
-
-      // Check if this transaction is for a booking and update booking status to completed
+      // Check if this transaction is for a booking payment
       const posBooking = sessionStorage.getItem('posBooking')
-      if (posBooking && currentTransaction.services.length > 0) {
+      const isBookingPayment = posBooking && currentTransaction.services.length > 0
+
+      // Pass the skip_booking_creation flag as a separate parameter
+      await createTransaction({
+        ...transactionData,
+        skip_booking_creation: isBookingPayment
+      })
+
+      // Update the existing booking if this is a booking payment
+      if (isBookingPayment) {
         try {
           const booking = JSON.parse(posBooking)
           // Update booking status to completed and payment status to paid
@@ -385,18 +392,19 @@ const POS = () => {
           setCurrentBooking(null)
         } catch (error) {
           console.error('Error updating booking status:', error)
+          // Don't fail the entire transaction if booking update fails
         }
       }
 
       // Show enhanced success message based on transaction type
-      const currentPosBooking = sessionStorage.getItem('posBooking')
       const hasServices = currentTransaction.services.length > 0
       const hasProducts = currentTransaction.products.length > 0
 
       let successMessage = 'Transaction completed successfully!'
 
-      if (currentPosBooking && hasServices) {
-        successMessage = `Booking payment completed! Booking #${JSON.parse(currentPosBooking).booking_code} has been marked as completed and paid.`
+      if (isBookingPayment) {
+        const booking = JSON.parse(posBooking)
+        successMessage = `Booking payment completed! Booking #${booking.booking_code} has been marked as completed and paid.`
       } else if (hasServices || hasProducts) {
         const serviceCount = currentTransaction.services.length
         const productCount = currentTransaction.products.length

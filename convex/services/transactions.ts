@@ -74,7 +74,8 @@ export const createTransaction = mutation({
     notes: v.optional(v.string()),
     cash_received: v.optional(v.number()),
     change_amount: v.optional(v.number()),
-    processed_by: v.id("users")
+    processed_by: v.id("users"),
+    skip_booking_creation: v.optional(v.boolean()) // Flag to skip automatic booking creation
   },
   handler: async (ctx, args) => {
     // Generate unique transaction ID and receipt number
@@ -82,18 +83,21 @@ export const createTransaction = mutation({
     const transactionId = `TXN-${timestamp}`;
     const receiptNumber = `RCP-${timestamp}`;
 
+    // Extract control flags that shouldn't be stored in the database
+    const { skip_booking_creation, ...transactionFields } = args;
+
     const transactionData = {
       transaction_id: transactionId,
       receipt_number: receiptNumber,
-      ...args,
+      ...transactionFields,
       createdAt: timestamp,
       updatedAt: timestamp,
     };
 
     const transactionDocId = await ctx.db.insert("transactions", transactionData);
 
-    // Create booking records for services performed in POS
-    if (args.services && args.services.length > 0) {
+    // Create booking records for services performed in POS (skip if it's a booking payment)
+    if (args.services && args.services.length > 0 && !skip_booking_creation) {
       for (const serviceItem of args.services) {
         try {
           // Check if a booking already exists for this service and customer on the same day
