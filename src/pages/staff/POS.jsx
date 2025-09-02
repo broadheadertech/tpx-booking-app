@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle } from 'lucide-react'
+import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
@@ -29,6 +29,10 @@ const POS = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('services') // 'services' or 'products'
   const [paymentMethod, setPaymentMethod] = useState('cash')
+  const [viewMode, setViewMode] = useState('card') // 'card' or 'table'
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 9 // For card view
+  const tableItemsPerPage = 15 // For table view
 
   // Convex queries
   const services = useQuery(api.services.services.getAllServices)
@@ -51,15 +55,33 @@ const POS = () => {
   const customerUsers = customers?.filter(customer => customer.role === 'customer') || []
 
   // Filter items based on search term
-  const filteredServices = activeServices.filter(service => 
+  const filteredServices = activeServices.filter(service =>
     service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     service.category.toLowerCase().includes(searchTerm.toLowerCase())
   )
-  
-  const filteredProducts = activeProducts.filter(product => 
+
+  const filteredProducts = activeProducts.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.category.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  // Pagination logic
+  const currentItemsPerPage = viewMode === 'card' ? itemsPerPage : tableItemsPerPage
+  const currentFilteredItems = activeTab === 'services' ? filteredServices : filteredProducts
+  const totalPages = Math.ceil(currentFilteredItems.length / currentItemsPerPage)
+  const startIndex = (currentPage - 1) * currentItemsPerPage
+  const endIndex = startIndex + currentItemsPerPage
+  const paginatedItems = currentFilteredItems.slice(startIndex, endIndex)
+
+  // Reset to page 1 when search term changes or tab changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, activeTab, viewMode])
+
+  // Handle page change
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+  }
 
   // Calculate totals
   useEffect(() => {
@@ -276,18 +298,31 @@ const POS = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F5F5F5] to-white">
+    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
+        <div
+          className="h-full bg-cover bg-center bg-no-repeat opacity-5"
+          style={{
+            backgroundImage: `url(/img/pnglog.png)`,
+            filter: 'brightness(0.3)'
+          }}
+        ></div>
+      </div>
+
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A] shadow-xl">
+      <div className="relative z-10 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center space-x-6">
               <Link
                 to="/staff"
-                className="w-12 h-12 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center hover:bg-white/20 transition-all duration-300 border border-white/20 group"
+                className="w-12 h-12 bg-[#1A1A1A]/50 backdrop-blur-sm rounded-2xl flex items-center justify-center hover:bg-[#FF8C42]/10 transition-all duration-300 border border-[#444444]/30 group"
                 title="Back to Dashboard"
               >
-                <ArrowLeft className="w-5 h-5 text-white group-hover:text-[#FF8C42] transition-colors duration-300" />
+                <ArrowLeft className="w-5 h-5 text-gray-300 group-hover:text-[#FF8C42] transition-colors duration-300" />
               </Link>
               <div className="w-16 h-16 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-3xl flex items-center justify-center shadow-2xl ring-4 ring-[#FF8C42]/20">
                 <CreditCard className="w-8 h-8 text-white" />
@@ -300,11 +335,11 @@ const POS = () => {
             <div className="flex items-center space-x-4">
               <div className="text-right">
                 <p className="text-base font-semibold text-white">Welcome, {user?.username}</p>
-                <p className="text-xs text-gray-300 font-medium">{new Date().toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
+                <p className="text-xs text-gray-400 font-medium">{new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
                 })}</p>
               </div>
             </div>
@@ -313,13 +348,13 @@ const POS = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Panel - Product/Service Selection */}
           <div className="lg:col-span-2 space-y-6">
             {/* Barber Selection */}
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Select Barber</h3>
+            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
+              <h3 className="text-lg font-bold text-white mb-4">Select Barber</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {activeBarbers.map((barber) => (
                   <button
@@ -328,7 +363,7 @@ const POS = () => {
                     className={`p-3 rounded-xl border-2 transition-all duration-200 ${
                       selectedBarber?._id === barber._id
                         ? 'border-[#FF8C42] bg-[#FF8C42]/10 text-[#FF8C42]'
-                        : 'border-gray-200 hover:border-[#FF8C42]/50 text-gray-700'
+                        : 'border-[#555555] hover:border-[#FF8C42]/50 text-gray-300 hover:text-[#FF8C42]'
                     }`}
                   >
                     <div className="text-center">
@@ -343,105 +378,247 @@ const POS = () => {
             </div>
 
             {/* Search and Tabs */}
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
-                <div className="flex space-x-1 bg-gray-100 rounded-xl p-1 mb-4 sm:mb-0">
-                  <button
-                    onClick={() => setActiveTab('services')}
-                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
-                      activeTab === 'services'
-                        ? 'bg-[#FF8C42] text-white shadow-lg'
-                        : 'text-gray-600 hover:text-[#FF8C42]'
-                    }`}
-                  >
-                    <Scissors className="w-4 h-4 inline mr-2" />
-                    Services
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('products')}
-                    className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
-                      activeTab === 'products'
-                        ? 'bg-[#FF8C42] text-white shadow-lg'
-                        : 'text-gray-600 hover:text-[#FF8C42]'
-                    }`}
-                  >
-                    <Package className="w-4 h-4 inline mr-2" />
-                    Products
-                  </button>
+            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
+                            <div className="flex flex-col space-y-4 mb-6">
+                {/* Top row: Tabs and View Mode Toggle */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex space-x-1 bg-[#1A1A1A] rounded-xl p-1 mb-4 sm:mb-0">
+                    <button
+                      onClick={() => setActiveTab('services')}
+                      className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                        activeTab === 'services'
+                          ? 'bg-[#FF8C42] text-white shadow-lg'
+                          : 'text-gray-400 hover:text-[#FF8C42]'
+                      }`}
+                    >
+                      <Scissors className="w-4 h-4 inline mr-2" />
+                      Services
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('products')}
+                      className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                        activeTab === 'products'
+                          ? 'bg-[#FF8C42] text-white shadow-lg'
+                          : 'text-gray-400 hover:text-[#FF8C42]'
+                      }`}
+                    >
+                      <Package className="w-4 h-4 inline mr-2" />
+                      Products
+                    </button>
+                  </div>
+
+                  {/* View Mode Toggle */}
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-400 font-medium">View:</span>
+                    <div className="flex space-x-1 bg-[#1A1A1A] rounded-lg p-1">
+                      <button
+                        onClick={() => setViewMode('card')}
+                        className={`p-2 rounded-md transition-all duration-200 ${
+                          viewMode === 'card'
+                            ? 'bg-[#FF8C42] text-white'
+                            : 'text-gray-400 hover:text-[#FF8C42]'
+                        }`}
+                        title="Card View"
+                      >
+                        <Grid3X3 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setViewMode('table')}
+                        className={`p-2 rounded-md transition-all duration-200 ${
+                          viewMode === 'table'
+                            ? 'bg-[#FF8C42] text-white'
+                            : 'text-gray-400 hover:text-[#FF8C42]'
+                        }`}
+                        title="Table View"
+                      >
+                        <List className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    placeholder={`Search ${activeTab}...`}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
-                  />
+
+                {/* Bottom row: Search and Pagination Info */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <input
+                      type="text"
+                      placeholder={`Search ${activeTab}...`}
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                    />
+                  </div>
+
+                  {/* Results count */}
+                  <div className="text-sm text-gray-400">
+                    Showing {startIndex + 1}-{Math.min(endIndex, currentFilteredItems.length)} of {currentFilteredItems.length} {activeTab}
+                  </div>
                 </div>
               </div>
 
-              {/* Services/Products Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {activeTab === 'services' ? (
-                  filteredServices.map((service) => (
+              {/* Services/Products Display */}
+              {viewMode === 'card' ? (
+                /* Card View */
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {activeTab === 'services' ? (
+                    paginatedItems.map((service) => (
+                      <button
+                        key={service._id}
+                        onClick={() => addService(service)}
+                        className="p-4 bg-[#1A1A1A] border border-[#555555] rounded-xl hover:border-[#FF8C42] hover:bg-[#FF8C42]/5 transition-all duration-200 text-left group"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-white group-hover:text-[#FF8C42]">{service.name}</h4>
+                          <Plus className="w-4 h-4 text-gray-400 group-hover:text-[#FF8C42]" />
+                        </div>
+                        <p className="text-sm text-gray-400 mb-2">{service.description}</p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-bold text-[#FF8C42]">₱{service.price}</span>
+                          <span className="text-xs text-gray-500">{service.duration_minutes} min</span>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    paginatedItems.map((product) => (
+                      <button
+                        key={product._id}
+                        onClick={() => addProduct(product)}
+                        className="p-4 bg-[#1A1A1A] border border-[#555555] rounded-xl hover:border-[#FF8C42] hover:bg-[#FF8C42]/5 transition-all duration-200 text-left group"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-white group-hover:text-[#FF8C42]">{product.name}</h4>
+                          <Plus className="w-4 h-4 text-gray-400 group-hover:text-[#FF8C42]" />
+                        </div>
+                        <p className="text-sm text-gray-400 mb-2">{product.description}</p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-bold text-[#FF8C42]">₱{product.price}</span>
+                          <span className="text-xs text-gray-500">Stock: {product.stock}</span>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              ) : (
+                /* Table View */
+                <div className="overflow-x-auto">
+                  <table className="w-full bg-[#1A1A1A] rounded-xl border border-[#555555]">
+                    <thead className="bg-[#2A2A2A]">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Name</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Description</th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Price</th>
+                        {activeTab === 'services' ? (
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Duration</th>
+                        ) : (
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Stock</th>
+                        )}
+                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-300 border-b border-[#555555]">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedItems.map((item) => (
+                        <tr
+                          key={item._id}
+                          className="hover:bg-[#333333] transition-colors border-b border-[#444444] last:border-b-0"
+                        >
+                          <td className="px-4 py-3 text-sm font-medium text-white">{item.name}</td>
+                          <td className="px-4 py-3 text-sm text-gray-400 max-w-xs truncate">{item.description}</td>
+                          <td className="px-4 py-3 text-sm font-bold text-[#FF8C42]">₱{item.price}</td>
+                          {activeTab === 'services' ? (
+                            <td className="px-4 py-3 text-sm text-gray-500">{item.duration_minutes} min</td>
+                          ) : (
+                            <td className="px-4 py-3 text-sm text-gray-500">{item.stock}</td>
+                          )}
+                          <td className="px-4 py-3 text-center">
+                            <button
+                              onClick={() => activeTab === 'services' ? addService(item) : addProduct(item)}
+                              className="px-3 py-1 bg-[#FF8C42] text-white text-sm rounded-lg hover:bg-[#E67E22] transition-colors flex items-center justify-center space-x-1 mx-auto"
+                            >
+                              <Plus className="w-3 h-3" />
+                              <span>Add</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6">
+                  <div className="text-sm text-gray-400">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                  <div className="flex items-center space-x-2">
                     <button
-                      key={service._id}
-                      onClick={() => addService(service)}
-                      className="p-4 border border-gray-200 rounded-xl hover:border-[#FF8C42] hover:shadow-lg transition-all duration-200 text-left group"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="p-2 bg-[#1A1A1A] border border-[#555555] text-gray-400 rounded-lg hover:bg-[#333333] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-gray-900 group-hover:text-[#FF8C42]">{service.name}</h4>
-                        <Plus className="w-4 h-4 text-gray-400 group-hover:text-[#FF8C42]" />
-                      </div>
-                      <p className="text-sm text-gray-600 mb-2">{service.description}</p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold text-[#FF8C42]">₱{service.price}</span>
-                        <span className="text-xs text-gray-500">{service.duration_minutes} min</span>
-                      </div>
+                      <ChevronLeft className="w-4 h-4" />
                     </button>
-                  ))
-                ) : (
-                  filteredProducts.map((product) => (
+
+                    {/* Page Numbers */}
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum
+                      if (totalPages <= 5) {
+                        pageNum = i + 1
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i
+                      } else {
+                        pageNum = currentPage - 2 + i
+                      }
+
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+                            currentPage === pageNum
+                              ? 'bg-[#FF8C42] text-white'
+                              : 'bg-[#1A1A1A] border border-[#555555] text-gray-400 hover:bg-[#333333] hover:text-white'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      )
+                    })}
+
                     <button
-                      key={product._id}
-                      onClick={() => addProduct(product)}
-                      className="p-4 border border-gray-200 rounded-xl hover:border-[#FF8C42] hover:shadow-lg transition-all duration-200 text-left group"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="p-2 bg-[#1A1A1A] border border-[#555555] text-gray-400 rounded-lg hover:bg-[#333333] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-gray-900 group-hover:text-[#FF8C42]">{product.name}</h4>
-                        <Plus className="w-4 h-4 text-gray-400 group-hover:text-[#FF8C42]" />
-                      </div>
-                      <p className="text-sm text-gray-600 mb-2">{product.description}</p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-bold text-[#FF8C42]">₱{product.price}</span>
-                        <span className="text-xs text-gray-500">Stock: {product.stock}</span>
-                      </div>
+                      <ChevronRight className="w-4 h-4" />
                     </button>
-                  ))
-                )}
-              </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Right Panel - Transaction Summary */}
           <div className="space-y-6">
             {/* Customer Selection */}
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-6">
+            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900">Customer</h3>
+                <h3 className="text-lg font-bold text-white">Customer</h3>
                 <div className="flex space-x-2">
                   <button
                     onClick={() => setActiveModal('scanner')}
-                    className="p-2 bg-blue-500/10 text-blue-600 rounded-lg hover:bg-blue-500/20 transition-colors"
+                    className="p-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors border border-blue-500/30"
                     title="Scan QR"
                   >
                     <QrCode className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setActiveModal('customerSelection')}
-                    className="p-2 bg-[#FF8C42]/10 text-[#FF8C42] rounded-lg hover:bg-[#FF8C42]/20 transition-colors"
+                    className="p-2 bg-[#FF8C42]/20 text-[#FF8C42] rounded-lg hover:bg-[#FF8C42]/30 transition-colors border border-[#FF8C42]/30"
                     title="Select Customer"
                   >
                     <User className="w-4 h-4" />
@@ -450,23 +627,23 @@ const POS = () => {
               </div>
               
               {currentTransaction.customer ? (
-                <div className="p-4 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200">
+                <div className="p-4 bg-gradient-to-r from-green-500/20 to-green-600/20 rounded-lg border border-green-500/30">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
-                        <User className="w-5 h-5 text-white" />
+                      <div className="w-10 h-10 bg-green-500/30 rounded-lg flex items-center justify-center border border-green-500/40">
+                        <User className="w-5 h-5 text-green-400" />
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900">{currentTransaction.customer.username}</p>
-                        <p className="text-sm text-gray-600">{currentTransaction.customer.email}</p>
+                        <p className="font-semibold text-white">{currentTransaction.customer.username}</p>
+                        <p className="text-sm text-gray-400">{currentTransaction.customer.email}</p>
                         {currentTransaction.customer.mobile_number && (
-                          <p className="text-sm text-gray-600">{currentTransaction.customer.mobile_number}</p>
+                          <p className="text-sm text-gray-400">{currentTransaction.customer.mobile_number}</p>
                         )}
                       </div>
                     </div>
                     <button
                       onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '' }))}
-                      className="text-red-500 hover:text-red-700 transition-colors"
+                      className="text-red-400 hover:text-red-300 transition-colors"
                       title="Remove Customer"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -474,23 +651,23 @@ const POS = () => {
                   </div>
                 </div>
               ) : currentTransaction.customer_name ? (
-                <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+                <div className="p-4 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-500/30">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                        <UserPlus className="w-5 h-5 text-white" />
+                      <div className="w-10 h-10 bg-blue-500/30 rounded-lg flex items-center justify-center border border-blue-500/40">
+                        <UserPlus className="w-5 h-5 text-blue-400" />
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900">{currentTransaction.customer_name}</p>
-                        <p className="text-sm text-gray-600">Walk-in Customer</p>
+                        <p className="font-semibold text-white">{currentTransaction.customer_name}</p>
+                        <p className="text-sm text-gray-400">Walk-in Customer</p>
                         {currentTransaction.customer_phone && (
-                          <p className="text-sm text-gray-600">{currentTransaction.customer_phone}</p>
+                          <p className="text-sm text-gray-400">{currentTransaction.customer_phone}</p>
                         )}
                       </div>
                     </div>
                     <button
                       onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '' }))}
-                      className="text-red-500 hover:text-red-700 transition-colors"
+                      className="text-red-400 hover:text-red-300 transition-colors"
                       title="Remove Customer"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -500,7 +677,7 @@ const POS = () => {
               ) : (
                 <button
                   onClick={() => setActiveModal('customerSelection')}
-                  className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-[#FF8C42] hover:bg-[#FF8C42]/5 transition-all duration-200 flex items-center justify-center space-x-2 text-gray-600 hover:text-[#FF8C42]"
+                  className="w-full p-4 border-2 border-dashed border-[#555555] rounded-lg hover:border-[#FF8C42] hover:bg-[#FF8C42]/10 transition-all duration-200 flex items-center justify-center space-x-2 text-gray-400 hover:text-[#FF8C42]"
                 >
                   <User className="w-5 h-5" />
                   <span className="font-medium">Select Customer</span>
@@ -509,13 +686,13 @@ const POS = () => {
             </div>
 
             {/* Transaction Items */}
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-6">
+            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900">Order Summary</h3>
+                <h3 className="text-lg font-bold text-white">Order Summary</h3>
                 {(currentTransaction.services.length > 0 || currentTransaction.products.length > 0) && (
                   <button
                     onClick={clearTransaction}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/30"
                     title="Clear All"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -526,22 +703,22 @@ const POS = () => {
               <div className="space-y-3 max-h-64 overflow-y-auto">
                 {/* Services */}
                 {currentTransaction.services.map((service, index) => (
-                  <div key={`service-${index}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div key={`service-${index}`} className="flex items-center justify-between p-3 bg-[#1A1A1A] rounded-lg border border-[#555555]/30">
                     <div className="flex-1">
-                      <p className="font-semibold text-gray-900">{service.service_name}</p>
-                      <p className="text-sm text-gray-600">₱{service.price} each</p>
+                      <p className="font-semibold text-white">{service.service_name}</p>
+                      <p className="text-sm text-gray-400">₱{service.price} each</p>
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => updateQuantity('services', index, -1)}
-                        className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300"
+                        className="w-6 h-6 bg-[#444444] border border-[#555555] rounded-full flex items-center justify-center hover:bg-[#555555] transition-colors"
                       >
-                        <Minus className="w-3 h-3" />
+                        <Minus className="w-3 h-3 text-gray-300" />
                       </button>
-                      <span className="w-8 text-center font-semibold">{service.quantity}</span>
+                      <span className="w-8 text-center font-semibold text-white">{service.quantity}</span>
                       <button
                         onClick={() => updateQuantity('services', index, 1)}
-                        className="w-6 h-6 bg-[#FF8C42] rounded-full flex items-center justify-center hover:bg-[#FF7A2B] text-white"
+                        className="w-6 h-6 bg-[#FF8C42] rounded-full flex items-center justify-center hover:bg-[#FF7A2B] text-white transition-colors"
                       >
                         <Plus className="w-3 h-3" />
                       </button>
@@ -551,22 +728,22 @@ const POS = () => {
 
                 {/* Products */}
                 {currentTransaction.products.map((product, index) => (
-                  <div key={`product-${index}`} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                  <div key={`product-${index}`} className="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
                     <div className="flex-1">
-                      <p className="font-semibold text-gray-900">{product.product_name}</p>
-                      <p className="text-sm text-gray-600">₱{product.price} each</p>
+                      <p className="font-semibold text-white">{product.product_name}</p>
+                      <p className="text-sm text-gray-400">₱{product.price} each</p>
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => updateQuantity('products', index, -1)}
-                        className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300"
+                        className="w-6 h-6 bg-[#444444] border border-[#555555] rounded-full flex items-center justify-center hover:bg-[#555555] transition-colors"
                       >
-                        <Minus className="w-3 h-3" />
+                        <Minus className="w-3 h-3 text-gray-300" />
                       </button>
-                      <span className="w-8 text-center font-semibold">{product.quantity}</span>
+                      <span className="w-8 text-center font-semibold text-white">{product.quantity}</span>
                       <button
                         onClick={() => updateQuantity('products', index, 1)}
-                        className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center hover:bg-blue-600 text-white"
+                        className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center hover:bg-blue-600 text-white transition-colors"
                       >
                         <Plus className="w-3 h-3" />
                       </button>
@@ -576,35 +753,35 @@ const POS = () => {
 
                 {currentTransaction.services.length === 0 && currentTransaction.products.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
-                    <Calculator className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p>No items added yet</p>
+                    <Calculator className="w-8 h-8 mx-auto mb-2 opacity-50 text-gray-400" />
+                    <p className="text-gray-400">No items added yet</p>
                   </div>
                 )}
               </div>
             </div>
 
             {/* Payment Summary */}
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Payment</h3>
-              
+            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
+              <h3 className="text-lg font-bold text-white mb-4">Payment</h3>
+
               {/* Totals */}
               <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-gray-600">
+                <div className="flex justify-between text-gray-400">
                   <span>Subtotal:</span>
-                  <span>₱{currentTransaction.subtotal.toFixed(2)}</span>
+                  <span className="text-white">₱{currentTransaction.subtotal.toFixed(2)}</span>
                 </div>
                 {currentTransaction.discount_amount > 0 && (
-                  <div className="flex justify-between text-green-600">
+                  <div className="flex justify-between text-green-400">
                     <span>Discount:</span>
                     <span>-₱{currentTransaction.discount_amount.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-gray-600">
+                <div className="flex justify-between text-gray-400">
                   <span>Tax (10%):</span>
-                  <span>₱{currentTransaction.tax_amount.toFixed(2)}</span>
+                  <span className="text-white">₱{currentTransaction.tax_amount.toFixed(2)}</span>
                 </div>
-                <div className="border-t pt-2">
-                  <div className="flex justify-between text-xl font-bold text-gray-900">
+                <div className="border-t border-[#555555] pt-2">
+                  <div className="flex justify-between text-xl font-bold text-white">
                     <span>Total:</span>
                     <span>₱{currentTransaction.total_amount.toFixed(2)}</span>
                   </div>
@@ -613,16 +790,16 @@ const POS = () => {
 
               {/* Payment Method */}
               <div className="mb-4">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Payment Method</label>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">Payment Method</label>
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                  className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
                 >
-                  <option value="cash">Cash</option>
-                  <option value="card">Card</option>
-                  <option value="digital_wallet">Digital Wallet</option>
-                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="cash" className="bg-[#1A1A1A] text-white">Cash</option>
+                  <option value="card" className="bg-[#1A1A1A] text-white">Card</option>
+                  <option value="digital_wallet" className="bg-[#1A1A1A] text-white">Digital Wallet</option>
+                  <option value="bank_transfer" className="bg-[#1A1A1A] text-white">Bank Transfer</option>
                 </select>
               </div>
 
@@ -631,15 +808,15 @@ const POS = () => {
                 <button
                 onClick={openPaymentModal}
                 disabled={!selectedBarber || (currentTransaction.services.length === 0 && currentTransaction.products.length === 0)}
-                className="w-full py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white font-bold rounded-xl hover:from-[#FF7A2B] hover:to-[#E67E37] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                className="w-full py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white font-bold rounded-xl hover:from-[#FF7A2B] hover:to-[#E67E37] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
               >
                 <CreditCard className="w-5 h-5" />
                 <span>Process Payment</span>
               </button>
-                
+
                 <button
                   onClick={() => alert('Receipt functionality coming soon!')}
-                  className="w-full py-2 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2"
+                  className="w-full py-2 border border-[#555555] text-gray-300 font-semibold rounded-xl hover:bg-[#FF8C42]/10 hover:border-[#FF8C42] hover:text-[#FF8C42] transition-colors flex items-center justify-center space-x-2"
                 >
                   <Receipt className="w-4 h-4" />
                   <span>Print Receipt</span>

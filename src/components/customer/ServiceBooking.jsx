@@ -16,7 +16,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import QRCode from "qrcode";
-import { useQuery, useMutation } from 'convex/react'
+import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from "../../context/AuthContext";
 
@@ -46,8 +46,9 @@ const ServiceBooking = ({ onBack }) => {
   const barbers = useQuery(api.services.barbers.getActiveBarbers)
   const vouchers = user?.id ? useQuery(api.services.vouchers.getVouchersByUser, { userId: user.id }) : undefined
 
-  // Convex mutations
+  // Convex mutations and actions
   const createBooking = useMutation(api.services.bookings.createBooking)
+  const createPaymentRequest = useAction(api.services.payments.createPaymentRequest)
   
   // Query to get booking details after creation
   const getBookingById = useQuery(
@@ -294,7 +295,17 @@ const ServiceBooking = ({ onBack }) => {
         voucher_code: selectedVoucher?.code
       };
       setCreatedBooking(booking);
-      setStep(4); // Success step
+
+      // Handle payment processing
+      if (paymentType === "pay_now" && paymentMethod) {
+        const paymentSuccess = await handlePaymentProcessing(bookingId, paymentMethod);
+        if (!paymentSuccess) {
+          // Payment failed, don't proceed to success page
+          return;
+        }
+      } else {
+        setStep(4); // Success step for pay later
+      }
 
       // Redeem voucher if one was selected
       if (selectedVoucher?.code) {
@@ -317,20 +328,58 @@ const ServiceBooking = ({ onBack }) => {
           // The voucher remains unredeemed and user can try again later
         }
       }
-
-      // Show payment confirmation message
-      if (paymentType === "pay_now") {
-        setTimeout(() => {
-          alert(
-            `Payment via ${paymentMethod?.toUpperCase()} will be processed. (Demo mode - no actual payment)`
-          );
-        }, 1000);
-      }
     } catch (error) {
       console.error("Error creating booking:", error);
       alert(error.message || "Failed to create booking. Please try again.");
     } finally {
       setBookingLoading(false);
+    }
+  };
+
+  const handlePaymentProcessing = async (bookingId, paymentMethod) => {
+    try {
+      // Calculate final amount after voucher discount
+      const originalAmount = selectedService?.price || 0;
+      const discountAmount = selectedVoucher?.value || 0;
+      const finalAmount = Math.max(0, originalAmount - discountAmount);
+
+      if (finalAmount === 0) {
+        // If amount is 0 after voucher, no payment needed
+        setStep(4);
+        return true;
+      }
+
+      console.log('Processing payment:', {
+        amount: finalAmount,
+        paymentMethod,
+        bookingId
+      });
+
+      // Call Convex payment action
+      const paymentResult = await createPaymentRequest({
+        amount: finalAmount,
+        paymentMethod: paymentMethod,
+        bookingId: bookingId,
+        customerEmail: user.email,
+        customerName: user.full_name || user.name
+      });
+
+      console.log('Payment created successfully:', paymentResult);
+
+      // Redirect to payment page if there's a redirect URL
+      if (paymentResult.redirect_url) {
+        window.location.href = paymentResult.redirect_url;
+        return true;
+      } else {
+        // If no redirect URL, show success
+        setStep(4);
+        return true;
+      }
+
+    } catch (error) {
+      console.error('Payment processing error:', error);
+      alert(`Payment failed: ${error.message}. Please try again or choose pay later.`);
+      return false; // Payment failed, don't proceed
     }
   };
 
@@ -1352,14 +1401,14 @@ const ServiceBooking = ({ onBack }) => {
           </div>
 
           <div className="text-center space-y-2">
-            <p className="text-lg font-black" style={{ color: "#36454F" }}>
+            <div className="text-lg font-black" style={{ color: "#36454F" }}>
               Booking Code: {getBookingById?.booking_code ? getBookingById.booking_code : 
                 <span className="inline-flex items-center space-x-2">
                   <span>Generating...</span>
                   <div className="animate-pulse w-2 h-2 bg-orange-500 rounded-full"></div>
                 </span>
               }
-            </p>
+            </div>
             <p className="text-sm" style={{ color: "#8B8B8B" }}>
               Show this QR code when you arrive
             </p>

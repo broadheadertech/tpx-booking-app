@@ -10,6 +10,8 @@ import CustomerDashboard from './pages/customer/Dashboard'
 import CustomerBooking from './pages/customer/Booking'
 import BarberDashboard from './components/barber/BarberDashboard'
 import Kiosk from './pages/Kiosk'
+import PaymentSuccess from './pages/booking/payment/success.jsx'
+import PaymentFailure from './pages/booking/payment/failure.jsx'
 
 function App() {
   return (
@@ -85,6 +87,8 @@ function App() {
               } 
             />
             <Route path="/kiosk" element={<Kiosk />} />
+            <Route path="/booking/payment/success" element={<PaymentSuccess />} />
+            <Route path="/booking/payment/failure" element={<PaymentFailure />} />
           </Routes>
         </div>
       </Router>

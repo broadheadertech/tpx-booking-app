@@ -329,4 +329,21 @@ export default defineSchema({
     .index("by_staff_member", ["staff_member"])
     .index("by_status", ["status"])
     .index("by_started_at", ["started_at"]),
+
+  // Payments table for Xendit integration
+  payments: defineTable({
+    booking_id: v.id("bookings"),
+    payment_request_id: v.string(),
+    reference_id: v.string(),
+    amount: v.number(),
+    payment_method: v.string(),
+    status: v.string(),
+    webhook_data: v.optional(v.any()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_booking_id", ["booking_id"])
+    .index("by_payment_request_id", ["payment_request_id"])
+    .index("by_reference_id", ["reference_id"])
+    .index("by_status", ["status"]),
 });
