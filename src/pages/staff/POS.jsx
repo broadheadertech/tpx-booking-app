@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight, X } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
@@ -9,6 +9,36 @@ import AddCustomerModal from '../../components/staff/AddCustomerModal'
 import PaymentConfirmationModal from '../../components/staff/PaymentConfirmationModal'
 import CustomerSelectionModal from '../../components/staff/CustomerSelectionModal'
 import Modal from '../../components/common/Modal'
+
+// Barber Avatar Component for POS
+const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
+  const [imageError, setImageError] = useState(false)
+
+  // Get image URL from Convex storage if available (pass undefined if no storageId)
+  const imageUrlFromStorage = useQuery(api.services.barbers.getImageUrl, {
+    storageId: barber.avatarStorageId
+  })
+
+  // Use storage URL if available, otherwise fallback to regular avatar or default
+  const imageSrc = imageUrlFromStorage || barber.avatarUrl || '/img/avatar_default.jpg'
+
+  if (imageError || !imageSrc) {
+    return (
+      <div className={`flex items-center justify-center bg-gray-200 rounded-full ${className}`}>
+        <User className="w-6 h-6 text-gray-500" />
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={imageSrc}
+      alt={`${barber.full_name} avatar`}
+      className={`${className} rounded-full object-cover`}
+      onError={() => setImageError(true)}
+    />
+  )
+}
 
 const POS = () => {
   const { user } = useAuth()
@@ -31,6 +61,7 @@ const POS = () => {
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [viewMode, setViewMode] = useState('card') // 'card' or 'table'
   const [currentPage, setCurrentPage] = useState(1)
+  const [currentBooking, setCurrentBooking] = useState(null) // Store booking data for POS
   const itemsPerPage = 9 // For card view
   const tableItemsPerPage = 15 // For table view
 
@@ -43,6 +74,7 @@ const POS = () => {
   // Convex mutations
   const createTransaction = useMutation(api.services.transactions.createTransaction)
   const updateBookingPaymentStatus = useMutation(api.services.bookings.updatePaymentStatus)
+  const updateBookingStatus = useMutation(api.services.bookings.updateBooking)
   const getVoucherByCode = useQuery(api.services.vouchers.getVoucherByCode,
     currentTransaction.voucher_applied && typeof currentTransaction.voucher_applied === 'string'
       ? { code: currentTransaction.voucher_applied }
@@ -60,6 +92,9 @@ const POS = () => {
     if (posBooking && services && customers) {
       try {
         const booking = JSON.parse(posBooking)
+
+        // Store booking data for display
+        setCurrentBooking(booking)
 
         // Find the customer
         const customer = customers.find(c => c._id === booking.customer)
@@ -99,8 +134,7 @@ const POS = () => {
           }
         }
 
-        // Clear the session storage
-        sessionStorage.removeItem('posBooking')
+        // Don't clear session storage here - we'll clear it after payment
 
       } catch (error) {
         console.error('Error parsing booking data:', error)
@@ -108,6 +142,40 @@ const POS = () => {
     }
   }, [services, customers, barbers])
   const customerUsers = customers?.filter(customer => customer.role === 'customer') || []
+
+  // Handle canceling booking attachment
+  const handleCancelBookingAttachment = () => {
+    setActiveModal('cancelBooking')
+  }
+
+  // Handle confirmed booking cancellation
+  const handleConfirmCancelBooking = () => {
+    // Clear booking data
+    setCurrentBooking(null)
+    sessionStorage.removeItem('posBooking')
+
+    // Reset transaction to remove booking-specific data
+    setCurrentTransaction(prev => ({
+      ...prev,
+      // Keep customer and barber information if they exist
+      customer: prev.customer,
+      customer_name: prev.customer_name,
+      customer_phone: prev.customer_phone,
+      barber: prev.barber || null,
+      // Clear services and products that were loaded from booking
+      services: [],
+      products: [],
+      // Reset financial data
+      subtotal: 0,
+      discount_amount: 0,
+      voucher_applied: null,
+      tax_amount: 0,
+      total_amount: 0
+    }))
+
+    console.log('Booking attachment canceled - converted to regular POS transaction')
+    setActiveModal(null)
+  }
 
   // Filter items based on search term
   const filteredServices = activeServices.filter(service =>
@@ -296,27 +364,47 @@ const POS = () => {
 
       await createTransaction(transactionData)
 
-      // Check if this transaction is for a booking and update payment status
+      // Check if this transaction is for a booking and update booking status to completed
       const posBooking = sessionStorage.getItem('posBooking')
       if (posBooking && currentTransaction.services.length > 0) {
         try {
           const booking = JSON.parse(posBooking)
-          // Update booking payment status to paid
+          // Update booking status to completed and payment status to paid
+          await updateBookingStatus({
+            id: booking._id,
+            status: 'completed'
+          })
           await updateBookingPaymentStatus({
             id: booking._id,
             payment_status: 'paid'
           })
-          console.log('Booking payment status updated to paid')
+          console.log('Booking status updated to completed and payment status updated to paid')
+
+          // Clear the session storage after successful processing
+          sessionStorage.removeItem('posBooking')
+          setCurrentBooking(null)
         } catch (error) {
-          console.error('Error updating booking payment status:', error)
+          console.error('Error updating booking status:', error)
         }
       }
 
-      // Show enhanced success message including booking creation
+      // Show enhanced success message based on transaction type
+      const currentPosBooking = sessionStorage.getItem('posBooking')
       const hasServices = currentTransaction.services.length > 0
-      const successMessage = hasServices
-        ? `Transaction completed successfully! ${currentTransaction.services.length} service${currentTransaction.services.length > 1 ? 's' : ''} recorded as completed booking${currentTransaction.services.length > 1 ? 's' : ''}.`
-        : 'Transaction completed successfully!'
+      const hasProducts = currentTransaction.products.length > 0
+
+      let successMessage = 'Transaction completed successfully!'
+
+      if (currentPosBooking && hasServices) {
+        successMessage = `Booking payment completed! Booking #${JSON.parse(currentPosBooking).booking_code} has been marked as completed and paid.`
+      } else if (hasServices || hasProducts) {
+        const serviceCount = currentTransaction.services.length
+        const productCount = currentTransaction.products.length
+        const items = []
+        if (serviceCount > 0) items.push(`${serviceCount} service${serviceCount > 1 ? 's' : ''}`)
+        if (productCount > 0) items.push(`${productCount} product${productCount > 1 ? 's' : ''}`)
+        successMessage = `POS transaction completed! ${items.join(' and ')} processed successfully.`
+      }
 
       setActiveModal('paymentSuccess')
 
@@ -445,8 +533,8 @@ const POS = () => {
                     }`}
                   >
                     <div className="text-center">
-                      <div className="w-8 h-8 bg-[#FF8C42]/20 rounded-lg flex items-center justify-center mx-auto mb-2">
-                        <Scissors className="w-4 h-4 text-[#FF8C42]" />
+                      <div className="w-10 h-10 rounded-full overflow-hidden mx-auto mb-2 border-2 border-[#FF8C42]/30">
+                        <BarberAvatar barber={barber} className="w-10 h-10" />
                       </div>
                       <p className="text-sm font-semibold">{barber.full_name}</p>
                     </div>
@@ -763,6 +851,47 @@ const POS = () => {
               )}
             </div>
 
+            {/* Booking Information Section */}
+            {currentBooking && (
+              <div className="mt-4">
+                <h3 className="text-lg font-bold text-white mb-3 flex items-center">
+                  <Receipt className="w-5 h-5 mr-2 text-[#FF8C42]" />
+                  Booking Information
+                </h3>
+                <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl shadow-lg border border-[#444444]/50 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-[#FF8C42]/20 to-[#FF7A2B]/20 rounded-lg flex items-center justify-center border-2 border-[#FF8C42]/30">
+                        <Receipt className="w-5 h-5 text-[#FF8C42]" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-white text-base">#{currentBooking.booking_code}</p>
+                        <p className="text-xs text-gray-400">Processing payment</p>
+                        <div className="flex items-center space-x-1 mt-1">
+                          <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
+                          <span className="text-xs font-medium text-green-400">Active</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end space-y-2">
+                      <div className="inline-flex items-center px-2 py-1 bg-[#FF8C42]/20 border border-[#FF8C42]/30 rounded-md">
+                        <div className="w-1.5 h-1.5 bg-[#FF8C42] rounded-full animate-pulse mr-1.5"></div>
+                        <span className="text-xs font-medium text-[#FF8C42]">Processing</span>
+                      </div>
+                      <button
+                        onClick={handleCancelBookingAttachment}
+                        className="inline-flex items-center px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 hover:border-red-500/50 rounded-lg transition-all duration-200 font-medium text-xs"
+                        title="Cancel booking attachment"
+                      >
+                        <X className="w-3 h-3 mr-1" />
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Transaction Items */}
             <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
               <div className="flex items-center justify-between mb-4">
@@ -837,6 +966,37 @@ const POS = () => {
                 )}
               </div>
             </div>
+
+            {/* Selected Barber Display */}
+            {selectedBarber && (
+              <div className="mt-4">
+                <h3 className="text-lg font-bold text-white mb-3 flex items-center">
+                  <Scissors className="w-5 h-5 mr-2 text-[#FF8C42]" />
+                  Selected Barber
+                </h3>
+                <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl shadow-lg border border-[#444444]/50 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#FF8C42]/30">
+                        <BarberAvatar barber={selectedBarber} className="w-10 h-10" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-white text-base">{selectedBarber.full_name}</p>
+                        <p className="text-xs text-gray-400">Selected barber</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedBarber(null)}
+                      className="inline-flex items-center px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 hover:border-red-500/50 rounded-lg transition-all duration-200 font-medium text-xs"
+                      title="Remove barber"
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Payment Summary */}
             <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
@@ -986,6 +1146,34 @@ const POS = () => {
                 : 'Receipt will be generated automatically'
               }
             </p>
+          </div>
+        </Modal>
+      )}
+
+      {activeModal === 'cancelBooking' && (
+        <Modal isOpen={true} onClose={() => setActiveModal(null)} title="Cancel Booking" size="sm">
+          <div className="text-center py-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-red-500/20 to-red-600/20 rounded-full flex items-center justify-center mx-auto mb-3 border-2 border-red-500/30">
+              <X className="w-6 h-6 text-red-400" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Cancel Booking #{currentBooking?.booking_code}?</h3>
+            <p className="text-red-700 text-sm mb-4 px-2">
+              This will detach the booking and convert to a regular POS transaction.
+            </p>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setActiveModal(null)}
+                className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-all duration-200 text-sm"
+              >
+                Keep
+              </button>
+              <button
+                onClick={handleConfirmCancelBooking}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg transition-all duration-200 text-sm"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </Modal>
       )}
