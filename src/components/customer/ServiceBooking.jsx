@@ -81,6 +81,7 @@ const ServiceBooking = ({ onBack }) => {
   // Convex mutations and actions
   const createBooking = useMutation(api.services.bookings.createBooking)
   const createPaymentRequest = useAction(api.services.payments.createPaymentRequest)
+  const updateBookingPaymentStatus = useMutation(api.services.bookings.updatePaymentStatus)
   
   // Query to get booking details after creation
   const getBookingById = useQuery(
@@ -335,6 +336,17 @@ const ServiceBooking = ({ onBack }) => {
         if (!paymentSuccess) {
           // Payment failed, don't proceed to success page
           return;
+        }
+        // For immediate payments, update booking payment status to paid
+        try {
+          await updateBookingPaymentStatus({
+            id: bookingId,
+            payment_status: 'paid'
+          });
+          console.log('Booking payment status updated to paid');
+        } catch (statusError) {
+          console.error('Error updating booking payment status:', statusError);
+          // Don't fail the booking creation if status update fails
         }
       } else {
         setStep(4); // Success step for pay later
