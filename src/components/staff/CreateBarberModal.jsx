@@ -19,7 +19,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
     services: [],
     experience: '0 years',
     specialties: [],
-    avatar: ''
+    avatar: '',
+    avatarStorageId: undefined
   })
 
   // Update form data when editingBarber changes
@@ -36,7 +37,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
         services: editingBarber.services || [],
         experience: editingBarber.experience || '0 years',
         specialties: editingBarber.specialties || [],
-        avatar: editingBarber.avatar || ''
+        avatar: editingBarber.avatar || '',
+        avatarStorageId: editingBarber.avatarStorageId || undefined
       })
     } else {
       setFormData({
@@ -50,7 +52,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
         services: [],
         experience: '0 years',
         specialties: [],
-        avatar: ''
+        avatar: '',
+        avatarStorageId: undefined
       })
     }
   }, [editingBarber])
@@ -64,29 +67,37 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
   const createBarber = useMutation(api.services.barbers.createBarber)
   const createBarberWithAccount = useMutation(api.services.barbers.createBarberWithAccount)
   const updateBarber = useMutation(api.services.barbers.updateBarber)
+  const generateUploadUrl = useMutation(api.services.barbers.generateUploadUrl)
+
+  // Get image URL for preview
+  const avatarUrl = useQuery(api.services.barbers.getImageUrl, {
+    storageId: formData.avatarStorageId
+  })
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  // Image upload function
+  // Image upload function using Convex storage
   const handleImageUpload = async (file) => {
     setUploadingImage(true)
     try {
-      const formData = new FormData()
-      formData.append('file', file)
+      // Get upload URL from Convex
+      const uploadUrl = await generateUploadUrl()
 
-      const response = await fetch('/api/upload', {
+      // Upload file to Convex storage
+      const result = await fetch(uploadUrl, {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': file.type },
+        body: file,
       })
 
-      if (!response.ok) {
-        throw new Error('Upload failed')
+      if (!result.ok) {
+        throw new Error('Failed to upload image')
       }
 
-      const data = await response.json()
-      return data.url
+      const { storageId } = await result.json()
+      return storageId
     } catch (error) {
       console.error('Image upload failed:', error)
       throw error
@@ -112,8 +123,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
     }
 
     try {
-      const imageUrl = await handleImageUpload(file)
-      handleInputChange('avatar', imageUrl)
+      const storageId = await handleImageUpload(file)
+      handleInputChange('avatarStorageId', storageId)
       setError('') // Clear any previous error
     } catch (error) {
       setError('Failed to upload image. Please try again.')
@@ -157,7 +168,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
           services: formData.services,
           experience: formData.experience || '0 years',
           specialties: formData.specialties,
-          avatar: formData.avatar || ''
+          avatar: formData.avatar || '',
+          avatarStorageId: formData.avatarStorageId || undefined
         }
 
         await updateBarber({ id: editingBarber._id, ...barberData })
@@ -174,7 +186,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
           services: formData.services,
           experience: formData.experience || '0 years',
           specialties: formData.specialties,
-          avatar: formData.avatar || ''
+          avatar: formData.avatar || '',
+          avatarStorageId: formData.avatarStorageId || undefined
         }
 
         await createBarberWithAccount(barberData)
@@ -219,7 +232,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
       services: [],
       experience: '0 years',
       specialties: [],
-      avatar: ''
+      avatar: '',
+      avatarStorageId: undefined
     })
     setError('')
     onClose()
@@ -373,7 +387,13 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
               <div className="flex items-center space-x-4">
                 <div className="relative">
                   <div className="w-16 h-16 rounded-full border-2 border-[#F5F5F5] overflow-hidden bg-gray-100">
-                    {formData.avatar ? (
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt="Barber avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : formData.avatar ? (
                       <img
                         src={formData.avatar}
                         alt="Barber avatar"
@@ -397,7 +417,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                   <label className="flex items-center justify-center px-4 py-2 border-2 border-[#FF8C42] text-[#FF8C42] rounded-lg hover:bg-[#FF8C42] hover:text-white transition-colors cursor-pointer">
                     <Camera className="w-4 h-4 mr-2" />
                     <span className="text-sm font-medium">
-                      {formData.avatar ? 'Change Photo' : 'Upload Photo'}
+                      {formData.avatarStorageId || formData.avatar ? 'Change Photo' : 'Upload Photo'}
                     </span>
                     <input
                       type="file"

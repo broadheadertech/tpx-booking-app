@@ -342,3 +342,35 @@ export const createBarberWithAccount = mutation({
     return { userId, barberId };
   },
 });
+
+// Generate upload URL for barber avatars
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+// Get avatar URL from storage ID
+export const getImageUrl = query({
+  args: {
+    storageId: v.optional(v.id("_storage")),
+  },
+  handler: async (ctx, args) => {
+    if (!args.storageId || args.storageId === "") {
+      return null;
+    }
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
+// Delete avatar from storage
+export const deleteImage = mutation({
+  args: {
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.storage.delete(args.storageId);
+    return { success: true };
+  },
+});

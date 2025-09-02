@@ -18,7 +18,39 @@ import {
 import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/AuthContext"
+
+// Barber Avatar Component
+const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
+  const [imageError, setImageError] = useState(false)
+
+  // Get image URL from Convex storage if available
+  const imageUrlFromStorage = barber.avatarStorageId ?
+    useQuery(api.services.barbers.getImageUrl, {
+      storageId: barber.avatarStorageId
+    }) :
+    null
+
+  // Use storage URL if available, otherwise fallback to regular avatar or default
+  const imageSrc = imageUrlFromStorage || barber.avatarUrl || '/img/avatar_default.jpg'
+
+  if (imageError || !imageSrc) {
+    return (
+      <div className={`flex items-center justify-center bg-gray-200 rounded-full ${className}`}>
+        <User className="w-6 h-6 text-gray-500" />
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={imageSrc}
+      alt={`${barber.full_name || barber.name} avatar`}
+      className={`${className} rounded-full object-cover`}
+      onError={() => setImageError(true)}
+    />
+  )
+}
 
 const ServiceBooking = ({ onBack }) => {
   const { user, isAuthenticated } = useAuth();
@@ -659,19 +691,16 @@ const ServiceBooking = ({ onBack }) => {
                 }}
               >
                 <div className="flex items-center space-x-3">
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center"
-                    style={{
-                      backgroundColor:
-                        selectedStaff?._id === barber._id ? "#F68B24" : "#F5F5F5",
-                    }}
-                  >
-                    {selectedStaff?._id === barber._id ? (
-                      <CheckCircle className="w-5 h-5 text-white" />
-                    ) : (
-                      <User className="w-5 h-5" style={{ color: "#F68B24" }} />
-                    )}
-                  </div>
+                  {selectedStaff?._id === barber._id ? (
+                    <div className="relative">
+                      <BarberAvatar barber={barber} className="w-10 h-10" />
+                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                        <CheckCircle className="w-3 h-3 text-white" />
+                      </div>
+                    </div>
+                  ) : (
+                    <BarberAvatar barber={barber} className="w-10 h-10" />
+                  )}
                   <div className="flex-1">
                     <h4
                       className="font-bold text-sm"
@@ -924,8 +953,13 @@ const ServiceBooking = ({ onBack }) => {
             }`}
           >
             <div className="text-center">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{backgroundColor: selectedStaff?._id === barber._id ? "#F68B24" : "#F5F5F5"}}>
-                <User className={`w-8 h-8 ${selectedStaff?._id === barber._id ? 'text-white' : 'text-gray-600'}`} />
+              <div className="relative w-16 h-16 rounded-full mx-auto mb-4">
+                <BarberAvatar barber={barber} className="w-16 h-16" />
+                {selectedStaff?._id === barber._id && (
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white">
+                    <CheckCircle className="w-4 h-4 text-white" />
+                  </div>
+                )}
               </div>
               <h3 className="text-xl font-black text-[#1A1A1A] mb-2 group-hover:text-[#FF8C42] transition-colors duration-200">
                 {barber}
@@ -1444,15 +1478,20 @@ const ServiceBooking = ({ onBack }) => {
                 , {createdBooking?.time || selectedTime}
               </span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span className="font-medium" style={{ color: "#36454F" }}>
                 Barber:
               </span>
-              <span className="font-bold" style={{ color: "#36454F" }}>
-                {selectedStaff?.full_name ||
-                  selectedStaff?.name ||
-                  "Any Barber"}
-              </span>
+              <div className="flex items-center space-x-2">
+                {selectedStaff && (
+                  <BarberAvatar barber={selectedStaff} className="w-8 h-8" />
+                )}
+                <span className="font-bold" style={{ color: "#36454F" }}>
+                  {selectedStaff?.full_name ||
+                    selectedStaff?.name ||
+                    "Any Barber"}
+                </span>
+              </div>
             </div>
             {selectedVoucher && (
               <div className="flex justify-between">
