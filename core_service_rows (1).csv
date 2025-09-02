@@ -1,0 +1,17 @@
+id,name,description,duration_minutes,price
+1,Tipuno X Classico,"Consultation, Haircut",30,150.00
+2,Tipuno X Signature,"Consultation, Haircut, Rinse Hot and Cold Towel Finish",60,500.00
+3,Tipuno X Deluxe,"Consultation, Haircut, Hair Spa Treatment, Rinse Hot and Cold Towel Finish",90,800.00
+4,Beard Shave/Shaping/Sculpting,More than a shave. It’s a service you’ll feel.,30,200.00
+6,FACVNDO ELITE BARBERING SERVICE,"If you are looking for wedding haircuts, trust the elite hands that turn grooms into legends.",0,10000.00
+7,Package 1,"Consultation, Haircut, Shaving, Styling",45,500.00
+9,Package 2,"Consultation, Haircut, Hair Color or With Single Bleach, Rinse, Styling.
+Note: Short hair only, add 250 per length",60,850.00
+10,Package 3,"Consultation, Haircut, Hair Color or With Single Bleach, Hair Spa Treatment, Rinse, Styling.
+Note: Short hair only, add 250 per length",60,1400.00
+11,Mustache/Beard Trim,No Description with this product yet.,30,170.00
+13,Hair Spa,No description for this service yet.,30,600.00
+14,Hair and Scalp Treatment,No description for this product yet.,60,1500.00
+15,Hair Color,No description for this product yet.,60,800.00
+16,Perm,No description for this product yet.,60,1500.00
+17,Hair Tattoo,No description for this product yet.,60,100.00

@@ -44,11 +44,11 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
   useEffect(() => {
     if (clients && Array.isArray(clients)) {
       // Get list of already assigned user IDs
-      const assignedUserIds = assignedUsers ? assignedUsers.map(user => user._id) : [];
-      
+      const assignedUserIds = assignedUsers ? assignedUsers.map(user => user._id || user.id) : [];
+
       const filtered = clients.filter(client =>
         client.role === 'customer' &&
-        !assignedUserIds.includes(client._id) // Exclude already assigned users
+        !assignedUserIds.includes(client._id || client.id) // Exclude already assigned users
       );
       setFilteredClients(filtered);
     }
@@ -68,11 +68,11 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
   useEffect(() => {
     if (clients && Array.isArray(clients)) {
       // Get list of already assigned user IDs
-      const assignedUserIds = assignedUsers ? assignedUsers.map(user => user._id) : [];
-      
+      const assignedUserIds = assignedUsers ? assignedUsers.map(user => user._id || user.id) : [];
+
       const filtered = clients.filter(client =>
         client.role === 'customer' &&
-        !assignedUserIds.includes(client._id) && // Exclude already assigned users
+        !assignedUserIds.includes(client._id || client.id) && // Exclude already assigned users
         (client.username?.toLowerCase().includes(customerSearch.toLowerCase()) ||
          client.email?.toLowerCase().includes(customerSearch.toLowerCase()) ||
          client.nickname?.toLowerCase().includes(customerSearch.toLowerCase()))
@@ -404,7 +404,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
               <div className="flex flex-wrap gap-2">
                 {selectedUsers.map((user) => (
                   <div
-                    key={user.id}
+                    key={user._id || user.id}
                     className="flex items-center space-x-1 bg-[#FF8C42]/10 border border-[#FF8C42]/20 rounded-lg px-2 py-1 text-xs"
                   >
                     <span className="text-[#1A1A1A] font-medium">
@@ -432,11 +432,11 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
               <div className="p-2 space-y-1">
                 {filteredClients.map((client) => {
                   const isSelected = selectedUsers.find(
-                    (u) => u.id === client.id
+                    (u) => (u._id || u.id) === (client._id || client.id)
                   );
                   return (
                     <div
-                      key={client.id}
+                      key={client._id || client.id}
                       onClick={() => toggleUserSelection(client)}
                       className={`flex items-center space-x-3 p-2 rounded-lg cursor-pointer transition-colors ${
                         isSelected

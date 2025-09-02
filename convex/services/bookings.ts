@@ -223,6 +223,7 @@ export const createBooking = mutation({
       date: args.date,
       time: args.time,
       status: args.status || "pending",
+      payment_status: "unpaid",
       price: service.price,
       notes: args.notes || undefined,
       createdAt: Date.now(),
@@ -473,6 +474,90 @@ export const validateBookingByCode = mutation({
       formattedDate: new Date(booking.date).toLocaleDateString(),
       formattedTime: formatTime(booking.time),
     };
+  },
+});
+
+// Update payment status
+export const updatePaymentStatus = mutation({
+  args: {
+    id: v.id("bookings"),
+    payment_status: v.union(
+      v.literal("unpaid"),
+      v.literal("paid"),
+      v.literal("refunded")
+    ),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, {
+      payment_status: args.payment_status,
+      updatedAt: Date.now(),
+    });
+
+    return args.id;
+  },
+});
+
+// Get payment details for a booking
+export const getBookingPayments = query({
+  args: { bookingId: v.optional(v.id("bookings")) },
+  handler: async (ctx, args) => {
+    if (!args.bookingId) {
+      return [];
+    }
+
+    const payments = await ctx.db
+      .query("payments")
+      .withIndex("by_booking_id", (q) => q.eq("booking_id", args.bookingId!))
+      .collect();
+
+    return payments.sort((a, b) => b.created_at - a.created_at);
+  },
+});
+
+// Get transaction details for a booking (from POS transactions)
+export const getBookingTransactions = query({
+  args: { bookingId: v.optional(v.id("bookings")) },
+  handler: async (ctx, args) => {
+    if (!args.bookingId) {
+      return [];
+    }
+
+    const transactions = await ctx.db
+      .query("transactions")
+      .collect();
+
+    // Filter transactions that include services from this booking
+    const booking = await ctx.db.get(args.bookingId!);
+    if (!booking) return [];
+
+    const bookingTransactions = transactions.filter(transaction => {
+      return transaction.services?.some(service =>
+        service.service_id === booking.service
+      );
+    });
+
+    return bookingTransactions.sort((a, b) => b.createdAt - a.createdAt);
+  },
+});
+
+// Migration function to update existing bookings with payment_status
+export const migratePaymentStatus = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const bookings = await ctx.db.query("bookings").collect();
+
+    let updateCount = 0;
+    for (const booking of bookings) {
+      if (!booking.payment_status) {
+        await ctx.db.patch(booking._id, {
+          payment_status: "unpaid",
+          updatedAt: Date.now(),
+        });
+        updateCount++;
+      }
+    }
+
+    return { updated: updateCount };
   },
 });
 

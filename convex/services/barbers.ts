@@ -17,6 +17,7 @@ export const getAllBarbers = query({
           name: barber.full_name,
           email: user?.email || '',
           phone: user?.mobile_number || '',
+          avatarUrl: barber.avatar || '/img/avatar_default.jpg',
         };
       })
     );
@@ -38,6 +39,7 @@ export const getBarberById = query({
       name: barber.full_name,
       email: user?.email || '',
       phone: user?.mobile_number || '',
+      avatarUrl: barber.avatar || '/img/avatar_default.jpg',
     };
   },
 });
@@ -52,6 +54,7 @@ export const createBarber = mutation({
     email: v.string(),
     phone: v.optional(v.string()),
     avatar: v.optional(v.string()),
+    avatarStorageId: v.optional(v.id("_storage")),
     experience: v.optional(v.string()),
     specialties: v.optional(v.array(v.string())),
   },
@@ -74,6 +77,7 @@ export const createBarber = mutation({
       email: args.email,
       phone: args.phone || undefined,
       avatar: args.avatar || undefined,
+      avatarStorageId: args.avatarStorageId || undefined,
       experience: args.experience || '0 years',
       rating: 0,
       totalBookings: 0,
@@ -106,6 +110,7 @@ export const updateBarber = mutation({
     email: v.optional(v.string()),
     phone: v.optional(v.string()),
     avatar: v.optional(v.string()),
+    avatarStorageId: v.optional(v.id("_storage")),
     experience: v.optional(v.string()),
     specialties: v.optional(v.array(v.string())),
     schedule: v.optional(v.object({
@@ -144,7 +149,7 @@ export const getBarbersByService = query({
   args: { serviceId: v.id("services") },
   handler: async (ctx, args) => {
     const allBarbers = await ctx.db.query("barbers").collect();
-    const barbers = allBarbers.filter(barber => 
+    const barbers = allBarbers.filter(barber =>
       barber.services.includes(args.serviceId)
     );
 
@@ -157,6 +162,7 @@ export const getBarbersByService = query({
           name: barber.full_name,
           email: user?.email || '',
           phone: user?.mobile_number || '',
+          avatarUrl: barber.avatar || '/img/avatar_default.jpg',
         };
       })
     );
@@ -183,6 +189,7 @@ export const getActiveBarbers = query({
           name: barber.full_name,
           email: user?.email || '',
           phone: user?.mobile_number || '',
+          avatarUrl: barber.avatar || '/img/avatar_default.jpg',
         };
       })
     );
@@ -226,6 +233,7 @@ export const createBarberProfile = mutation({
       email: user.email,
       phone: user.mobile_number || undefined,
       avatar: user.avatar || undefined,
+      avatarStorageId: undefined, // No storage ID initially
       experience: '0 years',
       rating: 0,
       totalBookings: 0,
@@ -260,6 +268,7 @@ export const createBarberWithAccount = mutation({
     services: v.array(v.id("services")),
     phone: v.optional(v.string()),
     avatar: v.optional(v.string()),
+    avatarStorageId: v.optional(v.id("_storage")),
     experience: v.optional(v.string()),
     specialties: v.optional(v.array(v.string())),
   },
@@ -311,6 +320,7 @@ export const createBarberWithAccount = mutation({
       email: args.email,
       phone: args.phone || undefined,
       avatar: args.avatar || undefined,
+      avatarStorageId: args.avatarStorageId || undefined,
       experience: args.experience || '0 years',
       rating: 0,
       totalBookings: 0,
@@ -330,5 +340,37 @@ export const createBarberWithAccount = mutation({
     });
 
     return { userId, barberId };
+  },
+});
+
+// Generate upload URL for barber avatars
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+// Get avatar URL from storage ID
+export const getImageUrl = query({
+  args: {
+    storageId: v.optional(v.id("_storage")),
+  },
+  handler: async (ctx, args) => {
+    if (!args.storageId || args.storageId === "") {
+      return null;
+    }
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
+// Delete avatar from storage
+export const deleteImage = mutation({
+  args: {
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.storage.delete(args.storageId);
+    return { success: true };
   },
 });

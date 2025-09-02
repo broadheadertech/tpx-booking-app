@@ -16,9 +16,41 @@ import {
   Sparkles,
 } from "lucide-react";
 import QRCode from "qrcode";
-import { useQuery, useMutation } from 'convex/react'
+import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/AuthContext"
+
+// Barber Avatar Component
+const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
+  const [imageError, setImageError] = useState(false)
+
+  // Get image URL from Convex storage if available
+  const imageUrlFromStorage = barber.avatarStorageId ?
+    useQuery(api.services.barbers.getImageUrl, {
+      storageId: barber.avatarStorageId
+    }) :
+    null
+
+  // Use storage URL if available, otherwise fallback to regular avatar or default
+  const imageSrc = imageUrlFromStorage || barber.avatarUrl || '/img/avatar_default.jpg'
+
+  if (imageError || !imageSrc) {
+    return (
+      <div className={`flex items-center justify-center bg-gray-200 rounded-full ${className}`}>
+        <User className="w-6 h-6 text-gray-500" />
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={imageSrc}
+      alt={`${barber.full_name || barber.name} avatar`}
+      className={`${className} rounded-full object-cover`}
+      onError={() => setImageError(true)}
+    />
+  )
+}
 
 const ServiceBooking = ({ onBack }) => {
   const { user, isAuthenticated } = useAuth();
@@ -46,8 +78,9 @@ const ServiceBooking = ({ onBack }) => {
   const barbers = useQuery(api.services.barbers.getActiveBarbers)
   const vouchers = user?.id ? useQuery(api.services.vouchers.getVouchersByUser, { userId: user.id }) : undefined
 
-  // Convex mutations
+  // Convex mutations and actions
   const createBooking = useMutation(api.services.bookings.createBooking)
+  const createPaymentRequest = useAction(api.services.payments.createPaymentRequest)
   
   // Query to get booking details after creation
   const getBookingById = useQuery(
@@ -295,7 +328,17 @@ const ServiceBooking = ({ onBack }) => {
         voucher_code: selectedVoucher?.code
       };
       setCreatedBooking(booking);
-      setStep(4); // Success step
+
+      // Handle payment processing
+      if (paymentType === "pay_now" && paymentMethod) {
+        const paymentSuccess = await handlePaymentProcessing(bookingId, paymentMethod);
+        if (!paymentSuccess) {
+          // Payment failed, don't proceed to success page
+          return;
+        }
+      } else {
+        setStep(4); // Success step for pay later
+      }
 
       // Redeem voucher if one was selected
       if (selectedVoucher?.code) {
@@ -318,20 +361,58 @@ const ServiceBooking = ({ onBack }) => {
           // The voucher remains unredeemed and user can try again later
         }
       }
-
-      // Show payment confirmation message
-      if (paymentType === "pay_now") {
-        setTimeout(() => {
-          alert(
-            `Payment via ${paymentMethod?.toUpperCase()} will be processed. (Demo mode - no actual payment)`
-          );
-        }, 1000);
-      }
     } catch (error) {
       console.error("Error creating booking:", error);
       alert(error.message || "Failed to create booking. Please try again.");
     } finally {
       setBookingLoading(false);
+    }
+  };
+
+  const handlePaymentProcessing = async (bookingId, paymentMethod) => {
+    try {
+      // Calculate final amount after voucher discount
+      const originalAmount = selectedService?.price || 0;
+      const discountAmount = selectedVoucher?.value || 0;
+      const finalAmount = Math.max(0, originalAmount - discountAmount);
+
+      if (finalAmount === 0) {
+        // If amount is 0 after voucher, no payment needed
+        setStep(4);
+        return true;
+      }
+
+      console.log('Processing payment:', {
+        amount: finalAmount,
+        paymentMethod,
+        bookingId
+      });
+
+      // Call Convex payment action
+      const paymentResult = await createPaymentRequest({
+        amount: finalAmount,
+        paymentMethod: paymentMethod,
+        bookingId: bookingId,
+        customerEmail: user.email,
+        customerName: user.full_name || user.name
+      });
+
+      console.log('Payment created successfully:', paymentResult);
+
+      // Redirect to payment page if there's a redirect URL
+      if (paymentResult.redirect_url) {
+        window.location.href = paymentResult.redirect_url;
+        return true;
+      } else {
+        // If no redirect URL, show success
+        setStep(4);
+        return true;
+      }
+
+    } catch (error) {
+      console.error('Payment processing error:', error);
+      alert(`Payment failed: ${error.message}. Please try again or choose pay later.`);
+      return false; // Payment failed, don't proceed
     }
   };
 
@@ -610,19 +691,16 @@ const ServiceBooking = ({ onBack }) => {
                 }}
               >
                 <div className="flex items-center space-x-3">
-                  <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center"
-                    style={{
-                      backgroundColor:
-                        selectedStaff?._id === barber._id ? "#F68B24" : "#F5F5F5",
-                    }}
-                  >
-                    {selectedStaff?._id === barber._id ? (
-                      <CheckCircle className="w-5 h-5 text-white" />
-                    ) : (
-                      <User className="w-5 h-5" style={{ color: "#F68B24" }} />
-                    )}
-                  </div>
+                  {selectedStaff?._id === barber._id ? (
+                    <div className="relative">
+                      <BarberAvatar barber={barber} className="w-10 h-10" />
+                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                        <CheckCircle className="w-3 h-3 text-white" />
+                      </div>
+                    </div>
+                  ) : (
+                    <BarberAvatar barber={barber} className="w-10 h-10" />
+                  )}
                   <div className="flex-1">
                     <h4
                       className="font-bold text-sm"
@@ -875,8 +953,13 @@ const ServiceBooking = ({ onBack }) => {
             }`}
           >
             <div className="text-center">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{backgroundColor: selectedStaff?._id === barber._id ? "#F68B24" : "#F5F5F5"}}>
-                <User className={`w-8 h-8 ${selectedStaff?._id === barber._id ? 'text-white' : 'text-gray-600'}`} />
+              <div className="relative w-16 h-16 rounded-full mx-auto mb-4">
+                <BarberAvatar barber={barber} className="w-16 h-16" />
+                {selectedStaff?._id === barber._id && (
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white">
+                    <CheckCircle className="w-4 h-4 text-white" />
+                  </div>
+                )}
               </div>
               <h3 className="text-xl font-black text-[#1A1A1A] mb-2 group-hover:text-[#FF8C42] transition-colors duration-200">
                 {barber}
@@ -1353,14 +1436,14 @@ const ServiceBooking = ({ onBack }) => {
           </div>
 
           <div className="text-center space-y-2">
-            <p className="text-lg font-black" style={{ color: "#36454F" }}>
+            <div className="text-lg font-black" style={{ color: "#36454F" }}>
               Booking Code: {getBookingById?.booking_code ? getBookingById.booking_code : 
                 <span className="inline-flex items-center space-x-2">
                   <span>Generating...</span>
                   <div className="animate-pulse w-2 h-2 bg-orange-500 rounded-full"></div>
                 </span>
               }
-            </p>
+            </div>
             <p className="text-sm" style={{ color: "#8B8B8B" }}>
               Show this QR code when you arrive
             </p>
@@ -1395,15 +1478,20 @@ const ServiceBooking = ({ onBack }) => {
                 , {createdBooking?.time || selectedTime}
               </span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span className="font-medium" style={{ color: "#36454F" }}>
                 Barber:
               </span>
-              <span className="font-bold" style={{ color: "#36454F" }}>
-                {selectedStaff?.full_name ||
-                  selectedStaff?.name ||
-                  "Any Barber"}
-              </span>
+              <div className="flex items-center space-x-2">
+                {selectedStaff && (
+                  <BarberAvatar barber={selectedStaff} className="w-8 h-8" />
+                )}
+                <span className="font-bold" style={{ color: "#36454F" }}>
+                  {selectedStaff?.full_name ||
+                    selectedStaff?.name ||
+                    "Any Barber"}
+                </span>
+              </div>
             </div>
             {selectedVoucher && (
               <div className="flex justify-between">
