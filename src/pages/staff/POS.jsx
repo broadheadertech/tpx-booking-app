@@ -240,8 +240,15 @@ const POS = () => {
       console.log('Transaction data voucher_applied:', transactionData.voucher_applied)
 
       await createTransaction(transactionData)
+
+      // Show enhanced success message including booking creation
+      const hasServices = currentTransaction.services.length > 0
+      const successMessage = hasServices
+        ? `Transaction completed successfully! ${currentTransaction.services.length} service${currentTransaction.services.length > 1 ? 's' : ''} recorded as completed booking${currentTransaction.services.length > 1 ? 's' : ''}.`
+        : 'Transaction completed successfully!'
+
       setActiveModal('paymentSuccess')
-      
+
       // Auto-close success modal and clear transaction after 3 seconds
       setTimeout(() => {
         setActiveModal(null)
@@ -895,9 +902,19 @@ const POS = () => {
               <CheckCircle className="w-8 h-8 text-white" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Payment Successful!</h3>
-            <p className="text-gray-600 mb-4">Transaction completed successfully.</p>
+            <p className="text-gray-600 mb-4">
+              {currentTransaction.services.length > 0
+                ? `Transaction completed! ${currentTransaction.services.length} service${currentTransaction.services.length > 1 ? 's' : ''} recorded as completed booking${currentTransaction.services.length > 1 ? 's' : ''}.`
+                : 'Transaction completed successfully!'
+              }
+            </p>
             <div className="text-2xl font-bold text-green-600">₱{currentTransaction.total_amount.toFixed(2)}</div>
-            <p className="text-sm text-gray-500 mt-2">Receipt will be generated automatically</p>
+            <p className="text-sm text-gray-500 mt-2">
+              {currentTransaction.services.length > 0
+                ? 'Receipt generated and bookings updated automatically'
+                : 'Receipt will be generated automatically'
+              }
+            </p>
           </div>
         </Modal>
       )}

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 import Input from '../common/Input'
-import { Calendar, Clock, User, Scissors, RefreshCw } from 'lucide-react'
+import { Calendar, Clock, User, Scissors, RefreshCw, ChevronDown, Check } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 
@@ -18,6 +18,8 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [fieldErrors, setFieldErrors] = useState({})
+  const [barberDropdownOpen, setBarberDropdownOpen] = useState(false)
+  const barberDropdownRef = useRef(null)
 
   // Convex queries for dropdown data
   const services = useQuery(api.services.services.getAllServices)
@@ -28,6 +30,18 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit }) => {
   const createBooking = useMutation(api.services.bookings.createBooking)
 
   // Convex handles data loading automatically
+
+  // Handle clicking outside dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (barberDropdownRef.current && !barberDropdownRef.current.contains(event.target)) {
+        setBarberDropdownOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -189,19 +203,83 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit }) => {
               <label className="block text-[#1A1A1A] font-bold text-base mb-2">
                 Barber (Optional)
               </label>
-              <select
-                value={formData.barber}
-                onChange={(e) => handleInputChange('barber', e.target.value)}
-                disabled={!services || !barbers || !customers}
-                className="w-full h-12 px-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200 disabled:opacity-50"
-              >
-                <option value="">Any available barber</option>
-                {barbers?.filter(barber => barber.is_active).map(barber => (
-                  <option key={barber._id} value={barber._id}>
-                    {barber.full_name}
-                  </option>
-                )) || []}
-              </select>
+              <div className="relative" ref={barberDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setBarberDropdownOpen(!barberDropdownOpen)}
+                  disabled={!services || !barbers || !customers}
+                  className="w-full h-12 px-4 border-2 border-[#F5F5F5] rounded-xl text-left flex items-center justify-between focus:outline-none focus:border-[#FF8C42] transition-colors duration-200 disabled:opacity-50"
+                >
+                  <div className="flex items-center">
+                    {formData.barber ? (
+                      <>
+                        {(() => {
+                          const selectedBarber = barbers?.find(b => b._id === formData.barber)
+                          return selectedBarber ? (
+                            <>
+                              <img
+                                src={selectedBarber.avatarUrl || '/img/avatar_default.jpg'}
+                                alt={selectedBarber.full_name}
+                                className="w-8 h-8 rounded-full object-cover mr-3"
+                              />
+                              <span>{selectedBarber.full_name}</span>
+                            </>
+                          ) : (
+                            <span>Any available barber</span>
+                          )
+                        })()}
+                      </>
+                    ) : (
+                      <span>Any available barber</span>
+                    )}
+                  </div>
+                  <ChevronDown className={`w-5 h-5 transition-transform ${barberDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {barberDropdownOpen && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border-2 border-[#F5F5F5] rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                    {/* Any available barber option */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleInputChange('barber', '')
+                        setBarberDropdownOpen(false)
+                      }}
+                      className="w-full px-4 py-3 flex items-center hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-3">
+                        <User className="w-4 h-4 text-gray-500" />
+                      </div>
+                      <span>Any available barber</span>
+                      {!formData.barber && <Check className="w-5 h-5 text-[#FF8C42] ml-auto" />}
+                    </button>
+
+                    {/* Barber options */}
+                    {barbers?.filter(barber => barber.is_active).map(barber => (
+                      <button
+                        key={barber._id}
+                        type="button"
+                        onClick={() => {
+                          handleInputChange('barber', barber._id)
+                          setBarberDropdownOpen(false)
+                        }}
+                        className="w-full px-4 py-3 flex items-center hover:bg-gray-50 transition-colors"
+                      >
+                        <img
+                          src={barber.avatarUrl || '/img/avatar_default.jpg'}
+                          alt={barber.full_name}
+                          className="w-8 h-8 rounded-full object-cover mr-3"
+                        />
+                        <div className="text-left">
+                          <div className="font-medium">{barber.full_name}</div>
+                          <div className="text-sm text-gray-500">{barber.experience}</div>
+                        </div>
+                        {formData.barber === barber._id && <Check className="w-5 h-5 text-[#FF8C42] ml-auto" />}
+                      </button>
+                    )) || []}
+                  </div>
+                )}
+              </div>
               {fieldErrors.barber && (
                 <p className="text-red-500 text-sm mt-1">{fieldErrors.barber[0]}</p>
               )}

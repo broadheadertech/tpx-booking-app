@@ -1,7 +1,39 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { Id } from "../_generated/dataModel";
+import { api } from "../_generated/api";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
+
+// Helper function to get or create a walk-in customer
+async function getOrCreateWalkInCustomer(ctx: any, customerName?: string, customerPhone?: string): Promise<Id<"users"> | undefined> {
+  try {
+    // For walk-in customers, we'll always create a new record
+    // This ensures each walk-in transaction is properly tracked
+    const walkInUsername = `walkin_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const walkInEmail = `${walkInUsername}@walkin.local`;
+
+    const customerId = await ctx.db.insert("users", {
+      username: walkInUsername,
+      email: walkInEmail,
+      password: "walkin_" + Math.random().toString(36), // Random password for walk-ins
+      mobile_number: customerPhone || "",
+      nickname: customerName || "Walk-in Customer",
+      role: "customer",
+      is_active: true,
+      avatar: "",
+      bio: "",
+      skills: [],
+      isVerified: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    return customerId;
+  } catch (error) {
+    console.error("Failed to create walk-in customer:", error);
+    return undefined;
+  }
+}
 
 // Create a new transaction
 export const createTransaction = mutation({
@@ -59,6 +91,65 @@ export const createTransaction = mutation({
     };
 
     const transactionDocId = await ctx.db.insert("transactions", transactionData);
+
+    // Create booking records for services performed in POS
+    if (args.services && args.services.length > 0) {
+      for (const serviceItem of args.services) {
+        try {
+          // Check if a booking already exists for this service and customer on the same day
+          const today = new Date().toISOString().split('T')[0];
+          let customerId = args.customer;
+
+          // For walk-in customers, create or find a walk-in customer record
+          if (!customerId && (args.customer_name || args.customer_phone)) {
+            customerId = await getOrCreateWalkInCustomer(ctx, args.customer_name, args.customer_phone);
+          }
+
+          if (customerId) {
+            const existingBooking = await ctx.db
+              .query("bookings")
+              .filter((q) =>
+                q.and(
+                  q.eq(q.field("customer"), customerId),
+                  q.eq(q.field("service"), serviceItem.service_id),
+                  q.eq(q.field("date"), today),
+                  q.eq(q.field("barber"), args.barber),
+                  q.or(
+                    q.eq(q.field("status"), "pending"),
+                    q.eq(q.field("status"), "confirmed")
+                  )
+                )
+              )
+              .first();
+
+            if (!existingBooking) {
+              // Create a new booking record for the POS service
+              await ctx.runMutation(api.services.bookings.createBooking, {
+                customer: customerId,
+                service: serviceItem.service_id,
+                barber: args.barber,
+                date: today,
+                time: new Date().toTimeString().slice(0, 5), // Current time
+                status: "completed", // Mark as completed since service was performed
+                notes: `POS Transaction - Receipt: ${receiptNumber}${args.customer_name ? ` - ${args.customer_name}` : ''}`
+              });
+            } else {
+              // Update existing booking to completed
+              await ctx.runMutation(api.services.bookings.updateBooking, {
+                id: existingBooking._id,
+                status: "completed",
+                notes: existingBooking.notes
+                  ? `${existingBooking.notes}\nPOS Transaction - Receipt: ${receiptNumber}`
+                  : `POS Transaction - Receipt: ${receiptNumber}`
+              });
+            }
+          }
+        } catch (error) {
+          console.error(`Failed to create/update booking for service ${serviceItem.service_name}:`, error);
+          // Don't fail the transaction if booking creation fails
+        }
+      }
+    }
 
     // Update product stock if products were sold
     if (args.products) {

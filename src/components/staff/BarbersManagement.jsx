@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { User, Star, Clock, Calendar, DollarSign, Search, Filter, UserCheck, UserX, Phone, Mail, Scissors, Plus, Edit, Trash2, RotateCcw, Eye, BookOpen, X, Save } from 'lucide-react'
+import { User, Star, Clock, Calendar, DollarSign, Search, Filter, UserCheck, UserX, Phone, Mail, Scissors, Plus, Edit, Trash2, RotateCcw, Eye, BookOpen, X, Save, Camera, Upload } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import CreateBarberModal from './CreateBarberModal'
@@ -17,6 +17,7 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   // Convex queries
   const services = useQuery(api.services.services.getAllServices)
@@ -26,6 +27,60 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
   const createBarber = useMutation(api.services.barbers.createBarber)
   const updateBarber = useMutation(api.services.barbers.updateBarber)
   const deleteBarber = useMutation(api.services.barbers.deleteBarber)
+
+  // Image upload function
+  const handleImageUpload = async (file) => {
+    setUploadingImage(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        throw new Error('Upload failed')
+      }
+
+      const data = await response.json()
+      return data.url
+    } catch (error) {
+      console.error('Image upload failed:', error)
+      throw error
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  const handleImageSelect = async (event, barberId) => {
+    const file = event.target.files[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB')
+      return
+    }
+
+    try {
+      const imageUrl = await handleImageUpload(file)
+      await updateBarber({
+        id: barberId,
+        avatar: imageUrl
+      })
+      onRefresh()
+    } catch (error) {
+      alert('Failed to upload image. Please try again.')
+    }
+  }
 
   const getStatusConfig = (isActive) => {
     if (isActive) {
@@ -324,10 +379,38 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
                   <tr key={barber._id} className="hover:bg-[#333333]/50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-[#FF8C42]/20 flex items-center justify-center">
-                            <User className="h-6 w-6 text-[#FF8C42]" />
+                        <div className="relative flex-shrink-0 h-10 w-10">
+                          {barber.avatarUrl && barber.avatarUrl !== '/img/avatar_default.jpg' ? (
+                            <img
+                              src={barber.avatarUrl}
+                              alt={barber.full_name}
+                              className="h-10 w-10 rounded-full object-cover border-2 border-[#FF8C42]/50"
+                            />
+                          ) : (
+                            <img
+                              src="/img/avatar_default.jpg"
+                              alt="Default avatar"
+                              className="h-10 w-10 rounded-full object-cover border-2 border-[#FF8C42]/50"
+                            />
+                          )}
+                          {/* Image upload overlay */}
+                          <div className="absolute inset-0 bg-black/50 rounded-full opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer group">
+                            <label className="cursor-pointer">
+                              <Camera className="h-4 w-4 text-white" />
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleImageSelect(e, barber._id)}
+                                className="hidden"
+                                disabled={uploadingImage}
+                              />
+                            </label>
                           </div>
+                          {uploadingImage && (
+                            <div className="absolute inset-0 bg-black/70 rounded-full flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            </div>
+                          )}
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-white">{barber.full_name}</div>

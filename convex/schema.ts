@@ -32,6 +32,7 @@ export default defineSchema({
     email: v.string(),
     phone: v.optional(v.string()),
     avatar: v.optional(v.string()),
+    avatarStorageId: v.optional(v.id("_storage")),
     experience: v.string(),
     rating: v.number(),
     totalBookings: v.number(),

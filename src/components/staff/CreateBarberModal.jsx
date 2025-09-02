@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
-import { User, Mail, Phone, Scissors } from 'lucide-react'
+import { User, Mail, Phone, Scissors, Camera, Upload } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
@@ -18,7 +18,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
     is_active: true,
     services: [],
     experience: '0 years',
-    specialties: []
+    specialties: [],
+    avatar: ''
   })
 
   // Update form data when editingBarber changes
@@ -34,7 +35,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
         is_active: editingBarber.is_active ?? true,
         services: editingBarber.services || [],
         experience: editingBarber.experience || '0 years',
-        specialties: editingBarber.specialties || []
+        specialties: editingBarber.specialties || [],
+        avatar: editingBarber.avatar || ''
       })
     } else {
       setFormData({
@@ -47,13 +49,15 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
         is_active: true,
         services: [],
         experience: '0 years',
-        specialties: []
+        specialties: [],
+        avatar: ''
       })
     }
   }, [editingBarber])
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   // Convex queries and mutations
   const services = useQuery(api.services.services.getAllServices)
@@ -63,6 +67,57 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  // Image upload function
+  const handleImageUpload = async (file) => {
+    setUploadingImage(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        throw new Error('Upload failed')
+      }
+
+      const data = await response.json()
+      return data.url
+    } catch (error) {
+      console.error('Image upload failed:', error)
+      throw error
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  const handleImageSelect = async (event) => {
+    const file = event.target.files[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File size must be less than 5MB')
+      return
+    }
+
+    try {
+      const imageUrl = await handleImageUpload(file)
+      handleInputChange('avatar', imageUrl)
+      setError('') // Clear any previous error
+    } catch (error) {
+      setError('Failed to upload image. Please try again.')
+    }
   }
 
   const handleSubmit = async (e) => {
@@ -102,7 +157,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
           services: formData.services,
           experience: formData.experience || '0 years',
           specialties: formData.specialties,
-          avatar: ''
+          avatar: formData.avatar || ''
         }
 
         await updateBarber({ id: editingBarber._id, ...barberData })
@@ -119,7 +174,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
           services: formData.services,
           experience: formData.experience || '0 years',
           specialties: formData.specialties,
-          avatar: ''
+          avatar: formData.avatar || ''
         }
 
         await createBarberWithAccount(barberData)
@@ -163,7 +218,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
       is_active: true,
       services: [],
       experience: '0 years',
-      specialties: []
+      specialties: [],
+      avatar: ''
     })
     setError('')
     onClose()
@@ -308,6 +364,54 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                 placeholder="e.g., 5 years"
                 className="w-full h-12 px-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200"
               />
+            </div>
+
+            <div>
+              <label className="block text-[#1A1A1A] font-bold text-base mb-2">
+                Profile Picture
+              </label>
+              <div className="flex items-center space-x-4">
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-full border-2 border-[#F5F5F5] overflow-hidden bg-gray-100">
+                    {formData.avatar ? (
+                      <img
+                        src={formData.avatar}
+                        alt="Barber avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <img
+                        src="/img/avatar_default.jpg"
+                        alt="Default avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                  </div>
+                  {uploadingImage && (
+                    <div className="absolute inset-0 bg-black/70 rounded-full flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <label className="flex items-center justify-center px-4 py-2 border-2 border-[#FF8C42] text-[#FF8C42] rounded-lg hover:bg-[#FF8C42] hover:text-white transition-colors cursor-pointer">
+                    <Camera className="w-4 h-4 mr-2" />
+                    <span className="text-sm font-medium">
+                      {formData.avatar ? 'Change Photo' : 'Upload Photo'}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className="hidden"
+                      disabled={uploadingImage}
+                    />
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Max 5MB. JPG, PNG, or GIF files only.
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div>
