@@ -42,9 +42,10 @@ const POS = () => {
 
   // Convex mutations
   const createTransaction = useMutation(api.services.transactions.createTransaction)
-  const getVoucherByCode = useQuery(api.services.vouchers.getVoucherByCode, 
-    currentTransaction.voucher_applied && typeof currentTransaction.voucher_applied === 'string' 
-      ? { code: currentTransaction.voucher_applied } 
+  const updateBookingPaymentStatus = useMutation(api.services.bookings.updatePaymentStatus)
+  const getVoucherByCode = useQuery(api.services.vouchers.getVoucherByCode,
+    currentTransaction.voucher_applied && typeof currentTransaction.voucher_applied === 'string'
+      ? { code: currentTransaction.voucher_applied }
       : "skip"
   )
 
@@ -52,6 +53,60 @@ const POS = () => {
   const activeServices = services?.filter(service => service.is_active) || []
   const activeProducts = products?.filter(product => product.status === 'active') || []
   const activeBarbers = barbers?.filter(barber => barber.is_active) || []
+
+  // Check for booking data from BookingsManagement
+  useEffect(() => {
+    const posBooking = sessionStorage.getItem('posBooking')
+    if (posBooking && services && customers) {
+      try {
+        const booking = JSON.parse(posBooking)
+
+        // Find the customer
+        const customer = customers.find(c => c._id === booking.customer)
+        if (!customer) {
+          console.error('Customer not found for booking')
+          return
+        }
+
+        // Find the service
+        const service = services.find(s => s._id === booking.service)
+        if (!service) {
+          console.error('Service not found for booking')
+          return
+        }
+
+        // Populate transaction with booking data
+        setCurrentTransaction(prev => ({
+          ...prev,
+          customer: customer,
+          customer_name: customer.username,
+          customer_phone: customer.mobile_number || '',
+          services: [{
+            service_id: service._id,
+            service_name: service.name,
+            price: service.price,
+            quantity: 1
+          }],
+          subtotal: service.price,
+          total_amount: service.price + (service.price * 0.12) // Add tax
+        }))
+
+        // Find and set the barber
+        if (booking.barber && barbers) {
+          const barber = barbers.find(b => b._id === booking.barber)
+          if (barber) {
+            setSelectedBarber(barber)
+          }
+        }
+
+        // Clear the session storage
+        sessionStorage.removeItem('posBooking')
+
+      } catch (error) {
+        console.error('Error parsing booking data:', error)
+      }
+    }
+  }, [services, customers, barbers])
   const customerUsers = customers?.filter(customer => customer.role === 'customer') || []
 
   // Filter items based on search term
@@ -240,6 +295,22 @@ const POS = () => {
       console.log('Transaction data voucher_applied:', transactionData.voucher_applied)
 
       await createTransaction(transactionData)
+
+      // Check if this transaction is for a booking and update payment status
+      const posBooking = sessionStorage.getItem('posBooking')
+      if (posBooking && currentTransaction.services.length > 0) {
+        try {
+          const booking = JSON.parse(posBooking)
+          // Update booking payment status to paid
+          await updateBookingPaymentStatus({
+            id: booking._id,
+            payment_status: 'paid'
+          })
+          console.log('Booking payment status updated to paid')
+        } catch (error) {
+          console.error('Error updating booking payment status:', error)
+        }
+      }
 
       // Show enhanced success message including booking creation
       const hasServices = currentTransaction.services.length > 0

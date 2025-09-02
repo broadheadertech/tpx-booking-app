@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode } from 'lucide-react'
+import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode, CreditCard, Receipt, DollarSign, Eye } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import QRCode from 'qrcode'
@@ -22,15 +22,22 @@ const BookingsManagement = ({ onRefresh }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [confirmModal, setConfirmModal] = useState({ show: false, booking: null, action: null })
+  const [activeTab, setActiveTab] = useState('bookings')
+  const [selectedBooking, setSelectedBooking] = useState(null)
+  const [showTransactionModal, setShowTransactionModal] = useState(false)
 
   // Convex queries
   const bookings = useQuery(api.services.bookings.getAllBookings) || []
   const services = useQuery(api.services.services.getAllServices) || []
   const barbers = useQuery(api.services.barbers.getActiveBarbers) || []
+  // Always call hooks in the same order to follow Rules of Hooks
+  const bookingPayments = useQuery(api.services.bookings.getBookingPayments, { bookingId: selectedBooking?._id })
+  const bookingTransactions = useQuery(api.services.bookings.getBookingTransactions, { bookingId: selectedBooking?._id })
 
   // Convex mutations
   const updateBookingStatus = useMutation(api.services.bookings.updateBooking)
   const deleteBookingMutation = useMutation(api.services.bookings.deleteBooking)
+  const updatePaymentStatus = useMutation(api.services.bookings.updatePaymentStatus)
 
   const getStatusConfig = (status) => {
     switch (status) {
@@ -118,7 +125,10 @@ const BookingsManagement = ({ onRefresh }) => {
       const bookingDate = new Date(b.date).toDateString()
       const today = new Date().toDateString()
       return bookingDate === today
-    }).length
+    }).length,
+    paid: bookings.filter(b => (b.payment_status || 'unpaid') === 'paid').length,
+    unpaid: bookings.filter(b => (b.payment_status || 'unpaid') === 'unpaid').length,
+    refunded: bookings.filter(b => (b.payment_status || 'unpaid') === 'refunded').length
   }
 
   const resetForm = () => {
@@ -222,12 +232,80 @@ const BookingsManagement = ({ onRefresh }) => {
 
   const handleConfirmAction = async () => {
     if (!confirmModal.booking || !confirmModal.action) return
-    
+
     const { booking, action } = confirmModal
     const newStatus = action === 'confirm' ? 'confirmed' : 'completed'
-    
+
     setConfirmModal({ show: false, booking: null, action: null })
     await handleStatusChange(booking, newStatus)
+  }
+
+  const getPaymentStatusConfig = (paymentStatus) => {
+    switch (paymentStatus) {
+      case 'paid':
+        return {
+          label: 'Paid',
+          icon: CheckCircle,
+          bg: 'bg-green-50',
+          text: 'text-green-700',
+          border: 'border-green-200',
+          iconColor: 'text-green-500'
+        }
+      case 'refunded':
+        return {
+          label: 'Refunded',
+          icon: XCircle,
+          bg: 'bg-yellow-50',
+          text: 'text-yellow-700',
+          border: 'border-yellow-200',
+          iconColor: 'text-yellow-500'
+        }
+      default: // unpaid
+        return {
+          label: 'Unpaid',
+          icon: CreditCard,
+          bg: 'bg-red-50',
+          text: 'text-red-700',
+          border: 'border-red-200',
+          iconColor: 'text-red-500'
+        }
+    }
+  }
+
+  const handlePaymentStatusChange = async (booking, newStatus) => {
+    setLoading(true)
+    try {
+      await updatePaymentStatus({ id: booking._id, payment_status: newStatus })
+      onRefresh()
+    } catch (err) {
+      console.error('Error updating payment status:', err)
+      setError(err.message || 'Failed to update payment status')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handlePOSPayment = async (booking) => {
+    // This would integrate with your POS system
+    // For now, we'll mark the payment as paid
+    try {
+      await handlePaymentStatusChange(booking, 'paid')
+      alert('Payment processed successfully!')
+    } catch (error) {
+      alert('Failed to process payment. Please try again.')
+    }
+  }
+
+  const handleViewTransaction = (booking) => {
+    setSelectedBooking(booking)
+    setShowTransactionModal(true)
+  }
+
+  const handlePOSRedirect = (booking) => {
+    // Store booking data in session storage to pass to POS page
+    sessionStorage.setItem('posBooking', JSON.stringify(booking))
+    // Navigate to POS page
+    window.location.href = '/staff/pos'
   }
 
   const formatDate = (dateString) => {
@@ -490,6 +568,503 @@ const BookingsManagement = ({ onRefresh }) => {
     </div>
   )
 
+  // Transaction Details Modal Component
+  const TransactionDetailsModal = ({ booking, onClose }) => {
+    if (!booking) return null
+
+    const service = services.find(s => s._id === booking.service)
+
+    return (
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+            onClick={onClose}
+          />
+          <div className="relative w-full max-w-4xl transform rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] shadow-2xl transition-all z-[10000] max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-[#444444]/30">
+              <h3 className="text-xl font-bold text-white">Transaction Details</h3>
+              <button
+                onClick={onClose}
+                className="p-2 text-gray-400 hover:text-white hover:bg-[#333333] rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Booking Summary */}
+              <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-bold text-white">Booking Summary</h4>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-400">Booking Code</p>
+                    <p className="text-sm font-mono font-bold text-white">#{booking.booking_code}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-400">Service</p>
+                    <p className="text-sm font-bold text-white">{service?.name || 'Unknown'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-400">Date & Time</p>
+                    <p className="text-sm font-bold text-white">
+                      {formatDate(booking.date)} at {formatTime(booking.time)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-400">Amount</p>
+                    <p className="text-sm font-bold text-green-400">₱{service?.price?.toFixed(2) || '0.00'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment History */}
+              <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-[#444444]/30">
+                  <h4 className="text-lg font-bold text-white">Payment History</h4>
+                </div>
+
+                <div className="overflow-x-auto">
+                  {bookingPayments && bookingPayments.length > 0 ? (
+                    <table className="min-w-full divide-y divide-[#444444]/30">
+                      <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                            Payment ID
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                            Method
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                            Amount
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                            Date
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] divide-y divide-[#444444]/30">
+                        {bookingPayments.map((payment) => (
+                          <tr key={payment._id} className="hover:bg-[#333333]/50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-mono text-gray-300">{payment.payment_request_id}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-white">{payment.payment_method}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-bold text-green-400">₱{payment.amount?.toFixed(2) || '0.00'}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                payment.status === 'completed' ? 'bg-green-50 text-green-700' :
+                                payment.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
+                                'bg-red-50 text-red-700'
+                              }`}>
+                                {payment.status}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-300">
+                                {new Date(payment.created_at).toLocaleDateString()}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div className="text-center py-12">
+                      <DollarSign className="mx-auto h-12 w-12 text-gray-500" />
+                      <h3 className="mt-2 text-sm font-medium text-white">No payments found</h3>
+                      <p className="mt-1 text-sm text-gray-400">
+                        No payment records found for this booking.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* POS Transactions */}
+              <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-[#444444]/30">
+                  <h4 className="text-lg font-bold text-white">POS Transactions</h4>
+                </div>
+
+                <div className="overflow-x-auto">
+                  {bookingTransactions && bookingTransactions.length > 0 ? (
+                    <table className="min-w-full divide-y divide-[#444444]/30">
+                      <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                            Transaction ID
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                            Services
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                            Total Amount
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                            Payment Method
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                            Date
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] divide-y divide-[#444444]/30">
+                        {bookingTransactions.map((transaction) => (
+                          <tr key={transaction._id} className="hover:bg-[#333333]/50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-mono text-gray-300">{transaction.transaction_id}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-white">
+                                {transaction.services?.map(s => s.service_name).join(', ') || 'N/A'}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-bold text-green-400">₱{transaction.total_amount?.toFixed(2) || '0.00'}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-white">{transaction.payment_method}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-300">
+                                {new Date(transaction.createdAt).toLocaleDateString()}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Receipt className="mx-auto h-12 w-12 text-gray-500" />
+                      <h3 className="mt-2 text-sm font-medium text-white">No transactions found</h3>
+                      <p className="mt-1 text-sm text-gray-400">
+                        No POS transactions found for this booking.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Transaction Tab Component
+  const TransactionTab = () => {
+    if (!selectedBooking) {
+      return (
+        <div className="space-y-6">
+          {/* Booking Selector */}
+          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+            <h3 className="text-lg font-bold text-white mb-4">Select a Booking</h3>
+
+            {/* Loading State */}
+            {(!bookings || !services) ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42]"></div>
+                <span className="ml-2 text-gray-400">Loading bookings...</span>
+              </div>
+            ) : (filteredBookings || []).length === 0 ? (
+              <div className="text-center py-8">
+                <Calendar className="mx-auto h-12 w-12 text-gray-500" />
+                <h3 className="mt-2 text-sm font-medium text-white">No bookings found</h3>
+                <p className="mt-1 text-sm text-gray-400">
+                  Create some bookings first to view transaction details.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-[#444444]/30">
+                <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Booking Code
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Service
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Payment
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] divide-y divide-[#444444]/30">
+                  {(filteredBookings || []).slice(0, 10).map((booking) => {
+                    const statusConfig = getStatusConfig(booking.status)
+                    const paymentStatusConfig = getPaymentStatusConfig(booking.payment_status || 'unpaid')
+                    const StatusIcon = statusConfig.icon
+                    const PaymentStatusIcon = paymentStatusConfig.icon
+                    const service = services.find(s => s._id === booking.service)
+
+                    return (
+                      <tr key={booking._id} className="hover:bg-[#333333]/50">
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm font-mono font-bold text-white">
+                            #{booking.booking_code}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-white">
+                            {service?.name || 'Unknown'}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <div className="text-sm text-white">
+                            {formatDate(booking.date)}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusConfig.bg} ${statusConfig.text}`}>
+                            {statusConfig.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${paymentStatusConfig.bg} ${paymentStatusConfig.text}`}>
+                            {paymentStatusConfig.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-right">
+                          <button
+                            onClick={() => setSelectedBooking(booking)}
+                            className="inline-flex items-center px-3 py-1 border border-blue-500/30 text-xs font-medium rounded text-blue-400 bg-blue-400/20 hover:bg-blue-400/30 transition-colors"
+                          >
+                            View Details
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+            )}
+          </div>
+        </div>
+      )
+    }
+
+    const booking = selectedBooking
+    const service = services ? services.find(s => s._id === booking.service) : null
+
+    return (
+      <div className="space-y-6">
+        {/* Booking Summary */}
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-white">Booking Summary</h3>
+            <button
+              onClick={() => setSelectedBooking(null)}
+              className="p-2 text-gray-400 hover:text-white hover:bg-[#333333] rounded-lg transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <p className="text-sm font-medium text-gray-400">Booking Code</p>
+              <p className="text-sm font-mono font-bold text-white">#{booking.booking_code}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-400">Service</p>
+              <p className="text-sm font-bold text-white">{service?.name || 'Unknown'}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-400">Date & Time</p>
+              <p className="text-sm font-bold text-white">
+                {formatDate(booking.date)} at {formatTime(booking.time)}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-400">Amount</p>
+              <p className="text-sm font-bold text-green-400">₱{service?.price?.toFixed(2) || '0.00'}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Payment History */}
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-[#444444]/30">
+            <h3 className="text-lg font-bold text-white">Payment History</h3>
+          </div>
+
+          <div className="overflow-x-auto">
+            {!selectedBooking ? (
+              <div className="text-center py-8">
+                <Receipt className="mx-auto h-12 w-12 text-gray-500" />
+                <p className="mt-2 text-sm text-gray-400">Select a booking to view payment history</p>
+              </div>
+            ) : !bookingPayments ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#FF8C42]"></div>
+                <span className="ml-2 text-gray-400">Loading payment history...</span>
+              </div>
+            ) : bookingPayments.length > 0 ? (
+              <table className="min-w-full divide-y divide-[#444444]/30">
+                <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Payment ID
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Method
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Date
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] divide-y divide-[#444444]/30">
+                  {bookingPayments.map((payment) => (
+                    <tr key={payment._id} className="hover:bg-[#333333]/50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-mono text-gray-300">{payment.payment_request_id}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-white">{payment.payment_method}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-bold text-green-400">₱{payment.amount?.toFixed(2) || '0.00'}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          payment.status === 'completed' ? 'bg-green-50 text-green-700' :
+                          payment.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
+                          'bg-red-50 text-red-700'
+                        }`}>
+                          {payment.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-300">
+                          {new Date(payment.created_at).toLocaleDateString()}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="text-center py-12">
+                <DollarSign className="mx-auto h-12 w-12 text-gray-500" />
+                <h3 className="mt-2 text-sm font-medium text-white">No payments found</h3>
+                <p className="mt-1 text-sm text-gray-400">
+                  No payment records found for this booking.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* POS Transactions */}
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-[#444444]/30">
+            <h3 className="text-lg font-bold text-white">POS Transactions</h3>
+          </div>
+
+          <div className="overflow-x-auto">
+            {!selectedBooking ? (
+              <div className="text-center py-8">
+                <CreditCard className="mx-auto h-12 w-12 text-gray-500" />
+                <p className="mt-2 text-sm text-gray-400">Select a booking to view POS transactions</p>
+              </div>
+            ) : !bookingTransactions ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#FF8C42]"></div>
+                <span className="ml-2 text-gray-400">Loading POS transactions...</span>
+              </div>
+            ) : bookingTransactions.length > 0 ? (
+              <table className="min-w-full divide-y divide-[#444444]/30">
+                <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Transaction ID
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Services
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Total Amount
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Payment Method
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      Date
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] divide-y divide-[#444444]/30">
+                  {bookingTransactions.map((transaction) => (
+                    <tr key={transaction._id} className="hover:bg-[#333333]/50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-mono text-gray-300">{transaction.transaction_id}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-white">
+                          {transaction.services?.map(s => s.service_name).join(', ') || 'N/A'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-bold text-green-400">₱{transaction.total_amount?.toFixed(2) || '0.00'}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-white">{transaction.payment_method}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-300">
+                          {new Date(transaction.createdAt).toLocaleDateString()}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="text-center py-12">
+                <Receipt className="mx-auto h-12 w-12 text-gray-500" />
+                <h3 className="mt-2 text-sm font-medium text-white">No transactions found</h3>
+                <p className="mt-1 text-sm text-gray-400">
+                  No POS transactions found for this booking.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
@@ -555,6 +1130,41 @@ const BookingsManagement = ({ onRefresh }) => {
         </div>
       </div>
 
+      {/* Payment Status Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-300">Paid</p>
+              <p className="text-2xl font-bold text-green-400">{stats.paid}</p>
+            </div>
+            <CheckCircle className="h-8 w-8 text-green-400 opacity-30" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-300">Unpaid</p>
+              <p className="text-2xl font-bold text-red-400">{stats.unpaid}</p>
+            </div>
+            <CreditCard className="h-8 w-8 text-red-400 opacity-30" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-300">Refunded</p>
+              <p className="text-2xl font-bold text-yellow-400">{stats.refunded}</p>
+            </div>
+            <XCircle className="h-8 w-8 text-yellow-400 opacity-30" />
+          </div>
+        </div>
+      </div>
+
+
+
       {/* Controls */}
       <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
@@ -619,8 +1229,39 @@ const BookingsManagement = ({ onRefresh }) => {
       {/* Edit Booking Form */}
       {editingBooking && <EditBookingForm />}
 
-      {/* Bookings Table */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
+      {/* Tab Navigation */}
+      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="flex space-x-1 mb-4">
+          <button
+            onClick={() => setActiveTab('bookings')}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === 'bookings'
+                ? 'bg-[#FF8C42] text-white'
+                : 'text-gray-300 hover:bg-[#333333] hover:text-white'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Bookings</span>
+          </button>
+          <button
+            onClick={() => setActiveTab('transaction')}
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === 'transaction'
+                ? 'bg-[#FF8C42] text-white'
+                : 'text-gray-300 hover:bg-[#333333] hover:text-white'
+            }`}
+          >
+            <Receipt className="w-4 h-4" />
+            <span>Transaction</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'bookings' ? (
+        <>
+          {/* Main Content */}
+          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-[#444444]/30">
             <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
@@ -643,6 +1284,9 @@ const BookingsManagement = ({ onRefresh }) => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Price
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  Payment Status
+                </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Actions
                 </th>
@@ -651,7 +1295,10 @@ const BookingsManagement = ({ onRefresh }) => {
             <tbody className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] divide-y divide-[#444444]/30">
               {filteredBookings.map((booking) => {
                 const statusConfig = getStatusConfig(booking.status)
+                const paymentStatusConfig = getPaymentStatusConfig(booking.payment_status || 'unpaid')
+                const currentPaymentStatus = booking.payment_status || 'unpaid'
                 const StatusIcon = statusConfig.icon
+                const PaymentStatusIcon = paymentStatusConfig.icon
                 const service = services.find(s => s._id === booking.service)
 
                 return (
@@ -693,6 +1340,25 @@ const BookingsManagement = ({ onRefresh }) => {
                         ₱{service ? parseFloat(service.price).toFixed(2) : '0.00'}
                       </div>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${paymentStatusConfig.bg} ${paymentStatusConfig.text}`}>
+                          <PaymentStatusIcon className={`-ml-0.5 mr-1.5 h-3 w-3 ${paymentStatusConfig.iconColor}`} />
+                          {paymentStatusConfig.label}
+                        </span>
+                        {booking.status === 'confirmed' && currentPaymentStatus === 'unpaid' && (
+                          <button
+                            onClick={() => handlePOSRedirect(booking)}
+                            className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-green-400 bg-green-400/20 hover:bg-green-400/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400"
+                            disabled={loading}
+                            title="Process Payment at POS"
+                          >
+                            <CreditCard className="h-3 w-3 mr-1" />
+                            POS
+                          </button>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
                         <button
@@ -703,6 +1369,16 @@ const BookingsManagement = ({ onRefresh }) => {
                           <QrCode className="h-3 w-3 mr-1" />
                           QR
                         </button>
+                        {booking.status === 'completed' && currentPaymentStatus === 'paid' && (
+                          <button
+                            onClick={() => handleViewTransaction(booking)}
+                            className="inline-flex items-center px-2.5 py-1.5 border border-blue-500/30 text-xs font-medium rounded text-blue-400 bg-blue-400/20 hover:bg-blue-400/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400"
+                            title="View Transaction Details"
+                          >
+                            <Receipt className="h-3 w-3 mr-1" />
+                            TXN
+                          </button>
+                        )}
                         {booking.status === 'pending' && (
                           <>
                             <button
@@ -795,6 +1471,22 @@ const BookingsManagement = ({ onRefresh }) => {
           </div>
         )}
       </div>
+
+        </>
+      ) : (
+        <TransactionTab />
+      )}
+
+      {/* Transaction Details Modal */}
+      {showTransactionModal && (
+        <TransactionDetailsModal
+          booking={selectedBooking}
+          onClose={() => {
+            setShowTransactionModal(false)
+            setSelectedBooking(null)
+          }}
+        />
+      )}
 
       {/* Create Booking Modal */}
       <CreateBookingModal

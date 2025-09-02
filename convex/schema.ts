@@ -83,6 +83,11 @@ export default defineSchema({
       v.literal("completed"),
       v.literal("cancelled")
     ),
+    payment_status: v.optional(v.union(
+      v.literal("unpaid"),
+      v.literal("paid"),
+      v.literal("refunded")
+    )),
     price: v.number(),
     notes: v.optional(v.string()),
     createdAt: v.number(),
@@ -92,6 +97,7 @@ export default defineSchema({
     .index("by_barber", ["barber"])
     .index("by_date", ["date"])
     .index("by_status", ["status"])
+    .index("by_payment_status", ["payment_status"])
     .index("by_booking_code", ["booking_code"]),
 
   // Vouchers table
