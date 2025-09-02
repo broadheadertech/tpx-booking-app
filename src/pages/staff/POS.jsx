@@ -494,7 +494,12 @@ const POS = () => {
                 <CreditCard className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">POS System</h1>
+                <div className="flex items-center space-x-3">
+                  <h1 className="text-2xl font-bold text-white tracking-tight">POS System</h1>
+                  <div className="bg-[#FF8C42]/20 backdrop-blur-sm rounded-full px-2 py-0.5 border border-[#FF8C42]/30">
+                    <span className="text-xs font-semibold text-[#FF8C42]">v1.0.1</span>
+                  </div>
+                </div>
                 <p className="text-sm font-medium text-[#FF8C42] mt-1">Point of Sale</p>
               </div>
             </div>
