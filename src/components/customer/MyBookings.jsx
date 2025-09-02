@@ -303,10 +303,53 @@ const MyBookings = ({ onBack }) => {
                             <p className="text-xs text-gray-500">
                               Service Price
                             </p>
-                            <p className="text-sm font-bold text-[#FF8C42]">
+                            <p
+                              className="text-sm font-bold"
+                              style={{ color: "#F68B24" }}
+                            >
                               ₱
                               {service.price
                                 ? parseFloat(service.price).toLocaleString()
+                                : "--"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div
+                            className="w-3 h-3 rounded"
+                            style={{ backgroundColor: "#F68B24" }}
+                          ></div>
+                          <div>
+                            <p className="text-xs" style={{ color: "#8B8B8B" }}>
+                              Discount
+                            </p>
+                            <p
+                              className="text-sm font-bold"
+                              style={{ color: "#36454F" }}
+                            >
+                              ₱
+                              {service.discount_amount
+                                ? parseFloat(service.discount_amount).toLocaleString()
+                                : "--"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div
+                            className="w-3 h-3 rounded"
+                            style={{ backgroundColor: "#22C55E" }}
+                          ></div>
+                          <div>
+                            <p className="text-xs" style={{ color: "#8B8B8B" }}>
+                              Grand Total
+                            </p>
+                            <p
+                              className="text-sm font-bold"
+                              style={{ color: "#36454F" }}
+                            >
+                              ₱
+                              {service.discount_amount
+                                ? parseFloat(service.total_amount).toLocaleString()
                                 : "--"}
                             </p>
                           </div>
