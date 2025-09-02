@@ -5,7 +5,7 @@ import { internal } from "../_generated/api";
 // Xendit API configuration
 const XENDIT_API_KEY = 'xnd_development_ES0mrBxcK9s2GqcQtp2hZsl3kDHDCkqwctk9Wb3CIlbUKj2pByM42sU6BcI';
 const XENDIT_BASE_URL = 'https://api.xendit.co';
-const BASE_URL = 'http://localhost:3001'; // Default base URL for redirects
+const BASE_URL = 'http://localhost:3000'; // Default base URL for redirects
 
 // Create payment request with Xendit
 export const createPaymentRequest = action({
