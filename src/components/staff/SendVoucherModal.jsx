@@ -1,18 +1,31 @@
 import React, { useState, useEffect, useRef } from "react";
 import Modal from "../common/Modal";
 import Button from "../common/Button";
+import SuccessModal from "../common/SuccessModal";
 import { Mail, Users, Search, X, CheckCircle, QrCode } from "lucide-react";
 import QRCode from "qrcode";
 import emailjs from "@emailjs/browser";
-import apiService from "../../services/api.js";
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
+import { useAuth } from '../../context/AuthContext'
 
 const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
-  const [clients, setClients] = useState([]);
+  const { user } = useAuth()
   const [filteredClients, setFilteredClients] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successDetails, setSuccessDetails] = useState([]);
+
+  // Convex queries and mutations
+  const clients = useQuery(api.services.auth.getAllUsers)
+  const assignedUsers = useQuery(
+    api.services.vouchers.getVoucherAssignedUsers,
+    voucher ? { voucherId: voucher._id } : "skip"
+  )
+  const assignVoucherMutation = useMutation(api.services.vouchers.assignVoucherByCode)
   const [sentCount, setSentCount] = useState(0);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const dropdownRef = useRef(null);
@@ -24,21 +37,22 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
 
   useEffect(() => {
     if (isOpen) {
-      fetchClients();
       generateQRCode();
     }
   }, [isOpen, voucher]);
 
   useEffect(() => {
-    const filtered = clients.filter(
-      (client) =>
-        client.username?.toLowerCase().includes(customerSearch.toLowerCase()) ||
-        client.email?.toLowerCase().includes(customerSearch.toLowerCase()) ||
-        (client.nickname &&
-          client.nickname.toLowerCase().includes(customerSearch.toLowerCase()))
-    );
-    setFilteredClients(filtered);
-  }, [customerSearch, clients]);
+    if (clients && Array.isArray(clients)) {
+      // Get list of already assigned user IDs
+      const assignedUserIds = assignedUsers ? assignedUsers.map(user => user._id) : [];
+      
+      const filtered = clients.filter(client =>
+        client.role === 'customer' &&
+        !assignedUserIds.includes(client._id) // Exclude already assigned users
+      );
+      setFilteredClients(filtered);
+    }
+  }, [clients, assignedUsers]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -50,21 +64,22 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const fetchClients = async () => {
-    setIsLoading(true);
-    try {
-      const response = await apiService.get("/clients/");
-      const clientsData = Array.isArray(response) ? response : [];
-      setClients(clientsData);
-      setFilteredClients(clientsData);
-    } catch (error) {
-      console.error("Failed to fetch clients:", error);
-      setClients([]);
-      setFilteredClients([]);
-    } finally {
-      setIsLoading(false);
+  // Filter clients based on search term and exclude already assigned users
+  useEffect(() => {
+    if (clients && Array.isArray(clients)) {
+      // Get list of already assigned user IDs
+      const assignedUserIds = assignedUsers ? assignedUsers.map(user => user._id) : [];
+      
+      const filtered = clients.filter(client =>
+        client.role === 'customer' &&
+        !assignedUserIds.includes(client._id) && // Exclude already assigned users
+        (client.username?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+         client.email?.toLowerCase().includes(customerSearch.toLowerCase()) ||
+         client.nickname?.toLowerCase().includes(customerSearch.toLowerCase()))
+      );
+      setFilteredClients(filtered);
     }
-  };
+  }, [clients, customerSearch, assignedUsers]);
 
   const generateQRCode = async () => {
     if (!voucher) return;
@@ -89,11 +104,18 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
     }
   };
 
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
+    setSuccessDetails([]);
+    onClose();
+  };
+
   const toggleUserSelection = (user) => {
     setSelectedUsers((prev) => {
-      const isSelected = prev.find((u) => u.id === user.id);
+      const userId = user._id || user.id;
+      const isSelected = prev.find((u) => (u._id || u.id) === userId);
       if (isSelected) {
-        return prev.filter((u) => u.id !== user.id);
+        return prev.filter((u) => (u._id || u.id) !== userId);
       } else {
         return [...prev, user];
       }
@@ -141,22 +163,23 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
       console.log("Initializing EmailJS with service:", EMAILJS_SERVICE_ID);
       emailjs.init(EMAILJS_PUBLIC_KEY);
 
-      for (const user of selectedUsers) {
+      for (const selectedUser of selectedUsers) {
         try {
-          // Step 1: Assign voucher to user via API
+          // Step 1: Assign voucher to user via Convex
           const assignData = {
-            username: user.username,
             code: voucher.code,
+            user_id: selectedUser._id || selectedUser.id,
+            assigned_by: user.id, // Staff member assigning the voucher
           };
 
           console.log("Assigning voucher to user:", assignData);
-          await apiService.post("/vouchers/assign/", assignData);
-          console.log(`Voucher ${voucher.code} assigned to ${user.username}`);
+          await assignVoucherMutation(assignData);
+          console.log(`Voucher ${voucher.code} assigned to ${selectedUser.username}`);
 
           // Step 2: Generate personalized QR code for this user
           const personalizedQrData = {
             voucherId: voucher.id,
-            username: user.username,
+            username: selectedUser.username,
             code: voucher.code,
             value: voucher.value,
             expires_at: voucher.expires_at,
@@ -166,7 +189,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
 
           console.log(
             "Generating QR code for user:",
-            user.username,
+            selectedUser.username,
             "with data:",
             personalizedQrData
           );
@@ -192,7 +215,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
             !personalizedQrUrl.startsWith("data:image/png;base64,")
           ) {
             throw new Error(
-              "Failed to generate QR code for user: " + user.username
+              "Failed to generate QR code for user: " + selectedUser.username
             );
           }
 
@@ -207,8 +230,8 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
           );
 
           const templateParams = {
-            to_name: user.nickname || user.username,
-            to_email: user.email,
+            to_name: selectedUser.nickname || selectedUser.username,
+            to_email: selectedUser.email,
             voucher_code: voucher.code,
             voucher_value: `₱${parseFloat(voucher.value).toFixed(2)}`,
             points_required: voucher.points_required || 0,
@@ -237,18 +260,18 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
           });
         } catch (error) {
           console.error(
-            `Failed to assign/send voucher to ${user.username}:`,
+            `Failed to assign/send voucher to ${selectedUser.username}:`,
             error
           );
 
           // Check if it's an EmailJS error
           if (error.text) {
             console.error("EmailJS Error:", error.text);
-            alert(`Failed to send email to ${user.email}: ${error.text}`);
+            alert(`Failed to send email to ${selectedUser.email}: ${error.text}`);
           } else if (error.message) {
             console.error("General Error:", error.message);
             alert(
-              `Failed to process voucher for ${user.username}: ${error.message}`
+              `Failed to process voucher for ${selectedUser.username}: ${error.message}`
             );
           }
           // Continue with other users even if one fails
@@ -262,17 +285,19 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
         "out of",
         selectedUsers.length
       );
+      
+      const details = selectedUsers.map(user => 
+        `${user.username} (${user.email})`
+      );
+      
       if (successfulSends > 0) {
-        alert(
-          `Successfully assigned vouchers and sent ${successfulSends} out of ${selectedUsers.length} emails!`
-        );
+        setSuccessDetails(details.slice(0, successfulSends));
+        setShowSuccessModal(true);
       } else if (selectedUsers.length > 0) {
         alert(
           "Vouchers were assigned but no emails were sent. Please check the console for errors."
         );
       }
-
-      onClose();
     } catch (error) {
       console.error("Failed to assign vouchers:", error);
       alert("Failed to assign vouchers. Please try again.");
@@ -284,6 +309,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
   if (!voucher) return null;
 
   return (
+    <>
     <Modal
       isOpen={isOpen}
       onClose={onClose}
@@ -504,6 +530,15 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
         {/* EmailJS Setup Notice */}
       </div>
     </Modal>
+    
+    <SuccessModal
+      isOpen={showSuccessModal}
+      onClose={handleSuccessModalClose}
+      title="Vouchers Sent Successfully!"
+      message={`Successfully assigned vouchers and sent ${successDetails.length} emails.`}
+      details={successDetails}
+    />
+  </>
   );
 };
 

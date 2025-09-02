@@ -2,20 +2,23 @@ import React, { useState } from 'react'
 import Card from '../common/Card'
 import { QrCode, UserPlus, Calendar, Gift } from 'lucide-react'
 import QRScannerModal from './QRScannerModal'
-import BookingQRScannerModal from './BookingQRScannerModal'
+
 import AddCustomerModal from './AddCustomerModal'
 import CreateBookingModal from './CreateBookingModal'
 import CreateVoucherModal from './CreateVoucherModal'
 
-const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVoucherScanned, onBookingScanned }) => {
-  const [activeModal, setActiveModal] = useState(null)
+const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVoucherScanned, onBookingScanned, activeModal, setActiveModal }) => {
+  // Use external modal state if provided, otherwise use internal state
+  const [internalModal, setInternalModal] = useState(null)
+  const currentModal = activeModal !== undefined ? activeModal : internalModal
+  const setCurrentModal = setActiveModal || setInternalModal
   
-  console.log('QuickActions render - activeModal:', activeModal)
+  console.log('QuickActions render - currentModal:', currentModal)
   
   // Add useEffect to debug state changes
   React.useEffect(() => {
-    console.log('activeModal changed to:', activeModal)
-  }, [activeModal])
+    console.log('currentModal changed to:', currentModal)
+  }, [currentModal])
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -33,7 +36,7 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
             <button 
               onClick={() => {
                 console.log('Scanner button clicked')
-                setActiveModal('scannerSelection')
+                setCurrentModal('scannerSelection')
               }}
               className="w-full py-3 px-6 bg-white/15 backdrop-blur-xl text-white font-semibold rounded-[16px] border border-white/20 hover:bg-white/25 transition-all duration-300 text-sm shadow-lg"
             >
@@ -45,17 +48,17 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
       
       {/* Secondary Actions */}
       <div className="group relative">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A] rounded-[28px] opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
-        <Card className="relative text-center p-8 bg-white/80 backdrop-blur-xl border border-gray-200/50 hover:border-[#FF8C42]/30 hover:shadow-xl transform hover:-translate-y-2 transition-all duration-500 rounded-[24px] group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#FF8C42]/5 to-transparent rounded-full -translate-y-12 translate-x-12"></div>
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-[#333333] to-[#444444] rounded-[28px] opacity-0 group-hover:opacity-30 blur-sm transition-all duration-500"></div>
+        <Card className="relative text-center p-8 bg-gradient-to-br from-[#2A2A2A] to-[#333333] backdrop-blur-xl border border-[#444444]/50 hover:border-[#FF8C42]/50 hover:shadow-xl transform hover:-translate-y-2 transition-all duration-500 rounded-[24px] group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#FF8C42]/10 to-transparent rounded-full -translate-y-12 translate-x-12"></div>
           <div className="relative z-10">
-            <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-[20px] flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+            <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-[20px] flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
               <UserPlus className="w-8 h-8 text-white" />
             </div>
-            <h3 className="font-bold text-[#1A1A1A] mb-4 text-lg tracking-tight">Add Customer</h3>
+            <h3 className="font-bold text-white mb-4 text-lg tracking-tight">Add Customer</h3>
             <button 
-              onClick={() => setActiveModal('customer')}
-              className="w-full py-3 px-6 border-2 border-[#1A1A1A]/20 text-[#1A1A1A] font-semibold rounded-[16px] hover:bg-[#1A1A1A] hover:text-white hover:border-[#1A1A1A] transition-all duration-300 text-sm"
+              onClick={() => setCurrentModal('customer')}
+              className="w-full py-3 px-6 border-2 border-[#FF8C42]/30 text-[#FF8C42] font-semibold rounded-[16px] hover:bg-[#FF8C42] hover:text-white hover:border-[#FF8C42] transition-all duration-300 text-sm"
             >
               New Customer
             </button>
@@ -64,17 +67,17 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
       </div>
       
       <div className="group relative">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-[#6B6B6B] to-[#4A4A4A] rounded-[28px] opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
-        <Card className="relative text-center p-8 bg-white/80 backdrop-blur-xl border border-gray-200/50 hover:border-[#FF8C42]/30 hover:shadow-xl transform hover:-translate-y-2 transition-all duration-500 rounded-[24px] group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#FF8C42]/5 to-transparent rounded-full -translate-y-12 translate-x-12"></div>
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-[#333333] to-[#444444] rounded-[28px] opacity-0 group-hover:opacity-30 blur-sm transition-all duration-500"></div>
+        <Card className="relative text-center p-8 bg-gradient-to-br from-[#2A2A2A] to-[#333333] backdrop-blur-xl border border-[#444444]/50 hover:border-[#6B6B6B]/50 hover:shadow-xl transform hover:-translate-y-2 transition-all duration-500 rounded-[24px] group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#6B6B6B]/10 to-transparent rounded-full -translate-y-12 translate-x-12"></div>
           <div className="relative z-10">
             <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-[#6B6B6B] to-[#4A4A4A] rounded-[20px] flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
               <Calendar className="w-8 h-8 text-white" />
             </div>
-            <h3 className="font-bold text-[#1A1A1A] mb-4 text-lg tracking-tight">New Booking</h3>
+            <h3 className="font-bold text-white mb-4 text-lg tracking-tight">New Booking</h3>
             <button 
-              onClick={() => setActiveModal('booking')}
-              className="w-full py-3 px-6 border-2 border-[#6B6B6B]/20 text-[#6B6B6B] font-semibold rounded-[16px] hover:bg-[#6B6B6B] hover:text-white hover:border-[#6B6B6B] transition-all duration-300 text-sm"
+              onClick={() => setCurrentModal('booking')}
+              className="w-full py-3 px-6 border-2 border-[#6B6B6B]/30 text-[#6B6B6B] font-semibold rounded-[16px] hover:bg-[#6B6B6B] hover:text-white hover:border-[#6B6B6B] transition-all duration-300 text-sm"
             >
               Book Appointment
             </button>
@@ -83,17 +86,17 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
       </div>
       
       <div className="group relative">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-[28px] opacity-0 group-hover:opacity-20 blur-sm transition-all duration-500"></div>
-        <Card className="relative text-center p-8 bg-white/80 backdrop-blur-xl border border-gray-200/50 hover:border-[#FF8C42]/30 hover:shadow-xl transform hover:-translate-y-2 transition-all duration-500 rounded-[24px] group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#FF8C42]/5 to-transparent rounded-full -translate-y-12 translate-x-12"></div>
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-[28px] opacity-0 group-hover:opacity-30 blur-sm transition-all duration-500"></div>
+        <Card className="relative text-center p-8 bg-gradient-to-br from-[#2A2A2A] to-[#333333] backdrop-blur-xl border border-[#444444]/50 hover:border-[#FF8C42]/50 hover:shadow-xl transform hover:-translate-y-2 transition-all duration-500 rounded-[24px] group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#FF8C42]/10 to-transparent rounded-full -translate-y-12 translate-x-12"></div>
           <div className="relative z-10">
             <div className="w-16 h-16 mx-auto mb-6 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-[20px] flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
               <Gift className="w-8 h-8 text-white" />
             </div>
-            <h3 className="font-bold text-[#1A1A1A] mb-4 text-lg tracking-tight">Create Voucher</h3>
+            <h3 className="font-bold text-white mb-4 text-lg tracking-tight">Create Voucher</h3>
             <button 
-              onClick={() => setActiveModal('voucher')}
-              className="w-full py-3 px-6 border-2 border-[#FF8C42]/20 text-[#FF8C42] font-semibold rounded-[16px] hover:bg-[#FF8C42] hover:text-white hover:border-[#FF8C42] transition-all duration-300 text-sm"
+              onClick={() => setCurrentModal('voucher')}
+              className="w-full py-3 px-6 border-2 border-[#FF8C42]/30 text-[#FF8C42] font-semibold rounded-[16px] hover:bg-[#FF8C42] hover:text-white hover:border-[#FF8C42] transition-all duration-300 text-sm"
             >
               New Voucher
             </button>
@@ -101,16 +104,16 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
         </Card>
       </div>
 
-      {/* Debug activeModal state */}
-      {activeModal && (
+      {/* Debug currentModal state */}
+      {currentModal && (
         <div className="fixed top-4 right-4 bg-red-500 text-white p-2 rounded z-[10001]">
-          Active Modal: {activeModal}
+          Active Modal: {currentModal}
         </div>
       )}
 
       {/* Modals */}
       {/* Scanner Selection Modal */}
-       {activeModal === 'scannerSelection' && (
+       {currentModal === 'scannerSelection' && (
          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl border border-gray-200">
             <div className="text-center space-y-6">
@@ -125,7 +128,7 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
 
               <div className="space-y-4">
                 <button
-                  onClick={() => setActiveModal('bookingScanner')}
+                  onClick={() => setCurrentModal('bookingScanner')}
                   className="w-full p-4 border-2 border-[#FF8C42]/20 rounded-xl hover:border-[#FF8C42] hover:bg-[#FF8C42]/5 transition-all duration-300 group"
                 >
                   <div className="flex items-center space-x-4">
@@ -140,7 +143,7 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
                 </button>
 
                 <button
-                  onClick={() => setActiveModal('voucherScanner')}
+                  onClick={() => setCurrentModal('voucherScanner')}
                   className="w-full p-4 border-2 border-[#FF8C42]/20 rounded-xl hover:border-[#FF8C42] hover:bg-[#FF8C42]/5 transition-all duration-300 group"
                 >
                   <div className="flex items-center space-x-4">
@@ -156,7 +159,7 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
               </div>
 
               <button
-                onClick={() => setActiveModal(null)}
+                onClick={() => setCurrentModal(null)}
                 className="w-full py-3 px-6 border-2 border-[#6B6B6B]/20 text-[#6B6B6B] font-semibold rounded-xl hover:bg-[#6B6B6B] hover:text-white transition-all duration-300"
               >
                 Cancel
@@ -166,53 +169,48 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
         </div>
       )}
 
-      {activeModal === 'voucherScanner' && (
+      {currentModal === 'voucherScanner' && (
         <QRScannerModal 
           isOpen={true}
-          onClose={() => setActiveModal(null)}
+          onClose={() => setCurrentModal(null)}
           onVoucherScanned={(voucher) => {
             onVoucherScanned?.(voucher)
-            setActiveModal(null)
+            setCurrentModal(null)
           }}
         />
       )}
       
-      {activeModal === 'bookingScanner' && (
-        <BookingQRScannerModal 
+      {currentModal === 'bookingScanner' && (
+        <QRScannerModal 
           isOpen={true}
-          onClose={() => setActiveModal(null)}
-          onBookingScanned={(booking) => {
-            console.log('BookingQRScannerModal onBookingScanned called with:', booking)
-            onBookingScanned?.(booking)
-            setActiveModal(null)
-          }}
+          onClose={() => setCurrentModal(null)}
         />
       )}
       
       <AddCustomerModal 
-        isOpen={activeModal === 'customer'} 
-        onClose={() => setActiveModal(null)}
+        isOpen={currentModal === 'customer'} 
+        onClose={() => setCurrentModal(null)}
         onSubmit={(customer) => {
           onAddCustomer?.(customer)
-          setActiveModal(null)
+          setCurrentModal(null)
         }}
       />
       
       <CreateBookingModal 
-        isOpen={activeModal === 'booking'} 
-        onClose={() => setActiveModal(null)}
+        isOpen={currentModal === 'booking'} 
+        onClose={() => setCurrentModal(null)}
         onSubmit={(booking) => {
           onCreateBooking?.(booking)
-          setActiveModal(null)
+          setCurrentModal(null)
         }}
       />
       
       <CreateVoucherModal 
-        isOpen={activeModal === 'voucher'} 
-        onClose={() => setActiveModal(null)}
+        isOpen={currentModal === 'voucher'} 
+        onClose={() => setCurrentModal(null)}
         onSubmit={(voucher) => {
           onCreateVoucher?.(voucher)
-          setActiveModal(null)
+          setCurrentModal(null)
         }}
       />
     </div>

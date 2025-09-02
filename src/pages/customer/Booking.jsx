@@ -4,21 +4,26 @@ import QRCode from 'qrcode'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
 import { useAuth } from '../../context/AuthContext'
-import bookingService from '../../services/customer/bookingService'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 
 function CustomerBooking() {
   const [selectedService, setSelectedService] = useState(null)
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedTime, setSelectedTime] = useState('')
   const [selectedBarber, setSelectedBarber] = useState(null)
-  const [services, setServices] = useState([])
-  const [barbers, setBarbers] = useState([])
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [bookingResult, setBookingResult] = useState(null)
   const [qrCodeUrl, setQrCodeUrl] = useState('')
   const navigate = useNavigate()
   const { user, isAuthenticated } = useAuth()
+
+  // Convex queries and mutations
+  const services = useQuery(api.services.services.getActiveServices)
+  const barbers = useQuery(api.services.barbers.getActiveBarbers)
+  const createBookingMutation = useMutation(api.services.bookings.createBooking)
+
+  const loading = services === undefined || barbers === undefined
 
   const availableTimes = [
     '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -31,26 +36,7 @@ function CustomerBooking() {
       navigate('/auth/login')
       return
     }
-    loadInitialData()
   }, [isAuthenticated, navigate])
-
-  const loadInitialData = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      const [servicesData, barbersData] = await Promise.all([
-        bookingService.getServices(),
-        bookingService.getBarbers()
-      ])
-      setServices(servicesData || [])
-      setBarbers(barbersData || [])
-    } catch (err) {
-      setError('Failed to load booking data. Please try again.')
-      console.error('Error loading booking data:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const formatPrice = (price) => {
     return `₱${parseFloat(price).toFixed(2)}`
@@ -100,15 +86,18 @@ function CustomerBooking() {
         ...(selectedBarber && { barber: selectedBarber.id })
       }
 
-      const result = await bookingService.createBooking(bookingData)
-      
-      if (result.success) {
-        setBookingResult(result.data)
-        if (result.data.booking_code) {
-          await generateQRCode(result.data.booking_code)
-        }
-      } else {
-        setError(result.error || 'Failed to create booking')
+      const result = await createBookingMutation({
+        customer: user.id,
+        service: selectedService._id,
+        barber: selectedBarber ? selectedBarber._id : undefined,
+        date: selectedDate,
+        time: formattedTime,
+        status: 'pending'
+      })
+
+      setBookingResult(result)
+      if (result.booking_code) {
+        await generateQRCode(result.booking_code)
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.')
@@ -130,10 +119,10 @@ function CustomerBooking() {
 
   if (loading && !services.length) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F4F0E6' }}>
+      <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4" style={{ borderColor: '#F68B24' }}></div>
-          <p style={{ color: '#36454F' }}>Loading booking options...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF8C42] mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading booking options...</p>
         </div>
       </div>
     )
@@ -141,72 +130,78 @@ function CustomerBooking() {
 
   if (bookingResult) {
     return (
-      <div className="min-h-screen" style={{ backgroundColor: '#F4F0E6' }}>
-        <header style={{ backgroundColor: '#36454F' }} className="shadow-sm sticky top-0 z-10">
+      <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
+        {/* Subtle background pattern */}
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
+        </div>
+        
+        <header className="bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30 shadow-sm sticky top-0 z-10">
           <div className="px-4 py-4 flex items-center">
-            <h1 className="text-xl font-bold" style={{ color: '#F4F0E6' }}>Booking Confirmed</h1>
+            <h1 className="text-xl font-bold text-white">Booking Confirmed</h1>
           </div>
         </header>
 
-        <div className="px-4 py-6 space-y-6">
-          <Card style={{ backgroundColor: 'white', border: '2px solid #22C55E' }}>
+        <div className="relative z-10 px-4 py-6 space-y-6">
+          <Card className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl border-2 border-green-500/50">
             <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">✓</span>
+              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl text-green-400">✓</span>
               </div>
-              <h2 className="text-xl font-bold text-green-600 mb-2">Booking Confirmed!</h2>
-              <p className="text-sm" style={{ color: '#8B8B8B' }}>Your appointment has been successfully booked</p>
+              <h2 className="text-xl font-bold text-green-400 mb-2">Booking Confirmed!</h2>
+              <p className="text-sm text-gray-400">Your appointment has been successfully booked</p>
             </div>
 
             <div className="space-y-3 mb-6">
               <div className="flex justify-between">
-                <span className="font-medium" style={{ color: '#36454F' }}>Booking Code:</span>
-                <span className="font-bold" style={{ color: '#F68B24' }}>{bookingResult.booking_code}</span>
+                <span className="font-medium text-gray-300">Booking Code:</span>
+                <span className="font-bold text-[#FF8C42]">{bookingResult.booking_code}</span>
               </div>
               <div className="flex justify-between">
-                <span style={{ color: '#36454F' }}>Service:</span>
-                <span style={{ color: '#36454F' }}>{selectedService.name}</span>
+                <span className="text-gray-300">Service:</span>
+                <span className="text-white">{selectedService.name}</span>
               </div>
               <div className="flex justify-between">
-                <span style={{ color: '#36454F' }}>Date:</span>
-                <span style={{ color: '#36454F' }}>{selectedDate}</span>
+                <span className="text-gray-300">Date:</span>
+                <span className="text-white">{selectedDate}</span>
               </div>
               <div className="flex justify-between">
-                <span style={{ color: '#36454F' }}>Time:</span>
-                <span style={{ color: '#36454F' }}>{formatTime(selectedTime)}</span>
+                <span className="text-gray-300">Time:</span>
+                <span className="text-white">{formatTime(selectedTime)}</span>
               </div>
               {selectedBarber && (
                 <div className="flex justify-between">
-                  <span style={{ color: '#36454F' }}>Barber:</span>
-                  <span style={{ color: '#36454F' }}>{selectedBarber.full_name}</span>
+                  <span className="text-gray-300">Barber:</span>
+                  <span className="text-white">{selectedBarber.full_name}</span>
                 </div>
               )}
-              <div className="flex justify-between font-bold pt-2" style={{ borderTop: '1px solid #E0E0E0' }}>
-                <span style={{ color: '#36454F' }}>Total:</span>
-                <span style={{ color: '#F68B24' }}>{formatPrice(selectedService.price)}</span>
+              <div className="flex justify-between font-bold pt-2 border-t border-[#555555]">
+                <span className="text-gray-300">Total:</span>
+                <span className="text-[#FF8C42]">{formatPrice(selectedService.price)}</span>
               </div>
             </div>
 
             {qrCodeUrl && (
               <div className="text-center mb-6">
-                <h3 className="font-semibold mb-3" style={{ color: '#36454F' }}>QR Code</h3>
-                <img src={qrCodeUrl} alt="Booking QR Code" className="mx-auto" />
-                <p className="text-xs mt-2" style={{ color: '#8B8B8B' }}>Show this QR code at the barbershop</p>
+                <h3 className="font-semibold mb-3 text-white">QR Code</h3>
+                <div className="bg-white p-4 rounded-xl inline-block">
+                  <img src={qrCodeUrl} alt="Booking QR Code" className="mx-auto" />
+                </div>
+                <p className="text-xs mt-2 text-gray-400">Show this QR code at the barbershop</p>
               </div>
             )}
 
             <div className="space-y-3">
               <Button 
                 onClick={() => navigate('/customer/dashboard')}
-                className="w-full"
-                style={{ backgroundColor: '#F68B24', color: 'white' }}
+                className="w-full bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors"
               >
                 Go to Dashboard
               </Button>
               <Button 
                 onClick={handleNewBooking}
-                className="w-full"
-                style={{ backgroundColor: 'white', color: '#36454F', border: '1px solid #E0E0E0' }}
+                className="w-full bg-[#444444] text-gray-300 border border-[#555555] hover:bg-[#555555] transition-colors"
               >
                 Book Another Appointment
               </Button>

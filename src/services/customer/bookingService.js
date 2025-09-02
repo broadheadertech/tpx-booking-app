@@ -486,6 +486,7 @@ class CustomerBookingService {
       voucherCode: apiBooking.voucherCode,
       voucher: apiBooking.voucher,
       voucher_code_in_voucher: apiBooking.voucher?.code,
+      discount_amount: apiBooking.discount_amount,
       total_amount: apiBooking.total_amount,
       totalAmount: apiBooking.totalAmount,
       payment: apiBooking.payment,
@@ -503,6 +504,8 @@ class CustomerBookingService {
       time: apiBooking.time,
       status: status,
       voucher_code: apiBooking.voucher_code || apiBooking.voucher?.code,
+      discount_amount: apiBooking.discount_amount,
+      total_amount: apiBooking.service.price - apiBooking.discount_amount,
       total_amount:
         apiBooking.total_amount ||
         apiBooking.totalAmount ||

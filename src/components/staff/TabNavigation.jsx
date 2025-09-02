@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { LayoutDashboard, Users, Calendar, Scissors, Gift, BarChart3, UserCheck, CalendarDays, Package, Bell, ChevronDown, MoreHorizontal } from 'lucide-react'
 
-const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
+const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount = 0 }) => {
   const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false)
   const moreDropdownRef = useRef(null)
 
@@ -51,10 +51,10 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
   }
 
   return (
-    <div className="bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-2xl shadow-xl shadow-black/5 overflow-visible relative z-50">
+    <div className="bg-gradient-to-r from-[#1E1E1E] to-[#2A2A2A] backdrop-blur-sm border border-[#333333]/50 rounded-2xl shadow-xl shadow-black/20 overflow-visible relative z-50">
       {/* Desktop Navigation */}
       <nav className="hidden lg:flex items-center justify-center p-2">
-        <div className="flex items-center space-x-1 bg-gray-50/80 rounded-xl p-1">
+        <div className="flex items-center space-x-1 bg-[#333333]/30 rounded-xl p-1">
           {/* Primary Tabs */}
           {primaryTabs.map((tab) => {
             const IconComponent = getIconComponent(tab.id)
@@ -66,7 +66,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
                   className={`relative flex items-center space-x-3 px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-300 group min-w-0 ${
                     activeTab === tab.id
                       ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg shadow-[#FF8C42]/25 transform scale-105'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/80 hover:shadow-sm'
+                      : 'text-gray-300 hover:text-white hover:bg-[#444444]/50 hover:shadow-sm'
                   }`}
                 >
                   {/* Active indicator */}
@@ -77,16 +77,16 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
                   <div className={`flex items-center justify-center w-5 h-5 transition-all duration-200 ${
                     activeTab === tab.id
                       ? 'text-white'
-                      : 'text-gray-500 group-hover:text-[#FF8C42]'
+                      : 'text-gray-400 group-hover:text-[#FF8C42]'
                   }`}>
                     <IconComponent className="w-5 h-5" />
                   </div>
                   <span className="font-semibold whitespace-nowrap">{tab.label}</span>
 
                   {/* Badge for bookings */}
-                  {tab.badge > 0 && (
+                  {tab.id === 'bookings' && incompleteBookingsCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                      {tab.badge > 99 ? '99+' : tab.badge}
+                      {incompleteBookingsCount > 99 ? '99+' : incompleteBookingsCount}
                     </span>
                   )}
                 </button>

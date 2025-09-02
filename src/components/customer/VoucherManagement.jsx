@@ -2,17 +2,15 @@ import React, { useState, useEffect, useRef } from 'react'
 import { ArrowLeft, Gift, Clock, CheckCircle, XCircle, QrCode, Ticket, Plus, Camera, Upload, Keyboard, X, RefreshCw } from 'lucide-react'
 import QRCode from 'qrcode'
 import jsQR from 'jsqr'
-import voucherService from '../../services/customer/voucherService'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
 
 const VoucherManagement = ({ onBack }) => {
   const { user, isAuthenticated } = useAuth()
-  const [vouchers, setVouchers] = useState([])
   const [selectedVoucher, setSelectedVoucher] = useState(null)
   const [showQRCode, setShowQRCode] = useState(false)
-  const [loading, setLoading] = useState(true)
   const [claimLoading, setClaimLoading] = useState(false)
-  const [error, setError] = useState(null)
   const [showClaimModal, setShowClaimModal] = useState(false)
   const [claimCode, setClaimCode] = useState('')
   const [claimMethod, setClaimMethod] = useState('code') // 'code', 'scan', 'upload'
@@ -26,70 +24,38 @@ const VoucherManagement = ({ onBack }) => {
   const videoRef = useRef(null)
   const canvasRef = useRef(null)
 
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      loadVouchers()
-    }
-  }, [isAuthenticated, user])
+  // Convex queries - only call when user exists
+  const vouchers = user?.id ? useQuery(api.services.vouchers.getVouchersByUser, { userId: user.id }) : undefined
+  const debugData = user?.id ? useQuery(api.services.vouchers.debugUserVouchers, { userId: user.id }) : undefined
+  const loading = vouchers === undefined && user?.id // Loading when user exists but vouchers not loaded yet
+  const error = null // No global error state needed for vouchers - handled individually
 
-  const loadVouchers = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      
-      // Verify user is authenticated
-      if (!isAuthenticated || !user) {
-        setError('Please log in to view your vouchers')
-        return
-      }
-      
-      // Get user-specific vouchers only
-      const userVouchers = await voucherService.getUserVouchers()
-      const voucherList = Array.isArray(userVouchers) ? userVouchers : userVouchers.results || []
-      setVouchers(voucherList)
-    } catch (error) {
-      console.error('Error loading vouchers:', error)
-      
-      // Handle specific error cases
-      if (error.message.includes('not authenticated')) {
-        setError('Authentication required. Please log in again.')
-      } else if (error.status === 500) {
-        setError('Server error. The voucher service is temporarily unavailable.')
-      } else if (error.status === 404) {
-        setError('Voucher service not found. Please contact support.')
-      } else if (error.message.includes('Failed to load your vouchers')) {
-        setError('Unable to load vouchers. Please check your connection and try again.')
-      } else {
-        setError('Failed to load vouchers. Please try again later.')
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Convex mutations
+  const claimVoucher = useMutation(api.services.vouchers.claimVoucher)
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'claimed':
-        return <CheckCircle className="w-5 h-5 text-green-500" />
+      case 'available':
+        return <CheckCircle className="w-5 h-5 text-green-400" />
       case 'redeemed':
-        return <Gift className="w-5 h-5 text-blue-500" />
+        return <Gift className="w-5 h-5 text-blue-400" />
       case 'expired':
-        return <XCircle className="w-5 h-5 text-red-500" />
+        return <XCircle className="w-5 h-5 text-red-400" />
       default:
-        return <Clock className="w-5 h-5 text-gray-500" />
+        return <Clock className="w-5 h-5 text-gray-400" />
     }
   }
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'claimed':
-        return 'bg-green-50 text-green-700 border-green-200'
+      case 'available':
+        return 'bg-green-500/20 text-green-400 border-green-500/30'
       case 'redeemed':
-        return 'bg-blue-50 text-blue-700 border-blue-200'
+        return 'bg-blue-500/20 text-blue-400 border-blue-500/30'
       case 'expired':
-        return 'bg-red-50 text-red-700 border-red-200'
+        return 'bg-red-500/20 text-red-400 border-red-500/30'
       default:
-        return 'bg-gray-50 text-gray-700 border-gray-200'
+        return 'bg-gray-500/20 text-gray-400 border-gray-500/30'
     }
   }
 
@@ -107,14 +73,18 @@ const VoucherManagement = ({ onBack }) => {
   }
 
   const formatValue = (voucher) => {
-    return voucherService.formatVoucherValue(voucher.value)
+    return `₱${parseFloat(voucher.value).toFixed(2)}`
   }
 
   const getVoucherStatus = (voucher) => {
-    // Based on the actual API response: {code, value, status, assigned_at, redeemed_at, expired}
-    if (voucher.expired) return 'expired'
-    if (voucher.status === 'assigned') return 'claimed' // Show "claimed" for assigned status
+    // Priority: expired first, then assignment status
+    if (voucher.isExpired) return 'expired'
+    
+    // Map assignment status to display status
+    if (voucher.status === 'assigned') return 'available' // Show "available" for assigned status
     if (voucher.status === 'redeemed') return 'redeemed'
+    
+    // Fallback
     return voucher.status || 'unknown'
   }
 
@@ -142,61 +112,81 @@ const VoucherManagement = ({ onBack }) => {
     })
   }
 
-  const handleVoucherClick = (voucher) => {
-    // Allow all vouchers to show QR codes, regardless of status
-    setSelectedVoucher(voucher)
-    setShowQRCode(true)
+  // Process vouchers into categories (after helper functions are defined)
+  const availableVouchers = vouchers ? vouchers.filter(v => {
+    // Show assigned (available) vouchers that are not expired
+    return v.status === 'assigned' && !v.isExpired
+  }) : []
+
+  const redeemedVouchers = vouchers ? vouchers.filter(v => {
+    // Show redeemed vouchers regardless of expiry
+    return v.status === 'redeemed'
+  }) : []
+
+  const expiredVouchers = vouchers ? vouchers.filter(v => {
+    // Show expired vouchers (regardless of assignment status)
+    return v.isExpired
+  }) : []
+
+  // Debug logging
+  console.log('=== VoucherManagement Debug ===')
+  console.log('User ID:', user?.id, typeof user?.id)
+  console.log('Raw vouchers from API:', vouchers)
+  console.log('Vouchers count:', vouchers?.length || 0)
+  console.log('Categorized vouchers:', {
+    available: availableVouchers.length,
+    redeemed: redeemedVouchers.length,
+    expired: expiredVouchers.length
+  })
+  console.log('Debug data from API:', debugData)
+
+  // Sample voucher structure debug
+  if (vouchers && vouchers.length > 0) {
+    console.log('First voucher structure:', vouchers[0])
   }
 
   const handleClaimVoucher = async (voucherCode, voucherValue = null) => {
     try {
       setClaimLoading(true)
       
-      // Only assign/claim the voucher using the redeem endpoint (no confirmation step)
-      const claimResult = await voucherService.redeemVoucher(voucherCode, null, voucherValue)
-      
-      if (claimResult.success) {
-        // Reload vouchers to reflect the changes
-        await loadVouchers()
-        setShowQRCode(false)
-        setSelectedVoucher(null)
-        // Show success message with voucher details
-        const value = claimResult.data?.value || voucherValue || 'Unknown'
-        setNotification({
-          type: 'success',
-          title: '🎉 Voucher Claimed Successfully!',
-          message: `Code: ${voucherCode}\nValue: ₱${parseFloat(value).toLocaleString()}\nYou can now use this voucher at the barbershop.`
-        })
-      } else {
-        // Handle assignment/claim error
-        let errorMessage = claimResult.error
+      // Claim the voucher using Convex (assign it to the user)
+      const result = await claimVoucher({
+        code: voucherCode,
+        user_id: user.id
+      })
+
+      // Show success message with voucher details
+      const value = result.voucher.value || voucherValue || 'Unknown'
+      setNotification({
+        type: 'success',
+        title: '🎉 Voucher Claimed Successfully!',
+        message: `Code: ${voucherCode}\nValue: ₱${parseFloat(value).toLocaleString()}\nYou can now use this voucher at the barbershop.`
+      })
+
+      setShowQRCode(false)
+      setSelectedVoucher(null)
+      setShowClaimModal(false)
+      setClaimCode('')
+    } catch (error) {
+        // Handle claim error
+        let errorMessage = error.message
         if (errorMessage.includes('expired')) {
           errorMessage = '⏰ This voucher has expired'
-        } else if (errorMessage.includes('already assigned')) {
+        } else if (errorMessage.includes('already') || errorMessage.includes('assigned')) {
           errorMessage = '✅ This voucher has already been claimed'
-        } else if (errorMessage.includes('Invalid voucher')) {
+        } else if (errorMessage.includes('Invalid') || errorMessage.includes('not found')) {
           errorMessage = '❌ Invalid voucher code. Please check and try again.'
-        } else if (errorMessage.includes('usage limit')) {
+        } else if (errorMessage.includes('maximum') || errorMessage.includes('limit')) {
           errorMessage = '🚫 This voucher has reached its usage limit'
-        } else if (errorMessage.includes('Username is required')) {
-          errorMessage = '❌ User authentication error. Please log in again.'
-        } else if (errorMessage.includes('Target user not found')) {
-          errorMessage = '❌ User account not found. Please log in again.'
+        } else {
+          errorMessage = errorMessage || 'Failed to claim voucher. Please try again.'
         }
         setNotification({
           type: 'error',
           title: 'Claim Failed',
           message: errorMessage
         })
-      }
-    } catch (error) {
-      console.error('Error claiming voucher:', error)
-      setNotification({
-        type: 'error',
-        title: 'Network Error',
-        message: 'Please check your connection and try again.'
-      })
-    } finally {
+      } finally {
       setClaimLoading(false)
     }
   }
@@ -216,15 +206,8 @@ const VoucherManagement = ({ onBack }) => {
       setValidationError(null)
       setValidatedVoucher(null)
       
-      const result = await voucherService.validateVoucherCode(claimCode.trim())
-      
-      if (result.success) {
-        setValidatedVoucher(result.data)
-        setValidationError(null)
-      } else {
-        setValidationError(result.error)
-        setValidatedVoucher(null)
-      }
+      // Just try to claim the voucher directly
+      await handleClaimVoucher(claimCode.trim())
     } catch (error) {
       console.error('Error validating voucher:', error)
       setValidationError('Failed to validate voucher. Please try again.')
@@ -248,24 +231,6 @@ const VoucherManagement = ({ onBack }) => {
     }
   }
 
-  const handleClaimByCode = async () => {
-    if (!claimCode.trim()) {
-      setNotification({
-        type: 'warning',
-        title: 'Missing Code',
-        message: 'Please enter a voucher code'
-      })
-      return
-    }
-    
-    try {
-      await handleClaimVoucher(claimCode.trim())
-      setClaimCode('')
-      setShowClaimModal(false)
-    } catch (error) {
-      // Error is already handled in handleClaimVoucher
-    }
-  }
 
   const handleFileUpload = async (event) => {
     const file = event.target.files[0]
@@ -480,10 +445,6 @@ const VoucherManagement = ({ onBack }) => {
     }
   }
 
-  // Filter vouchers by status
-  const claimedVouchers = vouchers.filter(v => getVoucherStatus(v) === 'claimed')
-  const redeemedVouchers = vouchers.filter(v => getVoucherStatus(v) === 'redeemed')
-  const expiredVouchers = vouchers.filter(v => getVoucherStatus(v) === 'expired')
 
   // Notification Modal Component
   const NotificationModal = ({ notification, onClose }) => {
@@ -551,55 +512,56 @@ const VoucherManagement = ({ onBack }) => {
   }
 
   return (
-    <div className="min-h-screen" style={{backgroundColor: '#F4F0E6'}}>
+    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
+      </div>
+      
       {/* Header */}
-      <div className="sticky top-0 z-40 shadow-lg" style={{backgroundColor: '#36454F'}}>
+      <div className="sticky top-0 z-40 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30 shadow-lg">
         <div className="max-w-md mx-auto px-4">
-          <div className="flex items-center justify-between py-2.5">
+          <div className="flex items-center justify-between py-4">
             <button
               onClick={onBack}
-              className="flex items-center space-x-1.5 px-2.5 py-1.5 text-white font-semibold rounded-lg transition-all duration-200 touch-manipulation"
-              onMouseEnter={(e) => e.target.style.color = '#F68B24'}
-              onMouseLeave={(e) => e.target.style.color = 'white'}
+              className="flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-xl hover:bg-white/10 transition-all duration-200 touch-manipulation"
             >
-              <ArrowLeft className="w-4 h-4" />
-              <span className="text-xs">Back</span>
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm">Back</span>
             </button>
             <div className="text-right">
-              <p className="text-base font-bold text-white">My Vouchers</p>
-              <p className="text-[10px]" style={{color: '#F68B24'}}>{claimedVouchers.length + redeemedVouchers.length} total</p>
+              <p className="text-lg font-bold text-white">My Vouchers</p>
+              <p className="text-xs text-[#FF8C42]">{availableVouchers.length + redeemedVouchers.length} total</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-md mx-auto px-4 py-4">
+      <div className="relative z-10 max-w-md mx-auto px-4 py-6">
         {/* Title & Actions */}
-        <div className="text-center mb-3">
-          <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2 shadow-lg" style={{backgroundColor: '#F68B24'}}>
-            <Gift className="w-5 h-5 text-white" />
+        <div className="text-center mb-6">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center mx-auto mb-3 shadow-lg">
+            <Gift className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-lg font-black mb-1" style={{color: '#36454F'}}>Your Vouchers</h1>
-          <p className="text-xs font-medium mb-3" style={{color: '#8B8B8B'}}>View and manage your vouchers</p>
+          <h1 className="text-xl font-black mb-2 text-white">Your Vouchers</h1>
+          <p className="text-sm font-medium mb-4 text-gray-400">View and manage your vouchers</p>
 
           {/* Action Buttons */}
-          <div className="flex space-x-2 mb-3">
+          <div className="flex space-x-3 mb-4">
             <button
               onClick={() => setShowClaimModal(true)}
-              className="flex-1 py-2.5 text-white font-bold rounded-lg transition-all duration-200 shadow-lg flex items-center justify-center space-x-1 touch-manipulation"
-              style={{backgroundColor: '#F68B24'}}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
+              className="flex-1 py-3 text-white font-bold rounded-xl bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-all duration-200 shadow-lg flex items-center justify-center space-x-2 touch-manipulation"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span className="text-xs">Claim New</span>
+              <Plus className="w-4 h-4" />
+              <span className="text-sm">Claim New</span>
             </button>
             <button
-              onClick={loadVouchers}
+              onClick={() => window.location.reload()}
               disabled={loading}
-              className="px-3 py-2.5 bg-gray-600 text-white font-bold rounded-lg transition-all duration-200 hover:bg-gray-700 shadow-lg flex items-center justify-center disabled:opacity-50 touch-manipulation"
+              className="px-4 py-3 bg-[#444444] text-gray-300 font-bold rounded-xl transition-all duration-200 hover:bg-[#555555] shadow-lg flex items-center justify-center disabled:opacity-50 touch-manipulation"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
@@ -607,24 +569,24 @@ const VoucherManagement = ({ onBack }) => {
         {/* Loading State */}
         {loading && (
           <div className="text-center py-12">
-            <div className="rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4" style={{backgroundColor: '#F68B24', opacity: 0.1}}>
-              <Gift className="w-8 h-8" style={{color: '#F68B24'}} />
+            <div className="rounded-full w-16 h-16 bg-[#FF8C42]/20 flex items-center justify-center mx-auto mb-4">
+              <Gift className="w-8 h-8 text-[#FF8C42]" />
             </div>
-            <p className="text-sm" style={{color: '#8B8B8B'}}>Loading vouchers...</p>
+            <p className="text-sm text-gray-400">Loading vouchers...</p>
           </div>
         )}
 
         {/* Error State */}
         {error && (
           <div className="text-center py-12">
-            <div className="rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4" style={{backgroundColor: '#dc3545', opacity: 0.1}}>
-              <XCircle className="w-8 h-8 text-red-500" />
+            <div className="rounded-full w-16 h-16 bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+              <XCircle className="w-8 h-8 text-red-400" />
             </div>
-            <p className="text-sm text-red-600 mb-4">{error}</p>
+            <p className="text-sm text-red-400 mb-4">{error}</p>
             <div className="space-y-2">
               <button 
-                onClick={loadVouchers}
-                className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors mr-2"
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg font-medium hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors mr-2"
               >
                 Try Again
               </button>
@@ -644,16 +606,16 @@ const VoucherManagement = ({ onBack }) => {
         )}
 
         {/* Claimed Vouchers */}
-        {!loading && !error && claimedVouchers.length > 0 && (
+        {!loading && !error && availableVouchers.length > 0 && (
           <div className="space-y-2 mb-3">
             <h2 className="text-base font-black flex items-center px-2" style={{color: '#36454F'}}>
               <CheckCircle className="w-3.5 h-3.5 text-green-500 mr-2" />
-              Claimed Vouchers ({claimedVouchers.length})
+              Available Vouchers ({availableVouchers.length})
             </h2>
             <div className="space-y-2">
-              {claimedVouchers.map((voucher) => (
+              {availableVouchers.map((voucher) => (
                 <div
-                  key={voucher.id}
+                  key={voucher._id}
                   className="bg-white rounded-lg p-3 shadow-sm touch-manipulation" style={{border: '1px solid #E0E0E0'}}
                 >
                   {/* Voucher Header */}
@@ -668,7 +630,7 @@ const VoucherManagement = ({ onBack }) => {
                     <div className="flex items-center space-x-1 flex-shrink-0">
                       {getStatusIcon(getVoucherStatus(voucher))}
                       <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${getStatusColor(getVoucherStatus(voucher))}`}>
-                        CLAIMED
+                        {getVoucherStatus(voucher).toUpperCase()}
                       </span>
                     </div>
                   </div>
@@ -692,10 +654,10 @@ const VoucherManagement = ({ onBack }) => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${voucher.expired || isExpiringSoon(voucher.expires_at) ? 'bg-red-500' : 'bg-blue-500'}`}></div>
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${voucher.isExpired || isExpiringSoon(voucher.expires_at) ? 'bg-red-500' : 'bg-blue-500'}`}></div>
                       <div className="min-w-0">
                         <p className="text-[10px]" style={{color: '#8B8B8B'}}>Expires</p>
-                        <p className={`text-xs font-bold truncate ${voucher.expired || isExpiringSoon(voucher.expires_at) ? 'text-red-600' : 'text-blue-600'}`}>
+                        <p className={`text-xs font-bold truncate ${voucher.isExpired || isExpiringSoon(voucher.expires_at) ? 'text-red-600' : 'text-blue-600'}`}>
                           {formatExpiryDate(voucher.expires_at)}
                         </p>
                       </div>
@@ -733,7 +695,7 @@ const VoucherManagement = ({ onBack }) => {
             <div className="space-y-2">
               {redeemedVouchers.map((voucher) => (
                 <div
-                  key={voucher.id}
+                  key={voucher._id}
                   className="bg-white rounded-lg p-3 shadow-sm opacity-75 touch-manipulation" style={{border: '1px solid #E0E0E0'}}
                 >
                   {/* Voucher Header */}
@@ -772,10 +734,10 @@ const VoucherManagement = ({ onBack }) => {
                       </div>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${voucher.expired || isExpiringSoon(voucher.expires_at) ? 'bg-red-500' : 'bg-blue-500'}`}></div>
+                      <div className={`w-2 h-2 rounded-full flex-shrink-0 ${voucher.isExpired || isExpiringSoon(voucher.expires_at) ? 'bg-red-500' : 'bg-blue-500'}`}></div>
                       <div className="min-w-0">
                         <p className="text-[10px]" style={{color: '#8B8B8B'}}>Expired</p>
-                        <p className={`text-xs font-bold truncate ${voucher.expired || isExpiringSoon(voucher.expires_at) ? 'text-red-600' : 'text-blue-600'}`}>
+                        <p className={`text-xs font-bold truncate ${voucher.isExpired || isExpiringSoon(voucher.expires_at) ? 'text-red-600' : 'text-blue-600'}`}>
                           {formatExpiryDate(voucher.expires_at)}
                         </p>
                       </div>
@@ -802,7 +764,7 @@ const VoucherManagement = ({ onBack }) => {
             <div className="space-y-2">
               {expiredVouchers.map((voucher) => (
                 <div
-                  key={voucher.id}
+                  key={voucher._id}
                   className="bg-white rounded-lg p-3 shadow-sm opacity-50 touch-manipulation" style={{border: '1px solid #E0E0E0'}}
                 >
                   {/* Voucher Header */}
@@ -860,7 +822,7 @@ const VoucherManagement = ({ onBack }) => {
         )}
 
         {/* Empty State */}
-        {!loading && !error && claimedVouchers.length === 0 && redeemedVouchers.length === 0 && expiredVouchers.length === 0 && (
+        {!loading && !error && availableVouchers.length === 0 && redeemedVouchers.length === 0 && expiredVouchers.length === 0 && (
           <div className="text-center py-8">
             <div className="rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-3" style={{backgroundColor: '#F68B24', opacity: 0.1}}>
               <Ticket className="w-6 h-6" style={{color: '#F68B24'}} />
@@ -1235,7 +1197,7 @@ const QRCodeDisplay = ({ voucher }) => {
   
   // Generate QR code data for voucher
   const qrData = JSON.stringify({
-    voucherId: voucher.id,
+    voucherId: voucher._id,
     code: voucher.code,
     username: getUsername(),
     value: voucher.value,

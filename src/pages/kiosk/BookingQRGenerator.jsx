@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import QRCode from 'qrcode'
 import { QrCode, RefreshCw, CheckCircle } from 'lucide-react'
-import bookingService from '../../services/customer/bookingService.js'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 
 function BookingQRGenerator() {
   const [selectedService, setSelectedService] = useState(null)
@@ -9,10 +10,14 @@ function BookingQRGenerator() {
   const [bookingQrUrl, setBookingQrUrl] = useState('')
   const [isGeneratingBooking, setIsGeneratingBooking] = useState(false)
   const [bookingConfirmed, setBookingConfirmed] = useState(false)
-  const [services, setServices] = useState([])
-  const [barbers, setBarbers] = useState([])
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  // Convex queries and mutations
+  const services = useQuery(api.services.services.getActiveServices)
+  const barbers = useQuery(api.services.barbers.getActiveBarbers)
+  const createBookingMutation = useMutation(api.services.bookings.createBooking)
+
+  const loading = services === undefined || barbers === undefined
 
   const resetBooking = () => {
     setSelectedService(null)
@@ -21,30 +26,7 @@ function BookingQRGenerator() {
     setBookingConfirmed(false)
   }
 
-  // Load real data from APIs
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        
-        const [servicesData, barbersData] = await Promise.all([
-          bookingService.getServices(),
-          bookingService.getBarbers()
-        ])
-        
-        setServices(servicesData)
-        setBarbers(barbersData)
-      } catch (err) {
-        console.error('Error loading booking data:', err)
-        setError('Failed to load services and barbers. Please try again.')
-      } finally {
-        setLoading(false)
-      }
-    }
 
-    loadData()
-  }, [])
 
   const generateBookingQR = async () => {
     if (!selectedService) return
@@ -62,7 +44,15 @@ function BookingQRGenerator() {
         notes: `Kiosk booking for ${selectedService.name}`
       }
 
-      const booking = await bookingService.createBooking(bookingData)
+      const booking = await createBookingMutation({
+        customer: undefined, // Kiosk booking - no customer account
+        service: selectedService._id,
+        barber: selectedBarber || undefined,
+        date: bookingData.date,
+        time: bookingData.time,
+        status: 'pending',
+        notes: bookingData.notes
+      })
       
       // Generate QR code with booking code
       const qrData = booking.booking_code

@@ -1,14 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Gift, Calendar, User, DollarSign, CheckCircle, XCircle, Clock, Search, Filter, Plus, RotateCcw, QrCode, Download, Printer, Copy, Mail } from 'lucide-react'
+import { Gift, Calendar, User, DollarSign, CheckCircle, XCircle, Clock, Search, Filter, Plus, RotateCcw, QrCode, Download, Printer, Copy, Mail, Trash2, Edit, Users, Grid, List } from 'lucide-react'
 import QRCode from 'qrcode'
 import SendVoucherModal from './SendVoucherModal'
+import ViewVoucherUsersModal from './ViewVoucherUsersModal'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 
-const VoucherManagement = ({ vouchers = [], onRefresh }) => {
+const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('created_at')
   const [showQRCode, setShowQRCode] = useState(null)
   const [showSendModal, setShowSendModal] = useState(null)
+  const [showUsersModal, setShowUsersModal] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [viewMode, setViewMode] = useState('card') // 'card' or 'table'
+
+  // Convex queries and mutations
+  const deleteVoucher = useMutation(api.services.vouchers.deleteVoucher)
+  const assignedUsers = useQuery(
+    api.services.vouchers.getVoucherAssignedUsers,
+    showUsersModal ? { voucherId: showUsersModal._id } : "skip"
+  )
 
   const getStatusConfig = (voucher) => {
     if (voucher.redeemed) {
@@ -22,7 +35,8 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
         iconColor: 'text-green-500'
       }
     }
-    if (voucher.isExpired) {
+    const isExpired = voucher.expires_at < Date.now()
+    if (isExpired) {
       return {
         status: 'expired',
         label: 'Expired',
@@ -41,6 +55,21 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
       text: 'text-orange-700',
       border: 'border-orange-200',
       iconColor: 'text-orange-500'
+    }
+  }
+
+  const handleDelete = async (voucher) => {
+    if (!confirm(`Are you sure you want to delete voucher "${voucher.code}"?`)) return
+
+    setLoading(true)
+    try {
+      await deleteVoucher({ id: voucher._id })
+      onRefresh()
+    } catch (err) {
+      console.error('Failed to delete voucher:', err)
+      alert('Failed to delete voucher. Please try again.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -77,15 +106,15 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
     useEffect(() => {
       if (qrRef.current) {
         QRCode.toCanvas(qrRef.current, qrData, {
-          width: 40,
-          margin: 1,
+          width: 32,
+          margin: 0,
           color: { dark: '#36454F', light: '#ffffff' },
           errorCorrectionLevel: 'M'
         }, (err) => { if (err) console.error('Mini QR error:', err) })
       }
     }, [qrData])
 
-    return <canvas ref={qrRef} className="rounded" />
+    return <canvas ref={qrRef} className="rounded w-8 h-8" style={{ maxWidth: '32px', maxHeight: '32px' }} />
   }
 
   // QR Code Modal for full-size display
@@ -241,80 +270,80 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
     <div className="space-y-6">
       {/* Header with Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Total</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-sm font-medium text-gray-300">Total</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.total}</p>
             </div>
-            <Gift className="h-8 w-8 text-blue-500" />
+            <Gift className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
         
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Active</p>
-              <p className="text-2xl font-bold text-orange-600">{stats.active}</p>
+              <p className="text-sm font-medium text-gray-300">Active</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.active}</p>
             </div>
-            <Clock className="h-8 w-8 text-orange-500" />
+            <Clock className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Redeemed</p>
-              <p className="text-2xl font-bold text-green-600">{stats.redeemed}</p>
+              <p className="text-sm font-medium text-gray-300">Redeemed</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.redeemed}</p>
             </div>
-            <CheckCircle className="h-8 w-8 text-green-500" />
+            <CheckCircle className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Expired</p>
-              <p className="text-2xl font-bold text-red-600">{stats.expired}</p>
+              <p className="text-sm font-medium text-gray-300">Expired</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.expired}</p>
             </div>
-            <XCircle className="h-8 w-8 text-red-500" />
+            <XCircle className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Total Value</p>
-              <p className="text-2xl font-bold text-gray-900">₱{stats.totalValue.toFixed(0)}</p>
+              <p className="text-sm font-medium text-gray-300">Total Value</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">₱{stats.totalValue.toFixed(0)}</p>
             </div>
-            <DollarSign className="h-8 w-8 text-blue-500" />
+            <DollarSign className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
       </div>
 
       {/* Controls */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
               <input
                 type="text"
                 placeholder="Search voucher code..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
               />
             </div>
 
             {/* Filter */}
             <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-gray-400" />
+              <Filter className="h-4 w-4 text-gray-500" />
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -327,7 +356,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             >
               <option value="created_at">Sort by Date</option>
               <option value="value">Sort by Value</option>
@@ -336,14 +365,41 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
           </div>
 
           <div className="flex items-center space-x-2">
+            {/* View Mode Toggle */}
+            <div className="flex items-center bg-[#1A1A1A] rounded-lg border border-[#444444] p-1">
+              <button
+                onClick={() => setViewMode('card')}
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === 'card'
+                    ? 'bg-orange-500 text-white'
+                    : 'text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                <Grid className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === 'table'
+                    ? 'bg-orange-500 text-white'
+                    : 'text-gray-400 hover:text-gray-300'
+                }`}
+              >
+                <List className="h-4 w-4" />
+              </button>
+            </div>
+            
             <button
               onClick={onRefresh}
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+              className="flex items-center space-x-2 px-4 py-2 bg-[#444444] text-gray-300 rounded-lg hover:bg-[#555555] transition-colors text-sm"
             >
               <RotateCcw className="h-4 w-4" />
               <span>Refresh</span>
             </button>
-            <button className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm">
+            <button 
+              onClick={onCreateVoucher}
+              className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
+            >
               <Plus className="h-4 w-4" />
               <span>New Voucher</span>
             </button>
@@ -351,101 +407,244 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
         </div>
       </div>
 
-      {/* Vouchers Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredVouchers.map((voucher) => {
-          const statusConfig = getStatusConfig(voucher)
-          const StatusIcon = statusConfig.icon
+      {/* Vouchers Display */}
+      {viewMode === 'card' ? (
+        /* Card View */
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredVouchers.map((voucher) => {
+            const statusConfig = getStatusConfig(voucher)
+            const StatusIcon = statusConfig.icon
 
-          return (
-            <div
-              key={voucher.id}
-              className={`bg-white rounded-lg border-2 ${statusConfig.border} shadow-sm hover:shadow-md transition-shadow p-4`}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 rounded-lg bg-orange-50 border-2 border-orange-200 flex items-center justify-center w-12 h-12">
-                    <MiniQRCode voucher={voucher} />
+            return (
+              <div
+                key={voucher._id}
+                className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm hover:shadow-lg transition-all duration-200 p-4"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center w-12 h-12">
+                      <MiniQRCode voucher={voucher} />
+                    </div>
+                    <div>
+                      <p className="font-mono text-sm font-bold text-white">{voucher.code}</p>
+                      <p className="text-xs text-gray-400">Points: {voucher.points_required}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-mono text-sm font-bold text-gray-900">{voucher.code}</p>
-                    <p className="text-xs text-gray-500">ID: {voucher.id}</p>
+                  <div className="flex items-center space-x-2">
+                    <div className={`flex items-center space-x-1 px-2 py-1 rounded-full ${
+                      statusConfig.status === 'active' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                      statusConfig.status === 'redeemed' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                      'bg-red-500/20 text-red-400 border border-red-500/30'
+                    }`}>
+                      <StatusIcon className="h-3 w-3" />
+                      <span className="text-xs font-medium">
+                        {statusConfig.label}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleDelete(voucher)}
+                      className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded transition-colors"
+                      title="Delete Voucher"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <div className={`flex items-center space-x-1 px-2 py-1 rounded-full ${statusConfig.bg} ${statusConfig.border} border`}>
-                    <StatusIcon className={`h-3 w-3 ${statusConfig.iconColor}`} />
-                    <span className={`text-xs font-medium ${statusConfig.text}`}>
-                      {statusConfig.label}
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-400">Value</span>
+                    <span className="text-lg font-bold text-[#FF8C42]">₱{parseFloat(voucher.value).toFixed(2)}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-400">Points Required</span>
+                    <span className="text-sm font-medium text-white">{voucher.points_required}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-400">Assignments</span>
+                    <span className="text-sm font-medium text-white">
+                      {voucher.assignedCount || 0}/{voucher.max_uses}
+                      {voucher.redeemedCount > 0 && (
+                        <span className="text-green-400 ml-1">({voucher.redeemedCount} redeemed)</span>
+                      )}
                     </span>
                   </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-400">Created</span>
+                    <span className="text-sm text-gray-300">
+                      {new Date(voucher.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-400">Expires</span>
+                    <span className={`text-sm ${voucher.expires_at < Date.now() ? 'text-red-400' : 'text-gray-300'}`}>
+                      {new Date(voucher.expires_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-[#444444]/30">
+                  {/* Always show View Users button */}
                   <button
-                    onClick={() => setShowSendModal(voucher)}
-                    className="inline-flex items-center px-2.5 py-1 border border-orange-300 text-xs font-medium rounded text-orange-700 bg-orange-50 hover:bg-orange-100"
-                    title="Send via Email"
+                    onClick={() => setShowUsersModal(voucher)}
+                    className="w-full mb-2 px-3 py-2 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg hover:bg-blue-500/30 transition-colors text-sm font-medium flex items-center justify-center"
                   >
-                    <Mail className="h-3 w-3 mr-1" /> Send
+                    <Users className="h-4 w-4 mr-2" /> View Assigned Users
                   </button>
+                  
+                  {/* Show action buttons only for active vouchers */}
+                  {!voucher.redeemed && voucher.expires_at >= Date.now() && (
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => setShowQRCode(voucher)}
+                        className="flex-1 px-3 py-2 bg-[#444444] text-gray-300 rounded-lg hover:bg-[#555555] transition-colors text-sm font-medium flex items-center justify-center"
+                      >
+                        <QrCode className="h-4 w-4 mr-2" /> View QR
+                      </button>
+                      <button
+                        onClick={() => setShowSendModal(voucher)}
+                        className="flex-1 px-3 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors text-sm font-semibold flex items-center justify-center"
+                      >
+                        <Mail className="h-4 w-4 mr-2" /> Send Email
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Value</span>
-                  <span className="text-lg font-bold text-gray-900">{voucher.formattedValue}</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Points Required</span>
-                  <span className="text-sm font-medium text-gray-900">{voucher.points_required}</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">User</span>
-                  <span className="text-sm font-medium text-gray-900">User {voucher.user}</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Created</span>
-                  <span className="text-sm text-gray-600">
-                    {new Date(voucher.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Expires</span>
-                  <span className={`text-sm ${voucher.isExpired ? 'text-red-600' : 'text-gray-600'}`}>
-                    {new Date(voucher.expires_at).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-
-              {!voucher.redeemed && !voucher.isExpired && (
-                <div className="mt-4 pt-3 border-t border-gray-200 flex space-x-2">
-                  <button
-                    onClick={() => setShowQRCode(voucher)}
-                    className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium flex items-center justify-center"
-                  >
-                    <QrCode className="h-4 w-4 mr-2" /> View QR
-                  </button>
-                  <button
-                    onClick={() => setShowSendModal(voucher)}
-                    className="flex-1 px-3 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg hover:from-orange-600 hover:to-amber-600 transition-colors text-sm font-semibold flex items-center justify-center"
-                  >
-                    <Mail className="h-4 w-4 mr-2" /> Send Email
-                  </button>
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
+      ) : (
+        /* Table View */
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-[#444444]/30">
+              <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Voucher
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Value
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Points
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Usage
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Expires
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#444444]/30">
+                {filteredVouchers.map((voucher) => {
+                  const statusConfig = getStatusConfig(voucher)
+                  const StatusIcon = statusConfig.icon
+                  
+                  return (
+                    <tr key={voucher._id} className="hover:bg-[#333333]/50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="p-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg mr-3">
+                            <Gift className="h-4 w-4 text-white" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-mono font-bold text-white">{voucher.code}</div>
+                            <div className="text-sm text-gray-400">Created: {new Date(voucher.createdAt).toLocaleDateString()}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-bold text-[#FF8C42]">₱{parseFloat(voucher.value).toFixed(2)}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-300">{voucher.points_required}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-300">
+                          {voucher.assignedCount || 0}/{voucher.max_uses}
+                          {voucher.redeemedCount > 0 && (
+                            <div className="text-xs text-green-400">({voucher.redeemedCount} redeemed)</div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className={`flex items-center space-x-1 px-2 py-1 rounded-full w-fit ${
+                          statusConfig.status === 'active' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                          statusConfig.status === 'redeemed' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                          'bg-red-500/20 text-red-400 border border-red-500/30'
+                        }`}>
+                          <StatusIcon className="h-3 w-3" />
+                          <span className="text-xs font-medium">{statusConfig.label}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className={`text-sm ${voucher.expires_at < Date.now() ? 'text-red-400' : 'text-gray-300'}`}>
+                          {new Date(voucher.expires_at).toLocaleDateString()}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-2">
+                          <button
+                            onClick={() => setShowUsersModal(voucher)}
+                            className="p-2 text-gray-400 hover:text-blue-400 hover:bg-[#444444] rounded-lg transition-colors"
+                            title="View Users"
+                          >
+                            <Users className="h-4 w-4" />
+                          </button>
+                          {!voucher.redeemed && voucher.expires_at >= Date.now() && (
+                            <>
+                              <button
+                                onClick={() => setShowQRCode(voucher)}
+                                className="p-2 text-gray-400 hover:text-[#FF8C42] hover:bg-[#444444] rounded-lg transition-colors"
+                                title="View QR"
+                              >
+                                <QrCode className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => setShowSendModal(voucher)}
+                                className="p-2 text-gray-400 hover:text-[#FF8C42] hover:bg-[#444444] rounded-lg transition-colors"
+                                title="Send Email"
+                              >
+                                <Mail className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => handleDelete(voucher)}
+                            className="p-2 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {filteredVouchers.length === 0 && (
         <div className="text-center py-12">
-          <Gift className="mx-auto h-12 w-12 text-gray-300" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No vouchers found</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <Gift className="mx-auto h-12 w-12 text-gray-500" />
+          <h3 className="mt-2 text-sm font-medium text-white">No vouchers found</h3>
+          <p className="mt-1 text-sm text-gray-400">
             {searchTerm || filterStatus !== 'all' 
               ? 'Try adjusting your search or filter criteria.'
               : 'Get started by creating a new voucher.'
@@ -463,6 +662,15 @@ const VoucherManagement = ({ vouchers = [], onRefresh }) => {
           voucher={showSendModal} 
           isOpen={!!showSendModal}
           onClose={() => setShowSendModal(null)} 
+        />
+      )}
+
+      {showUsersModal && (
+        <ViewVoucherUsersModal
+          voucher={showUsersModal}
+          isOpen={!!showUsersModal}
+          onClose={() => setShowUsersModal(null)}
+          assignedUsers={assignedUsers || []}
         />
       )}
     </div>

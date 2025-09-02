@@ -6,29 +6,29 @@ const ManagementSection = ({ activeTab, data }) => {
   const renderCustomerCard = (item) => (
     <div>
       <div className="flex items-center space-x-4 mb-4">
-        <h3 className="text-xl font-black text-[#1A1A1A]">{item.name}</h3>
+        <h3 className="text-xl font-black text-white">{item.name}</h3>
         <span className={`px-4 py-2 text-sm font-bold rounded-full border-2 ${
           item.status === 'active' 
-            ? 'bg-green-50 text-green-700 border-green-200' 
-            : 'bg-[#FF8C42]/10 text-[#FF8C42] border-[#FF8C42]/20'
+            ? 'bg-green-400/20 text-green-400 border-green-400/30' 
+            : 'bg-[#FF8C42]/20 text-[#FF8C42] border-[#FF8C42]/30'
         }`}>
           {item.status}
         </span>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-sm">
         <div className="space-y-2">
-          <p className="font-black text-[#1A1A1A] text-base uppercase tracking-wide">Contact</p>
-          <p className="text-[#6B6B6B] font-medium">{item.email}</p>
-          <p className="text-[#6B6B6B] font-medium">{item.phone}</p>
+          <p className="font-black text-white text-base uppercase tracking-wide">Contact</p>
+          <p className="text-gray-400 font-medium">{item.email}</p>
+          <p className="text-gray-400 font-medium">{item.phone}</p>
         </div>
         <div className="space-y-2">
-          <p className="font-black text-[#1A1A1A] text-base uppercase tracking-wide">Loyalty</p>
+          <p className="font-black text-white text-base uppercase tracking-wide">Loyalty</p>
           <p className="text-[#FF8C42] font-black text-xl">{item.points} points</p>
-          <p className="text-[#6B6B6B] font-medium">{item.visits} total visits</p>
+          <p className="text-gray-400 font-medium">{item.visits} total visits</p>
         </div>
         <div className="space-y-2">
-          <p className="font-black text-[#1A1A1A] text-base uppercase tracking-wide">Last Visit</p>
-          <p className="text-[#6B6B6B] font-bold">{item.lastVisit}</p>
+          <p className="font-black text-white text-base uppercase tracking-wide">Last Visit</p>
+          <p className="text-gray-400 font-bold">{item.lastVisit}</p>
         </div>
       </div>
     </div>
@@ -165,7 +165,7 @@ const ManagementSection = ({ activeTab, data }) => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-3xl font-black text-[#1A1A1A] capitalize">
+        <h2 className="text-3xl font-black text-white capitalize">
           {activeTab} Management
         </h2>
         <button className="bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:shadow-lg text-white font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 flex items-center space-x-2 text-sm whitespace-nowrap w-auto inline-flex">
@@ -177,22 +177,22 @@ const ManagementSection = ({ activeTab, data }) => {
       {/* Grid Layout for Services */}
       {activeTab === 'services' ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {data.map((item) => (
+          {data?.map((item) => (
             <Card 
               key={item.id} 
-              className="p-8 bg-white border-2 border-[#F5F5F5] hover:border-[#FF8C42]/30 hover:shadow-2xl transition-all duration-300 rounded-3xl group hover:-translate-y-2"
+              className="p-8 bg-gradient-to-br from-[#2A2A2A] to-[#333333] border-2 border-[#444444]/50 hover:border-[#FF8C42]/30 hover:shadow-2xl transition-all duration-300 rounded-3xl group hover:-translate-y-2"
             >
               {renderCardContent(item)}
             </Card>
-          ))}
+          )) || []}
         </div>
       ) : (
         /* List Layout for Other Tabs */
         <div className="grid gap-6">
-          {data.map((item) => (
+          {data?.map((item) => (
             <Card 
               key={item.id} 
-              className="p-8 bg-white border-2 border-[#F5F5F5] hover:border-[#FF8C42]/30 hover:shadow-2xl transition-all duration-300 rounded-3xl group hover:-translate-y-1"
+              className="p-8 bg-gradient-to-br from-[#2A2A2A] to-[#333333] border-2 border-[#444444]/50 hover:border-[#FF8C42]/30 hover:shadow-2xl transition-all duration-300 rounded-3xl group hover:-translate-y-1"
             >
               <div className="flex justify-between items-start">
                 <div className="flex-1">
@@ -210,7 +210,7 @@ const ManagementSection = ({ activeTab, data }) => {
                 </div>
               </div>
             </Card>
-          ))}
+          )) || []}
         </div>
       )}
     </div>

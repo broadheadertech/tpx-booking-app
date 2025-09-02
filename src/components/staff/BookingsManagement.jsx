@@ -1,18 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode } from 'lucide-react'
-import { bookingsService, servicesService } from '../../services/staff'
-import barbersService from '../../services/staff/barbersService'
+import { useQuery, useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import QRCode from 'qrcode'
+import { createPortal } from 'react-dom'
 import CreateBookingModal from './CreateBookingModal'
 
-const BookingsManagement = ({ bookings = [], onRefresh }) => {
+const BookingsManagement = ({ onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('date')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingBooking, setEditingBooking] = useState(null)
-  const [services, setServices] = useState([])
-  const [barbers, setBarbers] = useState([])
   const [showQRCode, setShowQRCode] = useState(null)
   const [formData, setFormData] = useState({
     service: '',
@@ -22,31 +21,16 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [confirmModal, setConfirmModal] = useState({ show: false, booking: null, action: null })
 
-  useEffect(() => {
-    loadServices()
-    loadBarbers()
-  }, [])
+  // Convex queries
+  const bookings = useQuery(api.services.bookings.getAllBookings) || []
+  const services = useQuery(api.services.services.getAllServices) || []
+  const barbers = useQuery(api.services.barbers.getActiveBarbers) || []
 
-  const loadServices = async () => {
-    try {
-      const servicesData = await servicesService.getAllServices()
-      setServices(servicesData)
-    } catch (err) {
-      console.error('Failed to load services:', err)
-      setError('Failed to load services. Please refresh the page.')
-    }
-  }
-
-  const loadBarbers = async () => {
-    try {
-      const barbersData = await barbersService.getAllBarbers()
-      setBarbers(barbersData.filter(b => b.is_active))
-    } catch (err) {
-      console.error('Failed to load barbers:', err)
-      setError('Failed to load barbers. Please refresh the page.')
-    }
-  }
+  // Convex mutations
+  const updateBookingStatus = useMutation(api.services.bookings.updateBooking)
+  const deleteBookingMutation = useMutation(api.services.bookings.deleteBooking)
 
   const getStatusConfig = (status) => {
     switch (status) {
@@ -67,6 +51,15 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
           text: 'text-green-700',
           border: 'border-green-200',
           iconColor: 'text-green-500'
+        }
+      case 'completed':
+        return {
+          label: 'Completed',
+          icon: CheckCircle,
+          bg: 'bg-orange-50',
+          text: 'text-orange-700',
+          border: 'border-orange-200',
+          iconColor: 'text-orange-500'
         }
       case 'cancelled':
         return {
@@ -91,7 +84,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
 
   const filteredBookings = bookings
     .filter(booking => {
-      const serviceName = services.find(s => s.id === booking.service)?.name || ''
+      const serviceName = services.find(s => s._id === booking.service)?.name || ''
       const matchesSearch = 
         serviceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (booking.barber_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -107,11 +100,11 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
       }
       if (sortBy === 'status') return a.status.localeCompare(b.status)
       if (sortBy === 'service') {
-        const serviceA = services.find(s => s.id === a.service)?.name || ''
-        const serviceB = services.find(s => s.id === b.service)?.name || ''
+        const serviceA = services.find(s => s._id === a.service)?.name || ''
+        const serviceB = services.find(s => s._id === b.service)?.name || ''
         return serviceA.localeCompare(serviceB)
       }
-      return a.id - b.id
+      return a._id.localeCompare(b._id)
     })
 
   const stats = {
@@ -119,6 +112,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
     pending: bookings.filter(b => b.status === 'pending').length,
     booked: bookings.filter(b => b.status === 'booked').length,
     confirmed: bookings.filter(b => b.status === 'confirmed').length,
+    completed: bookings.filter(b => b.status === 'completed').length,
     cancelled: bookings.filter(b => b.status === 'cancelled').length,
     today: bookings.filter(b => {
       const bookingDate = new Date(b.date).toDateString()
@@ -174,20 +168,18 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
 
     try {
       const bookingData = {
-        service: parseInt(formData.service),
+        service: formData.service,
         date: formData.date,
         time: formData.time
       }
 
-      // Only include barber if one is selected (API.md shows barber is optional)
+      // Only include barber if one is selected
       if (formData.barber) {
-        bookingData.barber = parseInt(formData.barber)
+        bookingData.barber = formData.barber
       }
 
       if (editingBooking) {
-        await bookingsService.updateBooking(editingBooking.id, bookingData)
-      } else {
-        await bookingsService.createBooking(bookingData)
+        await updateBookingStatus({ id: editingBooking._id, ...bookingData })
       }
 
       handleCancel()
@@ -201,11 +193,11 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
   }
 
   const handleDelete = async (booking) => {
-    if (!confirm(`Are you sure you want to delete booking #${booking.booking_code || booking.id}?`)) return
+    if (!confirm(`Are you sure you want to delete booking #${booking.booking_code || booking._id}?`)) return
 
     setLoading(true)
     try {
-      await bookingsService.deleteBooking(booking.id)
+      await deleteBookingMutation({ id: booking._id })
       onRefresh()
     } catch (err) {
       console.error('Error deleting booking:', err)
@@ -218,7 +210,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
   const handleStatusChange = async (booking, newStatus) => {
     setLoading(true)
     try {
-      await bookingsService.patchBooking(booking.id, { status: newStatus })
+      await updateBookingStatus({ id: booking._id, status: newStatus })
       onRefresh()
     } catch (err) {
       console.error('Error updating booking status:', err)
@@ -226,6 +218,16 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleConfirmAction = async () => {
+    if (!confirmModal.booking || !confirmModal.action) return
+    
+    const { booking, action } = confirmModal
+    const newStatus = action === 'confirm' ? 'confirmed' : 'completed'
+    
+    setConfirmModal({ show: false, booking: null, action: null })
+    await handleStatusChange(booking, newStatus)
   }
 
   const formatDate = (dateString) => {
@@ -266,9 +268,9 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
     
     // Generate QR code data
     const qrData = JSON.stringify({
-      bookingId: booking.id,
+      bookingId: booking._id,
       bookingCode: booking.booking_code,
-      service: services.find(s => s.id === booking.service)?.name,
+      service: services.find(s => s._id === booking.service)?.name,
       barber: booking.barber_name,
       date: booking.date,
       time: booking.time,
@@ -293,13 +295,18 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
       }
     }, [qrData])
 
-    return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border" style={{borderColor: '#E0E0E0'}}>
-          <div className="text-center space-y-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{backgroundColor: '#F68B24'}}>
-              <QrCode className="w-6 h-6 text-white" />
-            </div>
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+            onClick={onClose}
+          />
+          <div className="relative w-full max-w-sm transform rounded-2xl bg-white shadow-2xl transition-all z-[10000]" style={{borderColor: '#E0E0E0', border: '1px solid'}}>
+            <div className="text-center space-y-4 p-6">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{backgroundColor: '#F68B24'}}>
+                <QrCode className="w-6 h-6 text-white" />
+              </div>
             
             <div>
               <h3 className="text-lg font-bold mb-1" style={{color: '#36454F'}}>Booking QR Code</h3>
@@ -319,7 +326,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
               <div className="flex justify-between">
                 <span className="text-sm font-medium" style={{color: '#8B8B8B'}}>Service:</span>
                 <span className="text-sm font-bold" style={{color: '#36454F'}}>
-                  {services.find(s => s.id === booking.service)?.name}
+                  {services.find(s => s._id === booking.service)?.name}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -342,16 +349,18 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
               </div>
             </div>
 
-            <button
-              onClick={onClose}
-              className="w-full py-2 px-4 rounded-xl font-medium text-white transition-colors"
-              style={{backgroundColor: '#F68B24'}}
-            >
-              Close
-            </button>
+              <button
+                onClick={onClose}
+                className="w-full py-2 px-4 rounded-xl font-medium text-white transition-colors"
+                style={{backgroundColor: '#F68B24'}}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     )
   }
 
@@ -360,7 +369,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
     const miniQrRef = useRef(null)
     
     const qrData = JSON.stringify({
-      bookingId: booking.id,
+      bookingId: booking._id,
       bookingCode: booking.booking_code,
       barbershop: 'TPX Barbershop'
     })
@@ -368,8 +377,8 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
     useEffect(() => {
       if (miniQrRef.current) {
         QRCode.toCanvas(miniQrRef.current, qrData, {
-          width: 40,
-          margin: 1,
+          width: 28,
+          margin: 0,
           color: {
             dark: '#36454F',
             light: '#ffffff'
@@ -414,11 +423,11 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
             required
           >
             <option value="">Select a service</option>
-            {services.map(service => (
-              <option key={service.id} value={service.id}>
-                {service.name} - ₱{parseFloat(service.price).toFixed(2)} ({service.duration_minutes}min)
+            {services?.map(service => (
+              <option key={service._id} value={service._id}>
+                {service.name} - ₱{parseFloat(service.price || 0).toFixed(2)} ({service.duration_minutes}min)
               </option>
-            ))}
+            )) || []}
           </select>
         </div>
 
@@ -430,11 +439,11 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
           >
             <option value="">Any available barber</option>
-            {barbers.map(barber => (
-              <option key={barber.id} value={barber.id}>
+            {barbers?.map(barber => (
+              <option key={barber._id} value={barber._id}>
                 {barber.full_name}
               </option>
-            ))}
+            )) || []}
           </select>
         </div>
 
@@ -485,93 +494,94 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Total</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-sm font-medium text-gray-300">Total</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.total}</p>
             </div>
-            <Calendar className="h-8 w-8 text-blue-500" />
+            <Calendar className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
         
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Today</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.today}</p>
+              <p className="text-sm font-medium text-gray-300">Today</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.today}</p>
             </div>
-            <Clock className="h-8 w-8 text-blue-500" />
+            <Clock className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Pending</p>
-              <p className="text-2xl font-bold text-orange-600">{stats.pending}</p>
+              <p className="text-sm font-medium text-gray-300">Pending</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.pending}</p>
             </div>
-            <AlertCircle className="h-8 w-8 text-orange-500" />
+            <AlertCircle className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Booked</p>
-              <p className="text-2xl font-bold text-blue-600">{stats.booked}</p>
+              <p className="text-sm font-medium text-gray-300">Booked</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.booked}</p>
             </div>
-            <CheckCircle className="h-8 w-8 text-blue-500" />
+            <CheckCircle className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Confirmed</p>
-              <p className="text-2xl font-bold text-green-600">{stats.confirmed}</p>
+              <p className="text-sm font-medium text-gray-300">Confirmed</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.confirmed}</p>
             </div>
-            <CheckCircle className="h-8 w-8 text-green-500" />
+            <CheckCircle className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-500">Cancelled</p>
-              <p className="text-2xl font-bold text-red-600">{stats.cancelled}</p>
+              <p className="text-sm font-medium text-gray-300">Cancelled</p>
+              <p className="text-2xl font-bold text-[#FF8C42]">{stats.cancelled}</p>
             </div>
-            <XCircle className="h-8 w-8 text-red-500" />
+            <XCircle className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
       </div>
 
       {/* Controls */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
               <input
                 type="text"
                 placeholder="Search bookings..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
               />
             </div>
 
             <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-gray-400" />
+              <Filter className="h-4 w-4 text-gray-500" />
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
                 <option value="booked">Booked</option>
                 <option value="confirmed">Confirmed</option>
+                <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
             </div>
@@ -579,7 +589,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             >
               <option value="date">Sort by Date</option>
               <option value="status">Sort by Status</option>
@@ -610,77 +620,65 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
       {editingBooking && <EditBookingForm />}
 
       {/* Bookings Table */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-[#444444]/30">
+            <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Booking
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Service
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Date & Time
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Barber
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Price
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] divide-y divide-[#444444]/30">
               {filteredBookings.map((booking) => {
                 const statusConfig = getStatusConfig(booking.status)
                 const StatusIcon = statusConfig.icon
-                const service = services.find(s => s.id === booking.service)
+                const service = services.find(s => s._id === booking.service)
 
                 return (
-                  <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={booking._id} className="hover:bg-[#333333]/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-lg bg-orange-50 border-2 border-orange-200 flex items-center justify-center p-1">
-                            <MiniQRCode booking={booking} />
-                          </div>
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-mono font-bold text-gray-900">
-                            #{booking.booking_code || booking.id}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            ID: {booking.id}
-                          </div>
-                        </div>
+                      <div className="text-sm font-mono font-bold text-white">
+                        #{booking.booking_code}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-white">
                         {service?.name || 'Unknown Service'}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-gray-400">
                         {service?.duration_minutes}min
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
+                      <div className="text-sm text-white">
                         {formatDate(booking.date)}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-gray-400">
                         {formatTime(booking.time)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
+                      <div className="text-sm text-white">
                         {booking.barber_name || 'Not assigned'}
                       </div>
                     </td>
@@ -691,7 +689,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-bold text-green-600">
+                      <div className="text-sm font-bold text-green-400">
                         ₱{service ? parseFloat(service.price).toFixed(2) : '0.00'}
                       </div>
                     </td>
@@ -699,7 +697,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
                       <div className="flex items-center justify-end space-x-2">
                         <button
                           onClick={() => setShowQRCode(booking)}
-                          className="inline-flex items-center px-2.5 py-1.5 border border-orange-300 text-xs font-medium rounded text-orange-700 bg-orange-50 hover:bg-orange-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                          className="inline-flex items-center px-2.5 py-1.5 border border-[#FF8C42]/30 text-xs font-medium rounded text-[#FF8C42] bg-[#FF8C42]/20 hover:bg-[#FF8C42]/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FF8C42]"
                           title="View QR Code"
                         >
                           <QrCode className="h-3 w-3 mr-1" />
@@ -709,14 +707,14 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
                           <>
                             <button
                               onClick={() => handleStatusChange(booking, 'booked')}
-                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-blue-400 bg-blue-400/20 hover:bg-blue-400/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400"
                               disabled={loading}
                             >
                               Book
                             </button>
                             <button
                               onClick={() => handleStatusChange(booking, 'cancelled')}
-                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-red-400 bg-red-400/20 hover:bg-red-400/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400"
                               disabled={loading}
                             >
                               Cancel
@@ -726,31 +724,40 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
                         {booking.status === 'booked' && (
                           <>
                             <button
-                              onClick={() => handleStatusChange(booking, 'confirmed')}
-                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-green-700 bg-green-100 hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                              onClick={() => setConfirmModal({ show: true, booking, action: 'confirm' })}
+                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-green-400 bg-green-400/20 hover:bg-green-400/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400"
                               disabled={loading}
                             >
                               Confirm
                             </button>
                             <button
                               onClick={() => handleStatusChange(booking, 'cancelled')}
-                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-red-400 bg-red-400/20 hover:bg-red-400/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400"
                               disabled={loading}
                             >
                               Cancel
                             </button>
                           </>
                         )}
+                        {booking.status === 'confirmed' && (
+                          <button
+                            onClick={() => setConfirmModal({ show: true, booking, action: 'complete' })}
+                            className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-[#FF8C42] bg-[#FF8C42]/20 hover:bg-[#FF8C42]/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FF8C42]"
+                            disabled={loading}
+                          >
+                            Complete
+                          </button>
+                        )}
                         <button
                           onClick={() => handleEdit(booking)}
-                          className="text-indigo-600 hover:text-indigo-900"
+                          className="text-blue-400 hover:text-blue-300"
                           disabled={loading}
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleDelete(booking)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-red-400 hover:text-red-300"
                           disabled={loading}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -766,9 +773,9 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
 
         {filteredBookings.length === 0 && (
           <div className="text-center py-12">
-            <Calendar className="mx-auto h-12 w-12 text-gray-300" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No bookings found</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <Calendar className="mx-auto h-12 w-12 text-gray-500" />
+            <h3 className="mt-2 text-sm font-medium text-white">No bookings found</h3>
+            <p className="mt-1 text-sm text-gray-400">
               {searchTerm || filterStatus !== 'all' 
                 ? 'Try adjusting your search or filter criteria.'
                 : 'Get started by creating a new booking.'
@@ -778,7 +785,7 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
               <div className="mt-6">
                 <button
                   onClick={handleCreate}
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700"
+                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A]"
                 >
                   <Plus className="-ml-1 mr-2 h-4 w-4" />
                   New Booking
@@ -798,6 +805,68 @@ const BookingsManagement = ({ bookings = [], onRefresh }) => {
 
       {/* QR Code Modal */}
       {showQRCode && <QRCodeModal booking={showQRCode} onClose={() => setShowQRCode(null)} />}
+
+      {/* Confirmation Modal */}
+      {confirmModal.show && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{zIndex: 99999}}>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border">
+            <div className="text-center space-y-4">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{backgroundColor: '#F68B24'}}>
+                 <CheckCircle className="w-6 h-6 text-white" />
+               </div>
+              
+              <div>
+                <h3 className="text-lg font-bold mb-2 text-gray-900">
+                  {confirmModal.action === 'confirm' ? 'Confirm Booking' : 'Complete Booking'}
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Are you sure you want to {confirmModal.action === 'confirm' ? 'confirm' : 'mark as completed'} booking #{confirmModal.booking?.booking_code}?
+                </p>
+                
+                {confirmModal.booking && (
+                  <div className="text-left space-y-2 p-4 rounded-xl bg-gray-50">
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-600">Service:</span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {services.find(s => s._id === confirmModal.booking.service)?.name}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-600">Date & Time:</span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {formatDate(confirmModal.booking.date)} at {formatTime(confirmModal.booking.time)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-600">Barber:</span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {confirmModal.booking.barber_name || 'Not assigned'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setConfirmModal({ show: false, booking: null, action: null })}
+                  className="flex-1 py-2 px-4 rounded-xl font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                   onClick={handleConfirmAction}
+                   disabled={loading}
+                   className="flex-1 py-2 px-4 rounded-xl font-medium text-white transition-colors bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                   style={{backgroundColor: loading ? undefined : '#F68B24'}}
+                 >
+                   {loading ? 'Processing...' : (confirmModal.action === 'confirm' ? 'Confirm' : 'Complete')}
+                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
