@@ -276,6 +276,7 @@ const ServiceBooking = ({ onBack }) => {
         barber: selectedStaff?._id || undefined,
         date: selectedDate,
         time: formattedTime,
+        discount_amount: selectedVoucher?.value,
         status: "booked",
         notes: selectedVoucher ? `Used voucher: ${selectedVoucher.code}` : undefined,
       };
