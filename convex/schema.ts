@@ -71,7 +71,10 @@ export default defineSchema({
   // Bookings table
   bookings: defineTable({
     booking_code: v.string(),
-    customer: v.id("users"),
+    customer: v.optional(v.id("users")), // Optional for walk-in customers
+    customer_name: v.optional(v.string()), // For walk-in customers
+    customer_phone: v.optional(v.string()), // For walk-in customers
+    customer_email: v.optional(v.string()), // For walk-in customers
     service: v.id("services"),
     barber: v.optional(v.id("barbers")),
     date: v.string(),

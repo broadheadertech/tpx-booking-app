@@ -21,6 +21,7 @@ export const ERROR_CODES = {
   BOOKING_SERVICE_UNAVAILABLE: 'BOOKING_SERVICE_UNAVAILABLE',
   BOOKING_TIME_CONFLICT: 'BOOKING_TIME_CONFLICT',
   BOOKING_PAST_DATE: 'BOOKING_PAST_DATE',
+  BOOKING_INVALID_CUSTOMER_NAME: 'BOOKING_INVALID_CUSTOMER_NAME',
   
   // Barber errors
   BARBER_NOT_FOUND: 'BARBER_NOT_FOUND',
@@ -114,6 +115,13 @@ const ERROR_MESSAGES: Record<string, UserError> = {
     code: ERROR_CODES.BOOKING_PAST_DATE,
     details: 'The date you selected has already passed.',
     action: 'Please select a future date for your appointment.'
+  },
+
+  [ERROR_CODES.BOOKING_INVALID_CUSTOMER_NAME]: {
+    message: 'Customer name is required.',
+    code: ERROR_CODES.BOOKING_INVALID_CUSTOMER_NAME,
+    details: 'Please provide a valid customer name for the booking.',
+    action: 'Enter the customer\'s name and try again.'
   },
   
   [ERROR_CODES.BARBER_NOT_FOUND]: {

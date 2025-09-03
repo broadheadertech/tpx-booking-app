@@ -23,16 +23,16 @@ export const getAllBookings = query({
     const bookingsWithData = await Promise.all(
       bookings.map(async (booking) => {
         const [customer, service, barber] = await Promise.all([
-          ctx.db.get(booking.customer),
+          booking.customer ? ctx.db.get(booking.customer) : null,
           ctx.db.get(booking.service),
           booking.barber ? ctx.db.get(booking.barber) : null,
         ]);
 
         return {
           ...booking,
-          customer_name: customer?.username || 'Unknown',
-          customer_email: customer?.email || '',
-          customer_phone: customer?.mobile_number || '',
+          customer_name: customer?.username || booking.customer_name || 'Unknown',
+          customer_email: customer?.email || booking.customer_email || '',
+          customer_phone: customer?.mobile_number || booking.customer_phone || '',
           service_name: service?.name || 'Unknown Service',
           service_price: service?.price || 0,
           service_duration: service?.duration_minutes || 0,
@@ -98,15 +98,15 @@ export const getBookingsByBarber = query({
     const bookingsWithData = await Promise.all(
       bookings.map(async (booking) => {
         const [customer, service] = await Promise.all([
-          ctx.db.get(booking.customer),
+          booking.customer ? ctx.db.get(booking.customer) : null,
           ctx.db.get(booking.service),
         ]);
 
         return {
           ...booking,
-          customer_name: customer?.username || 'Unknown',
-          customer_email: customer?.email || '',
-          customer_phone: customer?.mobile_number || '',
+          customer_name: customer?.username || booking.customer_name || 'Unknown',
+          customer_email: customer?.email || booking.customer_email || '',
+          customer_phone: customer?.mobile_number || booking.customer_phone || '',
           service_name: service?.name || 'Unknown Service',
           service_price: service?.price || 0,
           service_duration: service?.duration_minutes || 0,
@@ -128,16 +128,16 @@ export const getBookingById = query({
     if (!booking) return null;
 
     const [customer, service, barber] = await Promise.all([
-      ctx.db.get(booking.customer),
+      booking.customer ? ctx.db.get(booking.customer) : null,
       ctx.db.get(booking.service),
       booking.barber ? ctx.db.get(booking.barber) : null,
     ]);
 
     return {
       ...booking,
-      customer_name: customer?.username || 'Unknown',
-      customer_email: customer?.email || '',
-      customer_phone: customer?.mobile_number || '',
+      customer_name: customer?.username || booking.customer_name || 'Unknown',
+      customer_email: customer?.email || booking.customer_email || '',
+      customer_phone: customer?.mobile_number || booking.customer_phone || '',
       service_name: service?.name || 'Unknown Service',
       service_price: service?.price || 0,
       service_duration: service?.duration_minutes || 0,
@@ -160,16 +160,16 @@ export const getBookingByCode = query({
     if (!booking) return null;
 
     const [customer, service, barber] = await Promise.all([
-      ctx.db.get(booking.customer),
+      booking.customer ? ctx.db.get(booking.customer) : null,
       ctx.db.get(booking.service),
       booking.barber ? ctx.db.get(booking.barber) : null,
     ]);
 
     return {
       ...booking,
-      customer_name: customer?.username || 'Unknown',
-      customer_email: customer?.email || '',
-      customer_phone: customer?.mobile_number || '',
+      customer_name: customer?.username || booking.customer_name || 'Unknown',
+      customer_email: customer?.email || booking.customer_email || '',
+      customer_phone: customer?.mobile_number || booking.customer_phone || '',
       service_name: service?.name || 'Unknown Service',
       service_price: service?.price || 0,
       service_duration: service?.duration_minutes || 0,
@@ -318,14 +318,16 @@ export const updateBooking = mutation({
                message = "Your booking status has been updated.";
            }
            
-           await ctx.runMutation(api.services.notifications.createNotification, {
-             title,
-             message,
-             type: "booking",
-             priority: "medium",
-             recipient_id: currentBooking.customer,
-             recipient_type: "customer",
-           });
+           if (currentBooking.customer) {
+             await ctx.runMutation(api.services.notifications.createNotification, {
+               title,
+               message,
+               type: "booking",
+               priority: "medium",
+               recipient_id: currentBooking.customer,
+               recipient_type: "customer",
+             });
+           }
          }
        } catch (error) {
          console.error("Failed to create booking status notification:", error);
@@ -365,16 +367,16 @@ export const getBookingsByStatus = query({
     const bookingsWithData = await Promise.all(
       bookings.map(async (booking) => {
         const [customer, service, barber] = await Promise.all([
-          ctx.db.get(booking.customer),
+          booking.customer ? ctx.db.get(booking.customer) : null,
           ctx.db.get(booking.service),
           booking.barber ? ctx.db.get(booking.barber) : null,
         ]);
 
         return {
           ...booking,
-          customer_name: customer?.username || 'Unknown',
-          customer_email: customer?.email || '',
-          customer_phone: customer?.mobile_number || '',
+          customer_name: customer?.username || booking.customer_name || 'Unknown',
+          customer_email: customer?.email || booking.customer_email || '',
+          customer_phone: customer?.mobile_number || booking.customer_phone || '',
           service_name: service?.name || 'Unknown Service',
           barber_name: barber?.full_name || 'Not assigned',
           formattedDate: new Date(booking.date).toLocaleDateString(),
@@ -402,16 +404,16 @@ export const getTodaysBookings = query({
     const bookingsWithData = await Promise.all(
       bookings.map(async (booking) => {
         const [customer, service, barber] = await Promise.all([
-          ctx.db.get(booking.customer),
+          booking.customer ? ctx.db.get(booking.customer) : null,
           ctx.db.get(booking.service),
           booking.barber ? ctx.db.get(booking.barber) : null,
         ]);
 
         return {
           ...booking,
-          customer_name: customer?.username || 'Unknown',
-          customer_email: customer?.email || '',
-          customer_phone: customer?.mobile_number || '',
+          customer_name: customer?.username || booking.customer_name || 'Unknown',
+          customer_email: customer?.email || booking.customer_email || '',
+          customer_phone: customer?.mobile_number || booking.customer_phone || '',
           service_name: service?.name || 'Unknown Service',
           barber_name: barber?.full_name || 'Not assigned',
           formattedTime: formatTime(booking.time),
@@ -457,16 +459,16 @@ export const validateBookingByCode = mutation({
     if (!booking) return null;
 
     const [customer, service, barber] = await Promise.all([
-      ctx.db.get(booking.customer),
+      booking.customer ? ctx.db.get(booking.customer) : null,
       ctx.db.get(booking.service),
       booking.barber ? ctx.db.get(booking.barber) : null,
     ]);
 
     return {
       ...booking,
-      customer_name: customer?.username || 'Unknown',
-      customer_email: customer?.email || '',
-      customer_phone: customer?.mobile_number || '',
+      customer_name: customer?.username || booking.customer_name || 'Unknown',
+      customer_email: customer?.email || booking.customer_email || '',
+      customer_phone: customer?.mobile_number || booking.customer_phone || '',
       service_name: service?.name || 'Unknown Service',
       service_price: service?.price || 0,
       service_duration: service?.duration_minutes || 0,
@@ -575,3 +577,67 @@ function formatTime(timeString: string) {
     return timeString;
   }
 }
+
+// Create walk-in booking for kiosk (no customer account required)
+export const createWalkInBooking = mutation({
+  args: {
+    customer_name: v.string(),
+    customer_phone: v.optional(v.string()),
+    customer_email: v.optional(v.string()),
+    service: v.id("services"),
+    barber: v.optional(v.id("barbers")),
+    date: v.string(),
+    time: v.string(),
+    status: v.optional(v.union(
+      v.literal("pending"),
+      v.literal("booked"),
+      v.literal("confirmed"),
+      v.literal("completed"),
+      v.literal("cancelled")
+    )),
+    notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Validate required fields
+    if (!args.customer_name.trim()) {
+      throwUserError(ERROR_CODES.BOOKING_INVALID_CUSTOMER_NAME);
+    }
+
+    // Get service details for price
+    const service = await ctx.db.get(args.service);
+    if (!service) {
+      throwUserError(ERROR_CODES.BOOKING_SERVICE_UNAVAILABLE);
+    }
+    
+    // Validate booking date is not in the past
+    const bookingDate = new Date(args.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (bookingDate < today) {
+      throwUserError(ERROR_CODES.BOOKING_PAST_DATE);
+    }
+
+    const bookingCode = generateBookingCode();
+
+    const bookingId = await ctx.db.insert("bookings", {
+      booking_code: bookingCode,
+      customer: undefined, // No customer account for walk-ins
+      customer_name: args.customer_name,
+      customer_phone: args.customer_phone || undefined,
+      customer_email: args.customer_email || undefined,
+      service: args.service,
+      barber: args.barber,
+      date: args.date,
+      time: args.time,
+      status: args.status || "pending",
+      payment_status: "unpaid",
+      price: service.price,
+      notes: args.notes || undefined,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    return bookingId;
+  },
+});
