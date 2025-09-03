@@ -88,7 +88,14 @@ const Dashboard = () => {
       case 'vouchers':
         return <VoucherManagement onBack={() => setActiveSection('home')} />
       case 'ai-assistant':
-        return <AIBarberAssistant />
+        return <AIBarberAssistant onNavigateToBooking={(selectedService) => {
+          // Navigate to booking with pre-selected service
+          setActiveSection('booking')
+          // You can store the selected service in state if needed
+          if (selectedService) {
+            sessionStorage.setItem('preSelectedService', JSON.stringify(selectedService))
+          }
+        }} />
       case 'profile':
         return <Profile />
       case 'loyalty':

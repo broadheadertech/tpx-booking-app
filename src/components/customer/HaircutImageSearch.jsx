@@ -26,7 +26,7 @@ const HaircutImageSearch = ({ searchQuery = '', onImageSelect = null }) => {
     
     try {
       // Use Google Custom Search API with the provided search engine ID
-      const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${SEARCH_ENGINE_ID}&q=${encodeURIComponent(query + ' men haircut hairstyle')}&searchType=image&num=8&safe=active&imgType=photo&imgSize=medium`
+      const searchUrl = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${SEARCH_ENGINE_ID}&q=${encodeURIComponent(query + ' men haircut hairstyle')}&searchType=image&num=4&safe=active&imgType=photo&imgSize=medium`
       
       const response = await fetch(searchUrl)
       

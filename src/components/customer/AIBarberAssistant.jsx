@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
-import { Camera, Upload, ArrowLeft, Scissors, User, Star, CheckCircle, ChevronRight, Bot, Sparkles, Image, Loader } from 'lucide-react'
+import { Camera, Upload, ArrowLeft, Scissors, User, Star, CheckCircle, ChevronRight, Bot, Sparkles, Image, Loader, Calendar, Clock, AlertTriangle } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { aiBarberService } from '../../services/aiBarberService'
+import { faceDetectionService } from '../../services/faceDetectionService'
 import HaircutImageSearch from './HaircutImageSearch'
 
-const AIBarberAssistant = () => {
-  const [currentStep, setCurrentStep] = useState(1)
+const AIBarberAssistant = ({ onNavigateToBooking }) => {
+  const [currentStep, setCurrentStep] = useState(0)
   const [uploadedImage, setUploadedImage] = useState(null)
   const [userPreferences, setUserPreferences] = useState({
     faceShape: '',
@@ -18,10 +19,19 @@ const AIBarberAssistant = () => {
   const [selectedRecommendation, setSelectedRecommendation] = useState(null)
   const [isGeneratingRecommendations, setIsGeneratingRecommendations] = useState(false)
   const [aiError, setAiError] = useState(null)
+  const [isValidatingImage, setIsValidatingImage] = useState(false)
+  const [imageValidationError, setImageValidationError] = useState(null)
 
   // Fetch services and barbers from Convex
   const services = useQuery(api.services.services.getActiveServices)
   const barbers = useQuery(api.services.barbers.getActiveBarbers)
+
+  // Initialize face detection service
+  useEffect(() => {
+    faceDetectionService.initialize().catch(error => {
+      console.warn('Face detection service initialization failed:', error)
+    })
+  }, [])
 
   const steps = [
     { id: 1, title: 'Upload Your Photo', subtitle: 'Let us analyze your face shape' },
@@ -110,14 +120,50 @@ const AIBarberAssistant = () => {
     }
   }
 
-  const handleImageUpload = (event) => {
+  const handleImageUpload = async (event) => {
     const file = event.target.files[0]
-    if (file) {
+    if (!file) return
+
+    // Clear previous errors
+    setImageValidationError(null)
+    setIsValidatingImage(true)
+
+    try {
+      console.log('📸 Validating uploaded image for face detection...')
+      
+      // Validate that the image contains a face
+      const validationResult = await faceDetectionService.validateFaceInImage(file)
+      
+      console.log('🔍 Face validation result:', validationResult)
+      
+      if (!validationResult.hasFace) {
+        const errorInfo = faceDetectionService.getValidationErrorMessage(validationResult)
+        setImageValidationError(errorInfo)
+        setIsValidatingImage(false)
+        // Clear the file input
+        event.target.value = ''
+        return
+      }
+
+      // If face is detected, proceed with image upload
       const reader = new FileReader()
       reader.onload = (e) => {
         setUploadedImage(e.target.result)
+        setIsValidatingImage(false)
+        console.log('✅ Image uploaded successfully with face detected')
       }
       reader.readAsDataURL(file)
+      
+    } catch (error) {
+      console.error('❌ Image validation error:', error)
+      setImageValidationError({
+        title: 'Validation Error',
+        message: error.message || 'Failed to validate image. Please try again.',
+        suggestions: ['Try uploading a different photo', 'Ensure the image file is not corrupted']
+      })
+      setIsValidatingImage(false)
+      // Clear the file input
+      event.target.value = ''
     }
   }
 
@@ -134,10 +180,80 @@ const AIBarberAssistant = () => {
   }
 
   const handleBack = () => {
-    if (currentStep > 1) {
+    if (currentStep > 0) {
       setCurrentStep(currentStep - 1)
     }
   }
+
+  const renderWelcomeScreen = () => (
+    <div className="space-y-4 text-center">
+      {/* Welcome Hero */}
+      <div className="space-y-3">
+        <div className="mx-auto w-16 h-16 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-2xl flex items-center justify-center shadow-xl">
+          <Bot className="w-8 h-8 text-white" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold text-white mb-1">AI TPX Assistant</h1>
+          <p className="text-gray-400 text-sm px-4">
+            Your personal AI-powered style consultant
+          </p>
+        </div>
+      </div>
+
+      {/* Compact Features */}
+      <div className="grid grid-cols-1 gap-3 px-4">
+        <div className="bg-gradient-to-br from-gray-800/40 to-gray-700/40 rounded-lg p-3 border border-gray-600/30">
+          <div className="flex items-center space-x-2 mb-2">
+            <Sparkles className="w-4 h-4 text-[#FF8C42]" />
+            <h3 className="text-white font-medium text-sm">AI Analysis</h3>
+          </div>
+          <p className="text-gray-400 text-xs">
+            Advanced head shape and hair analysis for perfect recommendations.
+          </p>
+        </div>
+
+        <div className="bg-gradient-to-br from-gray-800/40 to-gray-700/40 rounded-lg p-3 border border-gray-600/30">
+          <div className="flex items-center space-x-2 mb-2">
+            <Image className="w-4 h-4 text-[#FF8C42]" />
+            <h3 className="text-white font-medium text-sm">Style Gallery</h3>
+          </div>
+          <p className="text-gray-400 text-xs">
+            Browse curated haircut images and find inspiration.
+          </p>
+        </div>
+      </div>
+
+      {/* Get Started Button */}
+      <div className="px-4 pt-2">
+        <button
+          onClick={() => setCurrentStep(1)}
+          className="w-full bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg shadow-[#FF8C42]/20 flex items-center justify-center space-x-3"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span className="text-sm font-semibold">Get Started</span>
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Quick Stats */}
+      <div className="bg-gray-800/30 rounded-lg p-3 border border-gray-600/30 mx-4">
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div>
+            <div className="text-[#FF8C42] font-bold text-sm">AI</div>
+            <div className="text-gray-400 text-xs">Powered</div>
+          </div>
+          <div>
+            <div className="text-[#FF8C42] font-bold text-sm">5</div>
+            <div className="text-gray-400 text-xs">Steps</div>
+          </div>
+          <div>
+            <div className="text-[#FF8C42] font-bold text-sm">∞</div>
+            <div className="text-gray-400 text-xs">Styles</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 
   const renderStep1 = () => (
     <div className="space-y-4">
@@ -152,6 +268,39 @@ const AIBarberAssistant = () => {
         <p className="text-gray-300 text-sm leading-relaxed px-2">
           Upload a clear photo to analyze your face shape and get personalized recommendations.
         </p>
+        
+        {/* Image Validation Loading */}
+        {isValidatingImage && (
+          <div className="bg-blue-500/20 border border-blue-500/30 rounded-lg p-3 mt-3">
+            <div className="flex items-center justify-center space-x-2">
+              <Loader className="w-4 h-4 animate-spin text-blue-400" />
+              <span className="text-blue-400 text-sm font-medium">Analyzing image for face detection...</span>
+            </div>
+          </div>
+        )}
+        
+        {/* Image Validation Error */}
+        {imageValidationError && (
+          <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mt-3">
+            <div className="flex items-start space-x-3">
+              <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="text-red-400 font-medium text-sm mb-1">{imageValidationError.title}</h4>
+                <p className="text-red-300 text-xs mb-2">{imageValidationError.message}</p>
+                {imageValidationError.suggestions && (
+                  <ul className="text-red-300 text-xs space-y-1">
+                    {imageValidationError.suggestions.map((suggestion, index) => (
+                      <li key={index} className="flex items-center space-x-1">
+                        <div className="w-1 h-1 bg-red-400 rounded-full flex-shrink-0"></div>
+                        <span>{suggestion}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       
       <div className="space-y-3">
@@ -162,10 +311,24 @@ const AIBarberAssistant = () => {
             onChange={handleImageUpload}
             className="hidden"
             id="image-upload"
+            disabled={isValidatingImage}
           />
-          <div className="bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] text-white px-6 py-3 rounded-xl font-medium flex items-center justify-center space-x-2 transition-all duration-200 cursor-pointer shadow-lg">
-            <Upload className="w-4 h-4" />
-            <span>Upload Photo</span>
+          <div className={`px-6 py-3 rounded-xl font-medium flex items-center justify-center space-x-2 transition-all duration-200 shadow-lg ${
+            isValidatingImage 
+              ? 'bg-gray-600 cursor-not-allowed text-gray-300'
+              : 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] text-white cursor-pointer'
+          }`}>
+            {isValidatingImage ? (
+              <>
+                <Loader className="w-4 h-4 animate-spin" />
+                <span>Validating...</span>
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4" />
+                <span>Upload Photo</span>
+              </>
+            )}
           </div>
         </label>
         
@@ -195,9 +358,9 @@ const AIBarberAssistant = () => {
         <div className="flex justify-between items-center gap-3 pt-2">
           <button
             onClick={handleBack}
-            disabled={currentStep === 1}
+            disabled={currentStep === 0}
             className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-200 text-sm min-w-[80px] ${
-              currentStep === 1
+              currentStep === 0
                 ? 'bg-gray-700/30 text-gray-500 cursor-not-allowed'
                 : 'bg-gray-700/50 text-gray-200 hover:bg-gray-600/70 border border-gray-600/50'
             }`}
@@ -245,7 +408,7 @@ const AIBarberAssistant = () => {
           {hairTypes.map((type) => (
             <button
               key={type.id}
-              onClick={() => setUserPreferences(prev => ({ ...prev, hairType: type.id, faceShape: 'oval' }))}
+              onClick={() => setUserPreferences(prev => ({ ...prev, hairType: type.id }))}
               className={`p-3 rounded-xl border transition-all duration-200 text-left ${
                 userPreferences.hairType === type.id
                   ? 'bg-gradient-to-r from-[#FF8C42]/20 to-[#FF7A2B]/20 border-[#FF8C42]/60 text-white shadow-lg'
@@ -303,9 +466,9 @@ const AIBarberAssistant = () => {
       <div className="flex justify-between items-center gap-3 pt-4">
         <button
           onClick={handleBack}
-          disabled={currentStep === 1}
+          disabled={currentStep === 0}
           className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-200 text-sm min-w-[80px] ${
-            currentStep === 1
+            currentStep === 0
               ? 'bg-gray-700/30 text-gray-500 cursor-not-allowed'
               : 'bg-gray-700/50 text-gray-200 hover:bg-gray-600/70 border border-gray-600/50'
           }`}
@@ -433,9 +596,9 @@ const AIBarberAssistant = () => {
       <div className="flex justify-between items-center gap-3 pt-4">
         <button
           onClick={handleBack}
-          disabled={currentStep === 1 || isGeneratingRecommendations}
+          disabled={currentStep === 0 || isGeneratingRecommendations}
           className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-200 text-sm min-w-[80px] ${
-            currentStep === 1 || isGeneratingRecommendations
+            currentStep === 0 || isGeneratingRecommendations
               ? 'bg-gray-700/30 text-gray-500 cursor-not-allowed'
               : 'bg-gray-700/50 text-gray-200 hover:bg-gray-600/70 border border-gray-600/50'
           }`}
@@ -484,9 +647,9 @@ const AIBarberAssistant = () => {
         <div className="flex justify-between items-center gap-3 pt-4">
           <button
             onClick={handleBack}
-            disabled={currentStep === 1}
+            disabled={currentStep === 0}
             className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-200 text-sm min-w-[80px] ${
-              currentStep === 1
+              currentStep === 0
                 ? 'bg-gray-700/30 text-gray-500 cursor-not-allowed'
                 : 'bg-gray-700/50 text-gray-200 hover:bg-gray-600/70 border border-gray-600/50'
             }`}
@@ -512,72 +675,117 @@ const AIBarberAssistant = () => {
     )
   }
 
-  const renderStep5 = () => (
-    <div className="space-y-4">
-      {selectedRecommendation && (
-        <div className="bg-gradient-to-r from-[#FF8C42]/10 to-[#FF7A2B]/10 p-4 rounded-xl border border-[#FF8C42]/30">
-          <h3 className="text-white font-medium text-sm mb-1">Selected: {selectedRecommendation.name}</h3>
-          <p className="text-gray-400 text-xs">{selectedRecommendation.description}</p>
-        </div>
-      )}
-      
-      <div>
-        <h3 className="text-white font-medium text-sm mb-3">Choose Your Barber</h3>
-        <div className="space-y-2">
-          {barbers?.slice(0, 3).map((barber) => (
-            <div
-              key={barber._id}
-              className="flex items-center space-x-3 p-3 bg-gradient-to-br from-gray-800/40 to-gray-700/40 rounded-xl border border-gray-600/30"
-            >
-              <div className="w-10 h-10 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-full flex items-center justify-center shadow-lg">
-                <User className="w-5 h-5 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-white font-medium text-sm">{barber.name}</h4>
-                <p className="text-gray-400 text-xs truncate">{barber.specialties?.join(', ') || 'Professional Barber'}</p>
-              </div>
-              <button className="bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] text-white px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 shadow-lg">
-                Book
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      <div className="bg-gradient-to-r from-green-600/20 to-green-500/20 border border-green-600/40 p-4 rounded-xl">
-        <div className="flex items-center space-x-2 mb-2">
-          <CheckCircle className="w-4 h-4 text-green-400" />
-          <h4 className="text-green-400 font-medium text-sm">Ready to Transform!</h4>
-        </div>
-        <p className="text-gray-300 text-xs leading-relaxed">
-          Your personalized style is ready. Select a barber to book your appointment.
-        </p>
-      </div>
-      
-      {/* Navigation Buttons */}
-      <div className="flex justify-between items-center gap-3 pt-4">
-        <button
-          onClick={handleBack}
-          disabled={currentStep === 1}
-          className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-200 text-sm min-w-[80px] ${
-            currentStep === 1
-              ? 'bg-gray-700/30 text-gray-500 cursor-not-allowed'
-              : 'bg-gray-700/50 text-gray-200 hover:bg-gray-600/70 border border-gray-600/50'
-          }`}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back</span>
-        </button>
+  const renderStep5 = () => {
+    const handleBookNow = () => {
+      if (onNavigateToBooking && selectedRecommendation) {
+        // Find a matching service based on the recommendation name
+        const matchingService = services?.find(service => 
+          service.name.toLowerCase().includes('haircut') || 
+          service.name.toLowerCase().includes('cut')
+        ) || services?.[0]; // Fallback to first service if no haircut service found
         
-        <div className="bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white px-6 py-2.5 rounded-xl font-medium text-sm">
-          Complete
+        onNavigateToBooking(matchingService);
+      }
+    };
+
+    const handleBookLater = () => {
+      // Save recommendation for later (could store in localStorage or state)
+      localStorage.setItem('savedRecommendation', JSON.stringify(selectedRecommendation));
+      alert('Recommendation saved! You can book this style anytime from your dashboard.');
+    };
+
+    return (
+      <div className="space-y-4">
+        {selectedRecommendation && (
+          <div className="bg-gradient-to-r from-[#FF8C42]/10 to-[#FF7A2B]/10 p-4 rounded-xl border border-[#FF8C42]/30">
+            <h3 className="text-white font-medium text-sm mb-1">Perfect Choice: {selectedRecommendation.name}</h3>
+            <p className="text-gray-400 text-xs">{selectedRecommendation.description}</p>
+          </div>
+        )}
+        
+        <div className="text-center mb-6">
+          <div className="flex items-center justify-center space-x-2 mb-3">
+            <CheckCircle className="w-6 h-6 text-green-400" />
+            <h3 className="text-white font-medium text-lg">Ready to Transform!</h3>
+          </div>
+          <p className="text-gray-300 text-sm leading-relaxed">
+            Your personalized recommendation is ready. Choose how you'd like to proceed with your new look.
+          </p>
+        </div>
+
+        {/* Booking Options */}
+        <div className="space-y-3">
+          <button
+            onClick={handleBookNow}
+            className="w-full bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] text-white px-6 py-4 rounded-xl font-medium transition-all duration-200 shadow-lg shadow-[#FF8C42]/20 flex items-center justify-center space-x-3"
+          >
+            <Calendar className="w-5 h-5" />
+            <span className="text-base font-semibold">Book Appointment Now</span>
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          
+          <button
+            onClick={handleBookLater}
+            className="w-full bg-gray-700/50 hover:bg-gray-600/70 text-gray-200 px-6 py-4 rounded-xl font-medium transition-all duration-200 border border-gray-600/50 hover:border-gray-500/50 flex items-center justify-center space-x-3"
+          >
+            <Clock className="w-5 h-5" />
+            <span className="text-base font-semibold">Save for Later</span>
+          </button>
+        </div>
+
+        {/* Recommendation Summary */}
+        <div className="bg-gray-800/30 rounded-xl p-4 border border-gray-600/30">
+          <h4 className="text-white font-medium text-sm mb-3">Why This Style Works for You:</h4>
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-[#FF8C42] rounded-full"></div>
+              <span className="text-gray-300 text-xs">Matches your {userPreferences.hairType} hair type</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-[#FF8C42] rounded-full"></div>
+              <span className="text-gray-300 text-xs">Suits your {userPreferences.lifestyle} lifestyle</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-[#FF8C42] rounded-full"></div>
+              <span className="text-gray-300 text-xs">{userPreferences.maintenance} maintenance required</span>
+            </div>
+            {selectedRecommendation.suitability && (
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                <span className="text-gray-300 text-xs">{selectedRecommendation.suitability}% compatibility match</span>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Navigation Buttons */}
+        <div className="flex justify-between items-center gap-3 pt-4">
+          <button
+            onClick={handleBack}
+            disabled={currentStep === 1}
+            className={`flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl font-medium transition-all duration-200 text-sm min-w-[80px] ${
+              currentStep === 0
+                ? 'bg-gray-700/30 text-gray-500 cursor-not-allowed'
+                : 'bg-gray-700/50 text-gray-200 hover:bg-gray-600/70 border border-gray-600/50'
+            }`}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back</span>
+          </button>
+          
+          <div className="bg-gradient-to-r from-green-500 to-green-600 text-white px-6 py-2.5 rounded-xl font-medium text-sm flex items-center space-x-2">
+            <CheckCircle className="w-4 h-4" />
+            <span>Complete</span>
+          </div>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   const renderCurrentStep = () => {
     switch (currentStep) {
+      case 0:
+        return renderWelcomeScreen()
       case 1:
         return renderStep1()
       case 2:
@@ -589,12 +797,14 @@ const AIBarberAssistant = () => {
       case 5:
         return renderStep5()
       default:
-        return renderStep1()
+        return renderWelcomeScreen()
     }
   }
 
   const canProceed = () => {
     switch (currentStep) {
+      case 0:
+        return true // Welcome screen can always proceed
       case 1:
         return uploadedImage !== null
       case 2:

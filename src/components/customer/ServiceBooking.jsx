@@ -98,6 +98,33 @@ const ServiceBooking = ({ onBack }) => {
   )
   const redeemVoucher = useMutation(api.services.vouchers.redeemVoucher)
 
+  // Check for pre-selected service from AI assistant
+  useEffect(() => {
+    const preSelectedServiceData = sessionStorage.getItem('preSelectedService')
+    if (preSelectedServiceData && services) {
+      try {
+        const preSelectedService = JSON.parse(preSelectedServiceData)
+        // Find the matching service from the current services list
+        const matchingService = services.find(service => 
+          service._id === preSelectedService._id || 
+          service.name.toLowerCase().includes('haircut') || 
+          service.name.toLowerCase().includes('cut')
+        )
+        
+        if (matchingService) {
+          setSelectedService(matchingService)
+          setStep(2) // Skip to step 2 since service is already selected
+        }
+        
+        // Clear the stored service after using it
+        sessionStorage.removeItem('preSelectedService')
+      } catch (error) {
+        console.error('Error parsing pre-selected service:', error)
+        sessionStorage.removeItem('preSelectedService')
+      }
+    }
+  }, [services])
+
   // Reset QR code loading state when step changes
   useEffect(() => {
     if (step === 4) {
