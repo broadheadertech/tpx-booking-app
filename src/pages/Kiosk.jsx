@@ -49,7 +49,7 @@ function Kiosk() {
   useEffect(() => {
     const generateAppQR = async () => {
       try {
-        const appUrl = 'https://tpxbarbershop.com/download' // Replace with actual app store link
+        const appUrl = 'https://tpx-booking-app.vercel.app//download' // Replace with actual app store link
         const qrUrl = await QRCode.toDataURL(appUrl, {
           width: 200,
           margin: 1,
