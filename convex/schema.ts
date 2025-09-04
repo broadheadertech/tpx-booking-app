@@ -356,4 +356,22 @@ export default defineSchema({
     .index("by_payment_request_id", ["payment_request_id"])
     .index("by_reference_id", ["reference_id"])
     .index("by_status", ["status"]),
+
+  // Ratings table for barber ratings
+  ratings: defineTable({
+    booking_id: v.id("bookings"),
+    customer_id: v.id("users"),
+    barber_id: v.id("barbers"),
+    service_id: v.id("services"),
+    rating: v.number(), // 1-5 stars
+    feedback: v.optional(v.string()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_booking", ["booking_id"])
+    .index("by_customer", ["customer_id"])
+    .index("by_barber", ["barber_id"])
+    .index("by_service", ["service_id"])
+    .index("by_rating", ["rating"])
+    .index("by_created_at", ["created_at"]),
 });

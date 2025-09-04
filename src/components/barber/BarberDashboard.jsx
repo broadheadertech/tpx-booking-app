@@ -43,6 +43,12 @@ const BarberDashboard = () => {
   // Get bookings and transactions for overview
   const allBookings = useQuery(api.services.bookings.getAllBookings)
   const allTransactions = useQuery(api.services.transactions.getAllTransactions)
+  
+  // Get rating analytics for current barber - always call the hook but skip if no barber
+  const ratingAnalytics = useQuery(
+    api.services.ratings.getBarberRatingsAnalytics, 
+    currentBarber ? { barberId: currentBarber._id } : "skip"
+  )
 
   const barberBookings = allBookings?.filter(booking => booking.barber === currentBarber?._id) || []
   const barberTransactions = allTransactions?.filter(transaction => 
@@ -130,7 +136,40 @@ const BarberDashboard = () => {
             </div>
 
             <div className="px-4 md:max-w-7xl md:mx-auto md:px-6 lg:px-8 py-4 md:py-6">
+              
+              {/* Stats Cards - Compact Design */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {/* Total Bookings Card */}
+                <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg shadow-md border border-[#444444]/30 p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-gray-400 mb-1">Total Bookings</p>
+                      <p className="text-lg font-bold text-[#FF8C42]">{barberBookings.length}</p>
+                    </div>
+                    <div className="bg-[#FF8C42]/10 p-2 rounded-lg">
+                      <Calendar className="w-4 h-4 text-[#FF8C42]" />
+                    </div>
+                  </div>
+                </div>
 
+                {/* Average Rating Card */}
+                <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg shadow-md border border-[#444444]/30 p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium text-gray-400 mb-1">Rating</p>
+                      <div className="flex items-center space-x-1">
+                        <p className="text-lg font-bold text-yellow-400">
+                          {ratingAnalytics?.averageRating || currentBarber?.rating || 0}
+                        </p>
+                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                      </div>
+                    </div>
+                    <div className="bg-yellow-400/10 p-2 rounded-lg">
+                      <Star className="w-4 h-4 text-yellow-400" />
+                    </div>
+                  </div>
+                </div>
+              </div>
 
                               {/* Today's Appointments - Compact Design */}
                 <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg shadow-md border border-[#444444]/30 p-4">
@@ -177,8 +216,107 @@ const BarberDashboard = () => {
                   </div>
                 </div>
 
+                {/* Rating Analytics - Compact Design */}
+                {ratingAnalytics && ratingAnalytics.totalRatings > 0 && (
+                  <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg shadow-md border border-[#444444]/30 p-4 mt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-bold text-white">Customer Ratings</h3>
+                      <div className="flex items-center space-x-1">
+                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                        <span className="text-xs text-yellow-400 font-medium">
+                          {ratingAnalytics.averageRating}/5
+                        </span>
+                      </div>
+                    </div>
 
+                    <div className="space-y-3">
+                      {/* Rating Summary */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <div className="flex">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-4 h-4 ${
+                                  star <= Math.round(ratingAnalytics.averageRating)
+                                    ? "text-yellow-400 fill-yellow-400"
+                                    : "text-gray-500"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm text-white font-medium">
+                            {ratingAnalytics.averageRating}
+                          </span>
+                        </div>
+                        <span className="text-xs text-gray-400">
+                          {ratingAnalytics.totalRatings} reviews
+                        </span>
+                      </div>
 
+                      {/* Rating Breakdown */}
+                      <div className="space-y-1">
+                        {[5, 4, 3, 2, 1].map((rating) => {
+                          const count = ratingAnalytics.ratingBreakdown[rating] || 0;
+                          const percentage = ratingAnalytics.totalRatings > 0 
+                            ? (count / ratingAnalytics.totalRatings) * 100 
+                            : 0;
+                          
+                          return (
+                            <div key={rating} className="flex items-center space-x-2">
+                              <span className="text-xs text-gray-400 w-2">{rating}</span>
+                              <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                              <div className="flex-1 bg-gray-700 rounded-full h-1.5">
+                                <div
+                                  className="bg-yellow-400 h-1.5 rounded-full transition-all duration-300"
+                                  style={{ width: `${percentage}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-xs text-gray-400 w-6 text-right">
+                                {count}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Recent Reviews */}
+                      {ratingAnalytics.recentRatings && ratingAnalytics.recentRatings.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-gray-600">
+                          <h4 className="text-xs font-medium text-gray-400 mb-2">Recent Reviews</h4>
+                          <div className="space-y-2 max-h-32 overflow-y-auto">
+                            {ratingAnalytics.recentRatings.slice(0, 3).map((review, index) => (
+                              <div key={index} className="bg-[#1A1A1A] rounded-md p-2">
+                                <div className="flex items-center justify-between mb-1">
+                                  <div className="flex">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star
+                                        key={star}
+                                        className={`w-3 h-3 ${
+                                          star <= review.rating
+                                            ? "text-yellow-400 fill-yellow-400"
+                                            : "text-gray-500"
+                                        }`}
+                                      />
+                                    ))}
+                                  </div>
+                                  <span className="text-xs text-gray-500">
+                                    {new Date(review.created_at).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                {review.feedback && (
+                                  <p className="text-xs text-gray-300 line-clamp-2">
+                                    {review.feedback}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
             </div>
           </>
