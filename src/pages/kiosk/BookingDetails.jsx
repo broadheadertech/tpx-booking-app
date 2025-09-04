@@ -28,7 +28,7 @@ const BookingDetails = ({ scannedBooking, onDone, onValidateAndConfirm, isProces
   }
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-lg" style={{border: '1px solid #E0E0E0'}}>
+    <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl p-6 shadow-xl border border-[#444444]/50">
       <div className="space-y-6">
         {/* Booking Header with Status */}
         <div className="flex items-start space-x-4">
@@ -37,7 +37,7 @@ const BookingDetails = ({ scannedBooking, onDone, onValidateAndConfirm, isProces
           </div>
           <div className="flex-1">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-black text-[#1A1A1A] font-mono">
+              <h3 className="text-lg font-black text-white font-mono">
                 {scannedBooking.id}
               </h3>
               <span className={`px-3 py-1 text-sm font-bold rounded-full border-2 uppercase ${getStatusColor(scannedBooking.status)}`}>
@@ -48,58 +48,58 @@ const BookingDetails = ({ scannedBooking, onDone, onValidateAndConfirm, isProces
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div className="flex items-center space-x-3">
-                  <User className="w-4 h-4 text-[#6B6B6B]" />
+                  <User className="w-4 h-4 text-gray-400" />
                   <div>
-                    <span className="font-bold text-[#6B6B6B] text-sm">Customer:</span>
-                    <p className="text-[#1A1A1A] font-semibold">{scannedBooking.customer}</p>
+                    <span className="font-bold text-gray-400 text-sm">Customer:</span>
+                    <p className="text-white font-semibold">{scannedBooking.customer}</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-3">
-                  <QrCode className="w-4 h-4 text-[#6B6B6B]" />
+                  <QrCode className="w-4 h-4 text-gray-400" />
                   <div>
-                    <span className="font-bold text-[#6B6B6B] text-sm">Service:</span>
-                    <p className="text-[#1A1A1A] font-semibold">{scannedBooking.service?.name}</p>
+                    <span className="font-bold text-gray-400 text-sm">Service:</span>
+                    <p className="text-white font-semibold">{scannedBooking.service?.name}</p>
                   </div>
                 </div>
               </div>
               
               <div className="space-y-3">
                 <div className="flex items-center space-x-3">
-                  <Calendar className="w-4 h-4 text-[#6B6B6B]" />
+                  <Calendar className="w-4 h-4 text-gray-400" />
                   <div>
-                    <span className="font-bold text-[#6B6B6B] text-sm">Date & Time:</span>
-                    <p className="text-[#1A1A1A] font-semibold">{scannedBooking.date} at {scannedBooking.time}</p>
+                    <span className="font-bold text-gray-400 text-sm">Date & Time:</span>
+                    <p className="text-white font-semibold">{scannedBooking.date} at {scannedBooking.time}</p>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-3">
-                  <User className="w-4 h-4 text-[#6B6B6B]" />
+                  <User className="w-4 h-4 text-gray-400" />
                   <div>
-                    <span className="font-bold text-[#6B6B6B] text-sm">Staff:</span>
-                    <p className="text-[#1A1A1A] font-semibold">{scannedBooking.barber?.name}</p>
+                    <span className="font-bold text-gray-400 text-sm">Staff:</span>
+                    <p className="text-white font-semibold">{scannedBooking.barber?.name}</p>
                   </div>
                 </div>
               </div>
             </div>
             
             {scannedBooking.phone !== 'N/A' && (
-              <div className="mt-4 pt-3 border-t border-[#F5F5F5]">
-                <span className="font-bold text-[#6B6B6B] text-sm">Phone:</span>
-                <p className="text-[#1A1A1A] font-semibold">{scannedBooking.phone}</p>
+              <div className="mt-4 pt-3 border-t border-[#444444]/50">
+                <span className="font-bold text-gray-400 text-sm">Phone:</span>
+                <p className="text-white font-semibold">{scannedBooking.phone}</p>
               </div>
             )}
             
             {/* Status Messages */}
             {scannedBooking.status === 'confirmed' && (
-              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-xl">
-                <p className="text-green-800 font-bold text-sm">✓ Booking confirmed - Ready for service!</p>
+              <div className="mt-4 p-3 bg-green-500/20 border border-green-500/50 rounded-xl">
+                <p className="text-green-300 font-bold text-sm">✓ Booking confirmed - Ready for service!</p>
               </div>
             )}
             
             {scannedBooking.status === 'scanned' && (
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
-                <p className="text-blue-800 font-bold text-sm">📱 Booking scanned - Ready to validate</p>
+              <div className="mt-4 p-3 bg-blue-500/20 border border-blue-500/50 rounded-xl">
+                <p className="text-blue-300 font-bold text-sm">📱 QR Code scanned - Please confirm your booking</p>
               </div>
             )}
             
@@ -124,22 +124,22 @@ const BookingDetails = ({ scannedBooking, onDone, onValidateAndConfirm, isProces
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-center space-x-4 pt-4 border-t border-[#F5F5F5]">
-          {scannedBooking.status === 'scanned' && onValidateAndConfirm && (
+        <div className="flex flex-col sm:flex-row gap-3">
+          {scannedBooking.status === 'scanned' && (
             <button
               onClick={onValidateAndConfirm}
-              className="px-8 bg-[#F68B24] hover:bg-[#E67A1A] text-white font-semibold py-3 rounded-xl transition-colors duration-200 flex items-center space-x-2"
               disabled={isProcessingBooking}
+              className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-green-600 text-white font-bold rounded-xl transition-all duration-200 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
             >
               {isProcessingBooking ? (
                 <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Validating...
+                  <RefreshCw className="w-5 h-5 animate-spin" />
+                  <span>Confirming...</span>
                 </>
               ) : (
                 <>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Validate & Confirm Booking
+                  <CheckCircle className="w-5 h-5" />
+                  <span>Confirm Booking</span>
                 </>
               )}
             </button>
@@ -147,10 +147,10 @@ const BookingDetails = ({ scannedBooking, onDone, onValidateAndConfirm, isProces
           
           <button
             onClick={onDone}
-            className="px-8 border-[#6B6B6B] text-[#6B6B6B] hover:bg-[#6B6B6B] hover:text-white py-3 rounded-xl border-2 transition-colors duration-200"
-            disabled={isProcessingBooking}
+            className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-[#1A1A1A] border border-[#444444] text-white font-bold rounded-xl transition-all duration-200 hover:bg-[#2A2A2A] hover:border-[#FF8C42]/50 shadow-lg"
           >
-            {scannedBooking.status === 'confirmed' ? 'Continue' : 'Back to Scanner'}
+            <XCircle className="w-5 h-5" />
+            <span>Done</span>
           </button>
         </div>
       </div>

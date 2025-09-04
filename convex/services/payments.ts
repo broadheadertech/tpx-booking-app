@@ -151,15 +151,34 @@ export const updatePaymentStatus = mutation({
         webhook_data: args.metadata
       });
 
-      // If payment succeeded, update booking status
+      // If payment succeeded, update booking status and payment status
       if (args.status === 'SUCCEEDED') {
+        // Only update if payment status is not already 'paid' (idempotency)
+        const currentBooking = await ctx.db.get(payment.booking_id);
+        if (currentBooking && currentBooking.payment_status !== 'paid') {
+          await ctx.db.patch(payment.booking_id, {
+            status: 'confirmed',
+            payment_status: 'paid',
+            updatedAt: Date.now()
+          });
+          console.log(`Payment succeeded for booking ${payment.booking_id} - status updated`);
+        } else {
+          console.log(`Payment already processed for booking ${payment.booking_id}`);
+        }
+      } else if (args.status === 'FAILED') {
+        // Update booking payment status to failed
         await ctx.db.patch(payment.booking_id, {
-          status: 'confirmed',
+          payment_status: 'unpaid',
           updatedAt: Date.now()
         });
-      } else if (args.status === 'FAILED') {
-        // Keep booking as is, payment failed but booking still exists
         console.log(`Payment failed for booking ${payment.booking_id}`);
+      } else if (args.status === 'REFUNDED') {
+        // Update booking payment status to refunded
+        await ctx.db.patch(payment.booking_id, {
+          payment_status: 'refunded',
+          updatedAt: Date.now()
+        });
+        console.log(`Payment refunded for booking ${payment.booking_id}`);
       }
 
       return { success: true };

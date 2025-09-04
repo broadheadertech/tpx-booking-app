@@ -1,11 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, ArrowLeft, Calendar } from 'lucide-react';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '../../../../convex/_generated/api';
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [paymentDetails, setPaymentDetails] = useState(null);
+  const [bookingUpdated, setBookingUpdated] = useState(false);
+
+  // Convex mutations
+  const updatePaymentStatus = useMutation(api.services.payments.updatePaymentStatus);
+  const getPaymentByRequestId = useQuery(api.services.payments.getPaymentByRequestId,
+    paymentDetails?.paymentId ? { paymentRequestId: paymentDetails.paymentId } : "skip"
+  );
 
   useEffect(() => {
     // Extract payment details from URL parameters
@@ -21,6 +30,35 @@ const PaymentSuccess = () => {
       });
     }
   }, [searchParams]);
+
+  // Update payment status when we have payment details
+  useEffect(() => {
+    const updateBookingStatus = async () => {
+      if (paymentDetails?.paymentId && paymentDetails?.status === 'COMPLETED' && !bookingUpdated) {
+        try {
+          console.log('Updating payment status for successful payment:', paymentDetails.paymentId);
+
+          // Update payment status in Convex
+          await updatePaymentStatus({
+            payment_request_id: paymentDetails.paymentId,
+            status: 'SUCCEEDED',
+            metadata: {
+              source: 'payment_success_page',
+              timestamp: new Date().toISOString()
+            }
+          });
+
+          setBookingUpdated(true);
+          console.log('Payment status updated successfully');
+        } catch (error) {
+          console.error('Error updating payment status:', error);
+          // Continue anyway - the webhook might still work
+        }
+      }
+    };
+
+    updateBookingStatus();
+  }, [paymentDetails, updatePaymentStatus, bookingUpdated]);
 
   const handleBackToHome = () => {
     navigate('/customer/dashboard');
@@ -69,6 +107,12 @@ const PaymentSuccess = () => {
                   <span className="text-gray-400">Status:</span>
                   <span className="text-green-400 font-semibold">
                     {paymentDetails.status || 'COMPLETED'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Booking Status:</span>
+                  <span className={`font-semibold ${bookingUpdated ? 'text-green-400' : 'text-yellow-400'}`}>
+                    {bookingUpdated ? 'Updated' : 'Updating...'}
                   </span>
                 </div>
               </div>

@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
-import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User, ShoppingBag } from 'lucide-react'
+import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User, ShoppingBag, Bot } from 'lucide-react'
 import ServiceBooking from '../../components/customer/ServiceBooking'
 import CustomerProfile from '../../components/customer/CustomerProfile'
 import VoucherManagement from '../../components/customer/VoucherManagement'
 import LoyaltyPoints from '../../components/customer/LoyaltyPoints'
 import MyBookings from '../../components/customer/MyBookings'
 import ProductShop from '../../components/customer/ProductShop'
+import PremiumOnboarding from '../../components/customer/PremiumOnboarding'
+import AIBarberAssistant from '../../components/customer/AIBarberAssistant'
 import Profile from './Profile'
 import bannerImage from '../../assets/img/banner.jpg'
 import { useQuery } from 'convex/react'
@@ -15,6 +17,21 @@ import { useAuth } from '../../context/AuthContext'
 const Dashboard = () => {
   const { user, isAuthenticated } = useAuth()
   const [activeSection, setActiveSection] = useState('home')
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+  // Check if onboarding should be shown (once per session)
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const onboardingCompleted = sessionStorage.getItem('onboarding_completed')
+      if (!onboardingCompleted) {
+        setShowOnboarding(true)
+      }
+    }
+  }, [isAuthenticated, user])
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false)
+  }
 
   // Convex queries
   const services = useQuery(api.services.services.getActiveServices)
@@ -27,7 +44,7 @@ const Dashboard = () => {
     { id: 'shop', label: 'Shop', icon: ShoppingBag },
     { id: 'bookings', label: 'Bookings', icon: History },
     { id: 'vouchers', label: 'Vouchers', icon: Gift },
-    { id: 'profile', label: 'Profile', icon: User }
+    { id: 'ai-assistant', label: 'TPX AI', icon: Bot }
   ]
 
   // Calculate dashboard stats from Convex data
@@ -70,10 +87,19 @@ const Dashboard = () => {
         return <MyBookings onBack={() => setActiveSection('home')} />
       case 'vouchers':
         return <VoucherManagement onBack={() => setActiveSection('home')} />
-      case 'loyalty':
-        return <LoyaltyPoints onBack={() => setActiveSection('home')} />
+      case 'ai-assistant':
+        return <AIBarberAssistant onNavigateToBooking={(selectedService) => {
+          // Navigate to booking with pre-selected service
+          setActiveSection('booking')
+          // You can store the selected service in state if needed
+          if (selectedService) {
+            sessionStorage.setItem('preSelectedService', JSON.stringify(selectedService))
+          }
+        }} />
       case 'profile':
         return <Profile />
+      case 'loyalty':
+        return <LoyaltyPoints onBack={() => setActiveSection('home')} />
       default:
         return (
           <div className="space-y-6">
@@ -205,6 +231,10 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
+      {/* Premium Onboarding Modal */}
+      {showOnboarding && (
+        <PremiumOnboarding onComplete={handleOnboardingComplete} />
+      )}
       {/* Subtle background pattern */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
@@ -240,9 +270,17 @@ const Dashboard = () => {
                 <p className="text-xs font-medium text-[#FF8C42]">Dashboard</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-xs font-medium text-white">Welcome</p>
-              <p className="text-xs text-gray-400">{new Date().toLocaleDateString()}</p>
+            <div className="flex items-center space-x-3">
+              <div className="text-right">
+                <p className="text-xs font-medium text-white">Welcome</p>
+                <p className="text-xs text-gray-400">{new Date().toLocaleDateString()}</p>
+              </div>
+              <button
+                onClick={() => setActiveSection('profile')}
+                className="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center transition-colors"
+              >
+                <User className="w-4 h-4 text-gray-300" />
+              </button>
             </div>
           </div>
         </div>
@@ -253,8 +291,9 @@ const Dashboard = () => {
         {renderContent()}
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl shadow-2xl border-t border-[#444444]/30">
+      {/* Bottom Navigation - Hidden during onboarding */}
+      {!showOnboarding && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl shadow-2xl border-t border-[#444444]/30">
         <div className="max-w-md mx-auto px-3">
           <div className="grid grid-cols-5 py-3">
             {sections.map((section) => {
@@ -284,7 +323,8 @@ const Dashboard = () => {
             })}
           </div>
         </div>
-      </div>
+        </div>
+      )}
     </div>
   )
 }
