@@ -8,6 +8,8 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  Star,
+  MessageSquare,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useQuery, useMutation } from 'convex/react'
@@ -20,11 +22,16 @@ const MyBookings = ({ onBack }) => {
   const [showQRCode, setShowQRCode] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(null);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(null);
+  const [ratingLoading, setRatingLoading] = useState(false);
 
   // Convex queries - only call when user exists
   const bookings = user?.id ? useQuery(api.services.bookings.getBookingsByCustomer, { customerId: user.id }) : undefined;
   const services = useQuery(api.services.services.getAllServices);
   const barbers = useQuery(api.services.barbers.getAllBarbers);
+  
+  // Get all ratings to check which bookings have been rated
+  const allRatings = useQuery(api.services.ratings.getAllRatings);
 
   // Loading state - true when user exists but data not loaded yet
   const loading = user?.id && (bookings === undefined || services === undefined || barbers === undefined);
@@ -34,6 +41,7 @@ const MyBookings = ({ onBack }) => {
 
   // Convex mutations
   const updateBookingStatus = useMutation(api.services.bookings.updateBooking);
+  const submitRating = useMutation(api.services.ratings.submitRating);
 
   const handleCancelBooking = async (bookingId) => {
     try {
@@ -56,6 +64,220 @@ const MyBookings = ({ onBack }) => {
       alert(error.message || "Failed to cancel booking. Please try again.");
     } finally {
       setCancelLoading(false);
+    }
+  };
+
+// Rating Modal Component
+const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [feedback, setFeedback] = useState("");
+  const [hoveredRating, setHoveredRating] = useState(0);
+
+  const handleSubmit = () => {
+    if (selectedRating === 0) {
+      alert("Please select a rating");
+      return;
+    }
+    onSubmit(booking, selectedRating, feedback);
+  };
+
+  const renderStars = () => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <button
+          key={i}
+          type="button"
+          onClick={() => setSelectedRating(i)}
+          onMouseEnter={() => setHoveredRating(i)}
+          onMouseLeave={() => setHoveredRating(0)}
+          className="p-1 transition-all duration-200 hover:scale-110"
+        >
+          <Star
+            className={`w-8 h-8 transition-colors duration-200 ${
+              i <= (hoveredRating || selectedRating)
+                ? "text-yellow-400 fill-yellow-400"
+                : "text-gray-300"
+            }`}
+          />
+        </button>
+      );
+    }
+    return stars;
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div
+        className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border"
+        style={{ borderColor: "#E0E0E0" }}
+      >
+        <div className="text-center space-y-4">
+          {/* Rating Icon */}
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto"
+            style={{ backgroundColor: "#F59E0B" }}
+          >
+            <Star className="w-6 h-6 text-white" />
+          </div>
+
+          {/* Title */}
+          <div>
+            <h3 className="text-lg font-bold mb-1" style={{ color: "#36454F" }}>
+              Rate Your Service
+            </h3>
+            <p className="text-sm" style={{ color: "#8B8B8B" }}>
+              How was your experience with {booking.barber?.name || "your barber"}?
+            </p>
+          </div>
+
+          {/* Service Details */}
+          <div
+            className="rounded-xl p-3 text-left"
+            style={{ backgroundColor: "#F4F0E6", border: "1px solid #E0E0E0" }}
+          >
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span style={{ color: "#36454F" }}>Service:</span>
+                <span className="font-bold" style={{ color: "#36454F" }}>
+                  {booking.service?.name}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{ color: "#36454F" }}>Date:</span>
+                <span className="font-bold" style={{ color: "#36454F" }}>
+                  {new Date(booking.date).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span style={{ color: "#36454F" }}>Barber:</span>
+                <span className="font-bold" style={{ color: "#36454F" }}>
+                  {booking.barber?.name || "Any Barber"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Star Rating */}
+          <div>
+            <p className="text-sm font-medium mb-3" style={{ color: "#36454F" }}>
+              Rate your experience:
+            </p>
+            <div className="flex justify-center space-x-1 mb-2">
+              {renderStars()}
+            </div>
+            {selectedRating > 0 && (
+              <p className="text-xs" style={{ color: "#8B8B8B" }}>
+                {selectedRating === 1 && "Poor"}
+                {selectedRating === 2 && "Fair"}
+                {selectedRating === 3 && "Good"}
+                {selectedRating === 4 && "Very Good"}
+                {selectedRating === 5 && "Excellent"}
+              </p>
+            )}
+          </div>
+
+          {/* Feedback */}
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: "#36454F" }}>
+              Additional Feedback (Optional)
+            </label>
+            <textarea
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              placeholder="Share your thoughts about the service..."
+              className="w-full p-3 border rounded-lg resize-none text-sm"
+              style={{
+                borderColor: "#E0E0E0",
+                backgroundColor: "#FAFAFA",
+                color: "#36454F",
+              }}
+              rows={3}
+              maxLength={500}
+            />
+            <p className="text-xs mt-1" style={{ color: "#8B8B8B" }}>
+              {feedback.length}/500 characters
+            </p>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex space-x-3">
+            <button
+              onClick={onClose}
+              disabled={loading}
+              className="flex-1 py-3 border-2 font-bold rounded-xl transition-all duration-200"
+              style={{ borderColor: "#E0E0E0", color: "#8B8B8B" }}
+              onMouseEnter={(e) =>
+                !loading && (e.target.style.backgroundColor = "#F5F5F5")
+              }
+              onMouseLeave={(e) =>
+                !loading && (e.target.style.backgroundColor = "transparent")
+              }
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading || selectedRating === 0}
+              className={`flex-1 py-3 text-white font-bold rounded-xl transition-all duration-200 ${
+                loading || selectedRating === 0 ? "opacity-75 cursor-not-allowed" : ""
+              }`}
+              style={{
+                backgroundColor:
+                  loading || selectedRating === 0 ? "#CCCCCC" : "#F59E0B",
+              }}
+              onMouseEnter={(e) =>
+                !loading &&
+                selectedRating > 0 &&
+                (e.target.style.backgroundColor = "#D97706")
+              }
+              onMouseLeave={(e) =>
+                !loading &&
+                selectedRating > 0 &&
+                (e.target.style.backgroundColor = "#F59E0B")
+              }
+            >
+              {loading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                  <span>Submitting...</span>
+                </div>
+              ) : (
+                "Submit Rating"
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+  const handleSubmitRating = async (bookingData, rating, feedback) => {
+    try {
+      setRatingLoading(true);
+      await submitRating({
+        bookingId: bookingData._id,
+        customerId: user.id,
+        barberId: bookingData.barber._id || bookingData.barber,
+        serviceId: bookingData.service._id || bookingData.service,
+        rating: rating,
+        feedback: feedback || undefined,
+      });
+
+      setShowRatingModal(null);
+      // Show success message
+      const successMsg = document.createElement("div");
+      successMsg.className =
+        "fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50";
+      successMsg.textContent = "Rating submitted successfully";
+      document.body.appendChild(successMsg);
+      setTimeout(() => document.body.removeChild(successMsg), 3000);
+    } catch (error) {
+      console.error("Error submitting rating:", error);
+      alert(error.message || "Failed to submit rating. Please try again.");
+    } finally {
+      setRatingLoading(false);
     }
   };
 
@@ -89,6 +311,14 @@ const MyBookings = ({ onBack }) => {
     if (activeFilter === "all") return true;
     return booking.status === activeFilter;
   }) : [];
+
+  // Helper function to check if booking has been rated
+  const hasBeenRated = (bookingId) => {
+    if (!allRatings || !user?.id) return false;
+    return allRatings.some(rating => 
+      rating.booking_id === bookingId && rating.customer_id === user.id
+    );
+  };
 
   const filters = [
     { id: "all", label: "All Bookings", count: bookings ? bookings.length : 0 },
@@ -314,46 +544,6 @@ const MyBookings = ({ onBack }) => {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <div
-                            className="w-3 h-3 rounded"
-                            style={{ backgroundColor: "#F68B24" }}
-                          ></div>
-                          <div>
-                            <p className="text-xs" style={{ color: "#8B8B8B" }}>
-                              Discount
-                            </p>
-                            <p
-                              className="text-sm font-bold"
-                              style={{ color: "#36454F" }}
-                            >
-                              ₱
-                              {service.discount_amount
-                                ? parseFloat(service.discount_amount).toLocaleString()
-                                : "--"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <div
-                            className="w-3 h-3 rounded"
-                            style={{ backgroundColor: "#22C55E" }}
-                          ></div>
-                          <div>
-                            <p className="text-xs" style={{ color: "#8B8B8B" }}>
-                              Grand Total
-                            </p>
-                            <p
-                              className="text-sm font-bold"
-                              style={{ color: "#36454F" }}
-                            >
-                              ₱
-                              {service.discount_amount
-                                ? parseFloat(service.total_amount).toLocaleString()
-                                : "--"}
-                            </p>
-                          </div>
-                        </div>
                       </div>
 
                       {/* Voucher and Total Amount Row */}
@@ -490,8 +680,7 @@ const MyBookings = ({ onBack }) => {
                           Book Again
                         </button>
                       )}
-                      {(booking.status === "confirmed" ||
-                        booking.status === "completed") && (
+                      {booking.status === "confirmed" && (
                         <button
                           onClick={() =>
                             setShowQRCode({ ...booking, service, barber })
@@ -509,6 +698,46 @@ const MyBookings = ({ onBack }) => {
                           <span>Show QR</span>
                         </button>
                       )}
+                      {booking.status === "completed" && (
+                        <>
+                          {!hasBeenRated(booking._id) ? (
+                            <button
+                              onClick={() =>
+                                setShowRatingModal({ ...booking, service, barber })
+                              }
+                              className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 text-sm"
+                              style={{ backgroundColor: "#F59E0B" }}
+                              onMouseEnter={(e) =>
+                                (e.target.style.backgroundColor = "#D97706")
+                              }
+                              onMouseLeave={(e) =>
+                                (e.target.style.backgroundColor = "#F59E0B")
+                              }
+                            >
+                              <Star className="w-3 h-3" />
+                              <span>Rate Service</span>
+                            </button>
+                          ) : (
+                            <div className="flex-1 py-2 bg-green-500/20 text-green-400 font-bold rounded-lg text-sm flex items-center justify-center space-x-2 border border-green-500/30">
+                              <CheckCircle className="w-3 h-3" />
+                              <span>Rated</span>
+                            </div>
+                          )}
+                          <button
+                            onClick={onBack}
+                            className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 text-sm"
+                            style={{ backgroundColor: "#F68B24" }}
+                            onMouseEnter={(e) =>
+                              (e.target.style.backgroundColor = "#E67E22")
+                            }
+                            onMouseLeave={(e) =>
+                              (e.target.style.backgroundColor = "#F68B24")
+                            }
+                          >
+                            Book Again
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 );
@@ -517,6 +746,16 @@ const MyBookings = ({ onBack }) => {
           </div>
         )}
       </div>
+
+      {/* Rating Modal */}
+      {showRatingModal && (
+        <RatingModal
+          booking={showRatingModal}
+          onSubmit={handleSubmitRating}
+          onClose={() => setShowRatingModal(null)}
+          loading={ratingLoading}
+        />
+      )}
 
       {/* QR Code Modal */}
       {showQRCode && (

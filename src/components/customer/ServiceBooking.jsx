@@ -1431,10 +1431,10 @@ const ServiceBooking = ({ onBack }) => {
           >
             <CheckCircle className="w-10 h-10 text-white" />
           </div>
-          <h2 className="text-2xl font-black mb-2" style={{ color: "#36454F" }}>
+          <h2 className="text-2xl font-black mb-2 text-white">
             Booking Confirmed!
           </h2>
-          <p className="font-medium" style={{ color: "#8B8B8B" }}>
+          <p className="font-medium text-gray-300">
             Your appointment has been successfully booked
           </p>
         </div>
@@ -1444,7 +1444,7 @@ const ServiceBooking = ({ onBack }) => {
           className="bg-white rounded-2xl p-8 border-2 shadow-lg text-center"
           style={{ borderColor: "#E0E0E0" }}
         >
-          <h3 className="text-lg font-black mb-4" style={{ color: "#36454F" }}>
+          <h3 className="text-lg font-black mb-4 text-black">
             Your Booking QR Code
           </h3>
 
@@ -1459,7 +1459,7 @@ const ServiceBooking = ({ onBack }) => {
                   <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
                     <div className="text-center space-y-3">
                       <div className="animate-spin w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full mx-auto"></div>
-                      <p className="text-sm" style={{ color: "#8B8B8B" }}>
+                      <p className="text-sm text-gray-700">
                         {!getBookingById?.booking_code ? "Loading booking details..." : "Generating QR Code..."}
                       </p>
                     </div>
@@ -1475,15 +1475,15 @@ const ServiceBooking = ({ onBack }) => {
           </div>
 
           <div className="text-center space-y-2">
-            <div className="text-lg font-black" style={{ color: "#36454F" }}>
-              Booking Code: {getBookingById?.booking_code ? getBookingById.booking_code : 
+            <div className="text-lg font-black text-black">
+              Booking Code: {getBookingById?.booking_code ? getBookingById.booking_code :
                 <span className="inline-flex items-center space-x-2">
-                  <span>Generating...</span>
+                  <span className="text-gray-700">Generating...</span>
                   <div className="animate-pulse w-2 h-2 bg-orange-500 rounded-full"></div>
                 </span>
               }
             </div>
-            <p className="text-sm" style={{ color: "#8B8B8B" }}>
+            <p className="text-sm text-gray-700">
               Show this QR code when you arrive
             </p>
           </div>
@@ -1499,18 +1499,18 @@ const ServiceBooking = ({ onBack }) => {
         >
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="font-medium" style={{ color: "#36454F" }}>
+              <span className="font-medium text-gray-300">
                 Service:
               </span>
-              <span className="font-bold" style={{ color: "#36454F" }}>
+              <span className="font-bold text-white">
                 {selectedService?.name}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="font-medium" style={{ color: "#36454F" }}>
+              <span className="font-medium text-gray-300">
                 Date & Time:
               </span>
-              <span className="font-bold" style={{ color: "#36454F" }}>
+              <span className="font-bold text-white">
                 {createdBooking?.date
                   ? new Date(createdBooking.date).toLocaleDateString()
                   : "Today"}
@@ -1518,14 +1518,14 @@ const ServiceBooking = ({ onBack }) => {
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="font-medium" style={{ color: "#36454F" }}>
+              <span className="font-medium text-gray-300">
                 Barber:
               </span>
               <div className="flex items-center space-x-2">
                 {selectedStaff && (
                   <BarberAvatar barber={selectedStaff} className="w-8 h-8" />
                 )}
-                <span className="font-bold" style={{ color: "#36454F" }}>
+                <span className="font-bold text-white">
                   {selectedStaff?.full_name ||
                     selectedStaff?.name ||
                     "Any Barber"}
@@ -1534,35 +1534,31 @@ const ServiceBooking = ({ onBack }) => {
             </div>
             {selectedVoucher && (
               <div className="flex justify-between">
-                <span className="font-medium" style={{ color: "#36454F" }}>
+                <span className="font-medium text-gray-300">
                   Subtotal:
                 </span>
-                <span
-                  className="font-bold line-through"
-                  style={{ color: "#8B8B8B" }}
-                >
+                <span className="font-bold line-through text-gray-400">
                   ₱{selectedService?.price.toLocaleString()}
                 </span>
               </div>
             )}
             {selectedVoucher && (
               <div className="flex justify-between">
-                <span className="font-medium" style={{ color: "#36454F" }}>
+                <span className="font-medium text-gray-300">
                   Voucher Discount:
                 </span>
-                <span className="font-bold" style={{ color: "#22C55E" }}>
+                <span className="font-bold text-green-400">
                   -₱{parseFloat(selectedVoucher.value || 0).toLocaleString()}
                 </span>
               </div>
             )}
             <div
-              className="flex justify-between border-t pt-3"
-              style={{ borderColor: "rgba(246, 139, 36, 0.2)" }}
+              className="flex justify-between border-t pt-3 border-orange-500/30"
             >
-              <span className="font-bold" style={{ color: "#36454F" }}>
+              <span className="font-bold text-white">
                 Total:
               </span>
-              <span className="font-black text-lg" style={{ color: "#F68B24" }}>
+              <span className="font-black text-lg text-orange-400">
                 ₱
                 {createdBooking?.total_amount
                   ? parseFloat(createdBooking.total_amount).toLocaleString()

@@ -12,6 +12,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
     username: '',
     email: '',
     password: '',
+    newPassword: '', // For password updates when editing
     mobile_number: '',
     full_name: '',
     phone: '',
@@ -30,6 +31,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
         username: '', // Don't populate username for editing
         email: editingBarber.email || '',
         password: '', // Don't populate password for editing
+        newPassword: '', // Always start empty for password updates
         mobile_number: editingBarber.phone || '',
         full_name: editingBarber.full_name || '',
         phone: editingBarber.phone || '',
@@ -45,6 +47,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
         username: '',
         email: '',
         password: '',
+        newPassword: '',
         mobile_number: '',
         full_name: '',
         phone: '',
@@ -67,6 +70,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
   const createBarber = useMutation(api.services.barbers.createBarber)
   const createBarberWithAccount = useMutation(api.services.barbers.createBarberWithAccount)
   const updateBarber = useMutation(api.services.barbers.updateBarber)
+  const updateBarberPassword = useMutation(api.services.barbers.updateBarberPassword)
   const generateUploadUrl = useMutation(api.services.barbers.generateUploadUrl)
 
   // Get image URL for preview
@@ -172,7 +176,16 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
           avatarStorageId: formData.avatarStorageId || undefined
         }
 
+        // Update barber profile
         await updateBarber({ id: editingBarber._id, ...barberData })
+
+        // Update password if provided
+        if (formData.newPassword && formData.newPassword.trim()) {
+          await updateBarberPassword({
+            barberId: editingBarber._id,
+            newPassword: formData.newPassword.trim()
+          })
+        }
       } else {
         // Create new barber with account
         const barberData = {
@@ -203,13 +216,16 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
         username: '',
         email: '',
         password: '',
+        newPassword: '',
         mobile_number: '',
         full_name: '',
         phone: '',
         is_active: true,
         services: [],
         experience: '0 years',
-        specialties: []
+        specialties: [],
+        avatar: '',
+        avatarStorageId: undefined
       })
       onClose()
     } catch (err) {
@@ -225,6 +241,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
       username: '',
       email: '',
       password: '',
+      newPassword: '',
       mobile_number: '',
       full_name: '',
       phone: '',
@@ -364,6 +381,24 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                     className="w-full h-12 pl-12 pr-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200"
                   />
                 </div>
+              </div>
+            )}
+
+            {editingBarber && (
+              <div>
+                <label className="block text-[#1A1A1A] font-bold text-base mb-2">
+                  Update Password (Optional)
+                </label>
+                <input
+                  type="password"
+                  value={formData.newPassword}
+                  onChange={(e) => handleInputChange('newPassword', e.target.value)}
+                  placeholder="Enter new password (leave empty to keep current)"
+                  className="w-full h-12 px-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Leave empty to keep the current password unchanged
+                </p>
               </div>
             )}
 

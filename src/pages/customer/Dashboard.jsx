@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User, ShoppingBag, Bot } from 'lucide-react'
 import ServiceBooking from '../../components/customer/ServiceBooking'
 import CustomerProfile from '../../components/customer/CustomerProfile'
@@ -16,8 +17,19 @@ import { useAuth } from '../../context/AuthContext'
 
 const Dashboard = () => {
   const { user, isAuthenticated } = useAuth()
+  const location = useLocation()
   const [activeSection, setActiveSection] = useState('home')
   const [showOnboarding, setShowOnboarding] = useState(false)
+
+  // Check if we're EXACTLY on the customer dashboard route (not on booking or other pages)
+  const isOnCustomerDashboard = location.pathname === '/customer/dashboard' &&
+    !location.pathname.includes('/booking') &&
+    !location.pathname.includes('/client')
+
+  // Early return if not on dashboard route - prevents navigation from showing on other pages
+  if (!isOnCustomerDashboard) {
+    return null
+  }
 
   // Check if onboarding should be shown (once per session)
   useEffect(() => {
@@ -248,50 +260,52 @@ const Dashboard = () => {
         ></div>
       </div>
       
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30">
-        <div className="max-w-md mx-auto px-4">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center shadow-lg">
-                <img 
-                  src="/img/tipuno_x_logo_white.avif" 
-                  alt="TPX Barbershop Logo" 
-                  className="w-6 h-6 object-contain"
-                />
-              </div>
-              <div>
-                <div className="flex items-center space-x-2">
-                  <h1 className="text-sm font-bold text-white">TPX Barbershop</h1>
-                  <div className="bg-[#FF8C42]/20 backdrop-blur-sm rounded-full px-1.5 py-0.5 border border-[#FF8C42]/30">
-                    <span className="text-xs font-semibold text-[#FF8C42]">v1.0.1</span>
-                  </div>
+      {/* Header - Hide when on sections with their own navigation */}
+      {!['shop', 'booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings'].includes(activeSection) && (
+        <div className="sticky top-0 z-40 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30">
+          <div className="max-w-md mx-auto px-4">
+            <div className="flex justify-between items-center py-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center shadow-lg">
+                  <img 
+                    src="/img/tipuno_x_logo_white.avif" 
+                    alt="TPX Barbershop Logo" 
+                    className="w-6 h-6 object-contain"
+                  />
                 </div>
-                <p className="text-xs font-medium text-[#FF8C42]">Dashboard</p>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h1 className="text-sm font-bold text-white">TPX Barbershop</h1>
+                    <div className="bg-[#FF8C42]/20 backdrop-blur-sm rounded-full px-1.5 py-0.5 border border-[#FF8C42]/30">
+                      <span className="text-xs font-semibold text-[#FF8C42]">v1.0.1</span>
+                    </div>
+                  </div>
+                  <p className="text-xs font-medium text-[#FF8C42]">Dashboard</p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="text-right">
-                <p className="text-xs font-medium text-white">Welcome</p>
-                <p className="text-xs text-gray-400">{new Date().toLocaleDateString()}</p>
+              <div className="flex items-center space-x-3">
+                <div className="text-right">
+                  <p className="text-xs font-medium text-white">Welcome</p>
+                  <p className="text-xs text-gray-400">{new Date().toLocaleDateString()}</p>
+                </div>
+                <button
+                  onClick={() => setActiveSection('profile')}
+                  className="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center transition-colors"
+                >
+                  <User className="w-4 h-4 text-gray-300" />
+                </button>
               </div>
-              <button
-                onClick={() => setActiveSection('profile')}
-                className="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center transition-colors"
-              >
-                <User className="w-4 h-4 text-gray-300" />
-              </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Main Content */}
       <div className="relative z-10 max-w-md mx-auto pb-20">
         {renderContent()}
       </div>
 
-      {/* Bottom Navigation - Hidden during onboarding */}
+      {/* Bottom Navigation - Only show when not onboarding */}
       {!showOnboarding && (
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl shadow-2xl border-t border-[#444444]/30">
         <div className="max-w-md mx-auto px-3">
