@@ -135,6 +135,29 @@ export const updateBarber = mutation({
   },
 });
 
+// Update barber password
+export const updateBarberPassword = mutation({
+  args: {
+    barberId: v.id("barbers"),
+    newPassword: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Get barber to find associated user
+    const barber = await ctx.db.get(args.barberId);
+    if (!barber) {
+      throwUserError(ERROR_CODES.BARBER_NOT_FOUND);
+    }
+
+    // Update user password
+    await ctx.db.patch(barber.user, {
+      password: args.newPassword, // In production, this should be hashed
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
 // Delete barber
 export const deleteBarber = mutation({
   args: { id: v.id("barbers") },

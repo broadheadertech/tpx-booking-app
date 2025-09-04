@@ -159,9 +159,9 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
         </div>
       </nav>
 
-      {/* Mobile Navigation */}
+      {/* Mobile Navigation - No Horizontal Scroll */}
       <nav className="lg:hidden">
-        <div className="flex overflow-x-auto scrollbar-hide p-2 space-x-1">
+        <div className="flex flex-wrap gap-1 p-2 justify-center">
           {/* Show primary tabs first */}
           {primaryTabs.map((tab) => {
             const IconComponent = getIconComponent(tab.id)
@@ -170,7 +170,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
               <div key={tab.id} className="relative">
                 <button
                   onClick={() => handleTabClick(tab.id)}
-                  className={`flex flex-col items-center justify-center min-w-[70px] px-2 py-3 rounded-xl font-medium text-xs transition-all duration-300 whitespace-nowrap relative ${
+                  className={`flex flex-col items-center justify-center px-2 py-2 rounded-lg font-medium text-xs transition-all duration-200 whitespace-nowrap relative flex-shrink-0 ${
                     activeTab === tab.id
                       ? 'bg-gradient-to-b from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -203,7 +203,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
           <div className="relative">
             <button
               onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
-              className={`flex flex-col items-center justify-center min-w-[70px] px-2 py-3 rounded-xl font-medium text-xs transition-all duration-300 whitespace-nowrap ${
+              className={`flex flex-col items-center justify-center px-2 py-2 rounded-lg font-medium text-xs transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
                 activeSecondaryTab
                   ? 'bg-gradient-to-b from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'

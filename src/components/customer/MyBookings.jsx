@@ -314,46 +314,6 @@ const MyBookings = ({ onBack }) => {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <div
-                            className="w-3 h-3 rounded"
-                            style={{ backgroundColor: "#F68B24" }}
-                          ></div>
-                          <div>
-                            <p className="text-xs" style={{ color: "#8B8B8B" }}>
-                              Discount
-                            </p>
-                            <p
-                              className="text-sm font-bold"
-                              style={{ color: "#36454F" }}
-                            >
-                              ₱
-                              {service.discount_amount
-                                ? parseFloat(service.discount_amount).toLocaleString()
-                                : "--"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <div
-                            className="w-3 h-3 rounded"
-                            style={{ backgroundColor: "#22C55E" }}
-                          ></div>
-                          <div>
-                            <p className="text-xs" style={{ color: "#8B8B8B" }}>
-                              Grand Total
-                            </p>
-                            <p
-                              className="text-sm font-bold"
-                              style={{ color: "#36454F" }}
-                            >
-                              ₱
-                              {service.discount_amount
-                                ? parseFloat(service.total_amount).toLocaleString()
-                                : "--"}
-                            </p>
-                          </div>
-                        </div>
                       </div>
 
                       {/* Voucher and Total Amount Row */}
@@ -490,8 +450,7 @@ const MyBookings = ({ onBack }) => {
                           Book Again
                         </button>
                       )}
-                      {(booking.status === "confirmed" ||
-                        booking.status === "completed") && (
+                      {booking.status === "confirmed" && (
                         <button
                           onClick={() =>
                             setShowQRCode({ ...booking, service, barber })

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User, ShoppingBag, Bot } from 'lucide-react'
 import ServiceBooking from '../../components/customer/ServiceBooking'
 import CustomerProfile from '../../components/customer/CustomerProfile'
@@ -16,8 +17,19 @@ import { useAuth } from '../../context/AuthContext'
 
 const Dashboard = () => {
   const { user, isAuthenticated } = useAuth()
+  const location = useLocation()
   const [activeSection, setActiveSection] = useState('home')
   const [showOnboarding, setShowOnboarding] = useState(false)
+
+  // Check if we're EXACTLY on the customer dashboard route (not on booking or other pages)
+  const isOnCustomerDashboard = location.pathname === '/customer/dashboard' &&
+    !location.pathname.includes('/booking') &&
+    !location.pathname.includes('/client')
+
+  // Early return if not on dashboard route - prevents navigation from showing on other pages
+  if (!isOnCustomerDashboard) {
+    return null
+  }
 
   // Check if onboarding should be shown (once per session)
   useEffect(() => {
@@ -291,7 +303,7 @@ const Dashboard = () => {
         {renderContent()}
       </div>
 
-      {/* Bottom Navigation - Hidden during onboarding */}
+      {/* Bottom Navigation - Only show when not onboarding */}
       {!showOnboarding && (
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl shadow-2xl border-t border-[#444444]/30">
         <div className="max-w-md mx-auto px-3">
