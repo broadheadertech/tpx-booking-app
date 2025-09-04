@@ -1,22 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Calendar, DollarSign, TrendingUp, Users, Star, Clock, Award, BarChart3, MoreHorizontal, ChevronUp } from 'lucide-react'
+import { Calendar, Users, BarChart3, DollarSign, TrendingUp, Star } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
 import BarberBookings from './BarberBookings'
-import BarberIncome from './BarberIncome'
-import BarberAnalytics from './BarberAnalytics'
 import BarberProfile from './BarberProfile'
-import BarberSchedule from './BarberSchedule'
-import BarberServices from './BarberServices'
 
 const BarberDashboard = () => {
   const { user } = useAuth()
   const location = useLocation()
   const [activeTab, setActiveTab] = useState('overview')
-  const [showMoreDropdown, setShowMoreDropdown] = useState(false)
-  const moreDropdownRef = useRef(null)
 
   // Check if we're on the barber dashboard route (main dashboard only)
   const isOnBarberDashboard = location.pathname === '/barber/dashboard'
@@ -82,40 +76,19 @@ const BarberDashboard = () => {
     }).format(amount)
   }
 
-  // Handle clicking outside dropdown
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target)) {
-        setShowMoreDropdown(false)
-      }
-    }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
 
   const primaryTabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'bookings', label: 'Bookings', icon: Calendar },
-    { id: 'income', label: 'Income', icon: DollarSign }
-  ]
-
-  const moreTabs = [
-    { id: 'schedule', label: 'Schedule', icon: Clock },
-    { id: 'services', label: 'Services', icon: Award },
-    { id: 'analytics', label: 'Analytics', icon: TrendingUp },
     { id: 'profile', label: 'Profile', icon: Users }
   ]
+
+  const moreTabs = []
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'bookings', label: 'Bookings', icon: Calendar },
-    { id: 'income', label: 'Income', icon: DollarSign },
-    { id: 'analytics', label: 'Analytics', icon: TrendingUp },
-    { id: 'services', label: 'Services', icon: Award },
-    { id: 'schedule', label: 'Schedule', icon: Clock },
     { id: 'profile', label: 'Profile', icon: Users }
   ]
 
@@ -123,16 +96,8 @@ const BarberDashboard = () => {
     switch (activeTab) {
       case 'bookings':
         return <BarberBookings />
-      case 'income':
-        return <BarberIncome />
-      case 'analytics':
-        return <BarberAnalytics />
       case 'profile':
         return <BarberProfile />
-      case 'schedule':
-        return <BarberSchedule />
-      case 'services':
-        return <BarberServices />
       default:
         return (
           <>
@@ -165,56 +130,7 @@ const BarberDashboard = () => {
             </div>
 
             <div className="px-4 md:max-w-7xl md:mx-auto md:px-6 lg:px-8 py-4 md:py-6">
-              {/* Quick Stats - Mobile Optimized */}
-              <div className="grid grid-cols-2 gap-3 mb-4 md:grid-cols-4 md:gap-4 md:mb-6">
-                <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg shadow-md border border-[#444444]/30 p-3 active:scale-[0.98] transition-all duration-200 hover:border-[#FF8C42]/50">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-gray-400 mb-1">Today's Bookings</p>
-                      <p className="text-lg font-bold text-[#FF8C42]">{todayBookings.length}</p>
-                    </div>
-                    <div className="bg-[#FF8C42]/10 p-2 rounded-lg">
-                      <Calendar className="w-4 h-4 text-[#FF8C42]" />
-                    </div>
-                  </div>
-                </div>
 
-                <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg shadow-md border border-[#444444]/30 p-3 active:scale-[0.98] transition-all duration-200 hover:border-[#FF8C42]/50">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-gray-400 mb-1">Today's Revenue</p>
-                      <p className="text-sm font-bold text-[#FF8C42]">{formatCurrency(todayRevenue)}</p>
-                    </div>
-                    <div className="bg-[#FF8C42]/10 p-2 rounded-lg">
-                      <DollarSign className="w-4 h-4 text-[#FF8C42]" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg shadow-md border border-[#444444]/30 p-3 active:scale-[0.98] transition-all duration-200 hover:border-[#FF8C42]/50">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-gray-400 mb-1">Monthly</p>
-                      <p className="text-lg font-bold text-[#FF8C42]">{monthlyBookings.length}</p>
-                    </div>
-                    <div className="bg-[#FF8C42]/10 p-2 rounded-lg">
-                      <TrendingUp className="w-4 h-4 text-[#FF8C42]" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg shadow-md border border-[#444444]/30 p-3 active:scale-[0.98] transition-all duration-200 hover:border-[#FF8C42]/50">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-gray-400 mb-1">Rating</p>
-                      <p className="text-lg font-bold text-[#FF8C42]">{currentBarber?.rating || 0}/5</p>
-                    </div>
-                    <div className="bg-[#FF8C42]/10 p-2 rounded-lg">
-                      <Star className="w-4 h-4 text-[#FF8C42]" />
-                    </div>
-                  </div>
-                </div>
-              </div>
 
                               {/* Today's Appointments - Compact Design */}
                 <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg shadow-md border border-[#444444]/30 p-4">
@@ -261,71 +177,9 @@ const BarberDashboard = () => {
                   </div>
                 </div>
 
-                {/* Quick Actions - Compact Mobile Design */}
-                <div className="grid grid-cols-2 gap-3 md:hidden">
-                  <button
-                    onClick={() => setActiveTab('bookings')}
-                    className="bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white p-3 rounded-lg font-medium active:scale-[0.95] transition-all duration-200 shadow-lg hover:shadow-xl"
-                  >
-                    <Calendar className="w-5 h-5 mx-auto mb-1" />
-                    <span className="text-xs font-semibold">Bookings</span>
-                    <span className="text-xs opacity-80">{todayBookings.length} today</span>
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('income')}
-                    className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] border border-[#444444]/50 text-white p-3 rounded-lg font-medium active:scale-[0.95] transition-all duration-200 shadow-md hover:shadow-lg"
-                  >
-                    <DollarSign className="w-5 h-5 mx-auto mb-1 text-[#FF8C42]" />
-                    <span className="text-xs font-semibold">Income</span>
-                    <span className="text-xs text-[#FF8C42]">{formatCurrency(todayRevenue)}</span>
-                  </button>
-                </div>
 
-                {/* Performance Summary - Desktop Only */}
-                <div className="hidden md:block bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold text-white">Monthly Performance</h3>
-                    <TrendingUp className="w-5 h-5 text-[#FF8C42]" />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-400 text-sm">Total Bookings</span>
-                        <span className="font-bold text-white">{monthlyBookings.length}</span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-400 text-sm">Total Revenue</span>
-                        <span className="font-bold text-[#FF8C42]">{formatCurrency(monthlyRevenue)}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-400 text-sm">Avg per Booking</span>
-                        <span className="font-bold text-[#FF8C42]">
-                          {formatCurrency(monthlyBookings.length > 0 ? monthlyRevenue / monthlyBookings.length : 0)}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-400 text-sm">Rating</span>
-                        <div className="flex items-center space-x-1">
-                          <Star className="w-4 h-4 text-[#FF8C42]" />
-                          <span className="font-bold text-[#FF8C42]">{currentBarber?.rating || 0}/5</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <button
-                    onClick={() => setActiveTab('analytics')}
-                    className="w-full mt-6 py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors font-medium"
-                  >
-                    View Detailed Analytics
-                  </button>
-                </div>
+
+
             </div>
           </>
         )
@@ -409,17 +263,14 @@ const BarberDashboard = () => {
 
       {/* Mobile Bottom Navigation - Compact Design */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#1A1A1A]/95 to-[#2A2A2A]/95 backdrop-blur-xl border-t border-[#444444]/30">
-        <div className="grid grid-cols-4 gap-1 p-2">
+        <div className="grid grid-cols-3 gap-1 p-2">
           {/* Primary Tabs */}
           {primaryTabs.map((tab) => {
             const IconComponent = tab.icon
             return (
               <button
                 key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id)
-                  setShowMoreDropdown(false)
-                }}
+                onClick={() => setActiveTab(tab.id)}
                 className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all duration-200 ${
                   activeTab === tab.id
                     ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg scale-95'
@@ -433,52 +284,6 @@ const BarberDashboard = () => {
               </button>
             )
           })}
-
-          {/* More Dropdown */}
-          <div className="relative" ref={moreDropdownRef}>
-            <button
-              onClick={() => setShowMoreDropdown(!showMoreDropdown)}
-              className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all duration-200 w-full ${
-                moreTabs.some(tab => tab.id === activeTab)
-                  ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg scale-95'
-                  : 'text-gray-400 hover:text-gray-300 hover:bg-white/5 active:scale-95'
-              }`}
-            >
-              <div className={`p-1 rounded-md ${moreTabs.some(tab => tab.id === activeTab) ? 'bg-white/20' : 'bg-transparent'}`}>
-                <MoreHorizontal className="w-4 h-4" />
-              </div>
-              <span className="text-xs font-medium mt-1">More</span>
-              {showMoreDropdown && (
-                <ChevronUp className="w-3 h-3 absolute -top-1 right-1" />
-              )}
-            </button>
-
-            {/* Dropdown Menu */}
-            {showMoreDropdown && (
-              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-44 bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-lg shadow-xl border border-[#444444]/50 py-1 backdrop-blur-xl">
-                {moreTabs.map((tab) => {
-                  const IconComponent = tab.icon
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => {
-                        setActiveTab(tab.id)
-                        setShowMoreDropdown(false)
-                      }}
-                      className={`w-full flex items-center space-x-2 px-3 py-2 text-left transition-all duration-200 rounded-md mx-1 ${
-                        activeTab === tab.id
-                          ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white'
-                          : 'text-gray-300 hover:bg-white/10 hover:text-white'
-                      }`}
-                    >
-                      <IconComponent className="w-4 h-4" />
-                      <span className="font-medium text-sm">{tab.label}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
