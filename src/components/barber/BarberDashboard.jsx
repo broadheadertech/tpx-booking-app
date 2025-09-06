@@ -41,8 +41,13 @@ const BarberDashboard = () => {
   }, [user, barbers, currentBarber, createBarberProfile])
 
   // Get bookings and transactions for overview
-  const allBookings = useQuery(api.services.bookings.getAllBookings)
   const allTransactions = useQuery(api.services.transactions.getAllTransactions)
+  
+  // Get bookings specifically for this barber
+  const barberBookings = useQuery(
+    api.services.bookings.getBookingsByBarber,
+    currentBarber ? { barberId: currentBarber._id } : "skip"
+  ) || []
   
   // Get rating analytics for current barber - always call the hook but skip if no barber
   const ratingAnalytics = useQuery(
@@ -50,7 +55,21 @@ const BarberDashboard = () => {
     currentBarber ? { barberId: currentBarber._id } : "skip"
   )
 
-  const barberBookings = allBookings?.filter(booking => booking.barber === currentBarber?._id) || []
+  // Get all bookings for debugging
+  const allBookings = useQuery(api.services.bookings.getAllBookings)
+  
+  // Debug logging
+  console.log('Debug - currentBarber:', currentBarber)
+  console.log('Debug - currentBarber._id:', currentBarber?._id)
+  console.log('Debug - barberBookings from specific query:', barberBookings)
+  console.log('Debug - allBookings:', allBookings)
+  
+  // Check if any bookings have barber field populated
+  if (allBookings) {
+    console.log('Debug - Bookings with barber field:', allBookings.filter(b => b.barber))
+    console.log('Debug - All barber field values:', allBookings.map(b => ({ id: b._id, barber: b.barber })))
+  }
+  
   const barberTransactions = allTransactions?.filter(transaction => 
     transaction.barber === currentBarber?._id && transaction.payment_status === 'completed'
   ) || []

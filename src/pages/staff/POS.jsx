@@ -47,6 +47,8 @@ const POS = () => {
     customer: null,
     customer_name: '',
     customer_phone: '',
+    customer_email: '',
+    customer_address: '',
     services: [],
     products: [],
     subtotal: 0,
@@ -62,6 +64,7 @@ const POS = () => {
   const [viewMode, setViewMode] = useState('card') // 'card' or 'table'
   const [currentPage, setCurrentPage] = useState(1)
   const [currentBooking, setCurrentBooking] = useState(null) // Store booking data for POS
+  const [newCustomerCredentials, setNewCustomerCredentials] = useState(null) // Store new customer credentials
   const itemsPerPage = 9 // For card view
   const tableItemsPerPage = 15 // For table view
 
@@ -75,6 +78,7 @@ const POS = () => {
   const createTransaction = useMutation(api.services.transactions.createTransaction)
   const updateBookingPaymentStatus = useMutation(api.services.bookings.updatePaymentStatus)
   const updateBookingStatus = useMutation(api.services.bookings.updateBooking)
+  const createUser = useMutation(api.services.auth.createUser)
   const getVoucherByCode = useQuery(api.services.vouchers.getVoucherByCode,
     currentTransaction.voucher_applied && typeof currentTransaction.voucher_applied === 'string'
       ? { code: currentTransaction.voucher_applied }
@@ -116,6 +120,8 @@ const POS = () => {
           customer: customer,
           customer_name: customer.username,
           customer_phone: customer.mobile_number || '',
+          customer_email: customer.email || '',
+          customer_address: customer.address || '',
           services: [{
             service_id: service._id,
             service_name: service.name,
@@ -161,6 +167,8 @@ const POS = () => {
       customer: prev.customer,
       customer_name: prev.customer_name,
       customer_phone: prev.customer_phone,
+      customer_email: prev.customer_email,
+      customer_address: prev.customer_address,
       barber: prev.barber || null,
       // Clear services and products that were loaded from booking
       services: [],
@@ -294,6 +302,8 @@ const POS = () => {
       customer: null,
       customer_name: '',
       customer_phone: '',
+      customer_email: '',
+      customer_address: '',
       services: [],
       products: [],
       subtotal: 0,
@@ -324,9 +334,47 @@ const POS = () => {
     setActiveModal('paymentConfirmation')
   }
 
+  // Generate secure password for new users
+  const generateSecurePassword = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
+    let password = ''
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length))
+    }
+    return password
+  }
+
   // Process payment after confirmation
   const processPayment = async (paymentData) => {
     try {
+      let finalCustomerId = currentTransaction.customer?._id
+      
+      // Auto-register walk-in customer if they have email
+      if (!currentTransaction.customer && currentTransaction.customer_name && currentTransaction.customer_email) {
+        try {
+          const generatedPassword = generateSecurePassword()
+          const newUser = await createUser({
+            username: currentTransaction.customer_name,
+            email: currentTransaction.customer_email,
+            password: generatedPassword,
+            mobile_number: currentTransaction.customer_phone || undefined,
+            address: currentTransaction.customer_address || undefined,
+            role: 'customer'
+          })
+          
+          finalCustomerId = newUser._id
+          
+          // Show password to staff for customer
+          setActiveModal('customerCreated')
+          setNewCustomerCredentials({
+            email: currentTransaction.customer_email,
+            password: generatedPassword
+          })
+        } catch (error) {
+          console.error('Failed to create user account:', error)
+          // Continue with transaction even if user creation fails
+        }
+      }
       // Debug logging
       console.log('Current transaction voucher_applied:', currentTransaction.voucher_applied)
       console.log('Current transaction voucher_applied type:', typeof currentTransaction.voucher_applied)
@@ -340,9 +388,11 @@ const POS = () => {
       }
       
       const transactionData = {
-        customer: currentTransaction.customer?._id || undefined,
+        customer: finalCustomerId || undefined,
         customer_name: currentTransaction.customer_name || undefined,
         customer_phone: currentTransaction.customer_phone || undefined,
+        customer_email: currentTransaction.customer_email || undefined,
+        customer_address: currentTransaction.customer_address || undefined,
         barber: selectedBarber._id,
         services: currentTransaction.services,
         products: currentTransaction.products.length > 0 ? currentTransaction.products : undefined,
@@ -366,10 +416,10 @@ const POS = () => {
       const posBooking = sessionStorage.getItem('posBooking')
       const isBookingPayment = posBooking && currentTransaction.services.length > 0
 
-      // Pass the skip_booking_creation flag as a separate parameter
+      // Include the skip_booking_creation flag in transaction data
       await createTransaction({
         ...transactionData,
-        skip_booking_creation: isBookingPayment
+        skip_booking_creation: isBookingPayment || false
       })
 
       // Update the existing booking if this is a booking payment
@@ -434,7 +484,9 @@ const POS = () => {
       ...prev,
       customer: customerData.customer,
       customer_name: customerData.customer_name,
-      customer_phone: customerData.customer_phone
+      customer_phone: customerData.customer_phone,
+      customer_email: customerData.customer_email || '',
+      customer_address: customerData.customer_address || ''
     }))
   }
 
@@ -818,10 +870,13 @@ const POS = () => {
                         {currentTransaction.customer.mobile_number && (
                           <p className="text-sm text-gray-400">{currentTransaction.customer.mobile_number}</p>
                         )}
+                        {currentTransaction.customer.address && (
+                          <p className="text-sm text-gray-400">{currentTransaction.customer.address}</p>
+                        )}
                       </div>
                     </div>
                     <button
-                      onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '' }))}
+                      onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '', customer_email: '', customer_address: '' }))}
                       className="text-red-400 hover:text-red-300 transition-colors"
                       title="Remove Customer"
                     >
@@ -830,37 +885,98 @@ const POS = () => {
                   </div>
                 </div>
               ) : currentTransaction.customer_name ? (
-                <div className="p-4 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-500/30">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-500/30 rounded-lg flex items-center justify-center border border-blue-500/40">
-                        <UserPlus className="w-5 h-5 text-blue-400" />
+                <div className="space-y-4">
+                  <div className="p-4 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-500/30">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-blue-500/30 rounded-lg flex items-center justify-center border border-blue-500/40">
+                          <UserPlus className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-white">{currentTransaction.customer_name}</p>
+                          <p className="text-sm text-gray-400">Walk-in Customer</p>
+                          {currentTransaction.customer_phone && (
+                            <p className="text-sm text-gray-400">{currentTransaction.customer_phone}</p>
+                          )}
+                          {currentTransaction.customer_email && (
+                            <p className="text-sm text-gray-400">{currentTransaction.customer_email}</p>
+                          )}
+                          {currentTransaction.customer_address && (
+                            <p className="text-sm text-gray-400">{currentTransaction.customer_address}</p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-white">{currentTransaction.customer_name}</p>
-                        <p className="text-sm text-gray-400">Walk-in Customer</p>
-                        {currentTransaction.customer_phone && (
-                          <p className="text-sm text-gray-400">{currentTransaction.customer_phone}</p>
-                        )}
-                      </div>
+                      <button
+                        onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '', customer_email: '', customer_address: '' }))}
+                        className="text-red-400 hover:text-red-300 transition-colors"
+                        title="Remove Customer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '' }))}
-                      className="text-red-400 hover:text-red-300 transition-colors"
-                      title="Remove Customer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </div>
+                  
+                  {/* Walk-in Customer Input Fields */}
+                  <div className="grid grid-cols-1 gap-3">
+                    <input
+                      type="text"
+                      placeholder="Customer Name *"
+                      value={currentTransaction.customer_name}
+                      onChange={(e) => setCurrentTransaction(prev => ({ ...prev, customer_name: e.target.value }))}
+                      className="px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                    />
+                    <input
+                      type="tel"
+                      placeholder="Phone Number"
+                      value={currentTransaction.customer_phone}
+                      onChange={(e) => setCurrentTransaction(prev => ({ ...prev, customer_phone: e.target.value }))}
+                      className="px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email Address (for account creation)"
+                      value={currentTransaction.customer_email}
+                      onChange={(e) => setCurrentTransaction(prev => ({ ...prev, customer_email: e.target.value }))}
+                      className="px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                    />
+                    <textarea
+                      placeholder="Address (optional)"
+                      value={currentTransaction.customer_address}
+                      onChange={(e) => setCurrentTransaction(prev => ({ ...prev, customer_address: e.target.value }))}
+                      rows={2}
+                      className="px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] resize-none"
+                    />
+                  </div>
+                  
+                  {currentTransaction.customer_email && (
+                    <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                      <p className="text-xs text-green-400 font-medium flex items-center">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Customer account will be created automatically
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
-                <button
-                  onClick={() => setActiveModal('customerSelection')}
-                  className="w-full p-4 border-2 border-dashed border-[#555555] rounded-lg hover:border-[#FF8C42] hover:bg-[#FF8C42]/10 transition-all duration-200 flex items-center justify-center space-x-2 text-gray-400 hover:text-[#FF8C42]"
-                >
-                  <User className="w-5 h-5" />
-                  <span className="font-medium">Select Customer</span>
-                </button>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setActiveModal('customerSelection')}
+                    className="w-full p-4 border-2 border-dashed border-[#555555] rounded-lg hover:border-[#FF8C42] hover:bg-[#FF8C42]/10 transition-all duration-200 flex items-center justify-center space-x-2 text-gray-400 hover:text-[#FF8C42]"
+                  >
+                    <User className="w-5 h-5" />
+                    <span className="font-medium">Select Existing Customer</span>
+                  </button>
+                  
+                  <div className="text-center text-gray-500 text-sm">or</div>
+                  
+                  <button
+                    onClick={() => setCurrentTransaction(prev => ({ ...prev, customer_name: 'Walk-in Customer' }))}
+                    className="w-full p-4 border-2 border-dashed border-blue-500/30 rounded-lg hover:border-blue-500 hover:bg-blue-500/10 transition-all duration-200 flex items-center justify-center space-x-2 text-blue-400 hover:text-blue-300"
+                  >
+                    <UserPlus className="w-5 h-5" />
+                    <span className="font-medium">Add Walk-in Customer</span>
+                  </button>
+                </div>
               )}
             </div>
 
@@ -1187,6 +1303,63 @@ const POS = () => {
                 Cancel
               </button>
             </div>
+          </div>
+        </Modal>
+      )}
+
+      {activeModal === 'customerCreated' && newCustomerCredentials && (
+        <Modal isOpen={true} onClose={() => { setActiveModal(null); setNewCustomerCredentials(null); }} title="Customer Account Created" size="md">
+          <div className="text-center py-6">
+            <div className="w-16 h-16 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-green-500/30">
+              <CheckCircle className="w-8 h-8 text-green-500" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Customer Account Created Successfully!</h3>
+            <p className="text-gray-600 mb-6">
+              Please provide the following login credentials to the customer:
+            </p>
+            
+            <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email Address:</label>
+                  <div className="flex items-center justify-between bg-white border border-gray-200 rounded-md px-3 py-2">
+                    <span className="font-mono text-sm text-gray-900">{newCustomerCredentials.email}</span>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(newCustomerCredentials.email)}
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Temporary Password:</label>
+                  <div className="flex items-center justify-between bg-white border border-gray-200 rounded-md px-3 py-2">
+                    <span className="font-mono text-sm text-gray-900">{newCustomerCredentials.password}</span>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(newCustomerCredentials.password)}
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-blue-800">
+                <strong>Important:</strong> The customer should change their password after first login for security.
+              </p>
+            </div>
+            
+            <button
+              onClick={() => { setActiveModal(null); setNewCustomerCredentials(null); }}
+              className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium rounded-lg transition-all duration-200"
+            >
+              Continue with Transaction
+            </button>
           </div>
         </Modal>
       )}

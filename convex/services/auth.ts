@@ -14,6 +14,7 @@ export const registerUser = mutation({
     password: v.string(),
     email: v.string(),
     mobile_number: v.string(),
+    address: v.optional(v.string()),
     nickname: v.optional(v.string()),
     birthday: v.optional(v.string()),
     role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber")),
@@ -44,6 +45,7 @@ export const registerUser = mutation({
       email: args.email,
       password: args.password, // In production, hash this password
       mobile_number: args.mobile_number,
+      address: args.address,
       nickname: args.nickname,
       birthday: args.birthday,
       role: args.role,
@@ -246,6 +248,70 @@ export const updateUserProfile = mutation({
 });
 
 // Get all users (for staff/admin)
+// Create user mutation (for POS walk-in customers)
+export const createUser = mutation({
+  args: {
+    username: v.string(),
+    email: v.string(),
+    password: v.string(),
+    mobile_number: v.optional(v.string()),
+    address: v.optional(v.string()),
+    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber")),
+  },
+  handler: async (ctx, args) => {
+    // Check if user already exists
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+
+    if (existingUser) {
+      throwUserError(ERROR_CODES.AUTH_EMAIL_EXISTS);
+    }
+
+    const existingUsername = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .first();
+
+    if (existingUsername) {
+      throwUserError(ERROR_CODES.AUTH_USERNAME_EXISTS);
+    }
+
+    // Create new user
+    const userId = await ctx.db.insert("users", {
+      username: args.username,
+      email: args.email,
+      password: args.password, // In production, hash this password
+      mobile_number: args.mobile_number || "",
+      address: args.address,
+      nickname: undefined,
+      birthday: undefined,
+      role: args.role,
+      is_active: true,
+      avatar: undefined,
+      bio: undefined,
+      skills: [],
+      isVerified: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    // Get the created user
+    const user = await ctx.db.get(userId);
+
+    return {
+      _id: userId,
+      username: user?.username,
+      email: user?.email,
+      mobile_number: user?.mobile_number,
+      address: user?.address,
+      role: user?.role,
+      is_active: user?.is_active,
+    };
+  },
+});
+
 export const getAllUsers = query({
   args: {},
   handler: async (ctx) => {

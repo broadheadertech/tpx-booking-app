@@ -9,6 +9,7 @@ export default defineSchema({
     password: v.string(), // In production, this should be hashed
     nickname: v.optional(v.string()),
     mobile_number: v.string(),
+    address: v.optional(v.string()),
     birthday: v.optional(v.string()),
     role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber")),
     is_active: v.boolean(),
@@ -253,6 +254,8 @@ export default defineSchema({
     customer: v.optional(v.id("users")), // Optional for walk-in customers
     customer_name: v.optional(v.string()), // For walk-in customers
     customer_phone: v.optional(v.string()), // For walk-in customers
+    customer_email: v.optional(v.string()), // For walk-in customers
+    customer_address: v.optional(v.string()), // For walk-in customers
     barber: v.id("barbers"),
     services: v.array(v.object({
       service_id: v.id("services"),
