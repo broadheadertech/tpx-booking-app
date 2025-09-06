@@ -4,10 +4,10 @@ import Button from "../common/Button";
 import SuccessModal from "../common/SuccessModal";
 import { Mail, Users, Search, X, CheckCircle, QrCode } from "lucide-react";
 import QRCode from "qrcode";
-import emailjs from "@emailjs/browser";
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
+import { sendVoucherEmail, isEmailServiceConfigured } from '../../services/emailService'
 
 const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
   const { user } = useAuth()
@@ -30,10 +30,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const dropdownRef = useRef(null);
 
-  // EmailJS configuration - you'll need to update these with your actual values
-  const EMAILJS_SERVICE_ID = "service_4y8wlo6";
-  const EMAILJS_TEMPLATE_ID = "template_vj10o2t";
-  const EMAILJS_PUBLIC_KEY = "LdJKCGcFqSk3IAdnu";
+  // Using centralized email service for voucher emails
 
   useEffect(() => {
     if (isOpen) {
@@ -136,10 +133,10 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
       return;
     }
 
-    // Validate EmailJS configuration
-    if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
+    // Validate email service configuration
+    if (!isEmailServiceConfigured()) {
       alert(
-        "EmailJS configuration is missing. Please check the service configuration."
+        "Email service is not configured. Please check the configuration."
       );
       return;
     }
@@ -159,10 +156,6 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
     let successfulSends = 0; // Local counter for immediate tracking
 
     try {
-      // Initialize EmailJS (you'll need to call this once in your app)
-      console.log("Initializing EmailJS with service:", EMAILJS_SERVICE_ID);
-      emailjs.init(EMAILJS_PUBLIC_KEY);
-
       for (const selectedUser of selectedUsers) {
         try {
           // Step 1: Assign voucher to user via Convex
@@ -219,61 +212,49 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
             );
           }
 
-          // Step 3: Send email with voucher details
+          // Step 3: Send email with voucher details using centralized email service
           console.log(
             "Generated QR Code URL length:",
             personalizedQrUrl.length
           );
-          console.log(
-            "QR Code URL preview:",
-            personalizedQrUrl.substring(0, 100) + "..."
-          );
 
-          const templateParams = {
-            to_name: selectedUser.nickname || selectedUser.username,
-            to_email: selectedUser.email,
-            voucher_code: voucher.code,
-            voucher_value: `₱${parseFloat(voucher.value).toFixed(2)}`,
-            points_required: voucher.points_required || 0,
-            expires_at: new Date(voucher.expires_at).toLocaleDateString(),
-            qr_code_image: personalizedQrUrl,
-            business_name: "TPX Barbershop",
+          const voucherEmailData = {
+            email: selectedUser.email,
+            name: selectedUser.nickname || selectedUser.username,
+            voucherCode: voucher.code,
+            voucherValue: `₱${parseFloat(voucher.value).toFixed(2)}`,
+            pointsRequired: voucher.points_required || 0,
+            expiresAt: new Date(voucher.expires_at).toLocaleDateString(),
+            qrCodeImage: personalizedQrUrl
           };
 
-          console.log("Email template parameters:", {
-            ...templateParams,
-            qr_code_image: `QR_CODE_DATA_URL (${personalizedQrUrl.length} chars)`,
+          console.log("Sending voucher email with data:", {
+            ...voucherEmailData,
+            qrCodeImage: `QR_CODE_DATA_URL (${personalizedQrUrl.length} chars)`,
           });
 
-          const emailResult = await emailjs.send(
-            EMAILJS_SERVICE_ID,
-            EMAILJS_TEMPLATE_ID,
-            templateParams
-          );
+          const emailResult = await sendVoucherEmail(voucherEmailData);
 
-          console.log(`Email sent successfully to ${user.email}:`, emailResult);
-          successfulSends++;
-          setSentCount((prev) => {
-            const newCount = prev + 1;
-            console.log(`Incrementing sent count from ${prev} to ${newCount}`);
-            return newCount;
-          });
+          if (emailResult.success) {
+            console.log(`Email sent successfully to ${selectedUser.email}:`, emailResult.response);
+            successfulSends++;
+            setSentCount((prev) => {
+              const newCount = prev + 1;
+              console.log(`Incrementing sent count from ${prev} to ${newCount}`);
+              return newCount;
+            });
+          } else {
+            throw new Error(emailResult.error);
+          }
         } catch (error) {
           console.error(
             `Failed to assign/send voucher to ${selectedUser.username}:`,
             error
           );
 
-          // Check if it's an EmailJS error
-          if (error.text) {
-            console.error("EmailJS Error:", error.text);
-            alert(`Failed to send email to ${selectedUser.email}: ${error.text}`);
-          } else if (error.message) {
-            console.error("General Error:", error.message);
-            alert(
-              `Failed to process voucher for ${selectedUser.username}: ${error.message}`
-            );
-          }
+          alert(
+            `Failed to process voucher for ${selectedUser.username}: ${error.message}`
+          );
           // Continue with other users even if one fails
         }
       }

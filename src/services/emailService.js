@@ -87,6 +87,75 @@ export const sendWelcomeEmail = async (customerData) => {
 }
 
 /**
+ * Send voucher email to customer
+ * @param {Object} voucherData - Voucher information
+ * @param {string} voucherData.email - Customer email address
+ * @param {string} voucherData.name - Customer name
+ * @param {string} voucherData.voucherCode - Voucher code
+ * @param {string} voucherData.voucherValue - Voucher value
+ * @param {number} voucherData.pointsRequired - Points required
+ * @param {string} voucherData.expiresAt - Expiry date
+ * @param {string} voucherData.qrCodeImage - QR code image data URL
+ * @returns {Promise} EmailJS response
+ */
+export const sendVoucherEmail = async (voucherData) => {
+  try {
+    // Validate required data
+    if (!voucherData.email || !voucherData.name || !voucherData.voucherCode) {
+      throw new Error('Missing required voucher data for email')
+    }
+
+    // Check if EmailJS is properly configured
+    if (!EMAILJS_SERVICE_ID || EMAILJS_SERVICE_ID === 'your_service_id') {
+      console.warn('EmailJS service ID not configured')
+      return { success: false, error: 'Email service not configured' }
+    }
+
+    if (!EMAILJS_PUBLIC_KEY || EMAILJS_PUBLIC_KEY === 'your_public_key') {
+      console.warn('EmailJS public key not configured')
+      return { success: false, error: 'Email public key not configured' }
+    }
+
+    // Use specific template ID for voucher emails
+    const VOUCHER_TEMPLATE_ID = 'template_lo371v3'
+
+    // Prepare email template parameters
+    const templateParams = {
+      to_email: voucherData.email,
+      to_name: voucherData.name,
+      voucher_code: voucherData.voucherCode,
+      voucher_value: voucherData.voucherValue,
+      points_required: voucherData.pointsRequired || 0,
+      expires_at: voucherData.expiresAt,
+      qr_code_image: voucherData.qrCodeImage,
+      business_name: 'TPX Barber'
+    }
+
+    console.log('Sending voucher email to:', voucherData.email)
+    console.log('Template parameters:', { ...templateParams, qr_code_image: 'QR_CODE_DATA_URL' })
+    
+    // Send email using EmailJS with voucher-specific template
+    const response = await emailjs.send(
+      EMAILJS_SERVICE_ID,
+      VOUCHER_TEMPLATE_ID,
+      templateParams
+    )
+
+    console.log('Voucher email sent successfully:', response)
+    return { success: true, response }
+
+  } catch (error) {
+    console.error('Failed to send voucher email:', error)
+    console.error('Error details:', {
+      message: error.message,
+      status: error.status,
+      text: error.text
+    })
+    return { success: false, error: error.message }
+  }
+}
+
+/**
  * Send booking confirmation email
  * @param {Object} bookingData - Booking information
  * @returns {Promise} EmailJS response
@@ -145,6 +214,7 @@ export const getEmailServiceStatus = () => {
 
 export default {
   sendWelcomeEmail,
+  sendVoucherEmail,
   sendBookingConfirmationEmail,
   sendReceiptEmail,
   isEmailServiceConfigured,
