@@ -57,7 +57,7 @@ export const sendWelcomeEmail = async (customerData) => {
       user_password: customerData.password,
       username: customerData.username,
       login_url: customerData.loginUrl || `${window.location.origin}/auth/login`,
-      company_name: 'TPX Barber',
+      company_name: 'TipunoX Angeles',
       support_email: 'support@tpxbarber.com',
       current_year: new Date().getFullYear()
     }
@@ -128,7 +128,7 @@ export const sendVoucherEmail = async (voucherData) => {
       points_required: voucherData.pointsRequired || 0,
       expires_at: voucherData.expiresAt,
       qr_code_image: voucherData.qrCodeImage,
-      business_name: 'TPX Barber'
+      business_name: 'TipunoX Angeles'
     }
 
     console.log('Sending voucher email to:', voucherData.email)
