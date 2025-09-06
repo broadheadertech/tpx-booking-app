@@ -1202,7 +1202,7 @@ const QRCodeDisplay = ({ voucher }) => {
     username: getUsername(),
     value: voucher.value,
     expiresAt: voucher.expires_at,
-    barbershop: 'TPX Barbershop'
+    barbershop: 'TipunoX Angeles Barbershop'
   })
 
   useEffect(() => {

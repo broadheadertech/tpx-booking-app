@@ -42,7 +42,7 @@ export const createPaymentRequest = action({
           failure_return_url: `${BASE_URL}/booking/payment/failure`,
           success_return_url: `${BASE_URL}/booking/payment/success`
         },
-        description: `TPX Barbershop - Booking Payment #${args.bookingId}`,
+        description: `TipunoX Angeles Barbershop - Booking Payment #${args.bookingId}`,
         metadata: {
           booking_id: args.bookingId,
           customer_email: args.customerEmail || '',

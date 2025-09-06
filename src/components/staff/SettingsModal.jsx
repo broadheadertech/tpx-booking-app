@@ -17,7 +17,7 @@ import {
 const SettingsModal = ({ isOpen, onClose, onSave }) => {
   const [settings, setSettings] = useState({
     // Barbershop Info
-    shopName: 'TPX Barbershop',
+    shopName: 'TipunoX Angeles Barbershop',
     address: '123 Main Street, Quezon City, Philippines',
     phone: '+63 912 345 6789',
     email: 'info@tpxbarbershop.com',
@@ -79,7 +79,7 @@ const SettingsModal = ({ isOpen, onClose, onSave }) => {
   const resetToDefaults = () => {
     // Reset to default values
     setSettings({
-      shopName: 'TPX Barbershop',
+      shopName: 'TipunoX Angeles Barbershop',
       address: '123 Main Street, Quezon City, Philippines',
       phone: '+63 912 345 6789',
       email: 'info@tpxbarbershop.com',

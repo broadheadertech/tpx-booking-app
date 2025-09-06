@@ -100,7 +100,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
       voucherId: voucher.id,
       code: voucher.code,
       type: 'voucher',
-      brand: 'TPX Barbershop'
+      brand: 'TipunoX Angeles Barbershop'
     })
 
     useEffect(() => {
@@ -129,7 +129,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
       user: voucher.user,
       redeemed: !!voucher.redeemed,
       type: 'voucher',
-      brand: 'TPX Barbershop'
+      brand: 'TipunoX Angeles Barbershop'
     })
 
     useEffect(() => {

@@ -56,7 +56,7 @@ const Dashboard = () => {
     { id: 'shop', label: 'Shop', icon: ShoppingBag },
     { id: 'bookings', label: 'Bookings', icon: History },
     { id: 'vouchers', label: 'Vouchers', icon: Gift },
-    { id: 'ai-assistant', label: 'TPX AI', icon: Bot }
+    { id: 'ai-assistant', label: 'TipunoX Angeles AI', icon: Bot }
   ]
 
   // Calculate dashboard stats from Convex data
@@ -148,7 +148,7 @@ const Dashboard = () => {
                 {/* Professional Typography */}
                 <div className="space-y-4">
                   <h1 className="text-4xl md:text-5xl font-light text-white drop-shadow-2xl tracking-wider">
-                    <span className="font-thin">TPX</span>
+                    <span className="font-thin">TipunoX Angeles</span>
                     <span className="font-extralight text-[#FF8C42] ml-2">BARBERSHOP</span>
                   </h1>
                   
@@ -269,13 +269,13 @@ const Dashboard = () => {
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center shadow-lg">
                   <img 
                     src="/img/tipuno_x_logo_white.avif" 
-                    alt="TPX Barbershop Logo" 
+                    alt="TipunoX Angeles Barbershop Logo" 
                     className="w-6 h-6 object-contain"
                   />
                 </div>
                 <div>
                   <div className="flex items-center space-x-2">
-                    <h1 className="text-sm font-bold text-white">TPX Barbershop</h1>
+                    <h1 className="text-sm font-bold text-white">TipunoX Angeles Barbershop</h1>
                     <div className="bg-[#FF8C42]/20 backdrop-blur-sm rounded-full px-1.5 py-0.5 border border-[#FF8C42]/30">
                       <span className="text-xs font-semibold text-[#FF8C42]">v1.0.1</span>
                     </div>

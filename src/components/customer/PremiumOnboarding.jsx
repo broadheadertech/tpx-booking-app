@@ -182,7 +182,7 @@ const PremiumOnboarding = ({ onComplete }) => {
           <div className="flex items-center space-x-4">
              <img 
                src="/img/tipuno_x_logo_white.avif" 
-               alt="TPX Logo" 
+               alt="TipunoX Angeles Logo" 
                className="w-16 h-16 object-contain"
              />
              <div>

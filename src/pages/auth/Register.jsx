@@ -93,14 +93,14 @@ function Register() {
               <div className="w-18 h-18 p-3 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-3xl shadow-2xl ring-4 ring-[#FF8C42]/20">
                 <img 
                   src="/img/tipuno_x_logo_white.avif" 
-                  alt="TPX Barbershop Logo" 
+                  alt="TipunoX Angeles Barbershop Logo" 
                   className="w-full h-full object-contain"
                 />
               </div>
             </div>
             
             <h1 className="text-2xl font-light tracking-wider mb-3 text-white">
-              <span className="font-thin">TPX</span>
+              <span className="font-thin">TipunoX Angeles</span>
               <span className="font-extralight ml-2 text-[#FF8C42]">BARBERSHOP</span>
             </h1>
             <p className="text-sm font-light text-gray-400">Create your account to get started</p>

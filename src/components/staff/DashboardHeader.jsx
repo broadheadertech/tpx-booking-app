@@ -26,13 +26,13 @@ const DashboardHeader = ({ onLogout }) => {
             <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-2xl ring-2 sm:ring-4 ring-[#FF8C42]/20 p-2">
               <img 
                 src="/img/tipuno_x_logo_white.avif" 
-                alt="TPX Barbershop Logo" 
+                alt="TipunoX Angeles Barbershop Logo" 
                 className="w-full h-full object-contain"
               />
             </div>
             <div>
               <div className="flex items-center space-x-3">
-                <h1 className="text-lg sm:text-2xl font-bold text-white tracking-tight">TPX Barbershop</h1>
+                <h1 className="text-lg sm:text-2xl font-bold text-white tracking-tight">TipunoX Angeles Barbershop</h1>
                 <div className="bg-[#FF8C42]/20 backdrop-blur-sm rounded-full px-2 py-0.5 border border-[#FF8C42]/30">
                   <span className="text-xs font-semibold text-[#FF8C42]">v1.0.1</span>
                 </div>
