@@ -41,6 +41,8 @@ export const createTransaction = mutation({
     customer: v.optional(v.id("users")),
     customer_name: v.optional(v.string()),
     customer_phone: v.optional(v.string()),
+    customer_email: v.optional(v.string()),
+    customer_address: v.optional(v.string()),
     barber: v.id("barbers"),
     services: v.array(v.object({
       service_id: v.id("services"),
@@ -128,7 +130,7 @@ export const createTransaction = mutation({
 
             if (!existingBooking) {
               // Create a new booking record for the POS service
-              await ctx.runMutation(api.services.bookings.createBooking, {
+              const bookingId = await ctx.runMutation(api.services.bookings.createBooking, {
                 customer: customerId,
                 service: serviceItem.service_id,
                 barber: args.barber,
@@ -137,15 +139,27 @@ export const createTransaction = mutation({
                 status: "completed", // Mark as completed since service was performed
                 notes: `POS Transaction - Receipt: ${receiptNumber}${args.customer_name ? ` - ${args.customer_name}` : ''}`
               });
-            } else {
-              // Update existing booking to completed
-              await ctx.runMutation(api.services.bookings.updateBooking, {
-                id: existingBooking._id,
-                status: "completed",
-                notes: existingBooking.notes
-                  ? `${existingBooking.notes}\nPOS Transaction - Receipt: ${receiptNumber}`
-                  : `POS Transaction - Receipt: ${receiptNumber}`
+              
+              // Update payment status to paid since transaction is completed
+              await ctx.runMutation(api.services.bookings.updatePaymentStatus, {
+                id: bookingId,
+                payment_status: "paid"
               });
+            } else {
+                // Update existing booking to completed
+                await ctx.runMutation(api.services.bookings.updateBooking, {
+                  id: existingBooking._id,
+                  status: "completed",
+                  notes: existingBooking.notes
+                    ? `${existingBooking.notes}\nPOS Transaction - Receipt: ${receiptNumber}`
+                    : `POS Transaction - Receipt: ${receiptNumber}`
+                });
+                
+                // Update payment status to paid since transaction is completed
+                await ctx.runMutation(api.services.bookings.updatePaymentStatus, {
+                  id: existingBooking._id,
+                  payment_status: "paid"
+                });
             }
           }
         } catch (error) {
