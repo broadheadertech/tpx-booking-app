@@ -9,6 +9,7 @@ import AddCustomerModal from '../../components/staff/AddCustomerModal'
 import PaymentConfirmationModal from '../../components/staff/PaymentConfirmationModal'
 import CustomerSelectionModal from '../../components/staff/CustomerSelectionModal'
 import Modal from '../../components/common/Modal'
+import { sendWelcomeEmail, isEmailServiceConfigured } from '../../services/emailService'
 
 // Barber Avatar Component for POS
 const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
@@ -363,6 +364,28 @@ const POS = () => {
           })
           
           finalCustomerId = newUser._id
+          
+          // Send welcome email to the new customer
+          if (isEmailServiceConfigured()) {
+            try {
+              const emailResult = await sendWelcomeEmail({
+                email: currentTransaction.customer_email,
+                username: currentTransaction.customer_name,
+                password: generatedPassword,
+                loginUrl: `${window.location.origin}/auth/login`
+              })
+              
+              if (emailResult.success) {
+                console.log('Welcome email sent successfully to:', currentTransaction.customer_email)
+              } else {
+                console.warn('Failed to send welcome email:', emailResult.error)
+              }
+            } catch (emailError) {
+              console.error('Error sending welcome email:', emailError)
+            }
+          } else {
+            console.warn('Email service not configured - welcome email not sent')
+          }
           
           // Show password to staff for customer
           setActiveModal('customerCreated')
@@ -1348,9 +1371,15 @@ const POS = () => {
               </div>
             </div>
             
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
               <p className="text-sm text-blue-800">
                 <strong>Important:</strong> The customer should change their password after first login for security.
+              </p>
+            </div>
+            
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-green-800">
+                <strong>📧 Welcome Email:</strong> A welcome email with login instructions has been sent to the customer's email address.
               </p>
             </div>
             
