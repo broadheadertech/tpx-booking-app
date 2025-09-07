@@ -130,7 +130,7 @@ const POS = () => {
             quantity: 1
           }],
           subtotal: service.price,
-          total_amount: service.price + (service.price * 0.12) // Add tax
+          total_amount: service.price // No tax
         }))
 
         // Find and set the barber
@@ -220,9 +220,8 @@ const POS = () => {
     const servicesTotal = currentTransaction.services.reduce((sum, item) => sum + (item.price * item.quantity), 0)
     const productsTotal = currentTransaction.products.reduce((sum, item) => sum + (item.price * item.quantity), 0)
     const subtotal = servicesTotal + productsTotal
-    const taxRate = 0.1 // 10% tax
-    const taxAmount = (subtotal - currentTransaction.discount_amount) * taxRate
-    const totalAmount = subtotal - currentTransaction.discount_amount + taxAmount
+    const taxAmount = 0 // No tax
+    const totalAmount = subtotal - currentTransaction.discount_amount
 
     setCurrentTransaction(prev => ({
       ...prev,
@@ -1166,10 +1165,6 @@ const POS = () => {
                     <span>-₱{currentTransaction.discount_amount.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-gray-400">
-                  <span>Tax (10%):</span>
-                  <span className="text-white">₱{currentTransaction.tax_amount.toFixed(2)}</span>
-                </div>
                 <div className="border-t border-[#555555] pt-2">
                   <div className="flex justify-between text-xl font-bold text-white">
                     <span>Total:</span>
