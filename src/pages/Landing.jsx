@@ -109,13 +109,13 @@ const Landing = () => {
             </div>
             <div className="flex items-center space-x-6">
               <button 
-                onClick={() => navigate('/auth/login')}
+                onClick={() => navigate('/platform-selection', { state: { action: 'signin' } })}
                 className="text-gray-300 hover:text-white font-medium px-4 py-2 rounded-lg hover:bg-white/10 transition-all duration-200"
               >
                 Sign In
               </button>
               <button
-                onClick={() => navigate('/auth/register')}
+                onClick={() => navigate('/platform-selection', { state: { action: 'booking' } })}
                 className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-orange-600 hover:to-orange-700 shadow-lg hover:shadow-orange-500/25 transition-all duration-200 ring-1 ring-orange-400/30"
               >
                 Book Now
@@ -126,55 +126,66 @@ const Landing = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="bg-gray-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative bg-gray-900 py-20 overflow-hidden">
+        {/* Background Image Overlay */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
+          style={{
+            backgroundImage: `url(${bannerImage})`
+          }}
+        ></div>
+        
+        {/* Dark overlay for better text readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-gray-900/90 via-gray-900/70 to-gray-900/90"></div>
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             {/* Left Content */}
             <div>
-              <div className="inline-block bg-orange-100 text-orange-800 px-4 py-2 rounded-full text-sm font-medium mb-8">
+              <div className="inline-block bg-orange-600/20 border border-orange-500/30 text-orange-400 px-4 py-2 rounded-full text-sm font-medium mb-8 backdrop-blur-sm">
                 Professional Barbershop Services
               </div>
               
-              <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-8 leading-tight">
+              <h1 className="text-5xl md:text-6xl font-bold text-white mb-8 leading-tight">
                 Premium grooming
                 <br />
-                <span className="text-orange-600">in Quezon City</span>
+                <span className="text-orange-500">in Quezon City</span>
               </h1>
               
-              <p className="text-xl text-gray-600 mb-10 leading-relaxed">
+              <p className="text-xl text-gray-300 mb-10 leading-relaxed">
                 Experience expert haircuts, professional beard grooming, and premium styling services. 
                 Book your appointment with TPX Barbershop today.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 mb-12">
                 <button
-                  onClick={() => navigate('/auth/register')}
-                  className="bg-orange-600 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:bg-orange-700 transition-colors flex items-center justify-center gap-2"
+                  onClick={() => navigate('/platform-selection', { state: { action: 'booking' } })}
+                  className="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-8 py-4 rounded-lg font-semibold text-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-orange-500/25"
                 >
                   <Calendar className="w-5 h-5" />
                   Book Appointment
                 </button>
                 <button 
-                  onClick={() => navigate('/auth/login')}
-                  className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg font-semibold text-lg hover:border-gray-400 transition-colors"
+                  onClick={() => navigate('/platform-selection', { state: { action: 'signin' } })}
+                  className="border-2 border-gray-600 text-gray-300 px-8 py-4 rounded-lg font-semibold text-lg hover:border-orange-500 hover:text-white transition-all duration-200 backdrop-blur-sm"
                 >
-                  View Services
+                  Sign In
                 </button>
               </div>
 
               {/* Trust Indicators */}
-              <div className="grid grid-cols-3 gap-6 pt-8 border-t border-gray-200">
+              <div className="grid grid-cols-3 gap-6 pt-8 border-t border-gray-700">
                 <div>
-                  <div className="text-2xl font-bold text-gray-900">2,500+</div>
-                  <div className="text-sm text-gray-500">Happy Clients</div>
+                  <div className="text-2xl font-bold text-white">2,500+</div>
+                  <div className="text-sm text-gray-400">Happy Clients</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-gray-900">10+</div>
-                  <div className="text-sm text-gray-500">Years Experience</div>
+                  <div className="text-2xl font-bold text-white">10+</div>
+                  <div className="text-sm text-gray-400">Years Experience</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-gray-900">4.9</div>
-                  <div className="text-sm text-gray-500 flex items-center">
+                  <div className="text-2xl font-bold text-white">4.9</div>
+                  <div className="text-sm text-gray-400 flex items-center">
                     <Star className="w-4 h-4 text-yellow-400 fill-current mr-1" />
                     Rating
                   </div>
@@ -268,9 +279,14 @@ const Landing = () => {
                   key={index}
                   className="group border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-300 bg-white"
                 >
-                  {/* Service Image - Using actual barbershop imagery patterns */}
-                  <div className="h-48 bg-gray-900 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
+                  {/* Service Image */}
+                  <div className="h-48 relative overflow-hidden bg-gray-100">
+                    <img 
+                      src="/img/default.webp" 
+                      alt={service.title}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent"></div>
                     {service.popular && (
                       <div className="absolute top-4 left-4 z-10">
                         <span className="bg-orange-600 text-white text-xs font-semibold px-3 py-1 rounded-full">
@@ -314,26 +330,50 @@ const Landing = () => {
       </section>
 
       {/* Why Choose TPX */}
-      <section className="py-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="relative py-20 bg-gray-900 overflow-hidden">
+        {/* Background Image Overlay */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-10"
+          style={{
+            backgroundImage: `url(${bannerImage})`
+          }}
+        ></div>
+        
+        {/* Dark overlay for better text readability */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900/95 via-gray-900/85 to-gray-900/95"></div>
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
               Why choose TPX Barbershop
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
               We're committed to delivering exceptional grooming experiences with professional expertise
             </p>
           </div>
           
           <div className="grid md:grid-cols-3 gap-12">
             {features.map((feature, index) => {
+              const IconComponent = feature.icon
               return (
                 <div key={index} className="text-center">
-                  <div className="w-20 h-20 bg-orange-600 rounded-xl flex items-center justify-center mx-auto mb-6">
-                    <div className="text-white text-2xl font-bold">{feature.stat}</div>
+                  {/* Icon */}
+                  <div className="w-16 h-16 bg-orange-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <IconComponent className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-3">{feature.title}</h3>
-                  <p className="text-gray-600 leading-relaxed">{feature.description}</p>
+                  
+                  {/* Content */}
+                  <h3 className="text-2xl font-bold text-white mb-4">
+                    {feature.title}
+                  </h3>
+                  <p className="text-gray-300 leading-relaxed text-lg mb-4">
+                    {feature.description}
+                  </p>
+                  
+                  {/* Stat */}
+                  <div className="text-orange-400 font-bold text-xl">
+                    {feature.stat}
+                  </div>
                 </div>
               )
             })}

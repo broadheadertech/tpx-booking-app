@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import AuthRedirect from './components/common/AuthRedirect'
 import Landing from './pages/Landing'
+import PlatformSelection from './pages/PlatformSelection'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import StaffDashboard from './pages/staff/Dashboard'
@@ -22,6 +23,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/landing" element={<Landing />} />
+            <Route path="/platform-selection" element={<PlatformSelection />} />
             <Route 
               path="/auth/login" 
               element={
