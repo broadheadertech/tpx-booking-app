@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import AuthRedirect from './components/common/AuthRedirect'
+import Landing from './pages/Landing'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import StaffDashboard from './pages/staff/Dashboard'
@@ -19,7 +20,8 @@ function App() {
       <Router>
         <div className="min-h-screen bg-gray-light">
           <Routes>
-            <Route path="/" element={<Navigate to="/auth/login" replace />} />
+            <Route path="/" element={<Landing />} />
+            <Route path="/landing" element={<Landing />} />
             <Route 
               path="/auth/login" 
               element={
