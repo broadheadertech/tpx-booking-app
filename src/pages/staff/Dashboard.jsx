@@ -9,7 +9,7 @@ import VoucherManagement from '../../components/staff/VoucherManagement'
 import ServicesManagement from '../../components/staff/ServicesManagement'
 import BookingsManagement from '../../components/staff/BookingsManagement'
 import BarbersManagement from '../../components/staff/BarbersManagement'
-import BranchManagement from '../../components/staff/BranchManagement'
+import BranchUserManagement from '../../components/staff/BranchUserManagement'
 import CustomersManagement from '../../components/staff/CustomersManagement'
 import ReportsManagement from '../../components/staff/ReportsManagement'
 import EventsManagement from '../../components/staff/EventsManagement'
@@ -53,18 +53,22 @@ function StaffDashboard() {
       ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
       : undefined
   
-  const vouchers = useQuery(api.services.vouchers.getAllVouchers)
-  const events = useQuery(api.services.events.getAllEvents)
+  const vouchers = user?.role === 'super_admin'
+    ? useQuery(api.services.vouchers.getAllVouchers)
+    : user?.branch_id
+      ? useQuery(api.services.vouchers.getVouchersByBranch, { branch_id: user.branch_id })
+      : undefined
+  const events = user?.role === 'super_admin'
+    ? useQuery(api.services.events.getAllEvents)
+    : user?.branch_id
+      ? useQuery(api.services.events.getEventsByBranch, { branch_id: user.branch_id })
+      : undefined
   const customers = user?.role === 'super_admin'
     ? useQuery(api.services.auth.getAllUsers)
     : user?.branch_id
       ? useQuery(api.services.auth.getUsersByBranch, { branch_id: user.branch_id })
       : undefined
   
-  // Branch data for super admin
-  const branches = user?.role === 'super_admin' 
-    ? useQuery(api.services.branches.getAllBranches)
-    : undefined
 
   // Calculate incomplete bookings count (pending, booked, confirmed - not completed or cancelled)
   const incompleteBookingsCount = bookings ? bookings.filter(booking => 
@@ -139,7 +143,7 @@ function StaffDashboard() {
         return renderOverview()
 
       case 'bookings':
-        return <BookingsManagement bookings={bookings || []} onRefresh={handleRefresh} />
+        return <BookingsManagement onRefresh={handleRefresh} user={user} />
 
       case 'services':
         return <ServicesManagement services={services || []} onRefresh={handleRefresh} />
@@ -150,19 +154,17 @@ function StaffDashboard() {
       case 'barbers':
         return <BarbersManagement barbers={barbers || []} onRefresh={handleRefresh} />
 
-      case 'branches':
-        return user?.role === 'super_admin' 
-          ? <BranchManagement branches={branches || []} onRefresh={handleRefresh} />
-          : <div className="text-center py-8 text-gray-500">Access denied. Super admin only.</div>
+      case 'users':
+        return <BranchUserManagement onRefresh={handleRefresh} />
 
       case 'customers':
         return <CustomersManagement customers={customers || []} onRefresh={handleRefresh} onAddCustomer={() => setActiveModal('customer')} />
 
       case 'events':
-        return <EventsManagement events={events || []} onRefresh={handleRefresh} />
+        return <EventsManagement events={events || []} onRefresh={handleRefresh} user={user} />
 
       case 'reports':
-        return <ReportsManagement onRefresh={handleRefresh} />
+        return <ReportsManagement onRefresh={handleRefresh} user={user} />
 
       case 'products':
         return <ProductsManagement onRefresh={handleRefresh} />
@@ -212,14 +214,14 @@ function StaffDashboard() {
     }
   }
 
-  // Tab configuration - add branches tab for super admin
+  // Tab configuration for staff
   const tabs = [
     { id: 'overview', label: 'Overview', icon: 'dashboard' },
     { id: 'bookings', label: 'Bookings', icon: 'calendar' },
     { id: 'services', label: 'Services', icon: 'scissors' },
     { id: 'vouchers', label: 'Vouchers', icon: 'gift' },
     { id: 'barbers', label: 'Barbers', icon: 'user' },
-    ...(user?.role === 'super_admin' ? [{ id: 'branches', label: 'Branches', icon: 'building' }] : []),
+    { id: 'users', label: 'Users', icon: 'users' },
     { id: 'customers', label: 'Customers', icon: 'users' },
     { id: 'events', label: 'Events', icon: 'calendar' },
     { id: 'reports', label: 'Reports', icon: 'chart' },
@@ -231,7 +233,7 @@ function StaffDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0F0F0F] via-[#1A1A1A] to-[#2A2A2A]">
-      <DashboardHeader onLogout={handleLogout} />
+      <DashboardHeader onLogout={handleLogout} user={user} />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="space-y-12">

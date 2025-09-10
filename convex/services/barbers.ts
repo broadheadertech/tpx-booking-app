@@ -258,6 +258,7 @@ export const getActiveBarbers = query({
 export const createBarberProfile = mutation({
   args: {
     userId: v.id("users"),
+    branch_id: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
     // Get user data
@@ -268,6 +269,12 @@ export const createBarberProfile = mutation({
 
     if (user.role !== "barber") {
       throwUserError(ERROR_CODES.BARBER_INVALID_ROLE);
+    }
+
+    // Use branch_id from args or user's branch_id
+    const branchId = args.branch_id || user.branch_id;
+    if (!branchId) {
+      throw new Error("Branch ID is required for barber profile creation");
     }
 
     // Check if user already has a barber profile
@@ -283,6 +290,7 @@ export const createBarberProfile = mutation({
     // Create new barber profile
     const barberId = await ctx.db.insert("barbers", {
       user: args.userId,
+      branch_id: branchId,
       full_name: user.username, // Use username as default full name
       is_active: true,
       services: [], // Empty services array initially

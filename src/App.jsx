@@ -8,6 +8,7 @@ import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import StaffDashboard from './pages/staff/Dashboard'
 import POS from './pages/staff/POS'
+import AdminDashboard from './pages/admin/Dashboard'
 import CustomerDashboard from './pages/customer/Dashboard'
 import CustomerBooking from './pages/customer/Booking'
 import BarberDashboard from './components/barber/BarberDashboard'
@@ -38,6 +39,15 @@ function App() {
                 <AuthRedirect>
                   <Register />
                 </AuthRedirect>
+              } 
+            />
+            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+            <Route 
+              path="/admin/dashboard" 
+              element={
+                <ProtectedRoute requireSuperAdmin={true}>
+                  <AdminDashboard />
+                </ProtectedRoute>
               } 
             />
             <Route path="/staff" element={<Navigate to="/staff/dashboard" replace />} />

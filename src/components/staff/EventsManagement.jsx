@@ -6,7 +6,7 @@ import ErrorDisplay from '../common/ErrorDisplay'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 
-const EventsManagement = ({ onRefresh }) => {
+const EventsManagement = ({ onRefresh, user }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -26,8 +26,12 @@ const EventsManagement = ({ onRefresh }) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
-  // Convex queries and mutations
-  const events = useQuery(api.services.events.getAllEvents)
+  // Convex queries and mutations - use branch-scoped queries for staff
+  const events = user?.role === 'super_admin' 
+    ? useQuery(api.services.events.getAllEvents)
+    : user?.branch_id 
+      ? useQuery(api.services.events.getEventsByBranch, { branch_id: user.branch_id })
+      : []
   const createEvent = useMutation(api.services.events.createEvent)
   const updateEvent = useMutation(api.services.events.updateEvent)
   const deleteEvent = useMutation(api.services.events.deleteEvent)
@@ -76,7 +80,8 @@ const EventsManagement = ({ onRefresh }) => {
         maxAttendees: parseInt(formData.maxAttendees),
         price: parseFloat(formData.price) || 0,
         category: formData.category,
-        status: formData.status
+        status: formData.status,
+        branch_id: user.branch_id // Add branch_id for branch-scoped events
       }
       
       if (editingEvent) {

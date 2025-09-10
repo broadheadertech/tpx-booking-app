@@ -20,8 +20,10 @@ const BarberDashboard = () => {
     return null
   }
 
-  // Get barber data
-  const barbers = useQuery(api.services.barbers.getAllBarbers)
+  // Get barber data - only for current user's branch
+  const barbers = user?.branch_id 
+    ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
+    : useQuery(api.services.barbers.getAllBarbers)
   const currentBarber = barbers?.find(barber => barber.user === user?._id)
   
   // Mutation to create barber profile
@@ -29,8 +31,11 @@ const BarberDashboard = () => {
   
   // Auto-create barber profile if user has barber role but no profile
   React.useEffect(() => {
-    if (user?.role === 'barber' && barbers && !currentBarber && user._id) {
-      createBarberProfile({ userId: user._id })
+    if (user?.role === 'barber' && barbers && !currentBarber && user._id && user.branch_id) {
+      createBarberProfile({ 
+        userId: user._id,
+        branch_id: user.branch_id
+      })
         .then(() => {
           // Profile created, data will refresh automatically
         })
@@ -40,8 +45,10 @@ const BarberDashboard = () => {
     }
   }, [user, barbers, currentBarber, createBarberProfile])
 
-  // Get bookings and transactions for overview
-  const allTransactions = useQuery(api.services.transactions.getAllTransactions)
+  // Get bookings and transactions for overview - only for current branch
+  const allTransactions = user?.branch_id
+    ? useQuery(api.services.transactions.getTransactionsByBranch, { branch_id: user.branch_id })
+    : useQuery(api.services.transactions.getAllTransactions)
   
   // Get bookings specifically for this barber
   const barberBookings = useQuery(
@@ -55,8 +62,10 @@ const BarberDashboard = () => {
     currentBarber ? { barberId: currentBarber._id } : "skip"
   )
 
-  // Get all bookings for debugging
-  const allBookings = useQuery(api.services.bookings.getAllBookings)
+  // Get all bookings for debugging - only from current branch
+  const allBookings = user?.branch_id
+    ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id })
+    : useQuery(api.services.bookings.getAllBookings)
   
   // Debug logging
   console.log('Debug - currentBarber:', currentBarber)

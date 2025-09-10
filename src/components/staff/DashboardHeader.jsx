@@ -1,12 +1,18 @@
 import React, { useState } from 'react'
-import { User, Settings, LogOut, Monitor, CreditCard } from 'lucide-react'
+import { User, Settings, LogOut, Monitor, CreditCard, Building } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useQuery } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import SettingsModal from './SettingsModal'
 import LogoutConfirmModal from './LogoutConfirmModal'
 
-const DashboardHeader = ({ onLogout }) => {
+const DashboardHeader = ({ onLogout, user }) => {
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  
+  // Get branch information for the current user
+  const branches = useQuery(api.services.branches.getAllBranches) || []
+  const currentBranch = branches.find(b => b._id === user?.branch_id)
   return (
     <div className="relative bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A] shadow-xl overflow-hidden">
       {/* Background overlay */}
@@ -37,7 +43,19 @@ const DashboardHeader = ({ onLogout }) => {
                   <span className="text-xs font-semibold text-[#FF8C42]">v1.0.1</span>
                 </div>
               </div>
-              <p className="text-xs sm:text-sm font-medium text-[#FF8C42] mt-1">Staff Dashboard</p>
+              <div className="flex items-center space-x-2 mt-1">
+                <p className="text-xs sm:text-sm font-medium text-[#FF8C42]">Staff Dashboard</p>
+                {currentBranch && (
+                  <>
+                    <span className="text-gray-500">•</span>
+                    <div className="flex items-center space-x-1">
+                      <Building className="w-3 h-3 text-[#FF8C42]" />
+                      <span className="text-xs font-medium text-white">{currentBranch.name}</span>
+                      <span className="text-xs text-gray-400">({currentBranch.branch_code})</span>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
           

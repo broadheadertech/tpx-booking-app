@@ -80,6 +80,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
         max_uses: parseInt(formData.max_uses) || 1,
         expires_at: new Date(formData.expires_at).getTime(),
         description: formData.description || undefined,
+        branch_id: user.branch_id, // Add branch_id for branch-scoped vouchers
         created_by: user.id
       }
 

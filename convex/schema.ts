@@ -136,6 +136,7 @@ export default defineSchema({
     max_uses: v.number(),
     expires_at: v.number(),
     description: v.optional(v.string()),
+    branch_id: v.id("branches"), // Add branch_id for branch-scoped vouchers
     created_by: v.id("users"),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -145,7 +146,8 @@ export default defineSchema({
     redeemed_at: v.optional(v.number()),
   })
     .index("by_code", ["code"])
-    .index("by_created_by", ["created_by"]),
+    .index("by_created_by", ["created_by"])
+    .index("by_branch", ["branch_id"]),
 
   // User vouchers relationship table
   user_vouchers: defineTable({
@@ -187,12 +189,14 @@ export default defineSchema({
     price: v.number(),
     category: v.union(v.literal("workshop"), v.literal("celebration"), v.literal("training"), v.literal("promotion")),
     status: v.union(v.literal("upcoming"), v.literal("ongoing"), v.literal("completed"), v.literal("cancelled")),
+    branch_id: v.id("branches"), // Add branch_id for branch-scoped events
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_date", ["date"])
     .index("by_status", ["status"])
-    .index("by_category", ["category"]),
+    .index("by_category", ["category"])
+    .index("by_branch", ["branch_id"]),
 
   // Notifications table
   notifications: defineTable({

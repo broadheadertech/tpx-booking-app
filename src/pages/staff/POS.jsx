@@ -69,11 +69,30 @@ const POS = () => {
   const itemsPerPage = 9 // For card view
   const tableItemsPerPage = 15 // For table view
 
-  // Convex queries
-  const services = useQuery(api.services.services.getAllServices)
-  const products = useQuery(api.services.products.getAllProducts)
-  const barbers = useQuery(api.services.barbers.getAllBarbers)
-  const customers = useQuery(api.services.auth.getAllUsers)
+  // Convex queries - use branch-scoped queries for staff
+  const services = user?.role === 'super_admin'
+    ? useQuery(api.services.services.getAllServices)
+    : user?.branch_id
+      ? useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id })
+      : []
+      
+  const products = useQuery(api.services.products.getAllProducts) // Products remain global
+  
+  const barbers = user?.role === 'super_admin'
+    ? useQuery(api.services.barbers.getAllBarbers)
+    : user?.branch_id
+      ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
+      : []
+      
+  const customers = user?.role === 'super_admin'
+    ? useQuery(api.services.auth.getAllUsers)
+    : user?.branch_id
+      ? useQuery(api.services.auth.getUsersByBranch, { branch_id: user.branch_id })
+      : []
+
+  // Get branch information for the current user
+  const branches = useQuery(api.services.branches.getAllBranches) || []
+  const currentBranch = branches.find(b => b._id === user?.branch_id)
 
   // Convex mutations
   const createTransaction = useMutation(api.services.transactions.createTransaction)
@@ -359,7 +378,8 @@ const POS = () => {
             password: generatedPassword,
             mobile_number: currentTransaction.customer_phone || undefined,
             address: currentTransaction.customer_address || undefined,
-            role: 'customer'
+            role: 'customer',
+            branch_id: user.branch_id // Assign new customers to the current branch
           })
           
           finalCustomerId = newUser._id
@@ -415,6 +435,7 @@ const POS = () => {
         customer_phone: currentTransaction.customer_phone || undefined,
         customer_email: currentTransaction.customer_email || undefined,
         customer_address: currentTransaction.customer_address || undefined,
+        branch_id: user.branch_id, // Add branch_id for branch-scoped transactions
         barber: selectedBarber._id,
         services: currentTransaction.services,
         products: currentTransaction.products.length > 0 ? currentTransaction.products : undefined,
@@ -582,7 +603,18 @@ const POS = () => {
                     <span className="text-xs font-semibold text-[#FF8C42]">v1.0.1</span>
                   </div>
                 </div>
-                <p className="text-sm font-medium text-[#FF8C42] mt-1">Point of Sale</p>
+                <div className="flex items-center space-x-2 mt-1">
+                  <p className="text-sm font-medium text-[#FF8C42]">Point of Sale</p>
+                  {currentBranch && (
+                    <>
+                      <span className="text-gray-500">•</span>
+                      <div className="flex items-center space-x-1">
+                        <span className="text-sm font-medium text-white">{currentBranch.name}</span>
+                        <span className="text-sm text-gray-400">({currentBranch.branch_code})</span>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-center space-x-4">

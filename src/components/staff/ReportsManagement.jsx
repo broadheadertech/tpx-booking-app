@@ -3,18 +3,38 @@ import { BarChart3, TrendingUp, TrendingDown, DollarSign, Users, Calendar, Gift,
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 
-const ReportsManagement = ({ onRefresh }) => {
+const ReportsManagement = ({ onRefresh, user }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('week')
   const [selectedReport, setSelectedReport] = useState('revenue')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  // Convex queries for real-time data
-  const bookings = useQuery(api.services.bookings.getAllBookings)
-  const services = useQuery(api.services.services.getAllServices)
-  const products = useQuery(api.services.products.getAllProducts)
-  const transactions = useQuery(api.services.transactions.getAllTransactions)
-  const vouchers = useQuery(api.services.vouchers.getAllVouchers)
+  // Convex queries for real-time data - use branch-scoped queries for staff
+  const bookings = user?.role === 'super_admin' 
+    ? useQuery(api.services.bookings.getAllBookings)
+    : user?.branch_id 
+      ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id })
+      : []
+      
+  const services = user?.role === 'super_admin'
+    ? useQuery(api.services.services.getAllServices)
+    : user?.branch_id
+      ? useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id })
+      : []
+      
+  const products = useQuery(api.services.products.getAllProducts) // Products remain global for now
+  
+  const transactions = user?.role === 'super_admin'
+    ? useQuery(api.services.transactions.getAllTransactions)
+    : user?.branch_id
+      ? useQuery(api.services.transactions.getTransactionsByBranch, { branch_id: user.branch_id })
+      : []
+      
+  const vouchers = user?.role === 'super_admin'
+    ? useQuery(api.services.vouchers.getAllVouchers)
+    : user?.branch_id
+      ? useQuery(api.services.vouchers.getVouchersByBranch, { branch_id: user.branch_id })
+      : []
 
   // Calculate real-time data from Convex queries
   const reportData = useMemo(() => {

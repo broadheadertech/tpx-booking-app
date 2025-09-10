@@ -6,7 +6,7 @@ import { Calendar, Clock, User, Scissors, RefreshCw, ChevronDown, Check, UserPlu
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 
-const CreateBookingModal = ({ isOpen, onClose, onSubmit }) => {
+const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
   const [formData, setFormData] = useState({
     customerType: 'existing', // 'existing' or 'walkin'
     customer: '',
@@ -33,10 +33,24 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit }) => {
   const barberDropdownRef = useRef(null)
   const customerDropdownRef = useRef(null)
 
-  // Convex queries for dropdown data
-  const services = useQuery(api.services.services.getAllServices)
-  const barbers = useQuery(api.services.barbers.getActiveBarbers)
-  const customers = useQuery(api.services.auth.getAllUsers)
+  // Convex queries for dropdown data - use branch-scoped queries for staff
+  const services = user?.role === 'super_admin'
+    ? useQuery(api.services.services.getAllServices)
+    : user?.branch_id
+      ? useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id })
+      : undefined
+      
+  const barbers = user?.role === 'super_admin'
+    ? useQuery(api.services.barbers.getActiveBarbers)
+    : user?.branch_id
+      ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })?.filter(b => b.is_active)
+      : undefined
+      
+  const customers = user?.role === 'super_admin'
+    ? useQuery(api.services.auth.getAllUsers)
+    : user?.branch_id
+      ? useQuery(api.services.auth.getUsersByBranch, { branch_id: user.branch_id })
+      : undefined
   const barberAvailability = useQuery(api.services.bookings.getBookingsByBarberAndDate,
     (formData.barber && formData.date) ? {
       barberId: formData.barber,
@@ -213,6 +227,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit }) => {
       const bookingData = {
         customer: customerId,
         service: formData.service,
+        branch_id: user.branch_id, // Add branch_id for branch-scoped booking
         barber: formData.barber || undefined,
         date: formData.date,
         time: convertTo24Hour(formData.time),
