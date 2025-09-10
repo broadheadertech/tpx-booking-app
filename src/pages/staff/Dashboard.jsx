@@ -9,6 +9,7 @@ import VoucherManagement from '../../components/staff/VoucherManagement'
 import ServicesManagement from '../../components/staff/ServicesManagement'
 import BookingsManagement from '../../components/staff/BookingsManagement'
 import BarbersManagement from '../../components/staff/BarbersManagement'
+import BranchManagement from '../../components/staff/BranchManagement'
 import CustomersManagement from '../../components/staff/CustomersManagement'
 import ReportsManagement from '../../components/staff/ReportsManagement'
 import EventsManagement from '../../components/staff/EventsManagement'
@@ -33,13 +34,37 @@ function StaffDashboard() {
     localStorage.setItem('staff_dashboard_active_tab', activeTab)
   }, [activeTab])
 
-  // Convex queries for data
-  const bookings = useQuery(api.services.bookings.getAllBookings)
-  const services = useQuery(api.services.services.getAllServices)
+  // Convex queries for data - adjust based on user role
+  const bookings = user?.role === 'super_admin' 
+    ? useQuery(api.services.bookings.getAllBookings)
+    : user?.branch_id 
+      ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id })
+      : undefined
+  
+  const services = user?.role === 'super_admin'
+    ? useQuery(api.services.services.getAllServices)
+    : user?.branch_id
+      ? useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id })
+      : undefined
+  
+  const barbers = user?.role === 'super_admin'
+    ? useQuery(api.services.barbers.getAllBarbers)
+    : user?.branch_id
+      ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
+      : undefined
+  
   const vouchers = useQuery(api.services.vouchers.getAllVouchers)
-  const barbers = useQuery(api.services.barbers.getAllBarbers)
   const events = useQuery(api.services.events.getAllEvents)
-  const customers = useQuery(api.services.auth.getAllUsers) // We'll need to create this query
+  const customers = user?.role === 'super_admin'
+    ? useQuery(api.services.auth.getAllUsers)
+    : user?.branch_id
+      ? useQuery(api.services.auth.getUsersByBranch, { branch_id: user.branch_id })
+      : undefined
+  
+  // Branch data for super admin
+  const branches = user?.role === 'super_admin' 
+    ? useQuery(api.services.branches.getAllBranches)
+    : undefined
 
   // Calculate incomplete bookings count (pending, booked, confirmed - not completed or cancelled)
   const incompleteBookingsCount = bookings ? bookings.filter(booking => 
@@ -125,6 +150,11 @@ function StaffDashboard() {
       case 'barbers':
         return <BarbersManagement barbers={barbers || []} onRefresh={handleRefresh} />
 
+      case 'branches':
+        return user?.role === 'super_admin' 
+          ? <BranchManagement branches={branches || []} onRefresh={handleRefresh} />
+          : <div className="text-center py-8 text-gray-500">Access denied. Super admin only.</div>
+
       case 'customers':
         return <CustomersManagement customers={customers || []} onRefresh={handleRefresh} onAddCustomer={() => setActiveModal('customer')} />
 
@@ -182,13 +212,14 @@ function StaffDashboard() {
     }
   }
 
-  // Tab configuration
+  // Tab configuration - add branches tab for super admin
   const tabs = [
     { id: 'overview', label: 'Overview', icon: 'dashboard' },
     { id: 'bookings', label: 'Bookings', icon: 'calendar' },
     { id: 'services', label: 'Services', icon: 'scissors' },
     { id: 'vouchers', label: 'Vouchers', icon: 'gift' },
     { id: 'barbers', label: 'Barbers', icon: 'user' },
+    ...(user?.role === 'super_admin' ? [{ id: 'branches', label: 'Branches', icon: 'building' }] : []),
     { id: 'customers', label: 'Customers', icon: 'users' },
     { id: 'events', label: 'Events', icon: 'calendar' },
     { id: 'reports', label: 'Reports', icon: 'chart' },

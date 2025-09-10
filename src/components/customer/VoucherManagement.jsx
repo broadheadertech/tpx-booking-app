@@ -249,7 +249,7 @@ const VoucherManagement = ({ onBack }) => {
         
         try {
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-                      const code = await decodeQRFromImageData(imageData)
+          const code = await decodeQRFromImageData(imageData)
             if (code) {
               await handleClaimVoucher(code)
               setShowClaimModal(false)

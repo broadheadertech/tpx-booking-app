@@ -3,11 +3,13 @@ import { Link, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
+import BranchSelection from '../../components/customer/BranchSelection'
 import { useAuth } from '../../context/AuthContext'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 
 function CustomerBooking() {
+  const [selectedBranch, setSelectedBranch] = useState(null)
   const [selectedService, setSelectedService] = useState(null)
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedTime, setSelectedTime] = useState('')
@@ -19,11 +21,15 @@ function CustomerBooking() {
   const { user, isAuthenticated } = useAuth()
 
   // Convex queries and mutations
-  const services = useQuery(api.services.services.getActiveServices)
-  const barbers = useQuery(api.services.barbers.getActiveBarbers)
+  const services = selectedBranch 
+    ? useQuery(api.services.services.getActiveServicesByBranch, { branch_id: selectedBranch._id })
+    : undefined
+  const barbers = selectedBranch
+    ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: selectedBranch._id })
+    : undefined
   const createBookingMutation = useMutation(api.services.bookings.createBooking)
 
-  const loading = services === undefined || barbers === undefined
+  const loading = selectedBranch && (services === undefined || barbers === undefined)
 
   const availableTimes = [
     '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -67,8 +73,8 @@ function CustomerBooking() {
   }
 
   const handleBooking = async () => {
-    if (!selectedService || !selectedDate || !selectedTime) {
-      setError('Please select service, date, and time')
+    if (!selectedBranch || !selectedService || !selectedDate || !selectedTime) {
+      setError('Please select branch, service, date, and time')
       return
     }
 
@@ -78,16 +84,10 @@ function CustomerBooking() {
     try {
       // Format time as HH:MM:SS for API
       const formattedTime = selectedTime.includes(':') ? `${selectedTime}:00` : selectedTime
-      
-      const bookingData = {
-        service: selectedService.id,
-        date: selectedDate,
-        time: formattedTime,
-        ...(selectedBarber && { barber: selectedBarber.id })
-      }
 
       const result = await createBookingMutation({
         customer: user.id,
+        branch_id: selectedBranch._id,
         service: selectedService._id,
         barber: selectedBarber ? selectedBarber._id : undefined,
         date: selectedDate,
@@ -110,6 +110,7 @@ function CustomerBooking() {
   const handleNewBooking = () => {
     setBookingResult(null)
     setQrCodeUrl('')
+    setSelectedBranch(null)
     setSelectedService(null)
     setSelectedDate('')
     setSelectedTime('')
@@ -157,6 +158,10 @@ function CustomerBooking() {
               <div className="flex justify-between">
                 <span className="font-medium text-gray-300">Booking Code:</span>
                 <span className="font-bold text-[#FF8C42]">{bookingResult.booking_code}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-300">Branch:</span>
+                <span className="text-white">{selectedBranch.name}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-300">Service:</span>
@@ -225,17 +230,51 @@ function CustomerBooking() {
       </header>
 
       <div className="px-4 py-6 space-y-6">
-        {/* Step 1: Select Service */}
+        {/* Error Display */}
         {error && (
           <Card style={{ backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
             <p className="text-sm text-red-600">{error}</p>
           </Card>
         )}
 
-        <div>
-          <h2 className="text-lg font-semibold mb-4" style={{ color: '#36454F' }}>1. Choose Service</h2>
-          <div className="grid gap-3">
-            {services.map((service) => (
+        {/* Step 1: Select Branch */}
+        {!selectedBranch && (
+          <div>
+            <h2 className="text-lg font-semibold mb-4" style={{ color: '#36454F' }}>1. Choose Branch</h2>
+            <BranchSelection 
+              onBranchSelect={setSelectedBranch} 
+              selectedBranchId={selectedBranch?._id}
+            />
+          </div>
+        )}
+
+        {/* Step 2: Select Service */}
+        {selectedBranch && (
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold" style={{ color: '#36454F' }}>2. Choose Service</h2>
+              <button
+                onClick={() => setSelectedBranch(null)}
+                className="text-sm px-3 py-1 rounded border"
+                style={{ color: '#F68B24', borderColor: '#F68B24' }}
+              >
+                Change Branch
+              </button>
+            </div>
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>{selectedBranch.name}</strong> - {selectedBranch.address}
+              </p>
+            </div>
+            {!services || services.length === 0 ? (
+              <Card style={{ backgroundColor: 'white', border: '1px solid #E0E0E0' }}>
+                <p className="text-center text-gray-500 py-4">
+                  {services === undefined ? 'Loading services...' : 'No services available at this branch'}
+                </p>
+              </Card>
+            ) : (
+              <div className="grid gap-3">
+                {services.map((service) => (
               <Card 
                 key={service.id}
                 className="cursor-pointer transition-all"
@@ -262,13 +301,15 @@ function CustomerBooking() {
                 )}
               </Card>
             ))}
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
-        {/* Step 2: Select Date */}
-        {selectedService && (
+        {/* Step 3: Select Date */}
+        {selectedBranch && selectedService && (
           <div>
-            <h2 className="text-lg font-semibold mb-4" style={{ color: '#36454F' }}>2. Choose Date</h2>
+            <h2 className="text-lg font-semibold mb-4" style={{ color: '#36454F' }}>3. Choose Date</h2>
             <Card style={{ backgroundColor: 'white', border: '1px solid #E0E0E0' }}>
               <input
                 type="date"
@@ -284,10 +325,10 @@ function CustomerBooking() {
           </div>
         )}
 
-        {/* Step 3: Select Time */}
-        {selectedService && selectedDate && (
+        {/* Step 4: Select Time */}
+        {selectedBranch && selectedService && selectedDate && (
           <div>
-            <h2 className="text-lg font-semibold mb-4" style={{ color: '#36454F' }}>3. Choose Time</h2>
+            <h2 className="text-lg font-semibold mb-4" style={{ color: '#36454F' }}>4. Choose Time</h2>
             <div className="grid grid-cols-3 gap-2">
               {availableTimes.map((time) => (
                 <button
@@ -317,10 +358,10 @@ function CustomerBooking() {
           </div>
         )}
 
-        {/* Step 4: Select Barber (Optional) */}
-        {selectedService && selectedDate && selectedTime && (
+        {/* Step 5: Select Barber (Optional) */}
+        {selectedBranch && selectedService && selectedDate && selectedTime && (
           <div>
-            <h2 className="text-lg font-semibold mb-4" style={{ color: '#36454F' }}>4. Choose Barber (Optional)</h2>
+            <h2 className="text-lg font-semibold mb-4" style={{ color: '#36454F' }}>5. Choose Barber (Optional)</h2>
             <div className="space-y-2">
               <button
                 onClick={() => setSelectedBarber(null)}
@@ -344,22 +385,22 @@ function CustomerBooking() {
                 <p className="text-sm" style={{ color: '#8B8B8B' }}>Any available barber</p>
               </button>
               
-              {barbers.map((barber) => (
+              {barbers && barbers.length > 0 ? barbers.map((barber) => (
                 <button
-                  key={barber.id}
+                  key={barber._id}
                   onClick={() => setSelectedBarber(barber)}
                   className="w-full p-4 rounded-lg border-2 text-left transition-colors"
                   style={{
-                    backgroundColor: selectedBarber?.id === barber.id ? 'rgba(246, 139, 36, 0.1)' : 'white',
-                    borderColor: selectedBarber?.id === barber.id ? '#F68B24' : '#E0E0E0'
+                    backgroundColor: selectedBarber?._id === barber._id ? 'rgba(246, 139, 36, 0.1)' : 'white',
+                    borderColor: selectedBarber?._id === barber._id ? '#F68B24' : '#E0E0E0'
                   }}
                   onMouseEnter={(e) => {
-                    if (selectedBarber?.id !== barber.id) {
+                    if (selectedBarber?._id !== barber._id) {
                       e.target.style.borderColor = '#F68B24'
                     }
                   }}
                   onMouseLeave={(e) => {
-                    if (selectedBarber?.id !== barber.id) {
+                    if (selectedBarber?._id !== barber._id) {
                       e.target.style.borderColor = '#E0E0E0'
                     }
                   }}
@@ -367,13 +408,19 @@ function CustomerBooking() {
                   <span className="font-medium" style={{ color: '#36454F' }}>{barber.full_name}</span>
                   <p className="text-sm" style={{ color: '#8B8B8B' }}>Professional barber</p>
                 </button>
-              ))}
+              )) : (
+                <Card style={{ backgroundColor: 'white', border: '1px solid #E0E0E0' }}>
+                  <p className="text-center text-gray-500 py-4">
+                    {barbers === undefined ? 'Loading barbers...' : 'No barbers available at this branch'}
+                  </p>
+                </Card>
+              )}
             </div>
           </div>
         )}
 
         {/* Confirm Booking Button */}
-        {selectedService && selectedDate && selectedTime && !bookingResult && (
+        {selectedBranch && selectedService && selectedDate && selectedTime && !bookingResult && (
           <div className="mt-6">
             <Button 
               onClick={handleBooking}

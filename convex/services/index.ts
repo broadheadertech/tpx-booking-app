@@ -2,6 +2,7 @@
 export * as auth from './auth'
 export * as barbers from './barbers'
 export * as bookings from './bookings'
+export * as branches from './branches'
 export * as services from './services'
 export * as events from './events'
 export * as notifications from './notifications'

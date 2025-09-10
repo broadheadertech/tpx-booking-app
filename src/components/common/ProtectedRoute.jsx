@@ -23,7 +23,7 @@ const ProtectedRoute = ({ children, requireStaff = false, requireBarber = false 
   }
 
   // Check staff requirement
-  if (requireStaff && user?.role !== 'staff' && user?.role !== 'admin') {
+  if (requireStaff && user?.role !== 'staff' && user?.role !== 'admin' && user?.role !== 'super_admin' && user?.role !== 'branch_admin') {
     return <Navigate to={getRoleBasedRedirect(user?.role)} replace />
   }
 
@@ -40,6 +40,8 @@ const getRoleBasedRedirect = (role) => {
   switch (role) {
     case 'staff':
     case 'admin':
+    case 'super_admin':
+    case 'branch_admin':
       return '/staff/dashboard'
     case 'barber':
       return '/barber/dashboard'

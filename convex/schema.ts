@@ -2,6 +2,21 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  // Branches table for multi-branch support
+  branches: defineTable({
+    branch_code: v.string(),
+    name: v.string(),
+    address: v.string(),
+    phone: v.string(),
+    email: v.string(),
+    is_active: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_branch_code", ["branch_code"])
+    .index("by_active", ["is_active"])
+    .index("by_created_at", ["createdAt"]),
+
   // Users table for authentication
   users: defineTable({
     username: v.string(),
@@ -11,7 +26,8 @@ export default defineSchema({
     mobile_number: v.string(),
     address: v.optional(v.string()),
     birthday: v.optional(v.string()),
-    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber")),
+    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("super_admin"), v.literal("branch_admin")),
+    branch_id: v.optional(v.id("branches")), // Optional for super_admin, required for others
     is_active: v.boolean(),
     avatar: v.optional(v.string()),
     bio: v.optional(v.string()),
@@ -22,11 +38,14 @@ export default defineSchema({
   })
     .index("by_email", ["email"])
     .index("by_username", ["username"])
-    .index("by_created_at", ["createdAt"]),
+    .index("by_created_at", ["createdAt"])
+    .index("by_branch", ["branch_id"])
+    .index("by_role", ["role"]),
 
   // Barbers table
   barbers: defineTable({
     user: v.id("users"),
+    branch_id: v.id("branches"),
     full_name: v.string(),
     is_active: v.boolean(),
     services: v.array(v.id("services")),
@@ -52,10 +71,12 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_user", ["user"])
-    .index("by_active", ["is_active"]),
+    .index("by_active", ["is_active"])
+    .index("by_branch", ["branch_id"]),
 
   // Services table
   services: defineTable({
+    branch_id: v.id("branches"),
     name: v.string(),
     description: v.string(),
     price: v.number(),
@@ -67,11 +88,13 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_category", ["category"])
-    .index("by_active", ["is_active"]),
+    .index("by_active", ["is_active"])
+    .index("by_branch", ["branch_id"]),
 
   // Bookings table
   bookings: defineTable({
     booking_code: v.string(),
+    branch_id: v.id("branches"),
     customer: v.optional(v.id("users")), // Optional for walk-in customers
     customer_name: v.optional(v.string()), // For walk-in customers
     customer_phone: v.optional(v.string()), // For walk-in customers
@@ -102,7 +125,8 @@ export default defineSchema({
     .index("by_date", ["date"])
     .index("by_status", ["status"])
     .index("by_payment_status", ["payment_status"])
-    .index("by_booking_code", ["booking_code"]),
+    .index("by_booking_code", ["booking_code"])
+    .index("by_branch", ["branch_id"]),
 
   // Vouchers table
   vouchers: defineTable({
@@ -251,6 +275,7 @@ export default defineSchema({
   // POS Transactions table
   transactions: defineTable({
     transaction_id: v.string(),
+    branch_id: v.id("branches"),
     customer: v.optional(v.id("users")), // Optional for walk-in customers
     customer_name: v.optional(v.string()), // For walk-in customers
     customer_phone: v.optional(v.string()), // For walk-in customers
@@ -300,7 +325,8 @@ export default defineSchema({
     .index("by_receipt_number", ["receipt_number"])
     .index("by_payment_status", ["payment_status"])
     .index("by_created_at", ["createdAt"])
-    .index("by_processed_by", ["processed_by"]),
+    .index("by_processed_by", ["processed_by"])
+    .index("by_branch", ["branch_id"]),
 
   // POS Sessions table for tracking active POS sessions
   pos_sessions: defineTable({

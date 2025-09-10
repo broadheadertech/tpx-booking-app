@@ -2,15 +2,52 @@ import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 
-// Get all services
+// Get all services (for super admin)
 export const getAllServices = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("services").collect();
+    const services = await ctx.db.query("services").collect();
+    
+    // Get branch information for each service
+    const servicesWithBranch = await Promise.all(
+      services.map(async (service) => {
+        const branch = await ctx.db.get(service.branch_id);
+        return {
+          ...service,
+          branch_name: branch?.name || 'Unknown Branch',
+        };
+      })
+    );
+    
+    return servicesWithBranch;
   },
 });
 
-// Get active services
+// Get services by branch
+export const getServicesByBranch = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("services")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+  },
+});
+
+// Get active services by branch
+export const getActiveServicesByBranch = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    const services = await ctx.db
+      .query("services")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+    
+    return services.filter(service => service.is_active);
+  },
+});
+
+// Get active services (legacy - for backward compatibility)
 export const getActiveServices = query({
   args: {},
   handler: async (ctx) => {
@@ -48,6 +85,7 @@ export const createService = mutation({
     price: v.number(),
     duration_minutes: v.number(),
     category: v.string(),
+    branch_id: v.id("branches"),
     is_active: v.boolean(),
     image: v.optional(v.string()),
   },
@@ -58,6 +96,7 @@ export const createService = mutation({
       price: args.price,
       duration_minutes: args.duration_minutes,
       category: args.category,
+      branch_id: args.branch_id,
       is_active: args.is_active,
       image: args.image || undefined,
       createdAt: Date.now(),

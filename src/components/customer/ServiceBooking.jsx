@@ -14,6 +14,10 @@ import {
   Star,
   Crown,
   Sparkles,
+  Building,
+  MapPin,
+  Phone,
+  Mail,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from 'convex/react'
@@ -25,11 +29,10 @@ const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
   const [imageError, setImageError] = useState(false)
 
   // Get image URL from Convex storage if available
-  const imageUrlFromStorage = barber.avatarStorageId ?
-    useQuery(api.services.barbers.getImageUrl, {
-      storageId: barber.avatarStorageId
-    }) :
-    null
+  const imageUrlFromStorage = useQuery(
+    api.services.barbers.getImageUrl,
+    barber.avatarStorageId ? { storageId: barber.avatarStorageId } : "skip"
+  )
 
   // Use storage URL if available, otherwise fallback to regular avatar or default
   const imageSrc = imageUrlFromStorage || barber.avatarUrl || '/img/avatar_default.jpg'
@@ -54,6 +57,7 @@ const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
 
 const ServiceBooking = ({ onBack }) => {
   const { user, isAuthenticated } = useAuth();
+  const [selectedBranch, setSelectedBranch] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [selectedDate, setSelectedDate] = useState(() => {
     const today = new Date();
@@ -61,7 +65,7 @@ const ServiceBooking = ({ onBack }) => {
   });
   const [selectedTime, setSelectedTime] = useState(null);
   const [selectedStaff, setSelectedStaff] = useState(null);
-  const [step, setStep] = useState(1); // 1: services, 2: date & time & staff, 3: confirmation, 4: success
+  const [step, setStep] = useState(1); // 1: branch, 2: services, 3: date & time & staff, 4: confirmation, 5: success
   const [loading, setLoading] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -74,9 +78,19 @@ const ServiceBooking = ({ onBack }) => {
   const qrRef = useRef(null);
 
   // Convex queries
-  const services = useQuery(api.services.services.getActiveServices)
-  const barbers = useQuery(api.services.barbers.getActiveBarbers)
-  const vouchers = user?.id ? useQuery(api.services.vouchers.getVouchersByUser, { userId: user.id }) : undefined
+  const branches = useQuery(api.services.branches.getActiveBranches)
+  const services = useQuery(
+    api.services.services.getServicesByBranch, 
+    selectedBranch ? { branch_id: selectedBranch._id } : "skip"
+  )
+  const barbers = useQuery(
+    api.services.barbers.getBarbersByBranch, 
+    selectedBranch ? { branch_id: selectedBranch._id } : "skip"
+  )
+  const vouchers = useQuery(
+    api.services.vouchers.getVouchersByUser, 
+    user?.id ? { userId: user.id } : "skip"
+  )
 
   // Convex mutations and actions
   const createBooking = useMutation(api.services.bookings.createBooking)
@@ -101,7 +115,7 @@ const ServiceBooking = ({ onBack }) => {
   // Check for pre-selected service from AI assistant
   useEffect(() => {
     const preSelectedServiceData = sessionStorage.getItem('preSelectedService')
-    if (preSelectedServiceData && services) {
+    if (preSelectedServiceData && services && selectedBranch) {
       try {
         const preSelectedService = JSON.parse(preSelectedServiceData)
         // Find the matching service from the current services list
@@ -113,7 +127,7 @@ const ServiceBooking = ({ onBack }) => {
         
         if (matchingService) {
           setSelectedService(matchingService)
-          setStep(2) // Skip to step 2 since service is already selected
+          setStep(3) // Skip to step 3 since service is already selected
         }
         
         // Clear the stored service after using it
@@ -123,18 +137,18 @@ const ServiceBooking = ({ onBack }) => {
         sessionStorage.removeItem('preSelectedService')
       }
     }
-  }, [services])
+  }, [services, selectedBranch])
 
   // Reset QR code loading state when step changes
   useEffect(() => {
-    if (step === 4) {
+    if (step === 5) {
       setQrCodeLoading(true);
     }
   }, [step]);
 
-  // Generate QR code when we reach step 4 and have actual booking data
+  // Generate QR code when we reach step 5 and have actual booking data
   useEffect(() => {
-    if (step === 4 && createdBooking?._id && getBookingById?.booking_code) {
+    if (step === 5 && createdBooking?._id && getBookingById?.booking_code) {
       console.log(
         "Step 4 reached with booking ID:",
         createdBooking._id,
@@ -334,6 +348,7 @@ const ServiceBooking = ({ onBack }) => {
         customer: user.id,
         service: selectedService._id,
         barber: selectedStaff?._id || undefined,
+        branch_id: selectedBranch._id,
         date: selectedDate,
         time: formattedTime,
         discount_amount: selectedVoucher?.value,
@@ -376,7 +391,7 @@ const ServiceBooking = ({ onBack }) => {
           // Don't fail the booking creation if status update fails
         }
       } else {
-        setStep(4); // Success step for pay later
+        setStep(5); // Success step for pay later
       }
 
       // Redeem voucher if one was selected
@@ -417,7 +432,7 @@ const ServiceBooking = ({ onBack }) => {
 
       if (finalAmount === 0) {
         // If amount is 0 after voucher, no payment needed
-        setStep(4);
+        setStep(5);
         return true;
       }
 
@@ -444,7 +459,7 @@ const ServiceBooking = ({ onBack }) => {
         return true;
       } else {
         // If no redirect URL, show success
-        setStep(4);
+        setStep(5);
         return true;
       }
 
@@ -455,16 +470,25 @@ const ServiceBooking = ({ onBack }) => {
     }
   };
 
+  const handleBranchSelect = (branch) => {
+    setSelectedBranch(branch);
+    // Reset selections when changing branch
+    setSelectedService(null);
+    setSelectedStaff(null);
+    setSelectedTime(null);
+    setStep(2);
+  };
+
   const handleServiceSelect = (service) => {
     setSelectedService(service);
     // Reset selected staff when changing service to avoid validation errors
     setSelectedStaff(null);
-    setStep(2);
+    setStep(3);
   };
 
   const handleTimeSelect = (time) => {
     setSelectedTime(time);
-    setStep(3);
+    setStep(4);
   };
 
   const handleStaffSelect = (barber) => {
@@ -485,12 +509,14 @@ const ServiceBooking = ({ onBack }) => {
   const getStepTitle = () => {
     switch (step) {
       case 1:
-        return "Choose Service";
+        return "Select Branch";
       case 2:
-        return "Select Date, Time & Barber";
+        return "Choose Service";
       case 3:
-        return "Confirm Booking";
+        return "Select Date, Time & Barber";
       case 4:
+        return "Confirm Booking";
+      case 5:
         return "Booking Confirmed";
       default:
         return "Book Service";
@@ -500,7 +526,7 @@ const ServiceBooking = ({ onBack }) => {
   const renderStepIndicator = () => (
     <div className="flex justify-center mb-4 px-4 py-2">
       <div className="flex items-center space-x-3">
-        {[1, 2, 3].map((stepNumber) => (
+        {[1, 2, 3, 4].map((stepNumber) => (
           <div key={stepNumber} className="flex items-center">
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
@@ -512,7 +538,7 @@ const ServiceBooking = ({ onBack }) => {
             >
               {step > stepNumber ? "✓" : stepNumber}
             </div>
-            {stepNumber < 3 && (
+            {stepNumber < 4 && (
               <div
                 className={`w-8 h-0.5 mx-1 rounded transition-all duration-300`}
                 style={{
@@ -525,6 +551,135 @@ const ServiceBooking = ({ onBack }) => {
       </div>
     </div>
   );
+
+  const renderBranchSelection = () => {
+    if (!branches) {
+      return (
+        <div className="text-center py-8 px-4 min-h-[200px] flex flex-col justify-center">
+          <div
+            className="rounded-full w-14 h-14 flex items-center justify-center mx-auto mb-4"
+            style={{ backgroundColor: "rgba(246, 139, 36, 0.1)" }}
+          >
+            <Building className="w-7 h-7" style={{ color: "#F68B24" }} />
+          </div>
+          <p className="text-sm font-medium" style={{ color: "#8B8B8B" }}>
+            Loading branches...
+          </p>
+        </div>
+      );
+    }
+
+    if (branches.length === 0) {
+      return (
+        <div className="text-center py-8 px-4 min-h-[200px] flex flex-col justify-center">
+          <div
+            className="rounded-full w-14 h-14 flex items-center justify-center mx-auto mb-4"
+            style={{ backgroundColor: "rgba(220, 53, 69, 0.1)" }}
+          >
+            <XCircle className="w-7 h-7 text-red-500" />
+          </div>
+          <p className="text-sm text-red-600 mb-4 font-medium px-4">No branches available</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="px-4 pb-4">
+        {/* Mobile-First Header */}
+        <div className="text-center mb-6">
+          <div className="flex items-center justify-center mb-4">
+            <div className="rounded-full w-12 h-12 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center mr-3 shadow-lg">
+              <Building className="w-6 h-6 text-white" />
+            </div>
+            <div className="text-left">
+              <h2 className="text-xl font-bold leading-tight text-white">
+                Select Your Branch
+              </h2>
+              <p className="text-sm font-medium text-gray-400">
+                Choose your preferred location
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile-Optimized Branch Cards */}
+        <div className="space-y-4">
+          {branches.map((branch) => (
+            <button
+              key={branch._id}
+              onClick={() => handleBranchSelect(branch)}
+              className="group relative w-full bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl shadow-lg active:shadow-xl border-2 border-[#555555]/30 hover:border-[#FF8C42]/50 active:border-[#FF8C42] transition-all duration-200 overflow-hidden touch-manipulation min-h-[120px]"
+            >
+              {/* Mobile-Optimized Background Effects */}
+              <div className="absolute inset-0 bg-gradient-to-r from-[#FF8C42]/5 via-transparent to-[#FF8C42]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-[#FF8C42]/10 to-[#FF7A2B]/10 opacity-0 group-active:opacity-100 transition-opacity duration-200"></div>
+
+              {/* Touch-Friendly Content */}
+              <div className="relative p-4">
+                <div className="flex items-start space-x-3">
+                  {/* Mobile-Optimized Icon Badge */}
+                  <div className="flex-shrink-0">
+                    <div className="rounded-full w-12 h-12 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:scale-105">
+                      <Building className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+
+                  {/* Mobile-First Content Layout */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex-1 min-w-0 pr-2">
+                        <h3 className="text-base font-bold leading-tight text-white group-hover:text-[#FF8C42] transition-colors duration-200">
+                          {branch.name}
+                        </h3>
+                        <p className="text-xs font-mono text-gray-400 mt-1">
+                          #{branch.branch_code}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Branch Contact Info */}
+                    <div className="space-y-1 mt-2">
+                      <div className="flex items-center space-x-2">
+                        <MapPin className="w-3 h-3 flex-shrink-0 text-gray-500" />
+                        <span className="text-xs text-gray-400 truncate">
+                          {branch.address}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Phone className="w-3 h-3 flex-shrink-0 text-gray-500" />
+                        <span className="text-xs text-gray-400">
+                          {branch.phone}
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Mail className="w-3 h-3 flex-shrink-0 text-gray-500" />
+                        <span className="text-xs text-gray-400">
+                          {branch.email}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mobile-Optimized Accent Line */}
+                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] scale-x-0 group-hover:scale-x-100 group-active:scale-x-100 transition-transform duration-200 origin-left rounded-b-2xl"></div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Mobile-Optimized Footer */}
+        <div className="text-center mt-6">
+          <div className="inline-flex items-center space-x-2 px-4 py-3 rounded-full bg-[#FF8C42]/20 border border-[#FF8C42]/30">
+            <Building className="w-4 h-4 text-[#FF8C42]" />
+            <span className="text-sm font-semibold text-[#FF8C42]">
+              {branches.length} Branch{branches.length !== 1 ? 'es' : ''} Available
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const renderServiceSelection = () => {
     if (loading || !services) {
@@ -934,7 +1089,7 @@ const ServiceBooking = ({ onBack }) => {
       {/* Continue Button - Only show when all selections are made */}
       {selectedTime && selectedStaff && selectedDate && (
         <button
-          onClick={() => setStep(3)}
+          onClick={() => setStep(4)}
           className="w-full py-3 text-white font-bold rounded-xl transition-all duration-200 shadow-lg"
           style={{ backgroundColor: "#F68B24" }}
           onMouseEnter={(e) => (e.target.style.backgroundColor = "#E67E22")}
@@ -1068,6 +1223,20 @@ const ServiceBooking = ({ onBack }) => {
 
           {/* Appointment Details */}
           <div className="space-y-2">
+            <div className="flex items-center justify-between py-1">
+              <div className="flex items-center space-x-2">
+                <Building className="w-4 h-4" style={{ color: "#F68B24" }} />
+                <span
+                  className="font-semibold text-sm"
+                  style={{ color: "#36454F" }}
+                >
+                  Branch
+                </span>
+              </div>
+              <span className="font-bold text-sm" style={{ color: "#36454F" }}>
+                {selectedBranch?.name}
+              </span>
+            </div>
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center space-x-2">
                 <Calendar className="w-4 h-4" style={{ color: "#F68B24" }} />
@@ -1400,7 +1569,7 @@ const ServiceBooking = ({ onBack }) => {
           {!showPaymentMethods && (
             <div className="pt-2">
               <button
-                onClick={() => setStep(2)}
+                onClick={() => setStep(3)}
                 className="w-full py-2 px-3 border font-bold rounded-lg transition-all duration-200 text-sm"
                 style={{ borderColor: "#E0E0E0", color: "#8B8B8B" }}
                 onMouseEnter={(e) => {
@@ -1498,6 +1667,14 @@ const ServiceBooking = ({ onBack }) => {
           }}
         >
           <div className="space-y-3">
+            <div className="flex justify-between">
+              <span className="font-medium text-gray-300">
+                Branch:
+              </span>
+              <span className="font-bold text-white">
+                {selectedBranch?.name}
+              </span>
+            </div>
             <div className="flex justify-between">
               <span className="font-medium text-gray-300">
                 Service:
@@ -1632,7 +1809,7 @@ const ServiceBooking = ({ onBack }) => {
                 Book Service
               </p>
               <p className="text-xs text-[#FF8C42]">
-                Step {step} of 3
+                Step {step} of 4
               </p>
             </div>
           </div>
@@ -1646,10 +1823,11 @@ const ServiceBooking = ({ onBack }) => {
 
       {/* Content */}
       <div className="relative z-10 pb-8">
-        {step === 1 && renderServiceSelection()}
-        {step === 2 && renderTimeAndStaffSelection()}
-        {step === 3 && renderConfirmation()}
-        {step === 4 && renderBookingSuccess()}
+        {step === 1 && renderBranchSelection()}
+        {step === 2 && renderServiceSelection()}
+        {step === 3 && renderTimeAndStaffSelection()}
+        {step === 4 && renderConfirmation()}
+        {step === 5 && renderBookingSuccess()}
       </div>
     </div>
   );

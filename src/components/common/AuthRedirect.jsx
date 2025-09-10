@@ -21,6 +21,8 @@ const AuthRedirect = ({ children }) => {
     switch (user.role) {
       case 'staff':
       case 'admin':
+      case 'super_admin':
+      case 'branch_admin':
         return <Navigate to="/staff/dashboard" replace />
       case 'barber':
         return <Navigate to="/barber/dashboard" replace />

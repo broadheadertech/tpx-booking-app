@@ -5,7 +5,7 @@ import { api } from "../_generated/api";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 
 // Helper function to get or create a walk-in customer
-async function getOrCreateWalkInCustomer(ctx: any, customerName?: string, customerPhone?: string): Promise<Id<"users"> | undefined> {
+async function getOrCreateWalkInCustomer(ctx: any, branch_id: Id<"branches">, customerName?: string, customerPhone?: string): Promise<Id<"users"> | undefined> {
   try {
     // For walk-in customers, we'll always create a new record
     // This ensures each walk-in transaction is properly tracked
@@ -19,6 +19,7 @@ async function getOrCreateWalkInCustomer(ctx: any, customerName?: string, custom
       mobile_number: customerPhone || "",
       nickname: customerName || "Walk-in Customer",
       role: "customer",
+      branch_id: branch_id,
       is_active: true,
       avatar: "",
       bio: "",
@@ -43,6 +44,7 @@ export const createTransaction = mutation({
     customer_phone: v.optional(v.string()),
     customer_email: v.optional(v.string()),
     customer_address: v.optional(v.string()),
+    branch_id: v.id("branches"),
     barber: v.id("barbers"),
     services: v.array(v.object({
       service_id: v.id("services"),
@@ -108,7 +110,7 @@ export const createTransaction = mutation({
 
           // For walk-in customers, create or find a walk-in customer record
           if (!customerId && (args.customer_name || args.customer_phone)) {
-            customerId = await getOrCreateWalkInCustomer(ctx, args.customer_name, args.customer_phone);
+            customerId = await getOrCreateWalkInCustomer(ctx, args.branch_id, args.customer_name, args.customer_phone);
           }
 
           if (customerId) {
@@ -133,6 +135,7 @@ export const createTransaction = mutation({
               const bookingId = await ctx.runMutation(api.services.bookings.createBooking, {
                 customer: customerId,
                 service: serviceItem.service_id,
+                branch_id: args.branch_id,
                 barber: args.barber,
                 date: today,
                 time: new Date().toTimeString().slice(0, 5), // Current time
@@ -212,7 +215,7 @@ export const createTransaction = mutation({
   },
 });
 
-// Get all transactions
+// Get all transactions (for super admin)
 export const getAllTransactions = query({
   handler: async (ctx) => {
     const transactions = await ctx.db
@@ -223,21 +226,55 @@ export const getAllTransactions = query({
     // Populate related data
     const populatedTransactions = await Promise.all(
       transactions.map(async (transaction) => {
-        const customer = transaction.customer 
-          ? await ctx.db.get(transaction.customer)
-          : null;
-        const barber = await ctx.db.get(transaction.barber);
-        const processedBy = await ctx.db.get(transaction.processed_by);
-        const voucher = transaction.voucher_applied 
-          ? await ctx.db.get(transaction.voucher_applied)
-          : null;
+        const [customer, barber, processedBy, voucher, branch] = await Promise.all([
+          transaction.customer ? ctx.db.get(transaction.customer) : null,
+          ctx.db.get(transaction.barber),
+          ctx.db.get(transaction.processed_by),
+          transaction.voucher_applied ? ctx.db.get(transaction.voucher_applied) : null,
+          ctx.db.get(transaction.branch_id),
+        ]);
 
         return {
           ...transaction,
+          branch_name: branch?.name || 'Unknown Branch',
           customer_details: customer,
           barber_details: barber,
           processed_by_details: processedBy,
           voucher_details: voucher
+        };
+      })
+    );
+
+    return populatedTransactions;
+  },
+});
+
+// Get transactions by branch (for branch admin/staff)
+export const getTransactionsByBranch = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    const transactions = await ctx.db
+      .query("transactions")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .order("desc")
+      .collect();
+
+    // Populate related data
+    const populatedTransactions = await Promise.all(
+      transactions.map(async (transaction) => {
+        const [customer, barber, processedBy, voucher] = await Promise.all([
+          transaction.customer ? ctx.db.get(transaction.customer) : null,
+          ctx.db.get(transaction.barber),
+          ctx.db.get(transaction.processed_by),
+          transaction.voucher_applied ? ctx.db.get(transaction.voucher_applied) : null,
+        ]);
+
+        return {
+          ...transaction,
+          customer_display: customer?.username || transaction.customer_name || 'Walk-in Customer',
+          barber_name: barber?.full_name || 'Unknown Barber',
+          processed_by_name: processedBy?.username || 'Unknown Staff',
+          voucher_code: voucher?.code || null,
         };
       })
     );
