@@ -186,24 +186,78 @@ export const createTransaction = mutation({
       }
     }
 
-    // Mark voucher as redeemed if applied
+    // Mark voucher as redeemed if applied (only for the attached customer)
     if (args.voucher_applied) {
       const voucherId = args.voucher_applied;
-      // Find an assigned voucher that hasn't been redeemed yet
-      const assignments = await ctx.db
-        .query("user_vouchers")
-        .withIndex("by_voucher", (q) => q.eq("voucher_id", voucherId))
-        .collect();
+      console.log("[VOUCHER REDEMPTION] Starting voucher redemption process", {
+        voucherId,
+        customer: args.customer,
+        customer_email: args.customer_email,
+        customer_name: args.customer_name,
+        branch_id: args.branch_id
+      });
 
-      // Look for an assigned (not redeemed) voucher
-      const assignedVoucher = assignments.find(a => a.status === "assigned");
-      
-      if (assignedVoucher) {
-        // Update the assignment to redeemed
-        await ctx.db.patch(assignedVoucher._id, {
-          status: "redeemed",
-          redeemed_at: timestamp,
+      // Resolve customer ID for redemption
+      let customerIdForVoucher = args.customer as Id<"users"> | undefined;
+      if (!customerIdForVoucher && args.customer_email) {
+        // Try resolving by email if provided
+        console.log("[VOUCHER REDEMPTION] Attempting to resolve customer by email:", args.customer_email);
+        const userByEmail = await ctx.db
+          .query("users")
+          .withIndex("by_email", (q) => q.eq("email", args.customer_email!))
+          .first();
+        if (userByEmail) {
+          customerIdForVoucher = userByEmail._id as Id<"users">;
+          console.log("[VOUCHER REDEMPTION] Customer resolved by email:", customerIdForVoucher);
+        } else {
+          console.log("[VOUCHER REDEMPTION] No customer found with email:", args.customer_email);
+        }
+      }
+
+      if (customerIdForVoucher) {
+        console.log("[VOUCHER REDEMPTION] Looking for voucher assignment", {
+          voucherId,
+          customerIdForVoucher
         });
+        
+        // Find the specific user's assignment for this voucher
+        const userAssignment = await ctx.db
+          .query("user_vouchers")
+          .withIndex("by_voucher_user", (q) => q.eq("voucher_id", voucherId).eq("user_id", customerIdForVoucher!))
+          .first();
+
+        console.log("[VOUCHER REDEMPTION] Voucher assignment found:", {
+          assignmentId: userAssignment?._id,
+          status: userAssignment?.status,
+          assigned_at: userAssignment?.assigned_at
+        });
+
+        if (userAssignment && userAssignment.status === "assigned") {
+          await ctx.db.patch(userAssignment._id, {
+            status: "redeemed",
+            redeemed_at: timestamp,
+          });
+          console.log("[VOUCHER REDEMPTION] Voucher successfully redeemed", {
+            assignmentId: userAssignment._id,
+            voucherId,
+            customerIdForVoucher
+          });
+        } else {
+          console.warn(
+            "[VOUCHER REDEMPTION] Voucher assignment not found or not assignable for this customer",
+            JSON.stringify({ voucherId, customerIdForVoucher, status: userAssignment?.status, assignmentExists: !!userAssignment })
+          );
+        }
+      } else {
+        console.warn(
+          "[VOUCHER REDEMPTION] Skipping voucher redemption because no customer is attached to the transaction",
+          JSON.stringify({ 
+            voucherId, 
+            providedCustomer: args.customer,
+            providedEmail: args.customer_email,
+            providedName: args.customer_name
+          })
+        );
       }
     }
 

@@ -99,8 +99,9 @@ const POS = () => {
   const updateBookingPaymentStatus = useMutation(api.services.bookings.updatePaymentStatus)
   const updateBookingStatus = useMutation(api.services.bookings.updateBooking)
   const createUser = useMutation(api.services.auth.createUser)
-  const getVoucherByCode = useQuery(api.services.vouchers.getVoucherByCode,
-    currentTransaction.voucher_applied && typeof currentTransaction.voucher_applied === 'string' && !String(currentTransaction.voucher_applied).includes(':')
+  const getVoucherByCode = useQuery(
+    api.services.vouchers.getVoucherByCode,
+    currentTransaction.voucher_applied && typeof currentTransaction.voucher_applied === 'string' && /[A-Z]/.test(currentTransaction.voucher_applied) && !/[a-z]/.test(currentTransaction.voucher_applied)
       ? { code: currentTransaction.voucher_applied }
       : "skip"
   )
@@ -438,10 +439,14 @@ const POS = () => {
       // Handle voucher ID conversion if needed
       let voucherApplied = currentTransaction.voucher_applied
       if (typeof voucherApplied === 'string') {
-        const looksLikeConvexId = voucherApplied.includes(':')
-        if (!looksLikeConvexId && getVoucherByCode?._id) {
+        if (getVoucherByCode?._id) {
           console.log('Converting voucher code to ID via query:', voucherApplied)
           voucherApplied = getVoucherByCode._id
+        } else {
+          // If it looks like a human-entered code (uppercase), drop it
+          if (/[A-Z]/.test(voucherApplied) && !/[a-z]/.test(voucherApplied)) {
+            voucherApplied = undefined
+          }
         }
       }
       
