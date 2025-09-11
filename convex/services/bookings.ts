@@ -22,6 +22,50 @@ export const getAllBookings = query({
     // Get associated data for each booking
     const bookingsWithData = await Promise.all(
       bookings.map(async (booking) => {
+        const [customer, service, barber, branch] = await Promise.all([
+          booking.customer ? ctx.db.get(booking.customer) : null,
+          ctx.db.get(booking.service),
+          booking.barber ? ctx.db.get(booking.barber) : null,
+          ctx.db.get(booking.branch_id),
+        ]);
+
+        return {
+          ...booking,
+          customer_name: customer?.username || booking.customer_name || 'Unknown',
+          customer_email: customer?.email || booking.customer_email || '',
+          customer_phone: customer?.mobile_number || booking.customer_phone || '',
+          service_name: service?.name || 'Unknown Service',
+          service_price: service?.price || 0,
+          service_duration: service?.duration_minutes || 0,
+          barber_name: barber?.full_name || 'Not assigned',
+          branch_name: branch?.name || 'Unknown Branch',
+          formattedDate: new Date(booking.date).toLocaleDateString('en-US', {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          }),
+          formattedTime: formatTime(booking.time),
+        };
+      })
+    );
+
+    return bookingsWithData.sort((a, b) => b.createdAt - a.createdAt);
+  },
+});
+
+// Get bookings by branch (for branch admin/staff)
+export const getBookingsByBranch = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    const bookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+
+    // Get associated data for each booking
+    const bookingsWithData = await Promise.all(
+      bookings.map(async (booking) => {
         const [customer, service, barber] = await Promise.all([
           booking.customer ? ctx.db.get(booking.customer) : null,
           ctx.db.get(booking.service),
@@ -64,9 +108,10 @@ export const getBookingsByCustomer = query({
     // Get associated data
     const bookingsWithData = await Promise.all(
       bookings.map(async (booking) => {
-        const [service, barber] = await Promise.all([
+        const [service, barber, branch] = await Promise.all([
           ctx.db.get(booking.service),
           booking.barber ? ctx.db.get(booking.barber) : null,
+          ctx.db.get(booking.branch_id),
         ]);
 
         return {
@@ -75,6 +120,7 @@ export const getBookingsByCustomer = query({
           service_price: service?.price || 0,
           service_duration: service?.duration_minutes || 0,
           barber_name: barber?.full_name || 'Not assigned',
+          branch_name: branch?.name || 'Unknown Branch',
           formattedDate: new Date(booking.date).toLocaleDateString(),
           formattedTime: formatTime(booking.time),
         };
@@ -127,10 +173,11 @@ export const getBookingById = query({
     const booking = await ctx.db.get(args.id);
     if (!booking) return null;
 
-    const [customer, service, barber] = await Promise.all([
+    const [customer, service, barber, branch] = await Promise.all([
       booking.customer ? ctx.db.get(booking.customer) : null,
       ctx.db.get(booking.service),
       booking.barber ? ctx.db.get(booking.barber) : null,
+      ctx.db.get(booking.branch_id),
     ]);
 
     return {
@@ -142,6 +189,7 @@ export const getBookingById = query({
       service_price: service?.price || 0,
       service_duration: service?.duration_minutes || 0,
       barber_name: barber?.full_name || 'Not assigned',
+      branch_name: branch?.name || 'Unknown Branch',
       formattedDate: new Date(booking.date).toLocaleDateString(),
       formattedTime: formatTime(booking.time),
     };
@@ -185,6 +233,7 @@ export const createBooking = mutation({
   args: {
     customer: v.id("users"),
     service: v.id("services"),
+    branch_id: v.id("branches"),
     barber: v.optional(v.id("barbers")),
     date: v.string(),
     time: v.string(),
@@ -217,6 +266,7 @@ export const createBooking = mutation({
 
     const bookingId = await ctx.db.insert("bookings", {
       booking_code: bookingCode,
+      branch_id: args.branch_id,
       customer: args.customer,
       service: args.service,
       barber: args.barber,
@@ -585,6 +635,7 @@ export const createWalkInBooking = mutation({
     customer_phone: v.optional(v.string()),
     customer_email: v.optional(v.string()),
     service: v.id("services"),
+    branch_id: v.id("branches"),
     barber: v.optional(v.id("barbers")),
     date: v.string(),
     time: v.string(),
@@ -622,6 +673,7 @@ export const createWalkInBooking = mutation({
 
     const bookingId = await ctx.db.insert("bookings", {
       booking_code: bookingCode,
+      branch_id: args.branch_id,
       customer: undefined, // No customer account for walk-ins
       customer_name: args.customer_name,
       customer_phone: args.customer_phone || undefined,

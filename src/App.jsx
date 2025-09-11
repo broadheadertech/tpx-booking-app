@@ -2,10 +2,13 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import AuthRedirect from './components/common/AuthRedirect'
+import Landing from './pages/Landing'
+import PlatformSelection from './pages/PlatformSelection'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import StaffDashboard from './pages/staff/Dashboard'
 import POS from './pages/staff/POS'
+import AdminDashboard from './pages/admin/Dashboard'
 import CustomerDashboard from './pages/customer/Dashboard'
 import CustomerBooking from './pages/customer/Booking'
 import BarberDashboard from './components/barber/BarberDashboard'
@@ -19,7 +22,9 @@ function App() {
       <Router>
         <div className="min-h-screen bg-gray-light">
           <Routes>
-            <Route path="/" element={<Navigate to="/auth/login" replace />} />
+            <Route path="/" element={<Landing />} />
+            <Route path="/landing" element={<Landing />} />
+            <Route path="/platform-selection" element={<PlatformSelection />} />
             <Route 
               path="/auth/login" 
               element={
@@ -34,6 +39,15 @@ function App() {
                 <AuthRedirect>
                   <Register />
                 </AuthRedirect>
+              } 
+            />
+            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+            <Route 
+              path="/admin/dashboard" 
+              element={
+                <ProtectedRoute requireSuperAdmin={true}>
+                  <AdminDashboard />
+                </ProtectedRoute>
               } 
             />
             <Route path="/staff" element={<Navigate to="/staff/dashboard" replace />} />

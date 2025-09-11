@@ -2,11 +2,23 @@ import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 
-// Get all events
+// Get all events (for super admin)
 export const getAllEvents = query({
   args: {},
   handler: async (ctx) => {
     const events = await ctx.db.query("events").collect();
+    return events.sort((a, b) => b.createdAt - a.createdAt);
+  },
+});
+
+// Get events by branch
+export const getEventsByBranch = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    const events = await ctx.db
+      .query("events")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
     return events.sort((a, b) => b.createdAt - a.createdAt);
   },
 });
@@ -75,6 +87,7 @@ export const createEvent = mutation({
     price: v.number(),
     category: v.union(v.literal("workshop"), v.literal("celebration"), v.literal("training"), v.literal("promotion")),
     status: v.optional(v.union(v.literal("upcoming"), v.literal("ongoing"), v.literal("completed"), v.literal("cancelled"))),
+    branch_id: v.id("branches"), // Add branch_id requirement
   },
   handler: async (ctx, args) => {
     // Validate date is not in the past
@@ -97,6 +110,7 @@ export const createEvent = mutation({
       price: args.price,
       category: args.category,
       status: args.status || "upcoming",
+      branch_id: args.branch_id, // Add branch_id to event creation
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -187,3 +201,4 @@ export const unregisterFromEvent = mutation({
     return { success: true };
   },
 });
+

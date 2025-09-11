@@ -2,11 +2,42 @@ import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 
-// Get all barbers
+// Get all barbers (for super admin)
 export const getAllBarbers = query({
   args: {},
   handler: async (ctx) => {
     const barbers = await ctx.db.query("barbers").collect();
+
+    // Get associated user and branch data for each barber
+    const barbersWithUsers = await Promise.all(
+      barbers.map(async (barber) => {
+        const [user, branch] = await Promise.all([
+          ctx.db.get(barber.user),
+          ctx.db.get(barber.branch_id),
+        ]);
+        return {
+          ...barber,
+          name: barber.full_name,
+          email: user?.email || '',
+          phone: user?.mobile_number || '',
+          avatarUrl: barber.avatar || '/img/avatar_default.jpg',
+          branch_name: branch?.name || 'Unknown Branch',
+        };
+      })
+    );
+
+    return barbersWithUsers;
+  },
+});
+
+// Get barbers by branch
+export const getBarbersByBranch = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    const barbers = await ctx.db
+      .query("barbers")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
 
     // Get associated user data for each barber
     const barbersWithUsers = await Promise.all(
@@ -48,6 +79,7 @@ export const getBarberById = query({
 export const createBarber = mutation({
   args: {
     user: v.id("users"),
+    branch_id: v.id("branches"),
     full_name: v.string(),
     is_active: v.boolean(),
     services: v.array(v.id("services")),
@@ -71,6 +103,7 @@ export const createBarber = mutation({
 
     const barberId = await ctx.db.insert("barbers", {
       user: args.user,
+      branch_id: args.branch_id,
       full_name: args.full_name,
       is_active: args.is_active,
       services: args.services,
@@ -225,6 +258,7 @@ export const getActiveBarbers = query({
 export const createBarberProfile = mutation({
   args: {
     userId: v.id("users"),
+    branch_id: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
     // Get user data
@@ -235,6 +269,12 @@ export const createBarberProfile = mutation({
 
     if (user.role !== "barber") {
       throwUserError(ERROR_CODES.BARBER_INVALID_ROLE);
+    }
+
+    // Use branch_id from args or user's branch_id
+    const branchId = args.branch_id || user.branch_id;
+    if (!branchId) {
+      throw new Error("Branch ID is required for barber profile creation");
     }
 
     // Check if user already has a barber profile
@@ -250,6 +290,7 @@ export const createBarberProfile = mutation({
     // Create new barber profile
     const barberId = await ctx.db.insert("barbers", {
       user: args.userId,
+      branch_id: branchId,
       full_name: user.username, // Use username as default full name
       is_active: true,
       services: [], // Empty services array initially

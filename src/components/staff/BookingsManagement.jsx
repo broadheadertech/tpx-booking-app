@@ -6,7 +6,7 @@ import QRCode from 'qrcode'
 import { createPortal } from 'react-dom'
 import CreateBookingModal from './CreateBookingModal'
 
-const BookingsManagement = ({ onRefresh }) => {
+const BookingsManagement = ({ onRefresh, user }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('date')
@@ -26,10 +26,24 @@ const BookingsManagement = ({ onRefresh }) => {
   const [selectedBooking, setSelectedBooking] = useState(null)
   const [showTransactionModal, setShowTransactionModal] = useState(false)
 
-  // Convex queries
-  const bookings = useQuery(api.services.bookings.getAllBookings) || []
-  const services = useQuery(api.services.services.getAllServices) || []
-  const barbers = useQuery(api.services.barbers.getActiveBarbers) || []
+  // Convex queries - use branch-scoped queries for staff, global for super_admin
+  const bookings = user?.role === 'super_admin' 
+    ? (useQuery(api.services.bookings.getAllBookings) || [])
+    : user?.branch_id 
+      ? (useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id }) || [])
+      : []
+      
+  const services = user?.role === 'super_admin'
+    ? (useQuery(api.services.services.getAllServices) || [])
+    : user?.branch_id
+      ? (useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id }) || [])
+      : []
+      
+  const barbers = user?.role === 'super_admin'
+    ? (useQuery(api.services.barbers.getActiveBarbers) || [])
+    : user?.branch_id
+      ? (useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id }) || []).filter(b => b.is_active)
+      : []
   // Always call hooks in the same order to follow Rules of Hooks
   const bookingPayments = useQuery(api.services.bookings.getBookingPayments, { bookingId: selectedBooking?._id })
   const bookingTransactions = useQuery(api.services.bookings.getBookingTransactions, { bookingId: selectedBooking?._id })
@@ -1493,6 +1507,7 @@ const BookingsManagement = ({ onRefresh }) => {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         onSubmit={handleCreateBooking}
+        user={user}
       />
 
       {/* QR Code Modal */}

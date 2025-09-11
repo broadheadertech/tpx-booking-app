@@ -128,34 +128,22 @@ const CustomerProfile = ({ onBack, customerData }) => {
   ]
 
   return (
-    <div className="min-h-screen py-6" style={{ backgroundColor: '#F4F0E6' }}>
+    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] py-6">
       {/* Header */}
       <div className="flex items-center justify-between px-4 mb-6">
         <button
           onClick={onBack}
-          className="flex items-center space-x-2 px-4 py-2 font-medium rounded-xl transition-all duration-200"
-          style={{ color: '#8B8B8B', backgroundColor: 'white' }}
-          onMouseEnter={(e) => {
-            e.target.style.color = '#F68B24'
-            e.target.style.backgroundColor = 'white'
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.color = '#8B8B8B'
-            e.target.style.backgroundColor = 'white'
-          }}
+          className="flex items-center space-x-2 px-4 py-2 font-medium rounded-xl transition-all duration-200 text-gray-400 bg-[#333333] hover:text-[#FF8C42] hover:bg-[#444444]"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back</span>
         </button>
-        <h1 className="text-xl font-black" style={{ color: '#36454F' }}>My Profile</h1>
+        <h1 className="text-xl font-black text-white">My Profile</h1>
         <div className="flex items-center space-x-3">
           {!isEditing ? (
             <button
               onClick={() => setIsEditing(true)}
-              className="flex items-center space-x-2 px-4 py-2 text-white font-medium rounded-xl transition-all duration-200"
-              style={{ backgroundColor: '#F68B24' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
+              className="flex items-center space-x-2 px-4 py-2 text-white font-medium rounded-xl transition-all duration-200 bg-[#FF8C42] hover:bg-[#FF7A2B]"
             >
               <Edit3 className="w-4 h-4" />
               <span>Edit</span>
@@ -164,20 +152,14 @@ const CustomerProfile = ({ onBack, customerData }) => {
             <div className="flex space-x-2">
               <button
                 onClick={handleCancel}
-                className="flex items-center space-x-2 px-4 py-2 font-medium rounded-xl transition-all duration-200"
-                style={{ border: '1px solid #E0E0E0', color: '#8B8B8B', backgroundColor: 'white' }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#F5F5F5'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                className="flex items-center space-x-2 px-4 py-2 font-medium rounded-xl transition-all duration-200 text-gray-400 bg-[#333333] border border-[#444444] hover:bg-[#444444]"
               >
                 <X className="w-4 h-4" />
                 <span>Cancel</span>
               </button>
               <button
                 onClick={handleSave}
-                className="flex items-center space-x-2 px-4 py-2 text-white font-medium rounded-xl transition-all duration-200"
-                style={{ backgroundColor: '#28A745' }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#218838'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#28A745'}
+                className="flex items-center space-x-2 px-4 py-2 text-white font-medium rounded-xl transition-all duration-200 bg-green-600 hover:bg-green-700"
               >
                 <Save className="w-4 h-4" />
                 <span>Save</span>
@@ -189,46 +171,43 @@ const CustomerProfile = ({ onBack, customerData }) => {
 
       {/* Profile Header */}
       <div className="px-4 mb-6">
-        <div className="rounded-2xl p-6 shadow-sm" style={{ backgroundColor: 'white', border: '1px solid #E0E0E0' }}>
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm hover:shadow-lg transition-all duration-200 p-4">
           <div className="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
             {/* Profile Picture */}
             <div className="relative">
-              <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: '#F5F5F5' }}>
-                <User className="w-10 h-10" style={{ color: '#8B8B8B' }} />
+                <div className="w-20 h-20 rounded-full flex items-center justify-center bg-[#444444]">
+                  <User className="w-10 h-10 text-gray-400" />
+                </div>
+                {isEditing && (
+                  <button 
+                    className="absolute bottom-0 right-0 w-6 h-6 rounded-full flex items-center justify-center shadow-lg transition-colors duration-200 bg-[#FF8C42] hover:bg-[#FF7A2B]"
+                  >
+                    <Camera className="w-3 h-3 text-white" />
+                  </button>
+                )}
               </div>
-              {isEditing && (
-                <button 
-                  className="absolute bottom-0 right-0 w-6 h-6 rounded-full flex items-center justify-center shadow-lg transition-colors duration-200"
-                  style={{ backgroundColor: '#F68B24' }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
-                >
-                  <Camera className="w-3 h-3 text-white" />
-                </button>
-              )}
-            </div>
 
-            {/* Profile Info */}
-            <div className="flex-1 text-center md:text-left">
-              <h2 className="text-2xl font-black mb-1" style={{ color: '#36454F' }}>
-                {profileData.firstName} {profileData.lastName}
-              </h2>
-              <p className="text-sm font-medium mb-4" style={{ color: '#F68B24' }}>Gold Member</p>
+              {/* Profile Info */}
+              <div className="flex-1 text-center md:text-left">
+                <h2 className="text-2xl font-black mb-1 text-white">
+                  {profileData.firstName} {profileData.lastName}
+                </h2>
+                <p className="text-sm font-medium mb-4 text-[#FF8C42]">Gold Member</p>
               
               <div className="grid grid-cols-3 gap-4 text-sm">
-                <div className="text-center">
-                  <div className="font-bold text-lg" style={{ color: '#36454F' }}>{profileData.stats.totalVisits}</div>
-                  <div className="text-xs" style={{ color: '#8B8B8B' }}>Total Visits</div>
+                  <div className="text-center">
+                    <div className="font-bold text-lg text-white">{profileData.stats.totalVisits}</div>
+                    <div className="text-xs text-gray-400">Total Visits</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-bold text-lg text-white">1,250</div>
+                    <div className="text-xs text-gray-400">Loyalty Points</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-bold text-lg text-white">Jun 2023</div>
+                    <div className="text-xs text-gray-400">Member Since</div>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <div className="font-bold text-lg" style={{ color: '#36454F' }}>1,250</div>
-                  <div className="text-xs" style={{ color: '#8B8B8B' }}>Loyalty Points</div>
-                </div>
-                <div className="text-center">
-                  <div className="font-bold text-lg" style={{ color: '#36454F' }}>Jun 2023</div>
-                  <div className="text-xs" style={{ color: '#8B8B8B' }}>Member Since</div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -236,9 +215,9 @@ const CustomerProfile = ({ onBack, customerData }) => {
 
       <div className="space-y-6 px-4">
         {/* Personal Information */}
-        <div className="rounded-2xl p-6 shadow-sm" style={{ backgroundColor: 'white', border: '1px solid #E0E0E0' }}>
-          <h2 className="text-lg font-black mb-4 flex items-center" style={{ color: '#36454F' }}>
-            <User className="w-5 h-5 mr-2" style={{ color: '#F68B24' }} />
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm hover:shadow-lg transition-all duration-200 p-4">
+          <h2 className="text-lg font-black mb-4 flex items-center text-white">
+            <User className="w-5 h-5 mr-2 text-[#FF8C42]" />
             Personal Information
           </h2>
           

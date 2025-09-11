@@ -69,11 +69,30 @@ const POS = () => {
   const itemsPerPage = 9 // For card view
   const tableItemsPerPage = 15 // For table view
 
-  // Convex queries
-  const services = useQuery(api.services.services.getAllServices)
-  const products = useQuery(api.services.products.getAllProducts)
-  const barbers = useQuery(api.services.barbers.getAllBarbers)
-  const customers = useQuery(api.services.auth.getAllUsers)
+  // Convex queries - use branch-scoped queries for staff
+  const services = user?.role === 'super_admin'
+    ? useQuery(api.services.services.getAllServices)
+    : user?.branch_id
+      ? useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id })
+      : []
+      
+  const products = useQuery(api.services.products.getAllProducts) // Products remain global
+  
+  const barbers = user?.role === 'super_admin'
+    ? useQuery(api.services.barbers.getAllBarbers)
+    : user?.branch_id
+      ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
+      : []
+      
+  const customers = user?.role === 'super_admin'
+    ? useQuery(api.services.auth.getAllUsers)
+    : user?.branch_id
+      ? useQuery(api.services.auth.getUsersByBranch, { branch_id: user.branch_id })
+      : []
+
+  // Get branch information for the current user
+  const branches = useQuery(api.services.branches.getAllBranches) || []
+  const currentBranch = branches.find(b => b._id === user?.branch_id)
 
   // Convex mutations
   const createTransaction = useMutation(api.services.transactions.createTransaction)
@@ -81,7 +100,7 @@ const POS = () => {
   const updateBookingStatus = useMutation(api.services.bookings.updateBooking)
   const createUser = useMutation(api.services.auth.createUser)
   const getVoucherByCode = useQuery(api.services.vouchers.getVoucherByCode,
-    currentTransaction.voucher_applied && typeof currentTransaction.voucher_applied === 'string'
+    currentTransaction.voucher_applied && typeof currentTransaction.voucher_applied === 'string' && !String(currentTransaction.voucher_applied).includes(':')
       ? { code: currentTransaction.voucher_applied }
       : "skip"
   )
@@ -326,6 +345,13 @@ const POS = () => {
       return
     }
 
+    // Ensure we have a valid branch context (prefer barber's branch, then user's branch)
+    const resolvedBranchId = selectedBarber?.branch_id || user?.branch_id
+    if (!resolvedBranchId) {
+      alert('No branch selected or associated. Please select a barber from a branch or set your branch.')
+      return
+    }
+
     if (currentTransaction.services.length === 0 && currentTransaction.products.length === 0) {
       alert('Please add at least one service or product')
       return
@@ -347,6 +373,13 @@ const POS = () => {
   // Process payment after confirmation
   const processPayment = async (paymentData) => {
     try {
+      // Resolve branch to use for the transaction (barber branch takes precedence)
+      const resolvedBranchId = selectedBarber?.branch_id || user?.branch_id
+      if (!resolvedBranchId) {
+        alert('Cannot process payment: Missing branch. Please select a barber from a branch or set your branch.')
+        return
+      }
+
       let finalCustomerId = currentTransaction.customer?._id
       
       // Auto-register walk-in customer if they have email
@@ -359,7 +392,8 @@ const POS = () => {
             password: generatedPassword,
             mobile_number: currentTransaction.customer_phone || undefined,
             address: currentTransaction.customer_address || undefined,
-            role: 'customer'
+            role: 'customer',
+            branch_id: user.branch_id // Assign new customers to the current branch
           })
           
           finalCustomerId = newUser._id
@@ -403,10 +437,12 @@ const POS = () => {
       
       // Handle voucher ID conversion if needed
       let voucherApplied = currentTransaction.voucher_applied
-      if (typeof currentTransaction.voucher_applied === 'string' && getVoucherByCode) {
-        console.log('Converting voucher code to ID:', currentTransaction.voucher_applied)
-        console.log('Voucher lookup result:', getVoucherByCode)
-        voucherApplied = getVoucherByCode._id
+      if (typeof voucherApplied === 'string') {
+        const looksLikeConvexId = voucherApplied.includes(':')
+        if (!looksLikeConvexId && getVoucherByCode?._id) {
+          console.log('Converting voucher code to ID via query:', voucherApplied)
+          voucherApplied = getVoucherByCode._id
+        }
       }
       
       const transactionData = {
@@ -415,6 +451,7 @@ const POS = () => {
         customer_phone: currentTransaction.customer_phone || undefined,
         customer_email: currentTransaction.customer_email || undefined,
         customer_address: currentTransaction.customer_address || undefined,
+        branch_id: resolvedBranchId, // Ensure branch_id is provided (barber branch preferred)
         barber: selectedBarber._id,
         services: currentTransaction.services,
         products: currentTransaction.products.length > 0 ? currentTransaction.products : undefined,
@@ -582,7 +619,18 @@ const POS = () => {
                     <span className="text-xs font-semibold text-[#FF8C42]">v1.0.1</span>
                   </div>
                 </div>
-                <p className="text-sm font-medium text-[#FF8C42] mt-1">Point of Sale</p>
+                <div className="flex items-center space-x-2 mt-1">
+                  <p className="text-sm font-medium text-[#FF8C42]">Point of Sale</p>
+                  {currentBranch && (
+                    <>
+                      <span className="text-gray-500">•</span>
+                      <div className="flex items-center space-x-1">
+                        <span className="text-sm font-medium text-white">{currentBranch.name}</span>
+                        <span className="text-sm text-gray-400">({currentBranch.branch_code})</span>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
             <div className="flex items-center space-x-4">

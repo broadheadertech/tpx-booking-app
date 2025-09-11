@@ -17,7 +17,8 @@ export const registerUser = mutation({
     address: v.optional(v.string()),
     nickname: v.optional(v.string()),
     birthday: v.optional(v.string()),
-    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber")),
+    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("super_admin"), v.literal("branch_admin")),
+    branch_id: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
     // Check if user already exists
@@ -39,6 +40,11 @@ export const registerUser = mutation({
       throwUserError(ERROR_CODES.AUTH_USERNAME_EXISTS);
     }
 
+    // Validate branch_id for non-super_admin users
+    if (args.role !== "super_admin" && !args.branch_id) {
+      throw new Error("Branch ID is required for all users except super_admin");
+    }
+
     // Create new user
     const userId = await ctx.db.insert("users", {
       username: args.username,
@@ -49,6 +55,7 @@ export const registerUser = mutation({
       nickname: args.nickname,
       birthday: args.birthday,
       role: args.role,
+      branch_id: args.branch_id,
       is_active: true,
       avatar: undefined,
       bio: undefined,
@@ -132,6 +139,7 @@ export const loginUser = mutation({
         nickname: user.nickname,
         mobile_number: user.mobile_number,
         role: user.role,
+        branch_id: user.branch_id,
         is_active: user.is_active,
       }
     };
@@ -172,6 +180,7 @@ export const getCurrentUser = query({
       mobile_number: user.mobile_number,
       birthday: user.birthday,
       role: user.role,
+      branch_id: user.branch_id,
       is_active: user.is_active,
       avatar: user.avatar,
       bio: user.bio,
@@ -256,7 +265,8 @@ export const createUser = mutation({
     password: v.string(),
     mobile_number: v.optional(v.string()),
     address: v.optional(v.string()),
-    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber")),
+    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("super_admin"), v.literal("branch_admin")),
+    branch_id: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
     // Check if user already exists
@@ -288,6 +298,7 @@ export const createUser = mutation({
       nickname: undefined,
       birthday: undefined,
       role: args.role,
+      branch_id: args.branch_id,
       is_active: true,
       avatar: undefined,
       bio: undefined,
@@ -307,6 +318,7 @@ export const createUser = mutation({
       mobile_number: user?.mobile_number,
       address: user?.address,
       role: user?.role,
+      branch_id: user?.branch_id,
       is_active: user?.is_active,
     };
   },
@@ -316,5 +328,36 @@ export const getAllUsers = query({
   args: {},
   handler: async (ctx) => {
     return await ctx.db.query("users").collect();
+  },
+});
+
+// Get users by branch (for branch admins/staff)
+export const getUsersByBranch = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("users")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+  },
+});
+
+// Get users by role within a branch
+export const getUsersByRoleAndBranch = query({
+  args: { 
+    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("branch_admin")),
+    branch_id: v.optional(v.id("branches"))
+  },
+  handler: async (ctx, args) => {
+    let query = ctx.db.query("users").withIndex("by_role", (q) => q.eq("role", args.role));
+    
+    const users = await query.collect();
+    
+    // Filter by branch if specified
+    if (args.branch_id) {
+      return users.filter(user => user.branch_id === args.branch_id);
+    }
+    
+    return users;
   },
 });

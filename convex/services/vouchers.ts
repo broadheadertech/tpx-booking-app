@@ -12,11 +12,53 @@ function generateVoucherCode() {
   return code;
 }
 
-// Get all vouchers with assignment statistics
+// Get all vouchers with assignment statistics (for super admin)
 export const getAllVouchers = query({
   args: {},
   handler: async (ctx) => {
     const vouchers = await ctx.db.query("vouchers").collect();
+    
+    // Enrich vouchers with user information and assignment statistics
+    const enrichedVouchers = await Promise.all(
+      vouchers.map(async (voucher) => {
+        const createdBy = voucher.created_by ? await ctx.db.get(voucher.created_by) : null;
+        
+        // Get assignment statistics
+        const assignments = await ctx.db
+          .query("user_vouchers")
+          .withIndex("by_voucher", (q) => q.eq("voucher_id", voucher._id))
+          .collect();
+        
+        const assignedCount = assignments.length;
+        const redeemedCount = assignments.filter(a => a.status === "redeemed").length;
+        
+        return {
+          ...voucher,
+          id: voucher._id,
+          created_by_username: createdBy?.username || 'Unknown',
+          assignedCount,
+          redeemedCount,
+          availableCount: voucher.max_uses - assignedCount,
+          isExpired: voucher.expires_at < Date.now(),
+          isFullyAssigned: assignedCount >= voucher.max_uses,
+          formattedValue: `₱${parseFloat(voucher.value.toString()).toFixed(2)}`,
+          formattedExpiresAt: new Date(voucher.expires_at).toLocaleDateString(),
+        };
+      })
+    );
+    
+    return enrichedVouchers;
+  },
+});
+
+// Get vouchers by branch with assignment statistics
+export const getVouchersByBranch = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    const vouchers = await ctx.db
+      .query("vouchers")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
     
     // Enrich vouchers with user information and assignment statistics
     const enrichedVouchers = await Promise.all(
@@ -295,6 +337,7 @@ export const createVoucher = mutation({
     max_uses: v.number(),
     expires_at: v.number(),
     description: v.optional(v.string()),
+    branch_id: v.id("branches"), // Add branch_id requirement
     created_by: v.id("users"),
   },
   handler: async (ctx, args) => {
@@ -307,6 +350,7 @@ export const createVoucher = mutation({
       max_uses: args.max_uses,
       expires_at: args.expires_at,
       description: args.description || undefined,
+      branch_id: args.branch_id, // Add branch_id to voucher creation
       created_by: args.created_by,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -325,6 +369,7 @@ export const createVoucherWithCode = mutation({
     max_uses: v.number(),
     expires_at: v.number(),
     description: v.optional(v.string()),
+    branch_id: v.id("branches"), // Add branch_id requirement
     created_by: v.id("users"),
   },
   handler: async (ctx, args) => {
@@ -345,6 +390,7 @@ export const createVoucherWithCode = mutation({
       max_uses: args.max_uses,
       expires_at: args.expires_at,
       description: args.description || undefined,
+      branch_id: args.branch_id, // Add branch_id to voucher creation
       created_by: args.created_by,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -669,6 +715,7 @@ export const assignVoucherByCode = mutation({
     return { voucher, assignmentId };
   },
 });
+
 
 // Staff redemption - for QR scanner use (finds existing assignment and redeems it)
 export const redeemVoucherByStaff = mutation({

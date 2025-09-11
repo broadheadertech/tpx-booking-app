@@ -12,28 +12,37 @@ const BarberBookings = () => {
   const [showCompleteModal, setShowCompleteModal] = useState(null)
   const [completeLoading, setCompleteLoading] = useState(false)
 
-  // Get barber data
-  const barbers = useQuery(api.services.barbers.getAllBarbers)
+  // Get barber data - only for current user's branch
+  const barbers = user?.branch_id 
+    ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
+    : useQuery(api.services.barbers.getAllBarbers)
   const currentBarber = barbers?.find(barber => barber.user === user?._id)
 
-  // Get services data for validation
-  const allServices = useQuery(api.services.services.getAllServices)
+  // Get services data for validation - only for current user's branch
+  const allServices = user?.branch_id
+    ? useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id })
+    : useQuery(api.services.services.getAllServices)
 
   // Mutation to create barber profile
   const createBarberProfile = useMutation(api.services.barbers.createBarberProfile)
 
   // Auto-create barber profile if user has barber role but no profile
   React.useEffect(() => {
-    if (user?.role === 'barber' && barbers && !currentBarber && user._id) {
-      createBarberProfile({ userId: user._id })
+    if (user?.role === 'barber' && barbers && !currentBarber && user._id && user.branch_id) {
+      createBarberProfile({ 
+        userId: user._id,
+        branch_id: user.branch_id
+      })
         .catch((error) => {
           console.error('Failed to create barber profile:', error)
         })
     }
   }, [user, barbers, currentBarber, createBarberProfile])
 
-  // Get bookings for this barber
-  const allBookings = useQuery(api.services.bookings.getAllBookings)
+  // Get bookings for this barber - only from their branch
+  const allBookings = user?.branch_id 
+    ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id })
+    : useQuery(api.services.bookings.getAllBookings)
   const barberBookings = allBookings?.filter(booking => 
     booking.barber === currentBarber?._id
   ) || []

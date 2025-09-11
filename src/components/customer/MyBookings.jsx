@@ -457,323 +457,300 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                 return (
                   <div
                     key={booking._id}
-                    className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl p-5 border border-[#555555]/30 shadow-lg hover:shadow-xl transition-all duration-200 hover:border-[#FF8C42]/50"
+                    className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm hover:shadow-lg transition-all duration-200 p-4"
                   >
-                    {/* Booking Header */}
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center shadow-lg">
-                          <span className="text-white text-lg">✂️</span>
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-bold text-white">
+                    {/* Compact Header */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-base font-semibold text-white truncate">
                             {service.name || "Service"}
                           </h3>
-                          <p className="text-sm text-gray-400">
-                            Code: {booking.booking_code}
+                          <span
+                            className={`px-2 py-0.5 rounded-md text-xs font-medium ${getStatusColor(
+                              booking.status
+                            )}`}
+                          >
+                            {booking.status.toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-gray-400">
+                          <span>#{booking.booking_code}</span>
+                          {booking.branch_name && (
+                            <span className="text-[#FF8C42] font-medium flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                              </svg>
+                              {booking.branch_name}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Compact Details Grid */}
+                    <div className="grid grid-cols-3 gap-3 mb-3 text-xs">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-3.5 h-3.5 text-[#FF8C42]" />
+                        <div>
+                          <p className="text-gray-400">Date</p>
+                          <p className="font-medium text-white">
+                            {new Date(booking.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        {getStatusIcon(booking.status)}
-                        <span
-                          className={`px-3 py-1.5 rounded-full text-xs font-bold border ${getStatusColor(
-                            booking.status
-                          )}`}
-                        >
-                          {booking.status.toUpperCase()}
-                        </span>
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-3.5 h-3.5 text-[#FF8C42]" />
+                        <div>
+                          <p className="text-gray-400">Time</p>
+                          <p className="font-medium text-white">
+                            {booking.time}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <User className="w-3.5 h-3.5 text-[#FF8C42]" />
+                        <div>
+                          <p className="text-gray-400">Barber</p>
+                          <p className="font-medium text-white">
+                            {barber.name || "Any Barber"}
+                          </p>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Booking Details */}
-                    <div className="space-y-3 mb-4">
-                      {/* Date and Time Row */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="flex items-center space-x-3">
-                          <Calendar className="w-4 h-4 text-[#FF8C42]" />
-                          <div>
-                            <p className="text-xs text-gray-500">
-                              Date
-                            </p>
-                            <p className="text-sm font-bold text-white">
-                              {new Date(booking.date).toLocaleDateString()}
-                            </p>
-                          </div>
+                    {/* Price and Actions Row */}
+                    <div className="flex items-center justify-between pt-3 border-t border-[#444444]/50">
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-xs text-gray-400">Price</p>
+                          <p className="font-semibold text-[#FF8C42]">
+                            ₱{service.price ? parseFloat(service.price).toLocaleString() : "--"}
+                          </p>
                         </div>
-                        <div className="flex items-center space-x-3">
-                          <Clock className="w-4 h-4 text-[#FF8C42]" />
-                          <div>
-                            <p className="text-xs text-gray-500">
-                              Time
-                            </p>
-                            <p className="text-sm font-bold text-white">
-                              {booking.time}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Barber and Service Price Row */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="flex items-center space-x-3">
-                          <User className="w-4 h-4 text-[#FF8C42]" />
-                          <div>
-                            <p className="text-xs text-gray-500">
-                              Barber
-                            </p>
-                            <p className="text-sm font-bold text-white">
-                              {barber.name || "Any Barber"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <div className="w-4 h-4 rounded bg-[#FF8C42]"></div>
-                          <div>
-                            <p className="text-xs text-gray-500">
-                              Service Price
-                            </p>
-                            <p
-                              className="text-sm font-bold"
-                              style={{ color: "#F68B24" }}
-                            >
-                              ₱
-                              {service.price
-                                ? parseFloat(service.price).toLocaleString()
-                                : "--"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Voucher and Total Amount Row */}
-                      {(() => {
-                        // Check for voucher code in different possible field names
-                        const voucherCode =
-                          booking.voucher_code ||
-                          booking.voucherCode ||
-                          booking.voucher?.code;
-                        const totalAmount =
-                          booking.total_amount || booking.totalAmount;
-
-                        return (
-                          (voucherCode || totalAmount) && (
-                            <div
-                              className="grid grid-cols-2 gap-3 pt-2 border-t"
-                              style={{ borderColor: "#E0E0E0" }}
-                            >
-                              {voucherCode && (
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-3 h-3 rounded bg-green-500"></div>
-                                  <div>
-                                    <p
-                                      className="text-xs"
-                                      style={{ color: "#8B8B8B" }}
-                                    >
-                                      Voucher Used
-                                    </p>
-                                    <p
-                                      className="text-sm font-bold"
-                                      style={{ color: "#22C55E" }}
-                                    >
-                                      {voucherCode}
-                                    </p>
-                                  </div>
-                                </div>
-                              )}
-                              {totalAmount && (
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-3 h-3 rounded bg-blue-500"></div>
-                                  <div>
-                                    <p
-                                      className="text-xs"
-                                      style={{ color: "#8B8B8B" }}
-                                    >
-                                      Total Paid
-                                    </p>
-                                    <p
-                                      className="text-sm font-bold"
-                                      style={{ color: "#3B82F6" }}
-                                    >
-                                      ₱
-                                      {parseFloat(totalAmount).toLocaleString()}
-                                    </p>
-                                  </div>
-                                </div>
-                              )}
+                        {(() => {
+                          const voucherCode = booking.voucher_code || booking.voucherCode || booking.voucher?.code;
+                          return voucherCode && (
+                            <div className="text-right">
+                              <p className="text-xs text-gray-400">Voucher</p>
+                              <p className="text-xs font-medium text-green-400">{voucherCode}</p>
                             </div>
-                          )
-                        );
-                      })()}
-                    </div>
+                          );
+                        })()}
+                       </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex space-x-2">
-                      {booking.status === "booked" && (
-                        <button
-                          onClick={() =>
-                            setShowQRCode({ ...booking, service, barber })
-                          }
-                          className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 flex items-center justify-center space-x-2"
-                          style={{ backgroundColor: "#F68B24" }}
-                          onMouseEnter={(e) =>
-                            (e.target.style.backgroundColor = "#E67E22")
-                          }
-                          onMouseLeave={(e) =>
-                            (e.target.style.backgroundColor = "#F68B24")
-                          }
-                        >
-                          <QrCode className="w-3 h-3" />
-                          <span className="text-sm">Show QR</span>
-                        </button>
-                      )}
-                      {booking.status === "pending" && (
-                        <>
-                          <button
-                            onClick={() =>
-                              setShowCancelModal({
-                                ...booking,
-                                service,
-                                barber,
-                              })
-                            }
-                            className="flex-1 py-2 bg-red-500 text-white font-bold rounded-lg transition-all duration-200 text-sm"
-                            onMouseEnter={(e) =>
-                              (e.target.style.backgroundColor = "#DC2626")
-                            }
-                            onMouseLeave={(e) =>
-                              (e.target.style.backgroundColor = "#EF4444")
-                            }
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={() =>
-                              setShowQRCode({ ...booking, service, barber })
-                            }
-                            className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 text-sm"
-                            style={{ backgroundColor: "#F68B24" }}
-                            onMouseEnter={(e) =>
-                              (e.target.style.backgroundColor = "#E67E22")
-                            }
-                            onMouseLeave={(e) =>
-                              (e.target.style.backgroundColor = "#F68B24")
-                            }
-                          >
-                            <QrCode className="w-3 h-3" />
-                            <span>View QR</span>
-                          </button>
-                        </>
-                      )}
-                      {booking.status === "cancelled" && (
-                        <button
-                          onClick={onBack}
-                          className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 text-sm"
-                          style={{ backgroundColor: "#F68B24" }}
-                          onMouseEnter={(e) =>
-                            (e.target.style.backgroundColor = "#E67E22")
-                          }
-                          onMouseLeave={(e) =>
-                            (e.target.style.backgroundColor = "#F68B24")
-                          }
-                        >
-                          Book Again
-                        </button>
-                      )}
-                      {booking.status === "confirmed" && (
-                        <button
-                          onClick={() =>
-                            setShowQRCode({ ...booking, service, barber })
-                          }
-                          className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 text-sm"
-                          style={{ backgroundColor: "#10B981" }}
-                          onMouseEnter={(e) =>
-                            (e.target.style.backgroundColor = "#059669")
-                          }
-                          onMouseLeave={(e) =>
-                            (e.target.style.backgroundColor = "#10B981")
-                          }
-                        >
-                          <QrCode className="w-3 h-3" />
-                          <span>Show QR</span>
-                        </button>
-                      )}
-                      {booking.status === "completed" && (
-                        <>
-                          {!hasBeenRated(booking._id) ? (
-                            <button
-                              onClick={() =>
-                                setShowRatingModal({ ...booking, service, barber })
-                              }
-                              className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 text-sm"
-                              style={{ backgroundColor: "#F59E0B" }}
-                              onMouseEnter={(e) =>
-                                (e.target.style.backgroundColor = "#D97706")
-                              }
-                              onMouseLeave={(e) =>
-                                (e.target.style.backgroundColor = "#F59E0B")
-                              }
-                            >
-                              <Star className="w-3 h-3" />
-                              <span>Rate Service</span>
-                            </button>
-                          ) : (
-                            <div className="flex-1 py-2 bg-green-500/20 text-green-400 font-bold rounded-lg text-sm flex items-center justify-center space-x-2 border border-green-500/30">
-                              <CheckCircle className="w-3 h-3" />
-                              <span>Rated</span>
-                            </div>
-                          )}
-                          <button
-                            onClick={onBack}
-                            className="flex-1 py-2 text-white font-bold rounded-lg transition-all duration-200 text-sm"
-                            style={{ backgroundColor: "#F68B24" }}
-                            onMouseEnter={(e) =>
-                              (e.target.style.backgroundColor = "#E67E22")
-                            }
-                            onMouseLeave={(e) =>
-                              (e.target.style.backgroundColor = "#F68B24")
-                            }
-                          >
-                            Book Again
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Rating Modal */}
-      {showRatingModal && (
-        <RatingModal
-          booking={showRatingModal}
-          onSubmit={handleSubmitRating}
-          onClose={() => setShowRatingModal(null)}
-          loading={ratingLoading}
-        />
-      )}
-
-      {/* QR Code Modal */}
-      {showQRCode && (
-        <QRCodeModal booking={showQRCode} onClose={() => setShowQRCode(null)} />
-      )}
-
-      {/* Cancel Confirmation Modal */}
-      {showCancelModal && (
-        <CancelBookingModal
-          booking={showCancelModal}
-          onConfirm={() => handleCancelBooking(showCancelModal._id)}
-          onClose={() => setShowCancelModal(null)}
-          loading={cancelLoading}
-        />
+                       {/* Compact Action Buttons */}
+                       <div className="flex gap-2">
+                         {booking.status === "booked" && (
+                           <button
+                             onClick={() => setShowQRCode({ ...booking, service, barber })}
+                             className="flex-1 py-2 px-3 bg-[#FF8C42] text-white text-xs font-medium rounded-lg hover:bg-[#FF7A2B] transition-colors flex items-center justify-center gap-1"
+                           >
+                             <QrCode className="w-3 h-3" />
+                             <span>Show QR</span>
+                           </button>
+                         )}
+                         {booking.status === "pending" && (
+                           <>
+                             <button
+                               onClick={() => setShowCancelModal({ ...booking, service, barber })}
+                               className="flex-1 py-2 px-3 bg-red-500 text-white text-xs font-medium rounded-lg hover:bg-red-600 transition-colors"
+                             >
+                               Cancel
+                             </button>
+                             <button
+                               onClick={() => setShowQRCode({ ...booking, service, barber })}
+                               className="flex-1 py-2 px-3 bg-[#FF8C42] text-white text-xs font-medium rounded-lg hover:bg-[#FF7A2B] transition-colors flex items-center justify-center gap-1"
+                             >
+                               <QrCode className="w-3 h-3" />
+                               <span>QR Code</span>
+                             </button>
+                           </>
+                         )}
+                         {booking.status === "completed" && !hasBeenRated(booking._id) && (
+                           <button
+                             onClick={() => setShowRatingModal({ ...booking, service, barber })}
+                             className="flex-1 py-2 px-3 bg-yellow-500 text-white text-xs font-medium rounded-lg hover:bg-yellow-600 transition-colors flex items-center justify-center gap-1"
+                           >
+                             <Star className="w-3 h-3" />
+                             <span>Rate</span>
+                           </button>
+                         )}
+                       </div>
+                     </div>
+                   </div>
+          );
+        })
       )}
     </div>
-  );
+  )}
+</div>
+
+{/* Modals */}
+{showRatingModal && (
+  <RatingModal
+    booking={showRatingModal}
+    onSubmit={handleSubmitRating}
+    onClose={() => setShowRatingModal(null)}
+    loading={ratingLoading}
+  />
+)}
+
+{showQRCode && (
+  <QRCodeModal booking={showQRCode} onClose={() => setShowQRCode(null)} />
+)}
+
+{showCancelModal && (
+  <CancelBookingModal
+    booking={showCancelModal}
+    onConfirm={handleCancelBooking}
+    onClose={() => setShowCancelModal(null)}
+    loading={cancelLoading}
+  />
+)}
+</div>
+);
 };
+
+const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
+const [rating, setRating] = useState(0);
+const [feedback, setFeedback] = useState("");
+
+const handleSubmit = () => {
+  if (rating === 0) {
+    alert("Please select a rating");
+    return;
+  }
+  onSubmit(booking, rating, feedback);
+};
+
+return (
+  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div
+      className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border"
+      style={{ borderColor: "#E0E0E0" }}
+    >
+      <div className="text-center space-y-4">
+        {/* Rating Icon */}
+        <div
+          className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto"
+          style={{ backgroundColor: "#F68B24" }}
+        >
+          <Star className="w-6 h-6 text-white" />
+        </div>
+
+        {/* Title */}
+        <div>
+          <h3 className="text-lg font-bold mb-1" style={{ color: "#36454F" }}>
+            Rate Your Experience
+          </h3>
+          <p className="text-sm" style={{ color: "#8B8B8B" }}>
+            How was your service?
+          </p>
+        </div>
+
+        {/* Booking Summary */}
+        <div
+          className="rounded-xl p-3 text-left"
+          style={{ backgroundColor: "#F4F0E6", border: "1px solid #E0E0E0" }}
+        >
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span style={{ color: "#36454F" }}>Service:</span>
+              <span className="font-bold" style={{ color: "#36454F" }}>
+                {booking.service?.name}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span style={{ color: "#36454F" }}>Date:</span>
+              <span className="font-bold" style={{ color: "#36454F" }}>
+                {new Date(booking.date).toLocaleDateString()}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span style={{ color: "#36454F" }}>Barber:</span>
+              <span className="font-bold" style={{ color: "#36454F" }}>
+                {booking.barber?.name || "Any Barber"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Rating Stars */}
+        <div>
+          <p className="text-sm mb-3" style={{ color: "#36454F" }}>
+            Rate your experience:
+          </p>
+          <div className="flex justify-center space-x-2 mb-4">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                onClick={() => setRating(star)}
+                className="text-2xl transition-colors duration-200"
+                style={{
+                  color: star <= rating ? "#F59E0B" : "#D1D5DB",
+                }}
+              >
+                ★
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Feedback */}
+        <div>
+          <textarea
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            placeholder="Share your feedback (optional)"
+            className="w-full p-3 border rounded-lg text-sm resize-none"
+            style={{ borderColor: "#E0E0E0", color: "#36454F" }}
+            rows={3}
+          />
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex space-x-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 border font-bold rounded-xl transition-all duration-200"
+            style={{ borderColor: "#E0E0E0", color: "#8B8B8B" }}
+            onMouseEnter={(e) => {
+              e.target.style.backgroundColor = "#F5F5F5";
+              e.target.style.color = "#36454F";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.backgroundColor = "transparent";
+              e.target.style.color = "#8B8B8B";
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="flex-1 py-3 text-white font-bold rounded-xl transition-all duration-200"
+            style={{
+              backgroundColor: loading ? "#CCCCCC" : "#F68B24",
+              cursor: loading ? "not-allowed" : "pointer",
+            }}
+            onMouseEnter={(e) =>
+              !loading && (e.target.style.backgroundColor = "#E67E22")
+            }
+            onMouseLeave={(e) =>
+              !loading && (e.target.style.backgroundColor = "#F68B24")
+            }
+          >
+            {loading ? "Submitting..." : "Submit Rating"}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+ };
+
+
 
 // QR Code Modal Component
 const QRCodeModal = ({ booking, onClose }) => {

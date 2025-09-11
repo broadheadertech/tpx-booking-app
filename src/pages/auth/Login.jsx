@@ -32,8 +32,10 @@ function Login() {
       if (result.success) {
         const { role } = result.data
 
-        if (role === 'staff' || role === 'admin') {
+        if (role === 'staff' || role === 'admin' || role === 'super_admin' || role === 'branch_admin') {
           navigate('/staff/dashboard')
+        } else if (role === 'barber') {
+          navigate('/barber/dashboard')
         } else {
           navigate('/customer/dashboard')
         }
