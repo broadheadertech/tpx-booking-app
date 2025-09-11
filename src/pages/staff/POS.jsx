@@ -100,7 +100,7 @@ const POS = () => {
   const updateBookingStatus = useMutation(api.services.bookings.updateBooking)
   const createUser = useMutation(api.services.auth.createUser)
   const getVoucherByCode = useQuery(api.services.vouchers.getVoucherByCode,
-    currentTransaction.voucher_applied && typeof currentTransaction.voucher_applied === 'string'
+    currentTransaction.voucher_applied && typeof currentTransaction.voucher_applied === 'string' && !String(currentTransaction.voucher_applied).includes(':')
       ? { code: currentTransaction.voucher_applied }
       : "skip"
   )
@@ -345,6 +345,13 @@ const POS = () => {
       return
     }
 
+    // Ensure we have a valid branch context (prefer barber's branch, then user's branch)
+    const resolvedBranchId = selectedBarber?.branch_id || user?.branch_id
+    if (!resolvedBranchId) {
+      alert('No branch selected or associated. Please select a barber from a branch or set your branch.')
+      return
+    }
+
     if (currentTransaction.services.length === 0 && currentTransaction.products.length === 0) {
       alert('Please add at least one service or product')
       return
@@ -366,6 +373,13 @@ const POS = () => {
   // Process payment after confirmation
   const processPayment = async (paymentData) => {
     try {
+      // Resolve branch to use for the transaction (barber branch takes precedence)
+      const resolvedBranchId = selectedBarber?.branch_id || user?.branch_id
+      if (!resolvedBranchId) {
+        alert('Cannot process payment: Missing branch. Please select a barber from a branch or set your branch.')
+        return
+      }
+
       let finalCustomerId = currentTransaction.customer?._id
       
       // Auto-register walk-in customer if they have email
@@ -423,10 +437,12 @@ const POS = () => {
       
       // Handle voucher ID conversion if needed
       let voucherApplied = currentTransaction.voucher_applied
-      if (typeof currentTransaction.voucher_applied === 'string' && getVoucherByCode) {
-        console.log('Converting voucher code to ID:', currentTransaction.voucher_applied)
-        console.log('Voucher lookup result:', getVoucherByCode)
-        voucherApplied = getVoucherByCode._id
+      if (typeof voucherApplied === 'string') {
+        const looksLikeConvexId = voucherApplied.includes(':')
+        if (!looksLikeConvexId && getVoucherByCode?._id) {
+          console.log('Converting voucher code to ID via query:', voucherApplied)
+          voucherApplied = getVoucherByCode._id
+        }
       }
       
       const transactionData = {
@@ -435,7 +451,7 @@ const POS = () => {
         customer_phone: currentTransaction.customer_phone || undefined,
         customer_email: currentTransaction.customer_email || undefined,
         customer_address: currentTransaction.customer_address || undefined,
-        branch_id: user.branch_id, // Add branch_id for branch-scoped transactions
+        branch_id: resolvedBranchId, // Ensure branch_id is provided (barber branch preferred)
         barber: selectedBarber._id,
         services: currentTransaction.services,
         products: currentTransaction.products.length > 0 ? currentTransaction.products : undefined,
