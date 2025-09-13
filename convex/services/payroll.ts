@@ -176,7 +176,45 @@ export const calculateBarberEarnings = query({
       .filter((q) => q.eq(q.field("is_active"), true))
       .first();
 
-    // Get barber's specific commission rate or use default
+    // Get ALL transactions for this barber, then filter by period
+    const allTransactions = await ctx.db
+      .query("transactions")
+      .withIndex("by_barber", (q) => q.eq("barber", args.barber_id))
+      .collect();
+
+    // Filter transactions that were completed in the period
+    const transactions = allTransactions.filter(transaction => {
+      const isCompleted = transaction.payment_status === "completed";
+      const isInPeriod = transaction.createdAt >= args.period_start && transaction.createdAt <= args.period_end;
+      return isCompleted && isInPeriod;
+    });
+
+    // Load per-service commission rates (active during period) for the barber's branch
+    const serviceRates = await ctx.db
+      .query("service_commission_rates")
+      .withIndex("by_branch", (q) => q.eq("branch_id", barber.branch_id))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("is_active"), true),
+          q.lte(q.field("effective_from"), args.period_end),
+          q.or(
+            q.eq(q.field("effective_until"), undefined),
+            q.gt(q.field("effective_until"), args.period_start)
+          )
+        )
+      )
+      .collect();
+
+    const serviceRateMap = new Map<string, number>();
+    for (const r of serviceRates) {
+      // later entries can override; assume latest by updatedAt precedence if needed
+      // Convex doesn't let us sort here, but typical dataset small
+      // Use as-is
+      // @ts-ignore
+      serviceRateMap.set(r.service_id as string, r.commission_rate);
+    }
+
+    // Fallback commission rate if a service has no specific rate
     const barberCommissionRate = await ctx.db
       .query("barber_commission_rates")
       .withIndex("by_barber_active", (q) => q.eq("barber_id", args.barber_id).eq("is_active", true))
@@ -191,85 +229,81 @@ export const calculateBarberEarnings = query({
       )
       .first();
 
-    const commissionRate = barberCommissionRate?.commission_rate || payrollSettings?.default_commission_rate || 10;
+    const fallbackRate = barberCommissionRate?.commission_rate || payrollSettings?.default_commission_rate || 10;
 
+    // Compute service-level totals from transactions only
+    let totalServices = 0;
+    let totalServiceRevenue = 0;
+    let serviceCommission = 0;
+    const daySet = new Set<string>();
 
-    // Get ALL bookings for this barber, then filter by period
-    const allBookings = await ctx.db
-      .query("bookings")
-      .withIndex("by_barber", (q) => q.eq("barber", args.barber_id))
-      .collect();
+    for (const t of transactions) {
+      const dayKey = new Date(new Date(t.createdAt).toISOString().split('T')[0]).toISOString();
+      daySet.add(dayKey);
+      for (const s of t.services || []) {
+        const lineRevenue = (s.price || 0) * (s.quantity || 0);
+        totalServices += s.quantity || 0;
+        totalServiceRevenue += lineRevenue;
+        const rate = serviceRateMap.get(String(s.service_id)) ?? fallbackRate;
+        serviceCommission += (lineRevenue * rate) / 100;
+      }
+    }
 
-    // Filter bookings that were completed in the period (regardless of creation date)
-    const bookings = allBookings.filter(booking => {
-      const isCompleted = booking.status === "completed";
-      const isPaid = booking.payment_status === "paid";
-      const isInPeriod = booking.updatedAt >= args.period_start && booking.updatedAt <= args.period_end;
-      return isCompleted && isPaid && isInPeriod;
-    });
-
-    // Get additional booking details
-    const bookingsWithDetails = await Promise.all(
-      bookings.map(async (booking) => {
-        const service = await ctx.db.get(booking.service);
-        return {
-          ...booking,
-          service_name: service?.name || 'Unknown Service',
-          service_category: service?.category || 'General'
-        };
-      })
-    );
-
-    // Get ALL transactions for this barber, then filter by period
-    const allTransactions = await ctx.db
-      .query("transactions")
-      .withIndex("by_barber", (q) => q.eq("barber", args.barber_id))
-      .collect();
-
-    // Filter transactions that were completed in the period
-    const transactions = allTransactions.filter(transaction => {
-      const isCompleted = transaction.payment_status === "completed";
-      const isInPeriod = transaction.createdAt >= args.period_start && transaction.createdAt <= args.period_end;
-      return isCompleted && isInPeriod;
-    });
-
-    // Calculate service earnings from bookings
-    const totalServices = bookingsWithDetails.length;
-    const totalServiceRevenue = bookingsWithDetails.reduce((sum, booking) => sum + booking.price, 0);
-    const serviceCommission = (totalServiceRevenue * commissionRate) / 100;
-
-    // Calculate transaction earnings from POS
     const totalTransactions = transactions.length;
-    const totalTransactionRevenue = transactions.reduce((sum, transaction) => {
-      return sum + transaction.services.reduce((serviceSum, service) => serviceSum + (service.price * service.quantity), 0);
-    }, 0);
-    const transactionCommission = (totalTransactionRevenue * commissionRate) / 100;
+    const totalTransactionRevenue = 0; // No separate transaction revenue; accounted in services
+    const transactionCommission = 0; // No separate transaction commission
 
-    // Calculate total commission
-    const grossCommission = serviceCommission + transactionCommission;
+    // Daily rate computation (days with at least one completed transaction)
+    // Get active daily rate for barber
+    const barberDailyRate = await ctx.db
+      .query("barber_daily_rates")
+      .withIndex("by_barber_active", (q) => q.eq("barber_id", args.barber_id).eq("is_active", true))
+      .filter((q) => 
+        q.and(
+          q.lte(q.field("effective_from"), args.period_end),
+          q.or(
+            q.eq(q.field("effective_until"), undefined),
+            q.gt(q.field("effective_until"), args.period_start)
+          )
+        )
+      )
+      .first();
+
+    const daysWorked = daySet.size;
+    const dailyRate = barberDailyRate?.daily_rate || 0;
+    const dailyPay = dailyRate * daysWorked;
+
+    // Commission excludes daily pay; daily pay tracked separately
+    const grossCommission = serviceCommission;
     
     // Calculate deductions
     const taxRate = payrollSettings?.tax_rate || 0;
-    const taxDeduction = (grossCommission * taxRate) / 100;
+    // Tax is applied to commission + daily pay
+    const taxDeduction = ((grossCommission + dailyPay) * taxRate) / 100;
     const totalDeductions = taxDeduction;
     
     // Calculate net pay
-    const netPay = grossCommission - totalDeductions;
+    const netPay = grossCommission + dailyPay - totalDeductions;
 
     return {
       barber_id: args.barber_id,
       barber_name: barber.full_name,
-      commission_rate: commissionRate,
+      commission_rate: fallbackRate,
       
       // Service earnings
       total_services: totalServices,
       total_service_revenue: totalServiceRevenue,
       service_commission: serviceCommission,
       
-      // Transaction earnings
+      // Transaction breakdown (legacy fields retained for UI; set to 0)
       total_transactions: totalTransactions,
       total_transaction_revenue: totalTransactionRevenue,
       transaction_commission: transactionCommission,
+      
+      // Daily rate
+      daily_rate: dailyRate,
+      days_worked: daysWorked,
+      daily_pay: dailyPay,
       
       // Totals
       gross_commission: grossCommission,
@@ -279,15 +313,6 @@ export const calculateBarberEarnings = query({
       net_pay: netPay,
       
       // Details for verification
-      bookings: bookingsWithDetails.map(b => ({
-        id: b._id,
-        booking_code: b.booking_code,
-        date: b.date,
-        price: b.price,
-        service_name: b.service_name,
-        service_category: b.service_category,
-        completed_at: b.updatedAt
-      })),
       transactions: transactions.map(t => ({
         id: t._id,
         transaction_id: t.transaction_id,
@@ -296,6 +321,177 @@ export const calculateBarberEarnings = query({
         service_revenue: t.services.reduce((sum, s) => sum + (s.price * s.quantity), 0)
       }))
     };
+  },
+});
+
+// SERVICE COMMISSION RATES
+export const getServiceCommissionRatesByBranch = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("service_commission_rates")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+  },
+});
+
+export const setServiceCommissionRate = mutation({
+  args: {
+    branch_id: v.id("branches"),
+    service_id: v.id("services"),
+    commission_rate: v.number(),
+    effective_from: v.optional(v.number()),
+    created_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    if (args.commission_rate < 0 || args.commission_rate > 100) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Commission rate must be between 0 and 100");
+    }
+    const now = Date.now();
+    const effectiveFrom = args.effective_from || now;
+
+    // Deactivate existing active rates for same service in branch
+    const existing = await ctx.db
+      .query("service_commission_rates")
+      .withIndex("by_branch_service", (q) => q.eq("branch_id", args.branch_id).eq("service_id", args.service_id))
+      .filter((q) => q.eq(q.field("is_active"), true))
+      .collect();
+
+    for (const r of existing) {
+      await ctx.db.patch(r._id, {
+        is_active: false,
+        effective_until: effectiveFrom,
+        updatedAt: now,
+      });
+    }
+
+    return await ctx.db.insert("service_commission_rates", {
+      branch_id: args.branch_id,
+      service_id: args.service_id,
+      commission_rate: args.commission_rate,
+      effective_from: effectiveFrom,
+      is_active: true,
+      created_by: args.created_by,
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
+// BARBER DAILY RATES
+export const getBarberDailyRate = query({
+  args: { barber_id: v.id("barbers") },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    return await ctx.db
+      .query("barber_daily_rates")
+      .withIndex("by_barber_active", (q) => q.eq("barber_id", args.barber_id).eq("is_active", true))
+      .filter((q) => 
+        q.and(
+          q.lte(q.field("effective_from"), now),
+          q.or(
+            q.eq(q.field("effective_until"), undefined),
+            q.gt(q.field("effective_until"), now)
+          )
+        )
+      )
+      .first();
+  },
+});
+
+export const setBarberDailyRate = mutation({
+  args: {
+    barber_id: v.id("barbers"),
+    branch_id: v.id("branches"),
+    daily_rate: v.number(),
+    effective_from: v.optional(v.number()),
+    created_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    if (args.daily_rate < 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Daily rate must be non-negative");
+    }
+    const now = Date.now();
+    const effectiveFrom = args.effective_from || now;
+
+    // Deactivate existing active daily rates
+    const existing = await ctx.db
+      .query("barber_daily_rates")
+      .withIndex("by_barber_active", (q) => q.eq("barber_id", args.barber_id).eq("is_active", true))
+      .collect();
+    for (const r of existing) {
+      await ctx.db.patch(r._id, {
+        is_active: false,
+        effective_until: effectiveFrom,
+        updatedAt: now,
+      });
+    }
+
+    return await ctx.db.insert("barber_daily_rates", {
+      barber_id: args.barber_id,
+      branch_id: args.branch_id,
+      daily_rate: args.daily_rate,
+      effective_from: effectiveFrom,
+      is_active: true,
+      created_by: args.created_by,
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
+export const getBarberDailyRatesByBranch = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("barber_daily_rates")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+  },
+});
+
+// BOOKINGS VIEW FOR PAYROLL (display only)
+export const getBookingsByBarberAndPeriod = query({
+  args: {
+    barber_id: v.id("barbers"),
+    period_start: v.number(),
+    period_end: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const bookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_barber", (q) => q.eq("barber", args.barber_id))
+      .collect();
+
+    const filtered = bookings.filter((b) => {
+      const completed = b.status === "completed";
+      const paid = b.payment_status === "paid";
+      return completed && paid && b.updatedAt >= args.period_start && b.updatedAt <= args.period_end;
+    });
+
+    // Populate service + customer display info
+    const withDetails = await Promise.all(
+      filtered.map(async (b) => {
+        const service = await ctx.db.get(b.service);
+        let customerName = b.customer_name || "Walk-in";
+        if (!customerName && b.customer) {
+          const customer = await ctx.db.get(b.customer);
+          customerName = customer?.nickname || customer?.username || customer?.email || "Customer";
+        }
+        return {
+          id: b._id,
+          booking_code: b.booking_code,
+          date: b.date,
+          time: b.time,
+          price: b.price,
+          service_name: service?.name || "Service",
+          customer_name: customerName,
+          updatedAt: b.updatedAt,
+        };
+      })
+    );
+
+    return withDetails;
   },
 });
 
@@ -415,6 +611,11 @@ export const calculatePayrollForPeriod = mutation({
         total_transactions: earnings.total_transactions,
         total_transaction_revenue: earnings.total_transaction_revenue,
         transaction_commission: earnings.transaction_commission,
+
+        // Daily rate
+        daily_rate: earnings.daily_rate,
+        days_worked: earnings.days_worked,
+        daily_pay: earnings.daily_pay,
         
         tax_deduction: earnings.tax_deduction,
         other_deductions: earnings.other_deductions,
@@ -428,7 +629,8 @@ export const calculatePayrollForPeriod = mutation({
       });
 
       totalEarnings += earnings.total_service_revenue + earnings.total_transaction_revenue;
-      totalCommissions += earnings.gross_commission;
+      // Include daily pay in total payout figure
+      totalCommissions += earnings.gross_commission + (earnings.daily_pay || 0);
       totalDeductions += earnings.total_deductions;
     }
 

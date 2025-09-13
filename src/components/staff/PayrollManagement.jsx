@@ -34,6 +34,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const [expandedRecords, setExpandedRecords] = useState(new Set())
   const [showPeriodModal, setShowPeriodModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [showServiceRatesModal, setShowServiceRatesModal] = useState(false)
+  const [showDailyRatesModal, setShowDailyRatesModal] = useState(false)
+  const [showBookingsModal, setShowBookingsModal] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState(null)
   const [paymentForm, setPaymentForm] = useState({
     payment_method: 'bank_transfer',
@@ -45,6 +48,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
     startDate: '',
     endDate: ''
   })
+  const [serviceRateEdits, setServiceRateEdits] = useState({})
+  const [dailyRateEdits, setDailyRateEdits] = useState({})
+  const [savingServiceRates, setSavingServiceRates] = useState(false)
+  const [savingDailyRates, setSavingDailyRates] = useState(false)
 
   // Check if user is available
   if (!user) {
@@ -111,10 +118,37 @@ const PayrollManagement = ({ onRefresh, user }) => {
     user && user.branch_id ? { branch_id: user.branch_id } : "skip"
   )
 
+  const servicesInBranch = useQuery(
+    api.services.services.getActiveServicesByBranch,
+    user && user.branch_id ? { branch_id: user.branch_id } : "skip"
+  )
+
+  const serviceCommissionRates = useQuery(
+    api.services.payroll.getServiceCommissionRatesByBranch,
+    user && user.branch_id ? { branch_id: user.branch_id } : "skip"
+  )
+
+  const barberDailyRates = useQuery(
+    api.services.payroll.getBarberDailyRatesByBranch,
+    user && user.branch_id ? { branch_id: user.branch_id } : "skip"
+  )
+
   // Current period records
   const currentPeriodRecords = useQuery(
     api.services.payroll.getPayrollRecordsByPeriod,
     selectedPeriod && selectedPeriod._id ? { payroll_period_id: selectedPeriod._id } : "skip"
+  )
+
+  // Lazy fetch bookings for selected record when modal is open
+  const bookingsForRecord = useQuery(
+    api.services.payroll.getBookingsByBarberAndPeriod,
+    showBookingsModal && selectedRecord && selectedPeriod
+      ? {
+          barber_id: selectedRecord.barber_id,
+          period_start: selectedPeriod.period_start,
+          period_end: selectedPeriod.period_end,
+        }
+      : "skip"
   )
 
 
@@ -124,6 +158,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const calculatePayroll = useMutation(api.services.payroll.calculatePayrollForPeriod)
   const markAsPaid = useMutation(api.services.payroll.markPayrollRecordAsPaid)
   const setBarberCommissionRate = useMutation(api.services.payroll.setBarberCommissionRate)
+  const setServiceCommissionRate = useMutation(api.services.payroll.setServiceCommissionRate)
+  const setBarberDailyRate = useMutation(api.services.payroll.setBarberDailyRate)
 
   // Initialize settings from data
   useEffect(() => {
@@ -324,6 +360,27 @@ const PayrollManagement = ({ onRefresh, user }) => {
     onRefresh?.()
     setTimeout(() => setLoading(false), 1000)
   }
+
+  // Helpers: build maps for quick lookups
+  const serviceRateMap = useMemo(() => {
+    const map = new Map()
+    ;(Array.isArray(serviceCommissionRates) ? serviceCommissionRates : []).forEach(r => {
+      map.set(r.service_id, r)
+    })
+    return map
+  }, [serviceCommissionRates])
+
+  const barberDailyRateMap = useMemo(() => {
+    const map = new Map()
+    ;(Array.isArray(barberDailyRates) ? barberDailyRates : []).forEach(r => {
+      // keep only active/latest per barber (simple override)
+      const existing = map.get(r.barber_id)
+      if (!existing || (r.updatedAt || 0) > (existing.updatedAt || 0)) {
+        map.set(r.barber_id, r)
+      }
+    })
+    return map
+  }, [barberDailyRates])
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -561,6 +618,277 @@ const PayrollManagement = ({ onRefresh, user }) => {
             >
               {loading ? 'Saving...' : 'Save Settings'}
             </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
+  }
+
+  // Render Bookings modal (grouped by date)
+  const renderBookingsModal = () => {
+    if (!showBookingsModal || !selectedRecord) return null
+
+    const items = Array.isArray(bookingsForRecord) ? bookingsForRecord : []
+
+    // Group by booking date
+    const grouped = items.reduce((acc, b) => {
+      const key = b.date || new Date(b.updatedAt).toISOString().split('T')[0]
+      if (!acc[key]) acc[key] = []
+      acc[key].push(b)
+      return acc
+    }, {})
+
+    const sortedDates = Object.keys(grouped).sort((a,b) => new Date(b) - new Date(a))
+
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowBookingsModal(false)} />
+          <div className="relative w-full max-w-3xl rounded-2xl bg-gradient-to-br from-[#1F1F1F] to-[#2B2B2B] border border-[#3A3A3A] shadow-2xl z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#3A3A3A]">
+              <div>
+                <h2 className="text-xl font-bold text-white">Bookings • {selectedRecord.barber_name}</h2>
+                <p className="text-sm text-gray-400">{formatDate(selectedPeriod.period_start)} – {formatDate(selectedPeriod.period_end)}</p>
+              </div>
+              <button onClick={() => setShowBookingsModal(false)} className="w-8 h-8 rounded-lg bg-[#3A3A3A]/60 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors">
+                <X className="w-4 h-4 text-gray-300 hover:text-[#FF8C42]" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {bookingsForRecord === undefined && (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
+                  <p className="mt-2 text-gray-500">Loading bookings…</p>
+                </div>
+              )}
+
+              {bookingsForRecord !== undefined && sortedDates.length === 0 && (
+                <div className="bg-[#121212] border border-[#333333] rounded-lg p-6 text-center text-gray-400">
+                  No completed, paid bookings found for this period.
+                </div>
+              )}
+
+              {sortedDates.map(date => (
+                <div key={date} className="rounded-xl bg-[#121212] border border-[#333333] overflow-hidden">
+                  <div className="px-5 py-3 bg-[#171717] border-b border-[#2A2A2A] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-[#FF8C42]" />
+                      <span className="text-white font-medium">{new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    </div>
+                    <span className="text-sm text-gray-400">{grouped[date].length} booking{grouped[date].length > 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="divide-y divide-[#222]">
+                    {grouped[date].map(b => {
+                      const prettyTime = (b.time && b.time.length >= 4) ? b.time.slice(0,5) : '--:--'
+                      return (
+                        <div key={b.id} className="px-5 py-4 flex items-center justify-between hover:bg-[#161616] transition-colors">
+                          <div className="flex items-center gap-4">
+                            <div className="shrink-0">
+                              <div className="inline-flex items-center justify-center rounded-md bg-[#232323] border border-[#3A3A3A] px-3 py-1.5">
+                                <span className="font-mono text-sm font-semibold text-[#FF8C42] leading-none">{prettyTime}</span>
+                              </div>
+                            </div>
+                            <div className="leading-tight">
+                              <div className="text-white font-semibold">{b.service_name}</div>
+                              <div className="text-xs text-gray-400 mt-1">{b.customer_name} • {b.booking_code}</div>
+                            </div>
+                          </div>
+                          <div className="text-right pl-3">
+                            <div className="text-[#FF8C42] font-semibold">{formatCurrency(b.price)}</div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
+  }
+
+  // Render Service Commission Rates modal
+  const renderServiceRatesModal = () => {
+    if (!showServiceRatesModal) return null
+    const servicesArray = Array.isArray(servicesInBranch) ? servicesInBranch : []
+
+    const handleSaveAll = async () => {
+      if (!user?.branch_id) return
+      const entries = Object.entries(serviceRateEdits)
+        .map(([serviceId, val]) => ({ serviceId, rate: parseFloat(String(val)) }))
+        .filter(e => !isNaN(e.rate))
+        .filter(e => {
+          const existing = serviceRateMap.get(e.serviceId)
+          return !existing || Number(existing.commission_rate) !== Number(e.rate)
+        })
+
+      if (entries.length === 0) return
+      setSavingServiceRates(true)
+      try {
+        for (const e of entries) {
+          await setServiceCommissionRate({
+            branch_id: user.branch_id,
+            service_id: e.serviceId,
+            commission_rate: e.rate,
+            created_by: user._id
+          })
+        }
+        setServiceRateEdits({})
+      } catch (err) {
+        console.error(err)
+        setError('Failed to save some service commission rates')
+      } finally {
+        setSavingServiceRates(false)
+      }
+    }
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowServiceRatesModal(false)} />
+          <div className="relative w-full max-w-2xl rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] border border-[#444444]/50 shadow-2xl z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#444444]/50">
+              <h2 className="text-xl font-bold text-white">Service Commission Rates</h2>
+              <button onClick={() => setShowServiceRatesModal(false)} className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center">
+                <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="max-h-[60vh] overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-gray-400 border-b border-[#444444]/50">
+                      <th className="text-left py-2 px-2">Service</th>
+                      <th className="text-right py-2 px-2">Current Rate</th>
+                      <th className="text-right py-2 px-2">New Rate (%)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {servicesArray.map(svc => {
+                      const existing = serviceRateMap.get(svc._id)
+                      const value = serviceRateEdits[svc._id] ?? (existing?.commission_rate ?? "")
+                      return (
+                        <tr key={svc._id} className="border-b border-[#444444]/20">
+                          <td className="py-2 px-2 text-white">{svc.name}</td>
+                          <td className="py-2 px-2 text-right text-gray-300">{existing ? `${existing.commission_rate}%` : '—'}</td>
+                          <td className="py-2 px-2 text-right">
+                            <input type="number" min="0" max="100" step="0.1" value={value}
+                              onChange={(e) => setServiceRateEdits(prev => ({ ...prev, [svc._id]: e.target.value }))}
+                              className="w-28 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent text-right" />
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <button onClick={() => setShowServiceRatesModal(false)} className="px-4 py-2 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg hover:bg-[#2A2A2A] text-sm">Close</button>
+                <button
+                  onClick={handleSaveAll}
+                  disabled={savingServiceRates || Object.keys(serviceRateEdits).length === 0}
+                  className="px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 disabled:opacity-50 text-sm"
+                >
+                  {savingServiceRates ? 'Saving…' : 'Save All Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
+  }
+
+  // Render Daily Rates modal
+  const renderDailyRatesModal = () => {
+    if (!showDailyRatesModal) return null
+    const barbersArray = Array.isArray(barbers) ? barbers : []
+
+    const handleSaveAll = async () => {
+      if (!user?.branch_id) return
+      const entries = Object.entries(dailyRateEdits)
+        .map(([barberId, val]) => ({ barberId, rate: parseFloat(String(val)) }))
+        .filter(e => !isNaN(e.rate))
+        .filter(e => {
+          const existing = barberDailyRateMap.get(e.barberId)
+          return !existing || Number(existing.daily_rate) !== Number(e.rate)
+        })
+
+    if (entries.length === 0) return
+      setSavingDailyRates(true)
+      try {
+        for (const e of entries) {
+          await setBarberDailyRate({
+            barber_id: e.barberId,
+            branch_id: user.branch_id,
+            daily_rate: e.rate,
+            created_by: user._id
+          })
+        }
+        setDailyRateEdits({})
+      } catch (err) {
+        console.error(err)
+        setError('Failed to save some barber daily rates')
+      } finally {
+        setSavingDailyRates(false)
+      }
+    }
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowDailyRatesModal(false)} />
+          <div className="relative w-full max-w-2xl rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] border border-[#444444]/50 shadow-2xl z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#444444]/50">
+              <h2 className="text-xl font-bold text-white">Barber Daily Rates</h2>
+              <button onClick={() => setShowDailyRatesModal(false)} className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center">
+                <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="max-h-[60vh] overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-gray-400 border-b border-[#444444]/50">
+                      <th className="text-left py-2 px-2">Barber</th>
+                      <th className="text-right py-2 px-2">Current Daily Rate</th>
+                      <th className="text-right py-2 px-2">New Daily Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {barbersArray.map(b => {
+                      const existing = barberDailyRateMap.get(b._id)
+                      const value = dailyRateEdits[b._id] ?? (existing?.daily_rate ?? "")
+                      return (
+                        <tr key={b._id} className="border-b border-[#444444]/20">
+                          <td className="py-2 px-2 text-white">{b.full_name}</td>
+                          <td className="py-2 px-2 text-right text-gray-300">{existing ? formatCurrency(existing.daily_rate) : '—'}</td>
+                          <td className="py-2 px-2 text-right">
+                            <input type="number" min="0" step="1" value={value}
+                              onChange={(e) => setDailyRateEdits(prev => ({ ...prev, [b._id]: e.target.value }))}
+                              className="w-28 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent text-right" />
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <button onClick={() => setShowDailyRatesModal(false)} className="px-4 py-2 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg hover:bg-[#2A2A2A] text-sm">Close</button>
+                <button
+                  onClick={handleSaveAll}
+                  disabled={savingDailyRates || Object.keys(dailyRateEdits).length === 0}
+                  className="px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 disabled:opacity-50 text-sm"
+                >
+                  {savingDailyRates ? 'Saving…' : 'Save All Changes'}
+                </button>
               </div>
             </div>
           </div>
@@ -1034,6 +1362,15 @@ const PayrollManagement = ({ onRefresh, user }) => {
                           {record.status === 'paid' ? 'Paid' : 'Pending'}
                         </span>
                         <button
+                          onClick={() => {
+                            setSelectedRecord(record)
+                            setShowBookingsModal(true)
+                          }}
+                          className="px-3 py-1 bg-[#444444]/60 border border-[#555555] text-gray-200 rounded text-xs hover:bg-[#2A2A2A] transition-colors"
+                        >
+                          View Bookings
+                        </button>
+                        <button
                           onClick={() => toggleRecordExpansion(record._id)}
                           className="p-1 text-gray-400 hover:text-white transition-colors"
                         >
@@ -1061,7 +1398,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
 
                   {expandedRecords.has(record._id) && (
                     <div className="mt-4 pt-4 border-t border-[#333333]">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <h5 className="text-sm font-medium text-gray-300 mb-2">Service Earnings</h5>
                           <div className="space-y-1 text-sm">
@@ -1074,25 +1411,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
                               <span className="text-white">{formatCurrency(record.total_service_revenue)}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-400">Commission ({record.commission_rate}%):</span>
-                              <span className="text-[#FF8C42]">{formatCurrency(record.gross_commission - record.transaction_commission)}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div>
-                          <h5 className="text-sm font-medium text-gray-300 mb-2">Transaction Earnings</h5>
-                          <div className="space-y-1 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Transactions:</span>
-                              <span className="text-white">{record.total_transactions}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Revenue:</span>
-                              <span className="text-white">{formatCurrency(record.total_transaction_revenue)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">Commission:</span>
-                              <span className="text-[#FF8C42]">{formatCurrency(record.transaction_commission)}</span>
+                              <span className="text-gray-400">Commission (per-service rates):</span>
+                              <span className="text-[#FF8C42]">{formatCurrency(record.gross_commission)}</span>
                             </div>
                           </div>
                         </div>
@@ -1102,6 +1422,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
                             <div className="flex justify-between">
                               <span className="text-gray-400">Gross Commission:</span>
                               <span className="text-white">{formatCurrency(record.gross_commission)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Daily Pay:</span>
+                              <span className="text-white">{formatCurrency(record.daily_pay || 0)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-400">Tax Deduction:</span>
@@ -1156,6 +1480,20 @@ const PayrollManagement = ({ onRefresh, user }) => {
           >
             <Settings className="h-4 w-4" />
             <span>Settings</span>
+          </button>
+          <button
+            onClick={() => setShowServiceRatesModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
+          >
+            <Percent className="h-4 w-4" />
+            <span>Service Rates</span>
+          </button>
+          <button
+            onClick={() => setShowDailyRatesModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
+          >
+            <DollarSign className="h-4 w-4" />
+            <span>Daily Rates</span>
           </button>
           <button
             onClick={handleRefresh}
@@ -1224,6 +1562,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
       {renderPeriodModal()}
       {renderSettingsModal()}
       {renderPaymentModal()}
+      {renderServiceRatesModal()}
+      {renderDailyRatesModal()}
+      {renderBookingsModal()}
     </div>
   )
 }

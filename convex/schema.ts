@@ -487,8 +487,12 @@ export default defineSchema({
     // Service earnings breakdown
     total_services: v.number(), // Number of services completed
     total_service_revenue: v.number(), // Total revenue from services
-    commission_rate: v.number(), // Commission rate used for calculation
+    commission_rate: v.number(), // Commission rate used for calculation (legacy/fallback)
     gross_commission: v.number(), // Commission before deductions
+    // Daily rate additions
+    daily_rate: v.optional(v.number()), // Daily base rate applied
+    days_worked: v.optional(v.number()), // Distinct days with qualifying work
+    daily_pay: v.optional(v.number()), // Calculated daily rate pay
     
     // Transaction earnings breakdown (POS)
     total_transactions: v.number(), // Number of POS transactions
@@ -531,6 +535,39 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_paid_at", ["paid_at"])
     .index("by_barber_period", ["barber_id", "payroll_period_id"]),
+
+  // Service commission rates table (per service, per branch)
+  service_commission_rates: defineTable({
+    branch_id: v.id("branches"),
+    service_id: v.id("services"),
+    commission_rate: v.number(), // Percentage for this service
+    effective_from: v.number(),
+    effective_until: v.optional(v.number()),
+    is_active: v.boolean(),
+    created_by: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_service", ["service_id"])
+    .index("by_branch_service", ["branch_id", "service_id"])
+    .index("by_active", ["is_active"]),
+
+  // Barber daily rates table
+  barber_daily_rates: defineTable({
+    barber_id: v.id("barbers"),
+    branch_id: v.id("branches"),
+    daily_rate: v.number(),
+    effective_from: v.number(),
+    effective_until: v.optional(v.number()),
+    is_active: v.boolean(),
+    created_by: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_barber", ["barber_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_barber_active", ["barber_id", "is_active"]),
 
   // Payroll adjustments table for manual adjustments (bonuses, deductions, etc.)
   payroll_adjustments: defineTable({
