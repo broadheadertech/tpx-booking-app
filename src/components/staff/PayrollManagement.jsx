@@ -19,7 +19,8 @@ import {
   ChevronDown,
   ChevronUp,
   FileText,
-  Percent
+  Percent,
+  Printer
 } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
@@ -398,6 +399,98 @@ const PayrollManagement = ({ onRefresh, user }) => {
       month: 'short',
       day: 'numeric'
     })
+  }
+
+  // Printing helpers (via hidden iframe to avoid blank popups)
+  const printStyles = `
+    body{font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background:#111; color:#e5e5e5; padding:24px;}
+    .card{background:#1a1a1a; border:1px solid #333; border-radius:12px; padding:20px; margin-bottom:16px;}
+    .header{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px}
+    .title{font-weight:800; font-size:18px}
+    .grid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
+    .row{display:flex; justify-content:space-between; margin:6px 0}
+    .muted{color:#9ca3af}
+    .accent{color:#ff8c42; font-weight:700}
+    hr{border:0; border-top:1px solid #2b2b2b; margin:12px 0}
+    @media print { body{padding:0;background:#fff;color:#111} .card{border-color:#ddd;background:#fff} .accent{color:#111} }
+  `
+
+  const recordSection = (record) => {
+    const format = (amt) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 0 }).format(amt || 0)
+    const dateRange = selectedPeriod ? `${formatDate(selectedPeriod.period_start)} – ${formatDate(selectedPeriod.period_end)}` : ''
+    return `
+      <div class="card">
+        <div class="header">
+          <div>
+            <div class="title">${record.barber_name}</div>
+            <div class="muted">Payroll Period: ${dateRange}</div>
+          </div>
+          <div class="accent">Net Pay: ${format(record.net_pay)}</div>
+        </div>
+        <hr/>
+        <div class="grid">
+          <div>
+            <div class="row"><span class="muted">Services</span><span>${record.total_services}</span></div>
+            <div class="row"><span class="muted">Service Revenue</span><span>${format(record.total_service_revenue)}</span></div>
+            <div class="row"><span class="muted">Commission (per-service)</span><span class="accent">${format(record.gross_commission)}</span></div>
+          </div>
+          <div>
+            <div class="row"><span class="muted">Daily Pay${typeof record.days_worked==='number' && typeof record.daily_rate==='number' ? ` (${record.days_worked} day${record.days_worked===1?'':'s'} × ${format(record.daily_rate)})` : ''}</span><span>${format(record.daily_pay || 0)}</span></div>
+            <div class="row"><span class="muted">Tax Deduction</span><span>-${format(record.tax_deduction)}</span></div>
+            <div class="row"><span class="muted">Other Deductions</span><span>-${format(record.other_deductions)}</span></div>
+            <hr/>
+            <div class="row" style="font-weight:800"><span>Net Pay</span><span class="accent">${format(record.net_pay)}</span></div>
+          </div>
+        </div>
+      </div>
+    `
+  }
+
+  const buildDoc = (title, body) => `<!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>${title}</title>
+        <style>${printStyles}</style>
+      </head>
+      <body>${body}</body>
+    </html>`
+
+  const printHtml = (html) => {
+    const iframe = document.createElement('iframe')
+    iframe.style.position = 'fixed'
+    iframe.style.right = '0'
+    iframe.style.bottom = '0'
+    iframe.style.width = '0'
+    iframe.style.height = '0'
+    iframe.style.border = '0'
+    document.body.appendChild(iframe)
+    const doc = iframe.contentWindow?.document
+    if (!doc) return
+    doc.open()
+    doc.write(html)
+    doc.close()
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow?.focus()
+        iframe.contentWindow?.print()
+        setTimeout(() => document.body.removeChild(iframe), 100)
+      }, 150)
+    }
+  }
+
+  const handlePrintRecord = (record) => {
+    const html = buildDoc(`Payroll – ${record.barber_name}`, recordSection(record))
+    printHtml(html)
+  }
+
+  const handlePrintAll = () => {
+    const records = Array.isArray(currentPeriodRecords) ? currentPeriodRecords : []
+    const sections = records.map((r) => recordSection(r)).join('\n')
+    const title = selectedPeriod ? `Payroll – ${formatDate(selectedPeriod.period_start)} to ${formatDate(selectedPeriod.period_end)}` : 'Payroll – All'
+    const html = buildDoc(title, sections)
+    printHtml(html)
   }
 
   // Format period type
@@ -1284,6 +1377,15 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   <span>Calculate Payroll</span>
                 </button>
               )}
+              {(Array.isArray(currentPeriodRecords) && currentPeriodRecords.length > 0) && (
+                <button
+                  onClick={handlePrintAll}
+                  className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/60 border border-[#555555] text-gray-200 rounded-lg hover:bg-[#2A2A2A] transition-colors text-sm"
+                >
+                  <Printer className="h-4 w-4" />
+                  <span>Print All</span>
+                </button>
+              )}
               <button
                 onClick={() => setActiveView('overview')}
                 className="px-4 py-2 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
@@ -1381,17 +1483,23 @@ const PayrollManagement = ({ onRefresh, user }) => {
                           )}
                         </button>
                         {record.status === 'calculated' && (
-                          <button
-                            onClick={() => {
-                              setSelectedRecord(record)
-                              setPaymentForm({ payment_method: 'bank_transfer', payment_reference: '', notes: '' })
-                              setShowPaymentModal(true)
-                            }}
-                            className="px-3 py-1 bg-[#FF8C42] text-white rounded text-xs hover:bg-[#FF8C42]/90 transition-colors"
-                          >
-                            Mark Paid
-                          </button>
+                        <button
+                          onClick={() => {
+                            setSelectedRecord(record)
+                            setPaymentForm({ payment_method: 'bank_transfer', payment_reference: '', notes: '' })
+                            setShowPaymentModal(true)
+                          }}
+                          className="px-3 py-1 bg-[#FF8C42] text-white rounded text-xs hover:bg-[#FF8C42]/90 transition-colors"
+                        >
+                          Mark Paid
+                        </button>
                         )}
+                        <button
+                          onClick={() => handlePrintRecord(record)}
+                          className="px-3 py-1 bg-[#444444]/60 border border-[#555555] text-gray-200 rounded text-xs hover:bg-[#2A2A2A] transition-colors"
+                        >
+                          Print
+                        </button>
                       </div>
                     </div>
                   </div>
