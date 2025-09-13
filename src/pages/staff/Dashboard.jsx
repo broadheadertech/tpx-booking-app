@@ -15,6 +15,7 @@ import ReportsManagement from '../../components/staff/ReportsManagement'
 import EventsManagement from '../../components/staff/EventsManagement'
 import ProductsManagement from '../../components/staff/ProductsManagement'
 import NotificationsManagement from '../../components/staff/NotificationsManagement'
+import PayrollManagement from '../../components/staff/PayrollManagement'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
@@ -172,6 +173,9 @@ function StaffDashboard() {
       case 'notifications':
         return <NotificationsManagement onRefresh={handleRefresh} />
 
+      case 'payroll':
+        return <PayrollManagement onRefresh={handleRefresh} user={user} />
+
       default:
         return renderOverview()
     }
@@ -225,6 +229,7 @@ function StaffDashboard() {
     { id: 'customers', label: 'Customers', icon: 'users' },
     { id: 'events', label: 'Events', icon: 'calendar' },
     { id: 'reports', label: 'Reports', icon: 'chart' },
+    { id: 'payroll', label: 'Payroll', icon: 'dollar-sign' },
     { id: 'products', label: 'Products', icon: 'package' },
     { id: 'notifications', label: 'Notifications', icon: 'bell' }
   ]

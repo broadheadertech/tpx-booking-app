@@ -52,11 +52,21 @@ export const ERROR_CODES = {
   EVENT_PAST_DATE: 'EVENT_PAST_DATE',
   EVENT_REGISTRATION_CLOSED: 'EVENT_REGISTRATION_CLOSED',
   
+  // Payroll errors
+  PAYROLL_SETTINGS_NOT_FOUND: 'PAYROLL_SETTINGS_NOT_FOUND',
+  PAYROLL_PERIOD_NOT_FOUND: 'PAYROLL_PERIOD_NOT_FOUND',
+  PAYROLL_PERIOD_ALREADY_CALCULATED: 'PAYROLL_PERIOD_ALREADY_CALCULATED',
+  PAYROLL_RECORD_NOT_FOUND: 'PAYROLL_RECORD_NOT_FOUND',
+  PAYROLL_RECORD_ALREADY_PAID: 'PAYROLL_RECORD_ALREADY_PAID',
+  PAYROLL_INVALID_COMMISSION_RATE: 'PAYROLL_INVALID_COMMISSION_RATE',
+  PAYROLL_INVALID_PERIOD: 'PAYROLL_INVALID_PERIOD',
+  
   // General errors
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   PERMISSION_DENIED: 'PERMISSION_DENIED',
   RESOURCE_NOT_FOUND: 'RESOURCE_NOT_FOUND',
-  OPERATION_FAILED: 'OPERATION_FAILED'
+  OPERATION_FAILED: 'OPERATION_FAILED',
+  INVALID_INPUT: 'INVALID_INPUT'
 } as const;
 
 // User-friendly error messages
@@ -234,6 +244,55 @@ const ERROR_MESSAGES: Record<string, UserError> = {
     code: ERROR_CODES.EVENT_PAST_DATE,
     details: 'The date you selected has already passed.',
     action: 'Please select a future date for your event.'
+  },
+
+  [ERROR_CODES.PAYROLL_SETTINGS_NOT_FOUND]: {
+    message: 'Payroll settings not configured.',
+    code: ERROR_CODES.PAYROLL_SETTINGS_NOT_FOUND,
+    details: 'This branch does not have payroll settings configured.',
+    action: 'Please configure payroll settings before proceeding with payroll operations.'
+  },
+
+  [ERROR_CODES.PAYROLL_PERIOD_NOT_FOUND]: {
+    message: 'Payroll period not found.',
+    code: ERROR_CODES.PAYROLL_PERIOD_NOT_FOUND,
+    details: 'The payroll period you\'re looking for doesn\'t exist.',
+    action: 'Please check the payroll period details or create a new period.'
+  },
+
+  [ERROR_CODES.PAYROLL_PERIOD_ALREADY_CALCULATED]: {
+    message: 'Payroll period already calculated.',
+    code: ERROR_CODES.PAYROLL_PERIOD_ALREADY_CALCULATED,
+    details: 'This payroll period has already been calculated and cannot be recalculated.',
+    action: 'Please create a new payroll period or view the existing calculations.'
+  },
+
+  [ERROR_CODES.PAYROLL_RECORD_NOT_FOUND]: {
+    message: 'Payroll record not found.',
+    code: ERROR_CODES.PAYROLL_RECORD_NOT_FOUND,
+    details: 'The payroll record you\'re looking for doesn\'t exist.',
+    action: 'Please check the payroll record details or generate new payroll records.'
+  },
+
+  [ERROR_CODES.PAYROLL_RECORD_ALREADY_PAID]: {
+    message: 'Payroll record already paid.',
+    code: ERROR_CODES.PAYROLL_RECORD_ALREADY_PAID,
+    details: 'This payroll record has already been marked as paid.',
+    action: 'No further action is required for this payment.'
+  },
+
+  [ERROR_CODES.PAYROLL_INVALID_COMMISSION_RATE]: {
+    message: 'Invalid commission rate.',
+    code: ERROR_CODES.PAYROLL_INVALID_COMMISSION_RATE,
+    details: 'Commission rate must be between 0 and 100 percent.',
+    action: 'Please enter a valid commission rate between 0% and 100%.'
+  },
+
+  [ERROR_CODES.INVALID_INPUT]: {
+    message: 'Invalid input provided.',
+    code: ERROR_CODES.INVALID_INPUT,
+    details: 'The input you provided is not valid.',
+    action: 'Please check your input and try again.'
   }
 };
 
