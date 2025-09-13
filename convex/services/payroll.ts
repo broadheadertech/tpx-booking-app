@@ -231,24 +231,15 @@ export const calculateBarberEarnings = query({
 
     const fallbackRate = barberCommissionRate?.commission_rate || payrollSettings?.default_commission_rate || 10;
 
-    // Compute service-level totals from transactions only
+    // Compute service-level totals from completed bookings within the period
     let totalServices = 0;
     let totalServiceRevenue = 0;
     let serviceCommission = 0;
     // We'll compute days worked from bookings (per request)
 
-    for (const t of transactions) {
-      for (const s of t.services || []) {
-        const lineRevenue = (s.price || 0) * (s.quantity || 0);
-        totalServices += s.quantity || 0;
-        totalServiceRevenue += lineRevenue;
-        const rate = serviceRateMap.get(String(s.service_id)) ?? fallbackRate;
-        serviceCommission += (lineRevenue * rate) / 100;
-      }
-    }
-
+    // We'll fill bookingsInPeriod below; use it for totals
     const totalTransactions = transactions.length;
-    const totalTransactionRevenue = 0; // No separate transaction revenue; accounted in services
+    const totalTransactionRevenue = 0; // No separate transaction revenue; accounted in bookings
     const transactionCommission = 0; // No separate transaction commission
 
     // Daily rate computation (days with at least one completed & paid booking)
@@ -268,7 +259,7 @@ export const calculateBarberEarnings = query({
         bookingDaySet.add(dateKey);
         // enrich with details for printing/snapshots
         const service = await ctx.db.get(b.service);
-        let customerName = b.customer_name || "Walk-in";
+        let customerName = b.customer_name || "";
         if (!customerName && b.customer) {
           const customer = await ctx.db.get(b.customer);
           customerName = (customer as any)?.nickname || (customer as any)?.username || (customer as any)?.email || "Customer";
@@ -279,11 +270,20 @@ export const calculateBarberEarnings = query({
           date: b.date,
           time: b.time,
           price: b.price,
+          service: b.service,
           service_name: service?.name || 'Service',
           customer_name: customerName,
           updatedAt: b.updatedAt,
         });
       }
+    }
+
+    // Totals and commission based on bookings
+    for (const b of bookingsInPeriod) {
+      totalServices += 1;
+      totalServiceRevenue += b.price || 0;
+      const rate = serviceRateMap.get(String(b.service)) ?? fallbackRate;
+      serviceCommission += ((b.price || 0) * (rate || 0)) / 100;
     }
 
     // Get active daily rate for barber
@@ -506,7 +506,7 @@ export const getBookingsByBarberAndPeriod = query({
     const withDetails = await Promise.all(
       filtered.map(async (b) => {
         const service = await ctx.db.get(b.service);
-        let customerName = b.customer_name || "Walk-in";
+        let customerName = b.customer_name || "";
         if (!customerName && b.customer) {
           const customer = await ctx.db.get(b.customer);
           customerName = customer?.nickname || customer?.username || customer?.email || "Customer";

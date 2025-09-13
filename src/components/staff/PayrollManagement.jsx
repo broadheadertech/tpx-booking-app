@@ -465,7 +465,6 @@ const PayrollManagement = ({ onRefresh, user }) => {
           <div>
             <div class="row"><span class="muted">Services</span><span>${record.total_services}</span></div>
             <div class="row"><span class="muted">Service Revenue</span><span>${format(record.total_service_revenue)}</span></div>
-            <div class="row"><span class="muted">Commission (per-service)</span><span class="accent">${format(record.gross_commission)}</span></div>
           </div>
           <div>
             <div class="row"><span class="muted">Daily Pay${typeof record.days_worked==='number' && typeof record.daily_rate==='number' ? ` (${record.days_worked} day${record.days_worked===1?'':'s'} × ${format(record.daily_rate)})` : ''}</span><span>${format(record.daily_pay || 0)}</span></div>
