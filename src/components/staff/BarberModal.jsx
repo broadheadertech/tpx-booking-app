@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { User, Star, Phone, Mail, X, Edit, Save, BookOpen, Calendar } from 'lucide-react'
-import { useMutation } from 'convex/react'
+import { User, Star, Phone, Mail, X, Edit, Save, BookOpen, Calendar, Clock, MapPin } from 'lucide-react'
+import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import LoadingSpinner from '../common/LoadingSpinner'
 
 const BarberModal = ({ 
   isOpen, 
@@ -22,8 +23,14 @@ const BarberModal = ({
     services: []
   })
 
-  // Convex mutation
+  // Convex mutation and queries
   const updateBarber = useMutation(api.services.barbers.updateBarber)
+  
+  // Fetch barber bookings
+  const barberBookings = useQuery(
+    api.services.bookings.getBookingsByBarber, 
+    barber?._id ? { barberId: barber._id } : "skip"
+  )
 
   // Initialize form data when barber changes
   const initializeFormData = useCallback(() => {
@@ -104,6 +111,17 @@ const BarberModal = ({
       currency: 'PHP',
       minimumFractionDigits: 0
     }).format(amount || 0)
+  }, [])
+
+  const getStatusBadge = useCallback((status) => {
+    const statusStyles = {
+      pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+      booked: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      confirmed: 'bg-green-500/20 text-green-400 border-green-500/30',
+      completed: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+      cancelled: 'bg-red-500/20 text-red-400 border-red-500/30'
+    }
+    return statusStyles[status] || statusStyles.pending
   }, [])
 
   if (!isOpen || !barber) return null
@@ -329,17 +347,79 @@ const BarberModal = ({
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="flex items-center space-x-2 mb-4">
-                  <Calendar className="h-5 w-5 text-gray-400" />
-                  <h3 className="text-lg font-semibold text-white">Booking History</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-5 w-5 text-gray-400" />
+                    <h3 className="text-lg font-semibold text-white">Booking History</h3>
+                  </div>
+                  {barberBookings && barberBookings.length > 0 && (
+                    <span className="text-sm text-gray-400">
+                      {barberBookings.length} total bookings
+                    </span>
+                  )}
                 </div>
-                <div className="text-center py-12">
-                  <BookOpen className="mx-auto h-12 w-12 text-gray-300" />
-                  <h3 className="mt-2 text-sm font-medium text-white">No bookings found</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    No bookings available for this barber.
-                  </p>
-                </div>
+
+                {barberBookings === undefined ? (
+                  <div className="flex justify-center py-8">
+                    <LoadingSpinner size="md" message="Loading bookings..." />
+                  </div>
+                ) : barberBookings && barberBookings.length > 0 ? (
+                  <div className="space-y-3 max-h-80 overflow-y-auto">
+                    {barberBookings.map((booking) => (
+                      <div 
+                        key={booking._id} 
+                        className="bg-[#1A1A1A] border border-[#444444]/50 rounded-lg p-4 hover:border-[#FF8C42]/30 transition-colors"
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <h4 className="font-medium text-white">{booking.customer_name}</h4>
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusBadge(booking.status)}`}>
+                                {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-400 mb-1">{booking.service_name}</p>
+                            <div className="flex items-center space-x-4 text-xs text-gray-500">
+                              <div className="flex items-center space-x-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>{booking.formattedDate}</span>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <Clock className="h-3 w-3" />
+                                <span>{booking.formattedTime}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium text-[#FF8C42]">₱{booking.service_price}</p>
+                            <p className="text-xs text-gray-500">{booking.booking_code}</p>
+                          </div>
+                        </div>
+                        
+                        {booking.customer_phone && (
+                          <div className="flex items-center space-x-1 text-xs text-gray-500 mt-2">
+                            <Phone className="h-3 w-3" />
+                            <span>{booking.customer_phone}</span>
+                          </div>
+                        )}
+                        
+                        {booking.notes && (
+                          <div className="mt-2 p-2 bg-[#2A2A2A] rounded text-xs text-gray-400">
+                            <strong>Notes:</strong> {booking.notes}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <BookOpen className="mx-auto h-12 w-12 text-gray-300" />
+                    <h3 className="mt-2 text-sm font-medium text-white">No bookings found</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      No bookings available for this barber yet.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
