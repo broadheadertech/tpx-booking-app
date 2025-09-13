@@ -118,44 +118,44 @@ const BarberModal = ({
           className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
           onClick={handleClose}
         />
-        <div className="relative w-full max-w-4xl max-h-[90vh] overflow-hidden transform rounded-3xl bg-white shadow-2xl transition-all z-[10000]">
+        <div className="relative w-full max-w-3xl max-h-[85vh] overflow-hidden transform rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] border border-[#444444]/50 shadow-2xl transition-all z-[10000]">
           {/* Header */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 p-4 z-10">
+          <div className="sticky top-0 bg-gradient-to-r from-[#2A2A2A] to-[#333333] border-b border-[#444444]/50 p-3 z-10">
             <div className="flex justify-between items-start">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
-                  <User className="h-8 w-8 text-gray-500" />
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-full bg-[#444444]/50 flex items-center justify-center">
+                  <User className="h-6 w-6 text-gray-400" />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">{barber.full_name}</h2>
-                  <p className="text-sm text-gray-600">{barber.experience || '0 years'} Experience</p>
+                  <h2 className="text-lg font-bold text-white">{barber.full_name}</h2>
+                  <p className="text-sm text-gray-400">{barber.experience || '0 years'} Experience</p>
                   <div className="flex items-center space-x-1 mt-1">
-                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <span className="text-sm font-medium">{barber.rating || 0}</span>
-                    <span className="text-sm text-gray-500">({barber.totalBookings || 0} bookings)</span>
+                    <Star className="h-3 w-3 text-[#FF8C42] fill-current" />
+                    <span className="text-sm font-medium text-white">{barber.rating || 0}</span>
+                    <span className="text-sm text-gray-400">({barber.totalBookings || 0} bookings)</span>
                   </div>
                 </div>
               </div>
               <button
                 onClick={handleClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
+                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors duration-200"
                 title="Close"
               >
-                <X className="h-6 w-6" />
+                <X className="h-4 w-4 text-gray-400 hover:text-[#FF8C42]" />
               </button>
             </div>
           </div>
 
           {/* Tab Navigation */}
-          <div className="border-b border-gray-200 px-4">
-            <nav className="flex space-x-6">
+          <div className="border-b border-[#444444]/50 px-3">
+            <nav className="flex space-x-4">
               <button
                 type="button"
                 onClick={() => setActiveView('details')}
-                className={`py-3 px-2 border-b-2 font-medium text-sm cursor-pointer select-none ${
+                className={`py-2 px-2 border-b-2 font-medium text-sm cursor-pointer select-none ${
                   activeView === 'details'
-                    ? 'border-orange-500 text-orange-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-[#FF8C42] text-[#FF8C42]'
+                    : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500'
                 } transition-colors`}
               >
                 Details
@@ -163,10 +163,10 @@ const BarberModal = ({
               <button
                 type="button"
                 onClick={() => setActiveView('bookings')}
-                className={`py-3 px-2 border-b-2 font-medium text-sm cursor-pointer select-none ${
+                className={`py-2 px-2 border-b-2 font-medium text-sm cursor-pointer select-none ${
                   activeView === 'bookings'
-                    ? 'border-orange-500 text-orange-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-[#FF8C42] text-[#FF8C42]'
+                    : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500'
                 } transition-colors`}
               >
                 Bookings
@@ -175,7 +175,7 @@ const BarberModal = ({
           </div>
 
           {/* Content */}
-          <div className="p-4 max-h-[calc(90vh-200px)] overflow-y-auto">
+          <div className="p-3 max-h-[calc(85vh-160px)] overflow-y-auto">
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                 <p className="text-sm text-red-600">{error}</p>
@@ -257,21 +257,21 @@ const BarberModal = ({
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                     <div className="space-y-4">
                       <div>
-                        <h3 className="font-semibold text-gray-900 mb-2">Contact Information</h3>
+                        <h3 className="font-semibold text-white mb-2">Contact Information</h3>
                         <div className="space-y-2">
                           <div className="flex items-center space-x-2">
                             <Mail className="h-4 w-4 text-gray-400" />
-                            <span className="text-sm text-gray-600">{barber.email || 'N/A'}</span>
+                            <span className="text-sm text-gray-400">{barber.email || 'N/A'}</span>
                           </div>
                           <div className="flex items-center space-x-2">
                             <Phone className="h-4 w-4 text-gray-400" />
-                            <span className="text-sm text-gray-600">{barber.phone || 'N/A'}</span>
+                            <span className="text-sm text-gray-400">{barber.phone || 'N/A'}</span>
                           </div>
                         </div>
                       </div>
 
                       <div>
-                        <h3 className="font-semibold text-gray-900 mb-2">Specialties</h3>
+                        <h3 className="font-semibold text-white mb-2">Specialties</h3>
                         <div className="flex flex-wrap gap-2">
                           {barber.specialties?.map((specialty, index) => (
                             <span key={index} className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm">
@@ -284,25 +284,25 @@ const BarberModal = ({
 
                     <div className="space-y-4">
                       <div>
-                        <h3 className="font-semibold text-gray-900 mb-2">Performance</h3>
+                        <h3 className="font-semibold text-white mb-2">Performance</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="bg-blue-50 p-3 rounded-lg">
-                            <p className="text-sm text-gray-600">Monthly Revenue</p>
+                            <p className="text-sm text-gray-400">Monthly Revenue</p>
                             <p className="text-lg font-bold text-blue-600">{formatRevenue(barber.monthlyRevenue)}</p>
                           </div>
                           <div className="bg-green-50 p-3 rounded-lg">
-                            <p className="text-sm text-gray-600">Total Bookings</p>
+                            <p className="text-sm text-gray-400">Total Bookings</p>
                             <p className="text-lg font-bold text-green-600">{barber.totalBookings || 0}</p>
                           </div>
                           <div className="bg-purple-50 p-3 rounded-lg">
-                            <p className="text-sm text-gray-600">Working Days</p>
+                            <p className="text-sm text-gray-400">Working Days</p>
                             <p className="text-lg font-bold text-purple-600">{workingDays}/week</p>
                           </div>
                         </div>
                       </div>
 
                       <div>
-                        <h3 className="font-semibold text-gray-900 mb-2">Work Schedule</h3>
+                        <h3 className="font-semibold text-white mb-2">Work Schedule</h3>
                         <div className="space-y-2">
                           {daysOfWeek.map(day => {
                             const daySchedule = barber.schedule?.[day] || { available: false }
@@ -331,11 +331,11 @@ const BarberModal = ({
               <div className="space-y-4">
                 <div className="flex items-center space-x-2 mb-4">
                   <Calendar className="h-5 w-5 text-gray-400" />
-                  <h3 className="text-lg font-semibold text-gray-900">Booking History</h3>
+                  <h3 className="text-lg font-semibold text-white">Booking History</h3>
                 </div>
                 <div className="text-center py-12">
                   <BookOpen className="mx-auto h-12 w-12 text-gray-300" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No bookings found</h3>
+                  <h3 className="mt-2 text-sm font-medium text-white">No bookings found</h3>
                   <p className="mt-1 text-sm text-gray-500">
                     No bookings available for this barber.
                   </p>
@@ -345,7 +345,7 @@ const BarberModal = ({
           </div>
 
           {/* Footer */}
-          <div className="p-4 border-t border-gray-200 flex justify-between items-center">
+          <div className="p-4 border-t border-[#444444]/50 flex justify-between items-center">
             <div className="flex space-x-3">
               {activeView === 'details' && !isEditing && (
                 <button
@@ -363,7 +363,7 @@ const BarberModal = ({
                 <>
                   <button
                     onClick={handleCancelEdit}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-[#1A1A1A] transition-colors"
                   >
                     Cancel
                   </button>
@@ -379,7 +379,7 @@ const BarberModal = ({
               ) : (
                 <button
                   onClick={handleClose}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-[#1A1A1A] transition-colors"
                 >
                   Close
                 </button>
