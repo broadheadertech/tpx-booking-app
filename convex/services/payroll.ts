@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { mutation, query, action } from "../_generated/server";
 import { api } from "../_generated/api";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 
@@ -258,6 +258,7 @@ export const calculateBarberEarnings = query({
       .withIndex("by_barber", (q) => q.eq("barber", args.barber_id))
       .collect();
     const bookingDaySet = new Set<string>();
+    const bookingsInPeriod: any[] = [];
     for (const b of allBookings) {
       const completed = b.status === "completed";
       const paid = b.payment_status === "paid";
@@ -265,6 +266,23 @@ export const calculateBarberEarnings = query({
       if (completed && paid && inPeriod) {
         const dateKey = b.date || new Date(new Date(b.updatedAt).toISOString().split('T')[0]).toISOString();
         bookingDaySet.add(dateKey);
+        // enrich with details for printing/snapshots
+        const service = await ctx.db.get(b.service);
+        let customerName = b.customer_name || "Walk-in";
+        if (!customerName && b.customer) {
+          const customer = await ctx.db.get(b.customer);
+          customerName = (customer as any)?.nickname || (customer as any)?.username || (customer as any)?.email || "Customer";
+        }
+        bookingsInPeriod.push({
+          id: b._id,
+          booking_code: b.booking_code,
+          date: b.date,
+          time: b.time,
+          price: b.price,
+          service_name: service?.name || 'Service',
+          customer_name: customerName,
+          updatedAt: b.updatedAt,
+        });
       }
     }
 
@@ -327,6 +345,7 @@ export const calculateBarberEarnings = query({
       net_pay: netPay,
       
       // Details for verification
+      bookings_detail: bookingsInPeriod,
       transactions: transactions.map(t => ({
         id: t._id,
         transaction_id: t.transaction_id,
@@ -498,6 +517,7 @@ export const getBookingsByBarberAndPeriod = query({
           date: b.date,
           time: b.time,
           price: b.price,
+          service_id: b.service,
           service_name: service?.name || "Service",
           customer_name: customerName,
           updatedAt: b.updatedAt,
@@ -506,6 +526,64 @@ export const getBookingsByBarberAndPeriod = query({
     );
 
     return withDetails;
+  },
+});
+
+// ACTION: Obtain bookings for print (imperative use from client)
+export const getBookingsForPrint = action({
+  args: {
+    barber_id: v.id("barbers"),
+    period_start: v.number(),
+    period_end: v.number(),
+  },
+  handler: async (ctx, args) => {
+    // Reuse the query logic by invoking it via runQuery
+    const items = await ctx.runQuery(api.services.payroll.getBookingsByBarberAndPeriod, args as any);
+    return items || [];
+  },
+});
+
+// ACTION: Grouped bookings with per-date totals and commissions for print
+export const getBookingsSummaryForPrint = action({
+  args: {
+    barber_id: v.id("barbers"),
+    period_start: v.number(),
+    period_end: v.number(),
+  },
+  handler: async (ctx, args) => {
+    // Barber and branch
+    const barber = await ctx.runQuery(api.services.barbers.getBarberById, { id: args.barber_id as any });
+    if (!barber) return { groups: [], grandTotalAmount: 0, grandTotalCommission: 0 };
+
+    // Rates: per service + fallback
+    const serviceRates = await ctx.runQuery(api.services.payroll.getServiceCommissionRatesByBranch, { branch_id: barber.branch_id });
+    const rateMap = new Map<string, number>();
+    for (const r of serviceRates || []) rateMap.set(String(r.service_id), r.commission_rate);
+
+    const barberRate = await ctx.runQuery(api.services.payroll.getBarberCommissionRate, { barber_id: args.barber_id as any });
+    const settings = await ctx.runQuery(api.services.payroll.getPayrollSettingsByBranch, { branch_id: barber.branch_id });
+    const fallbackRate = (barberRate?.commission_rate) || (settings?.default_commission_rate || 10);
+
+    // Bookings
+    const items = await ctx.runQuery(api.services.payroll.getBookingsByBarberAndPeriod, args as any);
+
+    // Group by date
+    const groupsMap = new Map<string, any>();
+    for (const b of items || []) {
+      const key = b.date || new Date(b.updatedAt).toISOString().split('T')[0];
+      const rate = rateMap.get(String(b.service_id)) ?? fallbackRate;
+      const commission = (b.price || 0) * rate / 100;
+      if (!groupsMap.has(key)) groupsMap.set(key, { date: key, rows: [], totalAmount: 0, totalCommission: 0 });
+      const g = groupsMap.get(key);
+      g.rows.push({ ...b, commission, commission_rate: rate });
+      g.totalAmount += b.price || 0;
+      g.totalCommission += commission;
+    }
+
+    const groups = Array.from(groupsMap.values()).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const grandTotalAmount = groups.reduce((s,g) => s + g.totalAmount, 0);
+    const grandTotalCommission = groups.reduce((s,g) => s + g.totalCommission, 0);
+    return { groups, grandTotalAmount, grandTotalCommission };
   },
 });
 
@@ -625,6 +703,7 @@ export const calculatePayrollForPeriod = mutation({
         total_transactions: earnings.total_transactions,
         total_transaction_revenue: earnings.total_transaction_revenue,
         transaction_commission: earnings.transaction_commission,
+        bookings_detail: earnings.bookings_detail,
 
         // Daily rate
         daily_rate: earnings.daily_rate,

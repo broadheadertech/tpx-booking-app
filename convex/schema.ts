@@ -499,6 +499,18 @@ export default defineSchema({
     total_transaction_revenue: v.number(), // Revenue from POS transactions
     transaction_commission: v.number(), // Commission from POS transactions
     
+    // Booking details snapshot (for reporting/printing)
+    bookings_detail: v.optional(v.array(v.object({
+      id: v.id("bookings"),
+      booking_code: v.string(),
+      date: v.string(),
+      time: v.string(),
+      price: v.number(),
+      service_name: v.string(),
+      customer_name: v.string(),
+      updatedAt: v.number(),
+    }))),
+    
     // Deductions
     tax_deduction: v.number(), // Tax deducted
     other_deductions: v.number(), // Other deductions (insurance, etc.)

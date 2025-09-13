@@ -22,7 +22,7 @@ import {
   Percent,
   Printer
 } from 'lucide-react'
-import { useQuery, useMutation } from 'convex/react'
+import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { createPortal } from 'react-dom'
 
@@ -161,6 +161,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const setBarberCommissionRate = useMutation(api.services.payroll.setBarberCommissionRate)
   const setServiceCommissionRate = useMutation(api.services.payroll.setServiceCommissionRate)
   const setBarberDailyRate = useMutation(api.services.payroll.setBarberDailyRate)
+  const getBookingsForPrint = useAction(api.services.payroll.getBookingsForPrint)
+  const getBookingsSummaryForPrint = useAction(api.services.payroll.getBookingsSummaryForPrint)
 
   // Initialize settings from data
   useEffect(() => {
@@ -418,6 +420,37 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const recordSection = (record) => {
     const format = (amt) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', minimumFractionDigits: 0 }).format(amt || 0)
     const dateRange = selectedPeriod ? `${formatDate(selectedPeriod.period_start)} – ${formatDate(selectedPeriod.period_end)}` : ''
+    // bookings per-date with totals & commissions if available
+    let bookingsHtml = ''
+    if (record.bookings_summary && Array.isArray(record.bookings_summary.groups) && record.bookings_summary.groups.length) {
+      const blocks = record.bookings_summary.groups.map(g => {
+        const dateLabel = new Date(g.date).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
+        const rows = (g.rows || []).map(b => {
+          const tm = (b.time || '--:--').slice(0,5)
+          return `<div class="row"><span><span class="muted">${dateLabel} ${tm}</span> — ${b.service_name} <span class="muted">• ${b.customer_name} • ${b.booking_code}</span></span><span>${format(b.price)} (${format(b.commission)})</span></div>`
+        }).join('')
+        const footer = `<div class="row" style="font-weight:600"><span>Total (${dateLabel})</span><span>${format(g.totalAmount)} | Commission: ${format(g.totalCommission)}</span></div>`
+        return rows + footer + '<hr/>'
+      }).join('')
+      const grand = `<div class="row" style="font-weight:800"><span>Grand Total</span><span>${format(record.bookings_summary.grandTotalAmount)} | Commission: ${format(record.bookings_summary.grandTotalCommission)}</span></div>`
+      bookingsHtml = `<hr/>${blocks}${grand}`
+    } else {
+      const items = Array.isArray(record.bookings_detail) ? record.bookings_detail : []
+      if (items.length) {
+        const rows = items
+          .slice()
+          .sort((a,b) => (a.updatedAt||0) - (b.updatedAt||0))
+          .map(b => {
+            const dt = b.date
+              ? new Date(b.date).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
+              : new Date(b.updatedAt).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
+            const tm = (b.time || '--:--').slice(0,5)
+            return `<div class="row"><span><span class="muted">${dt} ${tm}</span> — ${b.service_name} <span class="muted">• ${b.customer_name} • ${b.booking_code}</span></span><span>${format(b.price)}</span></div>`
+          })
+          .join('')
+        bookingsHtml = `<hr/>${rows}`
+      }
+    }
     return `
       <div class="card">
         <div class="header">
@@ -442,6 +475,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
             <div class="row" style="font-weight:800"><span>Net Pay</span><span class="accent">${format(record.net_pay)}</span></div>
           </div>
         </div>
+        ${bookingsHtml}
       </div>
     `
   }
@@ -480,14 +514,57 @@ const PayrollManagement = ({ onRefresh, user }) => {
     }
   }
 
-  const handlePrintRecord = (record) => {
-    const html = buildDoc(`Payroll – ${record.barber_name}`, recordSection(record))
+  const handlePrintRecord = async (record) => {
+    let enriched = record
+    if (!record.bookings_detail || record.bookings_detail.length === 0) {
+      if (selectedPeriod) {
+        try {
+          const [items, summary] = await Promise.all([
+            getBookingsForPrint({
+              barber_id: record.barber_id,
+              period_start: selectedPeriod.period_start,
+              period_end: selectedPeriod.period_end,
+            }),
+            getBookingsSummaryForPrint({
+              barber_id: record.barber_id,
+              period_start: selectedPeriod.period_start,
+              period_end: selectedPeriod.period_end,
+            })
+          ])
+          enriched = { ...record, bookings_detail: items, bookings_summary: summary }
+        } catch (e) {
+          // ignore and print without bookings
+        }
+      }
+    }
+    const html = buildDoc(`Payroll – ${record.barber_name}`, recordSection(enriched))
     printHtml(html)
   }
 
-  const handlePrintAll = () => {
+  const handlePrintAll = async () => {
     const records = Array.isArray(currentPeriodRecords) ? currentPeriodRecords : []
-    const sections = records.map((r) => recordSection(r)).join('\n')
+    const enriched = await Promise.all(records.map(async (r) => {
+      if (r.bookings_detail && r.bookings_detail.length > 0) return r
+      if (!selectedPeriod) return r
+      try {
+        const [items, summary] = await Promise.all([
+          getBookingsForPrint({
+            barber_id: r.barber_id,
+            period_start: selectedPeriod.period_start,
+            period_end: selectedPeriod.period_end,
+          }),
+          getBookingsSummaryForPrint({
+            barber_id: r.barber_id,
+            period_start: selectedPeriod.period_start,
+            period_end: selectedPeriod.period_end,
+          })
+        ])
+        return { ...r, bookings_detail: items, bookings_summary: summary }
+      } catch (e) {
+        return r
+      }
+    }))
+    const sections = enriched.map((r) => recordSection(r)).join('\n')
     const title = selectedPeriod ? `Payroll – ${formatDate(selectedPeriod.period_start)} to ${formatDate(selectedPeriod.period_end)}` : 'Payroll – All'
     const html = buildDoc(title, sections)
     printHtml(html)
