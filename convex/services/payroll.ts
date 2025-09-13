@@ -235,11 +235,9 @@ export const calculateBarberEarnings = query({
     let totalServices = 0;
     let totalServiceRevenue = 0;
     let serviceCommission = 0;
-    const daySet = new Set<string>();
+    // We'll compute days worked from bookings (per request)
 
     for (const t of transactions) {
-      const dayKey = new Date(new Date(t.createdAt).toISOString().split('T')[0]).toISOString();
-      daySet.add(dayKey);
       for (const s of t.services || []) {
         const lineRevenue = (s.price || 0) * (s.quantity || 0);
         totalServices += s.quantity || 0;
@@ -253,7 +251,23 @@ export const calculateBarberEarnings = query({
     const totalTransactionRevenue = 0; // No separate transaction revenue; accounted in services
     const transactionCommission = 0; // No separate transaction commission
 
-    // Daily rate computation (days with at least one completed transaction)
+    // Daily rate computation (days with at least one completed & paid booking)
+    // Load bookings for the barber and derive unique dates from booking records
+    const allBookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_barber", (q) => q.eq("barber", args.barber_id))
+      .collect();
+    const bookingDaySet = new Set<string>();
+    for (const b of allBookings) {
+      const completed = b.status === "completed";
+      const paid = b.payment_status === "paid";
+      const inPeriod = b.updatedAt >= args.period_start && b.updatedAt <= args.period_end;
+      if (completed && paid && inPeriod) {
+        const dateKey = b.date || new Date(new Date(b.updatedAt).toISOString().split('T')[0]).toISOString();
+        bookingDaySet.add(dateKey);
+      }
+    }
+
     // Get active daily rate for barber
     const barberDailyRate = await ctx.db
       .query("barber_daily_rates")
@@ -269,7 +283,7 @@ export const calculateBarberEarnings = query({
       )
       .first();
 
-    const daysWorked = daySet.size;
+    const daysWorked = bookingDaySet.size;
     const dailyRate = barberDailyRate?.daily_rate || 0;
     const dailyPay = dailyRate * daysWorked;
 

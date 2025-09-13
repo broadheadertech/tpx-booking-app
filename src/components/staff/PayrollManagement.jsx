@@ -1424,7 +1424,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
                               <span className="text-white">{formatCurrency(record.gross_commission)}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-400">Daily Pay:</span>
+                              <span className="text-gray-400">
+                                {`Daily Pay${typeof record.days_worked === 'number' && typeof record.daily_rate === 'number' ? ` (${record.days_worked} ${record.days_worked === 1 ? 'day' : 'days'} × ${formatCurrency(record.daily_rate)})` : ''}:`}
+                              </span>
                               <span className="text-white">{formatCurrency(record.daily_pay || 0)}</span>
                             </div>
                             <div className="flex justify-between">
