@@ -4,6 +4,7 @@ import { User, Mail, Phone, Scissors, Camera, Upload, X } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
+import LoadingSpinner from '../common/LoadingSpinner'
 
 const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) => {
   const { user } = useAuth()
@@ -285,10 +286,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
 
               {/* Loading State */}
               {!services && (
-                <div className="flex items-center justify-center py-3">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#FF8C42]"></div>
-                  <span className="ml-2 text-gray-300 text-sm">Loading services...</span>
-                </div>
+                <LoadingSpinner size="sm" message="Loading services..." className="py-3" />
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -456,7 +454,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                   </div>
                   {uploadingImage && (
                     <div className="absolute inset-0 bg-black/70 rounded-full flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <LoadingSpinner size="xs" variant="white" />
                     </div>
                   )}
                 </div>
