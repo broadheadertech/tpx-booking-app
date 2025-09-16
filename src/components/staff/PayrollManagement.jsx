@@ -431,12 +431,12 @@ const PayrollManagement = ({ onRefresh, user }) => {
         const dateLabel = new Date(g.date).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
         const rows = (g.rows || []).map(b => {
           const tm = (b.time || '--:--').slice(0,5)
-          return `<div class="row"><span><span class="muted">${dateLabel} ${tm}</span> — ${b.service_name} <span class="muted">• ${b.customer_name} • ${b.booking_code}</span></span><span>${format(b.price)} (${format(b.commission)})</span></div>`
+          return `<div class="row"><span><span class="muted">${dateLabel} ${tm}</span> — ${b.service_name} <span class="muted">• ${b.customer_name} • ${b.booking_code}</span></span><span>${format(b.price)}</span></div>`
         }).join('')
-        const footer = `<div class="row" style="font-weight:600"><span>Total (${dateLabel})</span><span>${format(g.totalAmount)} | Commission: ${format(g.totalCommission)} | Selected Pay: ${format(g.selectedPay || 0)}</span></div>`
+        const footer = `<div class="row" style="font-weight:600"><span>Total (${dateLabel})</span><span>${format(g.totalAmount)} | Sales: ${format(g.totalAmount)} | Selected Pay: ${format(g.selectedPay || 0)}</span></div>`
         return rows + footer + '<hr/>'
       }).join('')
-      const grand = `<div class="row" style="font-weight:800"><span>Grand Total</span><span>${format(record.bookings_summary.grandTotalAmount)} | Commission: ${format(record.bookings_summary.grandTotalCommission)} | Final Daily Salary: ${format(record.bookings_summary.grandTotalSelectedPay || 0)}</span></div>`
+      const grand = `<div class="row" style="font-weight:800"><span>Grand Total</span><span>${format(record.bookings_summary.grandTotalAmount)} | Sales: ${format(record.bookings_summary.grandTotalAmount)} | Final Daily Salary: ${format(record.bookings_summary.grandTotalSelectedPay || 0)}</span></div>`
       bookingsHtml = `<hr/>${blocks}${grand}`
     } else {
       const items = Array.isArray(record.bookings_detail) ? record.bookings_detail : []
