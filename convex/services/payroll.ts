@@ -264,13 +264,13 @@ export const calculateBarberEarnings = query({
           const customer = await ctx.db.get(b.customer);
           customerName = (customer as any)?.nickname || (customer as any)?.username || (customer as any)?.email || "Customer";
         }
+        // Match schema for payroll_records.bookings_detail exactly (no extra fields)
         bookingsInPeriod.push({
           id: b._id,
           booking_code: b.booking_code,
           date: b.date,
           time: b.time,
           price: b.price,
-          service: b.service,
           service_name: service?.name || 'Service',
           customer_name: customerName,
           updatedAt: b.updatedAt,
