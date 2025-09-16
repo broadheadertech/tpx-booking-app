@@ -605,4 +605,48 @@ export default defineSchema({
     .index("by_branch", ["branch_id"])
     .index("by_type", ["adjustment_type"])
     .index("by_approved", ["is_approved"]),
+
+  // Email marketing campaigns
+  email_campaigns: defineTable({
+    branch_id: v.id("branches"),
+    name: v.string(),
+    subject: v.string(),
+    body_html: v.string(),
+    audience: v.union(
+      v.literal("all_customers")
+    ),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("scheduled"),
+      v.literal("sending"),
+      v.literal("sent"),
+      v.literal("failed")
+    ),
+    scheduled_at: v.optional(v.number()),
+    sent_at: v.optional(v.number()),
+    total_recipients: v.optional(v.number()),
+    sent_count: v.optional(v.number()),
+    failed_count: v.optional(v.number()),
+    created_by: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"])
+    .index("by_created_at", ["createdAt"]),
+
+  // Email marketing campaign logs
+  email_campaign_logs: defineTable({
+    campaign_id: v.id("email_campaigns"),
+    recipient_email: v.string(),
+    recipient_id: v.optional(v.id("users")),
+    status: v.union(
+      v.literal("sent"),
+      v.literal("failed")
+    ),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_campaign", ["campaign_id"])
+    .index("by_status", ["status"]),
 });

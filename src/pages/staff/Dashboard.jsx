@@ -15,6 +15,7 @@ import ReportsManagement from '../../components/staff/ReportsManagement'
 import EventsManagement from '../../components/staff/EventsManagement'
 import ProductsManagement from '../../components/staff/ProductsManagement'
 import NotificationsManagement from '../../components/staff/NotificationsManagement'
+import EmailMarketing from '../../components/staff/EmailMarketing'
 import PayrollManagement from '../../components/staff/PayrollManagement'
 import DashboardFooter from '../../components/common/DashboardFooter'
 import { useQuery } from 'convex/react'
@@ -177,6 +178,9 @@ function StaffDashboard() {
       case 'payroll':
         return <PayrollManagement onRefresh={handleRefresh} user={user} />
 
+      case 'email_marketing':
+        return <EmailMarketing onRefresh={handleRefresh} />
+
       default:
         return renderOverview()
     }
@@ -232,7 +236,8 @@ function StaffDashboard() {
     { id: 'reports', label: 'Reports', icon: 'chart' },
     { id: 'payroll', label: 'Payroll', icon: 'dollar-sign' },
     { id: 'products', label: 'Products', icon: 'package' },
-    { id: 'notifications', label: 'Notifications', icon: 'bell' }
+    { id: 'notifications', label: 'Notifications', icon: 'bell' },
+    { id: 'email_marketing', label: 'Email Marketing', icon: 'mail' }
   ]
 
   console.log('StaffDashboard - User:', user)
