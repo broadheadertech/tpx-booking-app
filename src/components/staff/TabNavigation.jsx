@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { LayoutDashboard, Users, Calendar, Scissors, Gift, BarChart3, UserCheck, CalendarDays, Package, Bell, ChevronDown, MoreHorizontal, Building, Settings, DollarSign } from 'lucide-react'
+import { LayoutDashboard, Users, Calendar, Scissors, Gift, BarChart3, UserCheck, CalendarDays, Package, Bell, ChevronDown, MoreHorizontal, Building, Settings, DollarSign, Mail } from 'lucide-react'
 
 const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount = 0 }) => {
   const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false)
@@ -34,14 +34,15 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
       products: Package,
       notifications: Bell,
       branches: Building,
-      payroll: DollarSign
+      payroll: DollarSign,
+      email_marketing: Mail
     }
     return iconMap[tabId] || LayoutDashboard
   }
 
   // Define primary tabs (most frequently used)  
   const primaryTabIds = ['overview', 'bookings', 'barbers', 'users', 'services', 'vouchers', 'payroll']
-  const secondaryTabIds = ['customers', 'reports', 'events', 'products', 'notifications']
+  const secondaryTabIds = ['customers', 'reports', 'events', 'products', 'notifications', 'email_marketing']
   
   const primaryTabs = tabs.filter(tab => primaryTabIds.includes(tab.id))
   const secondaryTabs = tabs.filter(tab => secondaryTabIds.includes(tab.id))

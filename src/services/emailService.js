@@ -212,11 +212,50 @@ export const getEmailServiceStatus = () => {
   }
 }
 
+/**
+ * Send marketing email (generic) using EmailJS.
+ * Allows overriding template ID and parameters for campaigns.
+ */
+export const sendMarketingEmail = async ({ to_email, to_name, subject, html_content, templateId }) => {
+  try {
+    if (!EMAILJS_SERVICE_ID || EMAILJS_SERVICE_ID === 'your_service_id') {
+      return { success: false, error: 'Email service not configured' }
+    }
+    if (!EMAILJS_PUBLIC_KEY || EMAILJS_PUBLIC_KEY === 'your_public_key') {
+      return { success: false, error: 'Email public key not configured' }
+    }
+
+    // Allow custom template; fall back to default configured template
+    const tplId = templateId || EMAILJS_TEMPLATE_ID
+    if (!tplId || tplId === 'your_template_id') {
+      return { success: false, error: 'Email template not configured' }
+    }
+
+    const params = {
+      to_email,
+      to_name,
+      subject,
+      html_content,
+      company_name: 'TPX Barber'
+    }
+
+    const response = await emailjs.send(
+      EMAILJS_SERVICE_ID,
+      tplId,
+      params
+    )
+    return { success: true, response }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+
 export default {
   sendWelcomeEmail,
   sendVoucherEmail,
   sendBookingConfirmationEmail,
   sendReceiptEmail,
   isEmailServiceConfigured,
-  getEmailServiceStatus
+  getEmailServiceStatus,
+  sendMarketingEmail
 }
