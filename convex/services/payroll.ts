@@ -304,23 +304,22 @@ export const calculateBarberEarnings = query({
     const daysWorked = bookingDaySet.size;
     const dailyRate = barberDailyRate?.daily_rate || 0;
 
-    // New rule: for each day, salary = max(daily_rate, commission_for_that_day)
-    const perDayCommissionMap = new Map<string, number>();
+    // New rule: for each day, salary = max(daily_rate, daily_total_barber_sales)
+    const perDaySalesMap = new Map<string, number>();
     for (const b of bookingsInPeriod) {
       const key = (b.date as string) || new Date(b.updatedAt).toISOString().split('T')[0];
-      const rate = serviceRateMap.get(String(b.service)) ?? fallbackRate;
-      const commission = ((b.price || 0) * (rate || 0)) / 100;
-      perDayCommissionMap.set(key, (perDayCommissionMap.get(key) || 0) + commission);
+      const sale = (b.price || 0);
+      perDaySalesMap.set(key, (perDaySalesMap.get(key) || 0) + sale);
     }
     let finalDailySalaryTotal = 0;
     for (const key of bookingDaySet) {
-      const dayCommission = perDayCommissionMap.get(key) || 0;
-      finalDailySalaryTotal += Math.max(dailyRate, dayCommission);
+      const daySales = perDaySalesMap.get(key) || 0;
+      finalDailySalaryTotal += Math.max(dailyRate, daySales);
     }
     const dailyPay = finalDailySalaryTotal; // store the final daily salary sum
 
-    // Keep raw service commission for reference, but do not add on top of dailyPay
-    const grossCommission = serviceCommission;
+    // Keep raw service commission for reference only (not used in pay calculus)
+    const grossCommission = 0; // hide percentage-based commission in records
     
     // Calculate deductions based on the final daily salary total
     const taxRate = payrollSettings?.tax_rate || 0;
@@ -568,14 +567,7 @@ export const getBookingsSummaryForPrint = action({
     const barber = await ctx.runQuery(api.services.barbers.getBarberById, { id: args.barber_id as any });
     if (!barber) return { groups: [], grandTotalAmount: 0, grandTotalCommission: 0 };
 
-    // Rates: per service + fallback
-    const serviceRates = await ctx.runQuery(api.services.payroll.getServiceCommissionRatesByBranch, { branch_id: barber.branch_id });
-    const rateMap = new Map<string, number>();
-    for (const r of serviceRates || []) rateMap.set(String(r.service_id), r.commission_rate);
-
-    const barberRate = await ctx.runQuery(api.services.payroll.getBarberCommissionRate, { barber_id: args.barber_id as any });
-    const settings = await ctx.runQuery(api.services.payroll.getPayrollSettingsByBranch, { branch_id: barber.branch_id });
-    const fallbackRate = (barberRate?.commission_rate) || (settings?.default_commission_rate || 10);
+    // We base final salary on daily total sales; no percentage commission required here
 
     // Bookings
     const items = await ctx.runQuery(api.services.payroll.getBookingsByBarberAndPeriod, args as any);
@@ -584,13 +576,12 @@ export const getBookingsSummaryForPrint = action({
     const groupsMap = new Map<string, any>();
     for (const b of items || []) {
       const key = b.date || new Date(b.updatedAt).toISOString().split('T')[0];
-      const rate = rateMap.get(String(b.service_id)) ?? fallbackRate;
-      const commission = (b.price || 0) * rate / 100;
+      const sale = (b.price || 0);
       if (!groupsMap.has(key)) groupsMap.set(key, { date: key, rows: [], totalAmount: 0, totalCommission: 0 });
       const g = groupsMap.get(key);
-      g.rows.push({ ...b, commission, commission_rate: rate });
-      g.totalAmount += b.price || 0;
-      g.totalCommission += commission;
+      g.rows.push({ ...b, commission: sale, commission_rate: undefined });
+      g.totalAmount += sale;
+      g.totalCommission += sale; // treat "commission" as daily sales for compatibility with UI
     }
 
     const groups = Array.from(groupsMap.values()).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -603,10 +594,10 @@ export const getBookingsSummaryForPrint = action({
       const nowRate = await ctx.runQuery(api.services.payroll.getBarberDailyRate, { barber_id: args.barber_id as any });
       dailyRate = nowRate?.daily_rate || 0;
     }
-    // Compute final per-day pay as max(dailyRate, day commission)
+    // Compute final per-day pay as max(dailyRate, day sales)
     for (const g of groups) {
       g.dailyRate = dailyRate;
-      g.selectedPay = Math.max(dailyRate, g.totalCommission);
+      g.selectedPay = Math.max(dailyRate, g.totalAmount);
     }
     const grandTotalSelectedPay = groups.reduce((s,g) => s + (g.selectedPay || 0), 0);
     return { groups, grandTotalAmount, grandTotalCommission, dailyRate, grandTotalSelectedPay };
