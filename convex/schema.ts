@@ -407,4 +407,202 @@ export default defineSchema({
     .index("by_service", ["service_id"])
     .index("by_rating", ["rating"])
     .index("by_created_at", ["created_at"]),
+
+  // Payroll settings table for branch-specific payroll configuration
+  payroll_settings: defineTable({
+    branch_id: v.id("branches"),
+    default_commission_rate: v.number(), // Default commission percentage (e.g., 10 for 10%)
+    payout_frequency: v.union(
+      v.literal("weekly"),
+      v.literal("bi_weekly"),
+      v.literal("monthly")
+    ),
+    payout_day: v.number(), // Day of week (0-6) for weekly, day of month (1-31) for monthly
+    tax_rate: v.optional(v.number()), // Tax percentage to deduct
+    is_active: v.boolean(),
+    created_by: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_active", ["is_active"]),
+
+  // Barber commission rates table for individual barber commission overrides
+  barber_commission_rates: defineTable({
+    barber_id: v.id("barbers"),
+    branch_id: v.id("branches"),
+    commission_rate: v.number(), // Individual commission percentage
+    effective_from: v.number(), // When this rate becomes effective
+    effective_until: v.optional(v.number()), // When this rate expires (null for current)
+    is_active: v.boolean(),
+    created_by: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_barber", ["barber_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_effective_from", ["effective_from"])
+    .index("by_active", ["is_active"])
+    .index("by_barber_active", ["barber_id", "is_active"]),
+
+  // Payroll periods table to track payroll calculation periods
+  payroll_periods: defineTable({
+    branch_id: v.id("branches"),
+    period_start: v.number(), // Start timestamp of payroll period
+    period_end: v.number(), // End timestamp of payroll period
+    period_type: v.union(
+      v.literal("weekly"),
+      v.literal("bi_weekly"),
+      v.literal("monthly")
+    ),
+    status: v.union(
+      v.literal("draft"), // Period created but not finalized
+      v.literal("calculated"), // Earnings calculated but not paid
+      v.literal("paid"), // All payments processed
+      v.literal("cancelled") // Period cancelled
+    ),
+    total_earnings: v.number(), // Total earnings for all barbers in this period
+    total_commissions: v.number(), // Total commission payouts
+    total_deductions: v.number(), // Total tax/other deductions
+    calculated_at: v.optional(v.number()), // When calculations were completed
+    paid_at: v.optional(v.number()), // When payments were processed
+    calculated_by: v.optional(v.id("users")), // Who calculated the payroll
+    paid_by: v.optional(v.id("users")), // Who processed payments
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_period_start", ["period_start"])
+    .index("by_period_end", ["period_end"])
+    .index("by_status", ["status"])
+    .index("by_branch_status", ["branch_id", "status"]),
+
+  // Payroll records table for individual barber payroll records
+  payroll_records: defineTable({
+    payroll_period_id: v.id("payroll_periods"),
+    barber_id: v.id("barbers"),
+    branch_id: v.id("branches"),
+    
+    // Service earnings breakdown
+    total_services: v.number(), // Number of services completed
+    total_service_revenue: v.number(), // Total revenue from services
+    commission_rate: v.number(), // Commission rate used for calculation (legacy/fallback)
+    gross_commission: v.number(), // Commission before deductions
+    // Daily rate additions
+    daily_rate: v.optional(v.number()), // Daily base rate applied
+    days_worked: v.optional(v.number()), // Distinct days with qualifying work
+    daily_pay: v.optional(v.number()), // Calculated daily rate pay
+    
+    // Transaction earnings breakdown (POS)
+    total_transactions: v.number(), // Number of POS transactions
+    total_transaction_revenue: v.number(), // Revenue from POS transactions
+    transaction_commission: v.number(), // Commission from POS transactions
+    
+    // Booking details snapshot (for reporting/printing)
+    bookings_detail: v.optional(v.array(v.object({
+      id: v.id("bookings"),
+      booking_code: v.string(),
+      date: v.string(),
+      time: v.string(),
+      price: v.number(),
+      service_name: v.string(),
+      customer_name: v.string(),
+      updatedAt: v.number(),
+    }))),
+    
+    // Deductions
+    tax_deduction: v.number(), // Tax deducted
+    other_deductions: v.number(), // Other deductions (insurance, etc.)
+    total_deductions: v.number(), // Total deductions
+    
+    // Final amounts
+    net_pay: v.number(), // Final amount to be paid
+    
+    // Payment tracking
+    payment_method: v.optional(v.union(
+      v.literal("cash"),
+      v.literal("bank_transfer"),
+      v.literal("check"),
+      v.literal("digital_wallet")
+    )),
+    payment_reference: v.optional(v.string()), // Bank transfer ref, check number, etc.
+    paid_at: v.optional(v.number()), // When payment was made
+    paid_by: v.optional(v.id("users")), // Who processed the payment
+    
+    // Status and notes
+    status: v.union(
+      v.literal("calculated"), // Calculated but not paid
+      v.literal("paid"), // Payment completed
+      v.literal("cancelled") // Record cancelled
+    ),
+    notes: v.optional(v.string()),
+    
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_payroll_period", ["payroll_period_id"])
+    .index("by_barber", ["barber_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"])
+    .index("by_paid_at", ["paid_at"])
+    .index("by_barber_period", ["barber_id", "payroll_period_id"]),
+
+  // Service commission rates table (per service, per branch)
+  service_commission_rates: defineTable({
+    branch_id: v.id("branches"),
+    service_id: v.id("services"),
+    commission_rate: v.number(), // Percentage for this service
+    effective_from: v.number(),
+    effective_until: v.optional(v.number()),
+    is_active: v.boolean(),
+    created_by: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_service", ["service_id"])
+    .index("by_branch_service", ["branch_id", "service_id"])
+    .index("by_active", ["is_active"]),
+
+  // Barber daily rates table
+  barber_daily_rates: defineTable({
+    barber_id: v.id("barbers"),
+    branch_id: v.id("branches"),
+    daily_rate: v.number(),
+    effective_from: v.number(),
+    effective_until: v.optional(v.number()),
+    is_active: v.boolean(),
+    created_by: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_barber", ["barber_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_barber_active", ["barber_id", "is_active"]),
+
+  // Payroll adjustments table for manual adjustments (bonuses, deductions, etc.)
+  payroll_adjustments: defineTable({
+    payroll_record_id: v.id("payroll_records"),
+    barber_id: v.id("barbers"),
+    branch_id: v.id("branches"),
+    adjustment_type: v.union(
+      v.literal("bonus"), // Additional payment
+      v.literal("deduction"), // Additional deduction
+      v.literal("correction") // Correction to previous calculation
+    ),
+    amount: v.number(), // Positive for bonus, negative for deduction
+    reason: v.string(), // Reason for adjustment
+    description: v.optional(v.string()), // Additional details
+    applied_by: v.id("users"), // Who applied the adjustment
+    approved_by: v.optional(v.id("users")), // Who approved the adjustment
+    is_approved: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_payroll_record", ["payroll_record_id"])
+    .index("by_barber", ["barber_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_type", ["adjustment_type"])
+    .index("by_approved", ["is_approved"]),
 });

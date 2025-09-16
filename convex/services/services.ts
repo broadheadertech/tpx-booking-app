@@ -140,9 +140,10 @@ export const deleteService = mutation({
   },
 });
 
-// Bulk insert services from CSV data
+// Bulk insert services from CSV data (deprecated - use bulkInsertServicesForBranch instead)
 export const bulkInsertServices = mutation({
   args: {
+    branch_id: v.id("branches"),
     services: v.array(v.object({
       name: v.string(),
       description: v.string(),
@@ -152,14 +153,14 @@ export const bulkInsertServices = mutation({
   },
   handler: async (ctx, args) => {
     const insertedServices: string[] = [];
-    
+
     for (const service of args.services) {
       // Determine category based on service name/description
       let category = "haircut"; // default category
-      
+
       const serviceName = service.name.toLowerCase();
       const serviceDesc = service.description.toLowerCase();
-      
+
       if (serviceName.includes("beard") || serviceName.includes("mustache") || serviceDesc.includes("shav")) {
         category = "beard-care";
       } else if (serviceName.includes("hair spa") || serviceName.includes("treatment") || serviceName.includes("scalp")) {
@@ -169,21 +170,211 @@ export const bulkInsertServices = mutation({
       } else if (serviceName.includes("package") || serviceName.includes("elite") || serviceName.includes("deluxe")) {
         category = "premium-package";
       }
-      
+
       const serviceId = await ctx.db.insert("services", {
         name: service.name,
         description: service.description,
         price: service.price,
         duration_minutes: service.duration_minutes,
         category: category,
+        branch_id: args.branch_id,
         is_active: true,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
-      
+
       insertedServices.push(serviceId);
     }
-    
+
+    return {
+      success: true,
+      insertedCount: insertedServices.length,
+      serviceIds: insertedServices
+    };
+  },
+});
+
+// Bulk insert services for a specific branch
+export const bulkInsertServicesForBranch = mutation({
+  args: {
+    branch_id: v.id("branches"),
+    services: v.array(v.object({
+      name: v.string(),
+      description: v.string(),
+      duration_minutes: v.number(),
+      price: v.number(),
+    }))
+  },
+  handler: async (ctx, args) => {
+    const insertedServices: string[] = [];
+
+    for (const service of args.services) {
+      // Determine category based on service name/description
+      let category = "haircut"; // default category
+
+      const serviceName = service.name.toLowerCase();
+      const serviceDesc = service.description.toLowerCase();
+
+      if (serviceName.includes("beard") || serviceName.includes("mustache") || serviceDesc.includes("shav")) {
+        category = "beard-care";
+      } else if (serviceName.includes("hair spa") || serviceName.includes("treatment") || serviceName.includes("scalp")) {
+        category = "hair-treatment";
+      } else if (serviceName.includes("color") || serviceName.includes("perm") || serviceName.includes("tattoo")) {
+        category = "hair-styling";
+      } else if (serviceName.includes("package") || serviceName.includes("elite") || serviceName.includes("deluxe")) {
+        category = "premium-package";
+      }
+
+      const serviceId = await ctx.db.insert("services", {
+        name: service.name,
+        description: service.description,
+        price: service.price,
+        duration_minutes: service.duration_minutes,
+        category: category,
+        branch_id: args.branch_id,
+        is_active: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      insertedServices.push(serviceId);
+    }
+
+    return {
+      success: true,
+      insertedCount: insertedServices.length,
+      serviceIds: insertedServices
+    };
+  },
+});
+
+// Insert default services for new branch
+export const insertDefaultServicesForBranch = mutation({
+  args: {
+    branch_id: v.id("branches")
+  },
+  handler: async (ctx, args) => {
+    const defaultServices = [
+      {
+        name: "Tipuno X Classico",
+        description: "Consultation, Haircut",
+        duration_minutes: 30,
+        price: 150.00
+      },
+      {
+        name: "Tipuno X Signature",
+        description: "Consultation, Haircut, Rinse Hot and Cold Towel Finish",
+        duration_minutes: 60,
+        price: 500.00
+      },
+      {
+        name: "Tipuno X Deluxe",
+        description: "Consultation, Haircut, Hair Spa Treatment, Rinse Hot and Cold Towel Finish",
+        duration_minutes: 90,
+        price: 800.00
+      },
+      {
+        name: "Beard Shave/Shaping/Sculpting",
+        description: "More than a shave. It's a service you'll feel.",
+        duration_minutes: 30,
+        price: 200.00
+      },
+      {
+        name: "FACVNDO ELITE BARBERING SERVICE",
+        description: "If you are looking for wedding haircuts, trust the elite hands that turn grooms into legends.",
+        duration_minutes: 0,
+        price: 10000.00
+      },
+      {
+        name: "Package 1",
+        description: "Consultation, Haircut, Shaving, Styling",
+        duration_minutes: 45,
+        price: 500.00
+      },
+      {
+        name: "Package 2",
+        description: "Consultation, Haircut, Hair Color or With Single Bleach, Rinse, Styling.\nNote: Short hair only, add 250 per length",
+        duration_minutes: 60,
+        price: 850.00
+      },
+      {
+        name: "Package 3",
+        description: "Consultation, Haircut, Hair Color or With Single Bleach, Hair Spa Treatment, Rinse, Styling.\nNote: Short hair only, add 250 per length",
+        duration_minutes: 60,
+        price: 1400.00
+      },
+      {
+        name: "Mustache/Beard Trim",
+        description: "No Description with this product yet.",
+        duration_minutes: 30,
+        price: 170.00
+      },
+      {
+        name: "Hair Spa",
+        description: "No description for this service yet.",
+        duration_minutes: 30,
+        price: 600.00
+      },
+      {
+        name: "Hair and Scalp Treatment",
+        description: "No description for this product yet.",
+        duration_minutes: 60,
+        price: 1500.00
+      },
+      {
+        name: "Hair Color",
+        description: "No description for this product yet.",
+        duration_minutes: 60,
+        price: 800.00
+      },
+      {
+        name: "Perm",
+        description: "No description for this product yet.",
+        duration_minutes: 60,
+        price: 1500.00
+      },
+      {
+        name: "Hair Tattoo",
+        description: "No description for this product yet.",
+        duration_minutes: 60,
+        price: 100.00
+      }
+    ];
+
+    const insertedServices: string[] = [];
+
+    for (const service of defaultServices) {
+      // Determine category based on service name/description
+      let category = "haircut"; // default category
+
+      const serviceName = service.name.toLowerCase();
+      const serviceDesc = service.description.toLowerCase();
+
+      if (serviceName.includes("beard") || serviceName.includes("mustache") || serviceDesc.includes("shav")) {
+        category = "beard-care";
+      } else if (serviceName.includes("hair spa") || serviceName.includes("treatment") || serviceName.includes("scalp")) {
+        category = "hair-treatment";
+      } else if (serviceName.includes("color") || serviceName.includes("perm") || serviceName.includes("tattoo")) {
+        category = "hair-styling";
+      } else if (serviceName.includes("package") || serviceName.includes("elite") || serviceName.includes("deluxe")) {
+        category = "premium-package";
+      }
+
+      const serviceId = await ctx.db.insert("services", {
+        name: service.name,
+        description: service.description,
+        price: service.price,
+        duration_minutes: service.duration_minutes,
+        category: category,
+        branch_id: args.branch_id,
+        is_active: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      insertedServices.push(serviceId);
+    }
+
     return {
       success: true,
       insertedCount: insertedServices.length,

@@ -156,7 +156,6 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
     .sort((a, b) => {
       if (sortBy === 'name') return (a.full_name || '').localeCompare(b.full_name || '')
       if (sortBy === 'rating') return parseFloat(b.rating || 0) - parseFloat(a.rating || 0)
-      if (sortBy === 'revenue') return (b.monthlyRevenue || 0) - (a.monthlyRevenue || 0)
       if (sortBy === 'bookings') return (b.totalBookings || 0) - (a.totalBookings || 0)
       return (a._id || '').localeCompare(b._id || '')
     })
@@ -165,7 +164,6 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
     total: barbers.length,
     active: barbers.filter(b => b.is_active === true).length,
     inactive: barbers.filter(b => b.is_active === false).length,
-    totalRevenue: barbers.reduce((sum, b) => sum + (b.monthlyRevenue || 0), 0),
     avgRating: barbers.length ? barbers.reduce((sum, b) => sum + (b.rating || 0), 0) / barbers.length : 0
   }
 
@@ -173,13 +171,6 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
     return Object.values(schedule || {}).filter(day => day.available).length
   }
 
-  const formatRevenue = (amount) => {
-    return new Intl.NumberFormat('en-PH', {
-      style: 'currency',
-      currency: 'PHP',
-      minimumFractionDigits: 0
-    }).format(amount)
-  }
 
   const handleCreate = () => {
     setEditingBarber(null)
@@ -310,15 +301,6 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-300">Total Revenue</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{formatRevenue(stats.totalRevenue)}</p>
-            </div>
-            <DollarSign className="h-8 w-8 text-[#FF8C42] opacity-30" />
-          </div>
-        </div>
       </div>
 
       {/* Controls */}
@@ -356,7 +338,6 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
             >
               <option value="name">Sort by Name</option>
               <option value="rating">Sort by Rating</option>
-              <option value="revenue">Sort by Revenue</option>
               <option value="bookings">Sort by Bookings</option>
             </select>
           </div>
@@ -396,7 +377,6 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Barber</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Contact</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Performance</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Schedule</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
@@ -450,10 +430,6 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
                       <div className="text-sm text-white">{barber.email}</div>
                       <div className="text-sm text-gray-400">{barber.phone || 'N/A'}</div>
                       <div className="text-xs text-gray-500 mt-1">{barber.specialties?.length || 0} specialties</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-white">{formatRevenue(barber.monthlyRevenue || 0)}</div>
-                      <div className="text-sm text-gray-400">{barber.totalBookings || 0} bookings</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-white">{workingDays}/week</div>

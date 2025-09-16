@@ -15,6 +15,8 @@ import ReportsManagement from '../../components/staff/ReportsManagement'
 import EventsManagement from '../../components/staff/EventsManagement'
 import ProductsManagement from '../../components/staff/ProductsManagement'
 import NotificationsManagement from '../../components/staff/NotificationsManagement'
+import PayrollManagement from '../../components/staff/PayrollManagement'
+import DashboardFooter from '../../components/common/DashboardFooter'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
@@ -172,6 +174,9 @@ function StaffDashboard() {
       case 'notifications':
         return <NotificationsManagement onRefresh={handleRefresh} />
 
+      case 'payroll':
+        return <PayrollManagement onRefresh={handleRefresh} user={user} />
+
       default:
         return renderOverview()
     }
@@ -225,6 +230,7 @@ function StaffDashboard() {
     { id: 'customers', label: 'Customers', icon: 'users' },
     { id: 'events', label: 'Events', icon: 'calendar' },
     { id: 'reports', label: 'Reports', icon: 'chart' },
+    { id: 'payroll', label: 'Payroll', icon: 'dollar-sign' },
     { id: 'products', label: 'Products', icon: 'package' },
     { id: 'notifications', label: 'Notifications', icon: 'bell' }
   ]
@@ -232,31 +238,35 @@ function StaffDashboard() {
   console.log('StaffDashboard - User:', user)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0F0F0F] via-[#1A1A1A] to-[#2A2A2A]">
+    <div className="min-h-screen bg-gradient-to-br from-[#0F0F0F] via-[#1A1A1A] to-[#2A2A2A] flex flex-col">
       <DashboardHeader onLogout={handleLogout} user={user} />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="space-y-12">
-          <QuickActions 
-            onAddCustomer={handleAddCustomer}
-            onCreateBooking={handleCreateBooking}
-            onCreateVoucher={handleCreateVoucher}
-            onVoucherScanned={handleVoucherScanned}
-            onBookingScanned={handleBookingScanned}
-            activeModal={activeModal}
-            setActiveModal={setActiveModal}
-          />
-          <TabNavigation 
-            tabs={tabs} 
-            activeTab={activeTab} 
-            onTabChange={setActiveTab}
-            incompleteBookingsCount={incompleteBookingsCount}
-          />
-          <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-3xl shadow-2xl border border-[#333333]/50 p-10 backdrop-blur-sm">
-            {renderTabContent()}
+      <div className="flex-1">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="space-y-12">
+            <QuickActions 
+              onAddCustomer={handleAddCustomer}
+              onCreateBooking={handleCreateBooking}
+              onCreateVoucher={handleCreateVoucher}
+              onVoucherScanned={handleVoucherScanned}
+              onBookingScanned={handleBookingScanned}
+              activeModal={activeModal}
+              setActiveModal={setActiveModal}
+            />
+            <TabNavigation 
+              tabs={tabs} 
+              activeTab={activeTab} 
+              onTabChange={setActiveTab}
+              incompleteBookingsCount={incompleteBookingsCount}
+            />
+            <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-3xl shadow-2xl border border-[#333333]/50 p-10 backdrop-blur-sm">
+              {renderTabContent()}
+            </div>
           </div>
         </div>
       </div>
+      
+      <DashboardFooter />
     </div>
   )
 }
