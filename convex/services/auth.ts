@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { mutation, query, action } from "../_generated/server";
+import { api } from "../_generated/api";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 
 // Generate a simple session token (in production, use proper JWT or similar)
@@ -205,6 +206,142 @@ export const logoutUser = mutation({
     }
 
     return { success: true };
+  },
+});
+
+// Social login with Facebook: action to verify token via Facebook Graph API,
+// then delegate to a mutation that creates/returns a session.
+export const loginWithFacebook = action({
+  args: {
+    access_token: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Strictly validate the short-lived token with debug_token using an App Token
+    const appId = process.env.FACEBOOK_CLIENT_ID;
+    const appSecret = process.env.FACEBOOK_CLIENT_SECRET;
+    let accessTokenToUse = args.access_token;
+
+    if (appId && appSecret) {
+      const appToken = `${appId}|${appSecret}`;
+      const debugUrl = `https://graph.facebook.com/v18.0/debug_token?input_token=${encodeURIComponent(args.access_token)}&access_token=${encodeURIComponent(appToken)}`;
+      const debugRes = await fetch(debugUrl);
+      const debugJson = await debugRes.json();
+      if (!debugRes.ok || !debugJson?.data?.is_valid || debugJson?.data?.app_id !== appId) {
+        throw new Error("Invalid Facebook token");
+      }
+      // Optionally exchange for a long-lived token
+      const exchangeUrl = `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId}&client_secret=${appSecret}&fb_exchange_token=${encodeURIComponent(args.access_token)}`;
+      const exchangeRes = await fetch(exchangeUrl, { method: 'POST' });
+      if (exchangeRes.ok) {
+        const exchangeJson = await exchangeRes.json();
+        if (exchangeJson?.access_token) {
+          accessTokenToUse = exchangeJson.access_token as string;
+        }
+      }
+    }
+
+    // Fetch profile with the verified token
+    const fields = "id,name,email,picture";
+    const res = await fetch(`https://graph.facebook.com/v18.0/me?fields=${fields}&access_token=${accessTokenToUse}`);
+    if (!res.ok) {
+      throw new Error("Failed to fetch Facebook profile");
+    }
+    const profile: any = await res.json();
+    if (!profile || (!profile.email && !profile.id)) {
+      throw new Error("Invalid Facebook profile response");
+    }
+
+    // Pass minimal normalized info to mutation
+    const email = profile.email || `fb_${profile.id}@facebook.local`;
+    const name = profile.name || "Facebook User";
+    const avatar = profile.picture?.data?.url as string | undefined;
+    return await ctx.runMutation(api.services.auth.loginWithFacebookInternal, {
+      email,
+      name,
+      avatar,
+      facebook_id: profile.id,
+    } as any);
+  },
+});
+
+export const loginWithFacebookInternal = mutation({
+  args: {
+    email: v.string(),
+    name: v.string(),
+    avatar: v.optional(v.string()),
+    facebook_id: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Try to find user by email
+    let user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+
+    const now = Date.now();
+    if (!user) {
+      // Create a new customer user. Username unique based on email or fb id
+      const baseUsername = (args.email.split("@")[0] || `fb_${args.facebook_id}`).replace(/[^a-zA-Z0-9_\-\.]/g, "");
+      let username = baseUsername || `fb_${args.facebook_id}`;
+      // Ensure uniqueness by appending random suffix if needed
+      const existingUsername = await ctx.db
+        .query("users")
+        .withIndex("by_username", (q) => q.eq("username", username))
+        .first();
+      if (existingUsername) {
+        username = `${baseUsername}_${Math.random().toString(36).slice(2, 6)}`;
+      }
+
+      const randomPassword = generateSessionToken(); // placeholder
+      const userId = await ctx.db.insert("users", {
+        username,
+        email: args.email,
+        password: randomPassword,
+        mobile_number: "", // unknown at signup
+        address: undefined,
+        nickname: args.name,
+        birthday: undefined,
+        role: "customer",
+        branch_id: undefined,
+        is_active: true,
+        avatar: args.avatar,
+        bio: undefined,
+        skills: [],
+        isVerified: true,
+        createdAt: now,
+        updatedAt: now,
+      });
+      user = await ctx.db.get(userId)!;
+    }
+
+    if (!user) {
+      throw new Error("User not found after Facebook login");
+    }
+
+    // Create a session for this user
+    const sessionToken = generateSessionToken();
+    await ctx.db.insert("sessions", {
+      userId: user._id,
+      token: sessionToken,
+      expiresAt: now + 30 * 24 * 60 * 60 * 1000,
+      createdAt: now,
+    });
+
+    return {
+      sessionToken,
+      user: {
+        _id: user._id,
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        nickname: user.nickname,
+        mobile_number: user.mobile_number,
+        role: user.role,
+        branch_id: user.branch_id,
+        is_active: user.is_active,
+        avatar: user.avatar,
+      },
+    };
   },
 });
 

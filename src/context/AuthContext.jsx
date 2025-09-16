@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { useQuery, useMutation } from 'convex/react'
+import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 const AuthContext = createContext(null)
 
@@ -39,6 +39,7 @@ export const AuthProvider = ({ children }) => {
 
   // Mutations
   const loginMutation = useMutation(api.services.auth.loginUser)
+  const facebookLoginAction = useAction(api.services.auth.loginWithFacebook)
   const logoutMutation = useMutation(api.services.auth.logoutUser)
 
   useEffect(() => {
@@ -117,6 +118,33 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const loginWithFacebook = async (accessToken) => {
+    try {
+      const result = await facebookLoginAction({ access_token: accessToken })
+      if (result?.sessionToken && result?.user) {
+        localStorage.setItem('session_token', result.sessionToken)
+        setSessionToken(result.sessionToken)
+        setIsAuthenticated(true)
+        setUser({
+          _id: result.user._id,
+          id: result.user._id,
+          username: result.user.username,
+          email: result.user.email,
+          nickname: result.user.nickname,
+          mobile_number: result.user.mobile_number,
+          role: result.user.role,
+          is_staff: result.user.role === 'staff' || result.user.role === 'admin' || result.user.role === 'super_admin' || result.user.role === 'branch_admin',
+          branch_id: result.user.branch_id
+        })
+        return { success: true, data: result.user }
+      }
+      return { success: false, error: 'Facebook login failed' }
+    } catch (err) {
+      console.error('Facebook login error:', err)
+      return { success: false, error: err.message || 'Facebook login failed' }
+    }
+  }
+
   const logout = async () => {
     try {
       if (sessionToken) {
@@ -139,6 +167,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     login,
     logout,
+    loginWithFacebook,
     sessionToken
   }
 

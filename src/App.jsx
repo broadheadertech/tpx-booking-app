@@ -6,6 +6,7 @@ import Landing from './pages/Landing'
 import PlatformSelection from './pages/PlatformSelection'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
+import FacebookCallback from './pages/auth/FacebookCallback'
 import StaffDashboard from './pages/staff/Dashboard'
 import POS from './pages/staff/POS'
 import AdminDashboard from './pages/admin/Dashboard'
@@ -33,6 +34,7 @@ function App() {
                 </AuthRedirect>
               } 
             />
+            <Route path="/auth/facebook/callback" element={<FacebookCallback />} />
             <Route 
               path="/auth/register" 
               element={

@@ -439,14 +439,10 @@ const POS = () => {
       // Handle voucher ID conversion if needed
       let voucherApplied = currentTransaction.voucher_applied
       if (typeof voucherApplied === 'string') {
-        if (getVoucherByCode?._id) {
+        const looksLikeConvexId = voucherApplied.includes(':')
+        if (!looksLikeConvexId && getVoucherByCode?._id) {
           console.log('Converting voucher code to ID via query:', voucherApplied)
           voucherApplied = getVoucherByCode._id
-        } else {
-          // If it looks like a human-entered code (uppercase), drop it
-          if (/[A-Z]/.test(voucherApplied) && !/[a-z]/.test(voucherApplied)) {
-            voucherApplied = undefined
-          }
         }
       }
       
@@ -462,7 +458,9 @@ const POS = () => {
         products: currentTransaction.products.length > 0 ? currentTransaction.products : undefined,
         subtotal: currentTransaction.subtotal,
         discount_amount: currentTransaction.discount_amount,
-        voucher_applied: voucherApplied || undefined,
+        voucher_applied: (typeof voucherApplied === 'string' && !voucherApplied.includes(':'))
+          ? undefined
+          : voucherApplied || undefined,
         tax_amount: currentTransaction.tax_amount,
         total_amount: currentTransaction.total_amount,
         payment_method: paymentData.payment_method,
@@ -621,7 +619,7 @@ const POS = () => {
                 <div className="flex items-center space-x-3">
                   <h1 className="text-2xl font-bold text-white tracking-tight">POS System</h1>
                   <div className="bg-[#FF8C42]/20 backdrop-blur-sm rounded-full px-2 py-0.5 border border-[#FF8C42]/30">
-                    <span className="text-xs font-semibold text-[#FF8C42]">v2.0.0</span>
+                    <span className="text-xs font-semibold text-[#FF8C42]">v1.0.1</span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2 mt-1">
