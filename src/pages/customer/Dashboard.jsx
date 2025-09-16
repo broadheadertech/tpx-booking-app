@@ -290,9 +290,13 @@ const Dashboard = () => {
                 </div>
                 <button
                   onClick={() => setActiveSection('profile')}
-                  className="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center transition-colors"
+                  className="w-8 h-8 rounded-full overflow-hidden ring-1 ring-white/10 hover:ring-white/20 transition-colors"
                 >
-                  <User className="w-4 h-4 text-gray-300" />
+                  <img
+                    src={(user && user.avatar) ? user.avatar : '/img/avatar_default.jpg'}
+                    alt={user?.username || 'Profile'}
+                    className="w-full h-full object-cover"
+                  />
                 </button>
               </div>
             </div>
