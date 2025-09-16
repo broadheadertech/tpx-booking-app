@@ -16,6 +16,8 @@ import BarberDashboard from './components/barber/BarberDashboard'
 import Kiosk from './pages/Kiosk'
 import PaymentSuccess from './pages/booking/payment/success.jsx'
 import PaymentFailure from './pages/booking/payment/failure.jsx'
+import Policy from './pages/Policy.jsx'
+import AccountDeletion from './pages/AccountDeletion.jsx'
 
 function App() {
   return (
@@ -26,6 +28,8 @@ function App() {
             <Route path="/" element={<Landing />} />
             <Route path="/landing" element={<Landing />} />
             <Route path="/platform-selection" element={<PlatformSelection />} />
+            <Route path="/privacy" element={<Policy />} />
+            <Route path="/account-deletion" element={<AccountDeletion />} />
             <Route 
               path="/auth/login" 
               element={

@@ -120,6 +120,12 @@ const Landing = () => {
               >
                 Book Now
               </button>
+              <button
+                onClick={() => navigate('/privacy')}
+                className="text-gray-300 hover:text-white font-medium px-4 py-2 rounded-lg hover:bg-white/10 transition-all duration-200"
+              >
+                Policy
+              </button>
             </div>
           </div>
         </div>
@@ -631,9 +637,11 @@ const Landing = () => {
             <p className="text-gray-400 mb-4">
               © 2024 TPX Barbershop. All rights reserved.
             </p>
-            <p className="text-gray-500 text-sm">
-              Professional grooming services in Quezon City since 2014.
-            </p>
+            <div className="text-gray-500 text-sm flex items-center justify-center gap-4">
+              <button onClick={() => navigate('/privacy')} className="hover:text-white">Policy</button>
+              <span>•</span>
+              <button onClick={() => navigate('/account-deletion')} className="hover:text-white">Account Deletion</button>
+            </div>
           </div>
         </div>
       </footer>
