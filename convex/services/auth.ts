@@ -240,8 +240,8 @@ export const loginWithFacebook = action({
       }
     }
 
-    // Fetch profile with the verified token
-    const fields = "id,name,email,picture";
+    // Fetch profile with a URL for the profile picture
+    const fields = "id,name,email,picture.type(large)";
     const res = await fetch(`https://graph.facebook.com/v18.0/me?fields=${fields}&access_token=${accessTokenToUse}`);
     if (!res.ok) {
       throw new Error("Failed to fetch Facebook profile");
@@ -312,6 +312,12 @@ export const loginWithFacebookInternal = mutation({
         updatedAt: now,
       });
       user = await ctx.db.get(userId)!;
+    }
+
+    // If user already exists and we have a fresher avatar, update it once
+    if (user && args.avatar && user.avatar !== args.avatar) {
+      await ctx.db.patch(user._id, { avatar: args.avatar, updatedAt: now });
+      user = await ctx.db.get(user._id)!;
     }
 
     if (!user) {

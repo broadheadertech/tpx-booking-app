@@ -57,6 +57,7 @@ export const AuthProvider = ({ children }) => {
           nickname: currentUser.nickname,
           mobile_number: currentUser.mobile_number,
           role: currentUser.role,
+          avatar: currentUser.avatar,
           is_staff: currentUser.role === 'staff' || currentUser.role === 'admin' || currentUser.role === 'super_admin' || currentUser.role === 'branch_admin',
           branch_id: currentUser.branch_id
         })
@@ -95,6 +96,7 @@ export const AuthProvider = ({ children }) => {
           nickname: result.user.nickname,
           mobile_number: result.user.mobile_number,
           role: result.user.role,
+          avatar: result.user.avatar,
           is_staff: result.user.role === 'staff' || result.user.role === 'admin' || result.user.role === 'super_admin' || result.user.role === 'branch_admin',
           branch_id: result.user.branch_id
         })
@@ -133,6 +135,7 @@ export const AuthProvider = ({ children }) => {
           nickname: result.user.nickname,
           mobile_number: result.user.mobile_number,
           role: result.user.role,
+          avatar: result.user.avatar,
           is_staff: result.user.role === 'staff' || result.user.role === 'admin' || result.user.role === 'super_admin' || result.user.role === 'branch_admin',
           branch_id: result.user.branch_id
         })

@@ -112,42 +112,28 @@ const Profile = () => {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
       </div>
-      
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30">
-        <div className="max-w-md mx-auto px-4">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => navigate(-1)}
-                className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center shadow-lg"
-              >
-                <ArrowLeft className="w-5 h-5 text-white" />
-              </button>
-              <div>
-                <h1 className="text-sm font-bold text-white">My Profile</h1>
-                <p className="text-xs font-medium text-[#FF8C42]">Account Settings</p>
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-colors text-sm shadow-lg"
-            >
-              <LogOut className="w-3 h-3" />
-              <span>Logout</span>
-            </button>
-          </div>
-        </div>
-      </div>
 
       {/* Profile Content */}
       <div className="relative z-10 max-w-md mx-auto px-4 py-6 pb-20">
+        {/* Actions Row */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={handleLogout}
+            className="px-3 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-colors text-sm shadow-lg"
+          >
+            Logout
+          </button>
+        </div>
         {/* Profile Header Card */}
         <div className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl shadow-lg border border-[#555555]/30 mb-6 overflow-hidden">
           <div className="bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] px-6 py-6">
             <div className="text-center">
-              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                <User className="w-8 h-8 text-white" />
+              <div className="w-16 h-16 rounded-full overflow-hidden mx-auto mb-3 bg-white/20">
+                <img
+                  src={user?.avatar || '/img/avatar_default.jpg'}
+                  alt={profileData.nickname || profileData.username || 'User'}
+                  className="w-full h-full object-cover"
+                />
               </div>
               <h2 className="text-lg font-bold text-white mb-1">
                 {profileData.nickname || profileData.username || 'User'}
