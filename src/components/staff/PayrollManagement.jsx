@@ -39,6 +39,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const [showDailyRatesModal, setShowDailyRatesModal] = useState(false)
   const [showBookingsModal, setShowBookingsModal] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState(null)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState('')
+  const [deleteTargetPeriod, setDeleteTargetPeriod] = useState(null)
   const [paymentForm, setPaymentForm] = useState({
     payment_method: 'bank_transfer',
     payment_reference: '',
@@ -163,6 +166,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const setBarberDailyRate = useMutation(api.services.payroll.setBarberDailyRate)
   const getBookingsForPrint = useAction(api.services.payroll.getBookingsForPrint)
   const getBookingsSummaryForPrint = useAction(api.services.payroll.getBookingsSummaryForPrint)
+  const deletePayrollPeriodMutation = useMutation(api.services.payroll.deletePayrollPeriod)
 
   // Initialize settings from data
   useEffect(() => {
@@ -429,10 +433,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
           const tm = (b.time || '--:--').slice(0,5)
           return `<div class="row"><span><span class="muted">${dateLabel} ${tm}</span> — ${b.service_name} <span class="muted">• ${b.customer_name} • ${b.booking_code}</span></span><span>${format(b.price)} (${format(b.commission)})</span></div>`
         }).join('')
-        const footer = `<div class="row" style="font-weight:600"><span>Total (${dateLabel})</span><span>${format(g.totalAmount)} | Commission: ${format(g.totalCommission)}</span></div>`
+        const footer = `<div class="row" style="font-weight:600"><span>Total (${dateLabel})</span><span>${format(g.totalAmount)} | Commission: ${format(g.totalCommission)} | Selected Pay: ${format(g.selectedPay || 0)}</span></div>`
         return rows + footer + '<hr/>'
       }).join('')
-      const grand = `<div class="row" style="font-weight:800"><span>Grand Total</span><span>${format(record.bookings_summary.grandTotalAmount)} | Commission: ${format(record.bookings_summary.grandTotalCommission)}</span></div>`
+      const grand = `<div class="row" style="font-weight:800"><span>Grand Total</span><span>${format(record.bookings_summary.grandTotalAmount)} | Commission: ${format(record.bookings_summary.grandTotalCommission)} | Final Daily Salary: ${format(record.bookings_summary.grandTotalSelectedPay || 0)}</span></div>`
       bookingsHtml = `<hr/>${blocks}${grand}`
     } else {
       const items = Array.isArray(record.bookings_detail) ? record.bookings_detail : []
@@ -467,7 +471,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
             <div class="row"><span class="muted">Service Revenue</span><span>${format(record.total_service_revenue)}</span></div>
           </div>
           <div>
-            <div class="row"><span class="muted">Daily Pay${typeof record.days_worked==='number' && typeof record.daily_rate==='number' ? ` (${record.days_worked} day${record.days_worked===1?'':'s'} × ${format(record.daily_rate)})` : ''}</span><span>${format(record.daily_pay || 0)}</span></div>
+            <div class="row"><span class="muted">Final Daily Salary (per-day max of rate vs commission)</span><span>${format(record.daily_pay || 0)}</span></div>
             <div class="row"><span class="muted">Tax Deduction</span><span>-${format(record.tax_deduction)}</span></div>
             <div class="row"><span class="muted">Other Deductions</span><span>-${format(record.other_deductions)}</span></div>
             <hr/>
@@ -1405,15 +1409,25 @@ const PayrollManagement = ({ onRefresh, user }) => {
                       </div>
                     </td>
                     <td className="py-4 px-4 text-center">
-                      <button
-                        onClick={() => {
-                          setSelectedPeriod(period)
-                          setActiveView('period')
-                        }}
-                        className="px-3 py-1 bg-[#FF8C42] text-white rounded text-xs hover:bg-[#FF8C42]/90 transition-colors"
-                      >
-                        View Details
-                      </button>
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedPeriod(period)
+                            setActiveView('period')
+                          }}
+                          className="px-3 py-1 bg-[#FF8C42] text-white rounded text-xs hover:bg-[#FF8C42]/90 transition-colors"
+                        >
+                          View Details
+                        </button>
+                        {period.status !== 'paid' && (
+                          <button
+                            onClick={() => { setDeleteTargetPeriod(period); setDeleteConfirmText(''); setShowDeleteModal(true); }}
+                            className="px-3 py-1 bg-red-600/90 text-white rounded text-xs hover:bg-red-600 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1604,13 +1618,11 @@ const PayrollManagement = ({ onRefresh, user }) => {
                           <h5 className="text-sm font-medium text-gray-300 mb-2">Summary</h5>
                           <div className="space-y-1 text-sm">
                             <div className="flex justify-between">
-                              <span className="text-gray-400">Gross Commission:</span>
+                              <span className="text-gray-400">Gross Commission (reference):</span>
                               <span className="text-white">{formatCurrency(record.gross_commission)}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-400">
-                                {`Daily Pay${typeof record.days_worked === 'number' && typeof record.daily_rate === 'number' ? ` (${record.days_worked} ${record.days_worked === 1 ? 'day' : 'days'} × ${formatCurrency(record.daily_rate)})` : ''}:`}
-                              </span>
+                              <span className="text-gray-400">Final Daily Salary (per-day max of rate vs commission):</span>
                               <span className="text-white">{formatCurrency(record.daily_pay || 0)}</span>
                             </div>
                             <div className="flex justify-between">
@@ -1648,6 +1660,54 @@ const PayrollManagement = ({ onRefresh, user }) => {
       </div>
     )
   }
+
+  // Delete Period Modal
+  const renderDeleteModal = () => (
+    showDeleteModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="w-full max-w-md bg-[#1F1F1F] border border-[#333] rounded-xl p-6">
+          <h3 className="text-lg font-semibold text-white mb-2">Delete Payroll Period</h3>
+          <p className="text-sm text-gray-300 mb-4">This will permanently delete the selected payroll period and all its payroll records and adjustments. This action cannot be undone.</p>
+          <p className="text-sm text-gray-400 mb-3">Type <span className="text-red-400 font-semibold">confirm delete record</span> to proceed.</p>
+          <input
+            type="text"
+            value={deleteConfirmText}
+            onChange={(e) => setDeleteConfirmText(e.target.value)}
+            placeholder="confirm delete record"
+            className="w-full h-11 px-4 bg-[#121212] border border-[#333] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500/40"
+          />
+          <div className="flex items-center justify-end gap-2 mt-5">
+            <button
+              onClick={() => setShowDeleteModal(false)}
+              className="px-4 py-2 text-sm bg-[#333] text-gray-200 rounded-lg hover:bg-[#2A2A2A]"
+            >
+              Cancel
+            </button>
+            <button
+              disabled={deleteConfirmText.trim().toLowerCase() !== 'confirm delete record'}
+              onClick={async () => {
+                if (!deleteTargetPeriod) return;
+                try {
+                  setLoading(true)
+                  await deletePayrollPeriodMutation({ payroll_period_id: deleteTargetPeriod._id })
+                  setShowDeleteModal(false)
+                  setDeleteTargetPeriod(null)
+                } catch (err) {
+                  console.error('Delete period error:', err)
+                  setError('Failed to delete payroll period')
+                } finally {
+                  setLoading(false)
+                }
+              }}
+              className={`px-4 py-2 text-sm rounded-lg ${deleteConfirmText.trim().toLowerCase() === 'confirm delete record' ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-red-900/40 text-red-300/60 cursor-not-allowed'}`}
+            >
+              Delete Period
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  )
 
   // Main render
   return (
@@ -1751,6 +1811,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
       {renderServiceRatesModal()}
       {renderDailyRatesModal()}
       {renderBookingsModal()}
+      {renderDeleteModal()}
     </div>
   )
 }
