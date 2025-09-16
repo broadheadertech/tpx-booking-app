@@ -303,19 +303,32 @@ export const calculateBarberEarnings = query({
 
     const daysWorked = bookingDaySet.size;
     const dailyRate = barberDailyRate?.daily_rate || 0;
-    const dailyPay = dailyRate * daysWorked;
 
-    // Commission excludes daily pay; daily pay tracked separately
+    // New rule: for each day, salary = max(daily_rate, commission_for_that_day)
+    const perDayCommissionMap = new Map<string, number>();
+    for (const b of bookingsInPeriod) {
+      const key = (b.date as string) || new Date(b.updatedAt).toISOString().split('T')[0];
+      const rate = serviceRateMap.get(String(b.service)) ?? fallbackRate;
+      const commission = ((b.price || 0) * (rate || 0)) / 100;
+      perDayCommissionMap.set(key, (perDayCommissionMap.get(key) || 0) + commission);
+    }
+    let finalDailySalaryTotal = 0;
+    for (const key of bookingDaySet) {
+      const dayCommission = perDayCommissionMap.get(key) || 0;
+      finalDailySalaryTotal += Math.max(dailyRate, dayCommission);
+    }
+    const dailyPay = finalDailySalaryTotal; // store the final daily salary sum
+
+    // Keep raw service commission for reference, but do not add on top of dailyPay
     const grossCommission = serviceCommission;
     
-    // Calculate deductions
+    // Calculate deductions based on the final daily salary total
     const taxRate = payrollSettings?.tax_rate || 0;
-    // Tax is applied to commission + daily pay
-    const taxDeduction = ((grossCommission + dailyPay) * taxRate) / 100;
+    const taxDeduction = (dailyPay * taxRate) / 100;
     const totalDeductions = taxDeduction;
     
-    // Calculate net pay
-    const netPay = grossCommission + dailyPay - totalDeductions;
+    // Net pay equals the final daily salary total minus deductions
+    const netPay = dailyPay - totalDeductions;
 
     return {
       barber_id: args.barber_id,
@@ -583,7 +596,20 @@ export const getBookingsSummaryForPrint = action({
     const groups = Array.from(groupsMap.values()).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     const grandTotalAmount = groups.reduce((s,g) => s + g.totalAmount, 0);
     const grandTotalCommission = groups.reduce((s,g) => s + g.totalCommission, 0);
-    return { groups, grandTotalAmount, grandTotalCommission };
+    // Determine active daily rate during the period (simple approach: current active rate)
+    // For print display purposes, use the same effective rate as calculation logic used
+    let dailyRate = 0;
+    {
+      const nowRate = await ctx.runQuery(api.services.payroll.getBarberDailyRate, { barber_id: args.barber_id as any });
+      dailyRate = nowRate?.daily_rate || 0;
+    }
+    // Compute final per-day pay as max(dailyRate, day commission)
+    for (const g of groups) {
+      g.dailyRate = dailyRate;
+      g.selectedPay = Math.max(dailyRate, g.totalCommission);
+    }
+    const grandTotalSelectedPay = groups.reduce((s,g) => s + (g.selectedPay || 0), 0);
+    return { groups, grandTotalAmount, grandTotalCommission, dailyRate, grandTotalSelectedPay };
   },
 });
 
@@ -722,8 +748,8 @@ export const calculatePayrollForPeriod = mutation({
       });
 
       totalEarnings += earnings.total_service_revenue + earnings.total_transaction_revenue;
-      // Include daily pay in total payout figure
-      totalCommissions += earnings.gross_commission + (earnings.daily_pay || 0);
+      // New rule: commissions total equals the final daily salary total (not commission + daily rate)
+      totalCommissions += (earnings.daily_pay || 0);
       totalDeductions += earnings.total_deductions;
     }
 
@@ -771,6 +797,42 @@ export const getPayrollRecordsByPeriod = query({
     );
 
     return recordsWithBarbers;
+  },
+});
+
+// Delete a payroll period and all its related records (if not paid)
+export const deletePayrollPeriod = mutation({
+  args: { payroll_period_id: v.id("payroll_periods") },
+  handler: async (ctx, args) => {
+    const period = await ctx.db.get(args.payroll_period_id);
+    if (!period) {
+      throwUserError(ERROR_CODES.PAYROLL_PERIOD_NOT_FOUND);
+    }
+    if (period.status === "paid") {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Cannot delete a paid payroll period");
+    }
+
+    // Fetch all payroll records for this period
+    const records = await ctx.db
+      .query("payroll_records")
+      .withIndex("by_payroll_period", (q) => q.eq("payroll_period_id", args.payroll_period_id))
+      .collect();
+
+    // Delete adjustments for each record, then the record
+    for (const rec of records) {
+      const adjustments = await ctx.db
+        .query("payroll_adjustments")
+        .withIndex("by_payroll_record", (q) => q.eq("payroll_record_id", rec._id))
+        .collect();
+      for (const adj of adjustments) {
+        await ctx.db.delete(adj._id);
+      }
+      await ctx.db.delete(rec._id);
+    }
+
+    // Finally delete the period
+    await ctx.db.delete(args.payroll_period_id);
+    return { success: true };
   },
 });
 
