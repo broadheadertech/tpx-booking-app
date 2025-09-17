@@ -683,20 +683,55 @@ export const calculatePayrollForPeriod = mutation({
       throwUserError(ERROR_CODES.PAYROLL_PERIOD_NOT_FOUND);
     }
 
-    if (period.status !== "draft") {
-      throwUserError(ERROR_CODES.PAYROLL_PERIOD_ALREADY_CALCULATED);
+    if (period.status === "paid") {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Cannot recalculate a payroll period that has already been paid.",
+        "Create a new payroll period for additional adjustments."
+      );
+    }
+
+    // Load existing records to support recalculation
+    const existingRecords = await ctx.db
+      .query("payroll_records")
+      .withIndex("by_payroll_period", (q) => q.eq("payroll_period_id", args.payroll_period_id))
+      .collect();
+
+    // Prevent recalculation when any record has already been paid
+    const hasPaidRecords = existingRecords.some((record) => record.status === "paid");
+    if (hasPaidRecords) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Cannot recalculate a payroll period with paid records.",
+        "Revert the paid status before recalculating or create a new payroll period."
+      );
     }
 
     // Get all active barbers in the branch
-    const barbers = await ctx.db
+    const activeBarbers = await ctx.db
       .query("barbers")
       .withIndex("by_branch", (q) => q.eq("branch_id", period.branch_id))
       .filter((q) => q.eq(q.field("is_active"), true))
       .collect();
 
+    // Merge active barbers with any barbers that already have records for this period
+    const barberMap = new Map(activeBarbers.map((barber) => [barber._id, barber]));
+    for (const record of existingRecords) {
+      if (!barberMap.has(record.barber_id)) {
+        const barber = await ctx.db.get(record.barber_id);
+        if (barber) {
+          barberMap.set(barber._id, barber);
+        }
+      }
+    }
+
+    const barbers = Array.from(barberMap.values());
+    const existingRecordMap = new Map(existingRecords.map((record) => [record.barber_id, record]));
+
     let totalEarnings = 0;
     let totalCommissions = 0;
     let totalDeductions = 0;
+    const timestamp = Date.now();
 
     // Calculate earnings for each barber
     for (const barber of barbers) {
@@ -706,42 +741,49 @@ export const calculatePayrollForPeriod = mutation({
         period_end: period.period_end,
       });
 
-      // Create payroll record for the barber
-      await ctx.db.insert("payroll_records", {
-        payroll_period_id: args.payroll_period_id,
-        barber_id: barber._id,
-        branch_id: period.branch_id,
-        
+      const recordPayload = {
         total_services: earnings.total_services,
         total_service_revenue: earnings.total_service_revenue,
         commission_rate: earnings.commission_rate,
         gross_commission: earnings.gross_commission,
-        
         total_transactions: earnings.total_transactions,
         total_transaction_revenue: earnings.total_transaction_revenue,
         transaction_commission: earnings.transaction_commission,
         bookings_detail: earnings.bookings_detail,
-
-        // Daily rate
         daily_rate: earnings.daily_rate,
         days_worked: earnings.days_worked,
         daily_pay: earnings.daily_pay,
-        
         tax_deduction: earnings.tax_deduction,
         other_deductions: earnings.other_deductions,
         total_deductions: earnings.total_deductions,
-        
         net_pay: earnings.net_pay,
         status: "calculated",
-        
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      });
+        updatedAt: timestamp,
+      };
+
+      const existingRecord = existingRecordMap.get(barber._id);
+      if (existingRecord) {
+        await ctx.db.patch(existingRecord._id, recordPayload);
+        existingRecordMap.delete(barber._id);
+      } else {
+        await ctx.db.insert("payroll_records", {
+          payroll_period_id: args.payroll_period_id,
+          barber_id: barber._id,
+          branch_id: period.branch_id,
+          ...recordPayload,
+          createdAt: timestamp,
+        });
+      }
 
       totalEarnings += earnings.total_service_revenue + earnings.total_transaction_revenue;
       // New rule: commissions total equals the final daily salary total (not commission + daily rate)
-      totalCommissions += (earnings.daily_pay || 0);
+      totalCommissions += earnings.daily_pay || 0;
       totalDeductions += earnings.total_deductions;
+    }
+
+    // Remove records for barbers that are no longer part of this calculation
+    for (const leftoverRecord of existingRecordMap.values()) {
+      await ctx.db.delete(leftoverRecord._id);
     }
 
     // Update period with calculations
@@ -750,9 +792,9 @@ export const calculatePayrollForPeriod = mutation({
       total_earnings: totalEarnings,
       total_commissions: totalCommissions,
       total_deductions: totalDeductions,
-      calculated_at: Date.now(),
+      calculated_at: timestamp,
       calculated_by: args.calculated_by,
-      updatedAt: Date.now(),
+      updatedAt: timestamp,
     });
 
     return {

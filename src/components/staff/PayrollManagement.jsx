@@ -188,6 +188,25 @@ const PayrollManagement = ({ onRefresh, user }) => {
     }
   }, [payrollPeriods, selectedPeriod])
 
+  // Keep selected period details in sync with latest data from Convex
+  useEffect(() => {
+    if (!selectedPeriod?._id) return
+
+    const periodsArray = Array.isArray(payrollPeriods) ? payrollPeriods : []
+    const updated = periodsArray.find((period) => period._id === selectedPeriod._id)
+
+    if (
+      updated &&
+      (updated.updatedAt !== selectedPeriod.updatedAt ||
+        updated.status !== selectedPeriod.status ||
+        updated.total_commissions !== selectedPeriod.total_commissions ||
+        updated.total_earnings !== selectedPeriod.total_earnings ||
+        updated.total_deductions !== selectedPeriod.total_deductions)
+    ) {
+      setSelectedPeriod(updated)
+    }
+  }, [payrollPeriods, selectedPeriod])
+
   // Calculate overview statistics
   const overviewStats = useMemo(() => {
     // Handle cases where data might be undefined or "skip" result
@@ -324,11 +343,23 @@ const PayrollManagement = ({ onRefresh, user }) => {
   }
 
   // Handle calculate payroll
-  const handleCalculatePayroll = async (periodId) => {
+  const handleCalculatePayroll = async (period) => {
+    if (!period?._id) return
+
     try {
+      if (period.status === 'calculated') {
+        const confirmRecalculate = typeof window !== 'undefined'
+          ? window.confirm('Recalculating will replace existing payroll records for this period. Continue?')
+          : true
+        if (!confirmRecalculate) {
+          return
+        }
+      }
+
       setLoading(true)
+      setError(null)
       await calculatePayroll({
-        payroll_period_id: periodId,
+        payroll_period_id: period._id,
         calculated_by: user._id
       })
       // Data will auto-refresh via Convex real-time updates
@@ -1457,14 +1488,14 @@ const PayrollManagement = ({ onRefresh, user }) => {
               </p>
             </div>
             <div className="flex space-x-2">
-              {selectedPeriod.status === 'draft' && (
+              {selectedPeriod.status !== 'paid' && (
                 <button
-                  onClick={() => handleCalculatePayroll(selectedPeriod._id)}
+                  onClick={() => handleCalculatePayroll(selectedPeriod)}
                   disabled={loading}
                   className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Calculator className="h-4 w-4" />
-                  <span>Calculate Payroll</span>
+                  <span>{selectedPeriod.status === 'calculated' ? 'Recalculate Payroll' : 'Calculate Payroll'}</span>
                 </button>
               )}
               {(Array.isArray(currentPeriodRecords) && currentPeriodRecords.length > 0) && (
