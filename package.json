@@ -22,6 +22,7 @@
   "description": "",
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
+    "@uiw/react-md-editor": "^4.0.8",
     "axios": "^1.11.0",
     "convex": "^1.26.1",
     "jsqr": "^1.4.0",

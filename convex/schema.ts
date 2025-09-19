@@ -613,8 +613,19 @@ export default defineSchema({
     subject: v.string(),
     body_html: v.string(),
     audience: v.union(
-      v.literal("all_customers")
+      v.literal("all_customers"),
+      v.literal("new_customers"),
+      v.literal("returning_customers"),
+      v.literal("vip_customers")
     ),
+    template_type: v.optional(v.union(
+      v.literal("marketing"),
+      v.literal("promotional"),
+      v.literal("reminder"),
+      v.literal("custom")
+    )),
+    from_email: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
     status: v.union(
       v.literal("draft"),
       v.literal("scheduled"),
@@ -627,13 +638,18 @@ export default defineSchema({
     total_recipients: v.optional(v.number()),
     sent_count: v.optional(v.number()),
     failed_count: v.optional(v.number()),
+    open_count: v.optional(v.number()),
+    click_count: v.optional(v.number()),
+    unsubscribe_count: v.optional(v.number()),
     created_by: v.id("users"),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_branch", ["branch_id"])
     .index("by_status", ["status"])
-    .index("by_created_at", ["createdAt"]),
+    .index("by_created_at", ["createdAt"])
+    .index("by_template_type", ["template_type"])
+    .index("by_audience", ["audience"]),
 
   // Email marketing campaign logs
   email_campaign_logs: defineTable({

@@ -18,6 +18,7 @@ import PaymentSuccess from './pages/booking/payment/success.jsx'
 import PaymentFailure from './pages/booking/payment/failure.jsx'
 import Policy from './pages/Policy.jsx'
 import AccountDeletion from './pages/AccountDeletion.jsx'
+import EmailTest from './pages/EmailTest.jsx'
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
             <Route path="/platform-selection" element={<PlatformSelection />} />
             <Route path="/privacy" element={<Policy />} />
             <Route path="/account-deletion" element={<AccountDeletion />} />
+            <Route path="/email-test" element={<EmailTest />} />
             <Route 
               path="/auth/login" 
               element={
