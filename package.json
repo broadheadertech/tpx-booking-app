@@ -6,7 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "android:build": "./scripts/build-android.sh",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android",
+    "android:icons": "./scripts/generate-icons.sh",
+    "android:splash": "./scripts/setup-splash.sh",
+    "android:update-apk": "./scripts/update-apk.sh"
   },
   "repository": {
     "type": "git",
@@ -21,10 +27,16 @@
   "homepage": "https://github.com/broadheadertech/tpx-booking-app#readme",
   "description": "",
   "dependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/cli": "^7.4.3",
+    "@capacitor/core": "^7.4.3",
+    "@capacitor/device": "^7.0.2",
+    "@capacitor/splash-screen": "^7.0.3",
     "@emailjs/browser": "^4.4.1",
     "@uiw/react-md-editor": "^4.0.8",
     "axios": "^1.11.0",
     "convex": "^1.26.1",
+    "file-saver": "^2.0.5",
     "jsqr": "^1.4.0",
     "ky": "^1.8.2",
     "lucide-react": "^0.536.0",
@@ -32,6 +44,7 @@
     "qrcode": "^1.5.4",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "react-hot-toast": "^2.6.0",
     "react-router-dom": "^7.7.1"
   },
   "devDependencies": {
