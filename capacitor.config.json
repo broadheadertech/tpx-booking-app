@@ -1,0 +1,43 @@
+{
+  "appId": "com.tpx.barbershop",
+  "appName": "TPX Barbershop",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true
+  },
+  "icons": [
+    {
+      "src": "public/img/app_logo.png",
+      "sizes": "1024x1024",
+      "purpose": "any maskable"
+    }
+  ],
+  "splash": {
+    "backgroundColor": "#0a0a0a",
+    "images": [
+      {
+        "src": "public/img/app_logo.png",
+        "sizes": "2732x2732",
+        "purpose": "splash"
+      },
+      {
+        "src": "public/img/app_logo.png",
+        "sizes": "2048x2732",
+        "purpose": "splash"
+      },
+      {
+        "src": "public/img/app_logo.png",
+        "sizes": "2732x2048",
+        "purpose": "splash"
+      }
+    ],
+    "launchShowDuration": 3000,
+    "launchAutoHide": true,
+    "launchFadeOutDuration": 500
+  },
+  "backgroundColor": "#0a0a0a",
+  "themeColor": "#0a0a0a"
+}
