@@ -280,19 +280,30 @@ export const createBooking = mutation({
       updatedAt: Date.now(),
     });
 
-    // Create notification for booking creation
+    // Send comprehensive booking notifications
     try {
-      await ctx.runMutation(api.services.notifications.createNotification, {
-        title: "Booking Created",
-        message: `Your booking has been created with code: ${bookingCode}`,
-        type: "booking",
-        priority: "medium",
-        recipient_id: args.customer,
-        recipient_type: "customer",
+      await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+        bookingId,
+        notificationType: "CUSTOMER_BOOKING_CONFIRMED",
+        recipients: [
+          { type: "customer", userId: args.customer },
+          { type: "staff", branchId: args.branch_id },
+        ]
       });
+
+      // Send notification to barber if assigned
+      if (args.barber) {
+        await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+          bookingId,
+          notificationType: "BARBER_NEW_ASSIGNMENT",
+          recipients: [
+            { type: "barber", userId: args.barber },
+          ]
+        });
+      }
     } catch (error) {
-      console.error("Failed to create booking notification:", error);
-      // Don't fail the booking creation if notification fails
+      console.error("Failed to send booking notifications:", error);
+      // Don't fail the booking creation if notifications fail
     }
 
     return bookingId;
@@ -325,10 +336,51 @@ export const updateBooking = mutation({
       throwUserError(ERROR_CODES.BOOKING_NOT_FOUND);
     }
 
+    // Check if booking was rescheduled
+    const isRescheduled = (args.date && args.date !== currentBooking.date) || 
+                          (args.time && args.time !== currentBooking.time);
+    const oldDate = currentBooking.date;
+    const oldTime = currentBooking.time;
+
     await ctx.db.patch(id, {
       ...updates,
       updatedAt: Date.now(),
     });
+
+    // Send rescheduled notification if date/time changed
+    if (isRescheduled) {
+      try {
+        await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+          bookingId: id,
+          notificationType: "CUSTOMER_BOOKING_RESCHEDULED",
+          recipients: [
+            { type: "customer", userId: currentBooking.customer },
+            { type: "staff", branchId: currentBooking.branch_id },
+          ],
+          metadata: {
+            new_date: args.date || currentBooking.date,
+            new_time: args.time || currentBooking.time,
+          }
+        });
+
+        // Notify barber if assigned
+        if (currentBooking.barber) {
+          await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+            bookingId: id,
+            notificationType: "BARBER_APPOINTMENT_RESCHEDULED",
+            recipients: [
+              { type: "barber", userId: currentBooking.barber },
+            ],
+            metadata: {
+              new_date: args.date || currentBooking.date,
+              new_time: args.time || currentBooking.time,
+            }
+          });
+        }
+      } catch (error) {
+        console.error("Failed to send reschedule notifications:", error);
+      }
+    }
 
     // Create notification if status changed
     if (args.status && args.status !== currentBooking.status) {
@@ -349,35 +401,55 @@ export const updateBooking = mutation({
         }
         
         if (notificationType) {
-           let title, message;
-           switch (notificationType) {
-             case "booking_confirmed":
-               title = "Booking Confirmed";
-               message = "Your booking has been confirmed.";
-               break;
-             case "booking_cancelled":
-               title = "Booking Cancelled";
-               message = "Your booking has been cancelled.";
-               break;
-             case "booking_completed":
-               title = "Booking Completed";
-               message = "Your booking has been completed.";
-               break;
-             default:
-               title = "Booking Updated";
-               message = "Your booking status has been updated.";
-           }
-           
-           if (currentBooking.customer) {
-             await ctx.runMutation(api.services.notifications.createNotification, {
-               title,
-               message,
-               type: "booking",
-               priority: "medium",
-               recipient_id: currentBooking.customer,
-               recipient_type: "customer",
-             });
-           }
+          switch (args.status) {
+            case "confirmed":
+              await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+                bookingId: id,
+                notificationType: "CUSTOMER_BOOKING_CONFIRMED",
+                recipients: [
+                  { type: "customer", userId: currentBooking.customer },
+                  { type: "staff", branchId: currentBooking.branch_id },
+                ]
+              });
+              break;
+              
+            case "cancelled":
+              await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+                bookingId: id,
+                notificationType: "CUSTOMER_BOOKING_CANCELLED",
+                recipients: [
+                  { type: "customer", userId: currentBooking.customer },
+                  { type: "staff", branchId: currentBooking.branch_id },
+                ]
+              });
+              
+              // Also notify barber if assigned
+              if (currentBooking.barber) {
+                await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+                  bookingId: id,
+                  notificationType: "BARBER_APPOINTMENT_CANCELLED",
+                  recipients: [
+                    { type: "barber", userId: currentBooking.barber },
+                  ]
+                });
+              }
+              break;
+              
+            case "completed":
+              if (currentBooking.customer) {
+                await ctx.runMutation(api.services.notifications.createNotification, {
+                  title: "Booking Completed",
+                  message: "Your booking has been completed. Thank you for visiting!",
+                  type: "booking",
+                  priority: "low",
+                  recipient_id: currentBooking.customer,
+                  recipient_type: "customer",
+                  action_url: `/bookings/${currentBooking.booking_code}`,
+                  action_label: "View Details",
+                });
+              }
+              break;
+          }
          }
        } catch (error) {
          console.error("Failed to create booking status notification:", error);

@@ -5,6 +5,7 @@ import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import SettingsModal from './SettingsModal'
 import LogoutConfirmModal from './LogoutConfirmModal'
+import { NotificationSystem } from '../common/NotificationSystem'
 
 const DashboardHeader = ({ onLogout, user }) => {
   const [showSettingsModal, setShowSettingsModal] = useState(false)
@@ -93,6 +94,9 @@ const DashboardHeader = ({ onLogout, user }) => {
                 <Monitor className="w-4 h-4 sm:w-5 sm:h-5 text-blue-300 group-hover:text-blue-200 transition-colors duration-300" />
                 <span className="text-blue-300 group-hover:text-blue-200 font-semibold text-xs sm:text-sm transition-colors duration-300">Kiosk</span>
               </Link>
+              
+              {/* Notification System */}
+              <NotificationSystem userId={user._id} />
               
               <button
                 onClick={() => setShowSettingsModal(true)}

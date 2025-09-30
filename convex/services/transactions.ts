@@ -261,6 +261,60 @@ export const createTransaction = mutation({
       }
     }
 
+    // Send real-time payment notifications
+    try {
+      // Send payment received notification to customer
+      if (args.customer && args.payment_status === "completed") {
+        await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+          bookingId: transactionDocId, // Using transaction ID as booking reference
+          notificationType: "CUSTOMER_PAYMENT_RECEIVED",
+          recipients: [
+            { type: "customer", userId: args.customer },
+          ],
+          metadata: {
+            amount: args.total_amount,
+            receipt_number: receiptNumber,
+            service_name: args.services[0]?.service_name || "Services",
+          }
+        });
+      }
+
+      // Notify staff about new transaction
+      await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+        bookingId: transactionDocId,
+        notificationType: "STAFF_NEW_BOOKING", // Using existing template
+        recipients: [
+          { type: "staff", branchId: args.branch_id },
+        ],
+        metadata: {
+          customer_name: args.customer_name || "Walk-in Customer",
+          service_name: args.services[0]?.service_name || "Services",
+          amount: args.total_amount,
+          date: new Date().toISOString().split('T')[0],
+          time: new Date().toTimeString().slice(0, 5),
+        }
+      });
+
+      // If payment failed, notify staff about payment issue
+      if (args.payment_status === "failed" && args.customer) {
+        await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+          bookingId: transactionDocId,
+          notificationType: "STAFF_PAYMENT_ISSUE",
+          recipients: [
+            { type: "staff", branchId: args.branch_id },
+          ],
+          metadata: {
+            customer_name: args.customer_name || "Customer",
+            amount: args.total_amount,
+            payment_method: args.payment_method,
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Failed to send payment notifications:", error);
+      // Don't fail the transaction if notifications fail
+    }
+
     return {
       transactionId: transactionDocId,
       transaction_id: transactionId,

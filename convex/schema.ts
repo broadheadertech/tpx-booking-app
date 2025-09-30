@@ -117,6 +117,8 @@ export default defineSchema({
     )),
     price: v.number(),
     notes: v.optional(v.string()),
+    reminder_sent: v.optional(v.boolean()),
+    check_in_reminder_sent: v.optional(v.boolean()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -126,7 +128,8 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_payment_status", ["payment_status"])
     .index("by_booking_code", ["booking_code"])
-    .index("by_branch", ["branch_id"]),
+    .index("by_branch", ["branch_id"])
+    .index("by_date_reminder", ["date", "reminder_sent"]),
 
   // Vouchers table
   vouchers: defineTable({
@@ -217,19 +220,13 @@ export default defineSchema({
       v.literal("urgent")
     ),
     recipient_id: v.id("users"),
-    recipient_type: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin")),
+    recipient_type: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber")),
     sender_id: v.optional(v.id("users")),
     is_read: v.boolean(),
     is_archived: v.boolean(),
     action_url: v.optional(v.string()),
     action_label: v.optional(v.string()),
-    metadata: v.optional(v.object({
-      booking_id: v.optional(v.id("bookings")),
-      service_id: v.optional(v.id("services")),
-      barber_id: v.optional(v.id("barbers")),
-      event_id: v.optional(v.id("events")),
-      voucher_id: v.optional(v.id("vouchers")),
-    })),
+    metadata: v.optional(v.any()),
     expires_at: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),

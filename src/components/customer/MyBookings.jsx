@@ -340,15 +340,9 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
-      {/* Subtle background pattern */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
-      </div>
-      
+    <div className="min-h-screen bg-[#0A0A0A]">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30">
+      <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
         <div className="max-w-md mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             <button
@@ -371,7 +365,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
       <div className="relative z-10 max-w-md mx-auto px-4 py-6">
         {/* Filter Tabs */}
         <div className="mb-6">
-          <div className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl p-3 border border-[#555555]/30 shadow-lg">
+          <div className="bg-[#1A1A1A] rounded-2xl p-3 border border-[#2A2A2A]">
             <div className="grid grid-cols-4 gap-2">
               {filters.map((filter) => (
                 <button
@@ -379,8 +373,8 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                   onClick={() => setActiveFilter(filter.id)}
                   className={`py-3 px-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
                     activeFilter === filter.id
-                      ? 'bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
-                      : 'text-gray-400 hover:text-gray-300 hover:bg-white/5'
+                      ? 'bg-[#FF8C42] text-white'
+                      : 'text-gray-400 hover:text-gray-300 hover:bg-[#2A2A2A]'
                   }`}
                 >
                   <div>{filter.label}</div>
@@ -457,7 +451,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                 return (
                   <div
                     key={booking._id}
-                    className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm hover:shadow-lg transition-all duration-200 p-4"
+                    className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] hover:border-[#FF8C42]/30 transition-all duration-200 p-4"
                   >
                     {/* Compact Header */}
                     <div className="flex items-start justify-between mb-3">
@@ -520,7 +514,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                     </div>
 
                     {/* Price and Actions Row */}
-                    <div className="flex items-center justify-between pt-3 border-t border-[#444444]/50">
+                    <div className="flex items-center justify-between pt-3 border-t border-[#2A2A2A]">
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                           <p className="text-xs text-gray-400">Price</p>

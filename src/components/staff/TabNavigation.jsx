@@ -55,7 +55,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
   }
 
   return (
-    <div className="bg-gradient-to-r from-[#1E1E1E] to-[#2A2A2A] backdrop-blur-sm border border-[#333333]/50 rounded-2xl shadow-xl shadow-black/20 overflow-visible relative z-50">
+    <div className="bg-gradient-to-r from-[#1E1E1E] to-[#2A2A2A] backdrop-blur-sm border border-[#333333]/50 rounded-2xl shadow-xl shadow-black/20 overflow-visible relative z-10">
       {/* Desktop Navigation */}
       <nav className="hidden lg:flex items-center justify-center p-2">
         <div className="flex items-center space-x-1 bg-[#333333]/30 rounded-xl p-1">
@@ -135,7 +135,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
             
             {/* Dropdown Menu */}
                {isMoreDropdownOpen && (
-                 <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200/50 py-2" style={{zIndex: 99999, position: 'absolute'}}>
+                 <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200/50 py-2" style={{zIndex: 10, position: 'absolute'}}>
                 {secondaryTabs.map((tab) => {
                   const IconComponent = getIconComponent(tab.id)
                   return (
@@ -232,7 +232,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
             
             {/* Mobile Dropdown */}
               {isMoreDropdownOpen && (
-                <div className="absolute top-full right-0 mt-2 w-40 bg-white rounded-xl shadow-xl border border-gray-200/50 py-2" style={{zIndex: 99999, position: 'absolute'}}>
+                <div className="absolute top-full right-0 mt-2 w-40 bg-white rounded-xl shadow-xl border border-gray-200/50 py-2" style={{zIndex: 10, position: 'absolute'}}>
                 {secondaryTabs.map((tab) => {
                   const IconComponent = getIconComponent(tab.id)
                   return (
@@ -322,7 +322,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
             
             {/* Tablet Dropdown */}
               {isMoreDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-200/50 py-2" style={{zIndex: 99999, position: 'absolute'}}>
+                <div className="absolute top-full left-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-200/50 py-2" style={{zIndex: 10, position: 'absolute'}}>
                 {secondaryTabs.map((tab) => {
                   const IconComponent = getIconComponent(tab.id)
                   return (
