@@ -18,6 +18,7 @@ import NotificationsManagement from '../../components/staff/NotificationsManagem
 import EmailMarketing from '../../components/staff/EmailMarketing'
 import PayrollManagement from '../../components/staff/PayrollManagement'
 import DashboardFooter from '../../components/common/DashboardFooter'
+import { NotificationModal } from '../../components/common/NotificationSystem'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
@@ -31,6 +32,7 @@ function StaffDashboard() {
     return localStorage.getItem('staff_dashboard_active_tab') || 'overview'
   })
   const [activeModal, setActiveModal] = useState(null)
+  const [showNotifications, setShowNotifications] = useState(false)
 
   // Save active tab to localStorage whenever it changes
   useEffect(() => {
@@ -244,7 +246,11 @@ function StaffDashboard() {
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] flex flex-col">
-      <DashboardHeader onLogout={handleLogout} user={user} />
+      <DashboardHeader
+        onLogout={handleLogout}
+        user={user}
+        onOpenNotifications={() => setShowNotifications(true)}
+      />
       
       <div className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -270,8 +276,15 @@ function StaffDashboard() {
           </div>
         </div>
       </div>
-      
+
       <DashboardFooter />
+
+      {/* Notification Modal */}
+      <NotificationModal
+        userId={user._id}
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+      />
     </div>
   )
 }
