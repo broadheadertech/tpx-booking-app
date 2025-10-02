@@ -134,7 +134,7 @@ export default function BranchUserManagement() {
             className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
             onClick={onClose}
           />
-          <div className="relative w-full max-w-md transform rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] shadow-2xl transition-all z-[10000] border border-[#444444]/50">
+          <div className="relative w-full max-w-md transform rounded-2xl bg-[#1A1A1A] shadow-2xl transition-all z-[10000] border border-[#2A2A2A]/50">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-[#444444]/30">
               <h3 className="text-xl font-bold text-white">{title}</h3>
@@ -273,7 +273,7 @@ export default function BranchUserManagement() {
   return (
     <div className="space-y-6">
       {/* Branch Info Header */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+      <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex items-center space-x-3">
           <Building className="h-6 w-6 text-[#FF8C42]" />
           <div>
@@ -285,7 +285,7 @@ export default function BranchUserManagement() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Total</p>
@@ -294,8 +294,8 @@ export default function BranchUserManagement() {
             <Users className="h-6 w-6 text-[#FF8C42] opacity-30" />
           </div>
         </div>
-        
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Staff</p>
@@ -305,7 +305,7 @@ export default function BranchUserManagement() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Barbers</p>
@@ -317,7 +317,7 @@ export default function BranchUserManagement() {
       </div>
 
       {/* Controls */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+      <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
             <div className="relative">
@@ -356,10 +356,10 @@ export default function BranchUserManagement() {
       </div>
 
       {/* Users Table */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
+      <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-[#444444]/30">
-            <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
+            <thead className="bg-[#0A0A0A]">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   User
@@ -378,7 +378,7 @@ export default function BranchUserManagement() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] divide-y divide-[#444444]/30">
+            <tbody className="bg-[#1A1A1A] divide-y divide-[#444444]/30">
               {filteredUsers.map((user) => {
                 const roleConfig = getRoleColor(user.role)
 

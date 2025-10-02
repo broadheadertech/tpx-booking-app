@@ -103,7 +103,7 @@ function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
+    <div className="min-h-screen bg-[#0A0A0A]">
       {/* Subtle background pattern */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
@@ -135,7 +135,7 @@ function Login() {
           </div>
 
           {/* Login Form */}
-          <div className="bg-gradient-to-b from-[#2A2A2A]/90 to-[#333333]/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-[#444444]/30">
+          <div className="bg-[#1A1A1A] backdrop-blur-xl rounded-3xl shadow-2xl border border-[#2A2A2A]/50">
             <div className="p-8">
               {error && (
                 <div className="mb-4">
@@ -156,7 +156,7 @@ function Login() {
                       onChange={handleChange}
                       placeholder="Email address"
                       required
-                      className="w-full h-14 px-5 bg-[#1A1A1A]/80 border-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:bg-[#1A1A1A] transition-all duration-300 text-base text-white placeholder-gray-400 shadow-inner"
+                      className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42] transition-all duration-300 text-base text-white placeholder-gray-400"
                     />
                   </div>
                   
@@ -168,7 +168,7 @@ function Login() {
                       onChange={handleChange}
                       placeholder="Password"
                       required
-                      className="w-full h-14 px-5 bg-[#1A1A1A]/80 border-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:bg-[#1A1A1A] transition-all duration-300 text-base text-white placeholder-gray-400 shadow-inner"
+                      className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42] transition-all duration-300 text-base text-white placeholder-gray-400"
                     />
                   </div>
                 </div>
@@ -201,7 +201,7 @@ function Login() {
                   </button>
                 </div>
                 
-                <div className="text-center pt-4 border-t border-[#444444]/30 mt-8">
+                <div className="text-center pt-4 border-t border-[#2A2A2A]/30 mt-8">
                   <span className="text-sm text-gray-400">Don't have an account? </span>
                   <Link 
                     to="/auth/register" 

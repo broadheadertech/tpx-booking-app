@@ -201,7 +201,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
     if (error) {
       return (
         <div className="space-y-6">
-          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+          <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
             <div className="text-center">
               <div className="text-red-400 mb-2">⚠️ Error Loading Data</div>
               <p className="text-gray-300">{error}</p>
@@ -219,7 +219,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
     
     return (
       <div className="space-y-6">
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+        <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
           <div className="text-center">
             <div className="animate-spin w-8 h-8 border-3 border-[#FF8C42] border-t-transparent rounded-full mx-auto mb-4"></div>
             <p className="text-gray-300">Loading report data...</p>
@@ -258,7 +258,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
       </div>
 
       {/* Filters */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+      <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
@@ -291,8 +291,8 @@ const ReportsManagement = ({ onRefresh, user }) => {
               onClick={() => setSelectedReport(type.id)}
               className={`p-6 rounded-lg border transition-all duration-200 text-left ${
                 isSelected
-                  ? `bg-gradient-to-br from-[#2A2A2A] to-[#333333] border-[#FF8C42] shadow-lg transform scale-105`
-                  : 'bg-gradient-to-br from-[#2A2A2A] to-[#333333] border-[#444444]/50 hover:border-[#FF8C42]/50 hover:shadow-lg'
+                  ? `bg-[#1A1A1A] border-[#FF8C42] shadow-lg transform scale-105`
+                  : 'bg-[#1A1A1A] border-[#2A2A2A]/50 hover:border-[#FF8C42]/50 hover:shadow-lg'
               }`}
             >
                 <div className="flex items-center justify-between mb-4">
@@ -327,7 +327,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
       </div>
 
         {/* Chart Section */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+      <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-lg font-semibold text-white">
@@ -365,7 +365,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
       </div>
 
        {/* Detailed Data Table */}
-       <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+       <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
          <div className="flex items-center justify-between mb-6">
            <div>
              <h3 className="text-lg font-semibold text-white">
@@ -472,7 +472,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
 
        {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+          <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
             <div className="flex items-center space-x-3 mb-4">
               <div className="p-2 bg-[#FF8C42]/20 rounded-lg">
                 <BarChart3 className="h-5 w-5 text-[#FF8C42]" />
@@ -493,7 +493,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
              </p>
           </div>
 
-          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+          <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
             <div className="flex items-center space-x-3 mb-4">
               <div className="p-2 bg-green-500/20 rounded-lg">
                 <TrendingUp className="h-5 w-5 text-green-400" />
@@ -520,7 +520,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
              </p>
           </div>
 
-          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+          <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
             <div className="flex items-center space-x-3 mb-4">
               <div className="p-2 bg-[#FF8C42]/20 rounded-lg">
                 <TrendingUp className="h-5 w-5 text-[#FF8C42]" />

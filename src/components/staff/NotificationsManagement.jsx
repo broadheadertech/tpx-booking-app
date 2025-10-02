@@ -222,7 +222,7 @@ const NotificationsManagement = ({ onRefresh }) => {
   return (
     <div className="space-y-6">
       {/* Header & Actions */}
-      <div className="bg-gradient-to-br from-[#1A1A1A] to-[#222222] border border-[#2F2F2F] rounded-2xl px-6 py-5 shadow-xl shadow-black/30">
+      <div className="bg-[#1A1A1A] border border-[#2A2A2A]/50 rounded-2xl px-6 py-5 shadow-xl shadow-black/30">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div className="flex items-center space-x-3">
             <div className="p-3 rounded-2xl bg-[#FF8C42]/10 border border-[#FF8C42]/30 text-[#FF8C42] shadow-lg shadow-[#FF8C42]/10">
@@ -327,7 +327,7 @@ const NotificationsManagement = ({ onRefresh }) => {
       </div>
 
       {/* Controls */}
-      <div className="bg-gradient-to-br from-[#1A1A1A] to-[#222222] border border-[#2F2F2F] rounded-2xl px-6 py-5 shadow-xl shadow-black/30">
+      <div className="bg-[#1A1A1A] border border-[#2A2A2A]/50 rounded-2xl px-6 py-5 shadow-xl shadow-black/30">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
             <div className="relative flex-1">
@@ -392,7 +392,7 @@ const NotificationsManagement = ({ onRefresh }) => {
       </div>
 
       {/* Notifications List */}
-      <div className="bg-gradient-to-br from-[#141414] to-[#1E1E1E] border border-[#242424] rounded-3xl p-6 space-y-4 shadow-2xl shadow-black/40">
+      <div className="bg-[#1A1A1A] border border-[#2A2A2A]/50 rounded-3xl p-6 space-y-4 shadow-2xl shadow-black/40">
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
             <div className="flex flex-col items-center gap-3 text-gray-400 text-sm">

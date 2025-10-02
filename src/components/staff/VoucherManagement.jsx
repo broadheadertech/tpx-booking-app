@@ -267,64 +267,64 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header with Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Total</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.total}</p>
+              <p className="text-xs font-medium text-gray-400">Total</p>
+              <p className="text-xl font-bold text-[#FF8C42]">{stats.total}</p>
             </div>
-            <Gift className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <Gift className="h-6 w-6 text-[#FF8C42] opacity-30" />
           </div>
         </div>
         
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Active</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.active}</p>
+              <p className="text-xs font-medium text-gray-400">Active</p>
+              <p className="text-xl font-bold text-[#FF8C42]">{stats.active}</p>
             </div>
-            <Clock className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <Clock className="h-6 w-6 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Redeemed</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.redeemed}</p>
+              <p className="text-xs font-medium text-gray-400">Redeemed</p>
+              <p className="text-xl font-bold text-[#FF8C42]">{stats.redeemed}</p>
             </div>
-            <CheckCircle className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <CheckCircle className="h-6 w-6 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Expired</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.expired}</p>
+              <p className="text-xs font-medium text-gray-400">Expired</p>
+              <p className="text-xl font-bold text-[#FF8C42]">{stats.expired}</p>
             </div>
-            <XCircle className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <XCircle className="h-6 w-6 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Total Value</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">₱{stats.totalValue.toFixed(0)}</p>
+              <p className="text-xs font-medium text-gray-400">Total Value</p>
+              <p className="text-xl font-bold text-[#FF8C42]">₱{stats.totalValue.toFixed(0)}</p>
             </div>
-            <DollarSign className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <DollarSign className="h-6 w-6 text-[#FF8C42] opacity-30" />
           </div>
         </div>
       </div>
 
       {/* Controls */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-          <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
+      <div className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0">
+          <div className="flex flex-col md:flex-row md:items-center space-y-3 md:space-y-0 md:space-x-3">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
@@ -333,7 +333,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                 placeholder="Search voucher code..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                className="pl-9 pr-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white placeholder-gray-500 rounded-md focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] text-sm"
               />
             </div>
 
@@ -343,7 +343,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -356,7 +356,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
             >
               <option value="created_at">Sort by Date</option>
               <option value="value">Sort by Value</option>
@@ -418,7 +418,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
             return (
               <div
                 key={voucher._id}
-                className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm hover:shadow-lg transition-all duration-200 p-4"
+                className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm hover:shadow-lg transition-all duration-200 p-4"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center space-x-3">
@@ -520,10 +520,10 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
         </div>
       ) : (
         /* Table View */
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
+        <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-[#444444]/30">
-              <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
+              <thead className="bg-[#0A0A0A]">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                     Voucher

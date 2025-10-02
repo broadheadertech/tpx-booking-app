@@ -243,7 +243,7 @@ function StaffDashboard() {
   console.log('StaffDashboard - User:', user)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0F0F0F] via-[#1A1A1A] to-[#2A2A2A] flex flex-col">
+    <div className="min-h-screen bg-[#0A0A0A] flex flex-col">
       <DashboardHeader onLogout={handleLogout} user={user} />
       
       <div className="flex-1">
@@ -264,7 +264,7 @@ function StaffDashboard() {
               onTabChange={setActiveTab}
               incompleteBookingsCount={incompleteBookingsCount}
             />
-            <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-3xl shadow-2xl border border-[#333333]/50 p-10 backdrop-blur-sm">
+            <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-3xl shadow-2xl border border-[#2A2A2A]/50 p-10 backdrop-blur-sm">
               {renderTabContent()}
             </div>
           </div>

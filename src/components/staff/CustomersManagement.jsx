@@ -68,7 +68,7 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
     <div className="space-y-6">
       {/* Header with Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Total</p>
@@ -77,8 +77,8 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
             <User className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
-        
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Active</p>
@@ -88,7 +88,7 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">New</p>
@@ -98,7 +98,7 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Inactive</p>
@@ -108,7 +108,7 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Total Spent</p>
@@ -120,7 +120,7 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
       </div>
 
       {/* Controls */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+      <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
             {/* Search */}
@@ -183,10 +183,10 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
       </div>
 
       {/* Customers Table */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
+      <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A] border-b border-[#444444]/50">
+            <thead className="bg-[#0A0A0A] border-b border-[#444444]/50">
               <tr>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                   <div className="flex items-center space-x-2">
@@ -210,7 +210,7 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
                 <th className="px-6 py-4 text-center text-xs font-semibold text-gray-300 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] divide-y divide-[#444444]/30">
+            <tbody className="bg-[#1A1A1A] divide-y divide-[#444444]/30">
               {filteredCustomers.map((customer, index) => {
                 const statusConfig = getStatusConfig(customer)
                 return (

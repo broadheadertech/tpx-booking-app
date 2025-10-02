@@ -834,11 +834,11 @@ const ServiceBooking = ({ onBack }) => {
         <div className="flex items-center space-x-2">
           <div className="text-xl">{selectedService?.image}</div>
           <div className="flex-1">
-            <h3 className="text-base font-bold" style={{ color: "#36454F" }}>
+            <h3 className="text-base font-bold text-white">
               {selectedService?.name}
             </h3>
             <div className="flex items-center space-x-3 text-sm">
-              <span className="font-bold" style={{ color: "#F68B24" }}>
+              <span className="font-bold text-[#FF8C42]">
                 ₱{selectedService?.price.toLocaleString()}
               </span>
               <span className="font-medium" style={{ color: "#8B8B8B" }}>

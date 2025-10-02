@@ -4,6 +4,7 @@ import bannerImage from '../../assets/img/banner.jpg'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import ErrorDisplay from '../../components/common/ErrorDisplay'
+import Card from '../../components/common/Card'
 
 function Register() {
   const [formData, setFormData] = useState({
@@ -69,7 +70,7 @@ function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
+    <div className="min-h-screen bg-[#0A0A0A]">
       {/* Subtle background pattern */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
@@ -87,27 +88,21 @@ function Register() {
       <div className="relative z-10 min-h-screen flex flex-col justify-center px-6 py-12">
         <div className="w-full max-w-sm mx-auto">
           {/* Header */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             {/* Logo */}
-            <div className="flex justify-center mb-6">
-              <div className="w-18 h-18 p-3 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-3xl shadow-2xl ring-4 ring-[#FF8C42]/20">
-                <img 
-                  src="/img/tipuno_x_logo_white.avif" 
-                  alt="TipunoX Angeles Barbershop Logo" 
-                  className="w-full h-full object-contain"
-                />
-              </div>
+            <div className="flex justify-center mb-1">
+              <img 
+                src="/img/tipuno_x_logo_white.avif" 
+                alt="TipunoX Angeles Barbershop Logo" 
+                className="w-52 h-32 object-contain"
+              />
             </div>
             
-            <h1 className="text-2xl font-light tracking-wider mb-3 text-white">
-              <span className="font-thin">TipunoX Angeles</span>
-              <span className="font-extralight ml-2 text-[#FF8C42]">BARBERSHOP</span>
-            </h1>
             <p className="text-sm font-light text-gray-400">Create your account to get started</p>
           </div>
 
           {/* Registration Form */}
-          <div className="bg-gradient-to-b from-[#2A2A2A]/90 to-[#333333]/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-[#444444]/30">
+          <div className="bg-[#1A1A1A] backdrop-blur-xl rounded-3xl shadow-2xl border border-[#2A2A2A]/50">
             <div className="p-6">
               {error && (
                 <div className="mb-4">
@@ -119,8 +114,10 @@ function Register() {
                 </div>
               )}
               {success && (
-                <div className="mb-4 p-3 bg-green-500/20 border border-green-500/30 rounded-lg">
-                  <p className="text-sm text-green-400">{success}</p>
+                <div className="mb-4">
+                  <Card variant="success" className="text-center">
+                    <p className="text-sm">{success}</p>
+                  </Card>
                 </div>
               )}
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -132,7 +129,7 @@ function Register() {
                     onChange={handleChange}
                     placeholder="Username"
                     required
-                    className="w-full h-14 px-5 bg-[#1A1A1A]/80 border-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:bg-[#1A1A1A] transition-all duration-300 text-base text-white placeholder-gray-400 shadow-inner"
+                    className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42] transition-all duration-300 text-base text-white placeholder-gray-400"
                   />
                   
                   <input
@@ -142,7 +139,7 @@ function Register() {
                     onChange={handleChange}
                     placeholder="Nickname"
                     required
-                    className="w-full h-14 px-5 bg-[#1A1A1A]/80 border-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:bg-[#1A1A1A] transition-all duration-300 text-base text-white placeholder-gray-400 shadow-inner"
+                    className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42] transition-all duration-300 text-base text-white placeholder-gray-400"
                   />
                   
                   <input
@@ -152,7 +149,7 @@ function Register() {
                     onChange={handleChange}
                     placeholder="Email address"
                     required
-                    className="w-full h-14 px-5 bg-[#1A1A1A]/80 border-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:bg-[#1A1A1A] transition-all duration-300 text-base text-white placeholder-gray-400 shadow-inner"
+                    className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42] transition-all duration-300 text-base text-white placeholder-gray-400"
                   />
                   
                   <input
@@ -162,7 +159,7 @@ function Register() {
                     onChange={handleChange}
                     placeholder="Mobile number"
                     required
-                    className="w-full h-14 px-5 bg-[#1A1A1A]/80 border-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:bg-[#1A1A1A] transition-all duration-300 text-base text-white placeholder-gray-400 shadow-inner"
+                    className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42] transition-all duration-300 text-base text-white placeholder-gray-400"
                   />
                   
                   <input
@@ -171,7 +168,7 @@ function Register() {
                     value={formData.birthday}
                     onChange={handleChange}
                     required
-                    className="w-full h-14 px-5 bg-[#1A1A1A]/80 border-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:bg-[#1A1A1A] transition-all duration-300 text-base text-white shadow-inner"
+                    className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42] transition-all duration-300 text-base text-white"
                   />
                   
                   <input
@@ -181,7 +178,7 @@ function Register() {
                     onChange={handleChange}
                     placeholder="Password"
                     required
-                    className="w-full h-14 px-5 bg-[#1A1A1A]/80 border-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:bg-[#1A1A1A] transition-all duration-300 text-base text-white placeholder-gray-400 shadow-inner"
+                    className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42] transition-all duration-300 text-base text-white placeholder-gray-400"
                   />
                   
                   <input
@@ -191,7 +188,7 @@ function Register() {
                     onChange={handleChange}
                     placeholder="Confirm password"
                     required
-                    className="w-full h-14 px-5 bg-[#1A1A1A]/80 border-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:bg-[#1A1A1A] transition-all duration-300 text-base text-white placeholder-gray-400 shadow-inner"
+                    className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42] transition-all duration-300 text-base text-white placeholder-gray-400"
                   />
                 </div>
                 
@@ -205,7 +202,7 @@ function Register() {
                   </button>
                 </div>
                 
-                <div className="text-center pt-4 border-t border-[#444444]/30 mt-6">
+                <div className="text-center pt-4 border-t border-[#2A2A2A]/30 mt-6">
                   <span className="text-sm text-gray-400">Already have an account? </span>
                   <Link 
                     to="/auth/login" 

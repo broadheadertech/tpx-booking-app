@@ -394,7 +394,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
             className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
             onClick={onClose}
           />
-          <div className="relative w-full max-w-sm transform rounded-2xl bg-white shadow-2xl transition-all z-[10000]" style={{borderColor: '#E0E0E0', border: '1px solid'}}>
+          <div className="relative w-full max-w-sm transform rounded-2xl bg-[#1A1A1A] shadow-2xl transition-all z-[10000] border border-[#2A2A2A]/50">
             <div className="text-center space-y-4 p-6">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{backgroundColor: '#F68B24'}}>
                 <QrCode className="w-6 h-6 text-white" />
@@ -486,32 +486,32 @@ const BookingsManagement = ({ onRefresh, user }) => {
   }
 
   const EditBookingForm = () => (
-    <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm mb-6">
+    <div className="bg-[#1A1A1A] p-6 rounded-2xl border border-[#2A2A2A]/50 shadow-xl mb-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">
+        <h3 className="text-lg font-semibold text-white">
           Edit Booking
         </h3>
         <button
           onClick={handleCancel}
-          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+          className="p-2 text-gray-400 hover:text-white hover:bg-[#333333] rounded-lg transition-colors"
         >
           <X className="h-5 w-5" />
         </button>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-sm text-red-600">{error}</p>
+        <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
+          <p className="text-sm text-red-300">{error}</p>
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Service *</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Service *</label>
           <select
             value={formData.service}
             onChange={(e) => setFormData(prev => ({ ...prev, service: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
             required
           >
             <option value="">Select a service</option>
@@ -524,11 +524,11 @@ const BookingsManagement = ({ onRefresh, user }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Barber (Optional)</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Barber (Optional)</label>
           <select
             value={formData.barber}
             onChange={(e) => setFormData(prev => ({ ...prev, barber: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
           >
             <option value="">Any available barber</option>
             {barbers?.map(barber => (
@@ -540,24 +540,24 @@ const BookingsManagement = ({ onRefresh, user }) => {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Date *</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Date *</label>
           <input
             type="date"
             value={formData.date}
             onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
             min={new Date().toISOString().split('T')[0]}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
             required
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Time *</label>
+          <label className="block text-sm font-medium text-gray-300 mb-2">Time *</label>
           <input
             type="time"
             value={formData.time}
             onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
             required
           />
         </div>
@@ -566,14 +566,14 @@ const BookingsManagement = ({ onRefresh, user }) => {
       <div className="flex justify-end space-x-3">
         <button
           onClick={handleCancel}
-          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+          className="px-4 py-2 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#333333] hover:text-white transition-colors"
         >
           Cancel
         </button>
         <button
           onClick={handleSave}
           disabled={loading}
-          className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
         >
           <Save className="h-4 w-4" />
           <span>{loading ? 'Saving...' : 'Save Booking'}</span>
@@ -595,7 +595,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
             className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
             onClick={onClose}
           />
-          <div className="relative w-full max-w-4xl transform rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] shadow-2xl transition-all z-[10000] max-h-[90vh] overflow-y-auto">
+          <div className="relative w-full max-w-4xl transform rounded-2xl bg-[#1A1A1A] shadow-2xl transition-all z-[10000] max-h-[90vh] overflow-y-auto border border-[#2A2A2A]/50">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-[#444444]/30">
               <h3 className="text-xl font-bold text-white">Transaction Details</h3>
@@ -609,12 +609,12 @@ const BookingsManagement = ({ onRefresh, user }) => {
 
             <div className="p-6 space-y-6">
               {/* Booking Summary */}
-              <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+              <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-4">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-lg font-bold text-white">Booking Summary</h4>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div>
                     <p className="text-sm font-medium text-gray-400">Booking Code</p>
                     <p className="text-sm font-mono font-bold text-white">#{booking.booking_code}</p>
@@ -645,7 +645,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                 <div className="overflow-x-auto">
                   {bookingPayments && bookingPayments.length > 0 ? (
                     <table className="min-w-full divide-y divide-[#444444]/30">
-                      <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
+                      <thead className="bg-[#2A2A2A]">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                             Payment ID
@@ -664,7 +664,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] divide-y divide-[#444444]/30">
+                      <tbody className="bg-[#1A1A1A] divide-y divide-[#2A2A2A]/30">
                         {bookingPayments.map((payment) => (
                           <tr key={payment._id} className="hover:bg-[#333333]/50">
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -715,7 +715,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                 <div className="overflow-x-auto">
                   {bookingTransactions && bookingTransactions.length > 0 ? (
                     <table className="min-w-full divide-y divide-[#444444]/30">
-                      <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
+                      <thead className="bg-[#2A2A2A]">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                             Transaction ID
@@ -734,7 +734,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] divide-y divide-[#444444]/30">
+                      <tbody className="bg-[#1A1A1A] divide-y divide-[#2A2A2A]/30">
                         {bookingTransactions.map((transaction) => (
                           <tr key={transaction._id} className="hover:bg-[#333333]/50">
                             <td className="px-6 py-4 whitespace-nowrap">
@@ -804,7 +804,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
             ) : (
               <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-[#444444]/30">
-                <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
+                <thead className="bg-[#2A2A2A]">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Booking Code
@@ -826,7 +826,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] divide-y divide-[#444444]/30">
+                <tbody className="bg-[#1A1A1A] divide-y divide-[#2A2A2A]/30">
                   {(filteredBookings || []).slice(0, 10).map((booking) => {
                     const statusConfig = getStatusConfig(booking.status)
                     const paymentStatusConfig = getPaymentStatusConfig(booking.payment_status || 'unpaid')
@@ -921,7 +921,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
         </div>
 
         {/* Payment History */}
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
+        <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-[#444444]/30">
             <h3 className="text-lg font-bold text-white">Payment History</h3>
           </div>
@@ -939,7 +939,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
               </div>
             ) : bookingPayments.length > 0 ? (
               <table className="min-w-full divide-y divide-[#444444]/30">
-                <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
+                <thead className="bg-[#2A2A2A]">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Payment ID
@@ -958,7 +958,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] divide-y divide-[#444444]/30">
+                <tbody className="bg-[#1A1A1A] divide-y divide-[#2A2A2A]/30">
                   {bookingPayments.map((payment) => (
                     <tr key={payment._id} className="hover:bg-[#333333]/50">
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -1001,7 +1001,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
         </div>
 
         {/* POS Transactions */}
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
+        <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm overflow-hidden">
           <div className="px-6 py-4 border-b border-[#444444]/30">
             <h3 className="text-lg font-bold text-white">POS Transactions</h3>
           </div>
@@ -1019,7 +1019,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
               </div>
             ) : bookingTransactions.length > 0 ? (
               <table className="min-w-full divide-y divide-[#444444]/30">
-                <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
+                <thead className="bg-[#2A2A2A]">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                       Transaction ID
@@ -1038,7 +1038,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] divide-y divide-[#444444]/30">
+                <tbody className="bg-[#1A1A1A] divide-y divide-[#2A2A2A]/30">
                   {bookingTransactions.map((transaction) => (
                     <tr key={transaction._id} className="hover:bg-[#333333]/50">
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -1080,99 +1080,117 @@ const BookingsManagement = ({ onRefresh, user }) => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Total</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.total}</p>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Total</p>
+              <p className="text-xl font-black text-[#FF8C42]">{stats.total}</p>
             </div>
-            <Calendar className="h-8 w-8 text-[#FF8C42] opacity-30" />
-          </div>
-        </div>
-        
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-300">Today</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.today}</p>
+            <div className="w-8 h-8 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
+              <Calendar className="h-4 w-4 text-[#FF8C42]" />
             </div>
-            <Clock className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Pending</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.pending}</p>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Today</p>
+              <p className="text-xl font-black text-[#FF8C42]">{stats.today}</p>
             </div>
-            <AlertCircle className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <div className="w-8 h-8 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
+              <Clock className="h-4 w-4 text-[#FF8C42]" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Booked</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.booked}</p>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Pending</p>
+              <p className="text-xl font-black text-[#FF8C42]">{stats.pending}</p>
             </div>
-            <CheckCircle className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <div className="w-8 h-8 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
+              <AlertCircle className="h-4 w-4 text-[#FF8C42]" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Confirmed</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.confirmed}</p>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Booked</p>
+              <p className="text-xl font-black text-[#FF8C42]">{stats.booked}</p>
             </div>
-            <CheckCircle className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <div className="w-8 h-8 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
+              <CheckCircle className="h-4 w-4 text-[#FF8C42]" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Cancelled</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.cancelled}</p>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Confirmed</p>
+              <p className="text-xl font-black text-[#FF8C42]">{stats.confirmed}</p>
             </div>
-            <XCircle className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <div className="w-8 h-8 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
+              <CheckCircle className="h-4 w-4 text-[#FF8C42]" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Cancelled</p>
+              <p className="text-xl font-black text-[#FF8C42]">{stats.cancelled}</p>
+            </div>
+            <div className="w-8 h-8 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
+              <XCircle className="h-4 w-4 text-[#FF8C42]" />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Payment Status Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Paid</p>
-              <p className="text-2xl font-bold text-green-400">{stats.paid}</p>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Paid</p>
+              <p className="text-xl font-black text-green-400">{stats.paid}</p>
             </div>
-            <CheckCircle className="h-8 w-8 text-green-400 opacity-30" />
+            <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+              <CheckCircle className="h-4 w-4 text-green-400" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Unpaid</p>
-              <p className="text-2xl font-bold text-red-400">{stats.unpaid}</p>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Unpaid</p>
+              <p className="text-xl font-black text-red-400">{stats.unpaid}</p>
             </div>
-            <CreditCard className="h-8 w-8 text-red-400 opacity-30" />
+            <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
+              <CreditCard className="h-4 w-4 text-red-400" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Refunded</p>
-              <p className="text-2xl font-bold text-yellow-400">{stats.refunded}</p>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Refunded</p>
+              <p className="text-xl font-black text-yellow-400">{stats.refunded}</p>
             </div>
-            <XCircle className="h-8 w-8 text-yellow-400 opacity-30" />
+            <div className="w-8 h-8 rounded-lg bg-yellow-500/20 flex items-center justify-center">
+              <XCircle className="h-4 w-4 text-yellow-400" />
+            </div>
           </div>
         </div>
       </div>
@@ -1180,26 +1198,26 @@ const BookingsManagement = ({ onRefresh, user }) => {
 
 
       {/* Controls */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-          <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
+      <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0">
+          <div className="flex flex-col md:flex-row md:items-center space-y-3 md:space-y-0 md:space-x-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
               <input
                 type="text"
                 placeholder="Search bookings..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                className="pl-9 pr-3 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42] text-xs"
               />
             </div>
 
             <div className="flex items-center space-x-2">
-              <Filter className="h-4 w-4 text-gray-500" />
+              <Filter className="h-3.5 w-3.5 text-gray-500" />
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
               >
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
@@ -1213,7 +1231,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
             >
               <option value="date">Sort by Date</option>
               <option value="status">Sort by Status</option>
@@ -1224,16 +1242,16 @@ const BookingsManagement = ({ onRefresh, user }) => {
           <div className="flex items-center space-x-2">
             <button
               onClick={onRefresh}
-              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#1A1A1A] text-gray-400 rounded-lg hover:bg-[#2A2A2A] hover:text-white transition-colors text-xs border border-[#2A2A2A]"
             >
-              <RotateCcw className="h-4 w-4" />
+              <RotateCcw className="h-3.5 w-3.5" />
               <span>Refresh</span>
             </button>
             <button
               onClick={handleCreate}
-              className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-all duration-200 text-xs shadow-lg"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3.5 w-3.5" />
               <span>New Booking</span>
             </button>
           </div>
@@ -1244,28 +1262,28 @@ const BookingsManagement = ({ onRefresh, user }) => {
       {editingBooking && <EditBookingForm />}
 
       {/* Tab Navigation */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
-        <div className="flex space-x-1 mb-4">
+      <div className="bg-[#1A1A1A] p-2 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
+        <div className="flex space-x-1">
           <button
             onClick={() => setActiveTab('bookings')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors text-xs ${
               activeTab === 'bookings'
-                ? 'bg-[#FF8C42] text-white'
-                : 'text-gray-300 hover:bg-[#333333] hover:text-white'
+                ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-md'
+                : 'text-gray-400 hover:bg-[#1A1A1A] hover:text-white'
             }`}
           >
-            <Calendar className="w-4 h-4" />
+            <Calendar className="w-3.5 h-3.5" />
             <span>Bookings</span>
           </button>
           <button
             onClick={() => setActiveTab('transaction')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors text-xs ${
               activeTab === 'transaction'
-                ? 'bg-[#FF8C42] text-white'
-                : 'text-gray-300 hover:bg-[#333333] hover:text-white'
+                ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-md'
+                : 'text-gray-400 hover:bg-[#1A1A1A] hover:text-white'
             }`}
           >
-            <Receipt className="w-4 h-4" />
+            <Receipt className="w-3.5 h-3.5" />
             <span>Transaction</span>
           </button>
         </div>
@@ -1275,38 +1293,38 @@ const BookingsManagement = ({ onRefresh, user }) => {
       {activeTab === 'bookings' ? (
         <>
           {/* Main Content */}
-          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
+          <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-lg overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-[#444444]/30">
-            <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
+          <table className="min-w-full divide-y divide-[#2A2A2A]/30">
+            <thead className="bg-[#0A0A0A]">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                   Booking
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                   Service
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                   Date & Time
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                   Barber
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                   Price
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                   Payment Status
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-right text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] divide-y divide-[#444444]/30">
+            <tbody className="bg-[#1A1A1A] divide-y divide-[#2A2A2A]/30">
               {filteredBookings.map((booking) => {
                 const statusConfig = getStatusConfig(booking.status)
                 const paymentStatusConfig = getPaymentStatusConfig(booking.payment_status || 'unpaid')
@@ -1316,7 +1334,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                 const service = services.find(s => s._id === booking.service)
 
                 return (
-                  <tr key={booking._id} className="hover:bg-[#333333]/50 transition-colors">
+                  <tr key={booking._id} className="hover:bg-[#1A1A1A]/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-mono font-bold text-white">
                         #{booking.booking_code}
@@ -1516,37 +1534,37 @@ const BookingsManagement = ({ onRefresh, user }) => {
       {/* Confirmation Modal */}
       {confirmModal.show && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{zIndex: 99999}}>
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border">
+          <div className="bg-[#1A1A1A] rounded-2xl p-6 max-w-md w-full shadow-2xl border border-[#2A2A2A]/50">
             <div className="text-center space-y-4">
               <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{backgroundColor: '#F68B24'}}>
                  <CheckCircle className="w-6 h-6 text-white" />
                </div>
               
               <div>
-                <h3 className="text-lg font-bold mb-2 text-gray-900">
+                <h3 className="text-lg font-bold mb-2 text-white">
                   {confirmModal.action === 'confirm' ? 'Confirm Booking' : 'Complete Booking'}
                 </h3>
-                <p className="text-sm text-gray-600 mb-4">
+                <p className="text-sm text-gray-400 mb-4">
                   Are you sure you want to {confirmModal.action === 'confirm' ? 'confirm' : 'mark as completed'} booking #{confirmModal.booking?.booking_code}?
                 </p>
                 
                 {confirmModal.booking && (
-                  <div className="text-left space-y-2 p-4 rounded-xl bg-gray-50">
+                  <div className="text-left space-y-2 p-4 rounded-xl bg-[#2A2A2A]">
                     <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-600">Service:</span>
-                      <span className="text-sm font-bold text-gray-900">
+                      <span className="text-sm font-medium text-gray-300">Service:</span>
+                      <span className="text-sm font-bold text-white">
                         {services.find(s => s._id === confirmModal.booking.service)?.name}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-600">Date & Time:</span>
-                      <span className="text-sm font-bold text-gray-900">
+                      <span className="text-sm font-medium text-gray-300">Date & Time:</span>
+                      <span className="text-sm font-bold text-white">
                         {formatDate(confirmModal.booking.date)} at {formatTime(confirmModal.booking.time)}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-600">Barber:</span>
-                      <span className="text-sm font-bold text-gray-900">
+                      <span className="text-sm font-medium text-gray-300">Barber:</span>
+                      <span className="text-sm font-bold text-white">
                         {confirmModal.booking.barber_name || 'Not assigned'}
                       </span>
                     </div>
@@ -1557,7 +1575,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
               <div className="flex space-x-3">
                 <button
                   onClick={() => setConfirmModal({ show: false, booking: null, action: null })}
-                  className="flex-1 py-2 px-4 rounded-xl font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+                  className="flex-1 py-2 px-4 rounded-xl font-medium text-gray-300 bg-[#2A2A2A] hover:bg-[#333333] transition-colors"
                 >
                   Cancel
                 </button>

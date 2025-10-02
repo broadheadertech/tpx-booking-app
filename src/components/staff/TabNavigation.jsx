@@ -55,10 +55,10 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
   }
 
   return (
-    <div className="bg-gradient-to-r from-[#1E1E1E] to-[#2A2A2A] backdrop-blur-sm border border-[#333333]/50 rounded-2xl shadow-xl shadow-black/20 overflow-visible relative z-10">
+    <div className="bg-[#0A0A0A] backdrop-blur-sm border border-[#1A1A1A]/30 rounded-xl shadow-2xl shadow-black/40 overflow-visible relative z-10">
       {/* Desktop Navigation */}
-      <nav className="hidden lg:flex items-center justify-center p-2">
-        <div className="flex items-center space-x-1 bg-[#333333]/30 rounded-xl p-1">
+      <nav className="hidden lg:flex items-center justify-center p-1.5">
+        <div className="flex items-center space-x-0.5 bg-[#050505]/60 rounded-lg p-1">
           {/* Primary Tabs */}
           {primaryTabs.map((tab) => {
             const IconComponent = getIconComponent(tab.id)
@@ -67,29 +67,29 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
               <div key={tab.id} className="relative">
                 <button
                   onClick={() => handleTabClick(tab.id)}
-                  className={`relative flex items-center space-x-3 px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-300 group min-w-0 ${
+                  className={`relative flex items-center space-x-2 px-3 py-2.5 rounded-md font-medium text-xs transition-all duration-250 group min-w-0 ${
                     activeTab === tab.id
-                      ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg shadow-[#FF8C42]/25 transform scale-105'
-                      : 'text-gray-300 hover:text-white hover:bg-[#444444]/50 hover:shadow-sm'
+                      ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-md shadow-[#FF8C42]/20'
+                      : 'text-gray-400 hover:text-white hover:bg-[#1A1A1A]/40'
                   }`}
                 >
                   {/* Active indicator */}
                   {activeTab === tab.id && (
-                    <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full" />
+                    <div className="absolute -top-0.5 left-1/2 transform -translate-x-1/2 w-0.5 h-0.5 bg-white rounded-full" />
                   )}
 
-                  <div className={`flex items-center justify-center w-5 h-5 transition-all duration-200 ${
+                  <div className={`flex items-center justify-center w-4 h-4 transition-all duration-200 ${
                     activeTab === tab.id
                       ? 'text-white'
-                      : 'text-gray-400 group-hover:text-[#FF8C42]'
+                      : 'text-gray-500 group-hover:text-[#FF8C42]'
                   }`}>
-                    <IconComponent className="w-5 h-5" />
+                    <IconComponent className="w-4 h-4" />
                   </div>
-                  <span className="font-semibold whitespace-nowrap">{tab.label}</span>
+                  <span className="font-medium whitespace-nowrap text-xs">{tab.label}</span>
 
                   {/* Badge for bookings */}
                   {tab.id === 'bookings' && incompleteBookingsCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5">
                       {incompleteBookingsCount > 99 ? '99+' : incompleteBookingsCount}
                     </span>
                   )}
@@ -102,31 +102,31 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
           <div className="relative" ref={moreDropdownRef}>
             <button
               onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
-              className={`relative flex items-center space-x-2 px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-300 group ${
+              className={`relative flex items-center space-x-1.5 px-3 py-2.5 rounded-md font-medium text-xs transition-all duration-250 group ${
                 activeSecondaryTab
-                  ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg shadow-[#FF8C42]/25'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-white/80 hover:shadow-sm'
+                  ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-md shadow-[#FF8C42]/20'
+                  : 'text-gray-400 hover:text-white hover:bg-[#1A1A1A]/40'
               }`}
             >
               {activeSecondaryTab ? (
                 <>
                   {/* Active indicator */}
-                  <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full" />
-                  <div className="flex items-center justify-center w-5 h-5 text-white">
-                    {React.createElement(getIconComponent(activeSecondaryTab.id), { className: "w-5 h-5" })}
+                  <div className="absolute -top-0.5 left-1/2 transform -translate-x-1/2 w-0.5 h-0.5 bg-white rounded-full" />
+                  <div className="flex items-center justify-center w-4 h-4 text-white">
+                    {React.createElement(getIconComponent(activeSecondaryTab.id), { className: "w-4 h-4" })}
                   </div>
-                  <span className="font-semibold whitespace-nowrap">{activeSecondaryTab.label}</span>
-                  <ChevronDown className={`w-4 h-4 text-white transition-transform duration-200 ${
+                  <span className="font-medium whitespace-nowrap text-xs">{activeSecondaryTab.label}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-white transition-transform duration-200 ${
                     isMoreDropdownOpen ? 'rotate-180' : ''
                   }`} />
                 </>
               ) : (
                 <>
-                  <div className="flex items-center justify-center w-5 h-5 text-gray-500 group-hover:text-[#FF8C42]">
-                    <MoreHorizontal className="w-5 h-5" />
+                  <div className="flex items-center justify-center w-4 h-4 text-gray-500 group-hover:text-[#FF8C42]">
+                    <MoreHorizontal className="w-4 h-4" />
                   </div>
-                  <span className="font-semibold whitespace-nowrap">More</span>
-                  <ChevronDown className={`w-4 h-4 text-gray-500 group-hover:text-[#FF8C42] transition-transform duration-200 ${
+                  <span className="font-medium whitespace-nowrap text-xs">More</span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-gray-500 group-hover:text-[#FF8C42] transition-transform duration-200 ${
                     isMoreDropdownOpen ? 'rotate-180' : ''
                   }`} />
                 </>
@@ -135,25 +135,25 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
             
             {/* Dropdown Menu */}
                {isMoreDropdownOpen && (
-                 <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200/50 py-2" style={{zIndex: 10, position: 'absolute'}}>
+                 <div className="absolute top-full left-0 mt-1.5 w-44 bg-[#050505]/95 backdrop-blur-xl rounded-lg shadow-2xl border border-[#1A1A1A]/50 py-1.5" style={{zIndex: 10, position: 'absolute'}}>
                 {secondaryTabs.map((tab) => {
                   const IconComponent = getIconComponent(tab.id)
                   return (
                     <button
                       key={tab.id}
                       onClick={() => handleTabClick(tab.id)}
-                      className={`w-full flex items-center space-x-3 px-4 py-3 text-left transition-all duration-200 ${
+                      className={`w-full flex items-center space-x-2.5 px-3 py-2 text-left transition-all duration-200 ${
                         activeTab === tab.id
                           ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF8C42]'
+                          : 'text-gray-400 hover:bg-[#1A1A1A]/40 hover:text-white'
                       }`}
                     >
-                      <div className={`flex items-center justify-center w-5 h-5 ${
+                      <div className={`flex items-center justify-center w-4 h-4 ${
                         activeTab === tab.id ? 'text-white' : 'text-gray-500'
                       }`}>
-                        <IconComponent className="w-5 h-5" />
+                        <IconComponent className="w-4 h-4" />
                       </div>
-                      <span className="font-semibold">{tab.label}</span>
+                      <span className="font-medium text-xs">{tab.label}</span>
                     </button>
                   )
                 })}
@@ -177,13 +177,13 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
                   className={`flex flex-col items-center justify-center px-2 py-2 rounded-lg font-medium text-xs transition-all duration-200 whitespace-nowrap relative flex-shrink-0 ${
                     activeTab === tab.id
                       ? 'bg-gradient-to-b from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      : 'text-gray-300 hover:text-white hover:bg-[#2A2A2A]'
                   }`}
                 >
                   <div className={`flex items-center justify-center w-5 h-5 mb-1 transition-all duration-200 ${
                     activeTab === tab.id
                       ? 'text-white'
-                      : 'text-gray-500'
+                      : 'text-gray-400'
                   }`}>
                     <IconComponent className="w-4 h-4" />
                   </div>
@@ -207,14 +207,14 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
           <div className="relative">
             <button
               onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
-              className={`flex flex-col items-center justify-center px-2 py-2 rounded-lg font-medium text-xs transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+              className={`flex flex-col items-center justify-center px-2 py-2 rounded-md font-medium text-xs transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
                 activeSecondaryTab
-                  ? 'bg-gradient-to-b from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  ? 'bg-gradient-to-b from-[#FF8C42] to-[#FF7A2B] text-white shadow-md'
+                  : 'text-gray-400 hover:text-white hover:bg-[#1A1A1A]/40'
               }`}
             >
               <div className={`flex items-center justify-center w-5 h-5 mb-1 transition-all duration-200 ${
-                activeSecondaryTab ? 'text-white' : 'text-gray-500'
+                activeSecondaryTab ? 'text-white' : 'text-gray-400'
               }`}>
                 {activeSecondaryTab ? (
                   React.createElement(getIconComponent(activeSecondaryTab.id), { className: "w-4 h-4" })
@@ -232,7 +232,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
             
             {/* Mobile Dropdown */}
               {isMoreDropdownOpen && (
-                <div className="absolute top-full right-0 mt-2 w-40 bg-white rounded-xl shadow-xl border border-gray-200/50 py-2" style={{zIndex: 10, position: 'absolute'}}>
+                <div className="absolute top-full right-0 mt-2 w-40 bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl shadow-2xl border border-[#2A2A2A]/50 py-2" style={{zIndex: 10, position: 'absolute'}}>
                 {secondaryTabs.map((tab) => {
                   const IconComponent = getIconComponent(tab.id)
                   return (
@@ -242,11 +242,11 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
                       className={`w-full flex items-center space-x-3 px-3 py-2 text-left transition-all duration-200 ${
                         activeTab === tab.id
                           ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF8C42]'
+                          : 'text-gray-300 hover:bg-[#333333] hover:text-[#FF8C42]'
                       }`}
                     >
                       <div className={`flex items-center justify-center w-4 h-4 ${
-                        activeTab === tab.id ? 'text-white' : 'text-gray-500'
+                        activeTab === tab.id ? 'text-white' : 'text-gray-400'
                       }`}>
                         <IconComponent className="w-4 h-4" />
                       </div>
@@ -262,7 +262,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
 
       {/* Tablet Navigation */}
       <nav className="hidden md:flex lg:hidden items-center justify-center p-2">
-        <div className="flex items-center space-x-2 bg-gray-50/80 rounded-xl p-1">
+        <div className="flex items-center space-x-2 bg-[#0A0A0A]/50 rounded-xl p-1">
           {/* Primary Tabs */}
           {primaryTabs.map((tab) => {
             const IconComponent = getIconComponent(tab.id)
@@ -274,7 +274,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
                   className={`flex items-center space-x-2 px-3 py-2.5 rounded-lg font-semibold text-sm transition-all duration-300 whitespace-nowrap relative ${
                     activeTab === tab.id
                       ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/80'
+                      : 'text-gray-300 hover:text-white hover:bg-[#333333]/50'
                   }`}
                 >
                   <IconComponent className="w-4 h-4" />
@@ -298,7 +298,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
               className={`flex items-center space-x-2 px-3 py-2.5 rounded-lg font-semibold text-sm transition-all duration-300 whitespace-nowrap ${
                 activeSecondaryTab
                   ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-white/80'
+                  : 'text-gray-300 hover:text-white hover:bg-[#333333]/50'
               }`}
             >
               {activeSecondaryTab ? (
@@ -322,7 +322,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
             
             {/* Tablet Dropdown */}
               {isMoreDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2 w-44 bg-white rounded-xl shadow-xl border border-gray-200/50 py-2" style={{zIndex: 10, position: 'absolute'}}>
+                <div className="absolute top-full left-0 mt-2 w-44 bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl shadow-2xl border border-[#2A2A2A]/50 py-2" style={{zIndex: 10, position: 'absolute'}}>
                 {secondaryTabs.map((tab) => {
                   const IconComponent = getIconComponent(tab.id)
                   return (
@@ -332,11 +332,11 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
                       className={`w-full flex items-center space-x-3 px-4 py-2.5 text-left transition-all duration-200 ${
                         activeTab === tab.id
                           ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white'
-                          : 'text-gray-600 hover:bg-gray-50 hover:text-[#FF8C42]'
+                          : 'text-gray-300 hover:bg-[#333333] hover:text-[#FF8C42]'
                       }`}
                     >
                       <div className={`flex items-center justify-center w-4 h-4 ${
-                        activeTab === tab.id ? 'text-white' : 'text-gray-500'
+                        activeTab === tab.id ? 'text-white' : 'text-gray-400'
                       }`}>
                         <IconComponent className="w-4 h-4" />
                       </div>

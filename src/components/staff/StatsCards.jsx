@@ -12,7 +12,7 @@ const StatsCards = ({ stats = [] }) => {
     if (label.toLowerCase().includes('service')) return Star
     if (label.toLowerCase().includes('barber')) return Scissors
     if (label.toLowerCase().includes('point')) return Award
-    
+
     // Default fallback
     return Star
   }
@@ -21,15 +21,17 @@ const StatsCards = ({ stats = [] }) => {
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
       {stats.map((stat, index) => {
         const IconComponent = getIcon(stat.icon, stat.label)
-        
+
         return (
-          <div key={index} className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+          <div key={index} className="bg-[#1A1A1A] p-6 rounded-2xl border border-[#2A2A2A]/50 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-300">{stat.label}</p>
-                <p className="text-2xl font-bold text-[#FF8C42]">{stat.value}</p>
+                <p className="text-sm font-semibold text-gray-400 mb-2">{stat.label}</p>
+                <p className="text-3xl font-black text-[#FF8C42]">{stat.value}</p>
               </div>
-              <IconComponent className="h-8 w-8 text-[#FF8C42] opacity-30" />
+              <div className="w-12 h-12 rounded-xl bg-[#FF8C42]/20 flex items-center justify-center">
+                <IconComponent className="h-6 w-6 text-[#FF8C42]" />
+              </div>
             </div>
           </div>
         )

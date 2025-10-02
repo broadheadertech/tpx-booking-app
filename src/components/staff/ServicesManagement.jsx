@@ -75,54 +75,54 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Total Services</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.total}</p>
+              <p className="text-xs font-medium text-gray-400">Total Services</p>
+              <p className="text-xl font-bold text-[#FF8C42]">{stats.total}</p>
             </div>
-            <Scissors className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <Scissors className="h-6 w-6 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Avg. Price</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">₱{stats.avgPrice.toFixed(0)}</p>
+              <p className="text-xs font-medium text-gray-400">Avg. Price</p>
+              <p className="text-xl font-bold text-[#FF8C42]">₱{stats.avgPrice.toFixed(0)}</p>
             </div>
-            <DollarSign className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <DollarSign className="h-6 w-6 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Avg. Duration</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{Math.round(stats.avgDuration)}m</p>
+              <p className="text-xs font-medium text-gray-400">Avg. Duration</p>
+              <p className="text-xl font-bold text-[#FF8C42]">{Math.round(stats.avgDuration)}m</p>
             </div>
-            <Clock className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <Clock className="h-6 w-6 text-[#FF8C42] opacity-30" />
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Total Value</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">₱{stats.totalRevenue.toFixed(0)}</p>
+              <p className="text-xs font-medium text-gray-400">Total Value</p>
+              <p className="text-xl font-bold text-[#FF8C42]">₱{stats.totalRevenue.toFixed(0)}</p>
             </div>
-            <DollarSign className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <DollarSign className="h-6 w-6 text-[#FF8C42] opacity-30" />
           </div>
         </div>
       </div>
 
       {/* Controls */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-          <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
+      <div className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0">
+          <div className="flex flex-col md:flex-row md:items-center space-y-3 md:space-y-0 md:space-x-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
               <input
@@ -130,14 +130,14 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
                 placeholder="Search services..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                className="pl-9 pr-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white placeholder-gray-500 rounded-md focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] text-sm"
               />
             </div>
 
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
             >
               <option value="name">Sort by Name</option>
               <option value="price">Sort by Price</option>
@@ -147,23 +147,23 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
 
           <div className="flex items-center space-x-2">
             {/* View Mode Toggle */}
-            <div className="flex items-center bg-[#1A1A1A] rounded-lg border border-[#444444] p-1">
+            <div className="flex items-center bg-[#2A2A2A] rounded-md border border-[#3A3A3A] p-0.5">
               <button
                 onClick={() => setViewMode('card')}
-                className={`p-2 rounded-md transition-colors ${
+                className={`p-1.5 rounded-md transition-colors ${
                   viewMode === 'card'
-                    ? 'bg-orange-500 text-white'
-                    : 'text-gray-400 hover:text-gray-300'
+                    ? 'bg-[#FF8C42] text-white'
+                    : 'text-gray-500 hover:text-white'
                 }`}
               >
                 <Grid className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setViewMode('table')}
-                className={`p-2 rounded-md transition-colors ${
+                className={`p-1.5 rounded-md transition-colors ${
                   viewMode === 'table'
-                    ? 'bg-orange-500 text-white'
-                    : 'text-gray-400 hover:text-gray-300'
+                    ? 'bg-[#FF8C42] text-white'
+                    : 'text-gray-500 hover:text-white'
                 }`}
               >
                 <List className="h-4 w-4" />
@@ -172,21 +172,21 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
             
             <button
               onClick={onRefresh}
-              className="flex items-center space-x-2 px-4 py-2 bg-[#444444] text-gray-300 rounded-lg hover:bg-[#555555] transition-colors text-sm"
+              className="flex items-center space-x-1.5 px-3 py-2 bg-[#2A2A2A] text-gray-300 rounded-md hover:bg-[#333333] transition-colors text-sm border border-[#3A3A3A]"
             >
               <RotateCcw className="h-4 w-4" />
               <span>Refresh</span>
             </button>
             <button
               onClick={() => setShowImportModal(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
+              className="flex items-center space-x-1.5 px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
             >
               <Upload className="h-4 w-4" />
               <span>Import CSV</span>
             </button>
             <button
               onClick={handleCreate}
-              className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
+              className="flex items-center space-x-1.5 px-3 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-md hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors text-sm"
             >
               <Plus className="h-4 w-4" />
               <span>New Service</span>
@@ -218,20 +218,20 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
       {/* Services Display */}
       {viewMode === 'card' ? (
         /* Card View */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredServices.map((service) => (
             <div
               key={service._id}
-              className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm hover:shadow-lg transition-all duration-200 p-6"
+              className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm hover:shadow-md transition-all duration-200 p-4 hover:border-[#FF8C42]/30"
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg">
-                    <Scissors className="h-5 w-5 text-white" />
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center space-x-2.5">
+                  <div className="p-1.5 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-md">
+                    <Scissors className="h-4 w-4 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-white">{service.name}</h3>
-                    <p className="text-sm text-gray-400">{service.category}</p>
+                    <h3 className="font-semibold text-white text-sm">{service.name}</h3>
+                    <p className="text-xs text-gray-400">{service.category}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-1">
