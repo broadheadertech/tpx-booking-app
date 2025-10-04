@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../../../convex/_generated/api';
 import { Bell, X, Check, Clock, AlertTriangle, Info, Gift, CreditCard, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -41,10 +42,12 @@ interface NotificationProps {
   notification: any;
   onMarkAsRead: (id: string) => void;
   onDelete: (id: string) => void;
+  userType?: 'customer' | 'staff';
 }
 
-const NotificationItem: React.FC<NotificationProps> = ({ notification, onMarkAsRead, onDelete }) => {
+const NotificationItem: React.FC<NotificationProps> = ({ notification, onMarkAsRead, onDelete, userType = 'staff' }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const navigate = useNavigate();
   
   const Icon = NOTIFICATION_ICONS[notification.type] || Info;
   const priorityColor = PRIORITY_COLORS[notification.priority] || PRIORITY_COLORS.medium;
@@ -68,7 +71,20 @@ const NotificationItem: React.FC<NotificationProps> = ({ notification, onMarkAsR
 
   const handleAction = () => {
     if (notification.action_url) {
-      window.location.href = notification.action_url;
+      // For customers, navigate to customer booking page
+      if (userType === 'customer') {
+        // Convert /bookings/{code} to /customer/bookings/{code}
+        if (notification.action_url.includes('/bookings/')) {
+          const bookingCode = notification.action_url.split('/bookings/')[1];
+          if (bookingCode) {
+            navigate(`/customer/bookings/${bookingCode}`);
+            return;
+          }
+        }
+      }
+      
+      // For staff or default, use the action_url as-is
+      navigate(notification.action_url);
     }
   };
 
@@ -213,9 +229,10 @@ interface NotificationModalProps {
   userId: any;
   isOpen: boolean;
   onClose: () => void;
+  userType?: 'customer' | 'staff';
 }
 
-export const NotificationModal: React.FC<NotificationModalProps> = ({ userId, isOpen, onClose }) => {
+export const NotificationModal: React.FC<NotificationModalProps> = ({ userId, isOpen, onClose, userType = 'staff' }) => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [unreadOnly, setUnreadOnly] = useState(false);
 
