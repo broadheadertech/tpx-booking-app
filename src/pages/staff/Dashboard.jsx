@@ -18,11 +18,13 @@ import NotificationsManagement from '../../components/staff/NotificationsManagem
 import EmailMarketing from '../../components/staff/EmailMarketing'
 import PayrollManagement from '../../components/staff/PayrollManagement'
 import DashboardFooter from '../../components/common/DashboardFooter'
-import { NotificationModal } from '../../components/common/NotificationSystem'
+import { NotificationModal, NotificationBell } from '../../components/common/NotificationSystem'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications'
+import { useBookingNotificationListener } from '../../utils/bookingNotifications'
 
 function StaffDashboard() {
   const { user, logout } = useAuth()
@@ -33,6 +35,12 @@ function StaffDashboard() {
   })
   const [activeModal, setActiveModal] = useState(null)
   const [showNotifications, setShowNotifications] = useState(false)
+  
+  // Hook for real-time notifications with toast alerts
+  const { unreadCount } = useRealtimeNotifications()
+  
+  // Hook for booking notification events
+  useBookingNotificationListener()
 
   // Save active tab to localStorage whenever it changes
   useEffect(() => {
@@ -122,7 +130,7 @@ function StaffDashboard() {
     }
 
     return (
-      <div className="space-y-8">
+      <div className="space-y-6">
         <StatsCards stats={[
           { label: 'Total Bookings', value: stats.totalBookings, icon: 'calendar' },
           { label: 'Today\'s Bookings', value: stats.todayBookings, icon: 'clock' },
@@ -131,7 +139,7 @@ function StaffDashboard() {
           { label: 'Total Customers', value: stats.totalCustomers, icon: 'users' },
           { label: 'Active Vouchers', value: stats.activeVouchers, icon: 'gift' }
         ]} />
-        <RecentActivity activities={[]} />
+        <RecentActivity />
       </div>
     )
   }

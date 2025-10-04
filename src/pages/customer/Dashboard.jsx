@@ -14,6 +14,9 @@ import bannerImage from '../../assets/img/banner.jpg'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
+import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications'
+import { useBookingNotificationListener } from '../../utils/bookingNotifications'
+import { NotificationBell } from '../../components/common/NotificationSystem'
 import NotificationsPage from '../../components/customer/NotificationsPage'
 
 const Dashboard = () => {
@@ -21,6 +24,12 @@ const Dashboard = () => {
   const location = useLocation()
   const [activeSection, setActiveSection] = useState('home')
   const [showOnboarding, setShowOnboarding] = useState(false)
+  
+  // Hook for real-time notifications with toast alerts
+  const { unreadCount } = useRealtimeNotifications()
+  
+  // Hook for booking notification events
+  useBookingNotificationListener()
 
   // Check if we're EXACTLY on the customer dashboard route (not on booking or other pages)
   const isOnCustomerDashboard = location.pathname === '/customer/dashboard' &&
@@ -270,6 +279,7 @@ const Dashboard = () => {
                 </div>
               </div>
               <div className="flex items-center space-x-3">
+                <NotificationBell userId={user?._id} onOpenModal={() => setActiveSection('notifications')} />
                 <div className="text-right">
                   <p className="text-xs font-medium text-white">Welcome</p>
                   <p className="text-xs text-gray-400">{new Date().toLocaleDateString()}</p>

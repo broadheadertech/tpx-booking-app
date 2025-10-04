@@ -1,7 +1,119 @@
 import React from 'react'
-import { Calendar, Gift, UserPlus, Clock, ChevronRight, DollarSign, User, Info } from 'lucide-react'
+import { Calendar, Gift, UserPlus, Clock, ChevronRight, DollarSign, User, Info, CheckCircle, XCircle } from 'lucide-react'
+import { useQuery } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
+import { useAuth } from '../../context/AuthContext'
 
-const RecentActivity = ({ activities = [] }) => {
+const RecentActivity = ({ activities: propActivities = [] }) => {
+  const { user } = useAuth()
+  
+  // Fetch recent bookings to generate activity feed
+  const bookings = user?.role === 'super_admin' 
+    ? useQuery(api.services.bookings.getAllBookings)
+    : user?.branch_id 
+      ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id })
+      : undefined
+  
+  // Fetch recent transactions
+  const transactions = user?.branch_id 
+    ? useQuery(api.services.transactions.getTransactionsByBranch, { branch_id: user.branch_id })
+    : undefined
+  
+  // Transform bookings and transactions into activity items
+  const generateActivities = () => {
+    if (propActivities.length > 0) return propActivities
+    
+    const activityItems = []
+    
+    // Add booking activities
+    if (bookings && bookings.length > 0) {
+      const recentBookings = bookings
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, 5)
+      
+      recentBookings.forEach((booking) => {
+        const timeAgo = getTimeAgo(booking.createdAt)
+        const customerName = booking.customer_name || 'Customer'
+        
+        let message = ''
+        let status = 'new'
+        let type = 'booking'
+        
+        if (booking.status === 'completed') {
+          message = `${customerName} completed their ${booking.service_name || 'service'} appointment`
+          status = 'completed'
+        } else if (booking.status === 'cancelled') {
+          message = `${customerName} cancelled their ${booking.service_name || 'service'} appointment`
+          status = 'cancelled'
+          type = 'info'
+        } else if (booking.status === 'confirmed') {
+          message = `${customerName} confirmed their ${booking.service_name || 'service'} appointment`
+          status = 'confirmed'
+        } else {
+          message = `New booking from ${customerName} for ${booking.service_name || 'service'}`
+        }
+        
+        activityItems.push({
+          id: booking._id,
+          type,
+          message,
+          time: timeAgo,
+          status
+        })
+      })
+    }
+    
+    // Add transaction activities
+    if (transactions && transactions.length > 0) {
+      const recentTransactions = transactions
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, 3)
+      
+      recentTransactions.forEach((transaction) => {
+        const timeAgo = getTimeAgo(transaction.createdAt)
+        const customerName = transaction.customer_name || 'Customer'
+        
+        activityItems.push({
+          id: transaction._id,
+          type: 'sale',
+          message: `${customerName} made a purchase - $${transaction.total_amount.toFixed(2)}`,
+          time: timeAgo,
+          status: transaction.payment_status === 'completed' ? 'completed' : 'new'
+        })
+      })
+    }
+    
+    // Sort all activities by most recent and limit to 8
+    return activityItems
+      .sort((a, b) => {
+        // Convert time strings back to timestamps for sorting (rough approximation)
+        const getMinutes = (timeStr) => {
+          if (timeStr.includes('just now')) return 0
+          if (timeStr.includes('min')) return parseInt(timeStr)
+          if (timeStr.includes('hour')) return parseInt(timeStr) * 60
+          if (timeStr.includes('day')) return parseInt(timeStr) * 1440
+          return 99999
+        }
+        return getMinutes(a.time) - getMinutes(b.time)
+      })
+      .slice(0, 8)
+  }
+  
+  // Helper function to calculate time ago
+  const getTimeAgo = (timestamp) => {
+    const now = Date.now()
+    const diff = now - timestamp
+    const minutes = Math.floor(diff / 60000)
+    const hours = Math.floor(diff / 3600000)
+    const days = Math.floor(diff / 86400000)
+    
+    if (minutes < 1) return 'just now'
+    if (minutes < 60) return `${minutes} min ago`
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`
+    return `${days} day${days > 1 ? 's' : ''} ago`
+  }
+  
+  const activities = generateActivities()
   // Icon mapping for different activity types
   const getActivityIcon = (type) => {
     switch (type) {
@@ -24,10 +136,32 @@ const RecentActivity = ({ activities = [] }) => {
   }
 
   const getColorClasses = (type, status) => {
+    // Status-based coloring for better UX
+    if (status === 'completed') {
+      return {
+        icon: 'text-green-500',
+        status: 'bg-green-500/10 text-green-500 border border-green-500/20'
+      }
+    }
+    
+    if (status === 'cancelled') {
+      return {
+        icon: 'text-red-500',
+        status: 'bg-red-500/10 text-red-500 border border-red-500/20'
+      }
+    }
+    
+    if (status === 'confirmed') {
+      return {
+        icon: 'text-blue-500',
+        status: 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
+      }
+    }
+    
     const typeColors = {
       booking: 'blue',
       appointment: 'blue', 
-      voucher: 'emerald',
+      voucher: 'orange',
       customer: 'purple',
       client: 'purple',
       sale: 'green',
@@ -39,49 +173,44 @@ const RecentActivity = ({ activities = [] }) => {
     
     const colors = {
       blue: {
-        bg: 'bg-gradient-to-r from-[#3B82F6] to-[#2563EB]',
-        icon: 'text-white',
-        status: status === 'new' ? 'bg-blue-50 text-blue-700 border-2 border-blue-200' : 'bg-green-50 text-green-700 border-2 border-green-200'
+        icon: 'text-blue-500',
+        status: 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
       },
-      emerald: {
-        bg: 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B]',
-        icon: 'text-white',
-        status: status === 'new' ? 'bg-[#FF8C42]/10 text-[#FF8C42] border-2 border-[#FF8C42]/20' : 'bg-green-50 text-green-700 border-2 border-green-200'
+      orange: {
+        icon: 'text-[#FF8C42]',
+        status: 'bg-[#FF8C42]/10 text-[#FF8C42] border border-[#FF8C42]/20'
       },
       purple: {
-        bg: 'bg-gradient-to-r from-[#8B5CF6] to-[#7C3AED]',
-        icon: 'text-white',
-        status: status === 'new' ? 'bg-purple-50 text-purple-700 border-2 border-purple-200' : 'bg-green-50 text-green-700 border-2 border-green-200'
+        icon: 'text-purple-500',
+        status: 'bg-purple-500/10 text-purple-500 border border-purple-500/20'
       },
       green: {
-        bg: 'bg-gradient-to-r from-[#10B981] to-[#059669]',
-        icon: 'text-white',
-        status: 'bg-green-50 text-green-700 border-2 border-green-200'
+        icon: 'text-green-500',
+        status: 'bg-green-500/10 text-green-500 border border-green-500/20'
       },
       gray: {
-        bg: 'bg-gradient-to-r from-[#6B6B6B] to-[#4A4A4A]',
-        icon: 'text-white',
-        status: 'bg-gray-50 text-gray-700 border-2 border-gray-200'
+        icon: 'text-gray-500',
+        status: 'bg-gray-500/10 text-gray-500 border border-gray-500/20'
       }
     }
     return colors[color]
   }
 
   return (
-    <div className="p-8 bg-gradient-to-br from-[#2A2A2A] to-[#333333] border border-[#444444]/50 rounded-3xl shadow-lg">
-      <div className="flex items-center justify-between mb-8">
-        <h3 className="text-2xl font-black text-white">Recent Activity</h3>
-        <button className="flex items-center space-x-2 text-[#FF8C42] hover:text-[#FF7A2B] text-base font-bold transition-all duration-300 group hover:scale-105">
+    <div className="p-6 bg-gradient-to-br from-[#2A2A2A] to-[#333333] border border-[#444444]/50 rounded-2xl shadow-lg">
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="text-xl font-bold text-white">Recent Activity</h3>
+        <button className="flex items-center gap-1 text-[#FF8C42] hover:text-[#FF7A2B] text-sm font-semibold transition-colors group">
           <span>View All</span>
-          <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+          <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
         </button>
       </div>
       
-      <div className="space-y-4">
+      <div className="space-y-2">
         {activities.length === 0 ? (
           <div className="text-center py-8">
-            <Info className="mx-auto h-12 w-12 text-gray-500 mb-4" />
-            <p className="text-gray-400">No recent activity available</p>
+            <Info className="mx-auto h-10 w-10 text-gray-500 mb-3" />
+            <p className="text-sm text-gray-400">No recent activity available</p>
           </div>
         ) : (
           activities.map((activity) => {
@@ -89,20 +218,18 @@ const RecentActivity = ({ activities = [] }) => {
             const colorClasses = getColorClasses(activity.type, activity.status)
             
             return (
-              <div key={activity.id} className="flex items-start space-x-6 p-6 rounded-2xl bg-[#1A1A1A]/50 border border-transparent hover:bg-[#1A1A1A]/80 hover:border-[#FF8C42]/40 transition-all duration-300 group cursor-pointer hover:shadow-lg hover:-translate-y-1">
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${colorClasses.bg} group-hover:scale-110 transition-transform shadow-lg ring-4 ring-[#1A1A1A]/20`}>
-                  <IconComponent className={`w-6 h-6 ${colorClasses.icon}`} />
-                </div>
+              <div key={activity.id} className="flex items-center gap-3 p-3 rounded-lg bg-[#1A1A1A]/50 border border-transparent hover:bg-[#1A1A1A]/80 hover:border-[#FF8C42]/30 transition-all duration-200 group cursor-pointer">
+                <IconComponent className={`w-5 h-5 flex-shrink-0 ${colorClasses.icon}`} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-base font-bold text-white mb-2 group-hover:text-[#FF8C42] transition-colors">
+                  <p className="text-sm font-medium text-white mb-0.5 group-hover:text-[#FF8C42] transition-colors truncate">
                     {activity.message}
                   </p>
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 text-gray-400" />
-                    <p className="text-sm text-gray-400 font-semibold">{activity.time}</p>
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-3 h-3 text-gray-500" />
+                    <p className="text-xs text-gray-500">{activity.time}</p>
                   </div>
                 </div>
-                <div className={`px-4 py-2 rounded-xl text-sm font-bold uppercase tracking-wider ${colorClasses.status}`}>
+                <div className={`px-2.5 py-1 rounded-md text-xs font-semibold uppercase tracking-wide ${colorClasses.status} flex-shrink-0`}>
                   {activity.status}
                 </div>
               </div>

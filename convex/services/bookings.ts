@@ -282,24 +282,28 @@ export const createBooking = mutation({
 
     // Send comprehensive booking notifications
     try {
+      // Send new booking notification to staff (for confirmation/processing)
       await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
         bookingId,
-        notificationType: "CUSTOMER_BOOKING_CONFIRMED",
+        notificationType: "STAFF_NEW_BOOKING",
         recipients: [
-          { type: "customer", userId: args.customer },
           { type: "staff", branchId: args.branch_id },
         ]
       });
 
       // Send notification to barber if assigned
       if (args.barber) {
-        await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
-          bookingId,
-          notificationType: "BARBER_NEW_ASSIGNMENT",
-          recipients: [
-            { type: "barber", userId: args.barber },
-          ]
-        });
+        // Get barber's user ID
+        const barber = await ctx.db.get(args.barber);
+        if (barber && barber.user) {
+          await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+            bookingId,
+            notificationType: "BARBER_NEW_ASSIGNMENT",
+            recipients: [
+              { type: "barber", userId: barber.user },
+            ]
+          });
+        }
       }
     } catch (error) {
       console.error("Failed to send booking notifications:", error);
@@ -339,8 +343,10 @@ export const updateBooking = mutation({
     // Check if booking was rescheduled
     const isRescheduled = (args.date && args.date !== currentBooking.date) || 
                           (args.time && args.time !== currentBooking.time);
-    const oldDate = currentBooking.date;
-    const oldTime = currentBooking.time;
+    
+    // Check if barber was changed
+    const barberChanged = args.barber && args.barber !== currentBooking.barber;
+    const previousBarber = currentBooking.barber;
 
     await ctx.db.patch(id, {
       ...updates,
@@ -350,13 +356,20 @@ export const updateBooking = mutation({
     // Send rescheduled notification if date/time changed
     if (isRescheduled) {
       try {
+        const recipients = [];
+        
+        // Notify customer if booking has a customer account
+        if (currentBooking.customer) {
+          recipients.push({ type: "customer" as const, userId: currentBooking.customer });
+        }
+        
+        // Notify staff
+        recipients.push({ type: "staff" as const, branchId: currentBooking.branch_id });
+        
         await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
           bookingId: id,
           notificationType: "CUSTOMER_BOOKING_RESCHEDULED",
-          recipients: [
-            { type: "customer", userId: currentBooking.customer },
-            { type: "staff", branchId: currentBooking.branch_id },
-          ],
+          recipients,
           metadata: {
             new_date: args.date || currentBooking.date,
             new_time: args.time || currentBooking.time,
@@ -365,97 +378,235 @@ export const updateBooking = mutation({
 
         // Notify barber if assigned
         if (currentBooking.barber) {
+          // Get barber record to find user ID
+          const barberRecord = await ctx.db.get(currentBooking.barber);
+          if (barberRecord && barberRecord.user) {
+            await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+              bookingId: id,
+              notificationType: "BARBER_APPOINTMENT_RESCHEDULED",
+              recipients: [
+                { type: "barber", userId: barberRecord.user },
+              ],
+              metadata: {
+                new_date: args.date || currentBooking.date,
+                new_time: args.time || currentBooking.time,
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Failed to send reschedule notifications:", error);
+      }
+    }
+    
+    // Send notifications if barber was changed
+    if (barberChanged) {
+      try {
+        // Notify the new barber about assignment
+        if (args.barber) {
+          // Get barber record to find user ID
+          const barberRecord = await ctx.db.get(args.barber);
+          if (barberRecord && barberRecord.user) {
+            await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+              bookingId: id,
+              notificationType: "BARBER_NEW_ASSIGNMENT",
+              recipients: [
+                { type: "barber", userId: barberRecord.user },
+              ]
+            });
+          }
+        }
+        
+        // Notify the previous barber about unassignment
+        if (previousBarber) {
           await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
             bookingId: id,
-            notificationType: "BARBER_APPOINTMENT_RESCHEDULED",
+            notificationType: "BARBER_APPOINTMENT_CANCELLED",
             recipients: [
-              { type: "barber", userId: currentBooking.barber },
+              { type: "barber", userId: previousBarber },
             ],
             metadata: {
-              new_date: args.date || currentBooking.date,
-              new_time: args.time || currentBooking.time,
+              reason: "Reassigned to another barber",
+            }
+          });
+        }
+        
+        // Notify customer about barber change
+        if (currentBooking.customer) {
+          await ctx.runMutation(api.services.notifications.createNotification, {
+            title: "Barber Changed",
+            message: "Your appointment barber has been updated.",
+            type: "booking",
+            priority: "medium",
+            recipient_id: currentBooking.customer,
+            recipient_type: "customer",
+            branch_id: currentBooking.branch_id,
+            action_url: `/bookings/${currentBooking.booking_code}`,
+            action_label: "View Details",
+            metadata: {
+              booking_id: id,
+              branch_id: currentBooking.branch_id,
             }
           });
         }
       } catch (error) {
-        console.error("Failed to send reschedule notifications:", error);
+        console.error("Failed to send barber change notifications:", error);
       }
     }
 
     // Create notification if status changed
     if (args.status && args.status !== currentBooking.status) {
       try {
-        let notificationType;
         switch (args.status) {
           case "confirmed":
-            notificationType = "booking_confirmed";
-            break;
-          case "cancelled":
-            notificationType = "booking_cancelled";
-            break;
-          case "completed":
-            notificationType = "booking_completed";
-            break;
-          default:
-            notificationType = null;
-        }
-        
-        if (notificationType) {
-          switch (args.status) {
-            case "confirmed":
+            {
+              const recipients = [];
+              
+              // Notify customer if exists
+              if (currentBooking.customer) {
+                recipients.push({ type: "customer" as const, userId: currentBooking.customer });
+              }
+              
+              // Notify staff
+              recipients.push({ type: "staff" as const, branchId: currentBooking.branch_id });
+              
               await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
                 bookingId: id,
                 notificationType: "CUSTOMER_BOOKING_CONFIRMED",
-                recipients: [
-                  { type: "customer", userId: currentBooking.customer },
-                  { type: "staff", branchId: currentBooking.branch_id },
-                ]
+                recipients
               });
-              break;
               
-            case "cancelled":
+              // Notify barber if assigned
+              if (currentBooking.barber) {
+                await ctx.runMutation(api.services.notifications.createNotification, {
+                  title: "Booking Confirmed",
+                  message: "A booking has been confirmed for you.",
+                  type: "booking",
+                  priority: "medium",
+                  recipient_id: currentBooking.barber,
+                  recipient_type: "barber",
+                  branch_id: currentBooking.branch_id,
+                  action_url: `/bookings/${currentBooking.booking_code}`,
+                  action_label: "View Details",
+                  metadata: {
+                    booking_id: id,
+                    branch_id: currentBooking.branch_id,
+                  }
+                });
+              }
+            }
+            break;
+            
+          case "cancelled":
+            {
+              const recipients = [];
+              
+              // Notify customer if exists
+              if (currentBooking.customer) {
+                recipients.push({ type: "customer" as const, userId: currentBooking.customer });
+              }
+              
+              // Notify staff
+              recipients.push({ type: "staff" as const, branchId: currentBooking.branch_id });
+              
               await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
                 bookingId: id,
                 notificationType: "CUSTOMER_BOOKING_CANCELLED",
-                recipients: [
-                  { type: "customer", userId: currentBooking.customer },
-                  { type: "staff", branchId: currentBooking.branch_id },
-                ]
+                recipients
               });
               
               // Also notify barber if assigned
               if (currentBooking.barber) {
-                await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
-                  bookingId: id,
-                  notificationType: "BARBER_APPOINTMENT_CANCELLED",
-                  recipients: [
-                    { type: "barber", userId: currentBooking.barber },
-                  ]
-                });
+                // Get barber record to find user ID
+                const barberRecord = await ctx.db.get(currentBooking.barber);
+                if (barberRecord && barberRecord.user) {
+                  await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+                    bookingId: id,
+                    notificationType: "BARBER_APPOINTMENT_CANCELLED",
+                    recipients: [
+                      { type: "barber", userId: barberRecord.user },
+                    ]
+                  });
+                }
               }
-              break;
+            }
+            break;
+            
+          case "completed":
+            // Notify customer
+            if (currentBooking.customer) {
+              await ctx.runMutation(api.services.notifications.createNotification, {
+                title: "Booking Completed",
+                message: "Your booking has been completed. Thank you for visiting!",
+                type: "booking",
+                priority: "low",
+                recipient_id: currentBooking.customer,
+                recipient_type: "customer",
+                branch_id: currentBooking.branch_id,
+                action_url: `/bookings/${currentBooking.booking_code}`,
+                action_label: "View Details",
+                metadata: {
+                  booking_id: id,
+                  branch_id: currentBooking.branch_id,
+                }
+              });
+            }
+            
+            // Notify barber
+            if (currentBooking.barber) {
+              await ctx.runMutation(api.services.notifications.createNotification, {
+                title: "Service Completed",
+                message: "Service has been marked as completed.",
+                type: "booking",
+                priority: "low",
+                recipient_id: currentBooking.barber,
+                recipient_type: "barber",
+                branch_id: currentBooking.branch_id,
+                action_url: `/bookings/${currentBooking.booking_code}`,
+                action_label: "View Details",
+                metadata: {
+                  booking_id: id,
+                  branch_id: currentBooking.branch_id,
+                }
+              });
+            }
+            break;
+            
+          case "booked":
+            // Notify when status changes from pending to booked
+            if (currentBooking.status === "pending") {
+              const recipients = [];
               
-            case "completed":
               if (currentBooking.customer) {
-                await ctx.runMutation(api.services.notifications.createNotification, {
-                  title: "Booking Completed",
-                  message: "Your booking has been completed. Thank you for visiting!",
-                  type: "booking",
-                  priority: "low",
-                  recipient_id: currentBooking.customer,
-                  recipient_type: "customer",
-                  action_url: `/bookings/${currentBooking.booking_code}`,
-                  action_label: "View Details",
-                });
+                recipients.push({ type: "customer" as const, userId: currentBooking.customer });
               }
-              break;
-          }
-         }
-       } catch (error) {
-         console.error("Failed to create booking status notification:", error);
-         // Don't fail the booking update if notification fails
-       }
-     }
+              
+              recipients.push({ type: "staff" as const, branchId: currentBooking.branch_id });
+              
+              await ctx.runMutation(api.services.notifications.createNotification, {
+                title: "Booking Status Updated",
+                message: "Your booking status has been updated to booked.",
+                type: "booking",
+                priority: "medium",
+                recipient_id: currentBooking.customer,
+                recipient_type: "customer",
+                branch_id: currentBooking.branch_id,
+                action_url: `/bookings/${currentBooking.booking_code}`,
+                action_label: "View Details",
+                metadata: {
+                  booking_id: id,
+                  branch_id: currentBooking.branch_id,
+                  status: "booked"
+                }
+              });
+            }
+            break;
+        }
+      } catch (error) {
+        console.error("Failed to create booking status notification:", error);
+        // Don't fail the booking update if notification fails
+      }
+    }
 
     return id;
   },
@@ -465,6 +616,50 @@ export const updateBooking = mutation({
 export const deleteBooking = mutation({
   args: { id: v.id("bookings") },
   handler: async (ctx, args) => {
+    // Get the booking details before deleting
+    const booking = await ctx.db.get(args.id);
+    
+    if (booking) {
+      // Send notifications before deletion
+      try {
+        const recipients = [];
+        
+        // Notify customer if exists
+        if (booking.customer) {
+          recipients.push({ type: "customer" as const, userId: booking.customer });
+        }
+        
+        // Notify staff
+        recipients.push({ type: "staff" as const, branchId: booking.branch_id });
+        
+        await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+          bookingId: args.id,
+          notificationType: "CUSTOMER_BOOKING_CANCELLED",
+          recipients,
+          metadata: {
+            reason: "Booking deleted by administrator"
+          }
+        });
+        
+        // Notify barber if assigned
+        if (booking.barber) {
+          await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+            bookingId: args.id,
+            notificationType: "BARBER_APPOINTMENT_CANCELLED",
+            recipients: [
+              { type: "barber", userId: booking.barber },
+            ],
+            metadata: {
+              reason: "Booking deleted by administrator"
+            }
+          });
+        }
+      } catch (error) {
+        console.error("Failed to send booking deletion notifications:", error);
+        // Continue with deletion even if notifications fail
+      }
+    }
+    
     await ctx.db.delete(args.id);
     return { success: true };
   },
@@ -761,6 +956,36 @@ export const createWalkInBooking = mutation({
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
+
+    // Send walk-in booking notifications
+    try {
+      // Notify staff about walk-in booking
+      await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+        bookingId,
+        notificationType: "STAFF_WALKIN_BOOKING",
+        recipients: [
+          { type: "staff", branchId: args.branch_id },
+        ]
+      });
+
+      // Notify barber if assigned
+      if (args.barber) {
+        // Get barber record to find user ID
+        const barberRecord = await ctx.db.get(args.barber);
+        if (barberRecord && barberRecord.user) {
+          await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+            bookingId,
+            notificationType: "BARBER_NEW_ASSIGNMENT",
+            recipients: [
+              { type: "barber", userId: barberRecord.user },
+            ]
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to send walk-in booking notifications:", error);
+      // Don't fail the booking creation if notifications fail
+    }
 
     return bookingId;
   },

@@ -5,6 +5,12 @@ import { api } from "../_generated/api";
 // Production-ready notification templates for booking events
 export const BOOKING_NOTIFICATION_TEMPLATES = {
   // Customer notifications
+  CUSTOMER_BOOKING_RECEIVED: {
+    title: "Booking Received",
+    message: "Your {service_name} appointment at {branch_name} on {date} at {time} has been received. We'll confirm it shortly.",
+    type: "booking" as const,
+    priority: "medium" as const,
+  },
   CUSTOMER_BOOKING_CONFIRMED: {
     title: "Booking Confirmed",
     message: "Your appointment has been confirmed! {service_name} at {branch_name} on {date} at {time}.",
@@ -135,6 +141,7 @@ export const sendBookingNotifications = mutation({
   args: {
     bookingId: v.id("bookings"),
     notificationType: v.union(
+      v.literal("CUSTOMER_BOOKING_RECEIVED"),
       v.literal("CUSTOMER_BOOKING_CONFIRMED"),
       v.literal("CUSTOMER_BOOKING_REMINDER"),
       v.literal("CUSTOMER_BOOKING_CANCELLED"),
@@ -302,6 +309,7 @@ export const sendBookingNotifications = mutation({
             recipient_id: userId,
             recipient_type: recipient.type,
             sender_id: undefined, // System notification
+            branch_id: booking.branch_id, // Include branch_id at root level for indexing
             is_read: false,
             is_archived: false,
             action_url: booking.booking_code ? `/bookings/${booking.booking_code}` : undefined,
@@ -360,7 +368,31 @@ export const sendBookingNotifications = mutation({
 async function sendToBranchStaff(ctx: any, params: any) {
   const { template, notificationData, bookingId, branchId, recipientType, now, metadata } = params;
   
-  // Get all active staff in the branch
+  // Create a single branch-wide notification for all staff
+  const branchNotificationId = await ctx.db.insert("notifications", {
+    title: template.title,
+    message: formatMessage(template.message, notificationData),
+    type: template.type,
+    priority: template.priority,
+    recipient_id: undefined, // No specific recipient - branch-wide
+    recipient_type: "staff", // Branch staff notification
+    sender_id: undefined, // System notification
+    branch_id: branchId, // Critical: branch_id at root level for indexing
+    is_read: false,
+    is_archived: false,
+    action_url: `/bookings/${bookingId}`,
+    action_label: "View Booking",
+    metadata: {
+      booking_id: bookingId,
+      branch_id: branchId, // Also keep in metadata for reference
+      ...metadata,
+    },
+    expires_at: calculateExpirationDate(now, template.type),
+    createdAt: now,
+    updatedAt: now,
+  });
+  
+  // Also create individual notifications for each staff member for better tracking
   const staffUsers = await ctx.db
     .query("users")
     .withIndex("by_branch_role", (q) => 
@@ -369,21 +401,23 @@ async function sendToBranchStaff(ctx: any, params: any) {
     .filter(q => q.eq(q.field("is_active"), true))
     .collect();
   
-  const notifications = staffUsers.map(staff => 
+  const individualNotifications = staffUsers.map(staff => 
     ctx.db.insert("notifications", {
       title: template.title,
       message: formatMessage(template.message, notificationData),
       type: template.type,
       priority: template.priority,
       recipient_id: staff._id,
-      recipient_type,
+      recipient_type: "staff", // Always "staff" for individual staff notifications
       sender_id: undefined,
+      branch_id: branchId, // Include branch_id for filtering
       is_read: false,
       is_archived: false,
       action_url: `/bookings/${bookingId}`,
       action_label: "View Booking",
       metadata: {
         booking_id: bookingId,
+        branch_id: branchId,
         ...metadata,
       },
       expires_at: calculateExpirationDate(now, template.type),
@@ -392,14 +426,39 @@ async function sendToBranchStaff(ctx: any, params: any) {
     })
   );
   
-  return Promise.all(notifications);
+  // Return all notification IDs
+  return [branchNotificationId, ...individualNotifications];
 }
 
 // Helper function to send notifications to admin users
 async function sendToAdminUsers(ctx: any, params: any) {
   const { template, notificationData, bookingId, branchId, recipientType, now, metadata } = params;
   
-  // Get branch admins
+  // Create admin-wide notification (for super admins)
+  const adminNotificationId = await ctx.db.insert("notifications", {
+    title: template.title,
+    message: formatMessage(template.message, notificationData),
+    type: template.type,
+    priority: template.priority,
+    recipient_id: undefined, // No specific recipient - admin-wide
+    recipient_type: "admin", // Admin notification
+    sender_id: undefined, // System notification
+    branch_id: branchId, // Include branch_id for context and filtering
+    is_read: false,
+    is_archived: false,
+    action_url: `/bookings/${bookingId}`,
+    action_label: "View Booking",
+    metadata: {
+      booking_id: bookingId,
+      branch_id: branchId, // Also keep in metadata
+      ...metadata,
+    },
+    expires_at: calculateExpirationDate(now, template.type),
+    createdAt: now,
+    updatedAt: now,
+  });
+  
+  // Get branch admins for individual notifications
   const branchAdmins = await ctx.db
     .query("users")
     .withIndex("by_branch_role", (q) => 
@@ -408,7 +467,7 @@ async function sendToAdminUsers(ctx: any, params: any) {
     .filter(q => q.eq(q.field("is_active"), true))
     .collect();
   
-  // Get super admins
+  // Get super admins for individual notifications
   const superAdmins = await ctx.db
     .query("users")
     .withIndex("by_role", (q) => q.eq("role", "super_admin"))
@@ -417,21 +476,23 @@ async function sendToAdminUsers(ctx: any, params: any) {
   
   const adminUsers = [...branchAdmins, ...superAdmins];
   
-  const notifications = adminUsers.map(admin => 
+  const individualNotifications = adminUsers.map(admin => 
     ctx.db.insert("notifications", {
       title: template.title,
       message: formatMessage(template.message, notificationData),
       type: template.type,
       priority: template.priority,
       recipient_id: admin._id,
-      recipient_type,
+      recipient_type: "admin", // Always "admin" for admin notifications
       sender_id: undefined,
+      branch_id: branchId, // Include branch_id for filtering
       is_read: false,
       is_archived: false,
       action_url: `/bookings/${bookingId}`,
       action_label: "View Booking",
       metadata: {
         booking_id: bookingId,
+        branch_id: branchId,
         ...metadata,
       },
       expires_at: calculateExpirationDate(now, template.type),
@@ -440,7 +501,8 @@ async function sendToAdminUsers(ctx: any, params: any) {
     })
   );
   
-  return Promise.all(notifications);
+  // Return all notification IDs
+  return [adminNotificationId, ...individualNotifications];
 }
 
 // Calculate expiration date based on notification type

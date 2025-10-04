@@ -40,7 +40,8 @@ export default defineSchema({
     .index("by_username", ["username"])
     .index("by_created_at", ["createdAt"])
     .index("by_branch", ["branch_id"])
-    .index("by_role", ["role"]),
+    .index("by_role", ["role"])
+    .index("by_branch_role", ["branch_id", "role"]),
 
   // Barbers table
   barbers: defineTable({
@@ -219,9 +220,10 @@ export default defineSchema({
       v.literal("high"),
       v.literal("urgent")
     ),
-    recipient_id: v.id("users"),
+    recipient_id: v.optional(v.id("users")), // Optional for branch-wide notifications
     recipient_type: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber")),
     sender_id: v.optional(v.id("users")),
+    branch_id: v.optional(v.id("branches")), // For branch-scoped notifications
     is_read: v.boolean(),
     is_archived: v.boolean(),
     action_url: v.optional(v.string()),
@@ -233,11 +235,14 @@ export default defineSchema({
   })
     .index("by_recipient", ["recipient_id"])
     .index("by_recipient_type", ["recipient_type"])
+    .index("by_branch", ["branch_id"])
+    .index("by_branch_type", ["branch_id", "recipient_type"])
     .index("by_type", ["type"])
     .index("by_priority", ["priority"])
     .index("by_read_status", ["is_read"])
     .index("by_created_at", ["createdAt"])
     .index("by_recipient_read", ["recipient_id", "is_read"])
+    .index("by_branch_read", ["branch_id", "is_read"])
     .index("by_recipient_archived", ["recipient_id", "is_archived"]),
 
   // Products table

@@ -33,12 +33,12 @@ const NotificationsManagement = ({ onRefresh }) => {
   // Convex queries with proper error handling
   const notifications = useQuery(
     api.services.notifications.getUserNotifications,
-    user?.id ? { userId: user.id, limit: 50 } : "skip"
+    user?._id ? { userId: user._id, limit: 50 } : "skip"
   )
 
   const unreadCount = useQuery(
     api.services.notifications.getUnreadCount,
-    user?.id ? { userId: user.id } : "skip"
+    user?._id ? { userId: user._id } : "skip"
   )
 
   // Convex mutations
@@ -113,9 +113,9 @@ const NotificationsManagement = ({ onRefresh }) => {
   }, [notifications])
 
   const handleMarkAsRead = async (notificationId) => {
-    if (!user?.id) return
+    if (!user?._id) return
     try {
-      await markAsReadMutation({ notificationId, userId: user.id })
+      await markAsReadMutation({ notificationId, userId: user._id })
       onRefresh?.()
     } catch (err) {
       setError(err.message || 'Failed to mark notification as read')
@@ -123,10 +123,10 @@ const NotificationsManagement = ({ onRefresh }) => {
   }
 
   const handleMarkAllAsRead = async () => {
-    if (!user?.id) return
+    if (!user?._id) return
     try {
       setMutating(true)
-      await markAllAsReadMutation({ userId: user.id })
+      await markAllAsReadMutation({ userId: user._id })
       onRefresh?.()
     } catch (err) {
       setError(err.message || 'Failed to mark all notifications as read')
@@ -136,9 +136,9 @@ const NotificationsManagement = ({ onRefresh }) => {
   }
 
   const handleDelete = async (notificationId) => {
-    if (!user?.id) return
+    if (!user?._id) return
     try {
-      await deleteNotificationMutation({ notificationId, userId: user.id })
+      await deleteNotificationMutation({ notificationId, userId: user._id })
       onRefresh?.()
     } catch (err) {
       setError(err.message || 'Failed to delete notification')
@@ -152,7 +152,7 @@ const NotificationsManagement = ({ onRefresh }) => {
   }
 
   const handleCreateNotification = async ({ title, message, type, priority }) => {
-    if (!user?.id) {
+    if (!user?._id) {
       return {
         success: false,
         error: 'You must be logged in to send notifications.'
@@ -167,9 +167,9 @@ const NotificationsManagement = ({ onRefresh }) => {
         message,
         type,
         priority,
-        recipient_id: user.id,
+        recipient_id: user._id,
         recipient_type: getRecipientTypeFromRole(user.role),
-        sender_id: user.id
+        sender_id: user._id
       })
 
       onRefresh?.()
