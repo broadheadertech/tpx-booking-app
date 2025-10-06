@@ -292,6 +292,7 @@ function StaffDashboard() {
         userId={user._id}
         isOpen={showNotifications}
         onClose={() => setShowNotifications(false)}
+        userRole={user?.role}
       />
     </div>
   )

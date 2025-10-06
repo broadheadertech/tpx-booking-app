@@ -67,7 +67,7 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
   return (
     <div className="space-y-6">
       {/* Header with Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
         <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -154,7 +154,7 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             >
               <option value="name">Sort by Name</option>
               <option value="email">Sort by Email</option>

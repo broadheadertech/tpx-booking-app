@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode, CreditCard, Receipt, DollarSign, Eye } from 'lucide-react'
+import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode, CreditCard, Receipt, DollarSign, Eye, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import QRCode from 'qrcode'
@@ -25,6 +25,9 @@ const BookingsManagement = ({ onRefresh, user }) => {
   const [activeTab, setActiveTab] = useState('bookings')
   const [selectedBooking, setSelectedBooking] = useState(null)
   const [showTransactionModal, setShowTransactionModal] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 8
+  const [sendSms, setSendSms] = useState(false)
 
   // Convex queries - use branch-scoped queries for staff, global for super_admin
   const bookings = user?.role === 'super_admin' 
@@ -106,7 +109,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
   const filteredBookings = bookings
     .filter(booking => {
       const serviceName = services.find(s => s._id === booking.service)?.name || ''
-      const matchesSearch = 
+      const matchesSearch =
         serviceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (booking.barber_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (booking.booking_code || '').toLowerCase().includes(searchTerm.toLowerCase())
@@ -127,6 +130,25 @@ const BookingsManagement = ({ onRefresh, user }) => {
       }
       return a._id.localeCompare(b._id)
     })
+
+  // Reset to page 1 when filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, searchTerm, sortBy]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentBookings = filteredBookings.slice(startIndex, endIndex);
+
+  const handlePreviousPage = () => {
+    setCurrentPage(prev => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  };
 
   const stats = {
     total: bookings.length,
@@ -250,7 +272,22 @@ const BookingsManagement = ({ onRefresh, user }) => {
     const { booking, action } = confirmModal
     const newStatus = action === 'confirm' ? 'confirmed' : 'completed'
 
+    // Open SMS app with pre-filled message if checkbox is checked
+    if (sendSms && booking.customer_phone) {
+      const service = services.find(s => s._id === booking.service)
+      const message = action === 'confirm'
+        ? `Hi ${booking.customer_name || 'Customer'}! Your booking #${booking.booking_code} at TipunoX Barbershop has been confirmed for ${formatDate(booking.date)} at ${formatTime(booking.time)}. Service: ${service?.name}. See you soon!`
+        : `Hi ${booking.customer_name || 'Customer'}! Your booking #${booking.booking_code} at TipunoX Barbershop has been completed. Thank you for choosing us!`
+
+      // Create SMS link that works on both web and mobile
+      const smsLink = `sms:${booking.customer_phone}${/iPhone|iPad|iPod/.test(navigator.userAgent) ? '&' : '?'}body=${encodeURIComponent(message)}`
+
+      // Open SMS app
+      window.location.href = smsLink
+    }
+
     setConfirmModal({ show: false, booking: null, action: null })
+    setSendSms(false) // Reset SMS checkbox
     await handleStatusChange(booking, newStatus)
   }
 
@@ -1325,7 +1362,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
               </tr>
             </thead>
             <tbody className="bg-[#1A1A1A] divide-y divide-[#2A2A2A]/30">
-              {filteredBookings.map((booking) => {
+              {currentBookings.map((booking) => {
                 const statusConfig = getStatusConfig(booking.status)
                 const paymentStatusConfig = getPaymentStatusConfig(booking.payment_status || 'unpaid')
                 const currentPaymentStatus = booking.payment_status || 'unpaid'
@@ -1484,7 +1521,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
             <Calendar className="mx-auto h-12 w-12 text-gray-500" />
             <h3 className="mt-2 text-sm font-medium text-white">No bookings found</h3>
             <p className="mt-1 text-sm text-gray-400">
-              {searchTerm || filterStatus !== 'all' 
+              {searchTerm || filterStatus !== 'all'
                 ? 'Try adjusting your search or filter criteria.'
                 : 'Get started by creating a new booking.'
               }
@@ -1503,6 +1540,48 @@ const BookingsManagement = ({ onRefresh, user }) => {
           </div>
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {filteredBookings.length > 0 && totalPages > 1 && (
+        <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-lg p-4">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={handlePreviousPage}
+              disabled={currentPage === 1}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                currentPage === 1
+                  ? 'text-gray-500 cursor-not-allowed'
+                  : 'text-white hover:bg-[#2A2A2A]'
+              }`}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span className="text-sm">Previous</span>
+            </button>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-400">
+                Page <span className="text-[#FF8C42] font-semibold">{currentPage}</span> of <span className="text-white font-semibold">{totalPages}</span>
+              </span>
+              <span className="text-xs text-gray-500">
+                ({startIndex + 1}-{Math.min(endIndex, filteredBookings.length)} of {filteredBookings.length})
+              </span>
+            </div>
+
+            <button
+              onClick={handleNextPage}
+              disabled={currentPage === totalPages}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                currentPage === totalPages
+                  ? 'text-gray-500 cursor-not-allowed'
+                  : 'text-white hover:bg-[#2A2A2A]'
+              }`}
+            >
+              <span className="text-sm">Next</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
         </>
       ) : (
@@ -1547,9 +1626,21 @@ const BookingsManagement = ({ onRefresh, user }) => {
                 <p className="text-sm text-gray-400 mb-4">
                   Are you sure you want to {confirmModal.action === 'confirm' ? 'confirm' : 'mark as completed'} booking #{confirmModal.booking?.booking_code}?
                 </p>
-                
+
                 {confirmModal.booking && (
                   <div className="text-left space-y-2 p-4 rounded-xl bg-[#2A2A2A]">
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-300">Customer:</span>
+                      <span className="text-sm font-bold text-white">
+                        {confirmModal.booking.customer_name || 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-300">Phone:</span>
+                      <span className="text-sm font-bold text-white">
+                        {confirmModal.booking.customer_phone || 'N/A'}
+                      </span>
+                    </div>
                     <div className="flex justify-between">
                       <span className="text-sm font-medium text-gray-300">Service:</span>
                       <span className="text-sm font-bold text-white">
@@ -1570,11 +1661,32 @@ const BookingsManagement = ({ onRefresh, user }) => {
                     </div>
                   </div>
                 )}
+
+                {/* SMS Checkbox */}
+                {confirmModal.booking?.customer_phone && (
+                  <div className="mt-4 p-3 rounded-xl bg-[#2A2A2A] border border-[#3A3A3A]">
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={sendSms}
+                        onChange={(e) => setSendSms(e.target.checked)}
+                        className="w-5 h-5 text-[#F68B24] bg-[#1A1A1A] border-[#3A3A3A] rounded focus:ring-[#F68B24] focus:ring-2"
+                      />
+                      <div className="flex items-center space-x-2">
+                        <MessageSquare className="w-4 h-4 text-[#F68B24]" />
+                        <span className="text-sm font-medium text-white">Send SMS notification to customer</span>
+                      </div>
+                    </label>
+                  </div>
+                )}
               </div>
 
               <div className="flex space-x-3">
                 <button
-                  onClick={() => setConfirmModal({ show: false, booking: null, action: null })}
+                  onClick={() => {
+                    setConfirmModal({ show: false, booking: null, action: null })
+                    setSendSms(false)
+                  }}
                   className="flex-1 py-2 px-4 rounded-xl font-medium text-gray-300 bg-[#2A2A2A] hover:bg-[#333333] transition-colors"
                 >
                   Cancel

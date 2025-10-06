@@ -13,19 +13,19 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
   const setCurrentModal = setActiveModal || setInternalModal
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3">
       {/* Primary Action - QR Scanner */}
       <button
         onClick={() => setCurrentModal('scannerSelection')}
-        className="group relative text-center p-4 bg-[#1A1A1A] border border-[#FF8C42]/50 hover:border-[#FF8C42] rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
+        className="group relative text-center p-3 sm:p-4 bg-[#1A1A1A] border border-[#FF8C42]/50 hover:border-[#FF8C42] rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
       >
         <div className="absolute top-0 right-0 w-16 h-16 bg-[#FF8C42]/5 rounded-full -translate-y-8 translate-x-8"></div>
         <div className="relative z-10">
-          <div className="w-10 h-10 mx-auto mb-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center">
-            <QrCode className="w-5 h-5 text-white" />
+          <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center">
+            <QrCode className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
-          <h3 className="font-semibold text-white mb-2 text-sm">QR Scanner</h3>
-          <div className="w-full py-1.5 px-3 border border-[#FF8C42]/30 text-[#FF8C42] font-medium rounded-md hover:bg-[#FF8C42]/10 transition-colors text-xs">
+          <h3 className="font-semibold text-white mb-1.5 sm:mb-2 text-xs sm:text-sm">QR Scanner</h3>
+          <div className="w-full py-1 sm:py-1.5 px-2 sm:px-3 border border-[#FF8C42]/30 text-[#FF8C42] font-medium rounded-md hover:bg-[#FF8C42]/10 transition-colors text-[10px] sm:text-xs">
             Open Scanner
           </div>
         </div>
@@ -34,15 +34,15 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
       {/* Add Customer */}
       <button
         onClick={() => setCurrentModal('customer')}
-        className="group relative text-center p-4 bg-[#1A1A1A] border border-[#2A2A2A]/50 hover:border-[#FF8C42]/30 rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
+        className="group relative text-center p-3 sm:p-4 bg-[#1A1A1A] border border-[#2A2A2A]/50 hover:border-[#FF8C42]/30 rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
       >
         <div className="absolute top-0 right-0 w-16 h-16 bg-[#FF8C42]/5 rounded-full -translate-y-8 translate-x-8"></div>
         <div className="relative z-10">
-          <div className="w-10 h-10 mx-auto mb-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center">
-            <UserPlus className="w-5 h-5 text-white" />
+          <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center">
+            <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
-          <h3 className="font-semibold text-white mb-2 text-sm">Add Customer</h3>
-          <div className="w-full py-1.5 px-3 border border-[#FF8C42]/30 text-[#FF8C42] font-medium rounded-md hover:bg-[#FF8C42]/10 transition-colors text-xs">
+          <h3 className="font-semibold text-white mb-1.5 sm:mb-2 text-xs sm:text-sm">Add Customer</h3>
+          <div className="w-full py-1 sm:py-1.5 px-2 sm:px-3 border border-[#FF8C42]/30 text-[#FF8C42] font-medium rounded-md hover:bg-[#FF8C42]/10 transition-colors text-[10px] sm:text-xs">
             New Customer
           </div>
         </div>
@@ -51,15 +51,15 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
       {/* New Booking */}
       <button
         onClick={() => setCurrentModal('booking')}
-        className="group relative text-center p-4 bg-[#1A1A1A] border border-[#2A2A2A]/50 hover:border-[#2A2A2A] rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
+        className="group relative text-center p-3 sm:p-4 bg-[#1A1A1A] border border-[#2A2A2A]/50 hover:border-[#2A2A2A] rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
       >
         <div className="absolute top-0 right-0 w-16 h-16 bg-gray-500/5 rounded-full -translate-y-8 translate-x-8"></div>
         <div className="relative z-10">
-          <div className="w-10 h-10 mx-auto mb-2 bg-gradient-to-br from-[#2A2A2A] to-[#1A1A1A] rounded-lg flex items-center justify-center border border-[#3A3A3A]">
-            <Calendar className="w-5 h-5 text-gray-400" />
+          <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 bg-gradient-to-br from-[#2A2A2A] to-[#1A1A1A] rounded-lg flex items-center justify-center border border-[#3A3A3A]">
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
           </div>
-          <h3 className="font-semibold text-white mb-2 text-sm">New Booking</h3>
-          <div className="w-full py-1.5 px-3 border border-[#2A2A2A] text-gray-400 font-medium rounded-md hover:bg-[#1A1A1A] hover:text-white hover:border-[#3A3A3A] transition-colors text-xs">
+          <h3 className="font-semibold text-white mb-1.5 sm:mb-2 text-xs sm:text-sm">New Booking</h3>
+          <div className="w-full py-1 sm:py-1.5 px-2 sm:px-3 border border-[#2A2A2A] text-gray-400 font-medium rounded-md hover:bg-[#1A1A1A] hover:text-white hover:border-[#3A3A3A] transition-colors text-[10px] sm:text-xs">
             Book Appointment
           </div>
         </div>
@@ -68,15 +68,15 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
       {/* Create Voucher */}
       <button
         onClick={() => setCurrentModal('voucher')}
-        className="group relative text-center p-4 bg-[#1A1A1A] border border-[#2A2A2A]/50 hover:border-[#FF8C42]/30 rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
+        className="group relative text-center p-3 sm:p-4 bg-[#1A1A1A] border border-[#2A2A2A]/50 hover:border-[#FF8C42]/30 rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
       >
         <div className="absolute top-0 right-0 w-16 h-16 bg-[#FF8C42]/5 rounded-full -translate-y-8 translate-x-8"></div>
         <div className="relative z-10">
-          <div className="w-10 h-10 mx-auto mb-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center">
-            <Gift className="w-5 h-5 text-white" />
+          <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center">
+            <Gift className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
-          <h3 className="font-semibold text-white mb-2 text-sm">Create Voucher</h3>
-          <div className="w-full py-1.5 px-3 border border-[#FF8C42]/30 text-[#FF8C42] font-medium rounded-md hover:bg-[#FF8C42]/10 transition-colors text-xs">
+          <h3 className="font-semibold text-white mb-1.5 sm:mb-2 text-xs sm:text-sm">Create Voucher</h3>
+          <div className="w-full py-1 sm:py-1.5 px-2 sm:px-3 border border-[#FF8C42]/30 text-[#FF8C42] font-medium rounded-md hover:bg-[#FF8C42]/10 transition-colors text-[10px] sm:text-xs">
             New Voucher
           </div>
         </div>

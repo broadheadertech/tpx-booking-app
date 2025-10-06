@@ -41,16 +41,21 @@ export const useRealtimeNotifications = () => {
             // Special handling for booking received vs confirmed
             const isBookingReceived = notification.title.includes('Booking Received');
             const isBookingConfirmed = notification.title.includes('Booking Confirmed');
-            
+
+            // Only show action button for customers
+            const isCustomer = user?.role === 'customer';
+
             toast.booking(
               notification.title,
               notification.message,
               {
                 duration: isBookingConfirmed ? 7000 : 6000,
-                action: notification.action_url ? {
+                action: isCustomer ? {
                   label: notification.action_label || 'View Booking',
                   onClick: () => {
-                    window.location.href = notification.action_url;
+                    // Trigger a custom event to switch to bookings tab
+                    console.log('Dispatching switchToBookings event...')
+                    window.dispatchEvent(new CustomEvent('switchToBookings'));
                   },
                   showArrow: true
                 } : undefined
@@ -208,7 +213,8 @@ export const useBookingNotifications = () => {
         action: {
           label: 'View Booking',
           onClick: () => {
-            window.location.href = `/booking/${bookingCode}`;
+            // Trigger a custom event to switch to bookings tab
+            window.dispatchEvent(new CustomEvent('switchToBookings'));
           },
           showArrow: true
         }

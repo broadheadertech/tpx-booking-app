@@ -51,6 +51,19 @@ const Dashboard = () => {
     }
   }, [isAuthenticated, user])
 
+  // Listen for custom event to switch to bookings tab
+  useEffect(() => {
+    const handleSwitchToBookings = () => {
+      console.log('Switching to bookings tab...')
+      setActiveSection('bookings')
+    }
+
+    window.addEventListener('switchToBookings', handleSwitchToBookings)
+    return () => {
+      window.removeEventListener('switchToBookings', handleSwitchToBookings)
+    }
+  }, [])
+
   const handleOnboardingComplete = () => {
     setShowOnboarding(false)
   }
@@ -66,7 +79,7 @@ const Dashboard = () => {
     { id: 'shop', label: 'Shop', icon: ShoppingBag },
     { id: 'bookings', label: 'Bookings', icon: History },
     { id: 'vouchers', label: 'Vouchers', icon: Gift },
-    { id: 'notifications', label: 'Alerts', icon: Bell }
+    { id: 'ai-assistant', label: 'TPX AI', icon: Bot }
   ]
 
   // Calculate dashboard stats from Convex data
@@ -261,7 +274,7 @@ const Dashboard = () => {
       )}
       
       {/* Header - Hide when on sections with their own navigation */}
-      {!['shop', 'booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'notifications', 'profile'].includes(activeSection) && (
+      {!['shop', 'booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
         <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
           <div className="max-w-md mx-auto px-4">
             <div className="flex justify-between items-center py-4">
@@ -306,7 +319,7 @@ const Dashboard = () => {
       </div>
 
       {/* Bottom Navigation - Only show when not onboarding and not on pages with their own navigation */}
-      {!showOnboarding && !['notifications', 'shop', 'booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
+      {!showOnboarding && !['shop', 'booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0A0A0A]/95 backdrop-blur-xl shadow-2xl border-t border-[#1A1A1A]">
         <div className="max-w-md mx-auto px-3">
           <div className="grid grid-cols-5 py-3">

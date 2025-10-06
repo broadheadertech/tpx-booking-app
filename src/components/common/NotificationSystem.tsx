@@ -35,15 +35,17 @@ const TYPE_COLORS = {
 interface NotificationSystemProps {
   userId: any; // Convex ID type
   className?: string;
+  userRole?: string;
 }
 
 interface NotificationProps {
   notification: any;
   onMarkAsRead: (id: string) => void;
   onDelete: (id: string) => void;
+  userRole?: string;
 }
 
-const NotificationItem: React.FC<NotificationProps> = ({ notification, onMarkAsRead, onDelete }) => {
+const NotificationItem: React.FC<NotificationProps> = ({ notification, onMarkAsRead, onDelete, userRole }) => {
   const [isHovered, setIsHovered] = useState(false);
   
   const Icon = NOTIFICATION_ICONS[notification.type] || Info;
@@ -149,8 +151,8 @@ const NotificationItem: React.FC<NotificationProps> = ({ notification, onMarkAsR
             {notification.message}
           </p>
 
-          {/* Action button */}
-          {notification.action_label && (
+          {/* Action button - hidden for staff users */}
+          {notification.action_label && userRole === 'customer' && (
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -213,9 +215,10 @@ interface NotificationModalProps {
   userId: any;
   isOpen: boolean;
   onClose: () => void;
+  userRole?: string;
 }
 
-export const NotificationModal: React.FC<NotificationModalProps> = ({ userId, isOpen, onClose }) => {
+export const NotificationModal: React.FC<NotificationModalProps> = ({ userId, isOpen, onClose, userRole = 'customer' }) => {
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [unreadOnly, setUnreadOnly] = useState(false);
 
@@ -402,6 +405,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ userId, is
                         notification={notification}
                         onMarkAsRead={handleMarkAsRead}
                         onDelete={handleDelete}
+                        userRole={userRole}
                       />
                     ))}
                   </AnimatePresence>
@@ -431,13 +435,13 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ userId, is
 };
 
 // Backward compatibility: Combined component (deprecated, use NotificationBell + NotificationModal separately)
-export const NotificationSystem: React.FC<NotificationSystemProps> = ({ userId, className = '' }) => {
+export const NotificationSystem: React.FC<NotificationSystemProps> = ({ userId, className = '', userRole = 'customer' }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div className={className}>
       <NotificationBell userId={userId} onOpenModal={() => setIsOpen(true)} />
-      <NotificationModal userId={userId} isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      <NotificationModal userId={userId} isOpen={isOpen} onClose={() => setIsOpen(false)} userRole={userRole} />
     </div>
   );
 };

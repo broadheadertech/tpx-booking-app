@@ -105,9 +105,9 @@ export const ToastProvider = ({ children }) => {
       title,
       message,
       icon: Calendar,
-      bgColor: 'bg-purple-500',
-      borderColor: 'border-purple-500',
-      iconColor: 'text-purple-400',
+      bgColor: 'bg-[#FF8C42]',
+      borderColor: 'border-[#FF8C42]',
+      iconColor: 'text-[#FF8C42]',
       ...options,
     });
   }, [addToast]);
@@ -144,9 +144,9 @@ export const ToastProvider = ({ children }) => {
       title,
       message,
       icon: Gift,
-      bgColor: 'bg-purple-500',
-      borderColor: 'border-purple-500',
-      iconColor: 'text-purple-400',
+      bgColor: 'bg-[#FF8C42]',
+      borderColor: 'border-[#FF8C42]',
+      iconColor: 'text-[#FF8C42]',
       ...options,
     });
   }, [addToast]);

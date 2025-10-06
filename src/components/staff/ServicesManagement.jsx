@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw, Grid, List, Upload } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw, Grid, List, Upload, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import CreateServiceModal from './CreateServiceModal'
@@ -13,12 +13,14 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
   const [loading, setLoading] = useState(false)
   const [viewMode, setViewMode] = useState('card') // 'card' or 'table'
   const [showImportModal, setShowImportModal] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 8
 
   // Convex mutations
   const deleteService = useMutation(api.services.services.deleteService)
 
   const filteredServices = services
-    .filter(service => 
+    .filter(service =>
       service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       service.description.toLowerCase().includes(searchTerm.toLowerCase())
     )
@@ -28,6 +30,25 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
       if (sortBy === 'duration') return b.duration_minutes - a.duration_minutes
       return a.id - b.id
     })
+
+  // Reset to page 1 when search or sort changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, sortBy]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentServices = filteredServices.slice(startIndex, endIndex);
+
+  const handlePreviousPage = () => {
+    setCurrentPage(prev => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  };
 
   const stats = {
     total: services.length,
@@ -219,7 +240,7 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
       {viewMode === 'card' ? (
         /* Card View */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filteredServices.map((service) => (
+          {currentServices.map((service) => (
             <div
               key={service._id}
               className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm hover:shadow-md transition-all duration-200 p-4 hover:border-[#FF8C42]/30"
@@ -322,7 +343,7 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#444444]/30">
-                {filteredServices.map((service) => (
+                {currentServices.map((service) => (
                   <tr key={service._id} className="hover:bg-[#333333]/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -382,7 +403,7 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
           <Scissors className="mx-auto h-12 w-12 text-gray-500" />
           <h3 className="mt-2 text-sm font-medium text-white">No services found</h3>
           <p className="mt-1 text-sm text-gray-400">
-            {searchTerm 
+            {searchTerm
               ? 'Try adjusting your search criteria.'
               : 'Get started by creating your first service.'
             }
@@ -398,6 +419,48 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {filteredServices.length > 0 && totalPages > 1 && (
+        <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-4">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={handlePreviousPage}
+              disabled={currentPage === 1}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                currentPage === 1
+                  ? 'text-gray-500 cursor-not-allowed'
+                  : 'text-white hover:bg-[#2A2A2A]'
+              }`}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span className="text-sm">Previous</span>
+            </button>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-400">
+                Page <span className="text-[#FF8C42] font-semibold">{currentPage}</span> of <span className="text-white font-semibold">{totalPages}</span>
+              </span>
+              <span className="text-xs text-gray-500">
+                ({startIndex + 1}-{Math.min(endIndex, filteredServices.length)} of {filteredServices.length})
+              </span>
+            </div>
+
+            <button
+              onClick={handleNextPage}
+              disabled={currentPage === totalPages}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                currentPage === totalPages
+                  ? 'text-gray-500 cursor-not-allowed'
+                  : 'text-white hover:bg-[#2A2A2A]'
+              }`}
+            >
+              <span className="text-sm">Next</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       )}
     </div>
