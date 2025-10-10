@@ -330,6 +330,7 @@ export const createBarberWithAccount = mutation({
     full_name: v.string(),
     is_active: v.boolean(),
     services: v.array(v.id("services")),
+    branch_id: v.id("branches"),
     phone: v.optional(v.string()),
     avatar: v.optional(v.string()),
     avatarStorageId: v.optional(v.id("_storage")),
@@ -366,6 +367,7 @@ export const createBarberWithAccount = mutation({
       nickname: undefined,
       birthday: undefined,
       role: "barber",
+      branch_id: args.branch_id,
       is_active: true,
       avatar: args.avatar,
       bio: undefined,
@@ -378,6 +380,7 @@ export const createBarberWithAccount = mutation({
     // Create barber profile
     const barberId = await ctx.db.insert("barbers", {
       user: userId,
+      branch_id: args.branch_id,
       full_name: args.full_name,
       is_active: args.is_active,
       services: args.services,
