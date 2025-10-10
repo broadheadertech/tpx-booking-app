@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User, ShoppingBag, Bot } from 'lucide-react'
+import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User, ShoppingBag, Bot, Bell } from 'lucide-react'
 import ServiceBooking from '../../components/customer/ServiceBooking'
 import CustomerProfile from '../../components/customer/CustomerProfile'
 import VoucherManagement from '../../components/customer/VoucherManagement'
@@ -14,12 +14,22 @@ import bannerImage from '../../assets/img/banner.jpg'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
+import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications'
+import { useBookingNotificationListener } from '../../utils/bookingNotifications'
+import { NotificationBell } from '../../components/common/NotificationSystem'
+import NotificationsPage from '../../components/customer/NotificationsPage'
 
 const Dashboard = () => {
   const { user, isAuthenticated } = useAuth()
   const location = useLocation()
   const [activeSection, setActiveSection] = useState('home')
   const [showOnboarding, setShowOnboarding] = useState(false)
+  
+  // Hook for real-time notifications with toast alerts
+  const { unreadCount } = useRealtimeNotifications()
+  
+  // Hook for booking notification events
+  useBookingNotificationListener()
 
   // Check if we're EXACTLY on the customer dashboard route (not on booking or other pages)
   const isOnCustomerDashboard = location.pathname === '/customer/dashboard' &&
@@ -41,6 +51,19 @@ const Dashboard = () => {
     }
   }, [isAuthenticated, user])
 
+  // Listen for custom event to switch to bookings tab
+  useEffect(() => {
+    const handleSwitchToBookings = () => {
+      console.log('Switching to bookings tab...')
+      setActiveSection('bookings')
+    }
+
+    window.addEventListener('switchToBookings', handleSwitchToBookings)
+    return () => {
+      window.removeEventListener('switchToBookings', handleSwitchToBookings)
+    }
+  }, [])
+
   const handleOnboardingComplete = () => {
     setShowOnboarding(false)
   }
@@ -56,7 +79,7 @@ const Dashboard = () => {
     { id: 'shop', label: 'Shop', icon: ShoppingBag },
     { id: 'bookings', label: 'Bookings', icon: History },
     { id: 'vouchers', label: 'Vouchers', icon: Gift },
-    { id: 'ai-assistant', label: 'TipunoX Angeles AI', icon: Bot }
+    { id: 'ai-assistant', label: 'TPX AI', icon: Bot }
   ]
 
   // Calculate dashboard stats from Convex data
@@ -112,6 +135,8 @@ const Dashboard = () => {
         return <Profile />
       case 'loyalty':
         return <LoyaltyPoints onBack={() => setActiveSection('home')} />
+      case 'notifications':
+        return <NotificationsPage onBack={() => setActiveSection('home')} />
       default:
         return (
           <div className="space-y-6">
@@ -170,14 +195,14 @@ const Dashboard = () => {
             </div>
 
             {/* Quick Stats - Simplified */}
-            <div className="px-4 -mt-6 relative z-10">
+            <div className="px-4 mt-6 relative z-10">
               <div className="grid grid-cols-2 gap-4">
                 {quickStats.map((stat) => {
                   const IconComponent = stat.icon
                   return (
-                    <div key={stat.label} className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-[#555555]/30">
+                    <div key={stat.label} className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
                       <div className="text-center">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center mx-auto mb-2 shadow-lg">
+                        <div className="w-12 h-12 rounded-xl bg-[#FF8C42] flex items-center justify-center mx-auto mb-2">
                           <IconComponent className="w-6 h-6 text-white" />
                         </div>
                         <div className="text-2xl font-bold text-white">{stat.value}</div>
@@ -213,23 +238,23 @@ const Dashboard = () => {
             </div>
 
             {/* Shop Info */}
-            <div className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl mx-4 rounded-xl p-4 shadow-sm border border-[#555555]/30">
+            <div className="bg-[#1A1A1A] mx-4 rounded-xl p-4 border border-[#2A2A2A]">
               <h3 className="text-sm font-bold mb-3 text-center text-white">Shop Information</h3>
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
-                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center">
+                  <div className="w-6 h-6 rounded-lg bg-[#FF8C42] flex items-center justify-center">
                     <MapPin className="w-3 h-3 text-white" />
                   </div>
                   <span className="text-xs font-medium text-gray-300">123 Main Street, Quezon City</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center">
+                  <div className="w-6 h-6 rounded-lg bg-[#FF8C42] flex items-center justify-center">
                     <Phone className="w-3 h-3 text-white" />
                   </div>
                   <span className="text-xs font-medium text-gray-300">+63 912 345 6789</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center">
+                  <div className="w-6 h-6 rounded-lg bg-[#FF8C42] flex items-center justify-center">
                     <Clock className="w-3 h-3 text-white" />
                   </div>
                   <span className="text-xs font-medium text-gray-300">9:00 AM - 8:00 PM (Mon-Sat)</span>
@@ -242,27 +267,15 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
+    <div className="min-h-screen bg-[#0A0A0A]">
       {/* Premium Onboarding Modal */}
       {showOnboarding && (
         <PremiumOnboarding onComplete={handleOnboardingComplete} />
       )}
-      {/* Subtle background pattern */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
-        <div 
-          className="h-full bg-cover bg-center bg-no-repeat opacity-5"
-          style={{
-            backgroundImage: `url(/img/pnglog.png)`,
-            filter: 'brightness(0.3)'
-          }}
-        ></div>
-      </div>
       
       {/* Header - Hide when on sections with their own navigation */}
-      {!['shop', 'booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings'].includes(activeSection) && (
-        <div className="sticky top-0 z-40 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30">
+      {!['shop', 'booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
+        <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
           <div className="max-w-md mx-auto px-4">
             <div className="flex justify-between items-center py-4">
               <div className="flex items-center space-x-3">
@@ -274,16 +287,12 @@ const Dashboard = () => {
                   />
                 </div>
                 <div>
-                  <div className="flex items-center space-x-2">
-                    <h1 className="text-sm font-bold text-white">TipunoX Angeles Barbershop</h1>
-                    <div className="bg-[#FF8C42]/20 backdrop-blur-sm rounded-full px-1.5 py-0.5 border border-[#FF8C42]/30">
-                      <span className="text-xs font-semibold text-[#FF8C42]">v2.0.0</span>
-                    </div>
-                  </div>
-                  <p className="text-xs font-medium text-[#FF8C42]">Dashboard</p>
+                  <h1 className="text-sm font-bold text-white">TipunoX Angeles</h1>
+                  <p className="text-xs font-medium text-[#FF8C42]">Barbershop</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
+                <NotificationBell userId={user?._id} onOpenModal={() => setActiveSection('notifications')} />
                 <div className="text-right">
                   <p className="text-xs font-medium text-white">Welcome</p>
                   <p className="text-xs text-gray-400">{new Date().toLocaleDateString()}</p>
@@ -309,9 +318,9 @@ const Dashboard = () => {
         {renderContent()}
       </div>
 
-      {/* Bottom Navigation - Only show when not onboarding */}
-      {!showOnboarding && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl shadow-2xl border-t border-[#444444]/30">
+      {/* Bottom Navigation - Only show when not onboarding and not on pages with their own navigation */}
+      {!showOnboarding && !['shop', 'booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0A0A0A]/95 backdrop-blur-xl shadow-2xl border-t border-[#1A1A1A]">
         <div className="max-w-md mx-auto px-3">
           <div className="grid grid-cols-5 py-3">
             {sections.map((section) => {

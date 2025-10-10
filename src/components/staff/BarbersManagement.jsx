@@ -260,8 +260,8 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
   return (
     <div className="space-y-6">
       {/* Header with Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Total</p>
@@ -270,8 +270,8 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
             <User className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
-        
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Active</p>
@@ -281,7 +281,7 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Inactive</p>
@@ -291,7 +291,7 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Avg Rating</p>
@@ -304,7 +304,7 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
       </div>
 
       {/* Controls */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+      <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
             <div className="relative">
@@ -370,10 +370,10 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
       />
 
       {/* Barbers Table */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
+      <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-[#444444]/30">
-            <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
+            <thead className="bg-[#0A0A0A]">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Barber</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Contact</th>
@@ -382,7 +382,7 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] divide-y divide-[#444444]/30">
+            <tbody className="bg-[#1A1A1A] divide-y divide-[#444444]/30">
               {filteredBarbers.map((barber) => {
                 const statusConfig = getStatusConfig(barber.is_active)
                 const StatusIcon = statusConfig.icon

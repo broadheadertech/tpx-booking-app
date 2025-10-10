@@ -254,7 +254,7 @@ const EventsManagement = ({ onRefresh, user }) => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Total Events</p>
@@ -263,8 +263,8 @@ const EventsManagement = ({ onRefresh, user }) => {
             <Calendar className="h-8 w-8 text-[#FF8C42] opacity-30" />
           </div>
         </div>
-        
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Upcoming</p>
@@ -274,7 +274,7 @@ const EventsManagement = ({ onRefresh, user }) => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Completed</p>
@@ -284,7 +284,7 @@ const EventsManagement = ({ onRefresh, user }) => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Total Attendees</p>
@@ -296,7 +296,7 @@ const EventsManagement = ({ onRefresh, user }) => {
       </div>
 
       {/* Controls */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+      <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
             <div className="relative">
@@ -332,7 +332,7 @@ const EventsManagement = ({ onRefresh, user }) => {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6].map(i => (
-            <div key={i} className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+            <div key={i} className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
               <div className="animate-pulse">
                 <div className="h-4 bg-[#444444] rounded w-3/4 mb-3"></div>
                 <div className="h-3 bg-[#444444] rounded w-full mb-2"></div>
@@ -349,7 +349,7 @@ const EventsManagement = ({ onRefresh, user }) => {
             const attendancePercentage = (event.currentAttendees / event.maxAttendees) * 100
             
             return (
-              <div key={event._id} className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm hover:shadow-md transition-shadow p-6">
+              <div key={event._id} className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm hover:shadow-md transition-shadow p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center space-x-2">
                     <span className="text-2xl">{getCategoryIcon(event.category)}</span>

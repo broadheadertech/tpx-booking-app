@@ -5,6 +5,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { ToastProvider } from "./components/common/ToastNotification";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import AuthRedirect from "./components/common/AuthRedirect";
 import Landing from "./pages/Landing";
@@ -33,8 +34,9 @@ function App() {
 
   return (
     <AuthProvider>
-      <Router>
-        <div className="min-h-screen bg-gray-light">
+      <ToastProvider>
+        <Router>
+          <div className="min-h-screen bg-gray-light">
           <Routes>
             <Route
               path="/"
@@ -150,8 +152,9 @@ function App() {
             />
             <Route path="/download-app" element={<DownloadApp />} />
           </Routes>
-        </div>
-      </Router>
+          </div>
+        </Router>
+      </ToastProvider>
     </AuthProvider>
   );
 }

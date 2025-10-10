@@ -37,11 +37,11 @@ const ManagementSection = ({ activeTab, data }) => {
   const renderVoucherCard = (item) => (
     <div>
       <div className="flex items-center space-x-4 mb-4">
-        <h3 className="text-xl font-black text-[#1A1A1A] font-mono bg-[#F5F5F5] px-4 py-2 rounded-xl">{item.code}</h3>
+        <h3 className="text-xl font-black text-white font-mono bg-[#2A2A2A] px-4 py-2 rounded-xl border border-[#3A3A3A]">{item.code}</h3>
         <span className={`px-4 py-2 text-sm font-bold rounded-full border-2 ${
           item.status === 'active' 
-            ? 'bg-green-50 text-green-700 border-green-200' 
-            : 'bg-gray-50 text-gray-700 border-gray-200'
+            ? 'bg-green-400/20 text-green-400 border-green-400/30' 
+            : 'bg-gray-400/20 text-gray-400 border-gray-400/30'
         }`}>
           {item.status}
         </span>

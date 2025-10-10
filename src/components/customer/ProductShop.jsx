@@ -129,15 +129,9 @@ const ProductShop = ({ onBack }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
-      {/* Subtle background pattern */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
-      </div>
-      
+    <div className="min-h-screen bg-[#0A0A0A]">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30">
+      <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
         <div className="max-w-md mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             <button
@@ -155,7 +149,7 @@ const ProductShop = ({ onBack }) => {
             </div>
             <button
               onClick={() => setShowCart(!showCart)}
-              className="relative p-2 text-white rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] transition-colors duration-200 shadow-lg"
+              className="relative p-2 text-white rounded-xl bg-[#FF8C42] transition-colors duration-200"
             >
               <ShoppingCart className="w-5 h-5" />
               {getCartItemCount() > 0 && (
@@ -322,13 +316,13 @@ const ProductShop = ({ onBack }) => {
                 <>
                   <div className="space-y-4 mb-6">
                     {cart.map((item) => (
-                      <div key={item._id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                        <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                      <div key={item._id} className="flex items-center space-x-3 p-3 bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]">
+                        <div className="w-12 h-12 bg-[#0A0A0A] rounded-lg flex items-center justify-center border border-[#2A2A2A]">
                           <Package className="w-6 h-6 text-gray-400" />
                         </div>
                         <div className="flex-1">
-                          <h4 className="font-medium text-sm text-gray-900">{item.name}</h4>
-                          <p className="text-xs text-gray-500">{item.brand}</p>
+                          <h4 className="font-medium text-sm text-white">{item.name}</h4>
+                          <p className="text-xs text-gray-400">{item.brand}</p>
                           <p className="text-sm font-bold" style={{ color: '#F68B24' }}>
                             ₱{item.price.toLocaleString()} × {item.quantity}
                           </p>
@@ -355,14 +349,13 @@ const ProductShop = ({ onBack }) => {
                   
                   <div className="border-t pt-4">
                     <div className="flex justify-between items-center mb-4">
-                      <span className="text-lg font-bold text-gray-900">Total:</span>
+                      <span className="text-lg font-bold text-white">Total:</span>
                       <span className="text-xl font-bold" style={{ color: '#F68B24' }}>
                         ₱{getCartTotal().toLocaleString()}
                       </span>
                     </div>
                     <button
-                      className="w-full py-3 rounded-lg text-white font-bold transition-colors duration-200"
-                      style={{ backgroundColor: '#F68B24' }}
+                      className="w-full py-3 rounded-lg text-white font-bold transition-colors duration-200 bg-[#FF8C42] hover:bg-[#FF7A2B]"
                       onClick={() => {
                         // TODO: Implement checkout functionality
                         alert('Checkout functionality coming soon!')

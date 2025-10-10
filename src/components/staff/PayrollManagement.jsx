@@ -61,7 +61,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
   if (!user) {
     return (
       <div className="space-y-6">
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-8 text-center">
+        <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-8 text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
           <p className="text-gray-300">Loading user data...</p>
           <p className="text-xs text-gray-500 mt-2">Please ensure you are logged in</p>
@@ -74,7 +74,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
   if (!user.branch_id) {
     return (
       <div className="space-y-6">
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-8 text-center">
+        <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-8 text-center">
           <div className="flex justify-center mb-4">
             <div className="p-4 bg-red-500/20 rounded-full">
               <AlertCircle className="h-8 w-8 text-red-400" />
@@ -636,8 +636,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
             className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
             onClick={() => setShowPeriodModal(false)}
           />
-          <div className="relative w-full max-w-md transform rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] border border-[#444444]/50 shadow-2xl transition-all z-[10000]">
-            <div className="flex items-center justify-between p-6 border-b border-[#444444]/50">
+          <div className="relative w-full max-w-md transform rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl transition-all z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
               <h2 className="text-xl font-bold text-white">Create Payroll Period</h2>
               <button
                 onClick={() => setShowPeriodModal(false)}
@@ -659,7 +659,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                       ...prev,
                       startDate: e.target.value
                     }))}
-                    className="w-full bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
                   />
                 </div>
 
@@ -674,11 +674,11 @@ const PayrollManagement = ({ onRefresh, user }) => {
                       ...prev,
                       endDate: e.target.value
                     }))}
-                    className="w-full bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
                   />
                 </div>
 
-                <div className="bg-[#1A1A1A] rounded-lg border border-[#444444]/50 p-3">
+                <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 p-3">
                   <h4 className="text-sm font-medium text-gray-300 mb-2">Period Summary</h4>
                   <div className="space-y-1 text-xs text-gray-400">
                     <p>Frequency: {payrollSettingsData?.payout_frequency || 'weekly'}</p>
@@ -693,7 +693,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
               <div className="flex space-x-3 mt-6">
                 <button
                   onClick={() => setShowPeriodModal(false)}
-                  className="flex-1 px-4 py-2 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg hover:bg-[#555555]/70 transition-all duration-200"
+                  className="flex-1 px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#555555]/70 transition-all duration-200"
                 >
                   Cancel
                 </button>
@@ -724,8 +724,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
             className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
             onClick={() => setShowSettings(false)}
           />
-          <div className="relative w-full max-w-md transform rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] border border-[#444444]/50 shadow-2xl transition-all z-[10000]">
-            <div className="flex items-center justify-between p-6 border-b border-[#444444]/50">
+          <div className="relative w-full max-w-md transform rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl transition-all z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
               <h2 className="text-xl font-bold text-white">Payroll Settings</h2>
               <button
                 onClick={() => setShowSettings(false)}
@@ -750,7 +750,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   ...prev,
                   default_commission_rate: parseFloat(e.target.value) || 0
                 }))}
-                className="w-full bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
               />
             </div>
 
@@ -764,7 +764,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   ...prev,
                   payout_frequency: e.target.value
                 }))}
-                className="w-full bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
               >
                 <option value="weekly">Weekly</option>
                 <option value="bi_weekly">Bi-Weekly</option>
@@ -785,7 +785,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   ...prev,
                   payout_day: parseInt(e.target.value) || 0
                 }))}
-                className="w-full bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
               />
             </div>
 
@@ -803,7 +803,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   ...prev,
                   tax_rate: parseFloat(e.target.value) || 0
                 }))}
-                className="w-full bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
               />
             </div>
           </div>
@@ -811,7 +811,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
           <div className="flex space-x-3 mt-6">
             <button
               onClick={() => setShowSettings(false)}
-              className="flex-1 px-4 py-2 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200"
+              className="flex-1 px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200"
             >
               Cancel
             </button>
@@ -851,8 +851,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
       <div className="fixed inset-0 z-[9999] overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowBookingsModal(false)} />
-          <div className="relative w-full max-w-3xl rounded-2xl bg-gradient-to-br from-[#1F1F1F] to-[#2B2B2B] border border-[#3A3A3A] shadow-2xl z-[10000]">
-            <div className="flex items-center justify-between p-6 border-b border-[#3A3A3A]">
+          <div className="relative w-full max-w-3xl rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
               <div>
                 <h2 className="text-xl font-bold text-white">Bookings • {selectedRecord.barber_name}</h2>
                 <p className="text-sm text-gray-400">{formatDate(selectedPeriod.period_start)} – {formatDate(selectedPeriod.period_end)}</p>
@@ -871,13 +871,13 @@ const PayrollManagement = ({ onRefresh, user }) => {
               )}
 
               {bookingsForRecord !== undefined && sortedDates.length === 0 && (
-                <div className="bg-[#121212] border border-[#333333] rounded-lg p-6 text-center text-gray-400">
+                <div className="bg-[#121212] border border-[#2A2A2A]/50 rounded-lg p-6 text-center text-gray-400">
                   No completed, paid bookings found for this period.
                 </div>
               )}
 
               {sortedDates.map(date => (
-                <div key={date} className="rounded-xl bg-[#121212] border border-[#333333] overflow-hidden">
+                <div key={date} className="rounded-xl bg-[#121212] border border-[#2A2A2A]/50 overflow-hidden">
                   <div className="px-5 py-3 bg-[#171717] border-b border-[#2A2A2A] flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-[#FF8C42]" />
@@ -892,7 +892,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                         <div key={b.id} className="px-5 py-4 flex items-center justify-between hover:bg-[#161616] transition-colors">
                           <div className="flex items-center gap-4">
                             <div className="shrink-0">
-                              <div className="inline-flex items-center justify-center rounded-md bg-[#232323] border border-[#3A3A3A] px-3 py-1.5">
+                              <div className="inline-flex items-center justify-center rounded-md bg-[#232323] border border-[#2A2A2A]/50 px-3 py-1.5">
                                 <span className="font-mono text-sm font-semibold text-[#FF8C42] leading-none">{prettyTime}</span>
                               </div>
                             </div>
@@ -956,8 +956,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
       <div className="fixed inset-0 z-[9999] overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowServiceRatesModal(false)} />
-          <div className="relative w-full max-w-2xl rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] border border-[#444444]/50 shadow-2xl z-[10000]">
-            <div className="flex items-center justify-between p-6 border-b border-[#444444]/50">
+          <div className="relative w-full max-w-2xl rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
               <h2 className="text-xl font-bold text-white">Service Commission Rates</h2>
               <button onClick={() => setShowServiceRatesModal(false)} className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center">
                 <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
@@ -967,7 +967,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
               <div className="max-h-[60vh] overflow-y-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-gray-400 border-b border-[#444444]/50">
+                    <tr className="text-gray-400 border-b border-[#2A2A2A]/50">
                       <th className="text-left py-2 px-2">Service</th>
                       <th className="text-right py-2 px-2">Current Rate</th>
                       <th className="text-right py-2 px-2">New Rate (%)</th>
@@ -978,13 +978,13 @@ const PayrollManagement = ({ onRefresh, user }) => {
                       const existing = serviceRateMap.get(svc._id)
                       const value = serviceRateEdits[svc._id] ?? (existing?.commission_rate ?? "")
                       return (
-                        <tr key={svc._id} className="border-b border-[#444444]/20">
+                        <tr key={svc._id} className="border-b border-[#2A2A2A]/20">
                           <td className="py-2 px-2 text-white">{svc.name}</td>
                           <td className="py-2 px-2 text-right text-gray-300">{existing ? `${existing.commission_rate}%` : '—'}</td>
                           <td className="py-2 px-2 text-right">
                             <input type="number" min="0" max="100" step="0.1" value={value}
                               onChange={(e) => setServiceRateEdits(prev => ({ ...prev, [svc._id]: e.target.value }))}
-                              className="w-28 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent text-right" />
+                              className="w-28 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent text-right" />
                           </td>
                         </tr>
                       )
@@ -993,7 +993,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                 </table>
               </div>
               <div className="flex justify-end gap-2 pt-4">
-                <button onClick={() => setShowServiceRatesModal(false)} className="px-4 py-2 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg hover:bg-[#2A2A2A] text-sm">Close</button>
+                <button onClick={() => setShowServiceRatesModal(false)} className="px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] text-sm">Close</button>
                 <button
                   onClick={handleSaveAll}
                   disabled={savingServiceRates || Object.keys(serviceRateEdits).length === 0}
@@ -1048,8 +1048,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
       <div className="fixed inset-0 z-[9999] overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowDailyRatesModal(false)} />
-          <div className="relative w-full max-w-2xl rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] border border-[#444444]/50 shadow-2xl z-[10000]">
-            <div className="flex items-center justify-between p-6 border-b border-[#444444]/50">
+          <div className="relative w-full max-w-2xl rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
               <h2 className="text-xl font-bold text-white">Barber Daily Rates</h2>
               <button onClick={() => setShowDailyRatesModal(false)} className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center">
                 <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
@@ -1059,7 +1059,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
               <div className="max-h-[60vh] overflow-y-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-gray-400 border-b border-[#444444]/50">
+                    <tr className="text-gray-400 border-b border-[#2A2A2A]/50">
                       <th className="text-left py-2 px-2">Barber</th>
                       <th className="text-right py-2 px-2">Current Daily Rate</th>
                       <th className="text-right py-2 px-2">New Daily Rate</th>
@@ -1070,13 +1070,13 @@ const PayrollManagement = ({ onRefresh, user }) => {
                       const existing = barberDailyRateMap.get(b._id)
                       const value = dailyRateEdits[b._id] ?? (existing?.daily_rate ?? "")
                       return (
-                        <tr key={b._id} className="border-b border-[#444444]/20">
+                        <tr key={b._id} className="border-b border-[#2A2A2A]/20">
                           <td className="py-2 px-2 text-white">{b.full_name}</td>
                           <td className="py-2 px-2 text-right text-gray-300">{existing ? formatCurrency(existing.daily_rate) : '—'}</td>
                           <td className="py-2 px-2 text-right">
                             <input type="number" min="0" step="1" value={value}
                               onChange={(e) => setDailyRateEdits(prev => ({ ...prev, [b._id]: e.target.value }))}
-                              className="w-28 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent text-right" />
+                              className="w-28 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent text-right" />
                           </td>
                         </tr>
                       )
@@ -1085,7 +1085,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                 </table>
               </div>
               <div className="flex justify-end gap-2 pt-4">
-                <button onClick={() => setShowDailyRatesModal(false)} className="px-4 py-2 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg hover:bg-[#2A2A2A] text-sm">Close</button>
+                <button onClick={() => setShowDailyRatesModal(false)} className="px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] text-sm">Close</button>
                 <button
                   onClick={handleSaveAll}
                   disabled={savingDailyRates || Object.keys(dailyRateEdits).length === 0}
@@ -1136,8 +1136,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
               setSelectedRecord(null)
             }}
           />
-          <div className="relative w-full max-w-md transform rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] border border-[#444444]/50 shadow-2xl transition-all z-[10000]">
-            <div className="flex items-center justify-between p-6 border-b border-[#444444]/50">
+          <div className="relative w-full max-w-md transform rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl transition-all z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
               <h2 className="text-xl font-bold text-white">Mark as Paid</h2>
               <button
                 onClick={() => {
@@ -1151,7 +1151,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
             </div>
             <div className="p-6">
               <div className="mb-6">
-                <div className="bg-[#1A1A1A] rounded-lg border border-[#444444]/50 p-4">
+                <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-gray-300">Barber:</span>
                 <span className="text-sm font-medium text-white">{selectedRecord?.barber_name}</span>
@@ -1171,7 +1171,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
               <select
                 value={paymentForm.payment_method}
                 onChange={(e) => setPaymentForm(prev => ({ ...prev, payment_method: e.target.value }))}
-                className="w-full bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
                 required
               >
                 <option value="bank_transfer">Bank Transfer</option>
@@ -1190,7 +1190,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                 value={paymentForm.payment_reference}
                 onChange={(e) => setPaymentForm(prev => ({ ...prev, payment_reference: e.target.value }))}
                 placeholder="Transaction ID, check number, etc."
-                className="w-full bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
               />
             </div>
 
@@ -1203,7 +1203,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                 onChange={(e) => setPaymentForm(prev => ({ ...prev, notes: e.target.value }))}
                 placeholder="Additional notes about the payment..."
                 rows={3}
-                className="w-full bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent resize-none"
+                className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent resize-none"
               />
             </div>
 
@@ -1214,7 +1214,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   setShowPaymentModal(false)
                   setSelectedRecord(null)
                 }}
-                className="flex-1 px-4 py-2 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200"
+                className="flex-1 px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200"
                 disabled={submittingPayment}
               >
                 Cancel
@@ -1252,7 +1252,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     if (payrollSettingsData === null || !payrollSettingsData) {
       return (
         <div className="space-y-6">
-          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-8 text-center">
+          <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-8 text-center">
             <div className="flex justify-center mb-4">
               <div className="p-4 bg-[#FF8C42]/20 rounded-full">
                 <Settings className="h-8 w-8 text-[#FF8C42]" />
@@ -1271,7 +1271,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
           </div>
 
           {/* Quick Setup Guide */}
-          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+          <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
             <h4 className="text-lg font-semibold text-white mb-4">Setup Guide</h4>
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
@@ -1310,7 +1310,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
       <div className="space-y-6">
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+          <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="p-2 bg-[#FF8C42]/20 rounded-lg">
                 <Users className="h-6 w-6 text-[#FF8C42]" />
@@ -1324,7 +1324,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+          <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="p-2 bg-green-500/20 rounded-lg">
                 <DollarSign className="h-6 w-6 text-green-400" />
@@ -1340,7 +1340,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+          <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="p-2 bg-yellow-500/20 rounded-lg">
                 <Clock className="h-6 w-6 text-yellow-400" />
@@ -1354,7 +1354,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+          <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="p-2 bg-blue-500/20 rounded-lg">
                 <Calculator className="h-6 w-6 text-blue-400" />
@@ -1370,7 +1370,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
         </div>
 
         {/* Recent Payroll Periods */}
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+        <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-semibold text-white">Recent Payroll Periods</h3>
@@ -1391,7 +1391,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-[#444444]/50">
+                <tr className="border-b border-[#2A2A2A]/50">
                   <th className="text-left py-4 px-4 font-medium text-gray-300">Period</th>
                   <th className="text-left py-4 px-4 font-medium text-gray-300">Type</th>
                   <th className="text-left py-4 px-4 font-medium text-gray-300">Status</th>
@@ -1402,7 +1402,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
               </thead>
               <tbody>
                 {(Array.isArray(payrollSummary) ? payrollSummary : []).map((period) => (
-                  <tr key={period._id} className="border-b border-[#444444]/20 hover:bg-[#1A1A1A]/30 transition-colors">
+                  <tr key={period._id} className="border-b border-[#2A2A2A]/20 hover:bg-[#1A1A1A]/30 transition-colors">
                     <td className="py-4 px-4">
                       <div>
                         <p className="text-white font-medium">
@@ -1477,7 +1477,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     return (
       <div className="space-y-6">
         {/* Period Header */}
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+        <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-lg font-semibold text-white">
@@ -1501,7 +1501,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
               {(Array.isArray(currentPeriodRecords) && currentPeriodRecords.length > 0) && (
                 <button
                   onClick={handlePrintAll}
-                  className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/60 border border-[#555555] text-gray-200 rounded-lg hover:bg-[#2A2A2A] transition-colors text-sm"
+                  className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/60 border border-[#2A2A2A] text-gray-200 rounded-lg hover:bg-[#2A2A2A] transition-colors text-sm"
                 >
                   <Printer className="h-4 w-4" />
                   <span>Print All</span>
@@ -1509,7 +1509,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
               )}
               <button
                 onClick={() => setActiveView('overview')}
-                className="px-4 py-2 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
+                className="px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
               >
                 Back to Overview
               </button>
@@ -1550,7 +1550,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
         </div>
 
         {/* Payroll Records */}
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+        <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-semibold text-white">Barber Payroll Records</h3>
@@ -1560,7 +1560,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
 
           <div className="space-y-4">
             {(Array.isArray(currentPeriodRecords) ? currentPeriodRecords : []).map((record) => (
-              <div key={record._id} className="bg-[#1A1A1A] rounded-lg border border-[#333333] overflow-hidden">
+              <div key={record._id} className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 overflow-hidden">
                 <div className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4">
@@ -1589,7 +1589,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                             setSelectedRecord(record)
                             setShowBookingsModal(true)
                           }}
-                          className="px-3 py-1 bg-[#444444]/60 border border-[#555555] text-gray-200 rounded text-xs hover:bg-[#2A2A2A] transition-colors"
+                          className="px-3 py-1 bg-[#444444]/60 border border-[#2A2A2A] text-gray-200 rounded text-xs hover:bg-[#2A2A2A] transition-colors"
                         >
                           View Bookings
                         </button>
@@ -1617,7 +1617,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                         )}
                         <button
                           onClick={() => handlePrintRecord(record)}
-                          className="px-3 py-1 bg-[#444444]/60 border border-[#555555] text-gray-200 rounded text-xs hover:bg-[#2A2A2A] transition-colors"
+                          className="px-3 py-1 bg-[#444444]/60 border border-[#2A2A2A] text-gray-200 rounded text-xs hover:bg-[#2A2A2A] transition-colors"
                         >
                           Print
                         </button>
@@ -1626,7 +1626,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   </div>
 
                   {expandedRecords.has(record._id) && (
-                    <div className="mt-4 pt-4 border-t border-[#333333]">
+                    <div className="mt-4 pt-4 border-t border-[#2A2A2A]/50">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <h5 className="text-sm font-medium text-gray-300 mb-2">Service Earnings</h5>
@@ -1664,7 +1664,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                               <span className="text-gray-400">Other Deductions:</span>
                               <span className="text-red-400">-{formatCurrency(record.other_deductions)}</span>
                             </div>
-                            <div className="flex justify-between font-medium pt-1 border-t border-[#333333]">
+                            <div className="flex justify-between font-medium pt-1 border-t border-[#2A2A2A]/50">
                               <span className="text-white">Net Pay:</span>
                               <span className="text-[#FF8C42]">{formatCurrency(record.net_pay)}</span>
                             </div>
@@ -1673,7 +1673,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                       </div>
 
                       {record.status === 'paid' && record.paid_at && (
-                        <div className="mt-4 pt-3 border-t border-[#333333] text-sm">
+                        <div className="mt-4 pt-3 border-t border-[#2A2A2A]/50 text-sm">
                           <div className="flex items-center space-x-4 text-gray-400">
                             <span>Paid on {formatDate(record.paid_at)}</span>
                             {record.payment_method && <span>via {record.payment_method}</span>}
@@ -1696,7 +1696,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const renderDeleteModal = () => (
     showDeleteModal && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-        <div className="w-full max-w-md bg-[#1F1F1F] border border-[#333] rounded-xl p-6">
+        <div className="w-full max-w-md bg-[#1F1F1F] border border-[#2A2A2A]/50 rounded-xl p-6">
           <h3 className="text-lg font-semibold text-white mb-2">Delete Payroll Period</h3>
           <p className="text-sm text-gray-300 mb-4">This will permanently delete the selected payroll period and all its payroll records and adjustments. This action cannot be undone.</p>
           <p className="text-sm text-gray-400 mb-3">Type <span className="text-red-400 font-semibold">confirm delete record</span> to proceed.</p>
@@ -1705,7 +1705,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
             value={deleteConfirmText}
             onChange={(e) => setDeleteConfirmText(e.target.value)}
             placeholder="confirm delete record"
-            className="w-full h-11 px-4 bg-[#121212] border border-[#333] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500/40"
+            className="w-full h-11 px-4 bg-[#121212] border border-[#2A2A2A]/50 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500/40"
           />
           <div className="flex items-center justify-end gap-2 mt-5">
             <button
@@ -1753,21 +1753,21 @@ const PayrollManagement = ({ onRefresh, user }) => {
         <div className="flex items-center space-x-3">
           <button
             onClick={() => setShowSettings(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
+            className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
           >
             <Settings className="h-4 w-4" />
             <span>Settings</span>
           </button>
           <button
             onClick={() => setShowServiceRatesModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
+            className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
           >
             <Percent className="h-4 w-4" />
             <span>Service Rates</span>
           </button>
           <button
             onClick={() => setShowDailyRatesModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
+            className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
           >
             <DollarSign className="h-4 w-4" />
             <span>Daily Rates</span>
@@ -1775,7 +1775,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
           <button
             onClick={handleRefresh}
             disabled={loading}
-            className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             <span>{loading ? 'Loading...' : 'Refresh'}</span>
@@ -1805,7 +1805,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
       )}
 
       {/* View Navigation */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+      <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex items-center space-x-4">
           <button
             onClick={() => setActiveView('overview')}

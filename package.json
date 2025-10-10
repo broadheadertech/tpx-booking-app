@@ -27,6 +27,7 @@
   "homepage": "https://github.com/broadheadertech/tpx-booking-app#readme",
   "description": "",
   "dependencies": {
+    "@byteowls/capacitor-sms": "^7.0.0",
     "@capacitor/android": "^7.4.3",
     "@capacitor/cli": "^7.4.3",
     "@capacitor/core": "^7.4.3",
@@ -37,6 +38,7 @@
     "axios": "^1.11.0",
     "convex": "^1.26.1",
     "file-saver": "^2.0.5",
+    "framer-motion": "^12.23.22",
     "jsqr": "^1.4.0",
     "ky": "^1.8.2",
     "lucide-react": "^0.536.0",

@@ -188,6 +188,12 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
         }
       } else {
         // Create new barber with account
+        if (!user?.branch_id) {
+          setError('Branch ID is required. Please contact your administrator.')
+          setLoading(false)
+          return
+        }
+
         const barberData = {
           username: formData.username.trim(),
           email: formData.email.trim(),
@@ -197,6 +203,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
           phone: formData.mobile_number.trim(), // Use mobile_number as phone for new barbers
           is_active: formData.is_active,
           services: formData.services,
+          branch_id: user.branch_id,
           experience: formData.experience || '0 years',
           specialties: formData.specialties,
           avatar: formData.avatar || '',

@@ -368,8 +368,8 @@ const ProductsManagement = ({ onRefresh }) => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-400">Total Products</p>
@@ -378,8 +378,8 @@ const ProductsManagement = ({ onRefresh }) => {
             <Package className="h-8 w-8 text-blue-400" />
           </div>
         </div>
-        
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-400">In Stock</p>
@@ -389,7 +389,7 @@ const ProductsManagement = ({ onRefresh }) => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-400">Low Stock</p>
@@ -399,7 +399,7 @@ const ProductsManagement = ({ onRefresh }) => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-400">Out of Stock</p>
@@ -409,7 +409,7 @@ const ProductsManagement = ({ onRefresh }) => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-400">Inventory Value</p>
@@ -419,7 +419,7 @@ const ProductsManagement = ({ onRefresh }) => {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-400">Sold This Month</p>
@@ -431,7 +431,7 @@ const ProductsManagement = ({ onRefresh }) => {
       </div>
 
       {/* Controls */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+      <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
             <div className="relative">
@@ -479,7 +479,7 @@ const ProductsManagement = ({ onRefresh }) => {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-            <div key={i} className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm p-6">
+            <div key={i} className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
               <div className="animate-pulse">
                 <div className="h-32 bg-[#444444] rounded mb-4"></div>
                 <div className="h-4 bg-[#444444] rounded w-3/4 mb-2"></div>
@@ -496,7 +496,7 @@ const ProductsManagement = ({ onRefresh }) => {
             const profitMargin = ((product.price - product.cost) / product.price * 100).toFixed(1)
             
             return (
-              <div key={product._id} className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+              <div key={product._id} className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
                 {/* Product Image */}
                 <div className="h-48 bg-gray-100 flex items-center justify-center relative">
                   {product.imageUrl || product.imageStorageId ? (

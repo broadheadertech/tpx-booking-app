@@ -15,11 +15,13 @@ import type {
 } from "convex/server";
 import type * as services_auth from "../services/auth.js";
 import type * as services_barbers from "../services/barbers.js";
+import type * as services_bookingNotifications from "../services/bookingNotifications.js";
 import type * as services_bookings from "../services/bookings.js";
 import type * as services_branches from "../services/branches.js";
 import type * as services_emailMarketing from "../services/emailMarketing.js";
 import type * as services_events from "../services/events.js";
 import type * as services_index from "../services/index.js";
+import type * as services_notificationScheduler from "../services/notificationScheduler.js";
 import type * as services_notifications from "../services/notifications.js";
 import type * as services_payments from "../services/payments.js";
 import type * as services_payroll from "../services/payroll.js";
@@ -41,11 +43,13 @@ import type * as utils_errors from "../utils/errors.js";
 declare const fullApi: ApiFromModules<{
   "services/auth": typeof services_auth;
   "services/barbers": typeof services_barbers;
+  "services/bookingNotifications": typeof services_bookingNotifications;
   "services/bookings": typeof services_bookings;
   "services/branches": typeof services_branches;
   "services/emailMarketing": typeof services_emailMarketing;
   "services/events": typeof services_events;
   "services/index": typeof services_index;
+  "services/notificationScheduler": typeof services_notificationScheduler;
   "services/notifications": typeof services_notifications;
   "services/payments": typeof services_payments;
   "services/payroll": typeof services_payroll;

@@ -602,24 +602,21 @@ const ServiceBooking = ({ onBack }) => {
           </div>
         </div>
 
-        {/* Mobile-Optimized Branch Cards */}
+        {/* Branch Cards */}
         <div className="space-y-4">
           {branches.map((branch) => (
             <button
               key={branch._id}
               onClick={() => handleBranchSelect(branch)}
-              className="group relative w-full bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl shadow-lg active:shadow-xl border-2 border-[#555555]/30 hover:border-[#FF8C42]/50 active:border-[#FF8C42] transition-all duration-200 overflow-hidden touch-manipulation min-h-[120px]"
+              className="group relative w-full bg-[#1A1A1A] rounded-xl border-2 border-[#2A2A2A] hover:border-[#FF8C42]/50 transition-all duration-200 overflow-hidden touch-manipulation"
             >
-              {/* Mobile-Optimized Background Effects */}
-              <div className="absolute inset-0 bg-gradient-to-r from-[#FF8C42]/5 via-transparent to-[#FF8C42]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-              <div className="absolute inset-0 bg-gradient-to-br from-[#FF8C42]/10 to-[#FF7A2B]/10 opacity-0 group-active:opacity-100 transition-opacity duration-200"></div>
 
               {/* Touch-Friendly Content */}
               <div className="relative p-4">
                 <div className="flex items-start space-x-3">
-                  {/* Mobile-Optimized Icon Badge */}
+                  {/* Icon Badge */}
                   <div className="flex-shrink-0">
-                    <div className="rounded-full w-12 h-12 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:scale-105">
+                    <div className="rounded-xl w-12 h-12 bg-[#FF8C42] flex items-center justify-center transition-all duration-200 group-hover:scale-105">
                       <Building className="w-6 h-6 text-white" />
                     </div>
                   </div>
@@ -737,24 +734,21 @@ const ServiceBooking = ({ onBack }) => {
           </div>
         </div>
 
-        {/* Mobile-Optimized Service Cards */}
+        {/* Service Cards */}
         <div className="space-y-4">
           {services && services.map((service) => (
             <button
               key={service._id}
               onClick={() => handleServiceSelect(service)}
-              className="group relative w-full bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl shadow-lg active:shadow-xl border-2 border-[#555555]/30 hover:border-[#FF8C42]/50 active:border-[#FF8C42] transition-all duration-200 overflow-hidden touch-manipulation min-h-[100px]"
+              className="group relative w-full bg-[#1A1A1A] rounded-xl border-2 border-[#2A2A2A] hover:border-[#FF8C42]/50 transition-all duration-200 overflow-hidden touch-manipulation"
             >
-              {/* Mobile-Optimized Background Effects */}
-              <div className="absolute inset-0 bg-gradient-to-r from-[#FF8C42]/5 via-transparent to-[#FF8C42]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
-              <div className="absolute inset-0 bg-gradient-to-br from-[#FF8C42]/10 to-[#FF7A2B]/10 opacity-0 group-active:opacity-100 transition-opacity duration-200"></div>
 
               {/* Touch-Friendly Content */}
               <div className="relative p-4">
                 <div className="flex items-center space-x-3">
                   {/* Mobile-Optimized Icon Badge */}
                   <div className="flex-shrink-0">
-                    <div className="rounded-full w-12 h-12 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:scale-105">
+                    <div className="rounded-xl w-12 h-12 bg-[#FF8C42] flex items-center justify-center transition-all duration-200 group-hover:scale-105">
                       {getServiceIcon(service.name)}
                     </div>
                   </div>
@@ -835,17 +829,16 @@ const ServiceBooking = ({ onBack }) => {
 
       {/* Selected Service Summary */}
       <div
-        className="bg-white rounded-xl p-3 border shadow-sm"
-        style={{ borderColor: "#E0E0E0" }}
+        className="bg-[#1A1A1A] rounded-xl p-3 border border-[#2A2A2A]"
       >
         <div className="flex items-center space-x-2">
           <div className="text-xl">{selectedService?.image}</div>
           <div className="flex-1">
-            <h3 className="text-base font-bold" style={{ color: "#36454F" }}>
+            <h3 className="text-base font-bold text-white">
               {selectedService?.name}
             </h3>
             <div className="flex items-center space-x-3 text-sm">
-              <span className="font-bold" style={{ color: "#F68B24" }}>
+              <span className="font-bold text-[#FF8C42]">
                 ₱{selectedService?.price.toLocaleString()}
               </span>
               <span className="font-medium" style={{ color: "#8B8B8B" }}>
@@ -1411,10 +1404,9 @@ const ServiceBooking = ({ onBack }) => {
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="bg-gray-50 rounded-lg p-3">
+                <div className="bg-[#1A1A1A] rounded-lg p-3 border border-[#2A2A2A]">
                   <h5
-                    className="text-sm font-bold mb-2"
-                    style={{ color: "#36454F" }}
+                    className="text-sm font-bold mb-2 text-white"
                   >
                     Select Payment Method
                   </h5>
@@ -1610,18 +1602,16 @@ const ServiceBooking = ({ onBack }) => {
 
         {/* QR Code */}
         <div
-          className="bg-white rounded-2xl p-8 border-2 shadow-lg text-center"
-          style={{ borderColor: "#E0E0E0" }}
+          className="bg-[#1A1A1A] rounded-2xl p-8 border-2 border-[#2A2A2A] shadow-lg text-center"
         >
-          <h3 className="text-lg font-black mb-4 text-black">
+          <h3 className="text-lg font-black mb-4 text-white">
             Your Booking QR Code
           </h3>
 
           {/* Real QR Code */}
           <div className="flex justify-center mb-4">
             <div
-              className="p-4 bg-white rounded-2xl border-2 shadow-sm"
-              style={{ borderColor: "#E0E0E0" }}
+              className="p-4 bg-[#0A0A0A] rounded-2xl border-2 border-[#2A2A2A] shadow-sm"
             >
               <div className="relative w-48 h-48">
                 {(qrCodeLoading || !getBookingById?.booking_code) && (
@@ -1644,15 +1634,15 @@ const ServiceBooking = ({ onBack }) => {
           </div>
 
           <div className="text-center space-y-2">
-            <div className="text-lg font-black text-black">
+            <div className="text-lg font-black text-white">
               Booking Code: {getBookingById?.booking_code ? getBookingById.booking_code :
                 <span className="inline-flex items-center space-x-2">
-                  <span className="text-gray-700">Generating...</span>
+                  <span className="text-gray-400">Generating...</span>
                   <div className="animate-pulse w-2 h-2 bg-orange-500 rounded-full"></div>
                 </span>
               }
             </div>
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-gray-400">
               Show this QR code when you arrive
             </p>
           </div>
@@ -1786,15 +1776,9 @@ const ServiceBooking = ({ onBack }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
-      {/* Subtle background pattern */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
-      </div>
-      
+    <div className="min-h-screen bg-[#0A0A0A]">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30 shadow-lg">
+      <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
         <div className="max-w-md mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             <button

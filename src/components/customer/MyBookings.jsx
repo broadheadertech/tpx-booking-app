@@ -10,6 +10,8 @@ import {
   AlertCircle,
   Star,
   MessageSquare,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useQuery, useMutation } from 'convex/react'
@@ -24,6 +26,8 @@ const MyBookings = ({ onBack }) => {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(null);
   const [ratingLoading, setRatingLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
 
   // Convex queries - only call when user exists
   const bookings = user?.id ? useQuery(api.services.bookings.getBookingsByCustomer, { customerId: user.id }) : undefined;
@@ -312,6 +316,25 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
     return booking.status === activeFilter;
   }) : [];
 
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilter]);
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentBookings = filteredBookings.slice(startIndex, endIndex);
+
+  const handlePreviousPage = () => {
+    setCurrentPage(prev => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  };
+
   // Helper function to check if booking has been rated
   const hasBeenRated = (bookingId) => {
     if (!allRatings || !user?.id) return false;
@@ -340,15 +363,9 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
-      {/* Subtle background pattern */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
-      </div>
-      
+    <div className="min-h-screen bg-[#0A0A0A]">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30">
+      <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
         <div className="max-w-md mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             <button
@@ -371,7 +388,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
       <div className="relative z-10 max-w-md mx-auto px-4 py-6">
         {/* Filter Tabs */}
         <div className="mb-6">
-          <div className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl p-3 border border-[#555555]/30 shadow-lg">
+          <div className="bg-[#1A1A1A] rounded-2xl p-3 border border-[#2A2A2A]">
             <div className="grid grid-cols-4 gap-2">
               {filters.map((filter) => (
                 <button
@@ -379,8 +396,8 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                   onClick={() => setActiveFilter(filter.id)}
                   className={`py-3 px-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
                     activeFilter === filter.id
-                      ? 'bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
-                      : 'text-gray-400 hover:text-gray-300 hover:bg-white/5'
+                      ? 'bg-[#FF8C42] text-white'
+                      : 'text-gray-400 hover:text-gray-300 hover:bg-[#2A2A2A]'
                   }`}
                 >
                   <div>{filter.label}</div>
@@ -421,27 +438,28 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
 
         {/* Bookings List */}
         {!loading && !error && (
-          <div className="space-y-3">
-            {filteredBookings.length === 0 ? (
-              <div className="text-center py-12">
-                <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-500" />
-                <h3 className="text-xl font-bold mb-3 text-white">
-                  No Bookings Found
-                </h3>
-                <p className="mb-6 text-gray-400">
-                  {activeFilter === "all"
-                    ? "You haven't made any bookings yet"
-                    : `No ${activeFilter} bookings found`}
-                </p>
-                <button
-                  onClick={onBack}
-                  className="px-6 py-3 text-white font-bold rounded-xl bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-all duration-200 shadow-lg"
-                >
-                  Book Your First Service
-                </button>
-              </div>
-            ) : (
-              filteredBookings.map((booking) => {
+          <>
+            <div className="space-y-3">
+              {filteredBookings.length === 0 ? (
+                <div className="text-center py-12">
+                  <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-500" />
+                  <h3 className="text-xl font-bold mb-3 text-white">
+                    No Bookings Found
+                  </h3>
+                  <p className="mb-6 text-gray-400">
+                    {activeFilter === "all"
+                      ? "You haven't made any bookings yet"
+                      : `No ${activeFilter} bookings found`}
+                  </p>
+                  <button
+                    onClick={onBack}
+                    className="px-6 py-3 text-white font-bold rounded-xl bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-all duration-200 shadow-lg"
+                  >
+                    Book Your First Service
+                  </button>
+                </div>
+              ) : (
+                currentBookings.map((booking) => {
                 // Get service and barber data from Convex queries
                 const service = services?.find(s => s._id === booking.service) || {};
                 const barber = barbers?.find(b => b._id === booking.barber) || {};
@@ -457,7 +475,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                 return (
                   <div
                     key={booking._id}
-                    className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm hover:shadow-lg transition-all duration-200 p-4"
+                    className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] hover:border-[#FF8C42]/30 transition-all duration-200 p-4"
                   >
                     {/* Compact Header */}
                     <div className="flex items-start justify-between mb-3">
@@ -520,7 +538,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                     </div>
 
                     {/* Price and Actions Row */}
-                    <div className="flex items-center justify-between pt-3 border-t border-[#444444]/50">
+                    <div className="flex items-center justify-between pt-3 border-t border-[#2A2A2A]">
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                           <p className="text-xs text-gray-400">Price</p>
@@ -583,6 +601,49 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
         })
       )}
     </div>
+
+    {/* Pagination Controls */}
+    {filteredBookings.length > 0 && totalPages > 1 && (
+      <div className="mt-6 bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={handlePreviousPage}
+            disabled={currentPage === 1}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              currentPage === 1
+                ? 'text-gray-500 cursor-not-allowed'
+                : 'text-white hover:bg-[#2A2A2A]'
+            }`}
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span className="text-sm">Previous</span>
+          </button>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-400">
+              Page <span className="text-[#FF8C42] font-semibold">{currentPage}</span> of <span className="text-white font-semibold">{totalPages}</span>
+            </span>
+            <span className="text-xs text-gray-500">
+              ({startIndex + 1}-{Math.min(endIndex, filteredBookings.length)} of {filteredBookings.length})
+            </span>
+          </div>
+
+          <button
+            onClick={handleNextPage}
+            disabled={currentPage === totalPages}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              currentPage === totalPages
+                ? 'text-gray-500 cursor-not-allowed'
+                : 'text-white hover:bg-[#2A2A2A]'
+            }`}
+          >
+            <span className="text-sm">Next</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    )}
+  </>
   )}
 </div>
 

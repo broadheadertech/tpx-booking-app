@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import Card from '../common/Card'
 import { QrCode, UserPlus, Calendar, Gift } from 'lucide-react'
 import QRScannerModal from './QRScannerModal'
 
@@ -12,147 +11,119 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
   const [internalModal, setInternalModal] = useState(null)
   const currentModal = activeModal !== undefined ? activeModal : internalModal
   const setCurrentModal = setActiveModal || setInternalModal
-  
-  console.log('QuickActions render - currentModal:', currentModal)
-  
-  // Add useEffect to debug state changes
-  React.useEffect(() => {
-    console.log('currentModal changed to:', currentModal)
-  }, [currentModal])
-  
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {/* Primary Action - Scan Voucher */}
-      <div className="group relative">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-[#FF8C42] via-[#FF7A2B] to-[#FF8C42] rounded-2xl opacity-20 group-hover:opacity-40 blur-sm transition-all"></div>
-        <Card className="relative text-center p-5 bg-gradient-to-br from-[#FF8C42] via-[#FF7A2B] to-[#E67E37] text-white border-0 hover:shadow-xl transform hover:-translate-y-1 transition-all rounded-xl overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16"></div>
-          <div className="absolute bottom-0 left-0 w-20 h-20 bg-black/10 rounded-full translate-y-10 -translate-x-10"></div>
-          <div className="relative z-10">
-            <div className="w-12 h-12 mx-auto mb-4 bg-white/20 backdrop-blur-xl rounded-xl flex items-center justify-center shadow-xl ring-1 ring-white/30 group-hover:scale-105 transition-all">
-              <QrCode className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="font-semibold mb-3 text-base tracking-tight">QR Scanner</h3>
-            <button 
-              onClick={() => {
-                console.log('Scanner button clicked')
-                setCurrentModal('scannerSelection')
-              }}
-              className="w-full py-2.5 px-4 bg-white/15 backdrop-blur-xl text-white font-semibold rounded-lg border border-white/20 hover:bg-white/25 transition-colors text-sm shadow"
-            >
-              Open Scanner
-            </button>
-          </div>
-        </Card>
-      </div>
-      
-      {/* Secondary Actions */}
-      <div className="group relative">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-[#333333] to-[#444444] rounded-2xl opacity-0 group-hover:opacity-30 blur-sm transition-all"></div>
-        <Card className="relative text-center p-5 bg-gradient-to-br from-[#2A2A2A] to-[#333333] backdrop-blur-xl border border-[#444444]/50 hover:border-[#FF8C42]/50 hover:shadow-lg transform hover:-translate-y-1 transition-all rounded-xl group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#FF8C42]/10 to-transparent rounded-full -translate-y-12 translate-x-12"></div>
-          <div className="relative z-10">
-            <div className="w-12 h-12 mx-auto mb-4 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-xl flex items-center justify-center shadow group-hover:scale-105 transition-all">
-              <UserPlus className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="font-semibold text-white mb-3 text-base tracking-tight">Add Customer</h3>
-            <button 
-              onClick={() => setCurrentModal('customer')}
-              className="w-full py-2.5 px-4 border border-[#FF8C42]/40 text-[#FF8C42] font-semibold rounded-lg hover:bg-[#FF8C42] hover:text-white hover:border-[#FF8C42] transition-colors text-sm"
-            >
-              New Customer
-            </button>
-          </div>
-        </Card>
-      </div>
-      
-      <div className="group relative">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-[#333333] to-[#444444] rounded-2xl opacity-0 group-hover:opacity-30 blur-sm transition-all"></div>
-        <Card className="relative text-center p-5 bg-gradient-to-br from-[#2A2A2A] to-[#333333] backdrop-blur-xl border border-[#444444]/50 hover:border-[#6B6B6B]/50 hover:shadow-lg transform hover:-translate-y-1 transition-all rounded-xl group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#6B6B6B]/10 to-transparent rounded-full -translate-y-12 translate-x-12"></div>
-          <div className="relative z-10">
-            <div className="w-12 h-12 mx-auto mb-4 bg-gradient-to-br from-[#6B6B6B] to-[#4A4A4A] rounded-xl flex items-center justify-center shadow group-hover:scale-105 transition-all">
-              <Calendar className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="font-semibold text-white mb-3 text-base tracking-tight">New Booking</h3>
-            <button 
-              onClick={() => setCurrentModal('booking')}
-              className="w-full py-2.5 px-4 border border-[#6B6B6B]/40 text-[#CCCCCC] font-semibold rounded-lg hover:bg-[#6B6B6B] hover:text-white hover:border-[#6B6B6B] transition-colors text-sm"
-            >
-              Book Appointment
-            </button>
-          </div>
-        </Card>
-      </div>
-      
-      <div className="group relative">
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-2xl opacity-0 group-hover:opacity-30 blur-sm transition-all"></div>
-        <Card className="relative text-center p-5 bg-gradient-to-br from-[#2A2A2A] to-[#333333] backdrop-blur-xl border border-[#444444]/50 hover:border-[#FF8C42]/50 hover:shadow-lg transform hover:-translate-y-1 transition-all rounded-xl group">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#FF8C42]/10 to-transparent rounded-full -translate-y-12 translate-x-12"></div>
-          <div className="relative z-10">
-            <div className="w-12 h-12 mx-auto mb-4 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-xl flex items-center justify-center shadow group-hover:scale-105 transition-all">
-              <Gift className="w-6 h-6 text-white" />
-            </div>
-            <h3 className="font-semibold text-white mb-3 text-base tracking-tight">Create Voucher</h3>
-            <button 
-              onClick={() => setCurrentModal('voucher')}
-              className="w-full py-2.5 px-4 border border-[#FF8C42]/40 text-[#FF8C42] font-semibold rounded-lg hover:bg-[#FF8C42] hover:text-white hover:border-[#FF8C42] transition-colors text-sm"
-            >
-              New Voucher
-            </button>
-          </div>
-        </Card>
-      </div>
 
-      {/* Debug currentModal state */}
-      {currentModal && (
-        <div className="fixed top-4 right-4 bg-red-500 text-white p-2 rounded z-[10001]">
-          Active Modal: {currentModal}
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Primary Action - QR Scanner */}
+      <button
+        onClick={() => setCurrentModal('scannerSelection')}
+        className="group relative text-center p-3 sm:p-4 bg-[#1A1A1A] border border-[#FF8C42]/50 hover:border-[#FF8C42] rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 w-16 h-16 bg-[#FF8C42]/5 rounded-full -translate-y-8 translate-x-8"></div>
+        <div className="relative z-10">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center">
+            <QrCode className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+          </div>
+          <h3 className="font-semibold text-white mb-1.5 sm:mb-2 text-xs sm:text-sm">QR Scanner</h3>
+          <div className="w-full py-1 sm:py-1.5 px-2 sm:px-3 border border-[#FF8C42]/30 text-[#FF8C42] font-medium rounded-md hover:bg-[#FF8C42]/10 transition-colors text-[10px] sm:text-xs">
+            Open Scanner
+          </div>
         </div>
-      )}
+      </button>
+
+      {/* Add Customer */}
+      <button
+        onClick={() => setCurrentModal('customer')}
+        className="group relative text-center p-3 sm:p-4 bg-[#1A1A1A] border border-[#2A2A2A]/50 hover:border-[#FF8C42]/30 rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 w-16 h-16 bg-[#FF8C42]/5 rounded-full -translate-y-8 translate-x-8"></div>
+        <div className="relative z-10">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center">
+            <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+          </div>
+          <h3 className="font-semibold text-white mb-1.5 sm:mb-2 text-xs sm:text-sm">Add Customer</h3>
+          <div className="w-full py-1 sm:py-1.5 px-2 sm:px-3 border border-[#FF8C42]/30 text-[#FF8C42] font-medium rounded-md hover:bg-[#FF8C42]/10 transition-colors text-[10px] sm:text-xs">
+            New Customer
+          </div>
+        </div>
+      </button>
+
+      {/* New Booking */}
+      <button
+        onClick={() => setCurrentModal('booking')}
+        className="group relative text-center p-3 sm:p-4 bg-[#1A1A1A] border border-[#2A2A2A]/50 hover:border-[#2A2A2A] rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 w-16 h-16 bg-gray-500/5 rounded-full -translate-y-8 translate-x-8"></div>
+        <div className="relative z-10">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 bg-gradient-to-br from-[#2A2A2A] to-[#1A1A1A] rounded-lg flex items-center justify-center border border-[#3A3A3A]">
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
+          </div>
+          <h3 className="font-semibold text-white mb-1.5 sm:mb-2 text-xs sm:text-sm">New Booking</h3>
+          <div className="w-full py-1 sm:py-1.5 px-2 sm:px-3 border border-[#2A2A2A] text-gray-400 font-medium rounded-md hover:bg-[#1A1A1A] hover:text-white hover:border-[#3A3A3A] transition-colors text-[10px] sm:text-xs">
+            Book Appointment
+          </div>
+        </div>
+      </button>
+
+      {/* Create Voucher */}
+      <button
+        onClick={() => setCurrentModal('voucher')}
+        className="group relative text-center p-3 sm:p-4 bg-[#1A1A1A] border border-[#2A2A2A]/50 hover:border-[#FF8C42]/30 rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 w-16 h-16 bg-[#FF8C42]/5 rounded-full -translate-y-8 translate-x-8"></div>
+        <div className="relative z-10">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center">
+            <Gift className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+          </div>
+          <h3 className="font-semibold text-white mb-1.5 sm:mb-2 text-xs sm:text-sm">Create Voucher</h3>
+          <div className="w-full py-1 sm:py-1.5 px-2 sm:px-3 border border-[#FF8C42]/30 text-[#FF8C42] font-medium rounded-md hover:bg-[#FF8C42]/10 transition-colors text-[10px] sm:text-xs">
+            New Voucher
+          </div>
+        </div>
+      </button>
 
       {/* Modals */}
       {/* Scanner Selection Modal */}
        {currentModal === 'scannerSelection' && (
-         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl border border-gray-200">
-            <div className="text-center space-y-5">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B]">
-                <QrCode className="w-6 h-6 text-white" />
-              </div>
-              
-              <div>
-                <h3 className="text-lg font-semibold mb-1 text-[#1A1A1A]">Choose Scanner</h3>
-                <p className="text-[#6B6B6B] text-sm">Select the type of QR code</p>
+         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-[#1A1A1A] rounded-xl p-6 max-w-md w-full shadow-2xl border border-[#2A2A2A]/50">
+            <div className="text-center space-y-4">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B]">
+                <QrCode className="w-5 h-5 text-white" />
               </div>
 
-              <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-bold mb-1 text-white">Choose Scanner</h3>
+                <p className="text-gray-400 text-xs">Select the type of QR code</p>
+              </div>
+
+              <div className="space-y-3">
                 <button
                   onClick={() => setCurrentModal('bookingScanner')}
-                  className="w-full p-3 border border-[#FF8C42]/30 rounded-lg hover:border-[#FF8C42] hover:bg-[#FF8C42]/5 transition-colors group"
+                  className="w-full p-3 border border-[#2A2A2A] rounded-lg hover:border-[#FF8C42]/50 hover:bg-[#1A1A1A]/50 transition-all group"
                 >
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Calendar className="w-5 h-5 text-white" />
+                  <div className="flex items-center space-x-3">
+                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Calendar className="w-4 h-4 text-white" />
                     </div>
                     <div className="text-left">
-                      <h4 className="font-semibold text-[#1A1A1A] text-base">Booking QR</h4>
-                      <p className="text-[#6B6B6B] text-sm">Scan customer booking QR codes</p>
+                      <h4 className="font-semibold text-white text-sm">Booking QR</h4>
+                      <p className="text-gray-400 text-xs">Scan customer booking QR codes</p>
                     </div>
                   </div>
                 </button>
 
                 <button
                   onClick={() => setCurrentModal('voucherScanner')}
-                  className="w-full p-3 border border-[#FF8C42]/30 rounded-lg hover:border-[#FF8C42] hover:bg-[#FF8C42]/5 transition-colors group"
+                  className="w-full p-3 border border-[#2A2A2A] rounded-lg hover:border-[#FF8C42]/50 hover:bg-[#1A1A1A]/50 transition-all group"
                 >
-                  <div className="flex items-center space-x-4">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Gift className="w-5 h-5 text-white" />
+                  <div className="flex items-center space-x-3">
+                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Gift className="w-4 h-4 text-white" />
                     </div>
                     <div className="text-left">
-                      <h4 className="font-semibold text-[#1A1A1A] text-base">Voucher QR</h4>
-                      <p className="text-[#6B6B6B] text-sm">Scan and redeem voucher QR codes</p>
+                      <h4 className="font-semibold text-white text-sm">Voucher QR</h4>
+                      <p className="text-gray-400 text-xs">Scan and redeem voucher QR codes</p>
                     </div>
                   </div>
                 </button>
@@ -160,7 +131,7 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
 
               <button
                 onClick={() => setCurrentModal(null)}
-                className="w-full py-2.5 px-4 border border-[#6B6B6B]/30 text-[#6B6B6B] font-semibold rounded-lg hover:bg-[#6B6B6B] hover:text-white transition-colors"
+                className="w-full py-2 px-4 border border-[#2A2A2A] text-gray-400 font-medium rounded-lg hover:bg-[#1A1A1A] hover:text-white hover:border-[#3A3A3A] transition-all text-sm"
               >
                 Cancel
               </button>

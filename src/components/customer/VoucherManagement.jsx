@@ -512,15 +512,9 @@ const VoucherManagement = ({ onBack }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
-      {/* Subtle background pattern */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
-      </div>
-      
+    <div className="min-h-screen bg-[#0A0A0A]">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30 shadow-lg">
+      <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
         <div className="max-w-md mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             <button
@@ -541,7 +535,7 @@ const VoucherManagement = ({ onBack }) => {
       <div className="relative z-10 max-w-md mx-auto px-4 py-6">
         {/* Title & Actions */}
         <div className="text-center mb-6">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center mx-auto mb-3 shadow-lg">
+          <div className="w-12 h-12 rounded-full bg-[#FF8C42] flex items-center justify-center mx-auto mb-3">
             <Gift className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-xl font-black mb-2 text-white">Your Vouchers</h1>
@@ -551,7 +545,7 @@ const VoucherManagement = ({ onBack }) => {
           <div className="flex space-x-3 mb-4">
             <button
               onClick={() => setShowClaimModal(true)}
-              className="flex-1 py-3 text-white font-bold rounded-xl bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-all duration-200 shadow-lg flex items-center justify-center space-x-2 touch-manipulation"
+              className="flex-1 py-3 text-white font-bold rounded-xl bg-[#FF8C42] hover:bg-[#FF7A2B] transition-all duration-200 flex items-center justify-center space-x-2 touch-manipulation"
             >
               <Plus className="w-4 h-4" />
               <span className="text-sm">Claim New</span>
@@ -559,7 +553,7 @@ const VoucherManagement = ({ onBack }) => {
             <button
               onClick={() => window.location.reload()}
               disabled={loading}
-              className="px-4 py-3 bg-[#444444] text-gray-300 font-bold rounded-xl transition-all duration-200 hover:bg-[#555555] shadow-lg flex items-center justify-center disabled:opacity-50 touch-manipulation"
+              className="px-4 py-3 bg-[#1A1A1A] text-gray-300 font-bold rounded-xl transition-all duration-200 hover:bg-[#2A2A2A] border border-[#2A2A2A] flex items-center justify-center disabled:opacity-50 touch-manipulation"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
@@ -608,7 +602,7 @@ const VoucherManagement = ({ onBack }) => {
         {/* Claimed Vouchers */}
         {!loading && !error && availableVouchers.length > 0 && (
           <div className="space-y-2 mb-3">
-            <h2 className="text-base font-black flex items-center px-2" style={{color: '#36454F'}}>
+            <h2 className="text-base font-black flex items-center px-2 text-white">
               <CheckCircle className="w-3.5 h-3.5 text-green-500 mr-2" />
               Available Vouchers ({availableVouchers.length})
             </h2>
@@ -616,15 +610,15 @@ const VoucherManagement = ({ onBack }) => {
               {availableVouchers.map((voucher) => (
                 <div
                   key={voucher._id}
-                  className="bg-white rounded-lg p-3 shadow-sm touch-manipulation" style={{border: '1px solid #E0E0E0'}}
+                  className="bg-[#1A1A1A] rounded-lg p-3 border border-[#2A2A2A] hover:border-[#FF8C42]/30 transition-all touch-manipulation"
                 >
                   {/* Voucher Header */}
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex items-center space-x-2 min-w-0 flex-1">
                       <div className="text-lg flex-shrink-0">{getTypeIcon(voucher.type)}</div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-sm font-black truncate" style={{color: '#36454F'}}>{voucher.code}</h3>
-                        <p className="text-xs truncate" style={{color: '#8B8B8B'}}>{voucher.description || 'Discount voucher'}</p>
+                        <h3 className="text-sm font-black truncate text-white">{voucher.code}</h3>
+                        <p className="text-xs truncate text-gray-400">{voucher.description || 'Discount voucher'}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-1 flex-shrink-0">
@@ -640,7 +634,7 @@ const VoucherManagement = ({ onBack }) => {
                     <div className="flex items-center space-x-1">
                       <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
                       <div className="min-w-0">
-                        <p className="text-[10px]" style={{color: '#8B8B8B'}}>Value</p>
+                        <p className="text-[10px] text-gray-500">Value</p>
                         <p className="text-xs font-bold text-green-600 truncate">{formatValue(voucher)}</p>
                       </div>
                     </div>
@@ -703,8 +697,8 @@ const VoucherManagement = ({ onBack }) => {
                     <div className="flex items-center space-x-2 min-w-0 flex-1">
                       <div className="text-lg opacity-50 flex-shrink-0">{getTypeIcon(voucher.type)}</div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-sm font-black truncate" style={{color: '#36454F'}}>{voucher.code}</h3>
-                        <p className="text-xs truncate" style={{color: '#8B8B8B'}}>{voucher.description || 'Discount voucher'}</p>
+                        <h3 className="text-sm font-black truncate text-white">{voucher.code}</h3>
+                        <p className="text-xs truncate text-gray-400">{voucher.description || 'Discount voucher'}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-1 flex-shrink-0">
@@ -720,7 +714,7 @@ const VoucherManagement = ({ onBack }) => {
                     <div className="flex items-center space-x-1">
                       <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0"></div>
                       <div className="min-w-0">
-                        <p className="text-[10px]" style={{color: '#8B8B8B'}}>Value</p>
+                        <p className="text-[10px] text-gray-500">Value</p>
                         <p className="text-xs font-bold text-blue-600 truncate">{formatValue(voucher)}</p>
                       </div>
                     </div>
@@ -772,8 +766,8 @@ const VoucherManagement = ({ onBack }) => {
                     <div className="flex items-center space-x-2 min-w-0 flex-1">
                       <div className="text-lg opacity-50 flex-shrink-0">{getTypeIcon(voucher.type)}</div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-sm font-black truncate" style={{color: '#36454F'}}>{voucher.code}</h3>
-                        <p className="text-xs truncate" style={{color: '#8B8B8B'}}>{voucher.description || 'Discount voucher'}</p>
+                        <h3 className="text-sm font-black truncate text-white">{voucher.code}</h3>
+                        <p className="text-xs truncate text-gray-400">{voucher.description || 'Discount voucher'}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-1 flex-shrink-0">
@@ -789,7 +783,7 @@ const VoucherManagement = ({ onBack }) => {
                     <div className="flex items-center space-x-1">
                       <div className="w-2 h-2 bg-red-500 rounded-full flex-shrink-0"></div>
                       <div className="min-w-0">
-                        <p className="text-[10px]" style={{color: '#8B8B8B'}}>Value</p>
+                        <p className="text-[10px] text-gray-500">Value</p>
                         <p className="text-xs font-bold text-red-600 truncate">{formatValue(voucher)}</p>
                       </div>
                     </div>
