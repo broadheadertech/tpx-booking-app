@@ -89,7 +89,7 @@ const ServiceBooking = ({ onBack }) => {
   )
   const vouchers = useQuery(
     api.services.vouchers.getVouchersByUser, 
-    user?.id ? { userId: user.id } : "skip"
+    user?._id ? { userId: user._id } : "skip"
   )
 
   // Convex mutations and actions
@@ -345,7 +345,7 @@ const ServiceBooking = ({ onBack }) => {
         : selectedTime;
 
       const bookingData = {
-        customer: user.id,
+        customer: user._id,
         service: selectedService._id,
         barber: selectedStaff?._id || undefined,
         branch_id: selectedBranch._id,
@@ -400,7 +400,7 @@ const ServiceBooking = ({ onBack }) => {
           console.log("Redeeming voucher:", selectedVoucher.code);
           await redeemVoucher({
             code: selectedVoucher.code,
-            redeemed_by: user.id
+            redeemed_by: user._id
           });
 
           console.log("Voucher redeemed successfully");

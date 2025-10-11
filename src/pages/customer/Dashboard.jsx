@@ -68,11 +68,27 @@ const Dashboard = () => {
     setShowOnboarding(false)
   }
 
-  // Convex queries
+  // Convex queries with error handling
   const services = useQuery(api.services.services.getActiveServices)
   const barbers = useQuery(api.services.barbers.getActiveBarbers)
-  const bookings = user?.id ? useQuery(api.services.bookings.getBookingsByCustomer, { customerId: user.id }) : undefined
-  const vouchers = user?.id ? useQuery(api.services.vouchers.getVouchersByUser, { userId: user.id }) : undefined
+  const bookings = user?._id ? useQuery(api.services.bookings.getBookingsByCustomer, { customerId: user._id }) : undefined
+  const vouchers = user?._id ? useQuery(api.services.vouchers.getVouchersByUser, { userId: user._id }) : undefined
+  
+  // Handle query errors
+  useEffect(() => {
+    if (services === null) {
+      console.error('Failed to load services')
+    }
+    if (barbers === null) {
+      console.error('Failed to load barbers')
+    }
+    if (user?._id && bookings === null) {
+      console.error('Failed to load bookings')
+    }
+    if (user?._id && vouchers === null) {
+      console.error('Failed to load vouchers')
+    }
+  }, [services, barbers, bookings, vouchers, user])
 
   const sections = [
     { id: 'home', label: 'Home', icon: Home },

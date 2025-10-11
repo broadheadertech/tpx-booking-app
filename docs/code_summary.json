@@ -1,0 +1,382 @@
+{
+  "tech_stack": [
+    "React",
+    "TypeScript",
+    "JavaScript",
+    "Vite",
+    "TailwindCSS",
+    "Convex",
+    "React Router",
+    "Capacitor"
+  ],
+  "features": [
+    {
+      "name": "Landing Page",
+      "description": "Main landing page with platform selection and app download options",
+      "files": [
+        "src/pages/Landing.jsx",
+        "src/pages/PlatformSelection.jsx",
+        "src/pages/DownloadApp.jsx"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "info": {
+          "title": "Landing Page Features",
+          "version": "1.0.0"
+        },
+        "paths": {
+          "/": {
+            "get": {
+              "summary": "Landing page with platform detection"
+            }
+          },
+          "/platform-selection": {
+            "get": {
+              "summary": "Platform selection page"
+            }
+          },
+          "/download-app": {
+            "get": {
+              "summary": "App download page"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Authentication System",
+      "description": "User authentication with login, registration, Facebook OAuth, and session management",
+      "files": [
+        "src/pages/auth/Login.jsx",
+        "src/pages/auth/Register.jsx",
+        "src/pages/auth/FacebookCallback.jsx",
+        "src/context/AuthContext.jsx",
+        "src/components/common/ProtectedRoute.jsx",
+        "src/components/common/AuthRedirect.jsx"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "info": {
+          "title": "Authentication Frontend",
+          "version": "1.0.0"
+        },
+        "paths": {
+          "/auth/login": {
+            "get": {
+              "summary": "Login page"
+            }
+          },
+          "/auth/register": {
+            "get": {
+              "summary": "Registration page"
+            }
+          },
+          "/auth/facebook/callback": {
+            "get": {
+              "summary": "Facebook OAuth callback"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Customer Dashboard",
+      "description": "Customer interface with booking, profile management, vouchers, and loyalty points",
+      "files": [
+        "src/pages/customer/Dashboard.jsx",
+        "src/pages/customer/Booking.jsx",
+        "src/pages/customer/Profile.jsx",
+        "src/components/customer/ServiceBooking.jsx",
+        "src/components/customer/CustomerProfile.jsx",
+        "src/components/customer/MyBookings.jsx",
+        "src/components/customer/CustomerVouchers.jsx",
+        "src/components/customer/LoyaltyPoints.jsx",
+        "src/components/customer/ProductShop.jsx",
+        "src/components/customer/AIBarberAssistant.jsx"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "info": {
+          "title": "Customer Dashboard",
+          "version": "1.0.0"
+        },
+        "paths": {
+          "/customer/dashboard": {
+            "get": {
+              "summary": "Customer dashboard"
+            }
+          },
+          "/customer/booking": {
+            "get": {
+              "summary": "Service booking interface"
+            }
+          },
+          "/customer/client": {
+            "get": {
+              "summary": "Customer profile management"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Staff Dashboard",
+      "description": "Staff management interface with POS, booking management, customer handling, and reports",
+      "files": [
+        "src/pages/staff/Dashboard.jsx",
+        "src/pages/staff/POS.jsx",
+        "src/pages/staff/Notifications.jsx",
+        "src/components/staff/BookingsManagement.jsx",
+        "src/components/staff/CustomersManagement.jsx",
+        "src/components/staff/BarbersManagement.jsx",
+        "src/components/staff/ServicesManagement.jsx",
+        "src/components/staff/VoucherManagement.jsx",
+        "src/components/staff/ProductsManagement.jsx",
+        "src/components/staff/PayrollManagement.jsx",
+        "src/components/staff/ReportsManagement.jsx",
+        "src/components/staff/QRScannerModal.jsx",
+        "src/components/staff/EmailMarketing.jsx"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "info": {
+          "title": "Staff Dashboard",
+          "version": "1.0.0"
+        },
+        "paths": {
+          "/staff/dashboard": {
+            "get": {
+              "summary": "Staff dashboard"
+            }
+          },
+          "/staff/pos": {
+            "get": {
+              "summary": "Point of Sale system"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Admin Dashboard",
+      "description": "Administrative interface for system management, user management, and global settings",
+      "files": [
+        "src/pages/admin/Dashboard.jsx",
+        "src/components/admin/BranchManagement.jsx",
+        "src/components/admin/UserManagement.jsx",
+        "src/components/admin/GlobalSettings.jsx",
+        "src/components/admin/SystemReports.jsx",
+        "src/components/admin/StatsCards.jsx"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "info": {
+          "title": "Admin Dashboard",
+          "version": "1.0.0"
+        },
+        "paths": {
+          "/admin/dashboard": {
+            "get": {
+              "summary": "Admin dashboard"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Barber Dashboard",
+      "description": "Barber interface for appointment management, profile, and booking handling",
+      "files": [
+        "src/components/barber/BarberDashboard.jsx",
+        "src/components/barber/BarberBookings.jsx",
+        "src/components/barber/BarberProfile.jsx"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "info": {
+          "title": "Barber Dashboard",
+          "version": "1.0.0"
+        },
+        "paths": {
+          "/barber/dashboard": {
+            "get": {
+              "summary": "Barber dashboard"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Kiosk System",
+      "description": "Self-service kiosk interface for walk-in customers with QR scanning and booking",
+      "files": [
+        "src/pages/Kiosk.jsx",
+        "src/pages/kiosk/QRScanner.jsx",
+        "src/pages/kiosk/BookingDetails.jsx",
+        "src/pages/kiosk/BookingQRGenerator.jsx",
+        "src/pages/kiosk/CameraPermissions.jsx"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "info": {
+          "title": "Kiosk System",
+          "version": "1.0.0"
+        },
+        "paths": {
+          "/kiosk": {
+            "get": {
+              "summary": "Kiosk interface"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Payment System",
+      "description": "Payment processing interface with success/failure handling",
+      "files": [
+        "src/pages/booking/payment/success.jsx",
+        "src/pages/booking/payment/failure.jsx"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "info": {
+          "title": "Payment System",
+          "version": "1.0.0"
+        },
+        "paths": {
+          "/booking/payment/success": {
+            "get": {
+              "summary": "Payment success page"
+            }
+          },
+          "/booking/payment/failure": {
+            "get": {
+              "summary": "Payment failure page"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Notification System",
+      "description": "Real-time notification system with toast notifications and notification dashboard",
+      "files": [
+        "src/components/common/NotificationSystem.tsx",
+        "src/components/common/NotificationDashboard.tsx",
+        "src/components/common/ToastNotification.jsx",
+        "src/context/NotificationContext.tsx",
+        "src/hooks/useRealtimeNotifications.js",
+        "src/services/NotificationService.ts"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "info": {
+          "title": "Notification System",
+          "version": "1.0.0"
+        },
+        "paths": {
+          "/notifications": {
+            "get": {
+              "summary": "Notification dashboard"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Common UI Components",
+      "description": "Reusable UI components including buttons, modals, inputs, and layout components",
+      "files": [
+        "src/components/common/Button.jsx",
+        "src/components/common/Modal.jsx",
+        "src/components/common/Input.jsx",
+        "src/components/common/Card.jsx",
+        "src/components/common/LoadingSpinner.jsx",
+        "src/components/common/LoadingScreen.jsx",
+        "src/components/common/ErrorDisplay.jsx",
+        "src/components/common/Layout.jsx",
+        "src/components/common/RichTextEditor.jsx"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "info": {
+          "title": "Common UI Components",
+          "version": "1.0.0"
+        },
+        "paths": {}
+      }
+    },
+    {
+      "name": "Utility Services",
+      "description": "Client-side services for AI barber assistance, email, downloads, and face detection",
+      "files": [
+        "src/services/aiBarberService.js",
+        "src/services/emailjsService.js",
+        "src/services/emailService.js",
+        "src/services/downloadService.js",
+        "src/services/faceDetectionService.js",
+        "src/services/splashService.js",
+        "src/services/customer/bookingService.js"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "info": {
+          "title": "Utility Services",
+          "version": "1.0.0"
+        },
+        "paths": {}
+      }
+    },
+    {
+      "name": "Policy and Legal Pages",
+      "description": "Legal pages including privacy policy and account deletion",
+      "files": [
+        "src/pages/Policy.jsx",
+        "src/pages/PrivacyPolicy.jsx",
+        "src/pages/AccountDeletion.jsx"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "info": {
+          "title": "Policy Pages",
+          "version": "1.0.0"
+        },
+        "paths": {
+          "/privacy": {
+            "get": {
+              "summary": "Privacy policy page"
+            }
+          },
+          "/account-deletion": {
+            "get": {
+              "summary": "Account deletion page"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Email Testing",
+      "description": "Email testing interface for development and debugging",
+      "files": [
+        "src/pages/EmailTest.jsx",
+        "src/components/common/EmailTestModal.jsx"
+      ],
+      "api_doc": {
+        "openapi": "3.0.0",
+        "info": {
+          "title": "Email Testing",
+          "version": "1.0.0"
+        },
+        "paths": {
+          "/email-test": {
+            "get": {
+              "summary": "Email testing interface"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

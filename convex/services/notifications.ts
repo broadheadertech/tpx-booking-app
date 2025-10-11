@@ -265,3 +265,68 @@ export const deleteNotification = mutation({
     return { success: true };
   },
 });
+
+// Clear all notifications for a user - regenerated
+export const clearAllNotifications = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Get the user to determine their role and branch
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throwUserError(ERROR_CODES.USER_NOT_FOUND, "User not found.", "User not found.");
+    }
+    
+    let notificationsToDelete = [];
+    
+    // Get all notifications for this user (direct notifications)
+    const directNotifications = await ctx.db
+      .query("notifications")
+      .withIndex("by_recipient", (q) => q.eq("recipient_id", args.userId))
+      .collect();
+    
+    notificationsToDelete.push(...directNotifications);
+    
+    // If user is staff, branch_admin, or barber, also get branch-wide notifications
+    if (['staff', 'branch_admin', 'barber'].includes(user.role) && user.branch_id) {
+      const branchNotifications = await ctx.db
+        .query("notifications")
+        .withIndex("by_branch_type", (q) => 
+          q.eq("branch_id", user.branch_id).eq("recipient_type", "staff")
+        )
+        .collect();
+      
+      // Add branch notifications that aren't already in direct notifications
+      const existingIds = new Set(directNotifications.map(n => n._id));
+      const newBranchNotifications = branchNotifications.filter(n => !existingIds.has(n._id));
+      
+      notificationsToDelete.push(...newBranchNotifications);
+    }
+    
+    // If user is super_admin, get all admin notifications
+    if (user.role === 'super_admin') {
+      const adminNotifications = await ctx.db
+        .query("notifications")
+        .withIndex("by_recipient_type", (q) => 
+          q.eq("recipient_type", "admin")
+        )
+        .collect();
+      
+      // Add admin notifications that aren't already included
+      const existingIds = new Set(notificationsToDelete.map(n => n._id));
+      const newAdminNotifications = adminNotifications.filter(n => !existingIds.has(n._id));
+      
+      notificationsToDelete.push(...newAdminNotifications);
+    }
+    
+    // Delete all notifications
+    await Promise.all(
+      notificationsToDelete.map((notification) =>
+        ctx.db.delete(notification._id)
+      )
+    );
+    
+    return { success: true, count: notificationsToDelete.length };
+  },
+});
