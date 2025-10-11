@@ -26,6 +26,7 @@ import Policy from "./pages/Policy.jsx";
 import AccountDeletion from "./pages/AccountDeletion.jsx";
 import EmailTest from "./pages/EmailTest.jsx";
 import DownloadApp from "./pages/DownloadApp.jsx";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 import { getInitialRoute } from "./utils/platform";
 
 function App() {
@@ -141,7 +142,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/kiosk" element={<Kiosk />} />
+            <Route 
+              path="/kiosk" 
+              element={
+                <ErrorBoundary>
+                  <Kiosk />
+                </ErrorBoundary>
+              } 
+            />
             <Route
               path="/booking/payment/success"
               element={<PaymentSuccess />}

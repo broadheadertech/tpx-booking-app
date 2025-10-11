@@ -17,6 +17,7 @@ function CustomerBooking() {
   const [error, setError] = useState('')
   const [bookingResult, setBookingResult] = useState(null)
   const [qrCodeUrl, setQrCodeUrl] = useState('')
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const { user, isAuthenticated } = useAuth()
 
@@ -29,7 +30,7 @@ function CustomerBooking() {
     : undefined
   const createBookingMutation = useMutation(api.services.bookings.createBooking)
 
-  const loading = selectedBranch && (services === undefined || barbers === undefined)
+  const queryLoading = selectedBranch && (services === undefined || barbers === undefined)
 
   const availableTimes = [
     '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -86,7 +87,7 @@ function CustomerBooking() {
       const formattedTime = selectedTime.includes(':') ? `${selectedTime}:00` : selectedTime
 
       const result = await createBookingMutation({
-        customer: user.id,
+        customer: user._id,
         branch_id: selectedBranch._id,
         service: selectedService._id,
         barber: selectedBarber ? selectedBarber._id : undefined,
@@ -118,7 +119,7 @@ function CustomerBooking() {
     setError('')
   }
 
-  if (loading && !services.length) {
+  if (queryLoading && !services?.length) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] flex items-center justify-center">
         <div className="text-center">

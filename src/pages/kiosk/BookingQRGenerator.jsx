@@ -97,8 +97,16 @@ function BookingQRGenerator() {
           // Use actual booking data from database
           const bookingData = getBookingById;
           
-          // Generate QR code data - simplified to contain only booking code
-          const qrData = bookingData.booking_code;
+          // Generate QR code data - JSON format for scanner compatibility
+          const qrData = JSON.stringify({
+            bookingId: bookingData._id,
+            bookingCode: bookingData.booking_code,
+            service: selectedService?.name,
+            barber: selectedBarber?.full_name || selectedBarber?.name,
+            date: today,
+            time: formattedTime,
+            barbershop: "TipunoX Angeles Barbershop"
+          });
 
           console.log("Generating QR with data:", qrData);
 
@@ -259,6 +267,7 @@ function BookingQRGenerator() {
         customer_email: customerEmail.trim() || undefined,
         service: selectedService._id,
         barber: selectedBarber._id,
+        branch_id: selectedBarber.branch_id,
         date: today,
         time: formattedTime,
         status: "pending",

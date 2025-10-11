@@ -30,7 +30,7 @@ const MyBookings = ({ onBack }) => {
   const itemsPerPage = 8;
 
   // Convex queries - only call when user exists
-  const bookings = user?.id ? useQuery(api.services.bookings.getBookingsByCustomer, { customerId: user.id }) : undefined;
+  const bookings = user?._id ? useQuery(api.services.bookings.getBookingsByCustomer, { customerId: user._id }) : undefined;
   const services = useQuery(api.services.services.getAllServices);
   const barbers = useQuery(api.services.barbers.getAllBarbers);
   
@@ -38,7 +38,7 @@ const MyBookings = ({ onBack }) => {
   const allRatings = useQuery(api.services.ratings.getAllRatings);
 
   // Loading state - true when user exists but data not loaded yet
-  const loading = user?.id && (bookings === undefined || services === undefined || barbers === undefined);
+  const loading = user?._id && (bookings === undefined || services === undefined || barbers === undefined);
   
   // Error state - currently no error handling implemented
   const error = null;
