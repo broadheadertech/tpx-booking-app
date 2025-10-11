@@ -234,7 +234,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
           });
 
           const emailResult = await sendVoucherEmail(voucherEmailData);
-
+//
           if (emailResult.success) {
             console.log(`Email sent successfully to ${selectedUser.email}:`, emailResult.response);
             successfulSends++;
