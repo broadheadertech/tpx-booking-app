@@ -41,9 +41,9 @@ export const registerUser = mutation({
       throwUserError(ERROR_CODES.AUTH_USERNAME_EXISTS);
     }
 
-    // Validate branch_id for non-super_admin users
-    if (args.role !== "super_admin" && !args.branch_id) {
-      throw new Error("Branch ID is required for all users except super_admin");
+    // Validate branch_id for staff users (customers don't need branch_id)
+    if (["staff", "barber", "branch_admin", "admin"].includes(args.role) && !args.branch_id) {
+      throw new Error("Branch ID is required for staff, barber, branch_admin, and admin users");
     }
 
     // Create new user
