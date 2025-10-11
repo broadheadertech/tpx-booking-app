@@ -27,7 +27,7 @@ export default defineSchema({
     address: v.optional(v.string()),
     birthday: v.optional(v.string()),
     role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("super_admin"), v.literal("branch_admin")),
-    branch_id: v.optional(v.id("branches")), // Optional for super_admin, required for others
+    branch_id: v.optional(v.id("branches")), // Optional for super_admin and customers, required for staff/barber/admin/branch_admin
     is_active: v.boolean(),
     avatar: v.optional(v.string()),
     bio: v.optional(v.string()),
