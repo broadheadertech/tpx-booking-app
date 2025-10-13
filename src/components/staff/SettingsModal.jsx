@@ -213,8 +213,6 @@ const SettingsModal = ({ isOpen, onClose, onSave }) => {
                 className="w-full h-12 px-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200"
               >
                 <option value="PHP">Philippine Peso (₱)</option>
-                <option value="USD">US Dollar ($)</option>
-                <option value="EUR">Euro (€)</option>
               </select>
             </div>
             <Input

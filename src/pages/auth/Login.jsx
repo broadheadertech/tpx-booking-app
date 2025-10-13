@@ -190,15 +190,19 @@ function Login() {
                 </div>
 
                 <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={handleFacebookLogin}
-                    disabled={fbLoading}
-                    className="w-full h-12 bg-[#1877F2] hover:bg-[#166FE5] active:bg-[#145FCB] disabled:bg-gray-600 text-white font-semibold rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 disabled:transform-none text-sm flex items-center justify-center gap-2"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M22.675 0h-21.35C.595 0 0 .594 0 1.326v21.348C0 23.406.595 24 1.325 24h11.495v-9.294H9.847v-3.622h2.973V8.413c0-2.943 1.796-4.548 4.418-4.548 1.256 0 2.336.093 2.65.135v3.07l-1.82.001c-1.428 0-1.703.679-1.703 1.675v2.197h3.406l-.444 3.622h-2.962V24h5.809C23.406 24 24 23.406 24 22.674V1.326C24 .594 23.406 0 22.675 0z"/></svg>
-                    {fbLoading ? 'Connecting...' : 'Continue with Facebook'}
-                  </button>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      disabled={true}
+                      className="w-full h-12 bg-gray-600 text-gray-400 font-semibold rounded-2xl transition-all duration-200 cursor-not-allowed text-sm flex items-center justify-center gap-2 opacity-60"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M22.675 0h-21.35C.595 0 0 .594 0 1.326v21.348C0 23.406.595 24 1.325 24h11.495v-9.294H9.847v-3.622h2.973V8.413c0-2.943 1.796-4.548 4.418-4.548 1.256 0 2.336.093 2.65.135v3.07l-1.82.001c-1.428 0-1.703.679-1.703 1.675v2.197h3.406l-.444 3.622h-2.962V24h5.809C23.406 24 24 23.406 24 22.674V1.326C24 .594 23.406 0 22.675 0z"/></svg>
+                      Continue with Facebook
+                    </button>
+                    <span className="absolute -top-2 -right-2 bg-[#FF8C42] text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                      Coming Soon
+                    </span>
+                  </div>
                 </div>
                 
                 <div className="text-center pt-4 border-t border-[#2A2A2A]/30 mt-8">

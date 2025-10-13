@@ -1,5 +1,5 @@
 import React from 'react'
-import { Calendar, Gift, UserPlus, Clock, ChevronRight, DollarSign, User, Info, CheckCircle, XCircle } from 'lucide-react'
+import { Calendar, Gift, UserPlus, Clock, DollarSign, User, Info, CheckCircle, XCircle } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
@@ -76,7 +76,7 @@ const RecentActivity = ({ activities: propActivities = [] }) => {
         activityItems.push({
           id: transaction._id,
           type: 'sale',
-          message: `${customerName} made a purchase - $${transaction.total_amount.toFixed(2)}`,
+          message: `${customerName} made a purchase - ₱${transaction.total_amount.toFixed(2)}`,
           time: timeAgo,
           status: transaction.payment_status === 'completed' ? 'completed' : 'new'
         })
@@ -200,10 +200,6 @@ const RecentActivity = ({ activities: propActivities = [] }) => {
     <div className="p-6 bg-gradient-to-br from-[#2A2A2A] to-[#333333] border border-[#444444]/50 rounded-2xl shadow-lg">
       <div className="flex items-center justify-between mb-5">
         <h3 className="text-xl font-bold text-white">Recent Activity</h3>
-        <button className="flex items-center gap-1 text-[#FF8C42] hover:text-[#FF7A2B] text-sm font-semibold transition-colors group">
-          <span>View All</span>
-          <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-        </button>
       </div>
       
       <div className="space-y-2">

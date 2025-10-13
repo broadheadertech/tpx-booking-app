@@ -22,7 +22,8 @@ The TPX Barbershop Booking System is a comprehensive multi-branch barbershop man
 - **Multi-Branch Architecture**: Complete branch isolation with role-based access
 - **Real-time Booking System**: Live appointment scheduling with QR code verification
 - **POS System**: Walk-in customer transactions with receipt generation
-- **Payment Integration**: Xendit payment gateway with webhook handling
+- **Payment Integration**: Xendit payment gateway with webhook handling (PHP - Philippine Pesos)
+- **Currency**: All monetary values are in Philippine Pesos (PHP/₱)
 - **Email Marketing**: Resend integration with template management
 - **Voucher System**: Digital voucher management with assignment tracking
 - **Payroll Management**: Commission-based payroll calculation and tracking
@@ -130,7 +131,7 @@ The TPX Barbershop Booking System is a comprehensive multi-branch barbershop man
   branch_id: Id<"branches">, // Branch-specific services
   name: string,              // Service name
   description: string,       // Service description
-  price: number,             // Service price
+  price: number,             // Service price in PHP (Philippine Pesos)
   duration_minutes: number,  // Service duration
   category: string,          // Service category
   is_active: boolean,        // Service availability
@@ -155,7 +156,7 @@ The TPX Barbershop Booking System is a comprehensive multi-branch barbershop man
   time: string,              // Booking time (HH:MM)
   status: "pending" | "booked" | "confirmed" | "completed" | "cancelled",
   payment_status?: "unpaid" | "paid" | "refunded",
-  price: number,             // Booking price
+  price: number,             // Booking price in PHP (Philippine Pesos)
   notes?: string,            // Additional notes
   createdAt: number,
   updatedAt: number
@@ -176,25 +177,25 @@ The TPX Barbershop Booking System is a comprehensive multi-branch barbershop man
   services: [{               // Service items
     service_id: Id<"services">,
     service_name: string,
-    price: number,
+    price: number,           // Price in PHP (Philippine Pesos)
     quantity: number
   }],
   products?: [{              // Product items
     product_id: Id<"products">,
     product_name: string,
-    price: number,
+    price: number,           // Price in PHP (Philippine Pesos)
     quantity: number
   }],
-  subtotal: number,          // Subtotal amount
-  discount_amount: number,   // Discount applied
+  subtotal: number,          // Subtotal amount in PHP
+  discount_amount: number,   // Discount applied in PHP
   voucher_applied?: Id<"vouchers">, // Applied voucher
-  tax_amount: number,        // Tax amount
-  total_amount: number,      // Final total
+  tax_amount: number,        // Tax amount in PHP
+  total_amount: number,      // Final total in PHP
   payment_method: "cash" | "card" | "digital_wallet" | "bank_transfer",
   payment_status: "pending" | "completed" | "failed" | "refunded",
   notes?: string,            // Transaction notes
-  cash_received?: number,    // Cash payment amount
-  change_amount?: number,    // Change given
+  cash_received?: number,    // Cash payment amount in PHP
+  change_amount?: number,    // Change given in PHP
   receipt_number: string,    // Receipt identifier
   processed_by: Id<"users">, // Staff member
   createdAt: number,
@@ -547,12 +548,14 @@ export const processPayment = action({
 ## 🔗 Integration Points
 
 ### Xendit Payment Integration
+**Currency**: All payments are processed in Philippine Pesos (PHP)
+
 ```javascript
 // Payment processing
 const processPayment = async (bookingData) => {
   const paymentRequest = await xenditClient.payments.create({
-    amount: bookingData.price,
-    currency: 'PHP',
+    amount: bookingData.price,  // Amount in PHP (Philippine Pesos)
+    currency: 'PHP',            // Philippine Pesos
     payment_method: 'CREDIT_CARD',
     reference_id: bookingData.booking_code
   });
