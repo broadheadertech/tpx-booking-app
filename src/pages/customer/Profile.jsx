@@ -3,7 +3,7 @@ import { User, Mail, Phone, Calendar, MapPin, Edit2, LogOut, Save, X, ArrowLeft,
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 
-const Profile = () => {
+const Profile = ({ onBack }) => {
   const { user, logout, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [isEditing, setIsEditing] = useState(false)
@@ -79,10 +79,15 @@ const Profile = () => {
 
   const handleLogout = async () => {
     try {
+      console.log('Logging out...')
       await logout()
-      navigate('/auth/login')
+      console.log('Logout successful, navigating to login...')
+      // Use window.location for a hard redirect to ensure clean state
+      window.location.href = '/auth/login'
     } catch (error) {
       console.error('Logout error:', error)
+      // Even if there's an error, redirect to login
+      window.location.href = '/auth/login'
     }
   }
 
@@ -94,9 +99,17 @@ const Profile = () => {
     alert('Onboarding has been reset! You will see the welcome tour on your next visit to the dashboard.')
   }
 
+  const handleBack = () => {
+    if (onBack) {
+      onBack()
+    } else {
+      navigate('/customer/dashboard')
+    }
+  }
+
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] flex items-center justify-center">
+      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF8C42] mx-auto mb-4"></div>
           <p className="text-gray-400">Loading profile...</p>
@@ -106,41 +119,48 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
-      {/* Subtle background pattern */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
+    <div className="min-h-screen bg-[#0A0A0A]">
+      {/* Header with Back Button */}
+      <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
+        <div className="max-w-md mx-auto px-4">
+          <div className="flex justify-between items-center py-4">
+            <button
+              onClick={handleBack}
+              className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm font-medium">Back</span>
+            </button>
+            <h1 className="text-lg font-bold text-white">Profile</h1>
+            <button
+              onClick={handleLogout}
+              className="px-3 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-colors text-sm shadow-lg"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Profile Content */}
       <div className="relative z-10 max-w-md mx-auto px-4 py-6 pb-20">
-        {/* Actions Row */}
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={handleLogout}
-            className="px-3 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-colors text-sm shadow-lg"
-          >
-            Logout
-          </button>
-        </div>
         {/* Profile Header Card */}
-        <div className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl shadow-lg border border-[#555555]/30 mb-6 overflow-hidden">
+        <div className="bg-[#1A1A1A] rounded-2xl shadow-lg border border-[#2A2A2A] mb-6 overflow-hidden">
           <div className="bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] px-6 py-6">
             <div className="text-center">
-              <div className="w-16 h-16 rounded-full overflow-hidden mx-auto mb-3 bg-white/20">
+              <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-3 ring-4 ring-white/30">
                 <img
                   src={user?.avatar || '/img/avatar_default.jpg'}
                   alt={profileData.nickname || profileData.username || 'User'}
                   className="w-full h-full object-cover"
                 />
               </div>
-              <h2 className="text-lg font-bold text-white mb-1">
+              <h2 className="text-xl font-bold text-white mb-1">
                 {profileData.nickname || profileData.username || 'User'}
               </h2>
-              <p className="text-white/80 text-sm">{profileData.email}</p>
-              <div className="mt-2 px-3 py-1 bg-white/20 rounded-full inline-block">
-                <span className="text-white/90 text-xs font-medium">
+              <p className="text-white/90 text-sm">{profileData.email}</p>
+              <div className="mt-3 px-4 py-1.5 bg-white/20 rounded-full inline-block">
+                <span className="text-white text-xs font-medium uppercase tracking-wide">
                   {user?.role === 'staff' ? 'Staff Member' : 'Customer'}
                 </span>
               </div>
@@ -149,8 +169,8 @@ const Profile = () => {
         </div>
 
         {/* Personal Information Card */}
-        <div className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl shadow-lg border border-[#555555]/30 mb-4">
-          <div className="px-4 py-4 border-b border-[#555555]/30">
+        <div className="bg-[#1A1A1A] rounded-2xl shadow-lg border border-[#2A2A2A] mb-4">
+          <div className="px-4 py-4 border-b border-[#2A2A2A]">
             <h3 className="text-lg font-semibold text-white">Personal Information</h3>
           </div>
           <div className="p-4 space-y-4">
@@ -164,10 +184,10 @@ const Profile = () => {
                   type="text"
                   value={profileData.username}
                   onChange={(e) => handleInputChange('username', e.target.value)}
-                  className="w-full px-4 py-3 bg-[#2A2A2A] border border-[#555555] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
                 />
               ) : (
-                <p className="px-4 py-3 bg-[#2A2A2A] text-white rounded-xl">{profileData.username}</p>
+                <p className="px-4 py-3 bg-[#0A0A0A] text-white rounded-xl">{profileData.username}</p>
               )}
             </div>
 
@@ -181,15 +201,15 @@ const Profile = () => {
                   type="email"
                   value={profileData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  className="w-full px-4 py-3 bg-[#2A2A2A] border border-[#555555] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
                 />
               ) : (
-                <p className="px-4 py-3 bg-[#2A2A2A] text-white rounded-xl">{profileData.email}</p>
+                <p className="px-4 py-3 bg-[#0A0A0A] text-white rounded-xl">{profileData.email}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
+              <label className="block text-sm font-medium text-gray-400 mb-2">
                 <User className="w-4 h-4 inline mr-2" />
                 Nickname
               </label>
@@ -199,15 +219,15 @@ const Profile = () => {
                   value={profileData.nickname}
                   onChange={(e) => handleInputChange('nickname', e.target.value)}
                   placeholder="Enter your preferred name"
-                  className="w-full px-4 py-3 border border-[#E0E0E0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F68B24]"
+                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
                 />
               ) : (
-                <p className="px-4 py-3 bg-[#F4F0E6] rounded-xl" style={{color: '#36454F'}}>{profileData.nickname || 'Not set'}</p>
+                <p className="px-4 py-3 bg-[#0A0A0A] text-gray-300 rounded-xl">{profileData.nickname || 'Not set'}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
+              <label className="block text-sm font-medium text-gray-400 mb-2">
                 <Phone className="w-4 h-4 inline mr-2" />
                 Mobile Number
               </label>
@@ -216,15 +236,15 @@ const Profile = () => {
                   type="tel"
                   value={profileData.mobile_number}
                   onChange={(e) => handleInputChange('mobile_number', e.target.value)}
-                  className="w-full px-4 py-3 border border-[#E0E0E0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F68B24]"
+                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
                 />
               ) : (
-                <p className="px-4 py-3 bg-[#F4F0E6] rounded-xl" style={{color: '#36454F'}}>{profileData.mobile_number}</p>
+                <p className="px-4 py-3 bg-[#0A0A0A] text-gray-300 rounded-xl">{profileData.mobile_number}</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-[#6B6B6B] mb-2">
+              <label className="block text-sm font-medium text-gray-400 mb-2">
                 <Calendar className="w-4 h-4 inline mr-2" />
                 Birthday
               </label>
@@ -233,10 +253,10 @@ const Profile = () => {
                   type="date"
                   value={profileData.birthday}
                   onChange={(e) => handleInputChange('birthday', e.target.value)}
-                  className="w-full px-4 py-3 border border-[#E0E0E0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#F68B24]"
+                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
                 />
               ) : (
-                <p className="px-4 py-3 bg-[#F4F0E6] rounded-xl" style={{color: '#36454F'}}>
+                <p className="px-4 py-3 bg-[#0A0A0A] text-gray-300 rounded-xl">
                   {profileData.birthday ? new Date(profileData.birthday).toLocaleDateString('en-PH') : 'Not set'}
                 </p>
               )}
@@ -245,22 +265,22 @@ const Profile = () => {
         </div>
 
         {/* Account Statistics */}
-        <div className="bg-white rounded-2xl shadow-lg border border-[#E0E0E0] mb-6">
-          <div className="px-4 py-4 border-b border-[#E0E0E0]">
-            <h3 className="text-lg font-semibold" style={{color: '#36454F'}}>Account Summary</h3>
+        <div className="bg-[#1A1A1A] rounded-2xl shadow-lg border border-[#2A2A2A] mb-6">
+          <div className="px-4 py-4 border-b border-[#2A2A2A]">
+            <h3 className="text-lg font-semibold text-white">Account Summary</h3>
           </div>
           <div className="p-4 space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-[#F4F0E6] rounded-xl">
-                <div className="text-2xl font-bold" style={{color: '#F68B24'}}>0</div>
-                <div className="text-sm" style={{color: '#8B8B8B'}}>Total Bookings</div>
+              <div className="text-center p-4 bg-[#0A0A0A] rounded-xl border border-[#2A2A2A]">
+                <div className="text-2xl font-bold text-[#FF8C42]">0</div>
+                <div className="text-sm text-gray-400">Total Bookings</div>
               </div>
-              <div className="text-center p-4 bg-[#F4F0E6] rounded-xl">
-                <div className="text-2xl font-bold" style={{color: '#F68B24'}}>0</div>
-                <div className="text-sm" style={{color: '#8B8B8B'}}>Vouchers</div>
+              <div className="text-center p-4 bg-[#0A0A0A] rounded-xl border border-[#2A2A2A]">
+                <div className="text-2xl font-bold text-[#FF8C42]">0</div>
+                <div className="text-sm text-gray-400">Vouchers</div>
               </div>
             </div>
-            <div className="text-center p-4 bg-gradient-to-r from-[#F68B24] to-[#E67A1F] rounded-xl">
+            <div className="text-center p-4 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-xl">
               <div className="text-white text-sm font-medium">Member since</div>
               <div className="text-white text-lg font-bold">
                 {new Date().toLocaleDateString('en-PH', { month: 'long', year: 'numeric' })}
@@ -282,7 +302,7 @@ const Profile = () => {
         {!isEditing && (
           <button
             onClick={() => setIsEditing(true)}
-            className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-[#F68B24] text-white rounded-xl hover:bg-[#E67A1F] transition-colors shadow-lg mb-4"
+            className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-xl hover:shadow-xl transition-all duration-300 transform hover:scale-105 shadow-lg mb-4"
           >
             <Edit2 className="w-4 h-4" />
             <span>Edit Profile</span>
@@ -297,15 +317,15 @@ const Profile = () => {
                 setIsEditing(false)
                 loadProfileData() // Reset data
               }}
-              className="flex-1 px-4 py-3 border border-[#E0E0E0] rounded-xl hover:bg-[#F4F0E6] transition-colors" 
-              style={{color: '#8B8B8B'}}
+              className="flex-1 px-4 py-3 bg-[#1A1A1A] border border-[#2A2A2A] text-gray-300 rounded-xl hover:bg-[#2A2A2A] transition-colors"
             >
+              <X className="w-4 h-4 inline mr-2" />
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={loading}
-              className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-[#F68B24] text-white rounded-xl hover:bg-[#E67A1F] transition-colors disabled:opacity-50"
+              className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-xl hover:shadow-xl transition-all duration-300 disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
               <span>{loading ? 'Saving...' : 'Save Changes'}</span>

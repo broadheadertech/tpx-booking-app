@@ -159,7 +159,7 @@ function StaffDashboard() {
         return <BookingsManagement onRefresh={handleRefresh} user={user} />
 
       case 'services':
-        return <ServicesManagement services={services || []} onRefresh={handleRefresh} />
+        return <ServicesManagement services={services || []} onRefresh={handleRefresh} user={user} />
 
       case 'vouchers':
         return <VoucherManagement vouchers={vouchers || []} onRefresh={handleRefresh} onCreateVoucher={() => setActiveModal('voucher')} />
@@ -171,7 +171,7 @@ function StaffDashboard() {
         return <BranchUserManagement onRefresh={handleRefresh} />
 
       case 'customers':
-        return <CustomersManagement customers={customers || []} onRefresh={handleRefresh} onAddCustomer={() => setActiveModal('customer')} />
+        return <CustomersManagement customers={customers || []} onRefresh={handleRefresh} />
 
       case 'events':
         return <EventsManagement events={events || []} onRefresh={handleRefresh} user={user} />

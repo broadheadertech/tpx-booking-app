@@ -61,10 +61,6 @@ const RecentActivity = ({ activities = [] }) => {
             <p className="text-sm text-gray-400">Latest system events</p>
           </div>
         </div>
-        
-        <button className="text-[#FF8C42] hover:text-[#FF7A2B] text-sm font-medium transition-colors">
-          View All
-        </button>
       </div>
 
       {/* Activity List */}
@@ -110,14 +106,7 @@ const RecentActivity = ({ activities = [] }) => {
         )}
       </div>
 
-      {/* View More Button */}
-      {displayActivities.length > 5 && (
-        <div className="mt-6 text-center">
-          <button className="text-[#FF8C42] hover:text-[#FF7A2B] text-sm font-medium transition-colors">
-            View {displayActivities.length - 5} more activities
-          </button>
-        </div>
-      )}
+
     </div>
   )
 }

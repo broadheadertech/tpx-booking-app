@@ -148,7 +148,7 @@ const Dashboard = () => {
           }
         }} />
       case 'profile':
-        return <Profile />
+        return <Profile onBack={() => setActiveSection('home')} />
       case 'loyalty':
         return <LoyaltyPoints onBack={() => setActiveSection('home')} />
       case 'notifications':

@@ -7,6 +7,10 @@ import { useAuth } from '../../context/AuthContext'
 const BarberProfile = () => {
   const { user, logout } = useAuth()
   const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
   const [editForm, setEditForm] = useState({
     full_name: '',
     email: '',
@@ -21,17 +25,38 @@ const BarberProfile = () => {
   // Get barber data
   const barbers = useQuery(api.services.barbers.getAllBarbers)
   const currentBarber = barbers?.find(barber => barber.user === user?._id)
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('BarberProfile Debug:', {
+      user: user?._id,
+      userRole: user?.role,
+      barbersLoaded: barbers !== undefined,
+      barbersCount: barbers?.length,
+      currentBarber: currentBarber?._id,
+      allBarberUsers: barbers?.map(b => b.user)
+    })
+  }, [user, barbers, currentBarber])
 
   // Get user profile data
   const updateUserProfile = useMutation(api.services.auth.updateUserProfile)
+  const updateBarberMutation = useMutation(api.services.barbers.updateBarber)
   const createBarberProfile = useMutation(api.services.barbers.createBarberProfile)
   
   // Auto-create barber profile if user has barber role but no profile
   useEffect(() => {
     if (user?.role === 'barber' && barbers && !currentBarber && user._id) {
-      createBarberProfile({ userId: user._id })
+      console.log('Auto-creating barber profile for user:', user._id, 'branch:', user.branch_id)
+      createBarberProfile({ 
+        userId: user._id,
+        branch_id: user.branch_id 
+      })
+        .then((barberId) => {
+          console.log('Barber profile created successfully:', barberId)
+        })
         .catch((error) => {
           console.error('Failed to create barber profile:', error)
+          alert('Failed to create barber profile. Please contact admin.')
         })
     }
   }, [user, barbers, currentBarber, createBarberProfile])
@@ -76,10 +101,14 @@ const BarberProfile = () => {
   }
 
   const handleSave = async () => {
+    setIsSaving(true)
     try {
-      // Update user profile
-      const sessionToken = localStorage.getItem('sessionToken')
+      console.log('Saving profile...', editForm)
+      
+      // Update user profile (bio and avatar)
+      const sessionToken = localStorage.getItem('session_token')
       if (sessionToken) {
+        console.log('Updating user profile...')
         await updateUserProfile({
           sessionToken,
           bio: editForm.bio,
@@ -87,14 +116,34 @@ const BarberProfile = () => {
         })
       }
       
-      // Note: In a real implementation, you'd also update the barber record
-      // This would require a separate mutation for barber-specific fields
+      // Update barber profile (barber-specific fields)
+      if (currentBarber?._id) {
+        console.log('Updating barber profile...')
+        await updateBarberMutation({
+          id: currentBarber._id,
+          full_name: editForm.full_name,
+          email: editForm.email,
+          phone: editForm.phone,
+          experience: editForm.experience,
+          specialties: editForm.specialties,
+          avatar: editForm.avatar
+        })
+      }
       
+      console.log('Profile updated successfully!')
       setIsEditing(false)
-      alert('Profile updated successfully!')
+      setShowSuccessModal(true)
+      
+      // Auto-close success modal after 2 seconds
+      setTimeout(() => {
+        setShowSuccessModal(false)
+      }, 2000)
     } catch (error) {
       console.error('Failed to update profile:', error)
-      alert('Failed to update profile. Please try again.')
+      setErrorMessage(error.message || 'Failed to update profile. Please try again.')
+      setShowErrorModal(true)
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -123,19 +172,39 @@ const BarberProfile = () => {
       .slice(0, 2)
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (window.confirm('Are you sure you want to logout?')) {
-      logout()
+      try {
+        await logout()
+        // Use window.location for a hard redirect to ensure clean state
+        window.location.href = '/auth/login'
+      } catch (error) {
+        console.error('Logout error:', error)
+        // Even if there's an error, redirect to login
+        window.location.href = '/auth/login'
+      }
     }
   }
 
+  // Show loading state while data is being fetched
+  if (barbers === undefined) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF8C42] mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading profile...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Only show "not found" if data has loaded but no barber profile exists
   if (!currentBarber) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] flex items-center justify-center p-4">
         <div className="text-center">
-          <User className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">Barber Profile Not Found</h2>
-          <p className="text-gray-400">Please contact admin to set up your barber profile.</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF8C42] mx-auto mb-4"></div>
+          <p className="text-gray-400">Setting up your profile...</p>
         </div>
       </div>
     )
@@ -194,13 +263,23 @@ const BarberProfile = () => {
                 <>
                   <button
                     onClick={handleSave}
-                    className="p-2 text-green-400 rounded-xl hover:bg-green-500/10 transition-all duration-200"
+                    disabled={isSaving}
+                    className={`p-2 rounded-xl transition-all duration-200 ${
+                      isSaving 
+                        ? 'text-gray-400 cursor-not-allowed' 
+                        : 'text-green-400 hover:bg-green-500/10'
+                    }`}
                   >
-                    <Save className="w-4 h-4" />
+                    {isSaving ? (
+                      <div className="w-4 h-4 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
                   </button>
                   <button
                     onClick={handleCancel}
-                    className="p-2 text-gray-400 rounded-xl hover:bg-white/10 transition-all duration-200"
+                    disabled={isSaving}
+                    className="p-2 text-gray-400 rounded-xl hover:bg-white/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -433,6 +512,46 @@ const BarberProfile = () => {
           </div>
         </div>
       </div>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl p-6 max-w-sm w-full border border-green-500/30 shadow-2xl animate-[slideIn_0.3s_ease-out]">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Profile Updated!</h3>
+              <p className="text-gray-400 text-sm">Your profile has been successfully updated.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Modal */}
+      {showErrorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl p-6 max-w-sm w-full border border-red-500/30 shadow-2xl">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Update Failed</h3>
+              <p className="text-gray-400 text-sm mb-4">{errorMessage}</p>
+              <button
+                onClick={() => setShowErrorModal(false)}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

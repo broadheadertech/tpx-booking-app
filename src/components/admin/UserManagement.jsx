@@ -29,6 +29,7 @@ export default function UserManagement() {
   
   // Mutations
   const createUser = useMutation(api.services.auth.createUser)
+  const updateUser = useMutation(api.services.auth.updateUser)
 
   const getRoleColor = (role) => {
     switch (role) {
@@ -83,7 +84,22 @@ export default function UserManagement() {
 
   const handleCreate = () => {
     resetForm()
+    setSelectedUser(null)
     setShowCreateModal(true)
+  }
+
+  const handleEdit = (user) => {
+    setSelectedUser(user)
+    setFormData({
+      username: user.username,
+      email: user.email,
+      password: '', // Don't populate password for security
+      mobile_number: user.mobile_number || '',
+      address: user.address || '',
+      role: user.role,
+      branch_id: user.branch_id || ''
+    })
+    setShowEditModal(true)
   }
 
   const handleSubmitCreate = async (e) => {
@@ -109,6 +125,49 @@ export default function UserManagement() {
     } catch (error) {
       console.error('Error creating user:', error)
       setError(error.message || 'Failed to create user')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSubmitEdit = async (e) => {
+    e.preventDefault()
+    if (!selectedUser) return
+
+    if (!formData.username.trim() || !formData.email.trim()) {
+      setError('Username and email are required')
+      return
+    }
+
+    if (formData.role !== 'super_admin' && !formData.branch_id) {
+      setError('Branch is required for all users except super admin')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const updateData = {
+        userId: selectedUser._id,
+        username: formData.username,
+        email: formData.email,
+        mobile_number: formData.mobile_number,
+        address: formData.address,
+        role: formData.role,
+        branch_id: formData.role === 'super_admin' ? undefined : formData.branch_id
+      }
+
+      // Only include password if it was provided
+      if (formData.password.trim()) {
+        updateData.password = formData.password
+      }
+
+      await updateUser(updateData)
+      setShowEditModal(false)
+      setSelectedUser(null)
+      resetForm()
+    } catch (error) {
+      console.error('Error updating user:', error)
+      setError(error.message || 'Failed to update user')
     } finally {
       setLoading(false)
     }
@@ -321,7 +380,9 @@ export default function UserManagement() {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
                         <button
+                          onClick={() => handleEdit(user)}
                           className="text-blue-400 hover:text-blue-300"
+                          title="Edit user"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
@@ -353,15 +414,39 @@ export default function UserManagement() {
         isOpen={showCreateModal}
         onClose={() => {
           setShowCreateModal(false)
+          setSelectedUser(null)
           resetForm()
         }}
         title="Create New User"
+        buttonText="Create User"
+        loadingText="Creating..."
         onSubmit={handleSubmitCreate}
         formData={formData}
         onInputChange={handleInputChange}
         error={error}
         loading={loading}
         branches={branches}
+        isEditMode={false}
+      />
+
+      {/* Edit User Modal */}
+      <UserFormModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false)
+          setSelectedUser(null)
+          resetForm()
+        }}
+        title="Edit User"
+        buttonText="Update User"
+        loadingText="Updating..."
+        onSubmit={handleSubmitEdit}
+        formData={formData}
+        onInputChange={handleInputChange}
+        error={error}
+        loading={loading}
+        branches={branches}
+        isEditMode={true}
       />
     </div>
   )

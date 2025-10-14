@@ -10,14 +10,16 @@ export default function BranchUserManagement() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRole, setFilterRole] = useState('all')
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [formData, setFormData] = useState({
+  const initialFormData = {
     username: '',
     email: '',
     password: '',
     mobile_number: '',
     address: '',
     role: 'staff'
-  })
+  }
+  
+  const [formData, setFormData] = useState(initialFormData)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -63,14 +65,7 @@ export default function BranchUserManagement() {
   }
 
   const resetForm = () => {
-    setFormData({
-      username: '',
-      email: '',
-      password: '',
-      mobile_number: '',
-      address: '',
-      role: 'staff'
-    })
+    setFormData(initialFormData)
     setError('')
   }
 
@@ -107,8 +102,7 @@ export default function BranchUserManagement() {
     }
   }
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target
+  const handleInputChange = (name, value) => {
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -156,42 +150,31 @@ export default function BranchUserManagement() {
               )}
 
               <form onSubmit={onSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Username *</label>
-                    <input
-                      type="text"
-                      name="username"
-                      value={formData.username}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
-                      placeholder="Enter username"
-                      required
-                    />
-                  </div>
+                {/* Info Note */}
+                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <p className="text-sm text-blue-400">
+                    <strong>Note:</strong> This form creates staff accounts only. To create barber accounts, use the Barber Management section.
+                  </p>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Role *</label>
-                    <select
-                      name="role"
-                      value={formData.role}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
-                      required
-                    >
-                      <option value="staff">Staff</option>
-                      <option value="barber">Barber</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Username *</label>
+                  <input
+                    type="text"
+                    value={formData.username}
+                    onChange={(e) => handleInputChange('username', e.target.value)}
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    placeholder="Enter username"
+                    required
+                  />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Email *</label>
                   <input
                     type="email"
-                    name="email"
                     value={formData.email}
-                    onChange={handleInputChange}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
                     className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
                     placeholder="Enter email address"
                     required
@@ -202,9 +185,8 @@ export default function BranchUserManagement() {
                   <label className="block text-sm font-medium text-gray-300 mb-2">Password *</label>
                   <input
                     type="password"
-                    name="password"
                     value={formData.password}
-                    onChange={handleInputChange}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
                     className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
                     placeholder="Enter password"
                     required
@@ -215,9 +197,8 @@ export default function BranchUserManagement() {
                   <label className="block text-sm font-medium text-gray-300 mb-2">Mobile Number</label>
                   <input
                     type="tel"
-                    name="mobile_number"
                     value={formData.mobile_number}
-                    onChange={handleInputChange}
+                    onChange={(e) => handleInputChange('mobile_number', e.target.value)}
                     className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
                     placeholder="Enter mobile number"
                   />
@@ -226,9 +207,8 @@ export default function BranchUserManagement() {
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Address</label>
                   <textarea
-                    name="address"
                     value={formData.address}
-                    onChange={handleInputChange}
+                    onChange={(e) => handleInputChange('address', e.target.value)}
                     rows="2"
                     className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
                     placeholder="Enter address"

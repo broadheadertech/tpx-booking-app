@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
-import { User, Mail, Phone, Calendar, Search, Filter, Plus, RotateCcw, X, MessageCircle, MapPin, Star, CreditCard, Package } from 'lucide-react'
+import { User, Mail, Phone, Calendar, Search, Filter, RotateCcw, X, MessageCircle, MapPin, Star, CreditCard, Package } from 'lucide-react'
 import Modal from '../common/Modal'
 
-const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
+const CustomersManagement = ({ customers = [], onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('name')
@@ -222,13 +222,6 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
             >
               <RotateCcw className="h-4 w-4" />
               <span>Refresh</span>
-            </button>
-            <button 
-              onClick={onAddCustomer}
-              className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add Customer</span>
             </button>
           </div>
         </div>

@@ -63,6 +63,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [uploadingImage, setUploadingImage] = useState(false)
 
   // Convex queries and mutations
@@ -155,6 +156,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
 
     setLoading(true)
     setError('')
+    setSuccess('')
 
     try {
       if (editingBarber) {
@@ -213,31 +215,63 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
         await createBarberWithAccount(barberData)
       }
 
+      // Show success message
+      setSuccess(editingBarber ? 'Barber updated successfully!' : 'Barber created successfully!')
+      
       // Call parent success handler
       if (onSubmit) {
         onSubmit()
       }
       
-      // Reset form and close modal
-      setFormData({
-        username: '',
-        email: '',
-        password: '',
-        newPassword: '',
-        mobile_number: '',
-        full_name: '',
-        phone: '',
-        is_active: true,
-        services: [],
-        experience: '0 years',
-        specialties: [],
-        avatar: '',
-        avatarStorageId: undefined
-      })
-      onClose()
+      // Close modal after a short delay to show success message
+      setTimeout(() => {
+        // Reset form and close modal
+        setFormData({
+          username: '',
+          email: '',
+          password: '',
+          newPassword: '',
+          mobile_number: '',
+          full_name: '',
+          phone: '',
+          is_active: true,
+          services: [],
+          experience: '0 years',
+          specialties: [],
+          avatar: '',
+          avatarStorageId: undefined
+        })
+        setSuccess('')
+        onClose()
+      }, 1500)
     } catch (err) {
       console.error('Error saving barber:', err)
-      setError(err.message || 'Failed to save barber')
+      
+      // Parse Convex error format
+      let errorMessage = 'Failed to save barber'
+      
+      if (err.message) {
+        try {
+          // Try to parse if it's a JSON string
+          const parsedError = JSON.parse(err.message)
+          if (parsedError.message) {
+            errorMessage = parsedError.message
+            // Add details if available
+            if (parsedError.details) {
+              errorMessage += ` ${parsedError.details}`
+            }
+            // Add suggested action if available
+            if (parsedError.action) {
+              errorMessage += ` ${parsedError.action}`
+            }
+          }
+        } catch {
+          // If not JSON, use the message as-is
+          errorMessage = err.message
+        }
+      }
+      
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -284,10 +318,42 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
           </div>
           <div className="p-4">
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Success Message */}
+              {success && (
+                <div className="bg-green-500/10 border-l-4 border-green-500 px-4 py-3 rounded-lg">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-green-400 font-medium">{success}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Error Message */}
               {error && (
-                <div className="bg-red-500/20 border border-red-500/50 text-red-400 px-3 py-2 rounded-lg">
-                  <p className="text-sm">{error}</p>
+                <div className="bg-red-500/10 border-l-4 border-red-500 px-4 py-3 rounded-lg">
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-red-400 font-medium">{error}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setError('')}
+                      className="ml-auto flex-shrink-0 text-red-400 hover:text-red-300"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               )}
 
