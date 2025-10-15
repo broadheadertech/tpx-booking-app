@@ -5,11 +5,13 @@ import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import SettingsModal from './SettingsModal'
 import LogoutConfirmModal from './LogoutConfirmModal'
+import ProfileModal from './ProfileModal'
 import { NotificationBell } from '../common/NotificationSystem'
 
 const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [showProfileModal, setShowProfileModal] = useState(false)
   
   // Get branch information for the current user
   const branches = useQuery(api.services.branches.getAllBranches) || []
@@ -114,13 +116,24 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
                 <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400 group-hover:text-red-300 transition-colors duration-200" />
               </button>
 
-              <div className="hidden sm:flex w-9 h-9 bg-white/5 backdrop-blur-sm rounded-lg items-center justify-center hover:bg-white/10 transition-all duration-200 cursor-pointer border border-white/10">
-                <User className="w-4 h-4 text-gray-400" />
-              </div>
+              <button
+                onClick={() => setShowProfileModal(true)}
+                className="hidden sm:flex w-9 h-9 bg-white/5 backdrop-blur-sm rounded-lg items-center justify-center hover:bg-white/10 transition-all duration-200 cursor-pointer border border-white/10 group"
+                title="My Profile"
+              >
+                <User className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors duration-200" />
+              </button>
             </div>
           </div>
         </div>
       </div>
+      
+      {/* Profile Modal */}
+      <ProfileModal 
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        user={user}
+      />
       
       {/* Settings Modal */}
       <SettingsModal 

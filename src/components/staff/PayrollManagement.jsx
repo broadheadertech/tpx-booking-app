@@ -399,6 +399,118 @@ const PayrollManagement = ({ onRefresh, user }) => {
     setTimeout(() => setLoading(false), 1000)
   }
 
+  // Handle export to CSV
+  const handleExport = () => {
+    try {
+      let csvContent = ''
+      let filename = ''
+
+      if (activeView === 'overview') {
+        // Export overview summary
+        filename = `payroll-overview-${new Date().toISOString().split('T')[0]}.csv`
+        csvContent = 'Payroll Overview Summary\n\n'
+        csvContent += 'Metric,Value\n'
+        csvContent += `Active Barbers,${overviewStats.totalBarbers}\n`
+        csvContent += `Current Period Payout,"${formatCurrency(overviewStats.currentPayout)}"\n`
+        csvContent += `Payout Change,${overviewStats.payoutChange.toFixed(1)}%\n`
+        csvContent += `Pending Payments,${overviewStats.pendingPayments}\n`
+        csvContent += `Average Commission,"${formatCurrency(overviewStats.averageCommission)}"\n\n`
+        
+        // Add recent periods
+        csvContent += 'Recent Payroll Periods\n'
+        csvContent += 'Period Start,Period End,Type,Status,Total Payout,Barber Count\n'
+        const summaryArray = Array.isArray(payrollSummary) ? payrollSummary : []
+        summaryArray.forEach(period => {
+          csvContent += `"${formatDate(period.period_start)}","${formatDate(period.period_end)}",`
+          csvContent += `${formatPeriodType(period.period_type)},`
+          csvContent += `${period.status === 'paid' ? 'Paid' : period.status === 'calculated' ? 'Calculated' : 'Draft'},`
+          csvContent += `"${formatCurrency(period.total_commissions || 0)}",`
+          csvContent += `${period.barber_count || 0}\n`
+        })
+      } else if (activeView === 'periods' && selectedPeriod) {
+        // Export selected period details with records
+        filename = `payroll-period-${formatDate(selectedPeriod.period_start)}-${formatDate(selectedPeriod.period_end)}.csv`
+        csvContent = `Payroll Period: ${formatDate(selectedPeriod.period_start)} - ${formatDate(selectedPeriod.period_end)}\n`
+        csvContent += `Status: ${selectedPeriod.status}\n`
+        csvContent += `Total Earnings: "${formatCurrency(selectedPeriod.total_earnings || 0)}"\n`
+        csvContent += `Total Commissions: "${formatCurrency(selectedPeriod.total_commissions || 0)}"\n`
+        csvContent += `Total Deductions: "${formatCurrency(selectedPeriod.total_deductions || 0)}"\n\n`
+        
+        csvContent += 'Barber Payroll Records\n'
+        csvContent += 'Barber Name,Services Count,Service Revenue,Gross Commission,Daily Pay,Tax Deduction,Other Deductions,Net Pay,Payment Status\n'
+        
+        const recordsArray = Array.isArray(currentPeriodRecords) ? currentPeriodRecords : []
+        const barbersArray = Array.isArray(barbers) ? barbers : []
+        
+        recordsArray.forEach(record => {
+          const barber = barbersArray.find(b => b._id === record.barber_id)
+          const barberName = barber?.full_name || 'Unknown'
+          
+          csvContent += `"${barberName}",`
+          csvContent += `${record.total_services || 0},`
+          csvContent += `"${formatCurrency(record.total_service_revenue || 0)}",`
+          csvContent += `"${formatCurrency(record.gross_commission || 0)}",`
+          csvContent += `"${formatCurrency(record.daily_pay || 0)}",`
+          csvContent += `"${formatCurrency(record.tax_deduction || 0)}",`
+          csvContent += `"${formatCurrency(record.other_deductions || 0)}",`
+          csvContent += `"${formatCurrency(record.net_pay || 0)}",`
+          csvContent += `${record.payment_status === 'paid' ? 'Paid' : 'Pending'}\n`
+        })
+      } else if (activeView === 'settings') {
+        // Export payroll settings
+        filename = `payroll-settings-${new Date().toISOString().split('T')[0]}.csv`
+        csvContent = 'Payroll Settings\n\n'
+        csvContent += 'Setting,Value\n'
+        csvContent += `Default Commission Rate,${payrollSettings.default_commission_rate}%\n`
+        csvContent += `Payout Frequency,${formatPeriodType(payrollSettings.payout_frequency)}\n`
+        csvContent += `Payout Day,${payrollSettings.payout_day}\n`
+        csvContent += `Tax Rate,${payrollSettings.tax_rate}%\n\n`
+        
+        // Add service commission rates
+        csvContent += 'Service Commission Rates\n'
+        csvContent += 'Service Name,Commission Rate\n'
+        const ratesArray = Array.isArray(serviceCommissionRates) ? serviceCommissionRates : []
+        const servicesArray = Array.isArray(servicesInBranch) ? servicesInBranch : []
+        
+        ratesArray.forEach(rate => {
+          const service = servicesArray.find(s => s._id === rate.service_id)
+          csvContent += `"${service?.name || 'Unknown'}",${rate.commission_rate}%\n`
+        })
+        
+        csvContent += '\nBarber Daily Rates\n'
+        csvContent += 'Barber Name,Daily Rate\n'
+        const dailyRatesArray = Array.isArray(barberDailyRates) ? barberDailyRates : []
+        const barbersArray = Array.isArray(barbers) ? barbers : []
+        
+        dailyRatesArray.forEach(rate => {
+          const barber = barbersArray.find(b => b._id === rate.barber_id)
+          csvContent += `"${barber?.full_name || 'Unknown'}","${formatCurrency(rate.daily_rate)}"\n`
+        })
+      } else {
+        setError('Please select a view to export')
+        return
+      }
+
+      // Create and download CSV file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      
+      link.setAttribute('href', url)
+      link.setAttribute('download', filename)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      // Show success feedback
+      setError(null)
+    } catch (error) {
+      setError('Failed to export payroll data. Please try again.')
+      console.error('Export error:', error)
+    }
+  }
+
   // Helpers: build maps for quick lookups
   const serviceRateMap = useMemo(() => {
     const map = new Map()
@@ -1780,7 +1892,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             <span>{loading ? 'Loading...' : 'Refresh'}</span>
           </button>
-          <button className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200 text-sm">
+          <button 
+            onClick={handleExport}
+            className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200 text-sm"
+          >
             <Download className="h-4 w-4" />
             <span>Export</span>
           </button>

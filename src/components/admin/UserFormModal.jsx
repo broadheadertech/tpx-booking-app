@@ -6,12 +6,15 @@ const UserFormModal = ({
   isOpen, 
   onClose, 
   title, 
+  buttonText = 'Create User',
+  loadingText = 'Creating...',
   onSubmit, 
   formData, 
   onInputChange, 
   error, 
   loading,
-  branches
+  branches,
+  isEditMode = false
 }) => {
   if (!isOpen) return null
 
@@ -89,15 +92,17 @@ const UserFormModal = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Password *</label>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Password {isEditMode ? '(leave blank to keep current)' : '*'}
+                </label>
                 <input
                   type="password"
                   name="password"
                   value={formData.password}
                   onChange={onInputChange}
                   className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
-                  placeholder="Enter password"
-                  required
+                  placeholder={isEditMode ? "Enter new password (optional)" : "Enter password"}
+                  required={!isEditMode}
                 />
               </div>
 
@@ -159,7 +164,7 @@ const UserFormModal = ({
                   className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <Save className="h-4 w-4" />
-                  <span>{loading ? 'Creating...' : 'Create User'}</span>
+                  <span>{loading ? loadingText : buttonText}</span>
                 </button>
               </div>
             </form>

@@ -467,6 +467,84 @@ export const createUser = mutation({
   },
 });
 
+// Update user mutation (for admin use)
+export const updateUser = mutation({
+  args: {
+    userId: v.id("users"),
+    username: v.optional(v.string()),
+    email: v.optional(v.string()),
+    password: v.optional(v.string()),
+    mobile_number: v.optional(v.string()),
+    address: v.optional(v.string()),
+    role: v.optional(v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("super_admin"), v.literal("branch_admin"))),
+    branch_id: v.optional(v.id("branches")),
+    is_active: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, ...updateData } = args;
+
+    // Get existing user
+    const existingUser = await ctx.db.get(userId);
+    if (!existingUser) {
+      throw new Error("User not found");
+    }
+
+    // Check if email is being updated and if it's already taken by another user
+    if (updateData.email && updateData.email !== existingUser.email) {
+      const emailExists = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", updateData.email))
+        .first();
+
+      if (emailExists && emailExists._id !== userId) {
+        throwUserError(ERROR_CODES.AUTH_EMAIL_EXISTS);
+      }
+    }
+
+    // Check if username is being updated and if it's already taken by another user
+    if (updateData.username && updateData.username !== existingUser.username) {
+      const usernameExists = await ctx.db
+        .query("users")
+        .withIndex("by_username", (q) => q.eq("username", updateData.username))
+        .first();
+
+      if (usernameExists && usernameExists._id !== userId) {
+        throwUserError(ERROR_CODES.AUTH_USERNAME_EXISTS);
+      }
+    }
+
+    // Build update object with only provided fields
+    const fieldsToUpdate: any = {
+      updatedAt: Date.now(),
+    };
+
+    if (updateData.username !== undefined) fieldsToUpdate.username = updateData.username;
+    if (updateData.email !== undefined) fieldsToUpdate.email = updateData.email;
+    if (updateData.password !== undefined) fieldsToUpdate.password = updateData.password;
+    if (updateData.mobile_number !== undefined) fieldsToUpdate.mobile_number = updateData.mobile_number;
+    if (updateData.address !== undefined) fieldsToUpdate.address = updateData.address;
+    if (updateData.role !== undefined) fieldsToUpdate.role = updateData.role;
+    if (updateData.branch_id !== undefined) fieldsToUpdate.branch_id = updateData.branch_id;
+    if (updateData.is_active !== undefined) fieldsToUpdate.is_active = updateData.is_active;
+
+    // Update user
+    await ctx.db.patch(userId, fieldsToUpdate);
+
+    // Get and return updated user
+    const user = await ctx.db.get(userId);
+    return {
+      _id: user?._id,
+      username: user?.username,
+      email: user?.email,
+      mobile_number: user?.mobile_number,
+      address: user?.address,
+      role: user?.role,
+      branch_id: user?.branch_id,
+      is_active: user?.is_active,
+    };
+  },
+});
+
 export const getAllUsers = query({
   args: {},
   handler: async (ctx) => {

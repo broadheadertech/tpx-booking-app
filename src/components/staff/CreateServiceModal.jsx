@@ -5,7 +5,7 @@ import { Scissors, Clock, DollarSign } from 'lucide-react'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 
-const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null }) => {
+const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, branchId }) => {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -64,7 +64,8 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null }
       const serviceData = {
         ...formData,
         price: parseFloat(formData.price),
-        duration_minutes: parseInt(formData.duration_minutes)
+        duration_minutes: parseInt(formData.duration_minutes),
+        branch_id: branchId // Add branch_id to service data
       }
 
       if (editingService) {

@@ -1,10 +1,16 @@
 import React, { useState } from 'react'
-import { User, Mail, Phone, Calendar, Search, Filter, Plus, RotateCcw } from 'lucide-react'
+import { User, Mail, Phone, Calendar, Search, Filter, RotateCcw, X, MessageCircle, MapPin, Star, CreditCard, Package } from 'lucide-react'
+import Modal from '../common/Modal'
 
-const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
+const CustomersManagement = ({ customers = [], onRefresh }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('name')
+  const [viewCustomer, setViewCustomer] = useState(null)
+  const [contactCustomer, setContactCustomer] = useState(null)
+  const [contactMethod, setContactMethod] = useState('email')
+  const [contactMessage, setContactMessage] = useState('')
+  const [sendingContact, setSendingContact] = useState(false)
 
   const getStatusConfig = (customer) => {
     const status = customer.status || 'active'
@@ -62,6 +68,52 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
     new: customers.filter(c => (c.status || 'active') === 'new').length,
     inactive: customers.filter(c => (c.status || 'active') === 'inactive').length,
     totalSpent: customers.reduce((sum, c) => sum + (c.totalSpent || 0), 0)
+  }
+
+  // Handle view customer
+  const handleViewCustomer = (customer) => {
+    setViewCustomer(customer)
+  }
+
+  // Handle contact customer
+  const handleContactCustomer = (customer) => {
+    setContactCustomer(customer)
+    setContactMethod('email')
+    setContactMessage('')
+  }
+
+  // Handle send contact
+  const handleSendContact = async () => {
+    if (!contactMessage.trim()) {
+      alert('Please enter a message')
+      return
+    }
+
+    setSendingContact(true)
+    try {
+      // Simulate sending contact (in production, this would call an API)
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      if (contactMethod === 'email') {
+        // Open email client as fallback
+        window.location.href = `mailto:${contactCustomer.email}?subject=Message from TPX Barbershop&body=${encodeURIComponent(contactMessage)}`
+      } else if (contactMethod === 'sms') {
+        // Open SMS app as fallback
+        window.location.href = `sms:${contactCustomer.mobile_number || contactCustomer.phone}?body=${encodeURIComponent(contactMessage)}`
+      } else if (contactMethod === 'whatsapp') {
+        // Open WhatsApp
+        const phone = (contactCustomer.mobile_number || contactCustomer.phone || '').replace(/[^0-9]/g, '')
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(contactMessage)}`, '_blank')
+      }
+      
+      setContactCustomer(null)
+      setContactMessage('')
+    } catch (error) {
+      console.error('Error sending contact:', error)
+      alert('Failed to send message. Please try again.')
+    } finally {
+      setSendingContact(false)
+    }
   }
 
   return (
@@ -171,13 +223,6 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
               <RotateCcw className="h-4 w-4" />
               <span>Refresh</span>
             </button>
-            <button 
-              onClick={onAddCustomer}
-              className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add Customer</span>
-            </button>
           </div>
         </div>
       </div>
@@ -282,11 +327,17 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
                     {/* Actions */}
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center space-x-2">
-                        <button className="inline-flex items-center px-3 py-1.5 bg-[#FF8C42]/20 text-[#FF8C42] rounded-lg hover:bg-[#FF8C42]/30 transition-colors text-xs font-medium">
+                        <button 
+                          onClick={() => handleViewCustomer(customer)}
+                          className="inline-flex items-center px-3 py-1.5 bg-[#FF8C42]/20 text-[#FF8C42] rounded-lg hover:bg-[#FF8C42]/30 transition-colors text-xs font-medium"
+                        >
                           <User className="h-3 w-3 mr-1" />
                           View
                         </button>
-                        <button className="inline-flex items-center px-3 py-1.5 bg-[#444444] text-gray-300 rounded-lg hover:bg-[#555555] transition-colors text-xs font-medium">
+                        <button 
+                          onClick={() => handleContactCustomer(customer)}
+                          className="inline-flex items-center px-3 py-1.5 bg-[#444444] text-gray-300 rounded-lg hover:bg-[#555555] transition-colors text-xs font-medium"
+                        >
                           <Mail className="h-3 w-3 mr-1" />
                           Contact
                         </button>
@@ -311,6 +362,285 @@ const CustomersManagement = ({ customers = [], onRefresh, onAddCustomer }) => {
             }
           </p>
         </div>
+      )}
+
+      {/* View Customer Modal */}
+      {viewCustomer && (
+        <Modal 
+          isOpen={!!viewCustomer} 
+          onClose={() => setViewCustomer(null)} 
+          title="Customer Details"
+          size="lg"
+        >
+          <div className="space-y-6">
+            {/* Customer Header */}
+            <div className="flex items-center space-x-4 pb-6 border-b border-gray-200">
+              <div className="flex-shrink-0 w-16 h-16 rounded-full bg-[#FF8C42]/20 flex items-center justify-center">
+                <User className="h-8 w-8 text-[#FF8C42]" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-2xl font-bold text-[#1A1A1A]">
+                  {viewCustomer.name || viewCustomer.username}
+                </h3>
+                <p className="text-sm text-gray-600">@{viewCustomer.username}</p>
+                {viewCustomer.nickname && (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FF8C42]/10 text-[#FF8C42] mt-1">
+                    {viewCustomer.nickname}
+                  </span>
+                )}
+              </div>
+              <div className="flex-shrink-0">
+                {(() => {
+                  const statusConfig = getStatusConfig(viewCustomer)
+                  return (
+                    <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border} border`}>
+                      <div className={`w-2 h-2 rounded-full mr-2 ${statusConfig.iconColor.replace('text-', 'bg-')}`}></div>
+                      {statusConfig.label}
+                    </span>
+                  )
+                })()}
+              </div>
+            </div>
+
+            {/* Customer Information Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Contact Information */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-[#1A1A1A] flex items-center">
+                  <Mail className="h-5 w-5 text-[#FF8C42] mr-2" />
+                  Contact Information
+                </h4>
+                <div className="space-y-3 bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <Mail className="h-4 w-4 text-gray-500 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-gray-500">Email</p>
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {viewCustomer.email || 'Not provided'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <Phone className="h-4 w-4 text-gray-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500">Phone</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {viewCustomer.phone || viewCustomer.mobile_number || 'Not provided'}
+                      </p>
+                    </div>
+                  </div>
+                  {viewCustomer.address && (
+                    <div className="flex items-start space-x-3">
+                      <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-500">Address</p>
+                        <p className="text-sm font-medium text-gray-900">
+                          {viewCustomer.address}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Personal Information */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-[#1A1A1A] flex items-center">
+                  <User className="h-5 w-5 text-[#FF8C42] mr-2" />
+                  Personal Information
+                </h4>
+                <div className="space-y-3 bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <Calendar className="h-4 w-4 text-gray-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500">Birthday</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {viewCustomer.formattedBirthday || viewCustomer.birthday || 'Not provided'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <User className="h-4 w-4 text-gray-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500">Role</p>
+                      <p className="text-sm font-medium text-gray-900 capitalize">
+                        {viewCustomer.role || 'Customer'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <Calendar className="h-4 w-4 text-gray-500 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500">Account ID</p>
+                      <p className="text-sm font-medium text-gray-900 font-mono">
+                        {viewCustomer._id || viewCustomer.id}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Customer Stats */}
+            <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+              <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 text-center">
+                <Package className="h-6 w-6 text-blue-600 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-blue-900">
+                  {viewCustomer.totalBookings || 0}
+                </p>
+                <p className="text-xs text-blue-700">Total Bookings</p>
+              </div>
+              <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 text-center">
+                <CreditCard className="h-6 w-6 text-green-600 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-green-900">
+                  ₱{(viewCustomer.totalSpent || 0).toFixed(0)}
+                </p>
+                <p className="text-xs text-green-700">Total Spent</p>
+              </div>
+              <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 text-center">
+                <Star className="h-6 w-6 text-yellow-600 mx-auto mb-2" />
+                <p className="text-2xl font-bold text-yellow-900">
+                  {viewCustomer.loyaltyPoints || 0}
+                </p>
+                <p className="text-xs text-yellow-700">Loyalty Points</p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex space-x-3 pt-4 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setViewCustomer(null)
+                  handleContactCustomer(viewCustomer)
+                }}
+                className="flex-1 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors text-sm font-medium"
+              >
+                <Mail className="h-4 w-4 inline mr-2" />
+                Contact Customer
+              </button>
+              <button
+                onClick={() => setViewCustomer(null)}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Contact Customer Modal */}
+      {contactCustomer && (
+        <Modal 
+          isOpen={!!contactCustomer} 
+          onClose={() => setContactCustomer(null)} 
+          title="Contact Customer"
+          size="md"
+        >
+          <div className="space-y-6">
+            {/* Customer Info */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[#FF8C42]/20 flex items-center justify-center">
+                  <User className="h-6 w-6 text-[#FF8C42]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-lg font-semibold text-[#1A1A1A]">
+                    {contactCustomer.name || contactCustomer.username}
+                  </h4>
+                  <p className="text-sm text-gray-600 truncate">
+                    {contactCustomer.email}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Method Selection */}
+            <div>
+              <label className="block text-sm font-medium text-[#1A1A1A] mb-2">
+                Contact Method
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  onClick={() => setContactMethod('email')}
+                  className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all ${
+                    contactMethod === 'email'
+                      ? 'border-[#FF8C42] bg-[#FF8C42]/10'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <Mail className={`h-6 w-6 mb-2 ${contactMethod === 'email' ? 'text-[#FF8C42]' : 'text-gray-500'}`} />
+                  <span className={`text-xs font-medium ${contactMethod === 'email' ? 'text-[#FF8C42]' : 'text-gray-700'}`}>
+                    Email
+                  </span>
+                </button>
+                <button
+                  onClick={() => setContactMethod('sms')}
+                  className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all ${
+                    contactMethod === 'sms'
+                      ? 'border-[#FF8C42] bg-[#FF8C42]/10'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <MessageCircle className={`h-6 w-6 mb-2 ${contactMethod === 'sms' ? 'text-[#FF8C42]' : 'text-gray-500'}`} />
+                  <span className={`text-xs font-medium ${contactMethod === 'sms' ? 'text-[#FF8C42]' : 'text-gray-700'}`}>
+                    SMS
+                  </span>
+                </button>
+                <button
+                  onClick={() => setContactMethod('whatsapp')}
+                  className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all ${
+                    contactMethod === 'whatsapp'
+                      ? 'border-[#FF8C42] bg-[#FF8C42]/10'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <Phone className={`h-6 w-6 mb-2 ${contactMethod === 'whatsapp' ? 'text-[#FF8C42]' : 'text-gray-500'}`} />
+                  <span className={`text-xs font-medium ${contactMethod === 'whatsapp' ? 'text-[#FF8C42]' : 'text-gray-700'}`}>
+                    WhatsApp
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Message Input */}
+            <div>
+              <label className="block text-sm font-medium text-[#1A1A1A] mb-2">
+                Message
+              </label>
+              <textarea
+                value={contactMessage}
+                onChange={(e) => setContactMessage(e.target.value)}
+                placeholder="Type your message here..."
+                rows={6}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent resize-none text-sm"
+              />
+              <p className="mt-2 text-xs text-gray-500">
+                {contactMethod === 'email' && 'This will open your default email client'}
+                {contactMethod === 'sms' && 'This will open your SMS app'}
+                {contactMethod === 'whatsapp' && 'This will open WhatsApp Web or App'}
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex space-x-3 pt-4 border-t border-gray-200">
+              <button
+                onClick={handleSendContact}
+                disabled={sendingContact || !contactMessage.trim()}
+                className="flex-1 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {sendingContact ? 'Sending...' : 'Send Message'}
+              </button>
+              <button
+                onClick={() => setContactCustomer(null)}
+                disabled={sendingContact}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors text-sm font-medium disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   )

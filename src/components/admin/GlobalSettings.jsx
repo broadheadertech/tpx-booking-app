@@ -55,11 +55,9 @@ const GlobalSettings = ({ onRefresh }) => {
           label: 'Default Currency',
           type: 'select',
           options: [
-            { value: 'PHP', label: 'PHP (Philippine Peso)' },
-            { value: 'USD', label: 'USD (US Dollar)' },
-            { value: 'EUR', label: 'EUR (Euro)' }
+            { value: 'PHP', label: 'PHP (Philippine Peso)' }
           ],
-          description: 'Default currency for pricing'
+          description: 'Default currency for pricing (PHP only)'
         }
       ]
     },

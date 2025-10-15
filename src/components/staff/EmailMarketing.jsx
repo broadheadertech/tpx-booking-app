@@ -875,7 +875,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                 <div>
                   <p className="text-gray-400 text-sm">Avg Revenue</p>
                   <p className="text-2xl font-bold text-[#FF8C42]">
-                    $2,450
+                    ₱2,450
                   </p>
                 </div>
                 <div className="p-2 bg-[#FF8C42]/20 rounded-lg">
@@ -884,7 +884,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
               </div>
               <div className="flex items-center space-x-2">
                 <TrendingUp className="w-4 h-4 text-green-400" />
-                <span className="text-xs text-green-400">+$320 from last month</span>
+                <span className="text-xs text-green-400">+₱320 from last month</span>
               </div>
             </div>
           </div>

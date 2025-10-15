@@ -167,6 +167,223 @@ const ReportsManagement = ({ onRefresh, user }) => {
     onRefresh?.()
   }
 
+  // Handle export to CSV
+  const handleExport = () => {
+    if (!reportData) {
+      alert('No data available to export')
+      return
+    }
+
+    try {
+      const currentData = reportData[selectedReport]
+      const reportType = reportTypes.find(r => r.id === selectedReport)
+      const timestamp = new Date().toISOString().split('T')[0]
+      
+      let csvContent = ''
+      let filename = ''
+
+      // Build CSV based on selected report type
+      if (selectedReport === 'revenue') {
+        filename = `revenue-report-${selectedPeriod}-${timestamp}.csv`
+        csvContent = 'Revenue Report\n\n'
+        csvContent += `Period: ${periods.find(p => p.id === selectedPeriod)?.label || selectedPeriod}\n`
+        csvContent += `Generated: ${new Date().toLocaleString()}\n\n`
+        
+        // Summary
+        csvContent += 'Summary\n'
+        csvContent += 'Metric,Value\n'
+        csvContent += `Current Period Revenue,"${formatCurrency(currentData.current)}"\n`
+        csvContent += `Previous Period Revenue,"${formatCurrency(currentData.previous)}"\n`
+        csvContent += `Change,${currentData.change.toFixed(1)}%\n`
+        csvContent += `Trend,${currentData.trend === 'up' ? 'Increasing' : 'Decreasing'}\n\n`
+        
+        // Daily breakdown
+        csvContent += 'Daily Breakdown\n'
+        csvContent += 'Period,Revenue\n'
+        currentData.chartData.forEach(item => {
+          csvContent += `${item.period},"${formatCurrency(item.value)}"\n`
+        })
+
+        // Add transaction details if available
+        if (transactions && transactions.length > 0) {
+          const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000)
+          const currentTransactions = transactions.filter(t => t.createdAt >= weekAgo)
+          
+          csvContent += '\nTransaction Details\n'
+          csvContent += 'Date,Transaction ID,Customer,Amount,Payment Method,Status\n'
+          currentTransactions.forEach(t => {
+            const date = new Date(t.createdAt).toLocaleDateString()
+            csvContent += `${date},${t.transaction_id || t._id},`
+            csvContent += `"${t.customer_name || 'Walk-in'}",`
+            csvContent += `"${formatCurrency(t.total_amount || 0)}",`
+            csvContent += `${t.payment_method || 'N/A'},`
+            csvContent += `${t.payment_status || 'N/A'}\n`
+          })
+        }
+      } else if (selectedReport === 'customers') {
+        filename = `customers-report-${selectedPeriod}-${timestamp}.csv`
+        csvContent = 'Customers Report\n\n'
+        csvContent += `Period: ${periods.find(p => p.id === selectedPeriod)?.label || selectedPeriod}\n`
+        csvContent += `Generated: ${new Date().toLocaleString()}\n\n`
+        
+        csvContent += 'Summary\n'
+        csvContent += 'Metric,Value\n'
+        csvContent += `Current Period Customers,${currentData.current}\n`
+        csvContent += `Previous Period Customers,${currentData.previous}\n`
+        csvContent += `Change,${currentData.change.toFixed(1)}%\n`
+        csvContent += `Trend,${currentData.trend === 'up' ? 'Growing' : 'Declining'}\n\n`
+        
+        csvContent += 'Daily Breakdown\n'
+        csvContent += 'Period,New Customers\n'
+        currentData.chartData.forEach(item => {
+          csvContent += `${item.period},${item.value}\n`
+        })
+      } else if (selectedReport === 'bookings') {
+        filename = `bookings-report-${selectedPeriod}-${timestamp}.csv`
+        csvContent = 'Bookings Report\n\n'
+        csvContent += `Period: ${periods.find(p => p.id === selectedPeriod)?.label || selectedPeriod}\n`
+        csvContent += `Generated: ${new Date().toLocaleString()}\n\n`
+        
+        csvContent += 'Summary\n'
+        csvContent += 'Metric,Value\n'
+        csvContent += `Current Period Bookings,${currentData.current}\n`
+        csvContent += `Previous Period Bookings,${currentData.previous}\n`
+        csvContent += `Change,${currentData.change.toFixed(1)}%\n`
+        csvContent += `Trend,${currentData.trend === 'up' ? 'Increasing' : 'Decreasing'}\n\n`
+        
+        csvContent += 'Daily Breakdown\n'
+        csvContent += 'Period,Bookings\n'
+        currentData.chartData.forEach(item => {
+          csvContent += `${item.period},${item.value}\n`
+        })
+
+        // Add booking details if available
+        if (bookings && bookings.length > 0) {
+          const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000)
+          const currentBookings = bookings.filter(b => b.createdAt >= weekAgo)
+          
+          csvContent += '\nBooking Details\n'
+          csvContent += 'Date,Booking Code,Customer,Service,Status,Price\n'
+          currentBookings.forEach(b => {
+            const date = new Date(b.createdAt).toLocaleDateString()
+            csvContent += `${date},${b.booking_code || b._id},`
+            csvContent += `"${b.customer_name || 'Unknown'}",`
+            csvContent += `"${b.service_name || 'N/A'}",`
+            csvContent += `${b.status || 'N/A'},`
+            csvContent += `"${formatCurrency(b.price || 0)}"\n`
+          })
+        }
+      } else if (selectedReport === 'vouchers') {
+        filename = `vouchers-report-${selectedPeriod}-${timestamp}.csv`
+        csvContent = 'Vouchers Report\n\n'
+        csvContent += `Period: ${periods.find(p => p.id === selectedPeriod)?.label || selectedPeriod}\n`
+        csvContent += `Generated: ${new Date().toLocaleString()}\n\n`
+        
+        csvContent += 'Summary\n'
+        csvContent += 'Metric,Value\n'
+        csvContent += `Redeemed Vouchers,${currentData.current}\n`
+        csvContent += `Previous Period,${currentData.previous}\n`
+        csvContent += `Change,${currentData.change.toFixed(1)}%\n\n`
+        
+        csvContent += 'Daily Breakdown\n'
+        csvContent += 'Period,Vouchers Redeemed\n'
+        currentData.chartData.forEach(item => {
+          csvContent += `${item.period},${item.value}\n`
+        })
+
+        // Add voucher details if available
+        if (vouchers && vouchers.length > 0) {
+          csvContent += '\nVoucher Details\n'
+          csvContent += 'Code,Value,Status,Created Date,Redeemed Date\n'
+          vouchers.forEach(v => {
+            const created = v.createdAt ? new Date(v.createdAt).toLocaleDateString() : 'N/A'
+            const redeemed = v.redeemed_at ? new Date(v.redeemed_at).toLocaleDateString() : 'N/A'
+            csvContent += `${v.code || v._id},`
+            csvContent += `"${formatCurrency(v.value || 0)}",`
+            csvContent += `${v.is_active ? 'Active' : 'Inactive'},`
+            csvContent += `${created},${redeemed}\n`
+          })
+        }
+      } else if (selectedReport === 'services') {
+        filename = `services-report-${timestamp}.csv`
+        csvContent = 'Services Report\n\n'
+        csvContent += `Generated: ${new Date().toLocaleString()}\n\n`
+        
+        csvContent += 'Summary\n'
+        csvContent += 'Metric,Value\n'
+        csvContent += `Active Services,${currentData.current}\n`
+        csvContent += `Total Services,${currentData.previous}\n\n`
+        
+        csvContent += 'Service Pricing\n'
+        csvContent += 'Service,Price\n'
+        currentData.chartData.forEach(item => {
+          csvContent += `"${item.period}","${formatCurrency(item.value)}"\n`
+        })
+
+        // Add full service list
+        if (services && services.length > 0) {
+          csvContent += '\nComplete Service List\n'
+          csvContent += 'Name,Price,Duration (min),Category,Status\n'
+          services.forEach(s => {
+            csvContent += `"${s.name || 'N/A'}",`
+            csvContent += `"${formatCurrency(s.price || 0)}",`
+            csvContent += `${s.duration_minutes || 0},`
+            csvContent += `"${s.category || 'General'}",`
+            csvContent += `${s.is_active ? 'Active' : 'Inactive'}\n`
+          })
+        }
+      } else if (selectedReport === 'products') {
+        filename = `products-report-${timestamp}.csv`
+        csvContent = 'Products Report\n\n'
+        csvContent += `Generated: ${new Date().toLocaleString()}\n\n`
+        
+        csvContent += 'Summary\n'
+        csvContent += 'Metric,Value\n'
+        csvContent += `Active Products,${currentData.current}\n`
+        csvContent += `Total Products,${currentData.previous}\n\n`
+        
+        csvContent += 'Product Pricing\n'
+        csvContent += 'Product,Price\n'
+        currentData.chartData.forEach(item => {
+          csvContent += `"${item.period}","${formatCurrency(item.value)}"\n`
+        })
+
+        // Add full product list
+        if (products && products.length > 0) {
+          csvContent += '\nComplete Product List\n'
+          csvContent += 'Name,Price,Cost,Stock,Category,Brand,Status\n'
+          products.forEach(p => {
+            csvContent += `"${p.name || 'N/A'}",`
+            csvContent += `"${formatCurrency(p.price || 0)}",`
+            csvContent += `"${formatCurrency(p.cost || 0)}",`
+            csvContent += `${p.stock || 0},`
+            csvContent += `"${p.category || 'N/A'}",`
+            csvContent += `"${p.brand || 'N/A'}",`
+            csvContent += `${p.status || 'N/A'}\n`
+          })
+        }
+      }
+
+      // Create and download CSV file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      
+      link.setAttribute('href', url)
+      link.setAttribute('download', filename)
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      setError(null)
+    } catch (error) {
+      console.error('Export error:', error)
+      setError('Failed to export report. Please try again.')
+    }
+  }
+
   const reportTypes = [
     { id: 'revenue', label: 'Revenue', icon: DollarSign, color: 'text-green-600', bgColor: 'bg-green-50', borderColor: 'border-green-200' },
     { id: 'customers', label: 'Customers', icon: Users, color: 'text-blue-600', bgColor: 'bg-blue-50', borderColor: 'border-blue-200' },
@@ -250,7 +467,11 @@ const ReportsManagement = ({ onRefresh, user }) => {
              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
              <span>{loading ? 'Loading...' : 'Refresh'}</span>
            </button>
-          <button className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200 text-sm">
+          <button 
+            onClick={handleExport}
+            disabled={!reportData}
+            className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             <Download className="h-4 w-4" />
             <span>Export</span>
           </button>

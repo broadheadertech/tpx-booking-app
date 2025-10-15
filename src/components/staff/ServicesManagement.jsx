@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from 'react'
-import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw, Grid, List, Upload, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw, Grid, List, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import CreateServiceModal from './CreateServiceModal'
-import ImportServices from './ImportServices'
 
-const ServicesManagement = ({ services = [], onRefresh }) => {
+const ServicesManagement = ({ services = [], onRefresh, user }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('name')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingService, setEditingService] = useState(null)
   const [loading, setLoading] = useState(false)
   const [viewMode, setViewMode] = useState('card') // 'card' or 'table'
-  const [showImportModal, setShowImportModal] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 8
 
@@ -199,13 +197,6 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
               <span>Refresh</span>
             </button>
             <button
-              onClick={() => setShowImportModal(true)}
-              className="flex items-center space-x-1.5 px-3 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
-            >
-              <Upload className="h-4 w-4" />
-              <span>Import CSV</span>
-            </button>
-            <button
               onClick={handleCreate}
               className="flex items-center space-x-1.5 px-3 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-md hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors text-sm"
             >
@@ -222,19 +213,8 @@ const ServicesManagement = ({ services = [], onRefresh }) => {
         onClose={handleCloseModal}
         onSubmit={handleModalSubmit}
         editingService={editingService}
+        branchId={user?.branch_id}
       />
-
-      {/* Import Services Modal */}
-      {showImportModal && (
-        <ImportServices
-          onClose={() => setShowImportModal(false)}
-          onSuccess={(result) => {
-            console.log('Import successful:', result)
-            setShowImportModal(false)
-            onRefresh()
-          }}
-        />
-      )}
 
       {/* Services Display */}
       {viewMode === 'card' ? (
