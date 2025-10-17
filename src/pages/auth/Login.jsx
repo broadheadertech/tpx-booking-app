@@ -174,9 +174,9 @@ function Login() {
                 </div>
                 
                 <div className="flex justify-end pt-2">
-                  <a href="#" className="text-sm font-medium text-[#FF8C42] hover:text-[#FF7A2B] transition-colors active:text-[#FF6B1A]">
+                  <Link to="/auth/forgot-password" className="text-sm font-medium text-[#FF8C42] hover:text-[#FF7A2B] transition-colors active:text-[#FF6B1A]">
                     Forgot Password?
-                  </a>
+                  </Link>
                 </div>
                 
                 <div className="pt-2">

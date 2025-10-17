@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2, Search, Filter, RefreshCw, Save, X, AlertCircle } from 'lucide-react'
-import Modal from '../common/Modal'
-import Button from '../common/Button'
+import { Calendar, Clock, MapPin, Users, Plus, Edit, Trash2, Search, Filter, RefreshCw, Save, X, AlertCircle, CheckCircle } from 'lucide-react'
 import ErrorDisplay from '../common/ErrorDisplay'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { createPortal } from 'react-dom'
 
 const EventsManagement = ({ onRefresh, user }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -25,6 +24,10 @@ const EventsManagement = ({ onRefresh, user }) => {
   const [formErrors, setFormErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null)
+  const [validationErrors, setValidationErrors] = useState({})
+  const [isFormValid, setIsFormValid] = useState(false)
 
   // Convex queries and mutations - use branch-scoped queries for staff
   const events = user?.role === 'super_admin' 
@@ -38,29 +41,120 @@ const EventsManagement = ({ onRefresh, user }) => {
 
   const loading = !events
 
+  // Real-time field validation
+  const validateField = (field, value) => {
+    const errors = { ...validationErrors }
+    
+    switch (field) {
+      case 'title':
+        if (!value.trim()) {
+          errors.title = 'Event title is required'
+        } else if (value.trim().length < 3) {
+          errors.title = 'Title must be at least 3 characters'
+        } else if (value.trim().length > 100) {
+          errors.title = 'Title must be less than 100 characters'
+        } else {
+          delete errors.title
+        }
+        break
+        
+      case 'description':
+        if (!value.trim()) {
+          errors.description = 'Description is required'
+        } else if (value.trim().length < 10) {
+          errors.description = 'Description must be at least 10 characters'
+        } else if (value.trim().length > 500) {
+          errors.description = 'Description must be less than 500 characters'
+        } else {
+          delete errors.description
+        }
+        break
+        
+      case 'date':
+        if (!value) {
+          errors.date = 'Date is required'
+        } else {
+          const eventDate = new Date(value)
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          if (eventDate < today) {
+            errors.date = 'Event date cannot be in the past'
+          } else {
+            delete errors.date
+          }
+        }
+        break
+        
+      case 'time':
+        if (!value) {
+          errors.time = 'Time is required'
+        } else {
+          delete errors.time
+        }
+        break
+        
+      case 'location':
+        if (!value.trim()) {
+          errors.location = 'Location is required'
+        } else if (value.trim().length < 3) {
+          errors.location = 'Location must be at least 3 characters'
+        } else if (value.trim().length > 200) {
+          errors.location = 'Location must be less than 200 characters'
+        } else {
+          delete errors.location
+        }
+        break
+        
+      case 'maxAttendees':
+        const attendees = parseInt(value)
+        if (!value || isNaN(attendees)) {
+          errors.maxAttendees = 'Valid number of attendees required'
+        } else if (attendees < 1) {
+          errors.maxAttendees = 'Must have at least 1 attendee'
+        } else if (attendees > 1000) {
+          errors.maxAttendees = 'Maximum 1000 attendees allowed'
+        } else {
+          delete errors.maxAttendees
+        }
+        break
+        
+      case 'price':
+        const price = parseFloat(value)
+        if (value && (isNaN(price) || price < 0)) {
+          errors.price = 'Price must be a valid positive number'
+        } else if (price > 100000) {
+          errors.price = 'Price cannot exceed ₱100,000'
+        } else {
+          delete errors.price
+        }
+        break
+    }
+    
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  // Check if form is valid for submission
+  const checkFormValidity = () => {
+    const requiredFields = ['title', 'description', 'date', 'time', 'location', 'maxAttendees']
+    const hasRequiredFields = requiredFields.every(field => formData[field] && formData[field].toString().trim())
+    const hasNoErrors = Object.keys(validationErrors).length === 0
+    setIsFormValid(hasRequiredFields && hasNoErrors)
+  }
+
+  // Validate entire form
   const validateForm = () => {
     const errors = {}
     
-    if (!formData.title.trim()) errors.title = 'Event title is required'
-    if (!formData.description.trim()) errors.description = 'Description is required'
-    if (!formData.date) errors.date = 'Date is required'
-    if (!formData.time) errors.time = 'Time is required'
-    if (!formData.location.trim()) errors.location = 'Location is required'
-    if (!formData.maxAttendees || formData.maxAttendees < 1) errors.maxAttendees = 'Valid max attendees required'
-    if (formData.price < 0) errors.price = 'Price cannot be negative'
+    // Validate all fields
+    Object.keys(formData).forEach(field => {
+      validateField(field, formData[field])
+    })
     
-    // Date validation
-    if (formData.date) {
-      const eventDate = new Date(formData.date)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      if (eventDate < today) {
-        errors.date = 'Event date cannot be in the past'
-      }
-    }
-
-    setFormErrors(errors)
-    return Object.keys(errors).length === 0
+    // Check final validation state
+    const hasErrors = Object.keys(validationErrors).length > 0
+    setFormErrors(validationErrors)
+    return !hasErrors
   }
 
   const handleSubmit = async (e) => {
@@ -69,6 +163,7 @@ const EventsManagement = ({ onRefresh, user }) => {
 
     setIsSubmitting(true)
     setError('')
+    setSuccessMessage('')
     
     try {
       const eventData = {
@@ -85,21 +180,45 @@ const EventsManagement = ({ onRefresh, user }) => {
       }
       
       if (editingEvent) {
-        // Update existing event
+        // Update existing event - don't include branch_id for updates
+        const { branch_id, ...updateData } = eventData
         await updateEvent({
           id: editingEvent._id,
-          ...eventData
+          ...updateData
         })
+        setSuccessMessage('Event updated successfully!')
       } else {
         // Create new event
         await createEvent(eventData)
+        setSuccessMessage('Event created successfully!')
       }
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(''), 3000)
       
       handleCloseModal()
       onRefresh?.()
     } catch (error) {
       console.error('Error saving event:', error)
-      setError(error.message || 'Failed to save event')
+      
+      // Handle specific error types
+      let errorMessage = 'Failed to save event'
+      
+      if (error.message?.includes('EVENT_PAST_DATE')) {
+        errorMessage = 'Event date cannot be in the past'
+      } else if (error.message?.includes('EVENT_NOT_FOUND')) {
+        errorMessage = 'Event not found'
+      } else if (error.message?.includes('network')) {
+        errorMessage = 'Network error. Please check your connection and try again.'
+      } else if (error.message?.includes('timeout')) {
+        errorMessage = 'Request timed out. Please try again.'
+      } else if (error.message?.includes('unauthorized')) {
+        errorMessage = 'You are not authorized to perform this action'
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      setError(errorMessage)
     } finally {
       setIsSubmitting(false)
     }
@@ -120,17 +239,40 @@ const EventsManagement = ({ onRefresh, user }) => {
     setEditingEvent(event)
     setShowCreateModal(true)
     setError('')
+    setSuccessMessage('')
+    setValidationErrors({})
   }
 
   const handleDelete = async (eventId) => {
-    if (!confirm('Are you sure you want to delete this event?')) return
+    setShowDeleteConfirm(eventId)
+  }
+
+  const confirmDelete = async () => {
+    if (!showDeleteConfirm) return
     
     try {
-      await deleteEvent({ id: eventId })
+      await deleteEvent({ id: showDeleteConfirm })
+      setSuccessMessage('Event deleted successfully!')
+      setTimeout(() => setSuccessMessage(''), 3000)
       onRefresh?.()
     } catch (error) {
       console.error('Error deleting event:', error)
-      setError(error.message || 'Failed to delete event')
+      
+      let errorMessage = 'Failed to delete event'
+      
+      if (error.message?.includes('EVENT_NOT_FOUND')) {
+        errorMessage = 'Event not found'
+      } else if (error.message?.includes('network')) {
+        errorMessage = 'Network error. Please check your connection and try again.'
+      } else if (error.message?.includes('unauthorized')) {
+        errorMessage = 'You are not authorized to delete this event'
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+      
+      setError(errorMessage)
+    } finally {
+      setShowDeleteConfirm(null)
     }
   }
 
@@ -149,8 +291,408 @@ const EventsManagement = ({ onRefresh, user }) => {
       status: 'upcoming'
     })
     setFormErrors({})
+    setValidationErrors({})
     setError('')
+    setSuccessMessage('')
+    setIsFormValid(false)
   }
+
+  // Render Create/Edit Event Modal via Portal (outside tabs)
+  const renderCreateEditModal = () => {
+    if (!showCreateModal) return null
+
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+            onClick={handleCloseModal}
+          />
+          <div className="relative w-full max-w-2xl transform rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl transition-all z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
+              <h2 className="text-xl font-bold text-white">
+                {editingEvent ? 'Edit Event' : 'Create New Event'}
+              </h2>
+              <button
+                onClick={handleCloseModal}
+                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors duration-200"
+              >
+                <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+              </button>
+            </div>
+            <div className="p-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Error Display */}
+                {error && (
+                  <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mb-6">
+                    <div className="flex items-center">
+                      <AlertCircle className="h-5 w-5 text-red-400 mr-2" />
+                      <p className="text-red-400 font-medium">{error}</p>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Event Title *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={formData.title}
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, title: e.target.value }))
+                          validateField('title', e.target.value)
+                        }}
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent ${
+                          validationErrors.title ? 'border-red-500' : 
+                          formData.title && !validationErrors.title ? 'border-green-500' : 'border-[#2A2A2A]'
+                        }`}
+                        placeholder="Enter event title"
+                      />
+                      {formData.title && !validationErrors.title && (
+                        <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-400" />
+                      )}
+                    </div>
+                    {validationErrors.title && (
+                      <p className="mt-1 text-sm text-red-400 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {validationErrors.title}
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-gray-400">
+                      {formData.title.length}/100 characters
+                    </p>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Description *
+                    </label>
+                    <div className="relative">
+                      <textarea
+                        value={formData.description}
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, description: e.target.value }))
+                          validateField('description', e.target.value)
+                        }}
+                        rows={3}
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent resize-none ${
+                          validationErrors.description ? 'border-red-500' : 
+                          formData.description && !validationErrors.description ? 'border-green-500' : 'border-[#2A2A2A]'
+                        }`}
+                        placeholder="Describe the event"
+                      />
+                      {formData.description && !validationErrors.description && (
+                        <CheckCircle className="absolute right-3 top-3 h-4 w-4 text-green-400" />
+                      )}
+                    </div>
+                    {validationErrors.description && (
+                      <p className="mt-1 text-sm text-red-400 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {validationErrors.description}
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-gray-400">
+                      {formData.description.length}/500 characters
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Date *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="date"
+                        value={formData.date}
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, date: e.target.value }))
+                          validateField('date', e.target.value)
+                        }}
+                        min={new Date().toISOString().split('T')[0]}
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent ${
+                          validationErrors.date ? 'border-red-500' : 
+                          formData.date && !validationErrors.date ? 'border-green-500' : 'border-[#2A2A2A]'
+                        }`}
+                      />
+                      {formData.date && !validationErrors.date && (
+                        <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-400" />
+                      )}
+                    </div>
+                    {validationErrors.date && (
+                      <p className="mt-1 text-sm text-red-400 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {validationErrors.date}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Time *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="time"
+                        value={formData.time}
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, time: e.target.value }))
+                          validateField('time', e.target.value)
+                        }}
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent ${
+                          validationErrors.time ? 'border-red-500' : 
+                          formData.time && !validationErrors.time ? 'border-green-500' : 'border-[#2A2A2A]'
+                        }`}
+                      />
+                      {formData.time && !validationErrors.time && (
+                        <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-400" />
+                      )}
+                    </div>
+                    {validationErrors.time && (
+                      <p className="mt-1 text-sm text-red-400 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {validationErrors.time}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Location *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={formData.location}
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, location: e.target.value }))
+                          validateField('location', e.target.value)
+                        }}
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent ${
+                          validationErrors.location ? 'border-red-500' : 
+                          formData.location && !validationErrors.location ? 'border-green-500' : 'border-[#2A2A2A]'
+                        }`}
+                        placeholder="Event location"
+                      />
+                      {formData.location && !validationErrors.location && (
+                        <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-400" />
+                      )}
+                    </div>
+                    {validationErrors.location && (
+                      <p className="mt-1 text-sm text-red-400 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {validationErrors.location}
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-gray-400">
+                      {formData.location.length}/200 characters
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Max Attendees *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={formData.maxAttendees}
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, maxAttendees: e.target.value }))
+                          validateField('maxAttendees', e.target.value)
+                        }}
+                        min="1"
+                        max="1000"
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent ${
+                          validationErrors.maxAttendees ? 'border-red-500' : 
+                          formData.maxAttendees && !validationErrors.maxAttendees ? 'border-green-500' : 'border-[#2A2A2A]'
+                        }`}
+                        placeholder="Maximum attendees"
+                      />
+                      {formData.maxAttendees && !validationErrors.maxAttendees && (
+                        <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-400" />
+                      )}
+                    </div>
+                    {validationErrors.maxAttendees && (
+                      <p className="mt-1 text-sm text-red-400 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {validationErrors.maxAttendees}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Price (₱)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={formData.price}
+                        onChange={(e) => {
+                          setFormData(prev => ({ ...prev, price: e.target.value }))
+                          validateField('price', e.target.value)
+                        }}
+                        min="0"
+                        max="100000"
+                        step="0.01"
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent ${
+                          validationErrors.price ? 'border-red-500' : 
+                          formData.price && !validationErrors.price ? 'border-green-500' : 'border-[#2A2A2A]'
+                        }`}
+                        placeholder="0.00 (Free event)"
+                      />
+                      {formData.price && !validationErrors.price && (
+                        <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-400" />
+                      )}
+                    </div>
+                    {validationErrors.price && (
+                      <p className="mt-1 text-sm text-red-400 flex items-center">
+                        <AlertCircle className="h-4 w-4 mr-1" />
+                        {validationErrors.price}
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-gray-400">
+                      Enter 0 for free events
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Category
+                    </label>
+                    <select
+                      value={formData.category}
+                      onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                      className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    >
+                      <option value="workshop">Workshop</option>
+                      <option value="celebration">Celebration</option>
+                      <option value="training">Training</option>
+                      <option value="promotion">Promotion</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Status
+                    </label>
+                    <select
+                      value={formData.status}
+                      onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
+                      className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    >
+                      <option value="upcoming">Upcoming</option>
+                      <option value="ongoing">Ongoing</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex space-x-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    disabled={isSubmitting}
+                    className="flex-1 px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || !isFormValid}
+                    className="flex-1 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin inline" />
+                        {editingEvent ? 'Updating...' : 'Creating...'}
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2 inline" />
+                        {editingEvent ? 'Update Event' : 'Create Event'}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
+  }
+
+  // Render Delete Confirmation Modal via Portal (outside tabs)
+  const renderDeleteConfirmModal = () => {
+    if (!showDeleteConfirm) return null
+
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+            onClick={() => setShowDeleteConfirm(null)}
+          />
+          <div className="relative w-full max-w-md transform rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl transition-all z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
+              <h2 className="text-xl font-bold text-white">Delete Event</h2>
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors duration-200"
+              >
+                <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="text-center py-4">
+                <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Trash2 className="w-8 h-8 text-red-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">Delete Event</h3>
+                <p className="text-gray-300 mb-6">
+                  Are you sure you want to delete this event? This action cannot be undone.
+                </p>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => setShowDeleteConfirm(null)}
+                    className="flex-1 px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200"
+                  >
+                    Delete Event
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
+  }
+
+  // Real-time form validation
+  useEffect(() => {
+    checkFormValidity()
+  }, [formData, validationErrors])
+
+  // Clear success message after timeout
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => setSuccessMessage(''), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [successMessage])
 
   const getStatusConfig = (status) => {
     switch (status) {
@@ -242,6 +784,16 @@ const EventsManagement = ({ onRefresh, user }) => {
           </button>
         </div>
       </div>
+
+      {/* Success Message */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <CheckCircle className="h-5 w-5 text-green-400 mr-2" />
+            <p className="text-green-800 font-medium">{successMessage}</p>
+          </div>
+        </div>
+      )}
 
       {/* Error Display */}
       {error && (
@@ -458,219 +1010,9 @@ const EventsManagement = ({ onRefresh, user }) => {
         </div>
       )}
 
-      {/* Create/Edit Event Modal */}
-      <Modal 
-        isOpen={showCreateModal} 
-        onClose={handleCloseModal} 
-        title={editingEvent ? 'Edit Event' : 'Create New Event'}
-        size="lg"
-      >
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Error Display */}
-          {error && (
-            <ErrorDisplay
-              error={error}
-              onClose={() => setError('')}
-              variant="compact"
-            />
-          )}
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Event Title *
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-                  formErrors.title ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="Enter event title"
-              />
-              {formErrors.title && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  {formErrors.title}
-                </p>
-              )}
-            </div>
-
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description *
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                rows={3}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-                  formErrors.description ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="Describe the event"
-              />
-              {formErrors.description && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  {formErrors.description}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Date *
-              </label>
-              <input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                min={new Date().toISOString().split('T')[0]}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-                  formErrors.date ? 'border-red-300' : 'border-gray-300'
-                }`}
-              />
-              {formErrors.date && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  {formErrors.date}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Time *
-              </label>
-              <input
-                type="time"
-                value={formData.time}
-                onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-                  formErrors.time ? 'border-red-300' : 'border-gray-300'
-                }`}
-              />
-              {formErrors.time && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  {formErrors.time}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Location *
-              </label>
-              <input
-                type="text"
-                value={formData.location}
-                onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-                  formErrors.location ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="Event location"
-              />
-              {formErrors.location && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  {formErrors.location}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Max Attendees *
-              </label>
-              <input
-                type="number"
-                value={formData.maxAttendees}
-                onChange={(e) => setFormData(prev => ({ ...prev, maxAttendees: e.target.value }))}
-                min="1"
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-                  formErrors.maxAttendees ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="Maximum attendees"
-              />
-              {formErrors.maxAttendees && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  {formErrors.maxAttendees}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Price (₱)
-              </label>
-              <input
-                type="number"
-                value={formData.price}
-                onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                min="0"
-                step="0.01"
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
-                  formErrors.price ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="0.00 (Free event)"
-              />
-              {formErrors.price && (
-                <p className="mt-1 text-sm text-red-600 flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  {formErrors.price}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category
-              </label>
-              <select
-                value={formData.category}
-                onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              >
-                <option value="workshop">Workshop</option>
-                <option value="celebration">Celebration</option>
-                <option value="training">Training</option>
-                <option value="promotion">Promotion</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCloseModal}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="bg-orange-500 hover:bg-orange-600"
-            >
-              {isSubmitting ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  {editingEvent ? 'Updating...' : 'Creating...'}
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  {editingEvent ? 'Update Event' : 'Create Event'}
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      {/* Modals */}
+      {renderCreateEditModal()}
+      {renderDeleteConfirmModal()}
     </div>
   )
 }

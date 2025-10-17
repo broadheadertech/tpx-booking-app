@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
+import { sanitizeString } from "../utils/sanitize";
 
 // Get all events (for super admin)
 export const getAllEvents = query({
@@ -90,6 +91,39 @@ export const createEvent = mutation({
     branch_id: v.id("branches"), // Add branch_id requirement
   },
   handler: async (ctx, args) => {
+    // Sanitize inputs
+    const sanitizedTitle = sanitizeString(args.title);
+    const sanitizedDescription = sanitizeString(args.description);
+    const sanitizedLocation = sanitizeString(args.location);
+
+    // Validate sanitized inputs
+    if (!sanitizedTitle || sanitizedTitle.length < 3) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Event title must be at least 3 characters long");
+    }
+    if (sanitizedTitle.length > 100) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Event title must be less than 100 characters");
+    }
+    if (!sanitizedDescription || sanitizedDescription.length < 10) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Event description must be at least 10 characters long");
+    }
+    if (sanitizedDescription.length > 500) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Event description must be less than 500 characters");
+    }
+    if (!sanitizedLocation || sanitizedLocation.length < 3) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Event location must be at least 3 characters long");
+    }
+    if (sanitizedLocation.length > 200) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Event location must be less than 200 characters");
+    }
+
+    // Validate numeric inputs
+    if (args.maxAttendees < 1 || args.maxAttendees > 1000) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Max attendees must be between 1 and 1000");
+    }
+    if (args.price < 0 || args.price > 100000) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Price must be between 0 and 100,000");
+    }
+
     // Validate date is not in the past
     const eventDate = new Date(args.date);
     const today = new Date();
@@ -99,18 +133,30 @@ export const createEvent = mutation({
       throwUserError(ERROR_CODES.EVENT_PAST_DATE);
     }
 
+    // Validate time format
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(args.time)) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid time format");
+    }
+
+    // Check if branch exists
+    const branch = await ctx.db.get(args.branch_id);
+    if (!branch) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Branch not found");
+    }
+
     const eventId = await ctx.db.insert("events", {
-      title: args.title,
-      description: args.description,
+      title: sanitizedTitle,
+      description: sanitizedDescription,
       date: args.date,
       time: args.time,
-      location: args.location,
+      location: sanitizedLocation,
       maxAttendees: args.maxAttendees,
       currentAttendees: 0,
       price: args.price,
       category: args.category,
       status: args.status || "upcoming",
-      branch_id: args.branch_id, // Add branch_id to event creation
+      branch_id: args.branch_id,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -136,8 +182,99 @@ export const updateEvent = mutation({
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
 
+    // Check if event exists
+    const existingEvent = await ctx.db.get(id);
+    if (!existingEvent) {
+      throwUserError(ERROR_CODES.EVENT_NOT_FOUND);
+    }
+
+    // Prepare sanitized updates
+    const sanitizedUpdates: any = {};
+
+    // Sanitize and validate string fields
+    if (updates.title !== undefined) {
+      const sanitizedTitle = sanitizeString(updates.title);
+      if (!sanitizedTitle || sanitizedTitle.length < 3) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Event title must be at least 3 characters long");
+      }
+      if (sanitizedTitle.length > 100) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Event title must be less than 100 characters");
+      }
+      sanitizedUpdates.title = sanitizedTitle;
+    }
+
+    if (updates.description !== undefined) {
+      const sanitizedDescription = sanitizeString(updates.description);
+      if (!sanitizedDescription || sanitizedDescription.length < 10) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Event description must be at least 10 characters long");
+      }
+      if (sanitizedDescription.length > 500) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Event description must be less than 500 characters");
+      }
+      sanitizedUpdates.description = sanitizedDescription;
+    }
+
+    if (updates.location !== undefined) {
+      const sanitizedLocation = sanitizeString(updates.location);
+      if (!sanitizedLocation || sanitizedLocation.length < 3) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Event location must be at least 3 characters long");
+      }
+      if (sanitizedLocation.length > 200) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Event location must be less than 200 characters");
+      }
+      sanitizedUpdates.location = sanitizedLocation;
+    }
+
+    // Validate numeric fields
+    if (updates.maxAttendees !== undefined) {
+      if (updates.maxAttendees < 1 || updates.maxAttendees > 1000) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Max attendees must be between 1 and 1000");
+      }
+      // Ensure current attendees don't exceed new max
+      if (existingEvent.currentAttendees > updates.maxAttendees) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Cannot reduce max attendees below current attendance");
+      }
+      sanitizedUpdates.maxAttendees = updates.maxAttendees;
+    }
+
+    if (updates.price !== undefined) {
+      if (updates.price < 0 || updates.price > 100000) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Price must be between 0 and 100,000");
+      }
+      sanitizedUpdates.price = updates.price;
+    }
+
+    // Validate date
+    if (updates.date !== undefined) {
+      const eventDate = new Date(updates.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      if (eventDate < today) {
+        throwUserError(ERROR_CODES.EVENT_PAST_DATE);
+      }
+      sanitizedUpdates.date = updates.date;
+    }
+
+    // Validate time
+    if (updates.time !== undefined) {
+      const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+      if (!timeRegex.test(updates.time)) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid time format");
+      }
+      sanitizedUpdates.time = updates.time;
+    }
+
+    // Add other fields that don't need sanitization
+    if (updates.category !== undefined) {
+      sanitizedUpdates.category = updates.category;
+    }
+    if (updates.status !== undefined) {
+      sanitizedUpdates.status = updates.status;
+    }
+
     await ctx.db.patch(id, {
-      ...updates,
+      ...sanitizedUpdates,
       updatedAt: Date.now(),
     });
 
@@ -149,6 +286,17 @@ export const updateEvent = mutation({
 export const deleteEvent = mutation({
   args: { id: v.id("events") },
   handler: async (ctx, args) => {
+    // Check if event exists
+    const event = await ctx.db.get(args.id);
+    if (!event) {
+      throwUserError(ERROR_CODES.EVENT_NOT_FOUND);
+    }
+
+    // Check if event has attendees (optional business rule)
+    if (event.currentAttendees > 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Cannot delete event with existing attendees. Please cancel the event instead.");
+    }
+
     await ctx.db.delete(args.id);
     return { success: true };
   },

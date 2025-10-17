@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { User, UserPlus, Edit, Trash2, Shield, Building, Users, Search, Filter } from 'lucide-react'
+import { User, UserPlus, Edit, Trash2, Shield, Building, Users, Search, Filter, CheckCircle } from 'lucide-react'
 import UserFormModal from './UserFormModal'
 
 export default function UserManagement() {
@@ -22,6 +22,9 @@ export default function UserManagement() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [pendingUpdate, setPendingUpdate] = useState(null)
 
   // Queries
   const users = useQuery(api.services.auth.getAllUsers) || []
@@ -80,6 +83,7 @@ export default function UserManagement() {
       branch_id: ''
     })
     setError('')
+    setSuccessMessage('')
   }
 
   const handleCreate = () => {
@@ -134,6 +138,10 @@ export default function UserManagement() {
     e.preventDefault()
     if (!selectedUser) return
 
+    // Clear previous errors
+    setError('')
+
+    // Basic validation
     if (!formData.username.trim() || !formData.email.trim()) {
       setError('Username and email are required')
       return
@@ -144,32 +152,101 @@ export default function UserManagement() {
       return
     }
 
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address')
+      return
+    }
+
+    // Username validation
+    if (formData.username.length < 3) {
+      setError('Username must be at least 3 characters long')
+      return
+    }
+
+    // Password validation (if provided)
+    if (formData.password.trim()) {
+      if (formData.password.length < 6) {
+        setError('Password must be at least 6 characters long')
+        return
+      }
+      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+        setError('Password must contain at least one uppercase letter, one lowercase letter, and one number')
+        return
+      }
+    }
+
+    // Prepare update data for confirmation
+    const updateData = {
+      userId: selectedUser._id,
+      username: formData.username.trim(),
+      email: formData.email.trim().toLowerCase(),
+      mobile_number: formData.mobile_number?.trim() || '',
+      address: formData.address?.trim() || '',
+      role: formData.role,
+      branch_id: formData.role === 'super_admin' ? undefined : formData.branch_id
+    }
+
+    // Only include password if it was provided
+    if (formData.password.trim()) {
+      updateData.password = formData.password
+    }
+
+    // Show confirmation dialog
+    setPendingUpdate(updateData)
+    setShowConfirmDialog(true)
+  }
+
+  const confirmUpdate = async () => {
+    if (!pendingUpdate) return
+
     setLoading(true)
+    setShowConfirmDialog(false)
+    
     try {
-      const updateData = {
-        userId: selectedUser._id,
-        username: formData.username,
-        email: formData.email,
-        mobile_number: formData.mobile_number,
-        address: formData.address,
-        role: formData.role,
-        branch_id: formData.role === 'super_admin' ? undefined : formData.branch_id
+      const result = await updateUser(pendingUpdate)
+      
+      if (result) {
+        // Success - close modal and reset form
+        setShowEditModal(false)
+        setSelectedUser(null)
+        resetForm()
+        setSuccessMessage('User updated successfully!')
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          setSuccessMessage('')
+        }, 3000)
       }
-
-      // Only include password if it was provided
-      if (formData.password.trim()) {
-        updateData.password = formData.password
-      }
-
-      await updateUser(updateData)
-      setShowEditModal(false)
-      setSelectedUser(null)
-      resetForm()
     } catch (error) {
       console.error('Error updating user:', error)
-      setError(error.message || 'Failed to update user')
+      
+      // Handle specific error types
+      if (error.message?.includes('email')) {
+        setError('This email address is already in use by another user')
+      } else if (error.message?.includes('username')) {
+        setError('This username is already taken by another user')
+      } else if (error.message?.includes('not found')) {
+        setError('User not found. Please refresh the page and try again.')
+      } else if (error.message?.includes('Invalid username')) {
+        setError('Invalid username format. Please check the requirements.')
+      } else if (error.message?.includes('Invalid email')) {
+        setError('Invalid email format. Please enter a valid email address.')
+      } else if (error.message?.includes('Password contains invalid characters')) {
+        setError('Password contains invalid characters. Please use only letters, numbers, and common symbols.')
+      } else if (error.message?.includes('network') || error.message?.includes('timeout')) {
+        setError('Network error. Please check your connection and try again.')
+      } else if (error.message?.includes('rate limit')) {
+        setError('Too many requests. Please wait a moment and try again.')
+      } else if (error.message?.includes('unauthorized') || error.message?.includes('forbidden')) {
+        setError('You do not have permission to update this user.')
+      } else {
+        setError(error.message || 'Failed to update user. Please try again.')
+      }
     } finally {
       setLoading(false)
+      setPendingUpdate(null)
     }
   }
 
@@ -206,6 +283,14 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-6">
+      {/* Success Message */}
+      {successMessage && (
+        <div className="bg-green-400/20 border border-green-400/30 rounded-lg p-4 flex items-center space-x-2">
+          <CheckCircle className="h-5 w-5 text-green-400 flex-shrink-0" />
+          <p className="text-sm text-green-400">{successMessage}</p>
+        </div>
+      )}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
@@ -448,6 +533,47 @@ export default function UserManagement() {
         branches={branches}
         isEditMode={true}
       />
+
+      {/* Confirmation Dialog */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 z-[10000] overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div 
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+              onClick={() => setShowConfirmDialog(false)}
+            />
+            <div className="relative w-full max-w-md transform rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] shadow-2xl transition-all z-[10001] border border-[#444444]/50">
+              <div className="p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
+                    <AlertCircle className="h-5 w-5 text-yellow-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Confirm User Update</h3>
+                </div>
+                
+                <p className="text-gray-300 mb-6">
+                  Are you sure you want to update this user? This action will modify the user's information and cannot be undone.
+                </p>
+                
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => setShowConfirmDialog(false)}
+                    className="px-4 py-2 border border-gray-500 text-gray-300 rounded-lg hover:bg-gray-500/20 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmUpdate}
+                    className="px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors"
+                  >
+                    Confirm Update
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

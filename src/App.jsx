@@ -12,6 +12,8 @@ import Landing from "./pages/Landing";
 import PlatformSelection from "./pages/PlatformSelection";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
 import FacebookCallback from "./pages/auth/FacebookCallback";
 import StaffDashboard from "./pages/staff/Dashboard";
 import POS from "./pages/staff/POS";
@@ -59,6 +61,22 @@ function App() {
               element={
                 <AuthRedirect>
                   <Login />
+                </AuthRedirect>
+              }
+            />
+            <Route
+              path="/auth/forgot-password"
+              element={
+                <AuthRedirect>
+                  <ForgotPassword />
+                </AuthRedirect>
+              }
+            />
+            <Route
+              path="/auth/reset-password"
+              element={
+                <AuthRedirect>
+                  <ResetPassword />
                 </AuthRedirect>
               }
             />

@@ -41,6 +41,8 @@ export const AuthProvider = ({ children }) => {
   const loginMutation = useMutation(api.services.auth.loginUser)
   const facebookLoginAction = useAction(api.services.auth.loginWithFacebook)
   const logoutMutation = useMutation(api.services.auth.logoutUser)
+  const requestPasswordResetMutation = useMutation(api.services.auth.requestPasswordReset)
+  const resetPasswordMutation = useMutation(api.services.auth.resetPassword)
 
   useEffect(() => {
     // Only process when we have a session token and the query has completed
@@ -164,6 +166,26 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const requestPasswordReset = async (email) => {
+    try {
+      const res = await requestPasswordResetMutation({ email })
+      return { success: true }
+    } catch (error) {
+      console.error('Request password reset error:', error)
+      return { success: false, error: error.message || 'Failed to request reset' }
+    }
+  }
+
+  const resetPassword = async (token, newPassword) => {
+    try {
+      const res = await resetPasswordMutation({ token, new_password: newPassword })
+      return { success: true }
+    } catch (error) {
+      console.error('Reset password error:', error)
+      return { success: false, error: error.message || 'Failed to reset password' }
+    }
+  }
+
   const value = {
     isAuthenticated,
     user,
@@ -171,7 +193,9 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     loginWithFacebook,
-    sessionToken
+    sessionToken,
+    requestPasswordReset,
+    resetPassword
   }
 
   return (

@@ -1,79 +1,158 @@
-import React from 'react'
-import { LogOut, Crown, Shield } from 'lucide-react'
+import React, { useState } from 'react'
+import { LogOut, Crown, Shield, User, Building } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { useQuery } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 
 const DashboardHeader = ({ onLogout }) => {
   const { user } = useAuth()
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const [showProfileModal, setShowProfileModal] = useState(false)
+  
+  // Get system stats for admin
+  const branches = useQuery(api.services.branches.getAllBranches) || []
+  const users = useQuery(api.services.auth.getAllUsers) || []
+  const activeBranches = branches.filter(b => b.is_active).length
 
   return (
-    <header className="relative bg-gradient-to-r from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] backdrop-blur-xl border-b border-[#333333]/50 shadow-2xl">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.1),transparent_50%)]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.05),transparent_50%)]"></div>
+    <div className="relative bg-[#050505] border-b border-[#1A1A1A]/30 overflow-hidden">
+      {/* Background overlay - more subtle */}
+      <div className="absolute inset-0">
+        <div
+          className="h-full bg-cover bg-center bg-no-repeat opacity-[0.02]"
+          style={{
+            backgroundImage: `url(/img/pnglog.png)`,
+            filter: 'brightness(0.2)'
+          }}
+        ></div>
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between py-6">
-          {/* Left Side - Logo and Title */}
-          <div className="flex items-center space-x-6">
-            {/* Logo */}
-            <div className="flex items-center space-x-4">
+      <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between py-2.5 lg:py-3 gap-2">
+          {/* Left section - Logo and Title */}
+          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+            <div className="w-9 h-9 sm:w-11 sm:h-11 bg-[#0A0A0A] rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg ring-1 ring-[#FF8C42]/20 p-1.5 border border-[#1A1A1A]/50 flex-shrink-0">
               <img
                 src="/img/tipuno_x_logo_white.avif"
-                alt="TPX Barbershop Logo"
-                className="w-12 h-12 object-contain"
+                alt="TipunoX Angeles Barbershop Logo"
+                className="w-full h-full object-contain"
               />
-              <div>
-                <h1 className="text-2xl font-bold text-white flex items-center space-x-2">
-                  <Crown className="w-6 h-6 text-[#FF8C42]" />
-                  <span>Admin Dashboard</span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center space-x-1.5 sm:space-x-2">
+                <h1 className="text-xs sm:text-lg font-bold text-white tracking-tight truncate">
+                  <span className="hidden sm:inline">TipunoX Angeles Barbershop</span>
+                  <span className="sm:hidden">TipunoX Angeles</span>
                 </h1>
-                <p className="text-sm text-gray-400">System Administration Panel</p>
+                <div className="bg-[#FF8C42]/15 backdrop-blur-sm rounded-md px-1.5 py-0.5 border border-[#FF8C42]/25 flex-shrink-0">
+                  <span className="text-[10px] font-semibold text-[#FF8C42]">v2.0.0</span>
+                </div>
+              </div>
+              <div className="flex items-center space-x-1 sm:space-x-1.5 mt-0.5">
+                <p className="text-[10px] sm:text-xs font-medium text-[#FF8C42]">Admin Dashboard</p>
+                <span className="text-gray-600 text-xs hidden sm:inline">•</span>
+                <div className="hidden sm:flex items-center space-x-1">
+                  <Crown className="w-2.5 h-2.5 text-[#FF8C42]" />
+                  <span className="text-[10px] font-medium text-gray-400">Super Administrator</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Center - Status Badge */}
-          <div className="hidden md:flex items-center space-x-4">
-            <div className="bg-gradient-to-r from-[#FF8C42]/20 to-[#FF7A2B]/20 border border-[#FF8C42]/30 rounded-full px-4 py-2">
-              <div className="flex items-center space-x-2">
+          {/* Center - System Stats */}
+          <div className="hidden lg:flex items-center space-x-3">
+            <div className="bg-[#FF8C42]/10 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-[#FF8C42]/20">
+              <div className="flex items-center space-x-1.5">
+                <Building className="w-3 h-3 text-[#FF8C42]" />
+                <span className="text-xs font-semibold text-white">{activeBranches}</span>
+                <span className="text-xs text-gray-400">Branches</span>
+              </div>
+            </div>
+            <div className="bg-green-500/10 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-green-500/20">
+              <div className="flex items-center space-x-1.5">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-sm font-medium text-white">System Online</span>
+                <span className="text-xs font-semibold text-white">Online</span>
               </div>
             </div>
           </div>
 
-          {/* Right Side - User Info and Actions */}
-          <div className="flex items-center space-x-4">
-            {/* User Info */}
-            <div className="hidden sm:flex items-center space-x-3 bg-gradient-to-r from-[#2A2A2A] to-[#333333] rounded-xl p-3 border border-[#444444]/50">
-              <div className="w-10 h-10 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center">
-                <Shield className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-white">
-                  {user?.username || 'Admin'}
-                </p>
-                <p className="text-xs text-[#FF8C42] font-medium">Super Administrator</p>
-              </div>
+          {/* Right section - Welcome message and buttons */}
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+            {/* Welcome message - hidden on mobile */}
+            <div className="hidden lg:block text-right">
+              <p className="text-sm font-semibold text-white">Welcome back, {user?.username || 'Admin'}</p>
+              <p className="text-[10px] text-gray-400 font-medium">{new Date().toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+              })}</p>
             </div>
 
-            {/* Logout Button */}
-            <button
-              onClick={onLogout}
-              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-red-500/25 active:scale-95"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
+            {/* Action Buttons */}
+            <div className="flex items-center space-x-1 sm:space-x-1.5">
+              <button
+                onClick={() => setShowProfileModal(true)}
+                className="w-7 h-7 sm:w-9 sm:h-9 bg-white/5 backdrop-blur-sm rounded-lg flex items-center justify-center hover:bg-white/10 transition-all duration-200 border border-white/10 group"
+                title="My Profile"
+              >
+                <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 group-hover:text-white transition-colors duration-200" />
+              </button>
+
+              <button
+                onClick={() => setShowLogoutModal(true)}
+                className="w-7 h-7 sm:w-9 sm:h-9 bg-red-500/15 backdrop-blur-sm rounded-lg flex items-center justify-center hover:bg-red-500/25 transition-all duration-200 border border-red-500/25 group"
+                title="Logout"
+              >
+                <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400 group-hover:text-red-300 transition-colors duration-200" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Bottom Gradient Line */}
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#FF8C42]/50 to-transparent"></div>
-    </header>
+      
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[10000] overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div 
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+              onClick={() => setShowLogoutModal(false)}
+            />
+            <div className="relative w-full max-w-md transform rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] shadow-2xl transition-all z-[10001] border border-[#444444]/50">
+              <div className="p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                    <LogOut className="h-5 w-5 text-red-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">Confirm Logout</h3>
+                </div>
+                
+                <p className="text-gray-300 mb-6">
+                  Are you sure you want to logout? You will need to sign in again to access the admin dashboard.
+                </p>
+                
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => setShowLogoutModal(false)}
+                    className="px-4 py-2 border border-gray-500 text-gray-300 rounded-lg hover:bg-gray-500/20 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowLogoutModal(false)
+                      onLogout()
+                    }}
+                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 

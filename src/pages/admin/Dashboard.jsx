@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import DashboardHeader from '../../components/admin/DashboardHeader'
-import QuickActions from '../../components/admin/QuickActions'
 import StatsCards from '../../components/admin/StatsCards'
 import RecentActivity from '../../components/admin/RecentActivity'
 import TabNavigation from '../../components/admin/TabNavigation'
@@ -8,6 +7,8 @@ import BranchManagement from '../../components/admin/BranchManagement'
 import UserManagement from '../../components/admin/UserManagement'
 import SystemReports from '../../components/admin/SystemReports'
 import GlobalSettings from '../../components/admin/GlobalSettings'
+import PayrollManagement from '../../components/staff/PayrollManagement'
+import EventsManagement from '../../components/staff/EventsManagement'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
@@ -19,6 +20,7 @@ function AdminDashboard() {
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('admin_dashboard_active_tab') || 'overview'
   })
+  const [selectedBranchId, setSelectedBranchId] = useState('')
 
   // Save active tab to localStorage whenever it changes
   useEffect(() => {
@@ -71,6 +73,14 @@ function AdminDashboard() {
   }
 
   const stats = calculateStats()
+
+  // Initialize selected branch for super admin contexts (payroll/events)
+  useEffect(() => {
+    if (!selectedBranchId && Array.isArray(branches) && branches.length > 0) {
+      const firstActive = branches.find(b => b.is_active)
+      setSelectedBranchId((firstActive || branches[0])._id)
+    }
+  }, [branches, selectedBranchId])
 
   // Helper functions
   const handleRefresh = () => {
@@ -125,6 +135,59 @@ function AdminDashboard() {
       case 'users':
         return <UserManagement onRefresh={handleRefresh} />
 
+      case 'payroll': {
+        // For super admin, require a branch selection and pass a pseudo user with branch_id
+        const branchScopedUser = user && selectedBranchId 
+          ? { ...user, branch_id: selectedBranchId, role: user.role }
+          : null
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-white">Branch Payroll</h3>
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-300">Branch</label>
+                <select
+                  value={selectedBranchId}
+                  onChange={(e) => setSelectedBranchId(e.target.value)}
+                  className="bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                >
+                  {(branches || []).map((b) => (
+                    <option key={b._id} value={b._id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <PayrollManagement onRefresh={handleRefresh} user={branchScopedUser} />
+          </div>
+        )
+      }
+
+      case 'events': {
+        const branchScopedUser = user && selectedBranchId 
+          ? { ...user, branch_id: selectedBranchId, role: user.role }
+          : null
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-semibold text-white">Branch Events</h3>
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-300">Branch</label>
+                <select
+                  value={selectedBranchId}
+                  onChange={(e) => setSelectedBranchId(e.target.value)}
+                  className="bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                >
+                  {(branches || []).map((b) => (
+                    <option key={b._id} value={b._id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <EventsManagement onRefresh={handleRefresh} user={branchScopedUser} />
+          </div>
+        )
+      }
+
       case 'reports':
         return <SystemReports onRefresh={handleRefresh} />
 
@@ -141,6 +204,8 @@ function AdminDashboard() {
     { id: 'overview', label: 'Overview', icon: 'dashboard' },
     { id: 'branches', label: 'Branches', icon: 'building' },
     { id: 'users', label: 'Users', icon: 'users' },
+    { id: 'payroll', label: 'Payroll', icon: 'dollar' },
+    { id: 'events', label: 'Events', icon: 'calendar' },
     { id: 'reports', label: 'Reports', icon: 'chart' },
     { id: 'settings', label: 'Settings', icon: 'settings' }
   ]
@@ -151,7 +216,6 @@ function AdminDashboard() {
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="space-y-12">
-          <QuickActions />
           <TabNavigation 
             tabs={tabs} 
             activeTab={activeTab} 

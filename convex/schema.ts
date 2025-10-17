@@ -33,6 +33,9 @@ export default defineSchema({
     bio: v.optional(v.string()),
     skills: v.array(v.string()),
     isVerified: v.boolean(),
+    // Password reset fields
+    password_reset_token: v.optional(v.string()),
+    password_reset_expires: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

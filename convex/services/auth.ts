@@ -2,6 +2,8 @@ import { v } from "convex/values";
 import { mutation, query, action } from "../_generated/server";
 import { api } from "../_generated/api";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
+import { hashPassword, verifyPassword } from "../utils/password";
+import { sanitizeString, sanitizeEmail, sanitizeUsername, sanitizePhone, sanitizeAddress, sanitizeRole, isSafeString } from "../utils/sanitize";
 
 // Generate a simple session token (in production, use proper JWT or similar)
 function generateSessionToken() {
@@ -22,10 +24,31 @@ export const registerUser = mutation({
     branch_id: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
+    // Sanitize and validate inputs
+    const sanitizedUsername = sanitizeUsername(args.username);
+    const sanitizedEmail = sanitizeEmail(args.email);
+    const sanitizedMobileNumber = sanitizePhone(args.mobile_number);
+    const sanitizedAddress = sanitizeAddress(args.address || '');
+    const sanitizedNickname = sanitizeString(args.nickname || '');
+    const sanitizedRole = sanitizeRole(args.role);
+
+    // Validate sanitized inputs
+    if (!sanitizedUsername || sanitizedUsername.length < 3) {
+      throw new Error("Invalid username. Must be at least 3 characters and contain only letters, numbers, dots, underscores, and hyphens.");
+    }
+
+    if (!sanitizedEmail || !sanitizedEmail.includes('@')) {
+      throw new Error("Invalid email address.");
+    }
+
+    if (!isSafeString(args.password)) {
+      throw new Error("Password contains invalid characters.");
+    }
+
     // Check if user already exists
     const existingUser = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .withIndex("by_email", (q) => q.eq("email", sanitizedEmail))
       .first();
 
     if (existingUser) {
@@ -34,7 +57,7 @@ export const registerUser = mutation({
 
     const existingUsername = await ctx.db
       .query("users")
-      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .withIndex("by_username", (q) => q.eq("username", sanitizedUsername))
       .first();
 
     if (existingUsername) {
@@ -42,20 +65,20 @@ export const registerUser = mutation({
     }
 
     // Validate branch_id for staff users (customers don't need branch_id)
-    if (["staff", "barber", "branch_admin", "admin"].includes(args.role) && !args.branch_id) {
+    if (["staff", "barber", "branch_admin", "admin"].includes(sanitizedRole) && !args.branch_id) {
       throw new Error("Branch ID is required for staff, barber, branch_admin, and admin users");
     }
 
     // Create new user
     const userId = await ctx.db.insert("users", {
-      username: args.username,
-      email: args.email,
-      password: args.password, // In production, hash this password
-      mobile_number: args.mobile_number,
-      address: args.address,
-      nickname: args.nickname,
-      birthday: args.birthday,
-      role: args.role,
+      username: sanitizedUsername,
+      email: sanitizedEmail,
+      password: hashPassword(args.password), // Hash password for security
+      mobile_number: sanitizedMobileNumber,
+      address: sanitizedAddress,
+      nickname: sanitizedNickname,
+      birthday: sanitizeString(args.birthday || ''),
+      role: sanitizedRole as "staff" | "customer" | "admin" | "barber" | "super_admin" | "branch_admin",
       branch_id: args.branch_id,
       is_active: true,
       avatar: undefined,
@@ -115,8 +138,8 @@ export const loginUser = mutation({
       throwUserError(ERROR_CODES.AUTH_ACCOUNT_INACTIVE);
     }
 
-    // Check password (in production, use proper password hashing)
-    if (user.password !== args.password) {
+    // Check password using hash verification
+    if (!verifyPassword(args.password, user.password)) {
       throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
     }
 
@@ -435,7 +458,7 @@ export const createUser = mutation({
     const userId = await ctx.db.insert("users", {
       username: args.username,
       email: args.email,
-      password: args.password, // In production, hash this password
+      password: hashPassword(args.password), // Hash password for security
       mobile_number: args.mobile_number || "",
       address: args.address,
       nickname: undefined,
@@ -489,11 +512,31 @@ export const updateUser = mutation({
       throw new Error("User not found");
     }
 
+    // Sanitize inputs
+    const sanitizedUsername = updateData.username ? sanitizeUsername(updateData.username) : undefined;
+    const sanitizedEmail = updateData.email ? sanitizeEmail(updateData.email) : undefined;
+    const sanitizedMobileNumber = updateData.mobile_number ? sanitizePhone(updateData.mobile_number) : undefined;
+    const sanitizedAddress = updateData.address ? sanitizeAddress(updateData.address) : undefined;
+    const sanitizedRole = updateData.role ? sanitizeRole(updateData.role) : undefined;
+
+    // Validate sanitized inputs
+    if (sanitizedUsername && sanitizedUsername.length < 3) {
+      throw new Error("Invalid username. Must be at least 3 characters and contain only letters, numbers, dots, underscores, and hyphens.");
+    }
+
+    if (sanitizedEmail && !sanitizedEmail.includes('@')) {
+      throw new Error("Invalid email address.");
+    }
+
+    if (updateData.password && !isSafeString(updateData.password)) {
+      throw new Error("Password contains invalid characters.");
+    }
+
     // Check if email is being updated and if it's already taken by another user
-    if (updateData.email && updateData.email !== existingUser.email) {
+    if (sanitizedEmail && sanitizedEmail !== existingUser.email) {
       const emailExists = await ctx.db
         .query("users")
-        .withIndex("by_email", (q) => q.eq("email", updateData.email))
+        .withIndex("by_email", (q) => q.eq("email", sanitizedEmail))
         .first();
 
       if (emailExists && emailExists._id !== userId) {
@@ -502,10 +545,10 @@ export const updateUser = mutation({
     }
 
     // Check if username is being updated and if it's already taken by another user
-    if (updateData.username && updateData.username !== existingUser.username) {
+    if (sanitizedUsername && sanitizedUsername !== existingUser.username) {
       const usernameExists = await ctx.db
         .query("users")
-        .withIndex("by_username", (q) => q.eq("username", updateData.username))
+        .withIndex("by_username", (q) => q.eq("username", sanitizedUsername))
         .first();
 
       if (usernameExists && usernameExists._id !== userId) {
@@ -518,12 +561,12 @@ export const updateUser = mutation({
       updatedAt: Date.now(),
     };
 
-    if (updateData.username !== undefined) fieldsToUpdate.username = updateData.username;
-    if (updateData.email !== undefined) fieldsToUpdate.email = updateData.email;
-    if (updateData.password !== undefined) fieldsToUpdate.password = updateData.password;
-    if (updateData.mobile_number !== undefined) fieldsToUpdate.mobile_number = updateData.mobile_number;
-    if (updateData.address !== undefined) fieldsToUpdate.address = updateData.address;
-    if (updateData.role !== undefined) fieldsToUpdate.role = updateData.role;
+    if (sanitizedUsername !== undefined) fieldsToUpdate.username = sanitizedUsername;
+    if (sanitizedEmail !== undefined) fieldsToUpdate.email = sanitizedEmail;
+    if (updateData.password !== undefined) fieldsToUpdate.password = hashPassword(updateData.password);
+    if (sanitizedMobileNumber !== undefined) fieldsToUpdate.mobile_number = sanitizedMobileNumber;
+    if (sanitizedAddress !== undefined) fieldsToUpdate.address = sanitizedAddress;
+    if (sanitizedRole !== undefined) fieldsToUpdate.role = sanitizedRole as "staff" | "customer" | "admin" | "barber" | "super_admin" | "branch_admin";
     if (updateData.branch_id !== undefined) fieldsToUpdate.branch_id = updateData.branch_id;
     if (updateData.is_active !== undefined) fieldsToUpdate.is_active = updateData.is_active;
 
@@ -549,6 +592,69 @@ export const getAllUsers = query({
   args: {},
   handler: async (ctx) => {
     return await ctx.db.query("users").collect();
+  },
+});
+
+// Request password reset: generate a short-lived token and store on user
+export const requestPasswordReset = mutation({
+  args: {
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+
+    // Do not reveal whether user exists (privacy). If not found, respond success.
+    if (!user) {
+      return { success: true };
+    }
+
+    const token = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const expiresInMs = 1000 * 60 * 15; // 15 minutes
+    await ctx.db.patch(user._id, {
+      password_reset_token: token,
+      password_reset_expires: Date.now() + expiresInMs,
+      updatedAt: Date.now(),
+    });
+
+    // In production: send email with reset link containing the token
+    // e.g., `${process.env.PUBLIC_APP_URL}/auth/reset-password?token=${token}`
+    return { success: true, token };
+  },
+});
+
+// Complete password reset with a valid token
+export const resetPassword = mutation({
+  args: {
+    token: v.string(),
+    new_password: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Scan for a user with this token; Convex doesn't support cross-table search by arbitrary field with index,
+    // so collect and filter. For small user counts in dev this is fine. For prod, add an index if needed.
+    const candidates = await ctx.db.query("users").collect();
+    const user = candidates.find(
+      (u: any) => u.password_reset_token === args.token && typeof u.password_reset_expires === 'number'
+    );
+
+    if (!user) {
+      throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
+    }
+
+    if ((user.password_reset_expires as number) < Date.now()) {
+      throw new Error("Reset token expired");
+    }
+
+    await ctx.db.patch(user._id, {
+      password: hashPassword(args.new_password), // Hash password for security
+      password_reset_token: undefined,
+      password_reset_expires: undefined,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
   },
 });
 
