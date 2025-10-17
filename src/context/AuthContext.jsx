@@ -77,11 +77,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      console.log('Attempting login with:', { email })
-
       const result = await loginMutation({ email, password })
-
-      console.log('Login result:', result)
 
       if (result) {
         // Store session token

@@ -3,7 +3,7 @@ import { mutation, query, action } from "../_generated/server";
 import { api } from "../_generated/api";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { hashPassword, verifyPassword } from "../utils/password";
-import { sanitizeString, sanitizeEmail, sanitizeUsername, sanitizePhone, sanitizeAddress, sanitizeRole, isSafeString } from "../utils/sanitize";
+
 
 // Generate a simple session token (in production, use proper JWT or similar)
 function generateSessionToken() {
@@ -24,31 +24,10 @@ export const registerUser = mutation({
     branch_id: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
-    // Sanitize and validate inputs
-    const sanitizedUsername = sanitizeUsername(args.username);
-    const sanitizedEmail = sanitizeEmail(args.email);
-    const sanitizedMobileNumber = sanitizePhone(args.mobile_number);
-    const sanitizedAddress = sanitizeAddress(args.address || '');
-    const sanitizedNickname = sanitizeString(args.nickname || '');
-    const sanitizedRole = sanitizeRole(args.role);
-
-    // Validate sanitized inputs
-    if (!sanitizedUsername || sanitizedUsername.length < 3) {
-      throw new Error("Invalid username. Must be at least 3 characters and contain only letters, numbers, dots, underscores, and hyphens.");
-    }
-
-    if (!sanitizedEmail || !sanitizedEmail.includes('@')) {
-      throw new Error("Invalid email address.");
-    }
-
-    if (!isSafeString(args.password)) {
-      throw new Error("Password contains invalid characters.");
-    }
-
     // Check if user already exists
     const existingUser = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", sanitizedEmail))
+      .withIndex("by_email", (q) => q.eq("email", args.email))
       .first();
 
     if (existingUser) {
@@ -57,7 +36,7 @@ export const registerUser = mutation({
 
     const existingUsername = await ctx.db
       .query("users")
-      .withIndex("by_username", (q) => q.eq("username", sanitizedUsername))
+      .withIndex("by_username", (q) => q.eq("username", args.username))
       .first();
 
     if (existingUsername) {
@@ -65,20 +44,20 @@ export const registerUser = mutation({
     }
 
     // Validate branch_id for staff users (customers don't need branch_id)
-    if (["staff", "barber", "branch_admin", "admin"].includes(sanitizedRole) && !args.branch_id) {
+    if (["staff", "barber", "branch_admin", "admin"].includes(args.role) && !args.branch_id) {
       throw new Error("Branch ID is required for staff, barber, branch_admin, and admin users");
     }
 
     // Create new user
     const userId = await ctx.db.insert("users", {
-      username: sanitizedUsername,
-      email: sanitizedEmail,
+      username: args.username,
+      email: args.email,
       password: hashPassword(args.password), // Hash password for security
-      mobile_number: sanitizedMobileNumber,
-      address: sanitizedAddress,
-      nickname: sanitizedNickname,
-      birthday: sanitizeString(args.birthday || ''),
-      role: sanitizedRole as "staff" | "customer" | "admin" | "barber" | "super_admin" | "branch_admin",
+      mobile_number: args.mobile_number,
+      address: args.address,
+      nickname: args.nickname,
+      birthday: args.birthday || '',
+      role: args.role as "staff" | "customer" | "admin" | "barber" | "super_admin" | "branch_admin",
       branch_id: args.branch_id,
       is_active: true,
       avatar: undefined,
@@ -138,9 +117,30 @@ export const loginUser = mutation({
       throwUserError(ERROR_CODES.AUTH_ACCOUNT_INACTIVE);
     }
 
-    // Check password using hash verification
-    if (!verifyPassword(args.password, user.password)) {
+    // Check password - support both plain text (legacy) and hashed passwords
+    const isHashedPassword = user.password.length > 50; // Hashed passwords are longer
+    let isPasswordValid = false;
+    
+    if (isHashedPassword) {
+      // Try hash verification first
+      isPasswordValid = verifyPassword(args.password, user.password);
+    } 
+    
+    // If hash verification fails or it's not a hashed password, try plain text comparison
+    if (!isPasswordValid) {
+      isPasswordValid = args.password === user.password;
+    }
+    
+    if (!isPasswordValid) {
       throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
+    }
+
+    // If password is plain text, update it to hashed version for next time
+    if (!isHashedPassword && isPasswordValid) {
+      await ctx.db.patch(user._id, {
+        password: hashPassword(args.password),
+        updatedAt: Date.now(),
+      });
     }
 
     // Create new session
@@ -512,31 +512,11 @@ export const updateUser = mutation({
       throw new Error("User not found");
     }
 
-    // Sanitize inputs
-    const sanitizedUsername = updateData.username ? sanitizeUsername(updateData.username) : undefined;
-    const sanitizedEmail = updateData.email ? sanitizeEmail(updateData.email) : undefined;
-    const sanitizedMobileNumber = updateData.mobile_number ? sanitizePhone(updateData.mobile_number) : undefined;
-    const sanitizedAddress = updateData.address ? sanitizeAddress(updateData.address) : undefined;
-    const sanitizedRole = updateData.role ? sanitizeRole(updateData.role) : undefined;
-
-    // Validate sanitized inputs
-    if (sanitizedUsername && sanitizedUsername.length < 3) {
-      throw new Error("Invalid username. Must be at least 3 characters and contain only letters, numbers, dots, underscores, and hyphens.");
-    }
-
-    if (sanitizedEmail && !sanitizedEmail.includes('@')) {
-      throw new Error("Invalid email address.");
-    }
-
-    if (updateData.password && !isSafeString(updateData.password)) {
-      throw new Error("Password contains invalid characters.");
-    }
-
     // Check if email is being updated and if it's already taken by another user
-    if (sanitizedEmail && sanitizedEmail !== existingUser.email) {
+    if (updateData.email && updateData.email !== existingUser.email) {
       const emailExists = await ctx.db
         .query("users")
-        .withIndex("by_email", (q) => q.eq("email", sanitizedEmail))
+        .withIndex("by_email", (q) => q.eq("email", updateData.email))
         .first();
 
       if (emailExists && emailExists._id !== userId) {
@@ -545,10 +525,10 @@ export const updateUser = mutation({
     }
 
     // Check if username is being updated and if it's already taken by another user
-    if (sanitizedUsername && sanitizedUsername !== existingUser.username) {
+    if (updateData.username && updateData.username !== existingUser.username) {
       const usernameExists = await ctx.db
         .query("users")
-        .withIndex("by_username", (q) => q.eq("username", sanitizedUsername))
+        .withIndex("by_username", (q) => q.eq("username", updateData.username))
         .first();
 
       if (usernameExists && usernameExists._id !== userId) {
@@ -561,12 +541,12 @@ export const updateUser = mutation({
       updatedAt: Date.now(),
     };
 
-    if (sanitizedUsername !== undefined) fieldsToUpdate.username = sanitizedUsername;
-    if (sanitizedEmail !== undefined) fieldsToUpdate.email = sanitizedEmail;
+    if (updateData.username !== undefined) fieldsToUpdate.username = updateData.username;
+    if (updateData.email !== undefined) fieldsToUpdate.email = updateData.email;
     if (updateData.password !== undefined) fieldsToUpdate.password = hashPassword(updateData.password);
-    if (sanitizedMobileNumber !== undefined) fieldsToUpdate.mobile_number = sanitizedMobileNumber;
-    if (sanitizedAddress !== undefined) fieldsToUpdate.address = sanitizedAddress;
-    if (sanitizedRole !== undefined) fieldsToUpdate.role = sanitizedRole as "staff" | "customer" | "admin" | "barber" | "super_admin" | "branch_admin";
+    if (updateData.mobile_number !== undefined) fieldsToUpdate.mobile_number = updateData.mobile_number;
+    if (updateData.address !== undefined) fieldsToUpdate.address = updateData.address;
+    if (updateData.role !== undefined) fieldsToUpdate.role = updateData.role as "staff" | "customer" | "admin" | "barber" | "super_admin" | "branch_admin";
     if (updateData.branch_id !== undefined) fieldsToUpdate.branch_id = updateData.branch_id;
     if (updateData.is_active !== undefined) fieldsToUpdate.is_active = updateData.is_active;
 
