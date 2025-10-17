@@ -588,6 +588,35 @@ export const updateUser = mutation({
   },
 });
 
+// Delete user mutation (for admin use)
+export const deleteUser = mutation({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Get existing user
+    const existingUser = await ctx.db.get(args.userId);
+    if (!existingUser) {
+      throw new Error("User not found");
+    }
+
+    // Delete all sessions for this user
+    const userSessions = await ctx.db
+      .query("sessions")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+    
+    for (const session of userSessions) {
+      await ctx.db.delete(session._id);
+    }
+
+    // Delete the user
+    await ctx.db.delete(args.userId);
+
+    return { success: true };
+  },
+});
+
 export const getAllUsers = query({
   args: {},
   handler: async (ctx) => {

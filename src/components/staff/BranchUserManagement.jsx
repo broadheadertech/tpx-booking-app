@@ -5,11 +5,364 @@ import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
 import { User, UserPlus, Edit, Trash2, Building, Users, Search, Filter, X, Save, AlertCircle } from 'lucide-react'
 
+// User Form Modal Component (moved outside to prevent re-renders)
+const UserFormModal = React.memo(({ isOpen, onClose, title, onSubmit, formData, onInputChange, loading, error }) => {
+    if (!isOpen) return null
+
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+            onClick={onClose}
+          />
+          <div className="relative w-full max-w-md transform rounded-2xl bg-[#1A1A1A] shadow-2xl transition-all z-[10000] border border-[#2A2A2A]/50">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-[#444444]/30">
+              <h3 className="text-xl font-bold text-white">{title}</h3>
+              <button
+                onClick={onClose}
+                className="p-2 text-gray-400 hover:text-white hover:bg-[#333333] rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              {error && (
+                <div className="mb-4 p-3 bg-red-400/20 border border-red-400/30 rounded-lg flex items-center space-x-2">
+                  <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
+                  <p className="text-sm text-red-400">{error}</p>
+                </div>
+              )}
+
+              <form onSubmit={onSubmit} className="space-y-4">
+                {/* Info Note */}
+                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                  <p className="text-sm text-blue-400">
+                    <strong>Note:</strong> This form creates staff accounts only. To create barber accounts, use the Barber Management section.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Username *</label>
+                  <input
+                    type="text"
+                    value={formData.username}
+                    onChange={(e) => onInputChange('username', e.target.value)}
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    placeholder="Enter username"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Email *</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => onInputChange('email', e.target.value)}
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    placeholder="Enter email address"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Password *</label>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => onInputChange('password', e.target.value)}
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    placeholder="Enter password"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Mobile Number</label>
+                  <input
+                    type="tel"
+                    value={formData.mobile_number}
+                    onChange={(e) => onInputChange('mobile_number', e.target.value)}
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    placeholder="Enter mobile number"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Address</label>
+                  <textarea
+                    value={formData.address}
+                    onChange={(e) => onInputChange('address', e.target.value)}
+                    rows="2"
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    placeholder="Enter address"
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-2 border border-gray-500 text-gray-300 rounded-lg hover:bg-gray-500/20 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Save className="h-4 w-4" />
+                    <span>{loading ? 'Creating...' : 'Create User'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
+})
+
+// Edit User Modal Component
+const EditUserModal = React.memo(({ isOpen, onClose, onSubmit, user, formData, onInputChange, loading, error }) => {
+    if (!isOpen) return null
+
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+            onClick={onClose}
+          />
+          <div className="relative w-full max-w-md transform rounded-2xl bg-[#1A1A1A] shadow-2xl transition-all z-[10000] border border-[#2A2A2A]/50">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-[#444444]/30">
+              <h3 className="text-xl font-bold text-white">Edit User</h3>
+              <button
+                onClick={onClose}
+                className="p-2 text-gray-400 hover:text-white hover:bg-[#333333] rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              {error && (
+                <div className="mb-4 p-3 bg-red-400/20 border border-red-400/30 rounded-lg flex items-center space-x-2">
+                  <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
+                  <p className="text-sm text-red-400">{error}</p>
+                </div>
+              )}
+
+              <form onSubmit={onSubmit} className="space-y-4">
+                {/* User Info Display */}
+                <div className="p-3 bg-gray-500/10 border border-gray-500/30 rounded-lg">
+                  <p className="text-sm text-gray-400">
+                    <strong>Editing:</strong> {user?.username} ({user?.email})
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Username *</label>
+                  <input
+                    type="text"
+                    value={formData.username}
+                    onChange={(e) => onInputChange('username', e.target.value)}
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    placeholder="Enter username"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Email *</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => onInputChange('email', e.target.value)}
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    placeholder="Enter email address"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">New Password</label>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => onInputChange('password', e.target.value)}
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    placeholder="Leave blank to keep current password"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Leave blank to keep current password</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Mobile Number</label>
+                  <input
+                    type="tel"
+                    value={formData.mobile_number}
+                    onChange={(e) => onInputChange('mobile_number', e.target.value)}
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    placeholder="Enter mobile number"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Address</label>
+                  <textarea
+                    value={formData.address}
+                    onChange={(e) => onInputChange('address', e.target.value)}
+                    rows="2"
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    placeholder="Enter address"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Role</label>
+                  <select
+                    value={formData.role}
+                    onChange={(e) => onInputChange('role', e.target.value)}
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                  >
+                    <option value="staff">Staff</option>
+                    <option value="barber">Barber</option>
+                  </select>
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-2 border border-gray-500 text-gray-300 rounded-lg hover:bg-gray-500/20 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Save className="h-4 w-4" />
+                    <span>{loading ? 'Updating...' : 'Update User'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
+})
+
+// Delete User Modal Component
+const DeleteUserModal = React.memo(({ isOpen, onClose, onConfirm, user, loading, error }) => {
+    if (!isOpen) return null
+
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+            onClick={onClose}
+          />
+          <div className="relative w-full max-w-md transform rounded-2xl bg-[#1A1A1A] shadow-2xl transition-all z-[10000] border border-[#2A2A2A]/50">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-[#444444]/30">
+              <h3 className="text-xl font-bold text-white">Delete User</h3>
+              <button
+                onClick={onClose}
+                className="p-2 text-gray-400 hover:text-white hover:bg-[#333333] rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6">
+              {error && (
+                <div className="mb-4 p-3 bg-red-400/20 border border-red-400/30 rounded-lg flex items-center space-x-2">
+                  <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
+                  <p className="text-sm text-red-400">{error}</p>
+                </div>
+              )}
+
+              <div className="text-center">
+                <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Trash2 className="h-8 w-8 text-red-400" />
+                </div>
+                
+                <h4 className="text-lg font-semibold text-white mb-2">Confirm Deletion</h4>
+                <p className="text-gray-400 mb-4">
+                  Are you sure you want to delete <strong>{user?.username}</strong>?
+                </p>
+                <p className="text-sm text-gray-500 mb-6">
+                  This action cannot be undone. The user will be permanently removed from the system.
+                </p>
+
+                <div className="bg-gray-500/10 border border-gray-500/30 rounded-lg p-3 mb-6 text-left">
+                  <p className="text-sm text-gray-400">
+                    <strong>User Details:</strong><br />
+                    Username: {user?.username}<br />
+                    Email: {user?.email}<br />
+                    Role: {user?.role?.replace('_', ' ').toUpperCase()}
+                  </p>
+                </div>
+
+                <div className="flex justify-center space-x-3">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-6 py-2 border border-gray-500 text-gray-300 rounded-lg hover:bg-gray-500/20 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onConfirm}
+                    disabled={loading}
+                    className="flex items-center space-x-2 px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Deleting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="h-4 w-4" />
+                        <span>Delete User</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
+})
+
 export default function BranchUserManagement() {
   const { user } = useAuth()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRole, setFilterRole] = useState('all')
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [selectedUser, setSelectedUser] = useState(null)
   const initialFormData = {
     username: '',
     email: '',
@@ -33,6 +386,8 @@ export default function BranchUserManagement() {
   
   // Mutations
   const createUser = useMutation(api.services.auth.createUser)
+  const updateUser = useMutation(api.services.auth.updateUser)
+  const deleteUser = useMutation(api.services.auth.deleteUser)
 
   // Filter to only show staff and barbers (not customers or admins)
   const staffAndBarbers = branchUsers.filter(u => u.role === 'staff' || u.role === 'barber')
@@ -109,6 +464,84 @@ export default function BranchUserManagement() {
     }))
   }
 
+  const handleEdit = (user) => {
+    setSelectedUser(user)
+    setFormData({
+      username: user.username,
+      email: user.email,
+      password: '', // Don't pre-fill password for security
+      mobile_number: user.mobile_number || '',
+      address: user.address || '',
+      role: user.role
+    })
+    setError('')
+    setShowEditModal(true)
+  }
+
+  const handleDelete = (user) => {
+    setSelectedUser(user)
+    setShowDeleteModal(true)
+  }
+
+  const handleSubmitEdit = async (e) => {
+    e.preventDefault()
+    if (!formData.username.trim() || !formData.email.trim()) {
+      setError('Username and email are required')
+      return
+    }
+
+    if (!selectedUser?._id) {
+      setError('User ID is missing')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const updateData = {
+        userId: selectedUser._id,
+        username: formData.username,
+        email: formData.email,
+        mobile_number: formData.mobile_number,
+        address: formData.address,
+        role: formData.role
+      }
+
+      // Only include password if it's provided
+      if (formData.password.trim()) {
+        updateData.password = formData.password
+      }
+
+      await updateUser(updateData)
+      setShowEditModal(false)
+      resetForm()
+      setSelectedUser(null)
+    } catch (error) {
+      console.error('Error updating user:', error)
+      setError(error.message || 'Failed to update user')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!selectedUser?._id) {
+      setError('User ID is missing')
+      return
+    }
+
+    setLoading(true)
+    try {
+      await deleteUser({ userId: selectedUser._id })
+      setShowDeleteModal(false)
+      setSelectedUser(null)
+    } catch (error) {
+      console.error('Error deleting user:', error)
+      setError(error.message || 'Failed to delete user')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const formatDate = (timestamp) => {
     return new Date(timestamp).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -117,129 +550,7 @@ export default function BranchUserManagement() {
     })
   }
 
-  // User Form Modal Component
-  const UserFormModal = ({ isOpen, onClose, title, onSubmit }) => {
-    if (!isOpen) return null
-
-    return createPortal(
-      <div className="fixed inset-0 z-[9999] overflow-y-auto">
-        <div className="flex min-h-full items-center justify-center p-4">
-          <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
-            onClick={onClose}
-          />
-          <div className="relative w-full max-w-md transform rounded-2xl bg-[#1A1A1A] shadow-2xl transition-all z-[10000] border border-[#2A2A2A]/50">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-[#444444]/30">
-              <h3 className="text-xl font-bold text-white">{title}</h3>
-              <button
-                onClick={onClose}
-                className="p-2 text-gray-400 hover:text-white hover:bg-[#333333] rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6">
-              {error && (
-                <div className="mb-4 p-3 bg-red-400/20 border border-red-400/30 rounded-lg flex items-center space-x-2">
-                  <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
-                  <p className="text-sm text-red-400">{error}</p>
-                </div>
-              )}
-
-              <form onSubmit={onSubmit} className="space-y-4">
-                {/* Info Note */}
-                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                  <p className="text-sm text-blue-400">
-                    <strong>Note:</strong> This form creates staff accounts only. To create barber accounts, use the Barber Management section.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Username *</label>
-                  <input
-                    type="text"
-                    value={formData.username}
-                    onChange={(e) => handleInputChange('username', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
-                    placeholder="Enter username"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Email *</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
-                    placeholder="Enter email address"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Password *</label>
-                  <input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
-                    placeholder="Enter password"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Mobile Number</label>
-                  <input
-                    type="tel"
-                    value={formData.mobile_number}
-                    onChange={(e) => handleInputChange('mobile_number', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
-                    placeholder="Enter mobile number"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Address</label>
-                  <textarea
-                    value={formData.address}
-                    onChange={(e) => handleInputChange('address', e.target.value)}
-                    rows="2"
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
-                    placeholder="Enter address"
-                  />
-                </div>
-
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="px-4 py-2 border border-gray-500 text-gray-300 rounded-lg hover:bg-gray-500/20 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Save className="h-4 w-4" />
-                    <span>{loading ? 'Creating...' : 'Create User'}</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>,
-      document.body
-    )
-  }
+  
 
   if (!currentBranch) {
     return (
@@ -404,9 +715,18 @@ export default function BranchUserManagement() {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
                         <button
-                          className="text-blue-400 hover:text-blue-300"
+                          onClick={() => handleEdit(user)}
+                          className="text-blue-400 hover:text-blue-300 transition-colors"
+                          title="Edit user"
                         >
                           <Edit className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(user)}
+                          className="text-red-400 hover:text-red-300 transition-colors"
+                          title="Delete user"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </td>
@@ -440,6 +760,40 @@ export default function BranchUserManagement() {
         }}
         title="Add User to Branch"
         onSubmit={handleSubmitCreate}
+        formData={formData}
+        onInputChange={handleInputChange}
+        loading={loading}
+        error={error}
+      />
+
+      {/* Edit User Modal */}
+      <EditUserModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false)
+          resetForm()
+          setSelectedUser(null)
+        }}
+        onSubmit={handleSubmitEdit}
+        user={selectedUser}
+        formData={formData}
+        onInputChange={handleInputChange}
+        loading={loading}
+        error={error}
+      />
+
+      {/* Delete User Modal */}
+      <DeleteUserModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false)
+          setSelectedUser(null)
+          setError('')
+        }}
+        onConfirm={handleConfirmDelete}
+        user={selectedUser}
+        loading={loading}
+        error={error}
       />
     </div>
   )

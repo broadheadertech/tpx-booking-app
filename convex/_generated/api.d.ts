@@ -31,6 +31,9 @@ import type * as services_services from "../services/services.js";
 import type * as services_transactions from "../services/transactions.js";
 import type * as services_vouchers from "../services/vouchers.js";
 import type * as utils_errors from "../utils/errors.js";
+import type * as utils_password from "../utils/password.js";
+import type * as utils_passwordActions from "../utils/passwordActions.js";
+import type * as utils_sanitize from "../utils/sanitize.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -59,6 +62,9 @@ declare const fullApi: ApiFromModules<{
   "services/transactions": typeof services_transactions;
   "services/vouchers": typeof services_vouchers;
   "utils/errors": typeof utils_errors;
+  "utils/password": typeof utils_password;
+  "utils/passwordActions": typeof utils_passwordActions;
+  "utils/sanitize": typeof utils_sanitize;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,
