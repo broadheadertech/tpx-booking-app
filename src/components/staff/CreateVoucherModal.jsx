@@ -113,42 +113,42 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
 
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Create New Voucher" size="lg">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <h3 className="text-lg font-black text-[#1A1A1A] uppercase tracking-wide flex items-center">
-              <Gift className="w-5 h-5 text-[#FF8C42] mr-2" />
-              Voucher Details
+    <Modal isOpen={isOpen} onClose={onClose} title="Create Voucher" size="lg" compact variant="dark">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Two Column Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Left Column - Voucher Details */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold text-gray-200 uppercase tracking-wider flex items-center">
+              <Gift className="w-3.5 h-3.5 text-[#FF8C42] mr-1.5" />
+              Details
             </h3>
             
+            {/* Code */}
             <div>
-              <label className="block text-[#1A1A1A] font-bold text-base mb-2">
-                Voucher Code <span className="text-red-500">*</span>
-              </label>
-              <div className="flex space-x-2">
+              <label className="block text-xs text-gray-400 mb-1">Voucher Code *</label>
+              <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder="Enter voucher code"
+                  placeholder="CODE"
                   value={formData.code}
                   onChange={(e) => handleInputChange('code', e.target.value.toUpperCase())}
                   required
-                  className="flex-1 h-12 px-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200 font-mono"
+                  className="flex-1 h-8 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 font-mono transition-all"
                 />
-                <Button
+                <button
                   type="button"
                   onClick={generateVoucherCode}
-                  className="px-6 bg-[#6B6B6B] hover:bg-[#4A4A4A] text-white rounded-xl"
+                  className="px-3 h-8 bg-[#2A2A2A] hover:bg-[#333333] text-gray-300 rounded-lg text-xs font-medium transition-colors"
                 >
-                  Generate
-                </Button>
+                  Gen
+                </button>
               </div>
             </div>
 
+            {/* Points Required */}
             <div>
-              <label className="block text-[#1A1A1A] font-bold text-base mb-2">
-                Points Required <span className="text-red-500">*</span>
-              </label>
+              <label className="block text-xs text-gray-400 mb-1">Points Required *</label>
               <input
                 type="number"
                 placeholder="100"
@@ -156,14 +156,13 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
                 onChange={(e) => handleInputChange('points_required', e.target.value)}
                 required
                 min="0"
-                className="w-full h-12 px-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200"
+                className="w-full h-8 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 transition-all"
               />
             </div>
 
+            {/* Max Uses */}
             <div>
-              <label className="block text-[#1A1A1A] font-bold text-base mb-2">
-                Max Uses <span className="text-red-500">*</span>
-              </label>
+              <label className="block text-xs text-gray-400 mb-1">Max Uses *</label>
               <input
                 type="number"
                 placeholder="1"
@@ -171,89 +170,79 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
                 onChange={(e) => handleInputChange('max_uses', e.target.value)}
                 required
                 min="1"
-                className="w-full h-12 px-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200"
+                className="w-full h-8 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 transition-all"
               />
             </div>
 
+            {/* Value */}
             <div>
-              <label className="block text-[#1A1A1A] font-bold text-base mb-2">
-                Value <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  placeholder="50.00"
-                  value={formData.value}
-                  onChange={(e) => handleInputChange('value', e.target.value)}
-                  required
-                  min="0.01"
-                  step="0.01"
-                  className="w-full h-12 px-4 pr-12 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200"
-                />
-                <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-[#6B6B6B] font-bold">
-                  ₱
-                </div>
-              </div>
+              <label className="block text-xs text-gray-400 mb-1">Value (₱) *</label>
+              <input
+                type="number"
+                placeholder="50.00"
+                value={formData.value}
+                onChange={(e) => handleInputChange('value', e.target.value)}
+                required
+                min="0.01"
+                step="0.01"
+                className="w-full h-8 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 transition-all"
+              />
             </div>
 
+            {/* Expiry Date */}
             <div>
-              <label className="block text-[#1A1A1A] font-bold text-base mb-2">
-                Expiry Date <span className="text-red-500">*</span>
-              </label>
+              <label className="block text-xs text-gray-400 mb-1">Expiry Date *</label>
               <input
                 type="datetime-local"
                 value={formData.expires_at}
                 onChange={(e) => handleInputChange('expires_at', e.target.value)}
                 required
-                className="w-full h-12 px-4 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200"
+                className="w-full h-8 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 transition-all"
               />
             </div>
           </div>
           
-          <div className="space-y-4">
-            <h3 className="text-lg font-black text-[#1A1A1A] uppercase tracking-wide flex items-center">
-              <User className="w-5 h-5 text-[#FF8C42] mr-2" />
-              Description
+          {/* Right Column - Description & Preview */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-bold text-gray-200 uppercase tracking-wider flex items-center">
+              <User className="w-3.5 h-3.5 text-[#FF8C42] mr-1.5" />
+              Info & Preview
             </h3>
 
+            {/* Description */}
             <div>
-              <label className="block text-[#1A1A1A] font-bold text-base mb-2">
-                Description
-              </label>
+              <label className="block text-xs text-gray-400 mb-1">Description (Optional)</label>
               <textarea
-                placeholder="Describe what this voucher is for..."
+                placeholder="What is this voucher for?"
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
-                rows={6}
-                className="w-full px-4 py-3 border-2 border-[#F5F5F5] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200 resize-none"
+                rows={3}
+                className="w-full px-2.5 py-1.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 resize-none transition-all"
               />
             </div>
 
-            <div className="bg-[#FF8C42]/10 border-2 border-[#FF8C42]/20 rounded-2xl p-4">
-              <h4 className="text-base font-bold text-[#1A1A1A] mb-2 flex items-center">
-                <QrCode className="w-4 h-4 mr-2" />
-                Voucher Preview
+            {/* QR Preview */}
+            <div className="bg-gradient-to-r from-[#1A1A1A] to-[#222222] border border-[#FF8C42]/20 rounded-lg p-2.5">
+              <h4 className="text-xs font-bold text-white mb-2 flex items-center">
+                <QrCode className="w-3 h-3 mr-1.5" />
+                Preview
               </h4>
-              <div className="bg-white rounded-xl p-4 border border-[#FF8C42]/30">
-                <div className="text-center">
-                  <div className="text-lg font-black text-[#1A1A1A] font-mono mb-2">
-                    {formData.code || 'VOUCHER-CODE'}
+              <div className="bg-[#0F0F0F]/50 rounded-lg p-2.5 border border-[#333333]/50">
+                <div className="text-center space-y-1">
+                  <div className="text-xs font-mono text-[#FF8C42] font-bold">
+                    {formData.code || 'CODE'}
                   </div>
-                  <div className="text-2xl font-black text-[#FF8C42] my-2">
-                    ₱{formData.value || '0'} OFF
+                  <div className="text-sm font-bold text-[#FF8C42]">
+                    ₱{formData.value || '0'}
                   </div>
-                  <div className="text-sm text-[#6B6B6B] mb-2">
-                    Points Required: {formData.points_required || '0'}
-                  </div>
-                  <div className="text-sm text-[#6B6B6B] mb-2">
-                    Max Uses: {formData.max_uses || '1'}
-                  </div>
-                  <div className="text-sm text-[#6B6B6B] mb-3">
-                    Expires: {formData.expires_at ? new Date(formData.expires_at).toLocaleDateString() : 'Not Set'}
+                  <div className="text-xs text-gray-400 space-y-0.5">
+                    <div>Pts: {formData.points_required || '0'}</div>
+                    <div>Max: {formData.max_uses || '1'}</div>
+                    <div>{formData.expires_at ? new Date(formData.expires_at).toLocaleDateString() : 'No date'}</div>
                   </div>
                   {qrCodeUrl && (
-                    <div className="flex justify-center">
-                      <img src={qrCodeUrl} alt="Voucher QR Code" className="w-24 h-24" />
+                    <div className="flex justify-center pt-1.5">
+                      <img src={qrCodeUrl} alt="Voucher QR" className="w-16 h-16" />
                     </div>
                   )}
                 </div>
@@ -262,22 +251,23 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
           </div>
         </div>
 
-        <div className="flex space-x-4 pt-6 border-t border-[#F5F5F5]">
-          <Button
+        {/* Action Buttons */}
+        <div className="flex gap-3 pt-3 border-t border-[#333333]">
+          <button
             type="button"
-            variant="outline"
             onClick={onClose}
-            className="flex-1 border-[#6B6B6B] text-[#6B6B6B] hover:bg-[#6B6B6B] hover:text-white"
+            className="flex-1 h-9 bg-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#333333] transition-colors text-sm font-medium disabled:opacity-50"
+            disabled={isLoading}
           >
             Cancel
-          </Button>
-          <Button
+          </button>
+          <button
             type="submit"
             disabled={isLoading}
-            className="flex-1 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 h-9 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:shadow-lg disabled:opacity-50 transition-all text-sm font-medium"
           >
             {isLoading ? 'Creating...' : 'Create Voucher'}
-          </Button>
+          </button>
         </div>
       </form>
     </Modal>

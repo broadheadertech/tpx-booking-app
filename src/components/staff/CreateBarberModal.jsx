@@ -19,7 +19,6 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
     is_active: true,
     services: [],
     experience: '0 years',
-    specialties: [],
     avatar: '',
     avatarStorageId: undefined
   })
@@ -38,7 +37,6 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
         is_active: editingBarber.is_active ?? true,
         services: editingBarber.services || [],
         experience: editingBarber.experience || '0 years',
-        specialties: editingBarber.specialties || [],
         avatar: editingBarber.avatar || '',
         avatarStorageId: editingBarber.avatarStorageId || undefined
       })
@@ -54,7 +52,6 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
         is_active: true,
         services: [],
         experience: '0 years',
-        specialties: [],
         avatar: '',
         avatarStorageId: undefined
       })
@@ -173,7 +170,6 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
           is_active: formData.is_active,
           services: formData.services,
           experience: formData.experience || '0 years',
-          specialties: formData.specialties,
           avatar: formData.avatar || '',
           avatarStorageId: formData.avatarStorageId || undefined
         }
@@ -207,7 +203,6 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
           services: formData.services,
           branch_id: user.branch_id,
           experience: formData.experience || '0 years',
-          specialties: formData.specialties,
           avatar: formData.avatar || '',
           avatarStorageId: formData.avatarStorageId || undefined
         }
@@ -237,7 +232,6 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
           is_active: true,
           services: [],
           experience: '0 years',
-          specialties: [],
           avatar: '',
           avatarStorageId: undefined
         })
@@ -289,7 +283,6 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
       is_active: true,
       services: [],
       experience: '0 years',
-      specialties: [],
       avatar: '',
       avatarStorageId: undefined
     })
@@ -620,22 +613,6 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                   <p className="text-sm text-gray-400 p-2">No services available</p>
                 )}
               </div>
-            </div>
-
-            <div>
-              <label className="block text-gray-300 font-medium text-sm mb-2">
-                Specialties (comma-separated)
-              </label>
-              <textarea
-                value={formData.specialties.join(', ')}
-                onChange={(e) => {
-                  const specialties = e.target.value.split(',').map(s => s.trim()).filter(s => s)
-                  handleInputChange('specialties', specialties)
-                }}
-                placeholder="e.g., Fade cuts, Beard styling, Hair coloring"
-                rows={3}
-                className="w-full px-3 py-2 border border-[#444444] rounded-lg text-sm bg-[#1A1A1A] text-white focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all duration-200 resize-none"
-              />
             </div>
 
             {/* Barber Preview */}

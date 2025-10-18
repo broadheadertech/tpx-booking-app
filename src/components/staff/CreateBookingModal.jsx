@@ -62,8 +62,6 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
   const createBooking = useMutation(api.services.bookings.createBooking)
   const createWalkinCustomer = useMutation(api.services.auth.registerUser)
 
-  // Convex handles data loading automatically
-
   // Handle clicking outside dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -108,6 +106,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
       // Validate customer selection
       if (formData.customerType === 'existing' && !formData.customer) {
         setFieldErrors({ customer: 'Please select a customer' })
+        setLoading(false)
         return
       }
 
@@ -115,35 +114,41 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
       if (formData.customerType === 'walkin') {
         if (!formData.walkinName.trim()) {
           setFieldErrors({ walkinName: 'Customer name is required' })
+          setLoading(false)
           return
         }
         if (formData.walkinName.trim().length < 2) {
           setFieldErrors({ walkinName: 'Customer name must be at least 2 characters' })
+          setLoading(false)
           return
         }
         if (!formData.walkinPhone.trim()) {
           setFieldErrors({ walkinPhone: 'Phone number is required' })
+          setLoading(false)
           return
         }
         // Validate Philippine phone number format
         const phoneRegex = /^(\+63|0)[9][0-9]{9}$/
         if (!phoneRegex.test(formData.walkinPhone.replace(/\s/g, ''))) {
           setFieldErrors({ walkinPhone: 'Please enter a valid Philippine phone number (e.g., 09123456789)' })
+          setLoading(false)
           return
         }
         if (formData.walkinEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.walkinEmail)) {
           setFieldErrors({ walkinEmail: 'Please enter a valid email address' })
+          setLoading(false)
           return
         }
 
-        // Create walk-in customer
+        // Create walk-in customer with branch_id
         try {
           const walkinCustomerData = {
             username: `walkin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             password: 'walkin_temp', // Temporary password
             email: formData.walkinEmail || `walkin_${Date.now()}@temp.local`,
             mobile_number: formData.walkinPhone,
-            role: 'customer'
+            role: 'customer',
+            branch_id: user?.branch_id // IMPORTANT: Add branch_id for walk-in customers
           }
 
           const walkinResult = await createWalkinCustomer(walkinCustomerData)
@@ -152,7 +157,8 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
           console.log('Walk-in customer created:', customerId)
         } catch (walkinErr) {
           console.error('Error creating walk-in customer:', walkinErr)
-          setError('Failed to create walk-in customer. Please try again.')
+          setError(`Failed to create walk-in customer: ${walkinErr.message || 'Unknown error'}`)
+          setLoading(false)
           return
         }
       }
@@ -160,14 +166,25 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
       // Validate other required fields
       if (!formData.service) {
         setFieldErrors({ service: 'Please select a service' })
+        setLoading(false)
         return
       }
       if (!formData.date) {
         setFieldErrors({ date: 'Please select a date' })
+        setLoading(false)
         return
       }
       if (!formData.time) {
         setFieldErrors({ time: 'Please select a time' })
+        setLoading(false)
+        return
+      }
+
+      // Validate service exists
+      const selectedService = services?.find(s => s._id === formData.service)
+      if (!selectedService) {
+        setError('Selected service is no longer available. Please refresh and try again.')
+        setLoading(false)
         return
       }
 
@@ -178,6 +195,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
 
       if (selectedDate < today) {
         setFieldErrors({ date: 'Cannot book appointments in the past' })
+        setLoading(false)
         return
       }
 
@@ -186,14 +204,30 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
       maxDate.setDate(maxDate.getDate() + 30)
       if (selectedDate > maxDate) {
         setFieldErrors({ date: 'Cannot book appointments more than 30 days in advance' })
+        setLoading(false)
         return
       }
 
+      // Parse time - handle both 12-hour (with AM/PM) and 24-hour formats
+      const timeParts = formData.time.split(' ')
+      let hour = 0
+      
+      if (timeParts.length === 2) {
+        // 12-hour format with AM/PM
+        const [time, modifier] = timeParts
+        const [hours] = time.split(':')
+        hour = parseInt(hours, 10)
+        if (modifier === 'PM' && hour !== 12) hour += 12
+        if (modifier === 'AM' && hour === 12) hour = 0
+      } else {
+        // 24-hour format
+        hour = parseInt(formData.time.split(':')[0], 10)
+      }
+
       // Validate business hours (9 AM to 5 PM)
-      const selectedTime = formData.time
-      const hour = parseInt(selectedTime.split(':')[0])
       if (hour < 9 || hour >= 17) {
         setFieldErrors({ time: 'Please select a time between 9:00 AM and 5:00 PM' })
+        setLoading(false)
         return
       }
 
@@ -201,25 +235,37 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
       const selectedSlot = timeSlots.find(slot => slot.display === formData.time)
       if (selectedSlot && !selectedSlot.available) {
         setFieldErrors({ time: 'This time slot is already booked. Please select another time.' })
+        setLoading(false)
         return
       }
 
       // Validate notes length if provided
       if (formData.notes && formData.notes.length > 500) {
         setFieldErrors({ notes: 'Notes cannot exceed 500 characters' })
+        setLoading(false)
         return
       }
 
-      // Convert 12-hour time to 24-hour format for API
-      const convertTo24Hour = (time12h) => {
-        const [time, modifier] = time12h.split(' ')
+      // Convert 12-hour time to 24-hour format for API (if needed)
+      const convertTo24Hour = (displayTime) => {
+        const timeParts = displayTime.split(' ')
+        
+        // If already in 24-hour format or only has one part, parse directly
+        if (timeParts.length === 1) {
+          return timeParts[0] // Already 24-hour format
+        }
+        
+        // Convert from 12-hour to 24-hour format
+        const [time, modifier] = timeParts
         let [hours, minutes] = time.split(':')
-        if (hours === '12') {
-          hours = '00'
+        hours = parseInt(hours, 10)
+        
+        if (modifier === 'AM') {
+          if (hours === 12) hours = 0
+        } else if (modifier === 'PM') {
+          if (hours !== 12) hours += 12
         }
-        if (modifier === 'PM') {
-          hours = parseInt(hours, 10) + 12
-        }
+        
         return `${hours.toString().padStart(2, '0')}:${minutes}`
       }
 
@@ -227,12 +273,22 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
       const bookingData = {
         customer: customerId,
         service: formData.service,
-        branch_id: user.branch_id, // Add branch_id for branch-scoped booking
+        branch_id: user.branch_id, // Required for branch-scoped booking
         barber: formData.barber || undefined,
         date: formData.date,
         time: convertTo24Hour(formData.time),
         status: 'booked',
         notes: formData.notes || undefined
+      }
+
+      // Validate barber exists if provided
+      if (formData.barber) {
+        const selectedBarber = barbers?.find(b => b._id === formData.barber)
+        if (!selectedBarber) {
+          setError('Selected barber is no longer available. Please select another.')
+          setLoading(false)
+          return
+        }
       }
 
       console.log('Creating booking:', bookingData)
@@ -244,16 +300,16 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
 
       // Get booking details for success display
       const serviceDetails = services?.find(s => s._id === formData.service)
-      const barberDetails = barbers?.find(b => b._id === formData.barber)
+      const barberDetails = formData.barber ? barbers?.find(b => b._id === formData.barber) : null
 
       // Show success modal with booking details
       setBookingCreated({
-        bookingCode: `BK${Date.now().toString().slice(-6)}`, // Temporary code for display
-        service: serviceDetails?.name,
+        bookingCode: `BK${Date.now().toString().slice(-6)}`,
+        service: serviceDetails?.name || 'Unknown Service',
         barber: barberDetails?.full_name || 'Any available',
         date: formData.date,
         time: formData.time,
-        price: serviceDetails?.price,
+        price: serviceDetails?.price || 0,
         customerName: formData.customerType === 'walkin' ? formData.walkinName : undefined
       })
 
@@ -266,13 +322,13 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
         })
       }
 
-      // Reset form and close modal after showing success
+      // Reset form after showing success
       resetForm()
-      // Don't close modal immediately - let user see the success message
 
     } catch (err) {
       console.error('Error creating booking:', err)
 
+      // Handle different error types
       if (err.response?.data) {
         const errorData = err.response.data
         if (typeof errorData === 'object') {
@@ -289,8 +345,11 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
         } else {
           setError(errorData || 'Failed to create booking')
         }
+      } else if (err.message) {
+        // Handle Convex or other errors with message property
+        setError(`Booking error: ${err.message}`)
       } else {
-        setError(err.message || 'Failed to create booking. Please try again.')
+        setError('Failed to create booking. Please try again.')
       }
     } finally {
       setLoading(false)
@@ -341,7 +400,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
           const slotHour = hour
           const slotMinute = minute
 
-          // Simple overlap check (could be improved)
+          // Overlap check: booking duration matters
           return bookedHour === slotHour && Math.abs(bookedMinute - slotMinute) < duration
         })
 
@@ -357,10 +416,23 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
   }
 
   const handleInputChange = (field, value) => {
+    // Clear field-specific errors when user starts editing
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[field]
+        return newErrors
+      })
+    }
+    
+    // If switching customer type, clear all validation errors
+    if (field === 'customerType') {
+      setFieldErrors({})
+      setError(null)
+    }
+    
     setFormData(prev => ({ ...prev, [field]: value }))
   }
-
-  // Time slots are now generated dynamically
 
   // Format service display
   const formatServiceOption = (service) => {
@@ -370,97 +442,91 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Create New Booking" size="xl">
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <Modal isOpen={isOpen} onClose={onClose} title="Create New Booking" size="xl" compact variant="dark">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {/* Error Message */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center space-x-2">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <p className="text-sm">{error}</p>
+          <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-3 py-2.5 rounded-lg flex items-center space-x-2 text-sm">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <p>{error}</p>
           </div>
         )}
 
         {/* Loading State */}
         {(!services || !barbers || !customers) && (
-          <div className="flex items-center justify-center py-8">
-            <RefreshCw className="w-6 h-6 animate-spin text-[#FF8C42] mr-3" />
-            <span className="text-gray-600 font-medium">Loading services and staff...</span>
+          <div className="flex items-center justify-center py-6">
+            <RefreshCw className="w-5 h-5 animate-spin text-[#FF8C42] mr-2" />
+            <span className="text-gray-300 text-sm font-medium">Loading...</span>
           </div>
         )}
 
         {/* Customer Type Selection */}
-        <div className="bg-gradient-to-br from-[#F4F0E6] to-[#E8DCC0] rounded-xl p-6 border border-[#D4C4A8]">
-          <h3 className="text-lg font-bold text-[#36454F] mb-4 flex items-center">
-            <User className="w-5 h-5 text-[#FF8C42] mr-2" />
-            Customer Information
+        <div className="bg-[#0F0F0F]/50 rounded-lg p-4 border border-[#333333]/50">
+          <h3 className="text-sm font-bold text-gray-200 mb-3 flex items-center">
+            <User className="w-4 h-4 text-[#FF8C42] mr-2" />
+            Customer
           </h3>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div className="flex items-center space-x-6">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="customerType"
-                  value="existing"
-                  checked={formData.customerType === 'existing'}
-                  onChange={(e) => handleInputChange('customerType', e.target.value)}
-                  className="w-4 h-4 text-[#FF8C42] focus:ring-[#FF8C42]"
-                />
-                <span className="text-[#36454F] font-medium">Existing Customer</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="customerType"
-                  value="walkin"
-                  checked={formData.customerType === 'walkin'}
-                  onChange={(e) => handleInputChange('customerType', e.target.value)}
-                  className="w-4 h-4 text-[#FF8C42] focus:ring-[#FF8C42]"
-                />
-                <span className="text-[#36454F] font-medium">Walk-in Customer</span>
-              </label>
-            </div>
+          <div className="flex items-center gap-4 mb-3">
+            <label className="flex items-center gap-2 cursor-pointer text-sm">
+              <input
+                type="radio"
+                name="customerType"
+                value="existing"
+                checked={formData.customerType === 'existing'}
+                onChange={(e) => handleInputChange('customerType', e.target.value)}
+                className="w-4 h-4"
+              />
+              <span className="text-gray-300">Existing</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-sm">
+              <input
+                type="radio"
+                name="customerType"
+                value="walkin"
+                checked={formData.customerType === 'walkin'}
+                onChange={(e) => handleInputChange('customerType', e.target.value)}
+                className="w-4 h-4"
+              />
+              <span className="text-gray-300">Walk-in</span>
+            </label>
           </div>
 
           {formData.customerType === 'existing' ? (
             <div>
-              <label className="block text-[#36454F] font-bold text-base mb-2">
-                Select Customer <span className="text-red-500">*</span>
-              </label>
               <div className="relative" ref={customerDropdownRef}>
                 <button
                   type="button"
                   onClick={() => setCustomerDropdownOpen(!customerDropdownOpen)}
                   disabled={!customers}
-                  className="w-full h-12 px-4 border-2 border-[#D4C4A8] rounded-xl text-left flex items-center justify-between focus:outline-none focus:border-[#FF8C42] transition-colors duration-200 disabled:opacity-50 bg-white"
+                  className="w-full h-10 px-3 border border-[#444444] rounded-lg text-left text-sm flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[#FF8C42] transition-all disabled:opacity-50 bg-[#1A1A1A] text-gray-300 hover:border-[#555555]"
                 >
-                  <div className="flex items-center">
+                  <div className="flex items-center gap-2">
                     {formData.customer ? (
                       (() => {
                         const selectedCustomer = customers?.find(c => c._id === formData.customer)
                         return selectedCustomer ? (
                           <>
-                            <div className="w-8 h-8 rounded-full bg-[#FF8C42] flex items-center justify-center mr-3">
-                              <User className="w-4 h-4 text-white" />
+                            <div className="w-6 h-6 rounded-full bg-[#FF8C42] flex items-center justify-center flex-shrink-0">
+                              <User className="w-3 h-3 text-white" />
                             </div>
-                            <div className="text-left">
-                              <div className="font-medium text-[#36454F]">{selectedCustomer.username}</div>
-                              <div className="text-sm text-[#8B8B8B]">{selectedCustomer.mobile_number}</div>
+                            <div className="text-left min-w-0">
+                              <div className="font-medium text-gray-200 text-xs">{selectedCustomer.username}</div>
                             </div>
                           </>
                         ) : (
-                          <span className="text-[#8B8B8B]">Select a customer</span>
+                          <span className="text-gray-400 text-xs">Select customer</span>
                         )
                       })()
                     ) : (
-                      <span className="text-[#8B8B8B]">Select a customer</span>
+                      <span className="text-gray-400 text-xs">Select customer</span>
                     )}
                   </div>
-                  <ChevronDown className={`w-5 h-5 text-[#8B8B8B] transition-transform ${customerDropdownOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${customerDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {customerDropdownOpen && (
-                  <div className="absolute z-50 w-full mt-1 bg-white border-2 border-[#D4C4A8] rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                  <div className="absolute z-50 w-full mt-1 bg-[#1A1A1A] border border-[#444444] rounded-lg shadow-lg max-h-40 overflow-y-auto">
                     {customers?.filter(customer => customer.role === 'customer').map(customer => (
                       <button
                         key={customer._id}
@@ -469,334 +535,229 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
                           handleInputChange('customer', customer._id)
                           setCustomerDropdownOpen(false)
                         }}
-                        className="w-full px-4 py-3 flex items-center hover:bg-[#F4F0E6] transition-colors"
+                        className="w-full px-3 py-2 flex items-center hover:bg-[#2A2A2A] transition-colors text-left"
                       >
-                        <div className="w-8 h-8 rounded-full bg-[#FF8C42] flex items-center justify-center mr-3">
-                          <User className="w-4 h-4 text-white" />
+                        <div className="w-6 h-6 rounded-full bg-[#FF8C42] flex items-center justify-center mr-2 flex-shrink-0">
+                          <User className="w-3 h-3 text-white" />
                         </div>
-                        <div className="text-left">
-                          <div className="font-medium text-[#36454F]">{customer.username}</div>
-                          <div className="text-sm text-[#8B8B8B]">{customer.mobile_number}</div>
+                        <div className="text-xs flex-1 min-w-0">
+                          <div className="font-medium text-gray-200">{customer.username}</div>
                         </div>
-                        {formData.customer === customer._id && <Check className="w-5 h-5 text-[#FF8C42] ml-auto" />}
+                        {formData.customer === customer._id && <Check className="w-4 h-4 text-[#FF8C42] flex-shrink-0" />}
                       </button>
                     )) || []}
                   </div>
                 )}
               </div>
               {fieldErrors.customer && (
-                <p className="text-red-500 text-sm mt-1">{fieldErrors.customer}</p>
+                <p className="text-red-400 text-xs mt-1">{fieldErrors.customer}</p>
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-2">
               <div>
-                <label className="block text-[#36454F] font-bold text-base mb-2">
-                  Customer Name <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#8B8B8B]" />
-                  <input
-                    type="text"
-                    value={formData.walkinName}
-                    onChange={(e) => handleInputChange('walkinName', e.target.value)}
-                    className="w-full h-12 pl-10 pr-4 border-2 border-[#D4C4A8] rounded-xl focus:outline-none focus:border-[#FF8C42] transition-colors bg-white"
-                    placeholder="Enter customer name"
-                  />
-                </div>
-                {fieldErrors.walkinName && (
-                  <p className="text-red-500 text-sm mt-1">{fieldErrors.walkinName}</p>
-                )}
+                <label className="block text-xs text-gray-400 mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={formData.walkinName}
+                  onChange={(e) => handleInputChange('walkinName', e.target.value)}
+                  className="w-full h-8 px-2 border border-[#444444] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 text-xs"
+                  placeholder="Name"
+                />
+                {fieldErrors.walkinName && <p className="text-red-400 text-xs mt-0.5">{fieldErrors.walkinName}</p>}
               </div>
               <div>
-                <label className="block text-[#36454F] font-bold text-base mb-2">
-                  Phone Number <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#8B8B8B]" />
-                  <input
-                    type="tel"
-                    value={formData.walkinPhone}
-                    onChange={(e) => handleInputChange('walkinPhone', e.target.value)}
-                    className="w-full h-12 pl-10 pr-4 border-2 border-[#D4C4A8] rounded-xl focus:outline-none focus:border-[#FF8C42] transition-colors bg-white"
-                    placeholder="Enter phone number"
-                  />
-                </div>
-                {fieldErrors.walkinPhone && (
-                  <p className="text-red-500 text-sm mt-1">{fieldErrors.walkinPhone}</p>
-                )}
+                <label className="block text-xs text-gray-400 mb-1">Phone *</label>
+                <input
+                  type="tel"
+                  value={formData.walkinPhone}
+                  onChange={(e) => handleInputChange('walkinPhone', e.target.value)}
+                  className="w-full h-8 px-2 border border-[#444444] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 text-xs"
+                  placeholder="09..."
+                />
+                {fieldErrors.walkinPhone && <p className="text-red-400 text-xs mt-0.5">{fieldErrors.walkinPhone}</p>}
               </div>
               <div>
-                <label className="block text-[#36454F] font-bold text-base mb-2">
-                  Email (Optional)
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#8B8B8B]" />
-                  <input
-                    type="email"
-                    value={formData.walkinEmail}
-                    onChange={(e) => handleInputChange('walkinEmail', e.target.value)}
-                    className="w-full h-12 pl-10 pr-4 border-2 border-[#D4C4A8] rounded-xl focus:outline-none focus:border-[#FF8C42] transition-colors bg-white"
-                    placeholder="Enter email address"
-                  />
-                </div>
+                <label className="block text-xs text-gray-400 mb-1">Email (Optional)</label>
+                <input
+                  type="email"
+                  value={formData.walkinEmail}
+                  onChange={(e) => handleInputChange('walkinEmail', e.target.value)}
+                  className="w-full h-8 px-2 border border-[#444444] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 text-xs"
+                  placeholder="Email"
+                />
               </div>
             </div>
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Service & Staff Section */}
-          <div className="bg-gradient-to-br from-[#F4F0E6] to-[#E8DCC0] rounded-xl p-6 border border-[#D4C4A8]">
-            <h3 className="text-lg font-bold text-[#36454F] mb-4 flex items-center">
-              <Scissors className="w-5 h-5 text-[#FF8C42] mr-2" />
-              Service & Staff
+        {/* Service & Schedule Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Service Section */}
+          <div className="bg-[#0F0F0F]/50 rounded-lg p-3 border border-[#333333]/50">
+            <h3 className="text-xs font-bold text-gray-200 mb-2 flex items-center">
+              <Scissors className="w-3.5 h-3.5 text-[#FF8C42] mr-1.5" />
+              Service
             </h3>
+            <select
+              value={formData.service}
+              onChange={(e) => handleInputChange('service', e.target.value)}
+              required
+              disabled={!services}
+              className="w-full h-9 px-2 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 disabled:opacity-50"
+            >
+              <option value="">Select service</option>
+              {services?.filter(service => service.is_active).map(service => (
+                <option key={service._id} value={service._id}>
+                  {service.name} - ₱{parseFloat(service.price).toFixed(0)}
+                </option>
+              )) || []}
+            </select>
+            {fieldErrors.service && <p className="text-red-400 text-xs mt-1">{fieldErrors.service}</p>}
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[#36454F] font-bold text-base mb-2">
-                  Service <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={formData.service}
-                  onChange={(e) => handleInputChange('service', e.target.value)}
-                  required
-                  disabled={!services}
-                  className="w-full h-12 px-4 border-2 border-[#D4C4A8] rounded-xl text-base focus:outline-none focus:border-[#FF8C42] transition-colors duration-200 disabled:opacity-50 bg-white"
+            <div className="mt-2">
+              <label className="block text-xs text-gray-400 mb-1">Barber (Optional)</label>
+              <div className="relative" ref={barberDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setBarberDropdownOpen(!barberDropdownOpen)}
+                  disabled={!barbers}
+                  className="w-full h-8 px-2 border border-[#444444] rounded-lg text-left text-xs flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 disabled:opacity-50 hover:border-[#555555]"
                 >
-                  <option value="">Select a service</option>
-                  {services?.filter(service => service.is_active).map(service => (
-                    <option key={service._id} value={service._id}>
-                      {formatServiceOption(service)}
-                    </option>
-                  )) || []}
-                </select>
-                {fieldErrors.service && (
-                  <p className="text-red-500 text-sm mt-1">{fieldErrors.service}</p>
-                )}
-              </div>
+                  <span className="truncate">
+                    {formData.barber ? barbers?.find(b => b._id === formData.barber)?.full_name : 'Any'}
+                  </span>
+                  <ChevronDown className={`w-3 h-3 flex-shrink-0 transition-transform ${barberDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
 
-              <div>
-                <label className="block text-[#36454F] font-bold text-base mb-2">
-                  Barber (Optional)
-                </label>
-                <div className="relative" ref={barberDropdownRef}>
-                  <button
-                    type="button"
-                    onClick={() => setBarberDropdownOpen(!barberDropdownOpen)}
-                    disabled={!barbers}
-                    className="w-full h-12 px-4 border-2 border-[#D4C4A8] rounded-xl text-left flex items-center justify-between focus:outline-none focus:border-[#FF8C42] transition-colors duration-200 disabled:opacity-50 bg-white"
-                  >
-                    <div className="flex items-center">
-                      {formData.barber ? (
-                        (() => {
-                          const selectedBarber = barbers?.find(b => b._id === formData.barber)
-                          return selectedBarber ? (
-                            <>
-                              <img
-                                src={selectedBarber.avatarUrl || '/img/avatar_default.jpg'}
-                                alt={selectedBarber.full_name}
-                                className="w-8 h-8 rounded-full object-cover mr-3"
-                              />
-                              <div className="text-left">
-                                <div className="font-medium text-[#36454F]">{selectedBarber.full_name}</div>
-                                <div className="text-sm text-[#8B8B8B]">{selectedBarber.experience}</div>
-                              </div>
-                            </>
-                          ) : (
-                            <span className="text-[#8B8B8B]">Any available barber</span>
-                          )
-                        })()
-                      ) : (
-                        <span className="text-[#8B8B8B]">Any available barber</span>
-                      )}
-                    </div>
-                    <ChevronDown className={`w-5 h-5 text-[#8B8B8B] transition-transform ${barberDropdownOpen ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  {barberDropdownOpen && (
-                    <div className="absolute z-50 w-full mt-1 bg-white border-2 border-[#D4C4A8] rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                {barberDropdownOpen && (
+                  <div className="absolute z-50 w-full mt-1 bg-[#1A1A1A] border border-[#444444] rounded-lg shadow-lg max-h-32 overflow-y-auto text-xs">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleInputChange('barber', '')
+                        setBarberDropdownOpen(false)
+                      }}
+                      className="w-full px-2 py-1.5 hover:bg-[#2A2A2A] transition-colors text-left text-gray-300"
+                    >
+                      Any available
+                      {!formData.barber && <Check className="w-3 h-3 text-[#FF8C42] float-right mt-0.5" />}
+                    </button>
+                    {barbers?.filter(barber => barber.is_active).map(barber => (
                       <button
+                        key={barber._id}
                         type="button"
                         onClick={() => {
-                          handleInputChange('barber', '')
+                          handleInputChange('barber', barber._id)
                           setBarberDropdownOpen(false)
                         }}
-                        className="w-full px-4 py-3 flex items-center hover:bg-[#F4F0E6] transition-colors"
+                        className="w-full px-2 py-1.5 hover:bg-[#2A2A2A] transition-colors text-left text-gray-300"
                       >
-                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-                          <User className="w-4 h-4 text-gray-500" />
-                        </div>
-                        <span className="text-[#36454F]">Any available barber</span>
-                        {!formData.barber && <Check className="w-5 h-5 text-[#FF8C42] ml-auto" />}
+                        {barber.full_name}
+                        {formData.barber === barber._id && <Check className="w-3 h-3 text-[#FF8C42] float-right mt-0.5" />}
                       </button>
-
-                      {barbers?.filter(barber => barber.is_active).map(barber => (
-                        <button
-                          key={barber._id}
-                          type="button"
-                          onClick={() => {
-                            handleInputChange('barber', barber._id)
-                            setBarberDropdownOpen(false)
-                          }}
-                          className="w-full px-4 py-3 flex items-center hover:bg-[#F4F0E6] transition-colors"
-                        >
-                          <img
-                            src={barber.avatarUrl || '/img/avatar_default.jpg'}
-                            alt={barber.full_name}
-                            className="w-8 h-8 rounded-full object-cover mr-3"
-                          />
-                          <div className="text-left">
-                            <div className="font-medium text-[#36454F]">{barber.full_name}</div>
-                            <div className="text-sm text-[#8B8B8B]">{barber.experience}</div>
-                          </div>
-                          {formData.barber === barber._id && <Check className="w-5 h-5 text-[#FF8C42] ml-auto" />}
-                        </button>
-                      )) || []}
-                    </div>
-                  )}
-                </div>
-                {fieldErrors.barber && (
-                  <p className="text-red-500 text-sm mt-1">{fieldErrors.barber}</p>
+                    )) || []}
+                  </div>
                 )}
-              </div>
-
-              <div>
-                <label className="block text-[#36454F] font-bold text-base mb-2">
-                  Notes (Optional)
-                </label>
-                <div className="relative">
-                  <FileText className="absolute left-3 top-3 w-5 h-5 text-[#8B8B8B]" />
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => handleInputChange('notes', e.target.value)}
-                    className="w-full h-20 pl-10 pr-4 pt-3 border-2 border-[#D4C4A8] rounded-xl focus:outline-none focus:border-[#FF8C42] transition-colors bg-white resize-none"
-                    placeholder="Any special requests or notes..."
-                  />
-                </div>
               </div>
             </div>
           </div>
 
           {/* Schedule Section */}
-          <div className="bg-gradient-to-br from-[#F4F0E6] to-[#E8DCC0] rounded-xl p-6 border border-[#D4C4A8]">
-            <h3 className="text-lg font-bold text-[#36454F] mb-4 flex items-center">
-              <Calendar className="w-5 h-5 text-[#FF8C42] mr-2" />
+          <div className="bg-[#0F0F0F]/50 rounded-lg p-3 border border-[#333333]/50">
+            <h3 className="text-xs font-bold text-gray-200 mb-2 flex items-center">
+              <Calendar className="w-3.5 h-3.5 text-[#FF8C42] mr-1.5" />
               Schedule
             </h3>
+            <div>
+              <input
+                type="date"
+                value={formData.date}
+                onChange={(e) => handleInputChange('date', e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full h-9 px-2 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300"
+                required
+              />
+              {fieldErrors.date && <p className="text-red-400 text-xs mt-1">{fieldErrors.date}</p>}
+            </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-[#36454F] font-bold text-base mb-2">
-                  Date <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#8B8B8B]" />
-                  <input
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => handleInputChange('date', e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full h-12 pl-10 pr-4 border-2 border-[#D4C4A8] rounded-xl focus:outline-none focus:border-[#FF8C42] transition-colors bg-white"
-                    required
-                  />
-                </div>
-                {fieldErrors.date && (
-                  <p className="text-red-500 text-sm mt-1">{fieldErrors.date}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-[#36454F] font-bold text-base mb-2">
-                  Time <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#8B8B8B]" />
-                  <select
-                    value={formData.time}
-                    onChange={(e) => handleInputChange('time', e.target.value)}
-                    className="w-full h-12 pl-10 pr-4 border-2 border-[#D4C4A8] rounded-xl focus:outline-none focus:border-[#FF8C42] transition-colors bg-white"
-                    required
+            <div className="mt-2">
+              <select
+                value={formData.time}
+                onChange={(e) => handleInputChange('time', e.target.value)}
+                className="w-full h-9 px-2 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300"
+                required
+              >
+                <option value="">Select time</option>
+                {timeSlots.map(slot => (
+                  <option
+                    key={slot.value}
+                    value={slot.display}
+                    disabled={!slot.available}
                   >
-                    <option value="">Select time</option>
-                    {timeSlots.map(slot => (
-                      <option
-                        key={slot.value}
-                        value={slot.display}
-                        disabled={!slot.available}
-                        className={!slot.available ? 'text-red-400' : ''}
-                      >
-                        {slot.display} {!slot.available ? '(Booked)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                {fieldErrors.time && (
-                  <p className="text-red-500 text-sm mt-1">{fieldErrors.time}</p>
-                )}
-              </div>
+                    {slot.display} {!slot.available ? '(Booked)' : ''}
+                  </option>
+                ))}
+              </select>
+              {fieldErrors.time && <p className="text-red-400 text-xs mt-1">{fieldErrors.time}</p>}
+            </div>
 
-              <div>
-                <label className="block text-[#36454F] font-bold text-base mb-2">
-                  Payment Method
-                </label>
-                <div className="relative">
-                  <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#8B8B8B]" />
-                  <select
-                    value={formData.paymentMethod}
-                    onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
-                    className="w-full h-12 pl-10 pr-4 border-2 border-[#D4C4A8] rounded-xl focus:outline-none focus:border-[#FF8C42] transition-colors bg-white"
-                  >
-                    <option value="cash">Cash</option>
-                    <option value="card">Card</option>
-                    <option value="digital_wallet">Digital Wallet</option>
-                    <option value="bank_transfer">Bank Transfer</option>
-                  </select>
-                </div>
-              </div>
+            <div className="mt-2">
+              <label className="block text-xs text-gray-400 mb-1">Payment</label>
+              <select
+                value={formData.paymentMethod}
+                onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
+                className="w-full h-8 px-2 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300"
+              >
+                <option value="cash">Cash</option>
+                <option value="card">Card</option>
+                <option value="digital_wallet">Digital Wallet</option>
+              </select>
             </div>
           </div>
         </div>
 
+        {/* Notes */}
+        <div className="bg-[#0F0F0F]/50 rounded-lg p-3 border border-[#333333]/50">
+          <label className="block text-xs text-gray-400 mb-1">Notes (Optional)</label>
+          <textarea
+            value={formData.notes}
+            onChange={(e) => handleInputChange('notes', e.target.value)}
+            className="w-full h-12 px-2 py-1.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 resize-none"
+            placeholder="Special requests..."
+          />
+        </div>
+
         {/* Booking Summary */}
         {(formData.service && formData.date && formData.time) && (
-          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl p-6 border border-[#444444]/50">
-            <h3 className="text-lg font-bold text-white mb-4 flex items-center">
-              <Check className="w-5 h-5 text-[#FF8C42] mr-2" />
-              Booking Summary
+          <div className="bg-gradient-to-r from-[#1A1A1A] to-[#222222] rounded-lg p-3 border border-[#FF8C42]/20">
+            <h3 className="text-xs font-bold text-white mb-2 flex items-center">
+              <Check className="w-3.5 h-3.5 text-[#FF8C42] mr-1.5" />
+              Summary
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-              <div className="text-center">
-                <p className="text-[#8B8B8B] mb-1">Service</p>
-                <p className="text-white font-medium">
-                  {services?.find(s => s._id === formData.service)?.name || 'N/A'}
-                </p>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <p className="text-gray-400">Service</p>
+                <p className="text-white font-medium">{services?.find(s => s._id === formData.service)?.name}</p>
               </div>
-              <div className="text-center">
-                <p className="text-[#8B8B8B] mb-1">Date & Time</p>
-                <p className="text-white font-medium">
-                  {formData.date ? new Date(formData.date).toLocaleDateString() : 'N/A'} at {formData.time || 'N/A'}
-                </p>
+              <div>
+                <p className="text-gray-400">Date & Time</p>
+                <p className="text-white font-medium">{formData.date ? new Date(formData.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'} {formData.time}</p>
               </div>
-              <div className="text-center">
-                <p className="text-[#8B8B8B] mb-1">Barber</p>
-                <p className="text-white font-medium">
-                  {formData.barber ? barbers?.find(b => b._id === formData.barber)?.full_name : 'Any available'}
-                </p>
+              <div>
+                <p className="text-gray-400">Barber</p>
+                <p className="text-white font-medium text-xs">{formData.barber ? barbers?.find(b => b._id === formData.barber)?.full_name : 'Any'}</p>
               </div>
-              <div className="text-center">
-                <p className="text-[#8B8B8B] mb-1">Price</p>
-                <p className="text-green-400 font-bold">
-                  ₱{services?.find(s => s._id === formData.service)?.price?.toFixed(2) || '0.00'}
-                </p>
+              <div>
+                <p className="text-gray-400">Price</p>
+                <p className="text-[#FF8C42] font-bold">₱{services?.find(s => s._id === formData.service)?.price?.toFixed(0)}</p>
               </div>
             </div>
           </div>
         )}
 
         {/* Action Buttons */}
-        <div className="flex space-x-4 pt-6 border-t border-[#D4C4A8]">
+        <div className="flex gap-3 pt-3 border-t border-[#333333]">
           <button
             type="button"
             onClick={() => {
@@ -804,24 +765,24 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
               onClose()
             }}
             disabled={loading}
-            className="flex-1 h-12 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors duration-200 disabled:opacity-50"
+            className="flex-1 h-9 bg-[#2A2A2A] text-gray-300 rounded-lg font-medium hover:bg-[#333333] transition-colors text-sm disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={loading || !services || !barbers || !customers}
-            className="flex-1 h-12 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-xl font-medium hover:shadow-lg disabled:opacity-50 transition-all duration-200 flex items-center justify-center space-x-2"
+            className="flex-1 h-9 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg font-medium hover:shadow-lg disabled:opacity-50 transition-all text-sm flex items-center justify-center gap-1.5"
           >
             {loading ? (
               <>
-                <RefreshCw className="w-5 h-5 animate-spin" />
+                <RefreshCw className="w-4 h-4 animate-spin" />
                 <span>Creating...</span>
               </>
             ) : (
               <>
-                <Plus className="w-5 h-5" />
-                <span>Create Booking</span>
+                <Plus className="w-4 h-4" />
+                <span>Create</span>
               </>
             )}
           </button>
@@ -836,69 +797,44 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
               setBookingCreated(null)
               onClose()
             }} />
-            <div className="relative w-full max-w-md transform rounded-2xl bg-white shadow-2xl transition-all z-[10000]">
-              <div className="text-center space-y-4 p-6">
-                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto bg-green-100">
-                  <Check className="w-8 h-8 text-green-600" />
+            <div className="relative w-full max-w-sm transform rounded-2xl bg-gradient-to-br from-[#1A1A1A] to-[#222222] shadow-2xl transition-all z-[10000] border border-[#333333]/50">
+              <div className="text-center space-y-3 p-5">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto bg-green-500/20 border border-green-500/30">
+                  <Check className="w-6 h-6 text-green-400" />
                 </div>
 
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Booking Created Successfully!</h3>
-                  <p className="text-sm text-gray-600 mb-4">Booking details have been saved and customer notified.</p>
+                  <h3 className="text-base font-bold text-white mb-1">Booking Created!</h3>
+                  <p className="text-xs text-gray-400">Details saved and customer notified</p>
                 </div>
 
                 {/* Booking Details */}
-                <div className="text-left space-y-3 p-4 rounded-xl bg-gray-50">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-600">Booking Code:</span>
-                    <span className="text-sm font-mono font-bold text-[#FF8C42]">#{bookingCreated.bookingCode}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-gray-600">Service:</span>
-                    <span className="text-sm font-bold text-gray-900">{bookingCreated.service}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-gray-600">Date & Time:</span>
-                    <span className="text-sm font-bold text-gray-900">
-                      {new Date(bookingCreated.date).toLocaleDateString()} at {bookingCreated.time}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-gray-600">Barber:</span>
-                    <span className="text-sm font-bold text-gray-900">{bookingCreated.barber}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium text-gray-600">Price:</span>
-                    <span className="text-sm font-bold text-green-600">₱{bookingCreated.price?.toFixed(2)}</span>
-                  </div>
-                  {bookingCreated.customerName && (
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-600">Customer:</span>
-                      <span className="text-sm font-bold text-gray-900">{bookingCreated.customerName}</span>
-                    </div>
-                  )}
+                <div className="text-left space-y-1.5 p-3 rounded-lg bg-[#0F0F0F]/50 border border-[#333333]/50 text-xs">
+                  <div className="flex justify-between"><span className="text-gray-400">Code:</span><span className="font-mono text-[#FF8C42]">#{bookingCreated.bookingCode}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-400">Service:</span><span className="text-gray-300">{bookingCreated.service}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-400">Date & Time:</span><span className="text-gray-300">{new Date(bookingCreated.date).toLocaleDateString()} {bookingCreated.time}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-400">Barber:</span><span className="text-gray-300">{bookingCreated.barber}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-400">Price:</span><span className="text-green-400 font-bold">₱{bookingCreated.price?.toFixed(2)}</span></div>
                 </div>
 
-                <div className="flex space-x-3">
+                <div className="flex gap-2 pt-2">
                   <button
                     onClick={() => {
                       setBookingCreated(null)
                       onClose()
                     }}
-                    className="flex-1 py-2 px-4 rounded-xl font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
+                    className="flex-1 py-2 px-3 rounded-lg font-medium text-gray-300 bg-[#2A2A2A] hover:bg-[#333333] transition-colors text-sm"
                   >
                     Close
                   </button>
                   <button
                     onClick={() => {
-                      // Could add print receipt functionality here
                       setBookingCreated(null)
                       onClose()
                     }}
-                    className="flex-1 py-2 px-4 rounded-xl font-medium text-white transition-colors"
-                    style={{backgroundColor: '#FF8C42'}}
+                    className="flex-1 py-2 px-3 rounded-lg font-medium text-white bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:shadow-lg transition-all text-sm"
                   >
-                    Print Receipt
+                    Done
                   </button>
                 </div>
               </div>

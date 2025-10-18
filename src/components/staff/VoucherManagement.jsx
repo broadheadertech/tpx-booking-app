@@ -14,7 +14,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
   const [showSendModal, setShowSendModal] = useState(null)
   const [showUsersModal, setShowUsersModal] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [viewMode, setViewMode] = useState('card') // 'card' or 'table'
+  const [viewMode, setViewMode] = useState('table') // 'card' or 'table' - DEFAULT TABLE
 
   // Convex queries and mutations
   const deleteVoucher = useMutation(api.services.vouchers.deleteVoucher)
@@ -137,7 +137,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
         QRCode.toCanvas(qrCanvasRef.current, qrPayload, {
           width: 220,
           margin: 2,
-          color: { dark: '#1F2937', light: '#ffffff' },
+          color: { dark: '#FF8C42', light: '#1A1A1A' },
           errorCorrectionLevel: 'H'
         }, (err) => { if (err) console.error('QR generation error:', err) })
       }
@@ -148,7 +148,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
         const url = await QRCode.toDataURL(qrPayload, {
           width: 600,
           margin: 2,
-          color: { dark: '#111827', light: '#ffffff' },
+          color: { dark: '#FF8C42', light: '#1A1A1A' },
           errorCorrectionLevel: 'H'
         })
         const link = document.createElement('a')
@@ -165,7 +165,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
         const url = await QRCode.toDataURL(qrPayload, {
           width: 600,
           margin: 2,
-          color: { dark: '#111827', light: '#ffffff' },
+          color: { dark: '#FF8C42', light: '#ffffff' },
           errorCorrectionLevel: 'H'
         })
         const printWindow = window.open('', '_blank')
@@ -205,60 +205,81 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
 
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gray-200">
-          <div className="text-center space-y-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto bg-gradient-to-br from-orange-400 to-amber-500 shadow-sm">
-              <QrCode className="w-6 h-6 text-white" />
+        <div className="bg-gradient-to-br from-[#1A1A1A] to-[#222222] rounded-xl w-full max-w-md shadow-2xl border border-[#333333]/50">
+          <div className="text-center space-y-3 p-5">
+            {/* Icon Header */}
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B]">
+              <QrCode className="w-5 h-5 text-white" />
             </div>
+
+            {/* Title & Code */}
             <div>
-              <h3 className="text-lg font-black text-gray-900">Voucher QR Code</h3>
-              <p className="text-sm font-mono font-bold text-orange-600">{voucher.code}</p>
-              <p className="text-sm text-gray-500">Scan this code to validate or redeem</p>
+              <h3 className="text-base font-bold text-white">Voucher QR Code</h3>
+              <p className="text-xs font-mono font-bold text-[#FF8C42] mt-0.5">{voucher.code}</p>
+              <p className="text-xs text-gray-400 mt-1">Scan to validate or redeem</p>
             </div>
 
-            <div className="p-4 rounded-xl bg-orange-50 border border-orange-100">
+            {/* QR Code Container */}
+            <div className="p-3 rounded-lg bg-[#0F0F0F]/50 border border-[#FF8C42]/20">
               <div className="flex justify-center">
-                <canvas ref={qrCanvasRef} className="rounded-lg" />
+                <canvas ref={qrCanvasRef} className="rounded" />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-left">
-              <div className="p-3 rounded-xl bg-gray-50">
-                <div className="text-xs text-gray-500">Value</div>
-                <div className="text-sm font-bold text-gray-900">{voucher.formattedValue || `₱${parseFloat(voucher.value).toFixed(2)}`}</div>
+            {/* Details Grid */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="p-2.5 rounded-lg bg-[#0F0F0F]/50 border border-[#333333]/50">
+                <div className="text-gray-400 mb-0.5">Value</div>
+                <div className="font-bold text-[#FF8C42]">₱{parseFloat(voucher.value).toFixed(2)}</div>
               </div>
-              <div className="p-3 rounded-xl bg-gray-50">
-                <div className="text-xs text-gray-500">Expires</div>
-                <div className={`text-sm font-bold ${voucher.isExpired ? 'text-red-600' : 'text-gray-900'}`}>{new Date(voucher.expires_at).toLocaleDateString()}</div>
-              </div>
-              <div className="p-3 rounded-xl bg-gray-50">
-                <div className="text-xs text-gray-500">User</div>
-                <div className="text-sm font-bold text-gray-900">User {voucher.user}</div>
-              </div>
-              <div className="p-3 rounded-xl bg-gray-50 flex items-center justify-between">
-                <div>
-                  <div className="text-xs text-gray-500">Status</div>
-                  <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${status.bg} ${status.border} border ${status.text}`}>
-                    <status.icon className={`h-3 w-3 mr-1 ${status.iconColor}`} />
+              <div className="p-2.5 rounded-lg bg-[#0F0F0F]/50 border border-[#333333]/50">
+                <div className="text-gray-400 mb-0.5">Status</div>
+                <div className="font-bold text-white inline-flex items-center gap-1">
+                  <span className={status.label === 'Active' ? 'text-green-400' : status.label === 'Redeemed' ? 'text-blue-400' : 'text-red-400'}>
                     {status.label}
-                  </div>
+                  </span>
                 </div>
-                <button onClick={handleCopy} className="ml-2 inline-flex items-center px-2.5 py-1 border border-gray-200 text-xs font-medium rounded bg-white hover:bg-gray-50 text-gray-700">
-                  <Copy className="h-3 w-3 mr-1" /> Copy
-                </button>
+              </div>
+              <div className="p-2.5 rounded-lg bg-[#0F0F0F]/50 border border-[#333333]/50">
+                <div className="text-gray-400 mb-0.5">Expires</div>
+                <div className={`font-bold text-sm ${voucher.isExpired ? 'text-red-400' : 'text-gray-300'}`}>
+                  {new Date(voucher.expires_at).toLocaleDateString()}
+                </div>
+              </div>
+              <div className="p-2.5 rounded-lg bg-[#0F0F0F]/50 border border-[#333333]/50">
+                <div className="text-gray-400 mb-0.5">Points</div>
+                <div className="font-bold text-white">{voucher.points_required}</div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-2">
-              <button onClick={onClose} className="px-4 py-2 rounded-xl text-gray-700 border border-gray-200 hover:bg-gray-50">Close</button>
-              <div className="flex items-center space-x-2">
-                <button onClick={handleDownload} className="inline-flex items-center px-3 py-2 rounded-xl text-white bg-orange-500 hover:bg-orange-600">
-                  <Download className="h-4 w-4 mr-1" /> Download
-                </button>
-                <button onClick={handlePrint} className="inline-flex items-center px-3 py-2 rounded-xl text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200">
-                  <Printer className="h-4 w-4 mr-1" /> Print
-                </button>
-              </div>
+            {/* Copy Button */}
+            <button 
+              onClick={handleCopy}
+              className="w-full px-3 py-2 bg-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#333333] transition-colors text-sm font-medium flex items-center justify-center gap-2"
+            >
+              <Copy className="w-3.5 h-3.5" /> Copy Code
+            </button>
+
+            {/* Action Buttons */}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={onClose}
+                className="flex-1 h-9 bg-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#333333] transition-colors text-sm font-medium"
+              >
+                Close
+              </button>
+              <button 
+                onClick={handleDownload}
+                className="flex-1 h-9 bg-[#444444] text-gray-300 rounded-lg hover:bg-[#555555] transition-colors text-sm font-medium flex items-center justify-center gap-1"
+              >
+                <Download className="w-3.5 h-3.5" /> Download
+              </button>
+              <button 
+                onClick={handlePrint}
+                className="flex-1 h-9 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:shadow-lg transition-all text-sm font-medium flex items-center justify-center gap-1"
+              >
+                <Printer className="w-3.5 h-3.5" /> Print
+              </button>
             </div>
           </div>
         </div>

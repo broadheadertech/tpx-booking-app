@@ -394,8 +394,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
   // QR Code Modal Component
   const QRCodeModal = ({ booking, onClose }) => {
     const qrRef = useRef(null)
-    
-    // Generate QR code data
+
     const qrData = JSON.stringify({
       bookingId: booking._id,
       bookingCode: booking.booking_code,
@@ -414,8 +413,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
           width: 200,
           margin: 2,
           color: {
-            dark: '#36454F',
-            light: '#ffffff'
+            dark: '#FF8C42',
+            light: '#1A1A1A'
           },
           errorCorrectionLevel: 'H'
         }, (error) => {
@@ -431,57 +430,57 @@ const BookingsManagement = ({ onRefresh, user }) => {
             className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
             onClick={onClose}
           />
-          <div className="relative w-full max-w-sm transform rounded-2xl bg-[#1A1A1A] shadow-2xl transition-all z-[10000] border border-[#2A2A2A]/50">
-            <div className="text-center space-y-4 p-6">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{backgroundColor: '#F68B24'}}>
-                <QrCode className="w-6 h-6 text-white" />
+          <div className="relative w-full max-w-sm transform rounded-2xl bg-gradient-to-br from-[#1A1A1A] to-[#222222] shadow-2xl transition-all z-[10000] border border-[#333333]/50">
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b border-[#333333]/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center">
+                  <QrCode className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">Booking QR Code</h3>
+                  <p className="text-xs text-gray-400 font-mono">#{booking.booking_code}</p>
+                </div>
               </div>
-            
-            <div>
-              <h3 className="text-lg font-bold mb-1" style={{color: '#36454F'}}>Booking QR Code</h3>
-              <p className="text-sm font-mono font-bold text-orange-600">#{booking.booking_code}</p>
-              <p className="text-sm" style={{color: '#8B8B8B'}}>Scan this code for booking verification</p>
+              <button
+                onClick={onClose}
+                className="p-2 text-gray-400 hover:text-white hover:bg-[#333333] rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            {/* QR Code */}
-            <div className="p-4 rounded-xl" style={{backgroundColor: '#F4F0E6'}}>
-              <div className="flex justify-center">
+            <div className="p-5 space-y-4">
+              {/* QR Code */}
+              <div className="p-4 rounded-xl bg-white flex justify-center">
                 <canvas ref={qrRef} className="rounded-lg"></canvas>
               </div>
-            </div>
 
-            {/* Booking Details */}
-            <div className="text-left space-y-2 p-4 rounded-xl" style={{backgroundColor: '#F9F9F9'}}>
-              <div className="flex justify-between">
-                <span className="text-sm font-medium" style={{color: '#8B8B8B'}}>Service:</span>
-                <span className="text-sm font-bold" style={{color: '#36454F'}}>
-                  {services.find(s => s._id === booking.service)?.name}
-                </span>
+              {/* Quick Details */}
+              <div className="space-y-2.5 bg-[#0F0F0F]/50 rounded-lg p-3.5">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-gray-400">Service:</span>
+                  <span className="text-white font-medium">{services.find(s => s._id === booking.service)?.name}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-gray-400">Date & Time:</span>
+                  <span className="text-white font-medium">{formatDate(booking.date)} {formatTime(booking.time)}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-gray-400">Barber:</span>
+                  <span className="text-white font-medium">{booking.barber_name || 'Not assigned'}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs pt-1 border-t border-[#333333]">
+                  <span className="text-gray-400">Status:</span>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getStatusConfig(booking.status).bg} ${getStatusConfig(booking.status).text}`}>
+                    {getStatusConfig(booking.status).label}
+                  </span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm font-medium" style={{color: '#8B8B8B'}}>Date & Time:</span>
-                <span className="text-sm font-bold" style={{color: '#36454F'}}>
-                  {formatDate(booking.date)} at {formatTime(booking.time)}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm font-medium" style={{color: '#8B8B8B'}}>Barber:</span>
-                <span className="text-sm font-bold" style={{color: '#36454F'}}>
-                  {booking.barber_name || 'Not assigned'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm font-medium" style={{color: '#8B8B8B'}}>Status:</span>
-                <span className={`text-xs font-bold px-2 py-1 rounded-full ${getStatusConfig(booking.status).bg} ${getStatusConfig(booking.status).text}`}>
-                  {getStatusConfig(booking.status).label}
-                </span>
-              </div>
-            </div>
 
               <button
                 onClick={onClose}
-                className="w-full py-2 px-4 rounded-xl font-medium text-white transition-colors"
-                style={{backgroundColor: '#F68B24'}}
+                className="w-full py-2.5 px-4 rounded-lg font-medium text-white bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-all text-sm"
               >
                 Close
               </button>

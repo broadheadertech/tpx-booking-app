@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { User, Mail, Phone, Calendar, MapPin, Briefcase, Shield, Edit, Save, X, AlertCircle, CheckCircle } from 'lucide-react'
+import { User, Mail, Phone, Briefcase, Shield, Edit, Save, X, AlertCircle, CheckCircle } from 'lucide-react'
 
 const ProfileModal = ({ isOpen, onClose, user, sessionToken }) => {
   const [isEditing, setIsEditing] = useState(false)
@@ -11,9 +11,7 @@ const ProfileModal = ({ isOpen, onClose, user, sessionToken }) => {
   const [success, setSuccess] = useState(false)
   const [editedProfile, setEditedProfile] = useState({
     nickname: user?.nickname || '',
-    mobile_number: user?.mobile_number || '',
-    address: user?.address || '',
-    birthday: user?.birthday || ''
+    mobile_number: user?.mobile_number || ''
   })
 
   const updateProfile = useMutation(api.services.auth.updateUserProfile)
@@ -43,19 +41,12 @@ const ProfileModal = ({ isOpen, onClose, user, sessionToken }) => {
       return
     }
 
-    if (editedProfile.address && editedProfile.address.length > 500) {
-      setError('Address must be less than 500 characters')
-      return
-    }
-
     try {
       setLoading(true)
       await updateProfile({
         sessionToken,
         nickname: editedProfile.nickname || undefined,
-        mobile_number: editedProfile.mobile_number || undefined,
-        address: editedProfile.address || undefined,
-        birthday: editedProfile.birthday || undefined,
+        mobile_number: editedProfile.mobile_number || undefined
       })
       setSuccess(true)
       setIsEditing(false)
@@ -72,9 +63,7 @@ const ProfileModal = ({ isOpen, onClose, user, sessionToken }) => {
   const handleCancel = () => {
     setEditedProfile({
       nickname: user?.nickname || '',
-      mobile_number: user?.mobile_number || '',
-      address: user?.address || '',
-      birthday: user?.birthday || ''
+      mobile_number: user?.mobile_number || ''
     })
     setIsEditing(false)
     setError(null)
@@ -197,35 +186,6 @@ const ProfileModal = ({ isOpen, onClose, user, sessionToken }) => {
                     />
                   ) : (
                     <p className="text-sm text-gray-300">{user.nickname || 'Not set'}</p>
-                  )}
-                </div>
-                <div className="p-3 rounded-lg bg-[#0F0F0F] border border-[#2A2A2A]/50">
-                  <p className="text-xs text-gray-500 mb-1">Birthday</p>
-                  {isEditing ? (
-                    <input
-                      type="date"
-                      value={editedProfile.birthday}
-                      onChange={(e) => handleInputChange('birthday', e.target.value)}
-                      className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded px-2 py-1 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
-                    />
-                  ) : (
-                    <p className="text-sm text-gray-300">
-                      {user.birthday ? new Date(user.birthday).toLocaleDateString() : 'N/A'}
-                    </p>
-                  )}
-                </div>
-                <div className="p-3 rounded-lg bg-[#0F0F0F] border border-[#2A2A2A]/50">
-                  <p className="text-xs text-gray-500 mb-1">Address</p>
-                  {isEditing ? (
-                    <textarea
-                      value={editedProfile.address}
-                      onChange={(e) => handleInputChange('address', e.target.value)}
-                      placeholder="Your address"
-                      rows={2}
-                      className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded px-2 py-1 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent resize-none"
-                    />
-                  ) : (
-                    <p className="text-sm text-gray-300">{user.address || 'N/A'}</p>
                   )}
                 </div>
               </div>

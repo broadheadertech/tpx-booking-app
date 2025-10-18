@@ -10,7 +10,7 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingService, setEditingService] = useState(null)
   const [loading, setLoading] = useState(false)
-  const [viewMode, setViewMode] = useState('card') // 'card' or 'table'
+  const [viewMode, setViewMode] = useState('table') // 'card' or 'table' - DEFAULT TABLE
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 8
 
