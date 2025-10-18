@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react'
-import { User, Mail, Phone, Calendar, MapPin, Edit2, LogOut, Save, X, ArrowLeft, RotateCcw } from 'lucide-react'
+import { User, Mail, Phone, Calendar, MapPin, Edit2, LogOut, Save, X, ArrowLeft, RotateCcw, AlertCircle, CheckCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import { useNavigate } from 'react-router-dom'
 
 const Profile = ({ onBack }) => {
-  const { user, logout, loading: authLoading } = useAuth()
+  const { user, logout, loading: authLoading, sessionToken } = useAuth()
   const navigate = useNavigate()
+  const updateUserProfileMutation = useMutation(api.services.auth.updateUserProfile)
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [profileData, setProfileData] = useState({
     username: '',
     email: '',
@@ -66,12 +71,37 @@ const Profile = ({ onBack }) => {
   const handleSave = async () => {
     try {
       setLoading(true)
-      // Mock save - replace with actual API call
-      console.log('Saving profile:', profileData)
-      // await profileService.updateProfile(profileData)
-      setIsEditing(false)
+      setError('')
+      setSuccess('')
+      
+      // Validate inputs
+      if (profileData.nickname && profileData.nickname.length > 100) {
+        throw new Error('Nickname must be less than 100 characters')
+      }
+      if (profileData.mobile_number && profileData.mobile_number.length > 0) {
+        if (!/^\+?[0-9\s\-\(\)]{7,}$/.test(profileData.mobile_number)) {
+          throw new Error('Please enter a valid phone number with at least 7 digits')
+        }
+      }
+      
+      // Call backend mutation
+      const result = await updateUserProfileMutation({
+        sessionToken: sessionToken || '',
+        nickname: profileData.nickname || undefined,
+        email: undefined, // Email should not be changed
+        mobile_number: profileData.mobile_number || undefined,
+        birthday: profileData.birthday || undefined,
+      })
+      
+      if (result) {
+        setSuccess('Profile updated successfully!')
+        setIsEditing(false)
+        setTimeout(() => setSuccess(''), 3000)
+      }
     } catch (error) {
       console.error('Error saving profile:', error)
+      const errorMessage = error?.message || 'Failed to update profile. Please try again.'
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -167,6 +197,20 @@ const Profile = ({ onBack }) => {
             </div>
           </div>
         </div>
+
+        {/* Error/Success Messages */}
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 mb-4 flex items-center space-x-2">
+            <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+            <p className="text-sm text-red-300">{error}</p>
+          </div>
+        )}
+        {success && (
+          <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-3 mb-4 flex items-center space-x-2">
+            <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+            <p className="text-sm text-green-300">{success}</p>
+          </div>
+        )}
 
         {/* Personal Information Card */}
         <div className="bg-[#1A1A1A] rounded-2xl shadow-lg border border-[#2A2A2A] mb-4">
@@ -270,16 +314,6 @@ const Profile = ({ onBack }) => {
             <h3 className="text-lg font-semibold text-white">Account Summary</h3>
           </div>
           <div className="p-4 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-[#0A0A0A] rounded-xl border border-[#2A2A2A]">
-                <div className="text-2xl font-bold text-[#FF8C42]">0</div>
-                <div className="text-sm text-gray-400">Total Bookings</div>
-              </div>
-              <div className="text-center p-4 bg-[#0A0A0A] rounded-xl border border-[#2A2A2A]">
-                <div className="text-2xl font-bold text-[#FF8C42]">0</div>
-                <div className="text-sm text-gray-400">Vouchers</div>
-              </div>
-            </div>
             <div className="text-center p-4 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-xl">
               <div className="text-white text-sm font-medium">Member since</div>
               <div className="text-white text-lg font-bold">
