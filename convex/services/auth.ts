@@ -656,7 +656,7 @@ export const sendPasswordResetEmail = action({
     token: v.string(),
   },
   handler: async (ctx, args) => {
-    const resetUrl = `${process.env.PUBLIC_APP_URL || 'http://localhost:5173'}/auth/reset-password?token=${args.token}`;
+    const resetUrl = `https://tipunox.broadheader.com/auth/reset-password?token=${args.token}`;
 
     const emailData = {
       from: 'TPX Barbershop <no-reply@tipunox.broadheader.com>',
