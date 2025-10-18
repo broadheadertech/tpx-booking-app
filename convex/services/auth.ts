@@ -524,7 +524,7 @@ export const updateUser = mutation({
     // Get existing user
     const existingUser = await ctx.db.get(userId);
     if (!existingUser) {
-      throw new Error("User not found");
+      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "User not found", "The user account could not be found in the system. Please refresh and try again.");
     }
 
     // Check if email is being updated and if it's already taken by another user
@@ -535,7 +535,7 @@ export const updateUser = mutation({
         .first();
 
       if (emailExists && emailExists._id !== userId) {
-        throwUserError(ERROR_CODES.AUTH_EMAIL_EXISTS);
+        throwUserError(ERROR_CODES.AUTH_EMAIL_EXISTS, `Email ${updateData.email} is already in use`, "This email is already registered in the system. Please use a different email address.");
       }
     }
 
@@ -547,7 +547,7 @@ export const updateUser = mutation({
         .first();
 
       if (usernameExists && usernameExists._id !== userId) {
-        throwUserError(ERROR_CODES.AUTH_USERNAME_EXISTS);
+        throwUserError(ERROR_CODES.AUTH_USERNAME_EXISTS, `Username "${updateData.username}" is already taken`, "This username is already in use. Please choose a different username.");
       }
     }
 
@@ -592,7 +592,7 @@ export const deleteUser = mutation({
     // Get existing user
     const existingUser = await ctx.db.get(args.userId);
     if (!existingUser) {
-      throw new Error("User not found");
+      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "User not found", "The user account could not be found in the system.");
     }
 
     // Delete all sessions for this user
@@ -830,7 +830,7 @@ export const resetPassword = mutation({
     }
 
     if ((user.password_reset_expires as number) < Date.now()) {
-      throw new Error("Reset token expired");
+      throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS, "Reset token expired", "Your password reset link has expired. Please request a new one.");
     }
 
     await ctx.db.patch(user._id, {

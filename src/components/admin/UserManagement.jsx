@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { User, UserPlus, Edit, Trash2, Shield, Building, Users, Search, Filter, CheckCircle } from 'lucide-react'
+import { User, UserPlus, Edit, Trash2, Shield, Building, Users, Search, Filter, CheckCircle, AlertCircle } from 'lucide-react'
 import UserFormModal from './UserFormModal'
 
 export default function UserManagement() {
@@ -128,7 +128,9 @@ export default function UserManagement() {
       resetForm()
     } catch (error) {
       console.error('Error creating user:', error)
-      setError(error.message || 'Failed to create user')
+      // Extract user-friendly error message
+      const errorMessage = error?.message || 'Failed to create user'
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -222,28 +224,9 @@ export default function UserManagement() {
     } catch (error) {
       console.error('Error updating user:', error)
       
-      // Handle specific error types
-      if (error.message?.includes('email')) {
-        setError('This email address is already in use by another user')
-      } else if (error.message?.includes('username')) {
-        setError('This username is already taken by another user')
-      } else if (error.message?.includes('not found')) {
-        setError('User not found. Please refresh the page and try again.')
-      } else if (error.message?.includes('Invalid username')) {
-        setError('Invalid username format. Please check the requirements.')
-      } else if (error.message?.includes('Invalid email')) {
-        setError('Invalid email format. Please enter a valid email address.')
-      } else if (error.message?.includes('Password contains invalid characters')) {
-        setError('Password contains invalid characters. Please use only letters, numbers, and common symbols.')
-      } else if (error.message?.includes('network') || error.message?.includes('timeout')) {
-        setError('Network error. Please check your connection and try again.')
-      } else if (error.message?.includes('rate limit')) {
-        setError('Too many requests. Please wait a moment and try again.')
-      } else if (error.message?.includes('unauthorized') || error.message?.includes('forbidden')) {
-        setError('You do not have permission to update this user.')
-      } else {
-        setError(error.message || 'Failed to update user. Please try again.')
-      }
+      // Extract user-friendly error message directly from the error
+      const errorMessage = error?.message || 'Failed to update user. Please try again.'
+      setError(errorMessage)
     } finally {
       setLoading(false)
       setPendingUpdate(null)
