@@ -398,22 +398,32 @@ const ServiceBooking = ({ onBack }) => {
       // Redeem voucher if one was selected
       if (selectedVoucher?.code) {
         try {
-          console.log("Redeeming voucher:", selectedVoucher.code);
-          await redeemVoucher({
+          console.log("Redeeming voucher:", selectedVoucher.code, "User:", user._id);
+          const redemptionResult = await redeemVoucher({
             code: selectedVoucher.code,
             user_id: user._id
           });
 
-          console.log("Voucher redeemed successfully");
+          console.log("✅ Voucher redeemed successfully:", {
+            code: selectedVoucher.code,
+            voucherId: selectedVoucher._id,
+            status: "redeemed",
+            result: redemptionResult
+          });
 
           // Show success message for voucher redemption
           setTimeout(() => {
-            console.log(`✅ Voucher ${selectedVoucher.code} redeemed successfully!`);
+            console.log(`✅ Voucher ${selectedVoucher.code} has been applied and marked as redeemed!`);
           }, 1500);
         } catch (voucherError) {
-          console.error("Error during voucher redemption:", voucherError);
-          // Don't break the booking flow - the booking is still successful
-          // The voucher remains unredeemed and user can try again later
+          console.error("⚠️ Error during voucher redemption:", {
+            code: selectedVoucher.code,
+            error: voucherError?.message || voucherError,
+            userId: user._id
+          });
+          // Log the error but don't break the booking flow
+          // The booking is still successful, but notify user about voucher issue
+          alert(`Booking confirmed! Note: Voucher status update encountered an issue. Please refresh to see the updated status.`);
         }
       }
     } catch (error) {

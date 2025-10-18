@@ -10,7 +10,9 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md', variant = 'light
     sm: 'max-w-md',
     md: 'max-w-2xl',
     lg: 'max-w-4xl',
-    xl: 'max-w-6xl'
+    xl: 'max-w-6xl',
+    compact: 'max-w-sm',  // Compact size - narrow modal
+    balanced: 'max-w-lg'  // Balanced size - medium width (good for forms/dialogs)
   }
 
   const isDark = variant === 'dark'
@@ -27,7 +29,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md', variant = 'light
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] overflow-y-auto">
-      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="flex min-h-full items-center justify-center p-2">
         <div 
           className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
           onClick={onClose}

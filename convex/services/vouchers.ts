@@ -459,16 +459,22 @@ export const redeemVoucher = mutation({
     user_id: v.id("users"),
   },
   handler: async (ctx, args) => {
+    console.log('🎫 redeemVoucher called:', { code: args.code, userId: args.user_id });
+    
     const voucher = await ctx.db
       .query("vouchers")
       .withIndex("by_code", (q) => q.eq("code", args.code.toUpperCase()))
       .first();
 
     if (!voucher) {
+      console.error('❌ Voucher not found:', args.code);
       throw new Error("Voucher not found");
     }
 
+    console.log('✅ Voucher found:', { code: voucher.code, voucherId: voucher._id });
+
     if (voucher.expires_at < Date.now()) {
+      console.error('❌ Voucher expired:', { code: voucher.code, expiresAt: new Date(voucher.expires_at) });
       throw new Error("Voucher has expired");
     }
 
@@ -481,18 +487,25 @@ export const redeemVoucher = mutation({
       .first();
 
     if (!assignment) {
+      console.error('❌ Voucher not assigned to user:', { code: voucher.code, userId: args.user_id, voucherId: voucher._id });
       throw new Error("Voucher not assigned to this user");
     }
 
+    console.log('✅ Assignment found:', { assignmentId: assignment._id, currentStatus: assignment.status });
+
     if (assignment.status === "redeemed") {
+      console.error('❌ Voucher already redeemed:', { code: voucher.code, redeemedAt: new Date(assignment.redeemed_at) });
       throw new Error("Voucher has already been redeemed");
     }
 
     // Mark assignment as redeemed
+    console.log('📝 Updating assignment status to redeemed...');
     await ctx.db.patch(assignment._id, {
       status: "redeemed",
       redeemed_at: Date.now(),
     });
+
+    console.log('✅ Assignment updated successfully:', { assignmentId: assignment._id, newStatus: "redeemed" });
 
     return { voucher, assignment };
   },

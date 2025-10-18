@@ -55,7 +55,7 @@ const PaymentConfirmationModal = ({ isOpen, onClose, onConfirm, transactionData,
   }, [isOpen])
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Confirm Payment" variant="dark" size="compact">
+    <Modal isOpen={isOpen} onClose={onClose} title="Confirm Payment" variant="dark" size="md">
       <div className="space-y-3">
         {/* Transaction Summary - Primary Focus */}
         <div className="bg-gradient-to-br from-[#1A1A1A] to-[#0A0A0A] rounded-xl p-4 border border-[#2A2A2A]">
