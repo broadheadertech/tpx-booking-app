@@ -11,31 +11,31 @@ const PremiumOnboarding = ({ onComplete }) => {
         title: 'Welcome to Tipuno X',
         subtitle: 'Premium Barbershop Experience',
         content: (
-          <div className="text-center space-y-8">
-            <div className="flex justify-center mb-6">
+          <div className="text-center space-y-6">
+            <div className="flex justify-center mb-8">
               <img 
                 src="/img/tipuno_x_logo_white.avif" 
                 alt="Tipuno X Logo" 
-                className="w-40 h-40 object-contain drop-shadow-2xl"
+                className="w-20 h-20 object-contain"
               />
             </div>
-            <div className="space-y-4 max-w-lg mx-auto">
-              <p className="text-gray-300 text-lg leading-relaxed">
+            <div className="space-y-4 max-w-md mx-auto">
+              <p className="text-gray-300 text-base leading-relaxed">
                 Book appointments with expert barbers, earn rewards, and enjoy premium service.
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-4 max-w-xl mx-auto pt-2">
-              <div className="bg-[#FF8C42]/10 p-4 rounded-xl border border-[#FF8C42]/30 hover:bg-[#FF8C42]/15 transition-all">
-                <Scissors className="w-8 h-8 text-[#FF8C42] mx-auto mb-2" />
-                <p className="text-white font-semibold text-sm">Expert</p>
+            <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto pt-4">
+              <div className="bg-[#FF8C42]/10 p-3 rounded-lg border border-[#FF8C42]/30">
+                <Scissors className="w-5 h-5 text-[#FF8C42] mx-auto mb-1" />
+                <p className="text-white font-medium text-xs">Expert</p>
               </div>
-              <div className="bg-[#FF8C42]/10 p-4 rounded-xl border border-[#FF8C42]/30 hover:bg-[#FF8C42]/15 transition-all">
-                <Calendar className="w-8 h-8 text-[#FF8C42] mx-auto mb-2" />
-                <p className="text-white font-semibold text-sm">Booking</p>
+              <div className="bg-[#FF8C42]/10 p-3 rounded-lg border border-[#FF8C42]/30">
+                <Calendar className="w-5 h-5 text-[#FF8C42] mx-auto mb-1" />
+                <p className="text-white font-medium text-xs">Booking</p>
               </div>
-              <div className="bg-[#FF8C42]/10 p-4 rounded-xl border border-[#FF8C42]/30 hover:bg-[#FF8C42]/15 transition-all">
-                <Star className="w-8 h-8 text-[#FF8C42] mx-auto mb-2" />
-                <p className="text-white font-semibold text-sm">Rewards</p>
+              <div className="bg-[#FF8C42]/10 p-3 rounded-lg border border-[#FF8C42]/30">
+                <Star className="w-5 h-5 text-[#FF8C42] mx-auto mb-1" />
+                <p className="text-white font-medium text-xs">Rewards</p>
               </div>
             </div>
           </div>
@@ -46,15 +46,11 @@ const PremiumOnboarding = ({ onComplete }) => {
         title: 'Easy Booking',
         subtitle: 'Schedule at your convenience',
         content: (
-          <div className="text-center space-y-8 max-w-lg mx-auto">
-            <div className="flex items-center justify-center h-48">
-              <img 
-                src="/img/pnglog.png" 
-                alt="Tipuno X" 
-                className="w-40 h-40 object-contain drop-shadow-2xl"
-              />
+          <div className="text-center space-y-6 max-w-md mx-auto">
+            <div className="bg-[#FF8C42]/10 rounded-2xl p-8 border border-[#FF8C42]/30 flex items-center justify-center h-32">
+              <Calendar className="w-16 h-16 text-[#FF8C42]" />
             </div>
-            <p className="text-gray-300 text-lg leading-relaxed">
+            <p className="text-gray-300 text-base leading-relaxed">
               Browse available time slots, choose your favorite barber, and confirm your appointment in seconds.
             </p>
             <div className="bg-[#1A1A1A] rounded-lg p-4 border border-[#2A2A2A]">
@@ -69,9 +65,9 @@ const PremiumOnboarding = ({ onComplete }) => {
         title: 'Earn Rewards',
         subtitle: 'Unlock exclusive benefits',
         content: (
-          <div className="text-center space-y-8 max-w-lg mx-auto">
-            <div className="bg-[#FF8C42]/10 rounded-3xl p-12 border border-[#FF8C42]/30 flex items-center justify-center h-48">
-              <Star className="w-24 h-24 text-[#FF8C42]" />
+          <div className="text-center space-y-6 max-w-md mx-auto">
+            <div className="bg-[#FF8C42]/10 rounded-2xl p-8 border border-[#FF8C42]/30 flex items-center justify-center h-32">
+              <Star className="w-16 h-16 text-[#FF8C42]" />
             </div>
             <p className="text-gray-300 text-base leading-relaxed">
               Earn points with every visit and redeem them for discounts, free services, and exclusive offers.
@@ -88,9 +84,9 @@ const PremiumOnboarding = ({ onComplete }) => {
         title: 'You\'re All Set!',
         subtitle: 'Ready to get started',
         content: (
-          <div className="text-center space-y-8 max-w-lg mx-auto">
-            <div className="bg-[#FF8C42]/10 rounded-3xl p-12 border border-[#FF8C42]/30 flex items-center justify-center h-48">
-              <CheckCircle className="w-24 h-24 text-[#FF8C42]" />
+          <div className="text-center space-y-6 max-w-md mx-auto">
+            <div className="bg-[#FF8C42]/10 rounded-2xl p-8 border border-[#FF8C42]/30 flex items-center justify-center h-32">
+              <CheckCircle className="w-16 h-16 text-[#FF8C42]" />
             </div>
             <p className="text-gray-300 text-base leading-relaxed">
               Everything is ready. Start booking your appointments and experience premium barbershop service.

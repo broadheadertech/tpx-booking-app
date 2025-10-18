@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, Gift, Clock, CheckCircle, XCircle, QrCode, Ticket, Plus, Camera, Upload, Keyboard, X, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Gift, Clock, CheckCircle, XCircle, QrCode, Ticket, Camera, Upload, Keyboard, X } from 'lucide-react'
 import QRCode from 'qrcode'
 import jsQR from 'jsqr'
 import { useQuery, useMutation } from 'convex/react'
@@ -540,24 +540,6 @@ const VoucherManagement = ({ onBack }) => {
           </div>
           <h1 className="text-xl font-black mb-2 text-white">Your Vouchers</h1>
           <p className="text-sm font-medium mb-4 text-gray-400">View and manage your vouchers</p>
-
-          {/* Action Buttons */}
-          <div className="flex space-x-3 mb-4">
-            <button
-              onClick={() => setShowClaimModal(true)}
-              className="flex-1 py-3 text-white font-bold rounded-xl bg-[#FF8C42] hover:bg-[#FF7A2B] transition-all duration-200 flex items-center justify-center space-x-2 touch-manipulation"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="text-sm">Claim New</span>
-            </button>
-            <button
-              onClick={() => window.location.reload()}
-              disabled={loading}
-              className="px-4 py-3 bg-[#1A1A1A] text-gray-300 font-bold rounded-xl transition-all duration-200 hover:bg-[#2A2A2A] border border-[#2A2A2A] flex items-center justify-center disabled:opacity-50 touch-manipulation"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
         </div>
 
         {/* Loading State */}
@@ -825,7 +807,7 @@ const VoucherManagement = ({ onBack }) => {
               No Vouchers Yet
             </h3>
             <p className="text-xs max-w-md mx-auto mb-3" style={{color: '#8B8B8B'}}>
-              Your vouchers will appear here. Click "Claim New" above to get started.
+              Your vouchers will appear here. 
             </p>
           </div>
         )}
