@@ -1,6 +1,6 @@
 {
   "name": "tpx-booking-app",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "main": "index.js",
   "scripts": {
@@ -12,7 +12,11 @@
     "android:open": "npx cap open android",
     "android:icons": "./scripts/generate-icons.sh",
     "android:splash": "./scripts/setup-splash.sh",
-    "android:update-apk": "./scripts/update-apk.sh"
+    "android:update-apk": "./scripts/update-apk.sh",
+    "deploy": "node scripts/deploy.js",
+    "deploy:major": "node scripts/deploy.js --major",
+    "deploy:minor": "node scripts/deploy.js --minor",
+    "deploy:patch": "node scripts/deploy.js --patch"
   },
   "repository": {
     "type": "git",

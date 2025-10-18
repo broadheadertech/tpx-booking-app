@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import bannerImage from '../../assets/img/banner.jpg'
 import { useAuth } from '../../context/AuthContext'
 import ErrorDisplay from '../../components/common/ErrorDisplay'
+import { APP_VERSION } from '../../config/version'
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -11,6 +12,8 @@ function Login() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [errorDetails, setErrorDetails] = useState('')
+  const [errorAction, setErrorAction] = useState('')
   const navigate = useNavigate()
   const { login, loginWithFacebook } = useAuth()
   const [fbLoading, setFbLoading] = useState(false)
@@ -78,6 +81,8 @@ function Login() {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setErrorDetails('')
+    setErrorAction('')
 
     try {
       const result = await login(formData.email, formData.password)
@@ -94,9 +99,12 @@ function Login() {
         }
       } else {
         setError(result.error)
+        setErrorDetails(result.details || '')
+        setErrorAction(result.action || '')
       }
     } catch (error) {
       setError('An unexpected error occurred. Please try again.')
+      setErrorDetails('If this problem persists, please contact support.')
     } finally {
       setLoading(false)
     }
@@ -142,8 +150,18 @@ function Login() {
                   <ErrorDisplay 
                     error={error} 
                     variant="compact"
-                    onClose={() => setError('')}
+                    onClose={() => {
+                      setError('')
+                      setErrorDetails('')
+                      setErrorAction('')
+                    }}
                   />
+                  {errorDetails && (
+                    <p className="text-xs text-gray-400 mt-2">{errorDetails}</p>
+                  )}
+                  {errorAction && (
+                    <p className="text-xs text-[#FF8C42] mt-1">{errorAction}</p>
+                  )}
                 </div>
               )}
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -222,6 +240,11 @@ function Login() {
         </div>
       </div>
 
+      {/* Version Display */}
+      <div className="fixed bottom-4 right-4 text-xs text-gray-500 text-right">
+        <p>v{APP_VERSION}</p>
+        <p className="text-gray-600">TPX Barbershop</p>
+      </div>
     </div>
   )
 }

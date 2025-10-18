@@ -118,27 +118,12 @@ export const loginUser = mutation({
       throwUserError(ERROR_CODES.AUTH_ACCOUNT_INACTIVE);
     }
 
-    // Debug: Check what's happening with the password
-    console.log("DEBUG - Login attempt details:");
-    console.log("Input email:", args.email);
-    console.log("Input password:", `"${args.password}"`);
-    console.log("Input password length:", args.password.length);
-    console.log("Stored password:", `"${user.password}"`);
-    console.log("Stored password length:", user.password.length);
-    console.log("Stored hash verification:", verifyPassword(args.password, user.password));
-    
     // Check password - assume it's hashed (new standard)
     if (!verifyPassword(args.password, user.password)) {
       // If hash verification fails, try plain text as fallback for legacy accounts
-      console.log("Hash failed, trying plain text...");
       if (args.password !== user.password) {
-        console.log("Plain text also failed");
         throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
-      } else {
-        console.log("Plain text verification succeeded - legacy account");
       }
-    } else {
-      console.log("Hash verification succeeded");
     }
 
     // Create new session

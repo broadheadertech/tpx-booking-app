@@ -1,6 +1,35 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../convex/_generated/api'
+
+// Helper function to parse Convex error messages
+function parseConvexError(error) {
+  try {
+    if (error?.message) {
+      // Try to parse JSON error from Convex
+      const parsed = JSON.parse(error.message)
+      if (parsed.message) {
+        return {
+          message: parsed.message,
+          details: parsed.details || '',
+          action: parsed.action || '',
+          code: parsed.code || ''
+        }
+      }
+    }
+  } catch (e) {
+    // Not a JSON error, return as-is
+  }
+  
+  // Return a friendly message for unparseable errors
+  return {
+    message: error?.message || 'An unexpected error occurred',
+    details: 'Please try again or contact support if the problem persists.',
+    action: '',
+    code: ''
+  }
+}
+
 const AuthContext = createContext(null)
 
 export const useAuth = () => {
@@ -113,16 +142,13 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Login error:', error)
-      let errorMessage = error.message || 'Login failed. Please try again.'
-      
-      // Check if it's related to email service configuration
-      if (error.message && error.message.includes('development mode')) {
-        errorMessage = 'Authentication failed. Email service is in development mode. Please contact support for assistance.'
-      }
+      const parsedError = parseConvexError(error)
       
       return {
         success: false,
-        error: errorMessage
+        error: parsedError.message,
+        details: parsedError.details,
+        action: parsedError.action
       }
     }
   }
