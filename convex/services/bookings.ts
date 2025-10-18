@@ -253,6 +253,12 @@ export const createBooking = mutation({
       throwUserError(ERROR_CODES.BOOKING_SERVICE_UNAVAILABLE);
     }
     
+    // Verify customer exists
+    const customer = await ctx.db.get(args.customer);
+    if (!customer) {
+      throwUserError(ERROR_CODES.BOOKING_NOT_FOUND, 'Customer not found for booking. Please ensure the customer exists before creating a booking.');
+    }
+    
     // Validate booking date is not in the past
     const bookingDate = new Date(args.date);
     const today = new Date();

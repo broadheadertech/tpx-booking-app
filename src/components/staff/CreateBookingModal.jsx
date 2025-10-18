@@ -155,6 +155,11 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
           customerId = walkinResult.userId
 
           console.log('Walk-in customer created:', customerId)
+
+          // Verify customer was created successfully before proceeding
+          if (!customerId) {
+            throw new Error('Walk-in customer creation returned no user ID')
+          }
         } catch (walkinErr) {
           console.error('Error creating walk-in customer:', walkinErr)
           setError(`Failed to create walk-in customer: ${walkinErr.message || 'Unknown error'}`)
@@ -292,6 +297,11 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
       }
 
       console.log('Creating booking:', bookingData)
+
+      // Small delay for walk-in customers to ensure database propagation
+      if (formData.customerType === 'walkin') {
+        await new Promise(resolve => setTimeout(resolve, 500)) // 500ms delay for DB propagation
+      }
 
       // Create booking via Convex
       const bookingId = await createBooking(bookingData)

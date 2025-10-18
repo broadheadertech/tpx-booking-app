@@ -114,24 +114,41 @@ const POS = () => {
   // Check for booking data from BookingsManagement
   useEffect(() => {
     const posBooking = sessionStorage.getItem('posBooking')
-    if (posBooking && services && customers) {
+    if (posBooking && services !== undefined) {
       try {
         const booking = JSON.parse(posBooking)
 
         // Store booking data for display
         setCurrentBooking(booking)
 
-        // Find the customer
-        const customer = customers.find(c => c._id === booking.customer)
+        // Try to find the customer from the customers query
+        let customer = null
+        if (customers && customers.length > 0) {
+          customer = customers.find(c => c._id === booking.customer)
+        }
+
+        // If customer not found in query, use booking's stored customer data
+        if (!customer && booking.customer_name) {
+          // Create a customer object from booking data
+          customer = {
+            _id: booking.customer,
+            username: booking.customer_name,
+            mobile_number: booking.customer_phone || '',
+            email: booking.customer_email || '',
+            address: booking.customer_address || ''
+          }
+          console.log('Using customer data from booking:', customer)
+        }
+
         if (!customer) {
-          console.error('Customer not found for booking')
+          console.error('Customer not found for booking and no customer data in booking')
           return
         }
 
-        // Find the service
-        const service = services.find(s => s._id === booking.service)
+        // Find the service - with optional chaining and error handling
+        const service = services?.find(s => s._id === booking.service)
         if (!service) {
-          console.error('Service not found for booking')
+          console.error('Service not found for booking:', booking.service)
           return
         }
 
