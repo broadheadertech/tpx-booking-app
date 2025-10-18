@@ -8,10 +8,9 @@ import Card from '../../components/common/Card'
 
 function Register() {
   const [formData, setFormData] = useState({
-    username: '',
+    fullName: '',
     password: '',
     confirmPassword: '',
-    nickname: '',
     mobile_number: '',
     email: '',
     birthday: ''
@@ -37,6 +36,43 @@ function Register() {
     setError('')
     setSuccess('')
 
+    // Form validation
+    if (!formData.fullName.trim()) {
+      setError('Full name is required')
+      setLoading(false)
+      return
+    }
+
+    if (!formData.email.trim()) {
+      setError('Email address is required')
+      setLoading(false)
+      return
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      setError('Please enter a valid email address')
+      setLoading(false)
+      return
+    }
+
+    if (!formData.mobile_number.trim()) {
+      setError('Mobile number is required')
+      setLoading(false)
+      return
+    }
+
+    if (!/^\+?[0-9\s\-\(\)]{7,}$/.test(formData.mobile_number)) {
+      setError('Please enter a valid mobile number')
+      setLoading(false)
+      return
+    }
+
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long')
+      setLoading(false)
+      return
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match')
       setLoading(false)
@@ -47,14 +83,20 @@ function Register() {
       // Determine user role (default to customer for registration)
       const userRole = 'customer' // You can add role selection later
 
+      // Generate username from full name and timestamp
+      const timestamp = Date.now().toString(36);
+      const baseUsername = formData.fullName.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const username = baseUsername ? `${baseUsername}_${timestamp}` : `user_${timestamp}`;
+
       await registerUser({
-        username: formData.username,
+        username: username,
         password: formData.password,
-        nickname: formData.nickname || undefined,
+        nickname: formData.fullName || undefined,
         mobile_number: formData.mobile_number,
         email: formData.email,
         birthday: formData.birthday || undefined,
-        role: userRole
+        role: userRole,
+        branch_id: undefined // Customers don't need branch assignment
       })
 
       setSuccess('Registration successful! Please log in with your credentials.')
@@ -63,7 +105,21 @@ function Register() {
       }, 2000)
     } catch (error) {
       console.error('Registration error:', error)
-      setError(error.message || 'An unexpected error occurred. Please try again.')
+      let errorMessage = 'An unexpected error occurred. Please try again.'
+      
+      if (error.message) {
+        if (error.message.includes('Email already exists')) {
+          errorMessage = 'This email address is already registered. Please use a different email or try logging in.'
+        } else if (error.message.includes('Username already exists')) {
+          errorMessage = 'This full name is already taken. Please use a different name.'
+        } else if (error.message.includes('Branch ID is required')) {
+          errorMessage = 'Registration failed. Please contact support.'
+        } else {
+          errorMessage = error.message
+        }
+      }
+      
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -124,20 +180,10 @@ function Register() {
                 <div className="space-y-4">
                   <input
                     type="text"
-                    name="username"
-                    value={formData.username}
+                    name="fullName"
+                    value={formData.fullName}
                     onChange={handleChange}
-                    placeholder="Username"
-                    required
-                    className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42] transition-all duration-300 text-base text-white placeholder-gray-400"
-                  />
-                  
-                  <input
-                    type="text"
-                    name="nickname"
-                    value={formData.nickname}
-                    onChange={handleChange}
-                    placeholder="Nickname"
+                    placeholder="Full Name"
                     required
                     className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42] transition-all duration-300 text-base text-white placeholder-gray-400"
                   />

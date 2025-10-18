@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { LogOut, Crown, Shield, User, Building } from 'lucide-react'
+import { LogOut, Crown, Shield, Building } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
@@ -7,7 +7,6 @@ import { api } from '../../../convex/_generated/api'
 const DashboardHeader = ({ onLogout }) => {
   const { user } = useAuth()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
-  const [showProfileModal, setShowProfileModal] = useState(false)
   
   // Get system stats for admin
   const branches = useQuery(api.services.branches.getAllBranches) || []
@@ -89,14 +88,6 @@ const DashboardHeader = ({ onLogout }) => {
 
             {/* Action Buttons */}
             <div className="flex items-center space-x-1 sm:space-x-1.5">
-              <button
-                onClick={() => setShowProfileModal(true)}
-                className="w-7 h-7 sm:w-9 sm:h-9 bg-white/5 backdrop-blur-sm rounded-lg flex items-center justify-center hover:bg-white/10 transition-all duration-200 border border-white/10 group"
-                title="My Profile"
-              >
-                <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 group-hover:text-white transition-colors duration-200" />
-              </button>
-
               <button
                 onClick={() => setShowLogoutModal(true)}
                 className="w-7 h-7 sm:w-9 sm:h-9 bg-red-500/15 backdrop-blur-sm rounded-lg flex items-center justify-center hover:bg-red-500/25 transition-all duration-200 border border-red-500/25 group"

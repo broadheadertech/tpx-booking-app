@@ -42,6 +42,7 @@ export const AuthProvider = ({ children }) => {
   const facebookLoginAction = useAction(api.services.auth.loginWithFacebook)
   const logoutMutation = useMutation(api.services.auth.logoutUser)
   const requestPasswordResetMutation = useMutation(api.services.auth.requestPasswordReset)
+  const sendPasswordResetEmailAction = useAction(api.services.auth.sendPasswordResetEmail)
   const resetPasswordMutation = useMutation(api.services.auth.resetPassword)
 
   useEffect(() => {
@@ -79,14 +80,13 @@ export const AuthProvider = ({ children }) => {
     try {
       const result = await loginMutation({ email, password })
 
-      if (result) {
+      if (result && result.sessionToken && result.user) {
         // Store session token
         localStorage.setItem('session_token', result.sessionToken)
         setSessionToken(result.sessionToken)
 
         // Set user state immediately
-        setIsAuthenticated(true)
-        setUser({
+        const userData = {
           _id: result.user._id,
           id: result.user._id, // Keep both for compatibility
           username: result.user.username,
@@ -97,23 +97,32 @@ export const AuthProvider = ({ children }) => {
           avatar: result.user.avatar,
           is_staff: result.user.role === 'staff' || result.user.role === 'admin' || result.user.role === 'super_admin' || result.user.role === 'branch_admin',
           branch_id: result.user.branch_id
-        })
+        }
+        setIsAuthenticated(true)
+        setUser(userData)
 
         return {
           success: true,
-          data: result.user
+          data: userData
         }
       }
 
       return {
         success: false,
-        error: 'Login failed'
+        error: 'Invalid email or password'
       }
     } catch (error) {
       console.error('Login error:', error)
+      let errorMessage = error.message || 'Login failed. Please try again.'
+      
+      // Check if it's related to email service configuration
+      if (error.message && error.message.includes('development mode')) {
+        errorMessage = 'Authentication failed. Email service is in development mode. Please contact support for assistance.'
+      }
+      
       return {
         success: false,
-        error: error.message || 'Login failed. Please try again.'
+        error: errorMessage
       }
     }
   }
@@ -124,8 +133,7 @@ export const AuthProvider = ({ children }) => {
       if (result?.sessionToken && result?.user) {
         localStorage.setItem('session_token', result.sessionToken)
         setSessionToken(result.sessionToken)
-        setIsAuthenticated(true)
-        setUser({
+        const userData = {
           _id: result.user._id,
           id: result.user._id,
           username: result.user.username,
@@ -136,13 +144,22 @@ export const AuthProvider = ({ children }) => {
           avatar: result.user.avatar,
           is_staff: result.user.role === 'staff' || result.user.role === 'admin' || result.user.role === 'super_admin' || result.user.role === 'branch_admin',
           branch_id: result.user.branch_id
-        })
-        return { success: true, data: result.user }
+        }
+        setIsAuthenticated(true)
+        setUser(userData)
+        return { success: true, data: userData }
       }
       return { success: false, error: 'Facebook login failed' }
     } catch (err) {
       console.error('Facebook login error:', err)
-      return { success: false, error: err.message || 'Facebook login failed' }
+      let errorMessage = err.message || 'Facebook login failed'
+      
+      // Check if it's related to email service configuration
+      if (err.message && err.message.includes('development mode')) {
+        errorMessage = 'Facebook authentication failed. Email service is in development mode.'
+      }
+      
+      return { success: false, error: errorMessage }
     }
   }
 
@@ -164,7 +181,20 @@ export const AuthProvider = ({ children }) => {
 
   const requestPasswordReset = async (email) => {
     try {
-      const res = await requestPasswordResetMutation({ email })
+      const result = await requestPasswordResetMutation({ email })
+      
+      if (result.success && result.token && result.email) {
+        // Send email with reset link
+        const emailResult = await sendPasswordResetEmailAction({
+          email: result.email,
+          token: result.token
+        });
+        
+        if (!emailResult.success) {
+          console.error('Failed to send reset email:', emailResult.error);
+        }
+      }
+      
       return { success: true }
     } catch (error) {
       console.error('Request password reset error:', error)

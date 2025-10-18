@@ -177,6 +177,8 @@ function Login() {
                   <Link to="/auth/forgot-password" className="text-sm font-medium text-[#FF8C42] hover:text-[#FF7A2B] transition-colors active:text-[#FF6B1A]">
                     Forgot Password?
                   </Link>
+                  <span className="text-xs text-gray-500">|</span>
+                  <span className="text-xs text-gray-500">Email reset</span>
                 </div>
                 
                 <div className="pt-2">

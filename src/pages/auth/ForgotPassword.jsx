@@ -16,9 +16,18 @@ function ForgotPassword() {
     try {
       const res = await requestPasswordReset(email)
       if (res.success) {
-        toast.success('Reset link sent', 'If the email exists, we sent instructions.')
+        toast.success('Reset link sent', 'If the email exists, we sent instructions to your email.')
       } else {
         toast.error('Request failed', res.error || 'Please try again')
+      }
+    } catch (error) {
+      console.error('Password reset request error:', error);
+      
+      // Check if it's the restricted API key error
+      if (error.message && error.message.includes('development mode')) {
+        toast.error('Service unavailable', 'Email service is currently in development mode. Please contact support.')
+      } else {
+        toast.error('Request failed', error.message || 'Please try again')
       }
     } finally {
       setLoading(false)
@@ -42,7 +51,9 @@ function ForgotPassword() {
             <div className="flex justify-center mb-1">
               <img src="/img/tipuno_x_logo_white.avif" alt="TipunoX Angeles Barbershop Logo" className="w-52 h-32 object-contain" />
             </div>
-            <p className="text-sm font-light text-gray-400">Forgot your password? We'll help you reset it.</p>
+            <p className="text-sm font-light text-gray-400">
+              Forgot your password? We'll help you reset it with email instructions.
+            </p>
           </div>
 
           <div className="bg-[#1A1A1A] backdrop-blur-xl rounded-3xl shadow-2xl border border-[#2A2A2A]/50">
