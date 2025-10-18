@@ -487,7 +487,7 @@ export const updateBooking = mutation({
             message: "A booking has been confirmed for you.",
             type: "booking",
             priority: "medium",
-            recipient_id: currentBooking.barber,
+            recipient_id: currentBooking.barber as unknown as Id<"users">,
             recipient_type: "barber",
             branch_id: currentBooking.branch_id,
             action_url: `/bookings/${currentBooking.booking_code}`,
@@ -543,7 +543,7 @@ export const deleteBooking = mutation({
             bookingId: args.id,
             notificationType: "BARBER_APPOINTMENT_CANCELLED",
             recipients: [
-              { type: "barber", userId: booking.barber },
+              { type: "barber", userId: booking.barber as unknown as Id<"users"> },
             ],
             metadata: {
               reason: "Booking deleted by administrator"
