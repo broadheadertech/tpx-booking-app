@@ -380,6 +380,8 @@ export const updateUserProfile = mutation({
     sessionToken: v.string(),
     nickname: v.optional(v.string()),
     birthday: v.optional(v.string()),
+    mobile_number: v.optional(v.string()),
+    address: v.optional(v.string()),
     avatar: v.optional(v.string()),
     bio: v.optional(v.string()),
     skills: v.optional(v.array(v.string())),
@@ -395,10 +397,37 @@ export const updateUserProfile = mutation({
       throwUserError(ERROR_CODES.AUTH_SESSION_EXPIRED);
     }
 
+    // Get current user to validate
+    const currentUser = await ctx.db.get(session.userId);
+    if (!currentUser) {
+      throw new Error("User not found");
+    }
+
+    // Validate inputs
+    if (args.mobile_number !== undefined && args.mobile_number.length > 0) {
+      if (!/^\+?[0-9\s\-\(\)]{7,}$/.test(args.mobile_number)) {
+        throw new Error("Invalid mobile number format");
+      }
+    }
+
+    if (args.nickname !== undefined && args.nickname.length > 100) {
+      throw new Error("Nickname must be less than 100 characters");
+    }
+
+    if (args.address !== undefined && args.address.length > 500) {
+      throw new Error("Address must be less than 500 characters");
+    }
+
+    if (args.bio !== undefined && args.bio.length > 1000) {
+      throw new Error("Bio must be less than 1000 characters");
+    }
+
     // Update user
     await ctx.db.patch(session.userId, {
       ...(args.nickname !== undefined && { nickname: args.nickname }),
       ...(args.birthday !== undefined && { birthday: args.birthday }),
+      ...(args.mobile_number !== undefined && { mobile_number: args.mobile_number }),
+      ...(args.address !== undefined && { address: args.address }),
       ...(args.avatar !== undefined && { avatar: args.avatar }),
       ...(args.bio !== undefined && { bio: args.bio }),
       ...(args.skills !== undefined && { skills: args.skills }),
@@ -408,16 +437,19 @@ export const updateUserProfile = mutation({
     // Return updated user
     const user = await ctx.db.get(session.userId);
     return {
+      _id: user?._id,
       id: user?._id,
       username: user?.username,
       email: user?.email,
       nickname: user?.nickname,
       mobile_number: user?.mobile_number,
       birthday: user?.birthday,
+      address: user?.address,
       role: user?.role,
       avatar: user?.avatar,
       bio: user?.bio,
       skills: user?.skills,
+      is_active: user?.is_active,
     };
   },
 });

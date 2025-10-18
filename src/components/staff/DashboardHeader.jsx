@@ -3,12 +3,14 @@ import { User, Settings, LogOut, Monitor, CreditCard, Building } from 'lucide-re
 import { Link } from 'react-router-dom'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { useAuth } from '../../context/AuthContext'
 import SettingsModal from './SettingsModal'
 import LogoutConfirmModal from './LogoutConfirmModal'
 import ProfileModal from './ProfileModal'
 import { NotificationBell } from '../common/NotificationSystem'
 
 const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
+  const { sessionToken } = useAuth()
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
@@ -133,6 +135,7 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
         user={user}
+        sessionToken={sessionToken}
       />
       
       {/* Settings Modal */}

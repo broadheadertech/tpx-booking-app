@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User, ShoppingBag, Bot, Bell } from 'lucide-react'
+import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User, Bot, Bell } from 'lucide-react'
 import ServiceBooking from '../../components/customer/ServiceBooking'
 import CustomerProfile from '../../components/customer/CustomerProfile'
 import VoucherManagement from '../../components/customer/VoucherManagement'
 import LoyaltyPoints from '../../components/customer/LoyaltyPoints'
 import MyBookings from '../../components/customer/MyBookings'
-import ProductShop from '../../components/customer/ProductShop'
 import PremiumOnboarding from '../../components/customer/PremiumOnboarding'
 import AIBarberAssistant from '../../components/customer/AIBarberAssistant'
 import Profile from './Profile'
@@ -92,7 +91,6 @@ const Dashboard = () => {
 
   const sections = [
     { id: 'home', label: 'Home', icon: Home },
-    { id: 'shop', label: 'Shop', icon: ShoppingBag },
     { id: 'bookings', label: 'Bookings', icon: History },
     { id: 'vouchers', label: 'Vouchers', icon: Gift },
     { id: 'ai-assistant', label: 'TPX AI', icon: Bot }
@@ -130,8 +128,6 @@ const Dashboard = () => {
 
   const renderContent = () => {
     switch (activeSection) {
-      case 'shop':
-        return <ProductShop onBack={() => setActiveSection('home')} />
       case 'booking':
         return <ServiceBooking onBack={() => setActiveSection('home')} />
       case 'bookings':
@@ -290,7 +286,7 @@ const Dashboard = () => {
       )}
       
       {/* Header - Hide when on sections with their own navigation */}
-      {!['shop', 'booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
+      {!['booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
         <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
           <div className="max-w-md mx-auto px-4">
             <div className="flex justify-between items-center py-4">
@@ -335,10 +331,10 @@ const Dashboard = () => {
       </div>
 
       {/* Bottom Navigation - Only show when not onboarding and not on pages with their own navigation */}
-      {!showOnboarding && !['shop', 'booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
+      {!showOnboarding && !['booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0A0A0A]/95 backdrop-blur-xl shadow-2xl border-t border-[#1A1A1A]">
         <div className="max-w-md mx-auto px-3">
-          <div className="grid grid-cols-5 py-3">
+          <div className="grid grid-cols-4 py-3">
             {sections.map((section) => {
               const IconComponent = section.icon
               const isActive = activeSection === section.id
