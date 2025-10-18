@@ -10,6 +10,7 @@ import PaymentConfirmationModal from '../../components/staff/PaymentConfirmation
 import CustomerSelectionModal from '../../components/staff/CustomerSelectionModal'
 import Modal from '../../components/common/Modal'
 import { sendWelcomeEmail, isEmailServiceConfigured } from '../../services/emailService'
+import { APP_VERSION } from '../../config/version'
 
 // Barber Avatar Component for POS
 const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
@@ -620,50 +621,86 @@ const POS = () => {
       </div>
 
       {/* Header */}
-      <div className="relative z-10 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center space-x-6">
+      <div className="relative z-10 bg-[#050505] border-b border-[#1A1A1A]/30 overflow-hidden">
+        {/* Background overlay - more subtle */}
+        <div className="absolute inset-0">
+          <div
+            className="h-full bg-cover bg-center bg-no-repeat opacity-[0.02]"
+            style={{
+              backgroundImage: `url(/img/pnglog.png)`,
+              filter: 'brightness(0.2)'
+            }}
+          ></div>
+        </div>
+
+        <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-2.5 lg:py-3 gap-2">
+            {/* Left section - Logo and Title */}
+            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
               <Link
                 to="/staff"
-                className="w-12 h-12 bg-[#1A1A1A]/50 backdrop-blur-sm rounded-2xl flex items-center justify-center hover:bg-[#FF8C42]/10 transition-all duration-300 border border-[#444444]/30 group"
+                className="w-8 h-8 sm:w-10 sm:h-10 bg-[#0A0A0A] rounded-lg sm:rounded-xl flex items-center justify-center hover:bg-[#FF8C42]/10 transition-all duration-200 border border-[#1A1A1A]/50 flex-shrink-0 ring-1 ring-[#FF8C42]/20 group"
                 title="Back to Dashboard"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-300 group-hover:text-[#FF8C42] transition-colors duration-300" />
+                <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 group-hover:text-[#FF8C42] transition-colors duration-200" />
               </Link>
-              <div className="w-16 h-16 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-3xl flex items-center justify-center shadow-2xl ring-4 ring-[#FF8C42]/20">
-                <CreditCard className="w-8 h-8 text-white" />
+              <div className="w-8 h-8 sm:w-11 sm:h-11 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg ring-1 ring-[#FF8C42]/20 p-1.5 border border-[#1A1A1A]/50 flex-shrink-0">
+                <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
-              <div>
-                <div className="flex items-center space-x-3">
-                  <h1 className="text-2xl font-bold text-white tracking-tight">POS System</h1>
-                  <div className="bg-[#FF8C42]/20 backdrop-blur-sm rounded-full px-2 py-0.5 border border-[#FF8C42]/30">
-                    <span className="text-xs font-semibold text-[#FF8C42]">v1.0.1</span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center space-x-1.5 sm:space-x-2">
+                  <h1 className="text-xs sm:text-lg font-bold text-white tracking-tight truncate">
+                    <span className="hidden sm:inline">POS System</span>
+                    <span className="sm:hidden">POS</span>
+                  </h1>
+                  <div className="bg-[#FF8C42]/15 backdrop-blur-sm rounded-md px-1.5 py-0.5 border border-[#FF8C42]/25 flex-shrink-0">
+                    <span className="text-[10px] font-semibold text-[#FF8C42]">v{APP_VERSION}</span>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2 mt-1">
-                  <p className="text-sm font-medium text-[#FF8C42]">Point of Sale</p>
+                <div className="flex items-center space-x-1 sm:space-x-1.5 mt-0.5">
+                  <p className="text-[10px] sm:text-xs font-medium text-[#FF8C42]">Point of Sale</p>
                   {currentBranch && (
                     <>
-                      <span className="text-gray-500">•</span>
-                      <div className="flex items-center space-x-1">
-                        <span className="text-sm font-medium text-white">{currentBranch.name}</span>
-                        <span className="text-sm text-gray-400">({currentBranch.branch_code})</span>
+                      <span className="text-gray-600 text-xs hidden sm:inline">•</span>
+                      <div className="hidden sm:flex items-center space-x-1">
+                        <span className="text-[10px] font-medium text-gray-400">{currentBranch.name}</span>
+                        <span className="text-[10px] text-gray-500">({currentBranch.branch_code})</span>
                       </div>
                     </>
                   )}
                 </div>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-base font-semibold text-white">Welcome, {user?.username}</p>
-                <p className="text-xs text-gray-400 font-medium">{new Date().toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  year: 'numeric',
-                  month: 'long',
+
+            {/* Right section - Welcome message and buttons */}
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              {/* Welcome message - hidden on mobile */}
+              <div className="hidden lg:block text-right">
+                <p className="text-sm font-semibold text-white">Welcome back, {user?.username || 'Staff'}</p>
+                <p className="text-[10px] text-gray-400 font-medium">{new Date().toLocaleDateString('en-US', {
+                  month: 'short',
                   day: 'numeric'
                 })}</p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center space-x-1 sm:space-x-1.5">
+                <Link
+                  to="/staff"
+                  className="bg-blue-500/15 backdrop-blur-sm rounded-lg flex items-center space-x-1 px-2 sm:px-3 py-1.5 hover:bg-blue-500/25 transition-all duration-200 border border-blue-500/25 group"
+                  title="Back to Dashboard"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 group-hover:text-blue-300 transition-colors duration-200" />
+                  <span className="hidden sm:inline text-blue-400 group-hover:text-blue-300 font-semibold text-xs transition-colors duration-200">Back</span>
+                </Link>
+
+                <button
+                  onClick={() => setActiveModal(null)}
+                  className="w-7 h-7 sm:w-9 sm:h-9 bg-white/5 backdrop-blur-sm rounded-lg flex items-center justify-center hover:bg-white/10 transition-all duration-200 border border-white/10 group"
+                  title="Help"
+                >
+                  <span className="text-gray-400 group-hover:text-white text-sm font-bold transition-colors duration-200">?</span>
+                </button>
               </div>
             </div>
           </div>

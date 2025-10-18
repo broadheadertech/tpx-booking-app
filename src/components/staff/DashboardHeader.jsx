@@ -8,6 +8,7 @@ import SettingsModal from './SettingsModal'
 import LogoutConfirmModal from './LogoutConfirmModal'
 import ProfileModal from './ProfileModal'
 import { NotificationBell } from '../common/NotificationSystem'
+import { APP_VERSION } from '../../config/version'
 
 const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
   const { sessionToken } = useAuth()
@@ -49,7 +50,7 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
                   <span className="sm:hidden">TipunoX Angeles</span>
                 </h1>
                 <div className="bg-[#FF8C42]/15 backdrop-blur-sm rounded-md px-1.5 py-0.5 border border-[#FF8C42]/25 flex-shrink-0">
-                  <span className="text-[10px] font-semibold text-[#FF8C42]">v2.0.0</span>
+                  <span className="text-[10px] font-semibold text-[#FF8C42]">v{APP_VERSION}</span>
                 </div>
               </div>
               <div className="flex items-center space-x-1 sm:space-x-1.5 mt-0.5">
