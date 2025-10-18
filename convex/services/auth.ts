@@ -546,7 +546,7 @@ export const updateUser = mutation({
     if (updateData.email && updateData.email !== existingUser.email) {
       const emailExists = await ctx.db
         .query("users")
-        .withIndex("by_email", (q) => q.eq("email", updateData.email))
+        .withIndex("by_email", (q) => q.eq("email", updateData.email!))
         .first();
 
       if (emailExists && emailExists._id !== userId) {
@@ -558,7 +558,7 @@ export const updateUser = mutation({
     if (updateData.username && updateData.username !== existingUser.username) {
       const usernameExists = await ctx.db
         .query("users")
-        .withIndex("by_username", (q) => q.eq("username", updateData.username))
+        .withIndex("by_username", (q) => q.eq("username", updateData.username!))
         .first();
 
       if (usernameExists && usernameExists._id !== userId) {
@@ -674,7 +674,7 @@ export const sendPasswordResetEmail = action({
     const resetUrl = `${process.env.PUBLIC_APP_URL || 'http://localhost:5173'}/auth/reset-password?token=${args.token}`;
 
     const emailData = {
-      from: 'TPX Barbershop <onboarding@resend.dev>',
+      from: 'TPX Barbershop <no-reply@tipunox.broadheader.com>',
       to: args.email,
       subject: 'Reset your TPX Barbershop password',
       html: `
@@ -887,5 +887,265 @@ export const getUsersByRoleAndBranch = query({
     }
     
     return users;
+  },
+});
+
+// Send voucher email with QR code to users
+export const sendVoucherEmailWithQR = action({
+  args: {
+    email: v.string(),
+    voucherCode: v.string(),
+    voucherValue: v.string(),
+    pointsRequired: v.number(),
+    expiresAt: v.string(),
+    qrCodeBase64: v.string(), // Base64 encoded QR code image
+    recipientName: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const emailData = {
+      from: 'TPX Barbershop <no-reply@tipunox.broadheader.com>',
+      to: args.email,
+      subject: `Your Voucher ${args.voucherCode} from TPX Barbershop`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Your Voucher - TPX Barbershop</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+              background-color: #f5f5f5;
+              color: #333;
+              line-height: 1.6;
+            }
+            .container {
+              max-width: 500px;
+              margin: 0 auto;
+              background: #ffffff;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+            .header {
+              background: linear-gradient(135deg, #FF8C42 0%, #FF7A2B 100%);
+              padding: 24px;
+              text-align: center;
+              color: white;
+            }
+            .header h1 {
+              font-size: 24px;
+              font-weight: 700;
+              margin: 0;
+              letter-spacing: -0.5px;
+            }
+            .body {
+              padding: 28px 24px;
+            }
+            .greeting {
+              font-size: 15px;
+              color: #555;
+              margin-bottom: 24px;
+              line-height: 1.5;
+            }
+            .greeting strong {
+              color: #333;
+              font-weight: 600;
+            }
+            .voucher-card {
+              background: linear-gradient(135deg, #FFF8F4 0%, #FFF5F0 100%);
+              border: 2px solid #FFD6C5;
+              border-radius: 10px;
+              padding: 20px;
+              margin-bottom: 24px;
+              text-align: center;
+            }
+            .voucher-code {
+              font-size: 28px;
+              font-weight: 800;
+              color: #FF8C42;
+              font-family: 'Courier New', monospace;
+              letter-spacing: 2px;
+              margin-bottom: 8px;
+              word-break: break-all;
+            }
+            .voucher-value {
+              font-size: 32px;
+              font-weight: 800;
+              color: #FF8C42;
+              margin-bottom: 8px;
+            }
+            .voucher-label {
+              font-size: 12px;
+              color: #999;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              font-weight: 600;
+            }
+            .qr-container {
+              background: white;
+              border: 1px solid #e5e5e5;
+              border-radius: 8px;
+              padding: 20px;
+              margin-bottom: 24px;
+              text-align: center;
+            }
+            .qr-instruction {
+              font-size: 13px;
+              color: #666;
+              margin-bottom: 12px;
+              font-weight: 500;
+            }
+            .qr-code {
+              display: inline-block;
+              padding: 12px;
+              background: white;
+              border: 1px solid #e5e5e5;
+              border-radius: 6px;
+            }
+            .qr-code img {
+              width: 180px;
+              height: 180px;
+              display: block;
+              border-radius: 4px;
+            }
+            .details {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 12px;
+              margin-bottom: 24px;
+            }
+            .detail-item {
+              background: #f9f9f9;
+              border: 1px solid #efefef;
+              border-radius: 6px;
+              padding: 12px;
+              text-align: center;
+            }
+            .detail-label {
+              font-size: 11px;
+              color: #999;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              font-weight: 600;
+            }
+            .detail-value {
+              font-size: 14px;
+              color: #333;
+              font-weight: 700;
+            }
+            .cta-section {
+              background: #FFF8F4;
+              border-left: 4px solid #FF8C42;
+              border-radius: 4px;
+              padding: 16px;
+              margin-bottom: 24px;
+              font-size: 13px;
+              color: #555;
+              line-height: 1.6;
+            }
+            .cta-section strong {
+              color: #333;
+              display: block;
+              margin-bottom: 8px;
+              font-weight: 600;
+            }
+            .cta-section p {
+              margin: 4px 0;
+            }
+            .footer {
+              background: #f9f9f9;
+              border-top: 1px solid #efefef;
+              padding: 16px 24px;
+              text-align: center;
+              font-size: 11px;
+              color: #999;
+            }
+            .footer p {
+              margin: 2px 0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>✨ Your Voucher Is Ready</h1>
+            </div>
+            
+            <div class="body">
+              <div class="greeting">
+                Hey <strong>${args.recipientName}</strong>! 🎉<br>
+                You've received a voucher from <strong>TPX Barbershop</strong>
+              </div>
+              
+              <div class="voucher-card">
+                <div class="voucher-label">Your Code</div>
+                <div class="voucher-code">${args.voucherCode}</div>
+                <div class="voucher-value">${args.voucherValue}</div>
+              </div>
+
+              <div class="qr-container">
+                <div class="qr-instruction">📱 Scan at checkout</div>
+                <div class="qr-code">
+                  <img src="${args.qrCodeBase64}" alt="Voucher QR Code" style="max-width: 100%;" />
+                </div>
+              </div>
+
+              <div class="details">
+                <div class="detail-item">
+                  <div class="detail-label">Points Needed</div>
+                  <div class="detail-value">${args.pointsRequired}</div>
+                </div>
+                <div class="detail-item">
+                  <div class="detail-label">Valid Until</div>
+                  <div class="detail-value">${args.expiresAt}</div>
+                </div>
+              </div>
+
+              <div class="cta-section">
+                <strong>How to Use</strong>
+                <p>✓ Present this email or scan the QR code</p>
+                <p>✓ Our staff will apply your discount</p>
+                <p>✓ One voucher per visit</p>
+              </div>
+            </div>
+            
+            <div class="footer">
+              <p><strong>TPX Barbershop</strong></p>
+              <p>© 2024 All Rights Reserved</p>
+              <p>This is an automated message. Please do not reply.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    try {
+      // In development, mock the email sending
+      if (process.env.NODE_ENV === 'development' || process.env.ENVIRONMENT === 'development') {
+        console.log('📧 [DEV MODE] Voucher email would be sent:');
+        console.log('  To:', args.email);
+        console.log('  Subject:', emailData.subject);
+        console.log('  Voucher Code:', args.voucherCode);
+        return { success: true, messageId: 'dev-mock-' + Date.now(), isDev: true };
+      }
+
+      // Production: Use Resend SDK
+      const result = await resend.emails.send(emailData);
+      
+      if (result.error) {
+        console.error('Voucher email service error:', result.error);
+        throw new Error(`Email service error: ${result.error.message || 'Unknown error'}`);
+      }
+      
+      console.log('Voucher email sent successfully:', result);
+      return { success: true, messageId: result.data?.id };
+    } catch (error) {
+      console.error('Failed to send voucher email:', error);
+      throw error;
+    }
   },
 });

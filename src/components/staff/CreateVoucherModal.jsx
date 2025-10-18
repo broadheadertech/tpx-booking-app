@@ -86,7 +86,10 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
 
       const response = await createVoucherMutation(voucherData)
 
-      onSubmit(response)
+      // Call parent callback but don't require it for the modal to close
+      if (onSubmit) {
+        onSubmit(response)
+      }
       
       // Reset form
       setFormData({
@@ -98,6 +101,8 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
         description: ''
       })
       setQrCodeUrl('')
+      
+      // Close modal without page refresh
       onClose()
     } catch (error) {
       console.error('Failed to create voucher:', error)

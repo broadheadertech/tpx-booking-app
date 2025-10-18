@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Gift, Calendar, User, DollarSign, CheckCircle, XCircle, Clock, Search, Filter, Plus, RotateCcw, QrCode, Download, Printer, Copy, Mail, Trash2, Edit, Users, Grid, List } from 'lucide-react'
+import { Gift, Calendar, User, DollarSign, CheckCircle, XCircle, Clock, Search, Filter, Plus, RotateCcw, QrCode, Download, Printer, Copy, Mail, Trash2, Edit, Users, Grid, List, AlertCircle } from 'lucide-react'
 import QRCode from 'qrcode'
+import Modal from '../common/Modal'
 import SendVoucherModal from './SendVoucherModal'
 import ViewVoucherUsersModal from './ViewVoucherUsersModal'
 import { useQuery, useMutation } from 'convex/react'
@@ -15,6 +16,10 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
   const [showUsersModal, setShowUsersModal] = useState(null)
   const [loading, setLoading] = useState(false)
   const [viewMode, setViewMode] = useState('table') // 'card' or 'table' - DEFAULT TABLE
+  
+  // Modal states
+  const [confirmModal, setConfirmModal] = useState(null)
+  const [errorModal, setErrorModal] = useState(null)
 
   // Convex queries and mutations
   const deleteVoucher = useMutation(api.services.vouchers.deleteVoucher)
@@ -59,18 +64,30 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
   }
 
   const handleDelete = async (voucher) => {
-    if (!confirm(`Are you sure you want to delete voucher "${voucher.code}"?`)) return
-
-    setLoading(true)
-    try {
-      await deleteVoucher({ id: voucher._id })
-      onRefresh()
-    } catch (err) {
-      console.error('Failed to delete voucher:', err)
-      alert('Failed to delete voucher. Please try again.')
-    } finally {
-      setLoading(false)
-    }
+    setConfirmModal({
+      title: 'Delete Voucher',
+      message: `Are you sure you want to delete voucher "${voucher.code}"?`,
+      type: 'delete',
+      onConfirm: async () => {
+        setConfirmModal(null)
+        setLoading(true)
+        try {
+          await deleteVoucher({ id: voucher._id })
+          onRefresh()
+        } catch (err) {
+          console.error('Failed to delete voucher:', err)
+          setErrorModal({
+            title: 'Delete Failed',
+            message: 'Failed to delete voucher. Please try again.'
+          })
+        } finally {
+          setLoading(false)
+        }
+      },
+      onCancel: () => {
+        setConfirmModal(null)
+      }
+    })
   }
 
   const filteredVouchers = vouchers
@@ -694,6 +711,67 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
           assignedUsers={assignedUsers || []}
         />
       )}
+
+      {/* Confirmation Modal */}
+      <Modal 
+        isOpen={!!confirmModal}
+        onClose={() => setConfirmModal(null)}
+        title={confirmModal?.title || 'Confirm'}
+        size="sm"
+        variant="dark"
+      >
+        <div className="space-y-6">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
+              <AlertCircle className="w-5 h-5 text-orange-400" />
+            </div>
+            <p className="text-sm text-gray-300">{confirmModal?.message}</p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setConfirmModal(null)}
+              className="flex-1 px-4 py-2 bg-[#2A2A2A] hover:bg-[#333333] text-gray-300 rounded-lg transition-colors text-sm font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmModal?.onConfirm}
+              disabled={loading}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
+                confirmModal?.type === 'delete' 
+                  ? 'bg-red-600 hover:bg-red-700 text-white disabled:opacity-50'
+                  : 'bg-[#FF8C42] hover:bg-[#FF7A2B] text-white disabled:opacity-50'
+              }`}
+            >
+              {loading ? 'Processing...' : 'Confirm'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Error Modal */}
+      <Modal 
+        isOpen={!!errorModal}
+        onClose={() => setErrorModal(null)}
+        title={errorModal?.title || 'Error'}
+        size="sm"
+        variant="dark"
+      >
+        <div className="space-y-6">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
+              <AlertCircle className="w-5 h-5 text-red-400" />
+            </div>
+            <p className="text-sm text-gray-300">{errorModal?.message}</p>
+          </div>
+          <button
+            onClick={() => setErrorModal(null)}
+            className="w-full px-4 py-2 bg-[#FF8C42] hover:bg-[#FF7A2B] text-white rounded-lg transition-colors text-sm font-medium"
+          >
+            Close
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }

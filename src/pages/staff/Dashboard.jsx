@@ -90,8 +90,9 @@ function StaffDashboard() {
 
   // Helper functions for refresh actions
   const refreshData = () => {
-    // Convex queries will automatically refresh
-    window.location.reload()
+    // Convex queries will automatically refresh through their real-time subscriptions
+    // No page reload needed - let the data update naturally
+    console.log('Data refresh triggered - Convex will handle updates')
   }
 
   // Calculate stats from Convex data
@@ -144,9 +145,10 @@ function StaffDashboard() {
     )
   }
 
-  // Handle refresh for components
+  // Handle refresh for components - no page reload needed
   const handleRefresh = () => {
-    window.location.reload()
+    // Convex queries automatically update through real-time subscriptions
+    console.log('Refresh triggered - data will update automatically')
   }
 
   // Render different tab content based on Convex data

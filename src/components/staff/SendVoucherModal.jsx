@@ -2,12 +2,11 @@ import React, { useState, useEffect, useRef } from "react";
 import Modal from "../common/Modal";
 import Button from "../common/Button";
 import SuccessModal from "../common/SuccessModal";
-import { Mail, Users, Search, X, CheckCircle, QrCode } from "lucide-react";
+import { Mail, Users, Search, X, CheckCircle, QrCode, AlertCircle } from "lucide-react";
 import QRCode from "qrcode";
-import { useQuery, useMutation } from 'convex/react'
+import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
-import { sendVoucherEmail, isEmailServiceConfigured } from '../../services/emailService'
 
 const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
   const { user } = useAuth()
@@ -18,6 +17,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
   const [isSending, setIsSending] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successDetails, setSuccessDetails] = useState([]);
+  const [errorModal, setErrorModal] = useState(null);
 
   // Convex queries and mutations
   const clients = useQuery(api.services.auth.getAllUsers)
@@ -26,6 +26,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
     voucher ? { voucherId: voucher._id } : "skip"
   )
   const assignVoucherMutation = useMutation(api.services.vouchers.assignVoucherByCode)
+  const sendVoucherEmailAction = useAction(api.services.auth.sendVoucherEmailWithQR)
   const [sentCount, setSentCount] = useState(0);
   const [qrCodeUrl, setQrCodeUrl] = useState("");
   const dropdownRef = useRef(null);
@@ -129,15 +130,10 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
 
   const sendVoucherEmails = async () => {
     if (selectedUsers.length === 0) {
-      alert("Please select at least one user to send the voucher to.");
-      return;
-    }
-
-    // Validate email service configuration
-    if (!isEmailServiceConfigured()) {
-      alert(
-        "Email service is not configured. Please check the configuration."
-      );
+      setErrorModal({
+        title: 'No Users Selected',
+        message: 'Please select at least one user to send the voucher to.'
+      });
       return;
     }
 
@@ -147,7 +143,10 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
     );
     if (usersWithoutEmail.length > 0) {
       const usernames = usersWithoutEmail.map((u) => u.username).join(", ");
-      alert(`The following users don't have email addresses: ${usernames}`);
+      setErrorModal({
+        title: 'Missing Email Addresses',
+        message: `The following users don't have email addresses: ${usernames}`
+      });
       return;
     }
 
@@ -212,7 +211,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
             );
           }
 
-          // Step 3: Send email with voucher details using centralized email service
+          // Step 3: Send email with voucher details using backend action
           console.log(
             "Generated QR Code URL length:",
             personalizedQrUrl.length
@@ -220,23 +219,23 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
 
           const voucherEmailData = {
             email: selectedUser.email,
-            name: selectedUser.nickname || selectedUser.username,
+            recipientName: selectedUser.nickname || selectedUser.username,
             voucherCode: voucher.code,
             voucherValue: `₱${parseFloat(voucher.value).toFixed(2)}`,
             pointsRequired: voucher.points_required || 0,
             expiresAt: new Date(voucher.expires_at).toLocaleDateString(),
-            qrCodeImage: personalizedQrUrl
+            qrCodeBase64: personalizedQrUrl // Send the full base64 string
           };
 
           console.log("Sending voucher email with data:", {
             ...voucherEmailData,
-            qrCodeImage: `QR_CODE_DATA_URL (${personalizedQrUrl.length} chars)`,
+            qrCodeBase64: `QR_CODE_DATA_URL (${personalizedQrUrl.length} chars)`,
           });
 
-          const emailResult = await sendVoucherEmail(voucherEmailData);
-//
+          const emailResult = await sendVoucherEmailAction(voucherEmailData);
+          
           if (emailResult.success) {
-            console.log(`Email sent successfully to ${selectedUser.email}:`, emailResult.response);
+            console.log(`Email sent successfully to ${selectedUser.email}:`, emailResult);
             successfulSends++;
             setSentCount((prev) => {
               const newCount = prev + 1;
@@ -244,7 +243,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
               return newCount;
             });
           } else {
-            throw new Error(emailResult.error);
+            throw new Error(emailResult.error || 'Unknown email error');
           }
         } catch (error) {
           console.error(
@@ -252,9 +251,10 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
             error
           );
 
-          alert(
-            `Failed to process voucher for ${selectedUser.username}: ${error.message}`
-          );
+          setErrorModal({
+            title: 'Error Processing Voucher',
+            message: `Failed to process voucher for ${selectedUser.username}: ${error.message}`
+          });
           // Continue with other users even if one fails
         }
       }
@@ -275,13 +275,17 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
         setSuccessDetails(details.slice(0, successfulSends));
         setShowSuccessModal(true);
       } else if (selectedUsers.length > 0) {
-        alert(
-          "Vouchers were assigned but no emails were sent. Please check the console for errors."
-        );
+        setErrorModal({
+          title: 'Email Sending Failed',
+          message: 'Vouchers were assigned but no emails were sent. Please check the console for errors.'
+        });
       }
     } catch (error) {
       console.error("Failed to assign vouchers:", error);
-      alert("Failed to assign vouchers. Please try again.");
+      setErrorModal({
+        title: 'Error',
+        message: 'Failed to assign vouchers. Please try again.'
+      });
     } finally {
       setIsSending(false);
     }
@@ -497,6 +501,30 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
       message={`Successfully assigned vouchers and sent ${successDetails.length} emails.`}
       details={successDetails}
     />
+
+    {/* Error Modal */}
+    <Modal 
+      isOpen={!!errorModal}
+      onClose={() => setErrorModal(null)}
+      title={errorModal?.title || 'Error'}
+      size="sm"
+      variant="dark"
+    >
+      <div className="space-y-6">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
+            <AlertCircle className="w-5 h-5 text-red-400" />
+          </div>
+          <p className="text-sm text-gray-300">{errorModal?.message}</p>
+        </div>
+        <button
+          onClick={() => setErrorModal(null)}
+          className="w-full px-4 py-2 bg-[#FF8C42] hover:bg-[#FF7A2B] text-white rounded-lg transition-colors text-sm font-medium"
+        >
+          Close
+        </button>
+      </div>
+    </Modal>
   </>
   );
 };
