@@ -995,6 +995,9 @@ export const sendVoucherEmailWithQR = action({
               height: 180px;
               display: block;
               border-radius: 4px;
+              margin: 0 auto;
+              max-width: 100%;
+              image-rendering: pixelated;
             }
             .details {
               display: grid;
@@ -1074,7 +1077,8 @@ export const sendVoucherEmailWithQR = action({
               <div class="qr-container">
                 <div class="qr-instruction">📱 Scan at checkout</div>
                 <div class="qr-code">
-                  <img src="${args.qrCodeBase64}" alt="Voucher QR Code" style="max-width: 100%;" />
+                  <img src="${args.qrCodeBase64}" alt="Voucher QR Code" style="max-width: 100%; width: 180px; height: 180px; display: block; margin: 0 auto; border-radius: 4px; image-rendering: pixelated;" />
+                  <div style="margin-top: 8px; font-size: 12px; color: #999;">Voucher Code: ${args.voucherCode}</div>
                 </div>
               </div>
 

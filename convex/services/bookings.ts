@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { api } from "../_generated/api";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
+import type { Id } from "../_generated/dataModel";
 
 // Generate booking code
 function generateBookingCode() {
@@ -362,15 +363,15 @@ export const updateBooking = mutation({
     // Send rescheduled notification if date/time changed
     if (isRescheduled) {
       try {
-        const recipients = [];
+        const recipients: Array<{ type: "customer" | "staff" | "barber" | "admin"; userId?: Id<"users">; branchId?: Id<"branches">; }> = [];
         
         // Notify customer if booking has a customer account
         if (currentBooking.customer) {
-          recipients.push({ type: "customer" as const, userId: currentBooking.customer });
+          recipients.push({ type: "customer", userId: currentBooking.customer });
         }
         
         // Notify staff
-        recipients.push({ type: "staff" as const, branchId: currentBooking.branch_id });
+        recipients.push({ type: "staff", branchId: currentBooking.branch_id });
         
         await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
           bookingId: id,
@@ -391,7 +392,7 @@ export const updateBooking = mutation({
               bookingId: id,
               notificationType: "BARBER_APPOINTMENT_RESCHEDULED",
               recipients: [
-                { type: "barber", userId: barberRecord.user },
+                { type: "barber", userId: barberRecord.user as Id<"users"> },
               ],
               metadata: {
                 new_date: args.date || currentBooking.date,
@@ -429,7 +430,7 @@ export const updateBooking = mutation({
             bookingId: id,
             notificationType: "BARBER_APPOINTMENT_CANCELLED",
             recipients: [
-              { type: "barber", userId: previousBarber },
+              { type: "barber", userId: previousBarber as unknown as Id<"users"> },
             ],
             metadata: {
               reason: "Reassigned to another barber",
@@ -463,150 +464,39 @@ export const updateBooking = mutation({
     // Create notification if status changed
     if (args.status && args.status !== currentBooking.status) {
       try {
-        switch (args.status) {
-          case "confirmed":
-            {
-              const recipients = [];
-              
-              // Notify customer if exists
-              if (currentBooking.customer) {
-                recipients.push({ type: "customer" as const, userId: currentBooking.customer });
-              }
-              
-              // Notify staff
-              recipients.push({ type: "staff" as const, branchId: currentBooking.branch_id });
-              
-              await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
-                bookingId: id,
-                notificationType: "CUSTOMER_BOOKING_CONFIRMED",
-                recipients
-              });
-              
-              // Notify barber if assigned
-              if (currentBooking.barber) {
-                await ctx.runMutation(api.services.notifications.createNotification, {
-                  title: "Booking Confirmed",
-                  message: "A booking has been confirmed for you.",
-                  type: "booking",
-                  priority: "medium",
-                  recipient_id: currentBooking.barber,
-                  recipient_type: "barber",
-                  branch_id: currentBooking.branch_id,
-                  action_url: `/bookings/${currentBooking.booking_code}`,
-                  action_label: "View Details",
-                  metadata: {
-                    booking_id: id,
-                    branch_id: currentBooking.branch_id,
-                  }
-                });
-              }
+        const recipients: Array<{ type: "customer" | "staff" | "barber" | "admin"; userId?: Id<"users">; branchId?: Id<"branches">; }> = [];
+        
+        // Notify customer if exists
+        if (currentBooking.customer) {
+          recipients.push({ type: "customer", userId: currentBooking.customer });
+        }
+        
+        // Notify staff
+        recipients.push({ type: "staff", branchId: currentBooking.branch_id });
+        
+        await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+          bookingId: id,
+          notificationType: "CUSTOMER_BOOKING_CONFIRMED",
+          recipients
+        });
+        
+        // Notify barber if assigned
+        if (currentBooking.barber) {
+          await ctx.runMutation(api.services.notifications.createNotification, {
+            title: "Booking Confirmed",
+            message: "A booking has been confirmed for you.",
+            type: "booking",
+            priority: "medium",
+            recipient_id: currentBooking.barber,
+            recipient_type: "barber",
+            branch_id: currentBooking.branch_id,
+            action_url: `/bookings/${currentBooking.booking_code}`,
+            action_label: "View Details",
+            metadata: {
+              booking_id: id,
+              branch_id: currentBooking.branch_id,
             }
-            break;
-            
-          case "cancelled":
-            {
-              const recipients = [];
-              
-              // Notify customer if exists
-              if (currentBooking.customer) {
-                recipients.push({ type: "customer" as const, userId: currentBooking.customer });
-              }
-              
-              // Notify staff
-              recipients.push({ type: "staff" as const, branchId: currentBooking.branch_id });
-              
-              await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
-                bookingId: id,
-                notificationType: "CUSTOMER_BOOKING_CANCELLED",
-                recipients
-              });
-              
-              // Also notify barber if assigned
-              if (currentBooking.barber) {
-                // Get barber record to find user ID
-                const barberRecord = await ctx.db.get(currentBooking.barber);
-                if (barberRecord && barberRecord.user) {
-                  await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
-                    bookingId: id,
-                    notificationType: "BARBER_APPOINTMENT_CANCELLED",
-                    recipients: [
-                      { type: "barber", userId: barberRecord.user },
-                    ]
-                  });
-                }
-              }
-            }
-            break;
-            
-          case "completed":
-            // Notify customer
-            if (currentBooking.customer) {
-              await ctx.runMutation(api.services.notifications.createNotification, {
-                title: "Booking Completed",
-                message: "Your booking has been completed. Thank you for visiting!",
-                type: "booking",
-                priority: "low",
-                recipient_id: currentBooking.customer,
-                recipient_type: "customer",
-                branch_id: currentBooking.branch_id,
-                action_url: `/bookings/${currentBooking.booking_code}`,
-                action_label: "View Details",
-                metadata: {
-                  booking_id: id,
-                  branch_id: currentBooking.branch_id,
-                }
-              });
-            }
-            
-            // Notify barber
-            if (currentBooking.barber) {
-              await ctx.runMutation(api.services.notifications.createNotification, {
-                title: "Service Completed",
-                message: "Service has been marked as completed.",
-                type: "booking",
-                priority: "low",
-                recipient_id: currentBooking.barber,
-                recipient_type: "barber",
-                branch_id: currentBooking.branch_id,
-                action_url: `/bookings/${currentBooking.booking_code}`,
-                action_label: "View Details",
-                metadata: {
-                  booking_id: id,
-                  branch_id: currentBooking.branch_id,
-                }
-              });
-            }
-            break;
-            
-          case "booked":
-            // Notify when status changes from pending to booked
-            if (currentBooking.status === "pending") {
-              const recipients = [];
-              
-              if (currentBooking.customer) {
-                recipients.push({ type: "customer" as const, userId: currentBooking.customer });
-              }
-              
-              recipients.push({ type: "staff" as const, branchId: currentBooking.branch_id });
-              
-              await ctx.runMutation(api.services.notifications.createNotification, {
-                title: "Booking Status Updated",
-                message: "Your booking status has been updated to booked.",
-                type: "booking",
-                priority: "medium",
-                recipient_id: currentBooking.customer,
-                recipient_type: "customer",
-                branch_id: currentBooking.branch_id,
-                action_url: `/bookings/${currentBooking.booking_code}`,
-                action_label: "View Details",
-                metadata: {
-                  booking_id: id,
-                  branch_id: currentBooking.branch_id,
-                  status: "booked"
-                }
-              });
-            }
-            break;
+          });
         }
       } catch (error) {
         console.error("Failed to create booking status notification:", error);
@@ -628,15 +518,15 @@ export const deleteBooking = mutation({
     if (booking) {
       // Send notifications before deletion
       try {
-        const recipients = [];
+        const recipients: Array<{ type: "customer" | "staff" | "barber" | "admin"; userId?: Id<"users">; branchId?: Id<"branches">; }> = [];
         
         // Notify customer if exists
         if (booking.customer) {
-          recipients.push({ type: "customer" as const, userId: booking.customer });
+          recipients.push({ type: "customer", userId: booking.customer });
         }
         
         // Notify staff
-        recipients.push({ type: "staff" as const, branchId: booking.branch_id });
+        recipients.push({ type: "staff", branchId: booking.branch_id });
         
         await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
           bookingId: args.id,

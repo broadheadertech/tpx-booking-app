@@ -54,8 +54,13 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
+      // Check if click is outside the dropdown container
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setCustomerSearch("");
+        // Only clear search if not clicking on a user item
+        const isUserListClick = event.target.closest('[data-user-item]');
+        if (!isUserListClick) {
+          setCustomerSearch("");
+        }
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -189,15 +194,15 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
           const personalizedQrUrl = await QRCode.toDataURL(
             JSON.stringify(personalizedQrData),
             {
-              width: 200,
-              margin: 1,
+              width: 300,
+              margin: 2,
               color: {
                 dark: "#1A1A1A",
                 light: "#FFFFFF",
               },
-              errorCorrectionLevel: "M",
+              errorCorrectionLevel: "H",
               type: "image/png",
-              quality: 0.6,
+              quality: 0.92, // Higher quality for email
             }
           );
 
@@ -420,6 +425,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
                           ? "bg-[#FF8C42]/10 hover:bg-[#FF8C42]/20"
                           : "hover:bg-[#2A2A2A]"
                       }`}
+                      data-user-item
                     >
                       <div
                         className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${

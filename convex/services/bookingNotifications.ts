@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { api } from "../_generated/api";
+import type { Id } from "../_generated/dataModel";
 
 // Production-ready notification templates for booking events
 export const BOOKING_NOTIFICATION_TEMPLATES = {
@@ -207,8 +208,14 @@ export const sendBookingNotifications = mutation({
         booking.barber ? ctx.db.get(booking.barber) : Promise.resolve(null),
       ]);
       
+      // Extract values safely
+      const serviceValue = service.status === "fulfilled" ? service.value : null;
+      const branchValue = branch.status === "fulfilled" ? branch.value : null;
+      const customerValue = customer.status === "fulfilled" ? customer.value : null;
+      const barberValue = barber.status === "fulfilled" ? barber.value : null;
+      
       // Validate required data
-      if (!service.value || !branch.value) {
+      if (!serviceValue || !branchValue) {
         console.error(`Required booking data not found for booking: ${bookingId}`);
         return { success: false, error: "Required booking data not found", sentCount: 0 };
       }
@@ -228,13 +235,13 @@ export const sendBookingNotifications = mutation({
       
       // Prepare notification data with fallbacks
       const notificationData = {
-        service_name: service.value?.name || "Service",
-        branch_name: branch.value?.name || "Branch",
+        service_name: serviceValue?.name || "Service",
+        branch_name: branchValue?.name || "Branch",
         date: booking.date,
         time: booking.time,
-        customer_name: customer.value?.username || booking.customer_name || 
-                         customer.value?.nickname || "Customer",
-        customer_email: customer.value?.email || booking.customer_email || "",
+        customer_name: customerValue?.username || booking.customer_name || 
+                         customerValue?.nickname || "Customer",
+        customer_email: customerValue?.email || booking.customer_email || "",
         ...(metadata || {}),
       };
       
@@ -263,8 +270,9 @@ export const sendBookingNotifications = mutation({
             userId = recipient.userId;
           } else if (recipient.type === "customer" && booking.customer) {
             userId = booking.customer;
-          } else if (recipient.type === "barber" && booking.barber) {
-            userId = booking.barber;
+          } else if (recipient.type === "barber" && barberValue && barberValue.user) {
+            // Map barber record to the underlying user id
+            userId = barberValue.user as Id<"users">;
           } else if (recipient.type === "staff") {
             // For staff, send to all active staff in the branch
             return sendToBranchStaff(ctx, {
@@ -295,13 +303,14 @@ export const sendBookingNotifications = mutation({
           
           // Check if user has notifications muted (optional feature)
           const user = await ctx.db.get(userId);
-          if (user && user.preferences?.notifications_muted) {
+          // Optional: skip if user has muted notifications (if preferences exist)
+          if ((user as any)?.preferences?.notifications_muted) {
             console.log(`Skipping muted user: ${userId}`);
             return null;
           }
           
           // Create individual notification
-          const notificationData = {
+          const notificationRecord = {
             title: template.title,
             message: formattedMessage,
             type: template.type,
@@ -328,7 +337,7 @@ export const sendBookingNotifications = mutation({
             updatedAt: now,
           };
           
-          return await ctx.db.insert("notifications", notificationData);
+          return await ctx.db.insert("notifications", notificationRecord);
         } catch (error) {
           console.error(`Failed to send notification to ${recipient.type}:`, error);
           return null;
@@ -427,7 +436,8 @@ async function sendToBranchStaff(ctx: any, params: any) {
   );
   
   // Return all notification IDs
-  return [branchNotificationId, ...individualNotifications];
+  const resolvedNotifications = await Promise.all(individualNotifications);
+  return [branchNotificationId, ...resolvedNotifications];
 }
 
 // Helper function to send notifications to admin users
@@ -502,7 +512,8 @@ async function sendToAdminUsers(ctx: any, params: any) {
   );
   
   // Return all notification IDs
-  return [adminNotificationId, ...individualNotifications];
+  const resolvedNotifications = await Promise.all(individualNotifications);
+  return [adminNotificationId, ...resolvedNotifications];
 }
 
 // Calculate expiration date based on notification type
@@ -589,9 +600,8 @@ export const markNotificationsAsRead = mutation({
       // Mark all notifications of a specific type as read
       notificationsToUpdate = await ctx.db
         .query("notifications")
-        .withIndex("by_recipient_type", (q) => 
-          q.eq("recipient_id", userId).eq("type", type)
-        )
+        .withIndex("by_recipient", (q) => q.eq("recipient_id", userId))
+        .filter(q => q.eq(q.field("type"), type))
         .filter(q => q.eq(q.field("is_read"), false))
         .collect();
     } else {
