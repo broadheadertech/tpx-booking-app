@@ -164,7 +164,6 @@ const POS = () => {
             service_id: service._id,
             service_name: service.name,
             price: booking.final_price || service.price, // Use discounted price if available
-            original_price: service.price, // Store original for reference
             quantity: 1
           }],
           subtotal: booking.final_price || service.price,
