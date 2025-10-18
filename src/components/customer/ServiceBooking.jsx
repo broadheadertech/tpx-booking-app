@@ -351,7 +351,6 @@ const ServiceBooking = ({ onBack }) => {
         branch_id: selectedBranch._id,
         date: selectedDate,
         time: formattedTime,
-        discount_amount: selectedVoucher?.value,
         status: "booked",
         notes: selectedVoucher ? `Used voucher: ${selectedVoucher.code}` : undefined,
       };
