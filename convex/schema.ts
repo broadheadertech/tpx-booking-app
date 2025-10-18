@@ -120,6 +120,9 @@ export default defineSchema({
       v.literal("refunded")
     )),
     price: v.number(),
+    voucher_id: v.optional(v.id("vouchers")), // Link to voucher if used
+    discount_amount: v.optional(v.number()), // Discount applied
+    final_price: v.optional(v.number()), // Price after discount
     notes: v.optional(v.string()),
     reminder_sent: v.optional(v.boolean()),
     check_in_reminder_sent: v.optional(v.boolean()),

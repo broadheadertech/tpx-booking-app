@@ -353,6 +353,8 @@ const ServiceBooking = ({ onBack }) => {
         time: formattedTime,
         status: "booked",
         notes: selectedVoucher ? `Used voucher: ${selectedVoucher.code}` : undefined,
+        voucher_id: selectedVoucher?._id || undefined,
+        discount_amount: selectedVoucher?.value || undefined,
       };
 
       console.log("Creating booking with data:", bookingData);
@@ -399,7 +401,7 @@ const ServiceBooking = ({ onBack }) => {
           console.log("Redeeming voucher:", selectedVoucher.code);
           await redeemVoucher({
             code: selectedVoucher.code,
-            redeemed_by: user._id
+            user_id: user._id
           });
 
           console.log("Voucher redeemed successfully");

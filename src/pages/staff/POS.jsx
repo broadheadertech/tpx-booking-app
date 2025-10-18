@@ -163,11 +163,14 @@ const POS = () => {
           services: [{
             service_id: service._id,
             service_name: service.name,
-            price: service.price,
+            price: booking.final_price || service.price, // Use discounted price if available
+            original_price: service.price, // Store original for reference
             quantity: 1
           }],
-          subtotal: service.price,
-          total_amount: service.price // No tax
+          subtotal: booking.final_price || service.price,
+          discount_amount: booking.discount_amount || 0, // Track discount from booking
+          voucher_applied: booking.voucher_id || null, // Track voucher if used
+          total_amount: booking.final_price || service.price // Use final price
         }))
 
         // Find and set the barber

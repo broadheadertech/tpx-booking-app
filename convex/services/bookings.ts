@@ -246,6 +246,8 @@ export const createBooking = mutation({
       v.literal("cancelled")
     )),
     notes: v.optional(v.string()),
+    voucher_id: v.optional(v.id("vouchers")),
+    discount_amount: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     // Get service details for price
@@ -270,6 +272,11 @@ export const createBooking = mutation({
     }
 
     const bookingCode = generateBookingCode();
+    
+    // Calculate final price with discount
+    const originalPrice = service.price;
+    const discountAmount = args.discount_amount || 0;
+    const finalPrice = Math.max(0, originalPrice - discountAmount);
 
     const bookingId = await ctx.db.insert("bookings", {
       booking_code: bookingCode,
@@ -281,7 +288,10 @@ export const createBooking = mutation({
       time: args.time,
       status: args.status || "pending",
       payment_status: "unpaid",
-      price: service.price,
+      price: originalPrice,
+      voucher_id: args.voucher_id,
+      discount_amount: discountAmount > 0 ? discountAmount : undefined,
+      final_price: discountAmount > 0 ? finalPrice : undefined,
       notes: args.notes || undefined,
       createdAt: Date.now(),
       updatedAt: Date.now(),
