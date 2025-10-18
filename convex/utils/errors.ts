@@ -338,7 +338,11 @@ export function throwUserError(
   customDetails?: string
 ): never {
   const error = createUserError(code, customMessage, customDetails);
-  throw new Error(JSON.stringify(error));
+  // Throw a simple, user-friendly message format
+  const errorMessage = customDetails 
+    ? `${customMessage || error.message} ${customDetails}`
+    : customMessage || error.message;
+  throw new Error(errorMessage);
 }
 
 /**

@@ -338,75 +338,130 @@ export const createBarberWithAccount = mutation({
     specialties: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
-    // Check if email already exists
-    const existingUser = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
-      .first();
+    try {
+      // Validate required fields
+      console.log('[createBarberWithAccount] Creating barber with data:', {
+        username: args.username,
+        email: args.email,
+        full_name: args.full_name,
+        mobile_number: args.mobile_number,
+        branch_id: args.branch_id,
+        services: args.services?.length || 0
+      });
 
-    if (existingUser) {
-      throwUserError(ERROR_CODES.AUTH_EMAIL_EXISTS);
+      if (!args.username?.trim()) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Username is required", "Please provide a username for the barber account.");
+      }
+      if (!args.email?.trim()) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Email is required", "Please provide an email address.");
+      }
+      if (!args.password?.trim()) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Password is required", "Please provide a password for the account.");
+      }
+      if (!args.mobile_number?.trim()) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Mobile number is required", "Please provide a valid mobile number.");
+      }
+      if (!args.full_name?.trim()) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Full name is required", "Please provide the barber's full name.");
+      }
+      if (!args.branch_id) {
+        throwUserError(ERROR_CODES.VALIDATION_ERROR, "Branch ID is required", "The barber must be assigned to a branch.");
+      }
+      if (!args.services || args.services.length === 0) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "At least one service must be selected", "Please select one or more services that the barber offers.");
+      }
+
+      // Check if email already exists
+      const existingUser = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", args.email))
+        .first();
+
+      if (existingUser) {
+        throwUserError(ERROR_CODES.AUTH_EMAIL_EXISTS, `Email ${args.email} is already in use`, "This email is already registered in the system. Please use a different email address.");
+      }
+
+      // Check if username already exists
+      const existingUsername = await ctx.db
+        .query("users")
+        .withIndex("by_username", (q) => q.eq("username", args.username))
+        .first();
+
+      if (existingUsername) {
+        throwUserError(ERROR_CODES.AUTH_USERNAME_EXISTS, `Username "${args.username}" is already taken`, "This username is already in use. Please choose a different username.");
+      }
+
+      // Validate that all services exist and belong to the branch
+      for (const serviceId of args.services) {
+        const service = await ctx.db.get(serviceId);
+        if (!service) {
+          throwUserError(ERROR_CODES.BOOKING_SERVICE_UNAVAILABLE, `Service not found`, "One or more selected services could not be found. Please verify and try again.");
+        }
+        if (service.branch_id !== args.branch_id) {
+          throwUserError(ERROR_CODES.VALIDATION_ERROR, `Service does not belong to this branch`, `The service "${service.name}" does not belong to the selected branch.`);
+        }
+      }
+
+      // Create user account
+      console.log('[createBarberWithAccount] Creating user account...');
+      const userId = await ctx.db.insert("users", {
+        username: args.username.trim(),
+        email: args.email.trim(),
+        password: args.password, // In production, this should be hashed
+        mobile_number: args.mobile_number.trim(),
+        nickname: undefined,
+        birthday: undefined,
+        role: "barber",
+        branch_id: args.branch_id,
+        is_active: true,
+        avatar: args.avatar || undefined,
+        bio: undefined,
+        skills: [],
+        isVerified: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      console.log('[createBarberWithAccount] User created:', userId);
+
+      // Create barber profile
+      console.log('[createBarberWithAccount] Creating barber profile...');
+      const barberId = await ctx.db.insert("barbers", {
+        user: userId,
+        branch_id: args.branch_id,
+        full_name: args.full_name.trim(),
+        is_active: args.is_active,
+        services: args.services,
+        email: args.email.trim(),
+        phone: args.phone?.trim() || undefined,
+        avatar: args.avatar || undefined,
+        avatarStorageId: args.avatarStorageId || undefined,
+        experience: args.experience?.trim() || '0 years',
+        rating: 0,
+        totalBookings: 0,
+        monthlyRevenue: 0,
+        specialties: args.specialties || [],
+        schedule: {
+          monday: { available: true, start: '09:00', end: '17:00' },
+          tuesday: { available: true, start: '09:00', end: '17:00' },
+          wednesday: { available: true, start: '09:00', end: '17:00' },
+          thursday: { available: true, start: '09:00', end: '17:00' },
+          friday: { available: true, start: '09:00', end: '17:00' },
+          saturday: { available: true, start: '09:00', end: '17:00' },
+          sunday: { available: false, start: '09:00', end: '17:00' },
+        },
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+
+      console.log('[createBarberWithAccount] Barber profile created:', barberId);
+
+      return { userId, barberId };
+    } catch (error) {
+      console.error('[createBarberWithAccount] Error:', error);
+      // Re-throw errors as-is since throwUserError already provides user-friendly messages
+      throw error;
     }
-
-    // Check if username already exists
-    const existingUsername = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", args.username))
-      .first();
-
-    if (existingUsername) {
-      throwUserError(ERROR_CODES.AUTH_USERNAME_EXISTS);
-    }
-
-    // Create user account
-    const userId = await ctx.db.insert("users", {
-      username: args.username,
-      email: args.email,
-      password: args.password, // In production, this should be hashed
-      mobile_number: args.mobile_number,
-      nickname: undefined,
-      birthday: undefined,
-      role: "barber",
-      branch_id: args.branch_id,
-      is_active: true,
-      avatar: args.avatar,
-      bio: undefined,
-      skills: [],
-      isVerified: false,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-
-    // Create barber profile
-    const barberId = await ctx.db.insert("barbers", {
-      user: userId,
-      branch_id: args.branch_id,
-      full_name: args.full_name,
-      is_active: args.is_active,
-      services: args.services,
-      email: args.email,
-      phone: args.phone || undefined,
-      avatar: args.avatar || undefined,
-      avatarStorageId: args.avatarStorageId || undefined,
-      experience: args.experience || '0 years',
-      rating: 0,
-      totalBookings: 0,
-      monthlyRevenue: 0,
-      specialties: args.specialties || [],
-      schedule: {
-        monday: { available: true, start: '09:00', end: '17:00' },
-        tuesday: { available: true, start: '09:00', end: '17:00' },
-        wednesday: { available: true, start: '09:00', end: '17:00' },
-        thursday: { available: true, start: '09:00', end: '17:00' },
-        friday: { available: true, start: '09:00', end: '17:00' },
-        saturday: { available: true, start: '09:00', end: '17:00' },
-        sunday: { available: false, start: '09:00', end: '17:00' },
-      },
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-
-    return { userId, barberId };
   },
 });
 

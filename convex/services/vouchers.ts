@@ -468,14 +468,14 @@ export const redeemVoucher = mutation({
 
     if (!voucher) {
       console.error('❌ Voucher not found:', args.code);
-      throw new Error("Voucher not found");
+      throwUserError(ERROR_CODES.VOUCHER_NOT_FOUND, `Voucher code "${args.code}" not found`, "Please check the voucher code and try again.");
     }
 
     console.log('✅ Voucher found:', { code: voucher.code, voucherId: voucher._id });
 
     if (voucher.expires_at < Date.now()) {
       console.error('❌ Voucher expired:', { code: voucher.code, expiresAt: new Date(voucher.expires_at) });
-      throw new Error("Voucher has expired");
+      throwUserError(ERROR_CODES.VOUCHER_EXPIRED, "This voucher has expired", "The voucher is no longer valid. Please use a different voucher.");
     }
 
     // Find the user's assignment for this voucher
@@ -488,14 +488,14 @@ export const redeemVoucher = mutation({
 
     if (!assignment) {
       console.error('❌ Voucher not assigned to user:', { code: voucher.code, userId: args.user_id, voucherId: voucher._id });
-      throw new Error("Voucher not assigned to this user");
+      throwUserError(ERROR_CODES.VOUCHER_NOT_ASSIGNED, "Voucher is not assigned to your account", "This voucher is not available for you to use.");
     }
 
     console.log('✅ Assignment found:', { assignmentId: assignment._id, currentStatus: assignment.status });
 
     if (assignment.status === "redeemed") {
       console.error('❌ Voucher already redeemed:', { code: voucher.code, redeemedAt: new Date(assignment.redeemed_at) });
-      throw new Error("Voucher has already been redeemed");
+      throwUserError(ERROR_CODES.VOUCHER_ALREADY_USED, "Voucher has already been used", "This voucher has already been redeemed and cannot be used again.");
     }
 
     // Mark assignment as redeemed

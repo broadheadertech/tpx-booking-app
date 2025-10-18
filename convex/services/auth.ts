@@ -46,7 +46,7 @@ export const registerUser = mutation({
 
     // Validate branch_id for staff users (customers don't need branch_id)
     if (["staff", "barber", "branch_admin", "admin"].includes(args.role) && !args.branch_id) {
-      throw new Error("Branch ID is required for staff, barber, branch_admin, and admin users");
+      throwUserError(ERROR_CODES.VALIDATION_ERROR, "Branch ID is required for this user role", "Staff, barbers, branch admins, and admins must be assigned to a branch.");
     }
 
     // Create new user
@@ -233,7 +233,7 @@ export const loginWithFacebook = action({
       const debugRes = await fetch(debugUrl);
       const debugJson = await debugRes.json();
       if (!debugRes.ok || !debugJson?.data?.is_valid || debugJson?.data?.app_id !== appId) {
-        throw new Error("Invalid Facebook token");
+        throwUserError(ERROR_CODES.VALIDATION_ERROR, "Facebook login failed", "The Facebook token provided is invalid or expired. Please try logging in again.");
       }
       // Optionally exchange for a long-lived token
       const exchangeUrl = `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId}&client_secret=${appSecret}&fb_exchange_token=${encodeURIComponent(args.access_token)}`;
@@ -250,11 +250,11 @@ export const loginWithFacebook = action({
     const fields = "id,name,email,picture.type(large)";
     const res = await fetch(`https://graph.facebook.com/v18.0/me?fields=${fields}&access_token=${accessTokenToUse}`);
     if (!res.ok) {
-      throw new Error("Failed to fetch Facebook profile");
+      throwUserError(ERROR_CODES.VALIDATION_ERROR, "Could not retrieve Facebook profile", "Unable to fetch your Facebook profile information. Please try again.");
     }
     const profile: any = await res.json();
     if (!profile || (!profile.email && !profile.id)) {
-      throw new Error("Invalid Facebook profile response");
+      throwUserError(ERROR_CODES.VALIDATION_ERROR, "Invalid Facebook profile", "Could not retrieve valid profile information from Facebook. Please try again.");
     }
 
     // Pass minimal normalized info to mutation
@@ -327,7 +327,7 @@ export const loginWithFacebookInternal = mutation({
     }
 
     if (!user) {
-      throw new Error("User not found after Facebook login");
+      throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS, "Facebook login error", "Unable to complete Facebook login. Please try again or contact support.");
     }
 
     // Create a session for this user
@@ -383,26 +383,26 @@ export const updateUserProfile = mutation({
     // Get current user to validate
     const currentUser = await ctx.db.get(session.userId);
     if (!currentUser) {
-      throw new Error("User not found");
+      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "User not found", "Your user account could not be found in the system.");
     }
 
     // Validate inputs
     if (args.mobile_number !== undefined && args.mobile_number.length > 0) {
       if (!/^\+?[0-9\s\-\(\)]{7,}$/.test(args.mobile_number)) {
-        throw new Error("Invalid mobile number format");
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid mobile number format", "Please enter a valid phone number with at least 7 digits.");
       }
     }
 
     if (args.nickname !== undefined && args.nickname.length > 100) {
-      throw new Error("Nickname must be less than 100 characters");
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Nickname too long", "Nickname must be less than 100 characters.");
     }
 
     if (args.address !== undefined && args.address.length > 500) {
-      throw new Error("Address must be less than 500 characters");
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Address too long", "Address must be less than 500 characters.");
     }
 
     if (args.bio !== undefined && args.bio.length > 1000) {
-      throw new Error("Bio must be less than 1000 characters");
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Bio too long", "Bio must be less than 1000 characters.");
     }
 
     // Update user

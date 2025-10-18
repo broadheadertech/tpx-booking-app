@@ -10,6 +10,10 @@ export const useRealtimeNotifications = () => {
   const toast = useToast();
   const lastNotificationCount = useRef(0);
   const processedNotifications = useRef(new Set());
+  const isInitialLoad = useRef(true);
+  
+  // Development mode - show all notifications including on initial load
+  const isDev = import.meta.env.DEV;
 
   // Get notifications for the current user
   const notifications = useQuery(
@@ -23,17 +27,41 @@ export const useRealtimeNotifications = () => {
     const unreadNotifications = notifications.filter(n => !n.is_read);
     const currentCount = unreadNotifications.length;
 
-    // Check for new unread notifications
-    if (currentCount > lastNotificationCount.current) {
+    console.log('[Notifications] Loaded:', currentCount, 'unread notifications', unreadNotifications);
+
+    // Skip showing toasts on initial load - only for new arrivals (unless in dev mode)
+    if (isInitialLoad.current && !isDev) {
+      // Mark all current unread notifications as processed without showing toasts
+      unreadNotifications.forEach(n => {
+        processedNotifications.current.add(n._id);
+      });
+      isInitialLoad.current = false;
+      lastNotificationCount.current = currentCount;
+      console.log('[Notifications] Initial load - marked as processed, no toasts shown');
+      return;
+    }
+
+    // In dev mode, show on initial load too
+    if (isInitialLoad.current && isDev) {
+      isInitialLoad.current = false;
+      console.log('[Notifications] Initial load in DEV mode - will show toasts');
+    }
+
+    // Check for new unread notifications (count increased OR in dev mode)
+    if (currentCount > lastNotificationCount.current || isDev) {
       // Find new notifications that haven't been processed
       const newNotifications = unreadNotifications.filter(n => 
         !processedNotifications.current.has(n._id)
       );
 
+      console.log('[Notifications] New notifications:', newNotifications.length);
+
       // Show toast for each new notification
       newNotifications.forEach(notification => {
         // Mark as processed to avoid duplicate toasts
         processedNotifications.current.add(notification._id);
+
+        console.log('[Notifications] Showing toast for:', notification.title);
 
         // Show appropriate toast based on notification type
         switch (notification.type) {

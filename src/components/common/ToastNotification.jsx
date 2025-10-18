@@ -179,7 +179,7 @@ const ToastContainer = () => {
   const { toasts, removeToast } = useToast();
 
   return (
-    <div className="fixed top-4 right-4 z-[9999] space-y-2 pointer-events-none">
+    <div className="fixed top-4 left-4 z-[9999] space-y-2 pointer-events-none max-w-sm">
       <AnimatePresence>
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} onRemove={removeToast} />
@@ -218,40 +218,43 @@ const ToastItem = ({ toast, onRemove }) => {
   const borderColorClass = toast.borderColor || 'border-gray-500';
   const iconColorClass = toast.iconColor || 'text-gray-400';
 
+  // Convert border-color to border-l-color format
+  const leftBorderClass = borderColorClass.replace('border-', 'border-l-');
+
   return (
     <motion.div
-      initial={{ opacity: 0, x: 100, scale: 0.8 }}
+      initial={{ opacity: 0, x: -100, scale: 0.9 }}
       animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, x: 100, scale: 0.8, transition: { duration: 0.2 } }}
+      exit={{ opacity: 0, x: -100, scale: 0.9, transition: { duration: 0.2 } }}
       className={`
-        relative max-w-md rounded-xl border-2 shadow-2xl backdrop-blur-sm
+        relative rounded-lg shadow-lg backdrop-blur-md
         pointer-events-auto overflow-hidden
-        ${bgColorClass}/10 ${borderColorClass}/30
-        bg-[#1A1A1A]/90 border-[#2A2A2A]/50
-        hover:border-opacity-60 transition-all duration-200
+        ${bgColorClass}/10 ${leftBorderClass}
+        bg-[#1A1A1A]/95 border-l-4
+        hover:shadow-xl transition-all duration-200
       `}
     >
       {/* Progress bar */}
       {toast.duration > 0 && (
-        <div className="absolute top-0 left-0 h-1 bg-gradient-to-r from-[#FF8C42] to-[#FF9D5C] transition-all duration-50"
+        <div className="absolute top-0 left-0 h-0.5 bg-gradient-to-r from-[#FF8C42] to-[#FF9D5C] transition-all duration-50"
              style={{ width: `${progress}%` }} />
       )}
 
-      <div className="flex items-start space-x-3 p-4">
-        {/* Icon */}
-        <div className={`p-2 rounded-lg ${bgColorClass}/20 border ${borderColorClass}/50 flex-shrink-0`}>
-          <Icon className={iconColorClass} size={18} />
+      <div className="flex items-start space-x-2.5 p-3">
+        {/* Icon - Compact */}
+        <div className={`p-1.5 rounded-md ${bgColorClass}/20 border ${borderColorClass}/50 flex-shrink-0 mt-0.5`}>
+          <Icon className={iconColorClass} size={16} />
         </div>
 
-        {/* Content */}
+        {/* Content - Compact */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
-              <h4 className="font-semibold text-white text-sm leading-tight mb-1">
+              <h4 className="font-semibold text-white text-xs leading-tight mb-0.5">
                 {toast.title}
               </h4>
               {toast.message && (
-                <p className="text-gray-300 text-sm leading-relaxed">
+                <p className="text-gray-400 text-xs leading-snug">
                   {toast.message}
                 </p>
               )}
@@ -260,21 +263,21 @@ const ToastItem = ({ toast, onRemove }) => {
             {/* Close button */}
             <button
               onClick={() => onRemove(toast.id)}
-              className="ml-3 p-1 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/10 flex-shrink-0"
+              className="ml-2 p-0.5 text-gray-400 hover:text-white transition-colors rounded hover:bg-white/10 flex-shrink-0"
             >
-              <X size={16} />
+              <X size={14} />
             </button>
           </div>
 
-          {/* Action button */}
+          {/* Action button - Compact */}
           {toast.action && (
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={toast.action.onClick}
-              className="mt-3 inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-lg
+              className="mt-2 inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-md
                 bg-[#FF8C42] hover:bg-[#FF8C42]/90 text-white transition-all duration-200
-                shadow-lg shadow-[#FF8C42]/20"
+                shadow-md shadow-[#FF8C42]/20"
             >
               {toast.action.label}
               {toast.action.showArrow && <span className="ml-1">→</span>}
@@ -282,9 +285,6 @@ const ToastItem = ({ toast, onRemove }) => {
           )}
         </div>
       </div>
-
-      {/* Type indicator bar */}
-      <div className={`h-1 ${bgColorClass}/30`} />
     </motion.div>
   );
 };
