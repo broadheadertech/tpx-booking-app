@@ -97,6 +97,45 @@ const BranchFormModal = ({
                 />
               </div>
 
+              <div className="border-t border-[#444444]/30 pt-4">
+                <h4 className="text-sm font-semibold text-white mb-3">Booking Hours</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Start Time</label>
+                    <select
+                      name="booking_start_hour"
+                      value={formData.booking_start_hour ?? 10}
+                      onChange={onInputChange}
+                      className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    >
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={i}>
+                          {i === 0 ? '12:00 AM' : i < 12 ? `${i}:00 AM` : i === 12 ? '12:00 PM' : `${i - 12}:00 PM`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">End Time</label>
+                    <select
+                      name="booking_end_hour"
+                      value={formData.booking_end_hour ?? 20}
+                      onChange={onInputChange}
+                      className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    >
+                      {Array.from({ length: 24 }, (_, i) => (
+                        <option key={i} value={i}>
+                          {i === 0 ? '12:00 AM' : i < 12 ? `${i}:00 AM` : i === 12 ? '12:00 PM' : `${i - 12}:00 PM`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-gray-400">
+                  Set the available booking time range for this branch (default: 10:00 AM - 8:00 PM)
+                </p>
+              </div>
+
               <div className="flex justify-end space-x-3 pt-4">
                 <button
                   type="button"

@@ -143,9 +143,11 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
       <SettingsModal 
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
+        currentBranch={currentBranch}
+        user={user}
         onSave={(settings) => {
           console.log('Settings saved:', settings)
-          // In a real app, this would save to database/API
+          // Refresh or update UI if needed
         }}
       />
       

@@ -235,11 +235,12 @@ const ServiceBooking = ({ onBack }) => {
 
   // Generate time slots for the selected date
   const timeSlots = React.useMemo(() => {
-    if (!selectedDate || !selectedStaff) return [];
+    if (!selectedDate || !selectedStaff || !selectedBranch) return [];
     
     const slots = [];
-    const startHour = 9; // 9 AM
-    const endHour = 18; // 6 PM
+    // Use branch-configured booking hours, default to 10am-8pm
+    const startHour = selectedBranch.booking_start_hour ?? 10; // Default 10 AM
+    const endHour = selectedBranch.booking_end_hour ?? 20; // Default 8 PM (20:00)
     const currentDate = new Date();
     const selectedDateObj = new Date(selectedDate);
     const isToday = selectedDateObj.toDateString() === currentDate.toDateString();
@@ -285,7 +286,7 @@ const ServiceBooking = ({ onBack }) => {
     }
     
     return slots;
-  }, [selectedDate, selectedStaff, existingBookings]);
+  }, [selectedDate, selectedStaff, selectedBranch, existingBookings]);
 
   // Get available barbers for selected service
   const getAvailableBarbers = () => {

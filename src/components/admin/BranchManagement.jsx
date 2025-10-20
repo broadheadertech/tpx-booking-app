@@ -15,7 +15,9 @@ export default function BranchManagement() {
     name: '',
     address: '',
     phone: '',
-    email: ''
+    email: '',
+    booking_start_hour: 10,
+    booking_end_hour: 20
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -81,7 +83,9 @@ export default function BranchManagement() {
       name: '',
       address: '',
       phone: '',
-      email: ''
+      email: '',
+      booking_start_hour: 10,
+      booking_end_hour: 20
     })
     setError('')
   }
@@ -97,7 +101,9 @@ export default function BranchManagement() {
       name: branch.name,
       address: branch.address,
       phone: branch.phone,
-      email: branch.email
+      email: branch.email,
+      booking_start_hour: branch.booking_start_hour ?? 10,
+      booking_end_hour: branch.booking_end_hour ?? 20
     })
     setShowEditModal(true)
   }

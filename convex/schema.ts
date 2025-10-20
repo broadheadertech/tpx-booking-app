@@ -10,6 +10,8 @@ export default defineSchema({
     phone: v.string(),
     email: v.string(),
     is_active: v.boolean(),
+    booking_start_hour: v.optional(v.number()), // Start hour for bookings (0-23, default: 10)
+    booking_end_hour: v.optional(v.number()), // End hour for bookings (0-23, default: 20)
     createdAt: v.number(),
     updatedAt: v.number(),
   })

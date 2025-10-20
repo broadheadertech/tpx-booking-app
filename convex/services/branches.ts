@@ -92,6 +92,8 @@ export const createBranch = mutation({
     address: v.string(),
     phone: v.string(),
     email: v.string(),
+    booking_start_hour: v.optional(v.number()),
+    booking_end_hour: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const branch_code = generateBranchCode(args.name);
@@ -113,6 +115,8 @@ export const createBranch = mutation({
       phone: args.phone,
       email: args.email,
       is_active: true,
+      booking_start_hour: args.booking_start_hour ?? 10, // Default 10am
+      booking_end_hour: args.booking_end_hour ?? 20, // Default 8pm (20:00)
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -248,6 +252,8 @@ export const updateBranch = mutation({
     phone: v.optional(v.string()),
     email: v.optional(v.string()),
     is_active: v.optional(v.boolean()),
+    booking_start_hour: v.optional(v.number()),
+    booking_end_hour: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;

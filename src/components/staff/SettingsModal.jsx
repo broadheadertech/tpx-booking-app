@@ -1,5 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useMutation } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import { 
   Settings, 
   Clock, 
@@ -8,10 +10,11 @@ import {
   Palette,
   Save,
   RefreshCw,
-  X
+  X,
+  Building
 } from 'lucide-react'
 
-const SettingsModal = ({ isOpen, onClose, onSave }) => {
+const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
   const [settings, setSettings] = useState({
     emailNotifications: true,
     smsNotifications: false,
@@ -20,8 +23,27 @@ const SettingsModal = ({ isOpen, onClose, onSave }) => {
     compactView: false,
     showTutorials: true,
     sessionTimeout: '60',
-    autoLogout: true
+    autoLogout: true,
+    bookingStartHour: 10,
+    bookingEndHour: 20
   })
+  
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
+  
+  const updateBranch = useMutation(api.services.branches.updateBranch)
+  
+  // Load branch booking hours when modal opens or branch changes
+  useEffect(() => {
+    if (isOpen && currentBranch) {
+      setSettings(prev => ({
+        ...prev,
+        bookingStartHour: currentBranch.booking_start_hour ?? 10,
+        bookingEndHour: currentBranch.booking_end_hour ?? 20
+      }))
+    }
+  }, [isOpen, currentBranch])
 
   const handleInputChange = (field, value) => {
     setSettings(prev => ({ ...prev, [field]: value }))
@@ -31,9 +53,35 @@ const SettingsModal = ({ isOpen, onClose, onSave }) => {
     setSettings(prev => ({ ...prev, [field]: checked }))
   }
 
-  const handleSave = () => {
-    onSave?.(settings)
-    onClose()
+  const handleSave = async () => {
+    // Save booking hours to branch if user has permission
+    if (currentBranch && (user?.role === 'branch_admin' || user?.role === 'super_admin' || user?.role === 'staff')) {
+      setLoading(true)
+      setError('')
+      setSuccessMessage('')
+      
+      try {
+        await updateBranch({
+          id: currentBranch._id,
+          booking_start_hour: settings.bookingStartHour,
+          booking_end_hour: settings.bookingEndHour
+        })
+        setSuccessMessage('Booking hours updated successfully!')
+        
+        // Show success message briefly then close
+        setTimeout(() => {
+          onSave?.(settings)
+          onClose()
+        }, 1500)
+      } catch (err) {
+        console.error('Error updating booking hours:', err)
+        setError(err.message || 'Failed to update booking hours')
+        setLoading(false)
+      }
+    } else {
+      onSave?.(settings)
+      onClose()
+    }
   }
 
   const resetToDefaults = () => {
@@ -45,8 +93,12 @@ const SettingsModal = ({ isOpen, onClose, onSave }) => {
       compactView: false,
       showTutorials: true,
       sessionTimeout: '60',
-      autoLogout: true
+      autoLogout: true,
+      bookingStartHour: 10,
+      bookingEndHour: 20
     })
+    setError('')
+    setSuccessMessage('')
   }
 
   if (!isOpen) return null
@@ -73,6 +125,70 @@ const SettingsModal = ({ isOpen, onClose, onSave }) => {
           </div>
 
           <div className="p-6 max-h-[60vh] overflow-y-auto space-y-4">
+            {/* Success/Error Messages */}
+            {error && (
+              <div className="p-3 bg-red-400/20 border border-red-400/30 rounded-lg text-sm text-red-400">
+                {error}
+              </div>
+            )}
+            {successMessage && (
+              <div className="p-3 bg-green-400/20 border border-green-400/30 rounded-lg text-sm text-green-400 flex items-center gap-2">
+                <span>✓</span> {successMessage}
+              </div>
+            )}
+            
+            {/* Branch Booking Hours - Only show if user has branch */}
+            {currentBranch && (
+              <>
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
+                    <Building className="w-4 h-4 text-[#FF8C42]" />
+                    Branch Booking Hours
+                  </h3>
+                  <div className="bg-[#232323] rounded-lg p-4 space-y-3">
+                    <div className="text-xs text-gray-400 mb-2">
+                      Configure available booking hours for {currentBranch.name}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-2">Start Time</label>
+                        <select
+                          value={settings.bookingStartHour}
+                          onChange={(e) => handleInputChange('bookingStartHour', parseInt(e.target.value))}
+                          className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                        >
+                          {Array.from({ length: 24 }, (_, i) => (
+                            <option key={i} value={i}>
+                              {i === 0 ? '12:00 AM' : i < 12 ? `${i}:00 AM` : i === 12 ? '12:00 PM' : `${i - 12}:00 PM`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-2">End Time</label>
+                        <select
+                          value={settings.bookingEndHour}
+                          onChange={(e) => handleInputChange('bookingEndHour', parseInt(e.target.value))}
+                          className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                        >
+                          {Array.from({ length: 24 }, (_, i) => (
+                            <option key={i} value={i}>
+                              {i === 0 ? '12:00 AM' : i < 12 ? `${i}:00 AM` : i === 12 ? '12:00 PM' : `${i - 12}:00 PM`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      These hours determine when customers can book appointments at this branch.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="h-px bg-[#2A2A2A]/50" />
+              </>
+            )}
+            
             {/* Notifications */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
@@ -203,10 +319,20 @@ const SettingsModal = ({ isOpen, onClose, onSave }) => {
               </button>
               <button
                 onClick={handleSave}
-                className="flex items-center gap-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200 text-sm font-medium"
+                disabled={loading}
+                className="flex items-center gap-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm font-medium"
               >
-                <Save className="w-4 h-4" />
-                Save
+                {loading ? (
+                  <>
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Save</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
