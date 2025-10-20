@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useNavigate } from 'react-router-dom'
+import { APP_VERSION } from '../../config/version'
 
 const Profile = ({ onBack }) => {
   const { user, logout, loading: authLoading, sessionToken } = useAuth()
@@ -320,16 +321,13 @@ const Profile = ({ onBack }) => {
                 {new Date().toLocaleDateString('en-PH', { month: 'long', year: 'numeric' })}
               </div>
             </div>
-            
-            {/* Reset Onboarding Button */}
-            <button
-              onClick={handleResetOnboarding}
-              className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-colors shadow-lg"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span>Reset Welcome Tour</span>
-            </button>
           </div>
+        </div>
+
+        {/* Version Display */}
+        <div className="text-center mb-6">
+          <p className="text-xs text-gray-500">v{APP_VERSION}</p>
+          <p className="text-xs text-gray-600">TPX Barbershop</p>
         </div>
 
         {/* Edit Button */}
