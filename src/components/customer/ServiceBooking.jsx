@@ -9,6 +9,7 @@ import {
   Building,
   Search,
   X,
+  MapPin,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from 'convex/react'
@@ -614,25 +615,30 @@ const ServiceBooking = ({ onBack }) => {
               className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[#FF8C42] rounded-lg p-4 text-left transition-all duration-200 group"
             >
               <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  {/* Branch Name */}
-                  <h3 className="text-base font-semibold text-white mb-1 group-hover:text-[#FF8C42] transition-colors">
-                    {branch.name}
-                  </h3>
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  {/* Location Pin Icon */}
+                  <MapPin className="w-5 h-5 text-[#FF8C42] flex-shrink-0 mt-0.5" />
                   
-                  {/* Branch Details - Compact */}
-                  <div className="space-y-0.5 text-xs text-gray-400">
-                    <p className="truncate">{branch.address}</p>
-                    <div className="flex items-center gap-3">
-                      <span>{branch.phone}</span>
-                      <span className="text-gray-600">•</span>
-                      <span className="text-gray-500">#{branch.branch_code}</span>
+                  <div className="flex-1 min-w-0">
+                    {/* Branch Name */}
+                    <h3 className="text-base font-semibold text-white mb-1 group-hover:text-[#FF8C42] transition-colors">
+                      {branch.name}
+                    </h3>
+                    
+                    {/* Branch Details - Compact */}
+                    <div className="space-y-0.5 text-xs text-gray-400">
+                      <p className="truncate">{branch.address}</p>
+                      <div className="flex items-center gap-3">
+                        <span>{branch.phone}</span>
+                        <span className="text-gray-600">•</span>
+                        <span className="text-gray-500">#{branch.branch_code}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Arrow Indicator */}
-                <div className="ml-4 text-gray-500 group-hover:text-[#FF8C42] transition-colors">
+                <div className="ml-4 text-gray-500 group-hover:text-[#FF8C42] transition-colors flex-shrink-0">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
