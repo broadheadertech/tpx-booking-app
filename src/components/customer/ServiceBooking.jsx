@@ -2,22 +2,13 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   ArrowLeft,
   Clock,
-  DollarSign,
   User,
   Calendar,
   CheckCircle,
-  XCircle,
   Gift,
-  Scissors,
-  Shield,
-  Zap,
-  Star,
-  Crown,
-  Sparkles,
   Building,
-  MapPin,
-  Phone,
-  Mail,
+  Search,
+  X,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from 'convex/react'
@@ -75,6 +66,8 @@ const ServiceBooking = ({ onBack }) => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
   const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
+  const [branchSearchTerm, setBranchSearchTerm] = useState("");
+  const [serviceSearchTerm, setServiceSearchTerm] = useState("");
   const qrRef = useRef(null);
 
   // Convex queries
@@ -307,26 +300,7 @@ const ServiceBooking = ({ onBack }) => {
     return serviceBarbers;
   };
 
-  // Helper function to get service icon
-  const getServiceIcon = (serviceName) => {
-    const name = serviceName?.toLowerCase() || "";
-    if (name.includes("haircut") || name.includes("cut")) {
-      return <Scissors className="w-5 h-5 text-white" />;
-    }
-    if (name.includes("beard")) {
-      return <Shield className="w-5 h-5 text-white" />;
-    }
-    if (name.includes("shave")) {
-      return <Zap className="w-5 h-5 text-white" />;
-    }
-    if (name.includes("wash")) {
-      return <Sparkles className="w-5 h-5 text-white" />;
-    }
-    if (name.includes("package") || name.includes("complete")) {
-      return <Crown className="w-5 h-5 text-white" />;
-    }
-    return <Star className="w-5 h-5 text-white" />;
-  };
+
 
   const handleCreateBooking = async (
     paymentType = "pay_later",
@@ -567,125 +541,107 @@ const ServiceBooking = ({ onBack }) => {
   const renderBranchSelection = () => {
     if (!branches) {
       return (
-        <div className="text-center py-8 px-4 min-h-[200px] flex flex-col justify-center">
-          <div
-            className="rounded-full w-14 h-14 flex items-center justify-center mx-auto mb-4"
-            style={{ backgroundColor: "rgba(246, 139, 36, 0.1)" }}
-          >
-            <Building className="w-7 h-7" style={{ color: "#F68B24" }} />
-          </div>
-          <p className="text-sm font-medium" style={{ color: "#8B8B8B" }}>
-            Loading branches...
-          </p>
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42]"></div>
         </div>
       );
     }
 
     if (branches.length === 0) {
       return (
-        <div className="text-center py-8 px-4 min-h-[200px] flex flex-col justify-center">
-          <div
-            className="rounded-full w-14 h-14 flex items-center justify-center mx-auto mb-4"
-            style={{ backgroundColor: "rgba(220, 53, 69, 0.1)" }}
-          >
-            <XCircle className="w-7 h-7 text-red-500" />
-          </div>
-          <p className="text-sm text-red-600 mb-4 font-medium px-4">No branches available</p>
+        <div className="text-center py-12 px-4">
+          <p className="text-sm text-gray-400">No branches available</p>
         </div>
       );
     }
 
+    // Filter branches based on search
+    const filteredBranches = branches.filter((branch) => {
+      const searchLower = branchSearchTerm.toLowerCase();
+      return (
+        branch.name.toLowerCase().includes(searchLower) ||
+        branch.address.toLowerCase().includes(searchLower) ||
+        branch.branch_code.toLowerCase().includes(searchLower) ||
+        branch.phone.includes(searchLower)
+      );
+    });
+
     return (
-      <div className="px-4 pb-4">
-        {/* Mobile-First Header */}
-        <div className="text-center mb-6">
-          <div className="flex items-center justify-center mb-4">
-            <div className="rounded-full w-12 h-12 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center mr-3 shadow-lg">
-              <Building className="w-6 h-6 text-white" />
-            </div>
-            <div className="text-left">
-              <h2 className="text-xl font-bold leading-tight text-white">
-                Select Your Branch
-              </h2>
-              <p className="text-sm font-medium text-gray-400">
-                Choose your preferred location
-              </p>
-            </div>
+      <div className="px-4 pb-6 max-w-2xl mx-auto">
+        {/* Header - Clean and Professional */}
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-white mb-1">
+            Select Location
+          </h2>
+          <p className="text-sm text-gray-400">
+            Choose your preferred branch to continue
+          </p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Search by name, address, or code..."
+              value={branchSearchTerm}
+              onChange={(e) => setBranchSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-10 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:outline-none focus:border-[#FF8C42] transition-colors text-sm"
+            />
+            {branchSearchTerm && (
+              <button
+                onClick={() => setBranchSearchTerm("")}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Branch Cards */}
-        <div className="space-y-4">
-          {branches.map((branch) => (
+        {/* Branch List - Compact Cards */}
+        {filteredBranches.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-sm text-gray-400">No branches found matching "{branchSearchTerm}"</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredBranches.map((branch) => (
             <button
               key={branch._id}
               onClick={() => handleBranchSelect(branch)}
-              className="group relative w-full bg-[#1A1A1A] rounded-xl border-2 border-[#2A2A2A] hover:border-[#FF8C42]/50 transition-all duration-200 overflow-hidden touch-manipulation"
+              className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[#FF8C42] rounded-lg p-4 text-left transition-all duration-200 group"
             >
-
-              {/* Touch-Friendly Content */}
-              <div className="relative p-4">
-                <div className="flex items-start space-x-3">
-                  {/* Icon Badge */}
-                  <div className="flex-shrink-0">
-                    <div className="rounded-xl w-12 h-12 bg-[#FF8C42] flex items-center justify-center transition-all duration-200 group-hover:scale-105">
-                      <Building className="w-6 h-6 text-white" />
-                    </div>
-                  </div>
-
-                  {/* Mobile-First Content Layout */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex-1 min-w-0 pr-2">
-                        <h3 className="text-base font-bold leading-tight text-white group-hover:text-[#FF8C42] transition-colors duration-200">
-                          {branch.name}
-                        </h3>
-                        <p className="text-xs font-mono text-gray-400 mt-1">
-                          #{branch.branch_code}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Branch Contact Info */}
-                    <div className="space-y-1 mt-2">
-                      <div className="flex items-center space-x-2">
-                        <MapPin className="w-3 h-3 flex-shrink-0 text-gray-500" />
-                        <span className="text-xs text-gray-400 truncate">
-                          {branch.address}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Phone className="w-3 h-3 flex-shrink-0 text-gray-500" />
-                        <span className="text-xs text-gray-400">
-                          {branch.phone}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Mail className="w-3 h-3 flex-shrink-0 text-gray-500" />
-                        <span className="text-xs text-gray-400">
-                          {branch.email}
-                        </span>
-                      </div>
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  {/* Branch Name */}
+                  <h3 className="text-base font-semibold text-white mb-1 group-hover:text-[#FF8C42] transition-colors">
+                    {branch.name}
+                  </h3>
+                  
+                  {/* Branch Details - Compact */}
+                  <div className="space-y-0.5 text-xs text-gray-400">
+                    <p className="truncate">{branch.address}</p>
+                    <div className="flex items-center gap-3">
+                      <span>{branch.phone}</span>
+                      <span className="text-gray-600">•</span>
+                      <span className="text-gray-500">#{branch.branch_code}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Mobile-Optimized Accent Line */}
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] scale-x-0 group-hover:scale-x-100 group-active:scale-x-100 transition-transform duration-200 origin-left rounded-b-2xl"></div>
+                {/* Arrow Indicator */}
+                <div className="ml-4 text-gray-500 group-hover:text-[#FF8C42] transition-colors">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </div>
             </button>
-          ))}
-        </div>
-
-        {/* Mobile-Optimized Footer */}
-        <div className="text-center mt-6">
-          <div className="inline-flex items-center space-x-2 px-4 py-3 rounded-full bg-[#FF8C42]/20 border border-[#FF8C42]/30">
-            <Building className="w-4 h-4 text-[#FF8C42]" />
-            <span className="text-sm font-semibold text-[#FF8C42]">
-              {branches.length} Branch{branches.length !== 1 ? 'es' : ''} Available
-            </span>
+            ))}
           </div>
-        </div>
+        )}
       </div>
     );
   };
@@ -693,33 +649,19 @@ const ServiceBooking = ({ onBack }) => {
   const renderServiceSelection = () => {
     if (loading || !services) {
       return (
-        <div className="text-center py-8 px-4 min-h-[200px] flex flex-col justify-center">
-          <div
-            className="rounded-full w-14 h-14 flex items-center justify-center mx-auto mb-4"
-            style={{ backgroundColor: "rgba(246, 139, 36, 0.1)" }}
-          >
-            <Calendar className="w-7 h-7" style={{ color: "#F68B24" }} />
-          </div>
-          <p className="text-sm font-medium" style={{ color: "#8B8B8B" }}>
-            Loading premium services...
-          </p>
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42]"></div>
         </div>
       );
     }
 
     if (error) {
       return (
-        <div className="text-center py-8 px-4 min-h-[200px] flex flex-col justify-center">
-          <div
-            className="rounded-full w-14 h-14 flex items-center justify-center mx-auto mb-4"
-            style={{ backgroundColor: "rgba(220, 53, 69, 0.1)" }}
-          >
-            <XCircle className="w-7 h-7 text-red-500" />
-          </div>
-          <p className="text-sm text-red-600 mb-4 font-medium px-4">{error}</p>
+        <div className="text-center py-12 px-4">
+          <p className="text-sm text-red-400 mb-4">{error}</p>
           <button
             onClick={loadBookingData}
-            className="w-full max-w-xs mx-auto px-6 py-3 bg-gradient-to-r from-[#F68B24] to-orange-500 text-white rounded-xl font-semibold hover:from-orange-500 hover:to-[#F68B24] transition-all duration-300 shadow-lg active:shadow-md active:scale-95 min-h-[44px] touch-manipulation"
+            className="px-6 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors text-sm font-medium"
           >
             Try Again
           </button>
@@ -727,103 +669,131 @@ const ServiceBooking = ({ onBack }) => {
       );
     }
 
+    // Filter services based on search
+    const filteredServices = services ? services.filter((service) => {
+      const searchLower = serviceSearchTerm.toLowerCase();
+      return (
+        service.name.toLowerCase().includes(searchLower) ||
+        (service.description && service.description.toLowerCase().includes(searchLower)) ||
+        service.price.toString().includes(searchLower)
+      );
+    }) : [];
+
     return (
-      <div className="px-4 pb-4">
-        {/* Mobile-First Header */}
-        <div className="text-center mb-6">
-          <div className="flex items-center justify-center mb-4">
-            <div className="rounded-full w-12 h-12 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center mr-3 shadow-lg">
-              <Star className="w-6 h-6 text-white" />
-            </div>
-            <div className="text-left">
-              <h2 className="text-xl font-bold leading-tight text-white">
-                Choose Your Service
-              </h2>
-              <p className="text-sm font-medium text-gray-400">
-                Premium grooming services
-              </p>
-            </div>
+      <div className="px-4 pb-6 max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-white mb-1">
+            Choose Service
+          </h2>
+          <p className="text-sm text-gray-400">
+            Select the service you'd like to book at {selectedBranch?.name}
+          </p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Search services by name, description, or price..."
+              value={serviceSearchTerm}
+              onChange={(e) => setServiceSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-10 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:outline-none focus:border-[#FF8C42] transition-colors text-sm"
+            />
+            {serviceSearchTerm && (
+              <button
+                onClick={() => setServiceSearchTerm("")}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Service Cards */}
-        <div className="space-y-4">
-          {services && services.map((service) => (
-            <button
-              key={service._id}
-              onClick={() => handleServiceSelect(service)}
-              className="group relative w-full bg-[#1A1A1A] rounded-xl border-2 border-[#2A2A2A] hover:border-[#FF8C42]/50 transition-all duration-200 overflow-hidden touch-manipulation"
-            >
+        {/* Service List - Modern & Professional */}
+        {filteredServices.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-sm text-gray-400">No services found matching "{serviceSearchTerm}"</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredServices.map((service) => {
+              // Calculate available barbers for this service
+              const availableBarbers = barbers ? barbers.filter(
+                (barber) =>
+                  barber.services &&
+                  Array.isArray(barber.services) &&
+                  barber.services.some(serviceId => serviceId === service._id)
+              ).length : 0;
 
-              {/* Touch-Friendly Content */}
-              <div className="relative p-4">
-                <div className="flex items-center space-x-3">
-                  {/* Mobile-Optimized Icon Badge */}
-                  <div className="flex-shrink-0">
-                    <div className="rounded-xl w-12 h-12 bg-[#FF8C42] flex items-center justify-center transition-all duration-200 group-hover:scale-105">
-                      {getServiceIcon(service.name)}
-                    </div>
-                  </div>
-
-                  {/* Mobile-First Content Layout */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start mb-1">
-                      <div className="flex-1 min-w-0 pr-2">
-                        <h3 className="text-base font-bold leading-tight text-white group-hover:text-[#FF8C42] transition-colors duration-200">
+              return (
+                <button
+                  key={service._id}
+                  onClick={() => handleServiceSelect(service)}
+                  className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[#FF8C42] rounded-lg p-4 text-left transition-all duration-200 group"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      {/* Service Name with Badge */}
+                      <div className="flex items-start gap-2 mb-1">
+                        <h3 className="text-base font-semibold text-white group-hover:text-[#FF8C42] transition-colors flex-1">
                           {service.name}
                         </h3>
-                        <p className="text-sm mt-1 line-clamp-2 leading-relaxed text-gray-400">
-                          {service.description ||
-                            "Professional grooming service tailored to your needs"}
+                        {availableBarbers > 0 && (
+                          <span className="flex-shrink-0 px-2 py-0.5 bg-[#FF8C42]/20 border border-[#FF8C42]/30 rounded text-[10px] font-semibold text-[#FF8C42]">
+                            {availableBarbers} {availableBarbers === 1 ? 'Barber' : 'Barbers'}
+                          </span>
+                        )}
+                      </div>
+                      
+                      {service.description && (
+                        <p className="text-xs text-gray-400 mb-2 line-clamp-2 leading-relaxed">
+                          {service.description}
                         </p>
-                      </div>
-                    </div>
+                      )}
 
-                    {/* Mobile-Optimized Meta Info */}
-                    <div className="flex items-center space-x-4 mt-3">
-                      <div className="flex items-center space-x-1">
-                        <Clock className="w-4 h-4 flex-shrink-0 text-gray-500" />
-                        <span className="text-sm font-medium truncate text-gray-400">
-                          {service.duration_minutes
-                            ? `${service.duration_minutes} min`
-                            : "Duration varies"}
+                      {/* Service Details - Modern Layout */}
+                      <div className="flex items-center gap-3 text-xs">
+                        {service.duration_minutes && (
+                          <div className="flex items-center gap-1 text-gray-500">
+                            <Clock className="w-3 h-3" />
+                            <span>{service.duration_minutes} min</span>
+                          </div>
+                        )}
+                        {service.duration_minutes && (
+                          <span className="text-gray-700">•</span>
+                        )}
+                        <span className="text-[#FF8C42] font-bold">
+                          ₱{parseFloat(service.price || 0).toLocaleString()}
                         </span>
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <Star className="w-4 h-4 flex-shrink-0 text-[#FF8C42]" />
-                        <span className="text-sm font-medium text-gray-400">
-                          5.0
-                        </span>
-                      </div>
+
+                      {/* Availability Warning */}
+                      {availableBarbers === 0 && (
+                        <div className="mt-2 flex items-center gap-1 text-[10px] text-amber-500">
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          <span>Limited availability</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Arrow Indicator */}
+                    <div className="flex-shrink-0 text-gray-500 group-hover:text-[#FF8C42] transition-colors self-center">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </div>
                   </div>
-
-                  {/* Mobile-Friendly Price Display */}
-                  <div className="flex-shrink-0">
-                    <div className="rounded-xl px-3 py-2 bg-[#FF8C42]/20 border border-[#FF8C42]/30 text-center min-w-[70px]">
-                      <div className="text-base font-bold leading-tight text-[#FF8C42]">
-                        ₱{parseFloat(service.price || 0).toLocaleString()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Mobile-Optimized Accent Line */}
-                <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] scale-x-0 group-hover:scale-x-100 group-active:scale-x-100 transition-transform duration-200 origin-left rounded-b-2xl"></div>
-              </div>
-            </button>
-          ))}
-        </div>
-
-        {/* Mobile-Optimized Footer */}
-        <div className="text-center mt-6">
-          <div className="inline-flex items-center space-x-2 px-4 py-3 rounded-full bg-[#FF8C42]/20 border border-[#FF8C42]/30">
-            <Crown className="w-4 h-4 text-[#FF8C42]" />
-            <span className="text-sm font-semibold text-[#FF8C42]">
-              {services.length} Premium Services Available
-            </span>
+                </button>
+              );
+            })}
           </div>
-        </div>
+        )}
       </div>
     );
   };
