@@ -3,6 +3,7 @@ import { Settings, Save, Database, Shield, Mail, Bell, Globe, Server, User, Lock
 import { useAuth } from '../../context/AuthContext'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { APP_VERSION } from '../../config/version'
 
 const GlobalSettings = ({ onRefresh }) => {
   const { user, logout } = useAuth()
@@ -449,7 +450,7 @@ const GlobalSettings = ({ onRefresh }) => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {[
-          { label: 'Version', value: '2.0.0' },
+          { label: 'Version', value: APP_VERSION },
           { label: 'Environment', value: 'Production' },
           { label: 'Database', value: 'Convex' },
           { label: 'Last Backup', value: 'Hourly' },

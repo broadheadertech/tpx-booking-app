@@ -1,5 +1,6 @@
 import React from 'react'
 import { Heart, Code } from 'lucide-react'
+import { APP_VERSION } from '../../config/version'
 
 const DashboardFooter = () => {
   const currentYear = new Date().getFullYear()
@@ -45,7 +46,7 @@ const DashboardFooter = () => {
           {/* Right section - Version & Links */}
           <div className="text-center lg:text-right">
             <div className="flex items-center justify-center lg:justify-end space-x-4">
-              <span className="text-gray-500 text-xs">v2.0.0</span>
+              <span className="text-gray-500 text-xs">v{APP_VERSION}</span>
               <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
               <span className="text-gray-500 text-xs">Multi-Branch System</span>
             </div>
