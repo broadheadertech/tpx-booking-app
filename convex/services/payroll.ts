@@ -210,8 +210,7 @@ export const calculateBarberEarnings = query({
       // later entries can override; assume latest by updatedAt precedence if needed
       // Convex doesn't let us sort here, but typical dataset small
       // Use as-is
-      // @ts-ignore
-      serviceRateMap.set(r.service_id as string, r.commission_rate);
+      serviceRateMap.set(String(r.service_id), r.commission_rate);
     }
 
     // Fallback commission rate if a service has no specific rate
@@ -282,7 +281,7 @@ export const calculateBarberEarnings = query({
       totalServiceRevenue += b.price || 0;
       
       // Get service-specific commission rate
-      const serviceId = b.service || '';
+      const serviceId = String(b.service || '');
       const serviceRate = serviceRateMap.get(serviceId) ?? fallbackRate;
       
       // Calculate service commission: service_coms = total_service_net * service.rate
@@ -748,51 +747,64 @@ export const calculatePayrollForPeriod = mutation({
 
     // Calculate earnings for each barber
     for (const barber of barbers) {
-      const earnings = await ctx.runQuery(api.services.payroll.calculateBarberEarnings, {
-        barber_id: barber._id,
-        period_start: period.period_start,
-        period_end: period.period_end,
-      });
-
-      const recordPayload: any = {
-        total_services: earnings.total_services,
-        total_service_revenue: earnings.total_service_revenue,
-        commission_rate: earnings.commission_rate,
-        gross_commission: earnings.gross_commission,
-        service_commission: earnings.service_commission,
-        total_transactions: earnings.total_transactions,
-        total_transaction_revenue: earnings.total_transaction_revenue,
-        transaction_commission: earnings.transaction_commission,
-        bookings_detail: earnings.bookings_detail,
-        daily_rate: earnings.daily_rate,
-        days_worked: earnings.days_worked,
-        daily_pay: earnings.daily_pay,
-        tax_deduction: earnings.tax_deduction,
-        other_deductions: earnings.other_deductions,
-        total_deductions: earnings.total_deductions,
-        net_pay: earnings.net_pay,
-        status: "calculated" as const,
-        updatedAt: timestamp,
-      };
-
-      const existingRecord = existingRecordMap.get(barber._id);
-      if (existingRecord) {
-        await ctx.db.patch(existingRecord._id, recordPayload);
-        existingRecordMap.delete(barber._id);
-      } else {
-        await ctx.db.insert("payroll_records", {
-          payroll_period_id: args.payroll_period_id,
+      try {
+        const earnings = await ctx.runQuery(api.services.payroll.calculateBarberEarnings, {
           barber_id: barber._id,
-          branch_id: period.branch_id,
-          ...recordPayload,
-          createdAt: timestamp,
+          period_start: period.period_start,
+          period_end: period.period_end,
         });
-      }
 
-      totalEarnings += earnings.total_service_revenue;
-      // Commissions total equals the final daily salary total (max of commission or daily rate)
-      totalCommissions += earnings.daily_pay || 0;
-      totalDeductions += earnings.total_deductions;
+        const recordPayload: any = {
+          total_services: earnings.total_services,
+          total_service_revenue: earnings.total_service_revenue,
+          commission_rate: earnings.commission_rate,
+          gross_commission: earnings.gross_commission,
+          service_commission: earnings.service_commission,
+          total_transactions: earnings.total_transactions,
+          total_transaction_revenue: earnings.total_transaction_revenue,
+          transaction_commission: earnings.transaction_commission,
+          bookings_detail: earnings.bookings_detail,
+          daily_rate: earnings.daily_rate,
+          days_worked: earnings.days_worked,
+          daily_pay: earnings.daily_pay,
+          tax_deduction: earnings.tax_deduction,
+          other_deductions: earnings.other_deductions,
+          total_deductions: earnings.total_deductions,
+          net_pay: earnings.net_pay,
+          status: "calculated" as const,
+          updatedAt: timestamp,
+        };
+
+        const existingRecord = existingRecordMap.get(barber._id);
+        if (existingRecord) {
+          await ctx.db.patch(existingRecord._id, recordPayload);
+          existingRecordMap.delete(barber._id);
+        } else {
+          await ctx.db.insert("payroll_records", {
+            payroll_period_id: args.payroll_period_id,
+            barber_id: barber._id,
+            branch_id: period.branch_id,
+            ...recordPayload,
+            createdAt: timestamp,
+          });
+        }
+
+        totalEarnings += earnings.total_service_revenue;
+        // Commissions total equals the final daily salary total (max of commission or daily rate)
+        totalCommissions += earnings.daily_pay || 0;
+        totalDeductions += earnings.total_deductions;
+      } catch (error) {
+        console.error(`Error calculating earnings for barber ${barber._id}:`, error);
+        // Log additional details for debugging
+        console.error(`Barber details:`, {
+          barber_id: barber._id,
+          barber_name: barber.full_name,
+          period_start: period.period_start,
+          period_end: period.period_end
+        });
+        // Skip this barber and continue with others
+        continue;
+      }
     }
 
     // Remove records for barbers that are no longer part of this calculation
