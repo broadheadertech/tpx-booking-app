@@ -304,22 +304,26 @@ export const calculateBarberEarnings = query({
     const daysWorked = bookingDaySet.size;
     const dailyRate = barberDailyRate?.daily_rate || 0;
 
-    // New rule: for each day, salary = max(daily_rate, daily_total_barber_sales)
-    const perDaySalesMap = new Map<string, number>();
+    // New rule: for each SERVICE, salary per service = max(service_minimum_rate, service_commission)
+    // service_minimum_rate = (daily_rate / average_services_per_day) to distribute daily rate fairly across services
+    // Calculate average services per day worked
+    const avgServicesPerDay = daysWorked > 0 ? totalServices / daysWorked : 0;
+    const serviceMinimumRate = avgServicesPerDay > 0 ? dailyRate / avgServicesPerDay : 0;
+    
+    // Calculate per-service salary
+    let finalServiceSalaryTotal = 0;
     for (const b of bookingsInPeriod) {
-      const key = (b.date as string) || new Date(b.updatedAt).toISOString().split('T')[0];
-      const sale = (b.price || 0);
-      perDaySalesMap.set(key, (perDaySalesMap.get(key) || 0) + sale);
+      const servicePrice = b.price || 0;
+      const rate = serviceRateMap.get(String(b.service)) ?? fallbackRate;
+      const serviceCommission = (servicePrice * (rate || 0)) / 100;
+      // For each service: salary = max(service_minimum_rate, service_commission)
+      const serviceSalary = Math.max(serviceMinimumRate, serviceCommission);
+      finalServiceSalaryTotal += serviceSalary;
     }
-    let finalDailySalaryTotal = 0;
-    for (const key of bookingDaySet) {
-      const daySales = perDaySalesMap.get(key) || 0;
-      finalDailySalaryTotal += Math.max(dailyRate, daySales);
-    }
-    const dailyPay = finalDailySalaryTotal; // store the final daily salary sum
+    const dailyPay = finalServiceSalaryTotal; // store the final service-based salary sum
 
-    // Keep raw service commission for reference only (not used in pay calculus)
-    const grossCommission = 0; // hide percentage-based commission in records
+    // Keep raw service commission for reference
+    const grossCommission = finalServiceSalaryTotal; // reference: total from per-service calculation
     
     // Calculate deductions based on the final daily salary total
     const taxRate = payrollSettings?.tax_rate || 0;
@@ -375,6 +379,16 @@ export const getServiceCommissionRatesByBranch = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("service_commission_rates")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+  },
+});
+
+export const getBarberCommissionRatesByBranch = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("barber_commission_rates")
       .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
       .collect();
   },
@@ -741,7 +755,7 @@ export const calculatePayrollForPeriod = mutation({
         period_end: period.period_end,
       });
 
-      const recordPayload = {
+      const recordPayload: any = {
         total_services: earnings.total_services,
         total_service_revenue: earnings.total_service_revenue,
         commission_rate: earnings.commission_rate,
@@ -757,7 +771,7 @@ export const calculatePayrollForPeriod = mutation({
         other_deductions: earnings.other_deductions,
         total_deductions: earnings.total_deductions,
         net_pay: earnings.net_pay,
-        status: "calculated",
+        status: "calculated" as const,
         updatedAt: timestamp,
       };
 

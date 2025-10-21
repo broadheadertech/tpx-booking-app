@@ -25,6 +25,7 @@ import {
 import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { createPortal } from 'react-dom'
+import AlertModal from '../common/AlertModal'
 
 const PayrollManagement = ({ onRefresh, user }) => {
   const [activeView, setActiveView] = useState('overview')
@@ -42,6 +43,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
   const [deleteTargetPeriod, setDeleteTargetPeriod] = useState(null)
+  const [showRecalculateConfirm, setShowRecalculateConfirm] = useState(false)
+  const [recalculatePeriod, setRecalculatePeriod] = useState(null)
   const [paymentForm, setPaymentForm] = useState({
     payment_method: 'bank_transfer',
     payment_reference: '',
@@ -134,6 +137,11 @@ const PayrollManagement = ({ onRefresh, user }) => {
 
   const barberDailyRates = useQuery(
     api.services.payroll.getBarberDailyRatesByBranch,
+    user && user.branch_id ? { branch_id: user.branch_id } : "skip"
+  )
+
+  const barberCommissionRates = useQuery(
+    api.services.payroll.getBarberCommissionRatesByBranch,
     user && user.branch_id ? { branch_id: user.branch_id } : "skip"
   )
 
@@ -346,16 +354,20 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const handleCalculatePayroll = async (period) => {
     if (!period?._id) return
 
-    try {
-      if (period.status === 'calculated') {
-        const confirmRecalculate = typeof window !== 'undefined'
-          ? window.confirm('Recalculating will replace existing payroll records for this period. Continue?')
-          : true
-        if (!confirmRecalculate) {
-          return
-        }
-      }
+    // If already calculated, show confirmation modal
+    if (period.status === 'calculated') {
+      setRecalculatePeriod(period)
+      setShowRecalculateConfirm(true)
+      return
+    }
 
+    // Proceed with calculation
+    await performCalculatePayroll(period)
+  }
+
+  // Perform the actual calculation
+  const performCalculatePayroll = async (period) => {
+    try {
       setLoading(true)
       setError(null)
       await calculatePayroll({
@@ -369,6 +381,15 @@ const PayrollManagement = ({ onRefresh, user }) => {
     } finally {
       setLoading(false)
     }
+  }
+
+  // Handle recalculate confirmation
+  const handleRecalculateConfirm = async () => {
+    if (recalculatePeriod) {
+      await performCalculatePayroll(recalculatePeriod)
+    }
+    setShowRecalculateConfirm(false)
+    setRecalculatePeriod(null)
   }
 
   // Handle mark as paid
@@ -948,9 +969,35 @@ const PayrollManagement = ({ onRefresh, user }) => {
     if (!showBookingsModal || !selectedRecord) return null
 
     const items = Array.isArray(bookingsForRecord) ? bookingsForRecord : []
+    const serviceRates = Array.isArray(serviceCommissionRates) ? serviceCommissionRates : []
+    const payrollSettings = payrollSettingsData || { default_commission_rate: 10 }
+
+    // Create service rate map for quick lookup
+    const serviceRateMap = new Map()
+    serviceRates.forEach(rate => {
+      if (rate.is_active) {
+        serviceRateMap.set(rate.service_id, rate.commission_rate)
+      }
+    })
+
+    // Get barber's fallback commission rate
+    const barberCommissionRate = barberCommissionRates?.find(r => r.barber_id === selectedRecord.barber_id)
+    const fallbackRate = barberCommissionRate?.commission_rate || payrollSettings.default_commission_rate || 10
+
+    // Calculate commission for each booking
+    const itemsWithCommission = items.map(booking => {
+      const serviceRate = serviceRateMap.get(booking.service_id) || fallbackRate
+      const serviceCommission = (booking.price * serviceRate) / 100
+      
+      return {
+        ...booking,
+        commission_rate: serviceRate,
+        commission_amount: serviceCommission
+      }
+    })
 
     // Group by booking date
-    const grouped = items.reduce((acc, b) => {
+    const grouped = itemsWithCommission.reduce((acc, b) => {
       const key = b.date || new Date(b.updatedAt).toISOString().split('T')[0]
       if (!acc[key]) acc[key] = []
       acc[key].push(b)
@@ -959,11 +1006,15 @@ const PayrollManagement = ({ onRefresh, user }) => {
 
     const sortedDates = Object.keys(grouped).sort((a,b) => new Date(b) - new Date(a))
 
+    // Calculate totals
+    const totalRevenue = itemsWithCommission.reduce((sum, b) => sum + (b.price || 0), 0)
+    const totalCommission = itemsWithCommission.reduce((sum, b) => sum + b.commission_amount, 0)
+
     return createPortal(
       <div className="fixed inset-0 z-[9999] overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowBookingsModal(false)} />
-          <div className="relative w-full max-w-3xl rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl z-[10000]">
+          <div className="relative w-full max-w-4xl rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl z-[10000]">
             <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
               <div>
                 <h2 className="text-xl font-bold text-white">Bookings • {selectedRecord.barber_name}</h2>
@@ -972,6 +1023,24 @@ const PayrollManagement = ({ onRefresh, user }) => {
               <button onClick={() => setShowBookingsModal(false)} className="w-8 h-8 rounded-lg bg-[#3A3A3A]/60 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors">
                 <X className="w-4 h-4 text-gray-300 hover:text-[#FF8C42]" />
               </button>
+            </div>
+
+            {/* Summary Stats */}
+            <div className="px-6 py-4 bg-[#171717] border-b border-[#2A2A2A]/50">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">{itemsWithCommission.length}</div>
+                  <div className="text-sm text-gray-400">Total Bookings</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-[#FF8C42]">{formatCurrency(totalRevenue)}</div>
+                  <div className="text-sm text-gray-400">Total Revenue</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-400">{formatCurrency(totalCommission)}</div>
+                  <div className="text-sm text-gray-400">Total Commission</div>
+                </div>
+              </div>
             </div>
 
             <div className="p-6 space-y-4">
@@ -1001,20 +1070,37 @@ const PayrollManagement = ({ onRefresh, user }) => {
                     {grouped[date].map(b => {
                       const prettyTime = (b.time && b.time.length >= 4) ? b.time.slice(0,5) : '--:--'
                       return (
-                        <div key={b.id} className="px-5 py-4 flex items-center justify-between hover:bg-[#161616] transition-colors">
-                          <div className="flex items-center gap-4">
-                            <div className="shrink-0">
-                              <div className="inline-flex items-center justify-center rounded-md bg-[#232323] border border-[#2A2A2A]/50 px-3 py-1.5">
-                                <span className="font-mono text-sm font-semibold text-[#FF8C42] leading-none">{prettyTime}</span>
+                        <div key={b.id} className="px-5 py-4 hover:bg-[#161616] transition-colors">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-4 flex-1">
+                              <div className="shrink-0">
+                                <div className="inline-flex items-center justify-center rounded-md bg-[#232323] border border-[#2A2A2A]/50 px-3 py-1.5">
+                                  <span className="font-mono text-sm font-semibold text-[#FF8C42] leading-none">{prettyTime}</span>
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-white font-semibold">{b.service_name}</div>
+                                <div className="text-xs text-gray-400 mt-1">{b.customer_name} • {b.booking_code}</div>
+                                
+                                {/* Commission Details */}
+                                <div className="mt-2 flex items-center gap-4 text-xs">
+                                  <div className="flex items-center gap-1">
+                                    <Percent className="w-3 h-3 text-blue-400" />
+                                    <span className="text-gray-400">Rate:</span>
+                                    <span className="text-blue-400 font-medium">{b.commission_rate}%</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <DollarSign className="w-3 h-3 text-green-400" />
+                                    <span className="text-gray-400">Commission:</span>
+                                    <span className="text-green-400 font-medium">{formatCurrency(b.commission_amount)}</span>
+                                  </div>
+                                </div>
                               </div>
                             </div>
-                            <div className="leading-tight">
-                              <div className="text-white font-semibold">{b.service_name}</div>
-                              <div className="text-xs text-gray-400 mt-1">{b.customer_name} • {b.booking_code}</div>
+                            <div className="text-right pl-3 shrink-0">
+                              <div className="text-[#FF8C42] font-semibold text-lg">{formatCurrency(b.price)}</div>
+                              <div className="text-xs text-gray-400">Service Price</div>
                             </div>
-                          </div>
-                          <div className="text-right pl-3">
-                            <div className="text-[#FF8C42] font-semibold">{formatCurrency(b.price)}</div>
                           </div>
                         </div>
                       )
@@ -1958,6 +2044,22 @@ const PayrollManagement = ({ onRefresh, user }) => {
       {renderDailyRatesModal()}
       {renderBookingsModal()}
       {renderDeleteModal()}
+
+      {/* Recalculate Confirmation Modal */}
+      <AlertModal
+        isOpen={showRecalculateConfirm}
+        type="confirm"
+        accent="brand"
+        title="Recalculate Payroll?"
+        message="Recalculating will replace existing payroll records for this period. Continue?"
+        confirmText="Recalculate"
+        cancelText="Cancel"
+        onConfirm={handleRecalculateConfirm}
+        onClose={() => {
+          setShowRecalculateConfirm(false)
+          setRecalculatePeriod(null)
+        }}
+      />
     </div>
   )
 }
