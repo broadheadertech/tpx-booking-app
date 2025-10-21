@@ -1765,7 +1765,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                       <div>
                         <h4 className="text-white font-medium">{record.barber_name}</h4>
                         <p className="text-sm text-gray-400">
-                          {record.total_services} services • {record.total_transactions} POS transactions
+                          {record.total_services} services
                         </p>
                       </div>
                     </div>
@@ -1949,24 +1949,6 @@ const PayrollManagement = ({ onRefresh, user }) => {
                             </div>
                           </div>
 
-                          {/* Transaction Details */}
-                          <div>
-                            <h6 className="text-xs font-medium text-gray-400 mb-3 uppercase tracking-wide">Transaction Details</h6>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex justify-between">
-                                <span className="text-gray-400">POS Transactions:</span>
-                                <span className="text-white">{record.total_transactions || 0}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-400">Transaction Revenue:</span>
-                                <span className="text-white">{formatCurrency(record.total_transaction_revenue || 0)}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-400">Transaction Commission:</span>
-                                <span className="text-white">{formatCurrency(record.transaction_commission || 0)}</span>
-                              </div>
-                            </div>
-                          </div>
                         </div>
                       </div>
 

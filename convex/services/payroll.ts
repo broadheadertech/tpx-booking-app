@@ -234,13 +234,7 @@ export const calculateBarberEarnings = query({
     // Compute service-level totals from completed bookings within the period
     let totalServices = 0;
     let totalServiceRevenue = 0;
-    let serviceCommission = 0;
-    // We'll compute days worked from bookings (per request)
-
-    // We'll fill bookingsInPeriod below; use it for totals
-    const totalTransactions = transactions.length;
-    const totalTransactionRevenue = 0; // No separate transaction revenue; accounted in bookings
-    const transactionCommission = 0; // No separate transaction commission
+    let totalBarberComs = 0; // This will be the sum of all service commissions
 
     // Daily rate computation (days with at least one completed & paid booking)
     // Load bookings for the barber and derive unique dates from booking records
@@ -278,12 +272,24 @@ export const calculateBarberEarnings = query({
       }
     }
 
-    // Totals and commission based on bookings
+    // Calculate commissions following the correct formula:
+    // total_barber_coms = 0
+    // foreach(services as service)
+    //   service_coms = total_service_net * service.rate
+    //   total_barber_coms = total_barber_coms + service_coms
     for (const b of bookingsInPeriod) {
       totalServices += 1;
       totalServiceRevenue += b.price || 0;
-      const rate = serviceRateMap.get(String(b.service)) ?? fallbackRate;
-      serviceCommission += ((b.price || 0) * (rate || 0)) / 100;
+      
+      // Get service-specific commission rate
+      const serviceId = b.service || '';
+      const serviceRate = serviceRateMap.get(serviceId) ?? fallbackRate;
+      
+      // Calculate service commission: service_coms = total_service_net * service.rate
+      const serviceComs = ((b.price || 0) * (serviceRate || 0)) / 100;
+      
+      // Add to total barber commissions
+      totalBarberComs += serviceComs;
     }
 
     // Get active daily rate for barber
@@ -304,27 +310,28 @@ export const calculateBarberEarnings = query({
     const daysWorked = bookingDaySet.size;
     const dailyRate = barberDailyRate?.daily_rate || 0;
 
-    // Original rule: daily_rate vs daily_total_barber_sales
-    // daily_rate = barber.daily_rate
-    // commission = daily_total_barber_sales (total sales for the period)
-    // final_daily_salary = max(daily_rate, commission)
+    // Apply the correct formula:
+    // if(total_barber_coms > barber_rate)
+    //   net_pay = total_barber_coms
+    // else
+    //   net_pay = barber_rate
     
-    // Calculate total sales for the period (this is the "commission" amount)
-    const dailyTotalBarberSales = totalServiceRevenue; // This is the total sales for the period
+    // Only apply daily rate if barber has at least 1 completed booking
+    const effectiveDailyRate = totalServices > 0 ? dailyRate : 0;
     
-    // Apply the max rule: final_daily_salary = max(daily_rate, daily_total_barber_sales)
-    const finalDailySalary = Math.max(dailyRate, dailyTotalBarberSales);
+    // Apply the max rule: net_pay = max(total_barber_coms, barber_rate)
+    const finalSalary = totalServices > 0 ? Math.max(totalBarberComs, effectiveDailyRate) : totalBarberComs;
     
-    // Keep raw service commission for reference (this is the actual commission calculation)
-    const grossCommission = serviceCommission; // This is the actual commission from service rates
+    // Keep raw service commission for reference
+    const grossCommission = totalBarberComs;
     
-    // Calculate deductions based on the final daily salary total
+    // Calculate deductions based on the final salary total
     const taxRate = payrollSettings?.tax_rate || 0;
-    const taxDeduction = (finalDailySalary * taxRate) / 100;
+    const taxDeduction = (finalSalary * taxRate) / 100;
     const totalDeductions = taxDeduction;
     
-    // Net pay equals the final daily salary total minus deductions
-    const netPay = finalDailySalary - totalDeductions;
+    // Net pay equals the final salary total minus deductions
+    const netPay = finalSalary - totalDeductions;
 
     return {
       barber_id: args.barber_id,
@@ -334,17 +341,17 @@ export const calculateBarberEarnings = query({
       // Service earnings
       total_services: totalServices,
       total_service_revenue: totalServiceRevenue,
-      service_commission: serviceCommission,
+      service_commission: totalBarberComs, // This is the calculated total barber commissions
       
-      // Transaction breakdown (legacy fields retained for UI; set to 0)
-      total_transactions: totalTransactions,
-      total_transaction_revenue: totalTransactionRevenue,
-      transaction_commission: transactionCommission,
+      // Transaction breakdown (removed - no longer used)
+      total_transactions: 0,
+      total_transaction_revenue: 0,
+      transaction_commission: 0,
       
       // Daily rate
       daily_rate: dailyRate,
       days_worked: daysWorked,
-      daily_pay: finalDailySalary,
+      daily_pay: finalSalary,
       
       // Totals
       gross_commission: grossCommission,
@@ -355,13 +362,7 @@ export const calculateBarberEarnings = query({
       
       // Details for verification
       bookings_detail: bookingsInPeriod,
-      transactions: transactions.map(t => ({
-        id: t._id,
-        transaction_id: t.transaction_id,
-        receipt_number: t.receipt_number,
-        total_amount: t.total_amount,
-        service_revenue: t.services.reduce((sum, s) => sum + (s.price * s.quantity), 0)
-      }))
+      transactions: [] // No longer needed
     };
   },
 });
@@ -586,9 +587,14 @@ export const getBookingsSummaryForPrint = action({
       const sale = (b.price || 0);
       if (!groupsMap.has(key)) groupsMap.set(key, { date: key, rows: [], totalAmount: 0, totalCommission: 0 });
       const g = groupsMap.get(key);
-      g.rows.push({ ...b, commission: sale, commission_rate: undefined });
+      
+      // Calculate commission for this service
+      const serviceRate = 10; // Default rate, should be fetched from service commission rates
+      const serviceCommission = (sale * serviceRate) / 100;
+      
+      g.rows.push({ ...b, commission: serviceCommission, commission_rate: serviceRate });
       g.totalAmount += sale;
-      g.totalCommission += sale; // treat "commission" as daily sales for compatibility with UI
+      g.totalCommission += serviceCommission; // Sum of actual commissions
     }
 
     const groups = Array.from(groupsMap.values()).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -601,10 +607,10 @@ export const getBookingsSummaryForPrint = action({
       const nowRate = await ctx.runQuery(api.services.payroll.getBarberDailyRate, { barber_id: args.barber_id as any });
       dailyRate = nowRate?.daily_rate || 0;
     }
-    // Compute final per-day pay as max(dailyRate, day sales)
+    // Compute final per-day pay as max(dailyRate, day commissions)
     for (const g of groups) {
       g.dailyRate = dailyRate;
-      g.selectedPay = Math.max(dailyRate, g.totalAmount);
+      g.selectedPay = Math.max(dailyRate, g.totalCommission);
     }
     const grandTotalSelectedPay = groups.reduce((s,g) => s + (g.selectedPay || 0), 0);
     return { groups, grandTotalAmount, grandTotalCommission, dailyRate, grandTotalSelectedPay };
@@ -753,6 +759,7 @@ export const calculatePayrollForPeriod = mutation({
         total_service_revenue: earnings.total_service_revenue,
         commission_rate: earnings.commission_rate,
         gross_commission: earnings.gross_commission,
+        service_commission: earnings.service_commission,
         total_transactions: earnings.total_transactions,
         total_transaction_revenue: earnings.total_transaction_revenue,
         transaction_commission: earnings.transaction_commission,
@@ -782,8 +789,8 @@ export const calculatePayrollForPeriod = mutation({
         });
       }
 
-      totalEarnings += earnings.total_service_revenue + earnings.total_transaction_revenue;
-      // New rule: commissions total equals the final daily salary total (not commission + daily rate)
+      totalEarnings += earnings.total_service_revenue;
+      // Commissions total equals the final daily salary total (max of commission or daily rate)
       totalCommissions += earnings.daily_pay || 0;
       totalDeductions += earnings.total_deductions;
     }
