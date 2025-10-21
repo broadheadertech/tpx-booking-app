@@ -304,34 +304,27 @@ export const calculateBarberEarnings = query({
     const daysWorked = bookingDaySet.size;
     const dailyRate = barberDailyRate?.daily_rate || 0;
 
-    // New rule: for each SERVICE, salary per service = max(service_minimum_rate, service_commission)
-    // service_minimum_rate = (daily_rate / average_services_per_day) to distribute daily rate fairly across services
-    // Calculate average services per day worked
-    const avgServicesPerDay = daysWorked > 0 ? totalServices / daysWorked : 0;
-    const serviceMinimumRate = avgServicesPerDay > 0 ? dailyRate / avgServicesPerDay : 0;
+    // Original rule: daily_rate vs daily_total_barber_sales
+    // daily_rate = barber.daily_rate
+    // commission = daily_total_barber_sales (total sales for the period)
+    // final_daily_salary = max(daily_rate, commission)
     
-    // Calculate per-service salary
-    let finalServiceSalaryTotal = 0;
-    for (const b of bookingsInPeriod) {
-      const servicePrice = b.price || 0;
-      const rate = serviceRateMap.get(String(b.service)) ?? fallbackRate;
-      const serviceCommission = (servicePrice * (rate || 0)) / 100;
-      // For each service: salary = max(service_minimum_rate, service_commission)
-      const serviceSalary = Math.max(serviceMinimumRate, serviceCommission);
-      finalServiceSalaryTotal += serviceSalary;
-    }
-    const dailyPay = finalServiceSalaryTotal; // store the final service-based salary sum
-
-    // Keep raw service commission for reference
-    const grossCommission = finalServiceSalaryTotal; // reference: total from per-service calculation
+    // Calculate total sales for the period (this is the "commission" amount)
+    const dailyTotalBarberSales = totalServiceRevenue; // This is the total sales for the period
+    
+    // Apply the max rule: final_daily_salary = max(daily_rate, daily_total_barber_sales)
+    const finalDailySalary = Math.max(dailyRate, dailyTotalBarberSales);
+    
+    // Keep raw service commission for reference (this is the actual commission calculation)
+    const grossCommission = serviceCommission; // This is the actual commission from service rates
     
     // Calculate deductions based on the final daily salary total
     const taxRate = payrollSettings?.tax_rate || 0;
-    const taxDeduction = (dailyPay * taxRate) / 100;
+    const taxDeduction = (finalDailySalary * taxRate) / 100;
     const totalDeductions = taxDeduction;
     
     // Net pay equals the final daily salary total minus deductions
-    const netPay = dailyPay - totalDeductions;
+    const netPay = finalDailySalary - totalDeductions;
 
     return {
       barber_id: args.barber_id,
@@ -351,7 +344,7 @@ export const calculateBarberEarnings = query({
       // Daily rate
       daily_rate: dailyRate,
       days_worked: daysWorked,
-      daily_pay: dailyPay,
+      daily_pay: finalDailySalary,
       
       // Totals
       gross_commission: grossCommission,

@@ -1825,34 +1825,85 @@ const PayrollManagement = ({ onRefresh, user }) => {
 
                   {expandedRecords.has(record._id) && (
                     <div className="mt-4 pt-4 border-t border-[#2A2A2A]/50">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <h5 className="text-sm font-medium text-gray-300 mb-2">Service Earnings</h5>
-                          <div className="space-y-1 text-sm">
+                      {/* Detailed Breakdown */}
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Service Earnings Breakdown */}
+                        <div className="space-y-4">
+                          <h5 className="text-sm font-medium text-gray-300 mb-3 flex items-center">
+                            <DollarSign className="w-4 h-4 mr-2 text-[#FF8C42]" />
+                            Service Earnings
+                          </h5>
+                          <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
-                              <span className="text-gray-400">Services:</span>
-                              <span className="text-white">{record.total_services}</span>
+                              <span className="text-gray-400">Total Services:</span>
+                              <span className="text-white font-medium">{record.total_services}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-400">Revenue:</span>
+                              <span className="text-gray-400">Service Revenue:</span>
                               <span className="text-white">{formatCurrency(record.total_service_revenue)}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-400">Commission (per-service rates):</span>
-                              <span className="text-[#FF8C42]">{formatCurrency(record.gross_commission)}</span>
+                              <span className="text-gray-400">Commission Rate:</span>
+                              <span className="text-blue-400">{record.commission_rate}%</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Calculated Commission:</span>
+                              <span className="text-[#FF8C42] font-medium">{formatCurrency(record.gross_commission)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Avg per Service:</span>
+                              <span className="text-gray-300">
+                                {record.total_services > 0 ? formatCurrency(record.total_service_revenue / record.total_services) : '₱0'}
+                              </span>
                             </div>
                           </div>
                         </div>
-                        <div>
-                          <h5 className="text-sm font-medium text-gray-300 mb-2">Summary</h5>
-                          <div className="space-y-1 text-sm">
+
+                        {/* Daily Rate & Calculation */}
+                        <div className="space-y-4">
+                          <h5 className="text-sm font-medium text-gray-300 mb-3 flex items-center">
+                            <Clock className="w-4 h-4 mr-2 text-blue-400" />
+                            Daily Rate & Calculation
+                          </h5>
+                          <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
-                              <span className="text-gray-400">Gross Commission (reference):</span>
+                              <span className="text-gray-400">Daily Rate:</span>
+                              <span className="text-white">{formatCurrency(record.daily_rate || 0)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Days Worked:</span>
+                              <span className="text-white">{record.days_worked || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Total Sales:</span>
+                              <span className="text-white">{formatCurrency(record.total_service_revenue)}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Final Summary */}
+                        <div className="space-y-4">
+                          <h5 className="text-sm font-medium text-gray-300 mb-3 flex items-center">
+                            <TrendingUp className="w-4 h-4 mr-2 text-green-400" />
+                            Final Summary
+                          </h5>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Gross Commission (ref):</span>
                               <span className="text-white">{formatCurrency(record.gross_commission)}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-400">Final Daily Salary (per-day max of rate vs commission):</span>
-                              <span className="text-white">{formatCurrency(record.daily_pay || 0)}</span>
+                              <span className="text-gray-400">Final Daily Salary:</span>
+                              <span className="text-white font-medium">{formatCurrency(record.daily_pay || 0)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Tax Rate:</span>
+                              <span className="text-gray-300">
+                                {record.tax_deduction > 0 ? 
+                                  `${((record.tax_deduction / (record.daily_pay || 1)) * 100).toFixed(1)}%` : 
+                                  '0%'
+                                }
+                              </span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-400">Tax Deduction:</span>
@@ -1862,21 +1913,91 @@ const PayrollManagement = ({ onRefresh, user }) => {
                               <span className="text-gray-400">Other Deductions:</span>
                               <span className="text-red-400">-{formatCurrency(record.other_deductions)}</span>
                             </div>
-                            <div className="flex justify-between font-medium pt-1 border-t border-[#2A2A2A]/50">
+                            <div className="flex justify-between font-medium pt-2 border-t border-[#2A2A2A]/50">
                               <span className="text-white">Net Pay:</span>
-                              <span className="text-[#FF8C42]">{formatCurrency(record.net_pay)}</span>
+                              <span className="text-[#FF8C42] text-lg">{formatCurrency(record.net_pay)}</span>
                             </div>
                           </div>
                         </div>
                       </div>
 
-                      {record.status === 'paid' && record.paid_at && (
-                        <div className="mt-4 pt-3 border-t border-[#2A2A2A]/50 text-sm">
-                          <div className="flex items-center space-x-4 text-gray-400">
-                            <span>Paid on {formatDate(record.paid_at)}</span>
-                            {record.payment_method && <span>via {record.payment_method}</span>}
-                            {record.payment_reference && <span>Ref: {record.payment_reference}</span>}
+                      {/* Additional Details */}
+                      <div className="mt-6 pt-4 border-t border-[#2A2A2A]/50">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Performance Metrics */}
+                          <div>
+                            <h6 className="text-xs font-medium text-gray-400 mb-3 uppercase tracking-wide">Performance Metrics</h6>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">Services per Day:</span>
+                                <span className="text-white">
+                                  {record.days_worked > 0 ? (record.total_services / record.days_worked).toFixed(1) : '0'}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">Revenue per Day:</span>
+                                <span className="text-white">
+                                  {record.days_worked > 0 ? formatCurrency(record.total_service_revenue / record.days_worked) : '₱0'}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">Commission per Day:</span>
+                                <span className="text-white">
+                                  {record.days_worked > 0 ? formatCurrency(record.gross_commission / record.days_worked) : '₱0'}
+                                </span>
+                              </div>
+                            </div>
                           </div>
+
+                          {/* Transaction Details */}
+                          <div>
+                            <h6 className="text-xs font-medium text-gray-400 mb-3 uppercase tracking-wide">Transaction Details</h6>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">POS Transactions:</span>
+                                <span className="text-white">{record.total_transactions || 0}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">Transaction Revenue:</span>
+                                <span className="text-white">{formatCurrency(record.total_transaction_revenue || 0)}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">Transaction Commission:</span>
+                                <span className="text-white">{formatCurrency(record.transaction_commission || 0)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Payment Information */}
+                      {record.status === 'paid' && record.paid_at && (
+                        <div className="mt-6 pt-4 border-t border-[#2A2A2A]/50">
+                          <h6 className="text-xs font-medium text-gray-400 mb-3 uppercase tracking-wide">Payment Information</h6>
+                          <div className="flex items-center space-x-6 text-sm">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-gray-400">Paid on:</span>
+                              <span className="text-white">{formatDate(record.paid_at)}</span>
+                            </div>
+                            {record.payment_method && (
+                              <div className="flex items-center space-x-2">
+                                <span className="text-gray-400">Method:</span>
+                                <span className="text-white capitalize">{record.payment_method.replace('_', ' ')}</span>
+                              </div>
+                            )}
+                            {record.payment_reference && (
+                              <div className="flex items-center space-x-2">
+                                <span className="text-gray-400">Reference:</span>
+                                <span className="text-white font-mono text-xs">{record.payment_reference}</span>
+                              </div>
+                            )}
+                          </div>
+                          {record.notes && (
+                            <div className="mt-2">
+                              <span className="text-gray-400 text-sm">Notes: </span>
+                              <span className="text-gray-300 text-sm">{record.notes}</span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
