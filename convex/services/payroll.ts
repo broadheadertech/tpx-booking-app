@@ -690,10 +690,11 @@ export const calculatePayrollForPeriod = mutation({
     calculated_by: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const period = await ctx.db.get(args.payroll_period_id);
-    if (!period) {
-      throwUserError(ERROR_CODES.PAYROLL_PERIOD_NOT_FOUND);
-    }
+    try {
+      const period = await ctx.db.get(args.payroll_period_id);
+      if (!period) {
+        throwUserError(ERROR_CODES.PAYROLL_PERIOD_NOT_FOUND);
+      }
 
     if (period.status === "paid") {
       throwUserError(
@@ -703,11 +704,11 @@ export const calculatePayrollForPeriod = mutation({
       );
     }
 
-    // Load existing records to support recalculation
-    const existingRecords = await ctx.db
-      .query("payroll_records")
-      .withIndex("by_payroll_period", (q) => q.eq("payroll_period_id", args.payroll_period_id))
-      .collect();
+      // Load existing records to support recalculation
+      const existingRecords = await ctx.db
+        .query("payroll_records")
+        .withIndex("by_payroll_period", (q) => q.eq("payroll_period_id", args.payroll_period_id))
+        .collect();
 
     // Prevent recalculation when any record has already been paid
     const hasPaidRecords = existingRecords.some((record) => record.status === "paid");
@@ -719,12 +720,12 @@ export const calculatePayrollForPeriod = mutation({
       );
     }
 
-    // Get all active barbers in the branch
-    const activeBarbers = await ctx.db
-      .query("barbers")
-      .withIndex("by_branch", (q) => q.eq("branch_id", period.branch_id))
-      .filter((q) => q.eq(q.field("is_active"), true))
-      .collect();
+      // Get all active barbers in the branch
+      const activeBarbers = await ctx.db
+        .query("barbers")
+        .withIndex("by_branch", (q) => q.eq("branch_id", period.branch_id))
+        .filter((q) => q.eq(q.field("is_active"), true))
+        .collect();
 
     // Merge active barbers with any barbers that already have records for this period
     const barberMap = new Map(activeBarbers.map((barber) => [barber._id, barber]));
@@ -737,13 +738,13 @@ export const calculatePayrollForPeriod = mutation({
       }
     }
 
-    const barbers = Array.from(barberMap.values());
-    const existingRecordMap = new Map(existingRecords.map((record) => [record.barber_id, record]));
+      const barbers = Array.from(barberMap.values());
+      const existingRecordMap = new Map(existingRecords.map((record) => [record.barber_id, record]));
 
-    let totalEarnings = 0;
-    let totalCommissions = 0;
-    let totalDeductions = 0;
-    const timestamp = Date.now();
+      let totalEarnings = 0;
+      let totalCommissions = 0;
+      let totalDeductions = 0;
+      const timestamp = Date.now();
 
     // Calculate earnings for each barber
     for (const barber of barbers) {
@@ -807,28 +808,40 @@ export const calculatePayrollForPeriod = mutation({
       }
     }
 
-    // Remove records for barbers that are no longer part of this calculation
-    for (const leftoverRecord of existingRecordMap.values()) {
-      await ctx.db.delete(leftoverRecord._id);
+      // Remove records for barbers that are no longer part of this calculation
+      for (const leftoverRecord of existingRecordMap.values()) {
+        await ctx.db.delete(leftoverRecord._id);
+      }
+
+      // Update period with calculations
+      await ctx.db.patch(args.payroll_period_id, {
+        status: "calculated",
+        total_earnings: totalEarnings,
+        total_commissions: totalCommissions,
+        total_deductions: totalDeductions,
+        calculated_at: timestamp,
+        calculated_by: args.calculated_by,
+        updatedAt: timestamp,
+      });
+
+      return {
+        total_barbers: barbers.length,
+        total_earnings: totalEarnings,
+        total_commissions: totalCommissions,
+        total_deductions: totalDeductions,
+      };
+    } catch (err) {
+      console.error("calculatePayrollForPeriod failed", {
+        payroll_period_id: args.payroll_period_id,
+        calculated_by: args.calculated_by,
+        error: err,
+      });
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Payroll calculation failed. Please verify data and try again.",
+        "See server logs for details."
+      );
     }
-
-    // Update period with calculations
-    await ctx.db.patch(args.payroll_period_id, {
-      status: "calculated",
-      total_earnings: totalEarnings,
-      total_commissions: totalCommissions,
-      total_deductions: totalDeductions,
-      calculated_at: timestamp,
-      calculated_by: args.calculated_by,
-      updatedAt: timestamp,
-    });
-
-    return {
-      total_barbers: barbers.length,
-      total_earnings: totalEarnings,
-      total_commissions: totalCommissions,
-      total_deductions: totalDeductions,
-    };
   },
 });
 
