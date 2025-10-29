@@ -20,7 +20,10 @@ import {
   ChevronUp,
   FileText,
   Percent,
-  Printer
+  Printer,
+  Package,
+  ShoppingBag,
+  BarChart3
 } from 'lucide-react'
 import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
@@ -38,6 +41,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [showServiceRatesModal, setShowServiceRatesModal] = useState(false)
   const [showDailyRatesModal, setShowDailyRatesModal] = useState(false)
+  const [showProductSharesModal, setShowProductSharesModal] = useState(false)
   const [showBookingsModal, setShowBookingsModal] = useState(false)
   const [selectedRecord, setSelectedRecord] = useState(null)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -59,6 +63,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const [dailyRateEdits, setDailyRateEdits] = useState({})
   const [savingServiceRates, setSavingServiceRates] = useState(false)
   const [savingDailyRates, setSavingDailyRates] = useState(false)
+  const [productShareDraft, setProductShareDraft] = useState({})
+  const [savingProductShares, setSavingProductShares] = useState(false)
+  const [productStartDate, setProductStartDate] = useState('')
+  const [productEndDate, setProductEndDate] = useState('')
 
   // Check if user is available
   if (!user) {
@@ -125,9 +133,20 @@ const PayrollManagement = ({ onRefresh, user }) => {
     user && user.branch_id ? { branch_id: user.branch_id } : "skip"
   )
 
+  const barberNameMap = useMemo(() => {
+    const map = new Map()
+    ;(Array.isArray(barbers) ? barbers : []).forEach(b => map.set(b._id, b.full_name))
+    return map
+  }, [barbers])
+
   const servicesInBranch = useQuery(
     api.services.services.getActiveServicesByBranch,
     user && user.branch_id ? { branch_id: user.branch_id } : "skip"
+  )
+
+  const productsData = useQuery(
+    api.services.products.getAllProducts,
+    user ? {} : "skip"
   )
 
   const serviceCommissionRates = useQuery(
@@ -143,6 +162,41 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const barberCommissionRates = useQuery(
     api.services.payroll.getBarberCommissionRatesByBranch,
     user && user.branch_id ? { branch_id: user.branch_id } : "skip"
+  )
+
+  const productCommissionSettings = useQuery(
+    api.services.payroll.getProductCommissionSettingsByBranch,
+    user && user.branch_id ? { branch_id: user.branch_id } : "skip"
+  )
+
+  // Initialize product date filter (default to selected period or last 7 days)
+  useEffect(() => {
+    const toYMD = (d) => new Date(d).toISOString().split('T')[0]
+    if (selectedPeriod) {
+      setProductStartDate(toYMD(selectedPeriod.period_start))
+      setProductEndDate(toYMD(selectedPeriod.period_end))
+      return
+    }
+    if (!productStartDate || !productEndDate) {
+      const end = new Date()
+      const start = new Date()
+      start.setDate(end.getDate() - 6)
+      setProductStartDate(toYMD(start))
+      setProductEndDate(toYMD(end))
+    }
+  }, [selectedPeriod])
+
+  // Build timestamps for range queries (always call hook with valid args)
+  const productRangeStartTs = useMemo(() => {
+    return productStartDate ? new Date(productStartDate + 'T00:00:00').getTime() : Date.now() - 6 * 24 * 60 * 60 * 1000
+  }, [productStartDate])
+  const productRangeEndTs = useMemo(() => {
+    return productEndDate ? new Date(productEndDate + 'T23:59:59').getTime() : Date.now()
+  }, [productEndDate])
+
+  const transactionsByRange = useQuery(
+    api.services.transactions.getTransactionsByDateRange,
+    { startDate: productRangeStartTs, endDate: productRangeEndTs }
   )
 
   // Current period records
@@ -172,6 +226,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const setBarberCommissionRate = useMutation(api.services.payroll.setBarberCommissionRate)
   const setServiceCommissionRate = useMutation(api.services.payroll.setServiceCommissionRate)
   const setBarberDailyRate = useMutation(api.services.payroll.setBarberDailyRate)
+  const setProductCommissionSetting = useMutation(api.services.payroll.setProductCommissionSetting)
   const getBookingsForPrint = useAction(api.services.payroll.getBookingsForPrint)
   const getBookingsSummaryForPrint = useAction(api.services.payroll.getBookingsSummaryForPrint)
   const deletePayrollPeriodMutation = useMutation(api.services.payroll.deletePayrollPeriod)
@@ -383,6 +438,70 @@ const PayrollManagement = ({ onRefresh, user }) => {
     }
   }
 
+  const handleProductShareValueChange = (productId, value) => {
+    setProductShareDraft(prev => ({
+      ...prev,
+      [productId]: {
+        shareType: prev[productId]?.shareType || prev[productId]?.share_type || 'percentage',
+        shareValue: value
+      }
+    }))
+  }
+
+  const handleProductShareTypeChange = (productId, shareType) => {
+    setProductShareDraft(prev => ({
+      ...prev,
+      [productId]: {
+        shareType,
+        shareValue: prev[productId]?.shareValue ?? ''
+      }
+    }))
+  }
+
+  const handleSaveProductShares = async () => {
+    if (!user?.branch_id) return
+
+    const entries = Object.entries(productShareDraft || {})
+      .map(([productId, draftValue]) => {
+        const shareType = draftValue?.shareType || 'percentage'
+        let shareValue = draftValue?.shareValue === '' ? 0 : parseFloat(String(draftValue?.shareValue))
+        if (isNaN(shareValue) || shareValue < 0) {
+          shareValue = 0
+        }
+        const existing = productShareMap.get(`${productId}`)
+        if (existing && existing.share_type === shareType && Number(existing.share_value) === shareValue) {
+          return null
+        }
+        return { productId, shareType, shareValue }
+      })
+      .filter((entry) => entry)
+
+    if (entries.length === 0) {
+      setShowProductSharesModal(false)
+      return
+    }
+
+    setSavingProductShares(true)
+    try {
+      for (const update of entries) {
+        await setProductCommissionSetting({
+          branch_id: user.branch_id,
+          product_id: update.productId,
+          share_type: update.shareType,
+          share_value: update.shareValue,
+          created_by: user._id
+        })
+      }
+      setShowProductSharesModal(false)
+      setError(null)
+    } catch (err) {
+      console.error('Error saving product shares:', err)
+      setError('Failed to save product share settings')
+    } finally {
+      setSavingProductShares(false)
+    }
+  }
+
   // Handle recalculate confirmation
   const handleRecalculateConfirm = async () => {
     if (recalculatePeriod) {
@@ -498,6 +617,21 @@ const PayrollManagement = ({ onRefresh, user }) => {
           csvContent += `"${service?.name || 'Unknown'}",${rate.commission_rate}%\n`
         })
         
+        csvContent += '\nProduct Commission Settings\n'
+        csvContent += 'Barber,Product,Share Type,Share Value\n'
+        const productSettingsArray = Array.isArray(productCommissionSettings) ? productCommissionSettings : []
+        const productsArray = Array.isArray(productsData) ? productsData : []
+        const barbersArrayForProducts = Array.isArray(barbers) ? barbers : []
+
+        productSettingsArray.forEach(setting => {
+          const barber = barbersArrayForProducts.find(b => b._id === setting.barber_id)
+          const product = productsArray.find(p => p._id === setting.product_id)
+          const shareValueLabel = setting.share_type === 'percentage'
+            ? `${setting.share_value}%`
+            : formatCurrency(setting.share_value)
+          csvContent += `"${barber?.full_name || 'Unknown Barber'}","${product?.name || 'Unknown Product'}",${setting.share_type},${shareValueLabel}\n`
+        })
+
         csvContent += '\nBarber Daily Rates\n'
         csvContent += 'Barber Name,Daily Rate\n'
         const dailyRatesArray = Array.isArray(barberDailyRates) ? barberDailyRates : []
@@ -552,6 +686,41 @@ const PayrollManagement = ({ onRefresh, user }) => {
     })
     return map
   }, [barberDailyRates])
+
+  const productShareMap = useMemo(() => {
+    const map = new Map()
+    ;(Array.isArray(productCommissionSettings) ? productCommissionSettings : []).forEach(setting => {
+      const key = `${setting.product_id}`
+      const existing = map.get(key)
+      if (!existing || (setting.updatedAt || 0) > (existing.updatedAt || 0)) {
+        map.set(key, setting)
+      }
+    })
+    return map
+  }, [productCommissionSettings])
+
+  const productNameMap = useMemo(() => {
+    const map = new Map()
+    ;(Array.isArray(productsData) ? productsData : []).forEach(product => {
+      map.set(product._id, product.name)
+    })
+    return map
+  }, [productsData])
+
+  useEffect(() => {
+    if (!showProductSharesModal) return
+    const productsArray = Array.isArray(productsData) ? productsData : []
+    const draft = {}
+    productsArray.forEach(product => {
+      const key = `${product._id}`
+      const existing = productShareMap.get(key)
+      draft[product._id] = {
+        shareType: existing?.share_type || 'percentage',
+        shareValue: existing ? String(existing.share_value) : ''
+      }
+    })
+    setProductShareDraft(draft)
+  }, [showProductSharesModal, productShareMap, productsData])
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -1300,6 +1469,108 @@ const PayrollManagement = ({ onRefresh, user }) => {
     )
   }
 
+  const renderProductSharesModal = () => {
+    if (!showProductSharesModal) return null
+    const barbersArray = Array.isArray(barbers) ? barbers.filter(b => b?.is_active) : []
+    const productsArray = Array.isArray(productsData) ? productsData.filter(p => p.status !== 'inactive') : []
+
+    const hasChanges = () => {
+      const entries = Object.entries(productShareDraft || {})
+        .map(([productId, draftValue]) => {
+          const shareType = draftValue?.shareType || 'percentage'
+          let shareValue = draftValue?.shareValue === '' ? 0 : parseFloat(String(draftValue?.shareValue))
+          if (isNaN(shareValue) || shareValue < 0) shareValue = 0
+          const existing = productShareMap.get(`${productId}`)
+          return existing && existing.share_type === shareType && Number(existing.share_value) === shareValue ? null : { productId, shareType, shareValue }
+        })
+        .filter(Boolean)
+      return entries.length > 0
+    }
+
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowProductSharesModal(false)} />
+          <div className="relative w-full max-w-2xl rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
+              <h2 className="text-xl font-bold text-white">Product Commission Shares</h2>
+              <button onClick={() => setShowProductSharesModal(false)} className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center">
+                <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-xs text-blue-300">
+                Set branch-wide product commission shares. Percentage is of product total; fixed is per unit.
+              </div>
+
+              <div className="max-h-[55vh] overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-gray-400 border-b border-[#2A2A2A]/50">
+                      <th className="text-left py-2 px-2">Product</th>
+                      <th className="text-right py-2 px-2">Current Share</th>
+                      <th className="text-left py-2 px-2">Type</th>
+                      <th className="text-right py-2 px-2">New Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {productsArray.map(product => {
+                      const existing = productShareMap.get(`${product._id}`)
+                      const currentLabel = existing
+                        ? (existing.share_type === 'percentage' ? `${existing.share_value}%` : `${formatCurrency(existing.share_value)}`)
+                        : '—'
+                      const draftEntry = productShareDraft[product._id] || { shareType: existing?.share_type || 'percentage', shareValue: existing ? String(existing.share_value) : '' }
+                      const value = draftEntry.shareValue
+                      return (
+                        <tr key={product._id} className="border-b border-[#2A2A2A]/20">
+                          <td className="py-2 px-2 text-white">{product.name}</td>
+                          <td className="py-2 px-2 text-right text-gray-300">{currentLabel}</td>
+                          <td className="py-2 px-2">
+                            <select
+                              value={draftEntry.shareType}
+                              onChange={(e) => handleProductShareTypeChange(product._id, e.target.value)}
+                              className="w-full px-2 py-1 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                            >
+                              <option value="percentage">Percentage</option>
+                              <option value="fixed">Fixed</option>
+                            </select>
+                          </td>
+                          <td className="py-2 px-2 text-right">
+                            <input
+                              type="number"
+                              min="0"
+                              step={draftEntry.shareType === 'percentage' ? '0.1' : '0.01'}
+                              value={value}
+                              onChange={(e) => handleProductShareValueChange(product._id, e.target.value)}
+                              className="w-28 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent text-right"
+                              placeholder={draftEntry.shareType === 'percentage' ? '0 - 100' : 'Amount'}
+                            />
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4">
+                <button onClick={() => setShowProductSharesModal(false)} className="px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] text-sm">Close</button>
+                <button
+                  onClick={handleSaveProductShares}
+                  disabled={savingProductShares || !hasChanges()}
+                  className="px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 disabled:opacity-50 text-sm"
+                >
+                  {savingProductShares ? 'Saving…' : 'Save All Changes'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
+  }
+
   // Render payment modal
   const renderPaymentModal = () => {
     if (!showPaymentModal || !selectedRecord) return null
@@ -1668,6 +1939,225 @@ const PayrollManagement = ({ onRefresh, user }) => {
     )
   }
 
+  const renderProductCommissions = () => {
+    // Prepare data from transactions within date range and branch
+    const txns = Array.isArray(transactionsByRange) ? transactionsByRange : []
+    const txnsInBranch = txns.filter(t => t?.branch_id === user.branch_id && t?.payment_status === 'completed')
+
+    // Aggregate totals
+    let totals = { totalRevenue: 0, totalCommission: 0, totalQuantity: 0 }
+    const productTotalsMap = new Map()
+    const perBarberMap = new Map()
+
+    txnsInBranch.forEach(t => {
+      const items = Array.isArray(t.products) ? t.products : []
+      if (!items.length) return
+
+      let barberId = t.barber
+      const barberName = barberNameMap.get(barberId) || 'Unknown Barber'
+      if (!perBarberMap.has(barberId)) {
+        perBarberMap.set(barberId, { barber_id: barberId, barber_name: barberName, quantity: 0, revenue: 0, commission: 0 })
+      }
+      const perBarber = perBarberMap.get(barberId)
+
+      items.forEach(p => {
+        const lineQty = p.quantity || 0
+        const lineTotal = (p.price || 0) * lineQty
+        const setting = productShareMap.get(p.product_id) || null
+        const shareType = setting?.share_type || 'percentage'
+        const shareValue = setting?.share_value || 0
+        const shareAmount = shareType === 'percentage' ? (lineTotal * shareValue) / 100 : (shareValue * lineQty)
+
+        totals.totalRevenue += lineTotal
+        totals.totalQuantity += lineQty
+        totals.totalCommission += shareAmount
+
+        perBarber.quantity += lineQty
+        perBarber.revenue += lineTotal
+        perBarber.commission += shareAmount
+
+        const key = p.product_id
+        const productName = productNameMap.get(p.product_id) || p.product_name || 'Product'
+        const existing = productTotalsMap.get(key)
+        if (existing) {
+          existing.quantity += lineQty
+          existing.total_amount += lineTotal
+          existing.share_amount += shareAmount
+        } else {
+          productTotalsMap.set(key, {
+            product_id: key,
+            product_name: productName,
+            quantity: lineQty,
+            total_amount: lineTotal,
+            share_amount: shareAmount
+          })
+        }
+      })
+    })
+
+    const productTotals = Array.from(productTotalsMap.values()).sort((a, b) => (b.total_amount || 0) - (a.total_amount || 0))
+    const perBarberTotals = Array.from(perBarberMap.values()).sort((a, b) => (b.revenue || 0) - (a.revenue || 0))
+
+    return (
+      <div className="space-y-6">
+        {/* Date Filter */}
+        <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-4">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full sm:w-auto">
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">Start Date</label>
+                <input
+                  type="date"
+                  value={productStartDate}
+                  onChange={(e) => setProductStartDate(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-1">End Date</label>
+                <input
+                  type="date"
+                  value={productEndDate}
+                  onChange={(e) => setProductEndDate(e.target.value)}
+                  className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                />
+              </div>
+              <div className="flex items-end">
+                <div className="flex gap-2 w-full">
+                  <button
+                    onClick={() => {
+                      // force recompute via state setters (values already bound)
+                      setProductStartDate(productStartDate)
+                      setProductEndDate(productEndDate)
+                    }}
+                    className="flex-1 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 text-sm"
+                  >
+                    Apply
+                  </button>
+                  {selectedPeriod && (
+                    <button
+                      onClick={() => {
+                        const toYMD = (d) => new Date(d).toISOString().split('T')[0]
+                        setProductStartDate(toYMD(selectedPeriod.period_start))
+                        setProductEndDate(toYMD(selectedPeriod.period_end))
+                      }}
+                      className="px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] text-sm"
+                    >
+                      Reset to Period
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="text-xs text-gray-400">
+              Showing transactions from <span className="text-gray-200">{productStartDate || '-'}</span> to <span className="text-gray-200">{productEndDate || '-'}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-[#FF8C42]/20 rounded-lg">
+                <ShoppingBag className="h-6 w-6 text-[#FF8C42]" />
+              </div>
+              <BarChart3 className="h-5 w-5 text-[#FF8C42]" />
+            </div>
+            <p className="text-sm font-medium text-gray-300">Total Product Revenue</p>
+            <p className="text-2xl font-bold text-white mt-1">{formatCurrency(totals.totalRevenue)}</p>
+          </div>
+          <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-green-500/20 rounded-lg">
+                <DollarSign className="h-6 w-6 text-green-400" />
+              </div>
+              <Percent className="h-5 w-5 text-green-400" />
+            </div>
+            <p className="text-sm font-medium text-gray-300">Commission Earned</p>
+            <p className="text-2xl font-bold text-white mt-1">{formatCurrency(totals.totalCommission)}</p>
+          </div>
+          <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2 bg-blue-500/20 rounded-lg">
+                <Package className="h-6 w-6 text-blue-400" />
+              </div>
+              <TrendingUp className="h-5 w-5 text-blue-400" />
+            </div>
+            <p className="text-sm font-medium text-gray-300">Total Units Sold</p>
+            <p className="text-2xl font-bold text-white mt-1">{totals.totalQuantity || 0}</p>
+          </div>
+        </div>
+
+        <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-white">Barber Product Commissions</h3>
+              <p className="text-sm text-gray-400">Breakdown of product revenue and commissions per barber</p>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-[#2A2A2A]/40">
+              <thead className="bg-[#111111]">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Barber</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Units Sold</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Product Revenue</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Commission</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Avg Rate</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#2A2A2A]/30">
+                {perBarberTotals.map(r => {
+                  const avgRate = r.revenue > 0 ? (r.commission / r.revenue) * 100 : 0
+                  return (
+                    <tr key={r.barber_id} className="hover:bg-[#2A2A2A]/30 transition-colors">
+                      <td className="px-4 py-3 text-sm text-white">{r.barber_name}</td>
+                      <td className="px-4 py-3 text-sm text-right text-gray-200">{r.quantity || 0}</td>
+                      <td className="px-4 py-3 text-sm text-right text-gray-200">{formatCurrency(r.revenue || 0)}</td>
+                      <td className="px-4 py-3 text-sm text-right text-[#FF8C42] font-semibold">{formatCurrency(r.commission || 0)}</td>
+                      <td className="px-4 py-3 text-sm text-right text-gray-400">{avgRate.toFixed(1)}%</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-white">Top Products</h3>
+              <p className="text-sm text-gray-400">Aggregated product sales across all barbers for this period</p>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-[#2A2A2A]/40">
+              <thead className="bg-[#111111]">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Product</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Units Sold</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Revenue</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Commission Paid</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#2A2A2A]/30">
+                {productTotals.map(product => (
+                  <tr key={product.product_id} className="hover:bg-[#2A2A2A]/30 transition-colors">
+                    <td className="px-4 py-3 text-sm text-white">{product.product_name}</td>
+                    <td className="px-4 py-3 text-sm text-right text-gray-200">{product.quantity || 0}</td>
+                    <td className="px-4 py-3 text-sm text-right text-gray-200">{formatCurrency(product.total_amount || 0)}</td>
+                    <td className="px-4 py-3 text-sm text-right text-[#FF8C42] font-semibold">{formatCurrency(product.share_amount || 0)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // Render period details
   const renderPeriodDetails = () => {
     if (!selectedPeriod) return null
@@ -1826,7 +2316,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   {expandedRecords.has(record._id) && (
                     <div className="mt-4 pt-4 border-t border-[#2A2A2A]/50">
                       {/* Detailed Breakdown */}
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                         {/* Service Earnings Breakdown */}
                         <div className="space-y-4">
                           <h5 className="text-sm font-medium text-gray-300 mb-3 flex items-center">
@@ -1854,6 +2344,36 @@ const PayrollManagement = ({ onRefresh, user }) => {
                               <span className="text-gray-400">Avg per Service:</span>
                               <span className="text-gray-300">
                                 {record.total_services > 0 ? formatCurrency(record.total_service_revenue / record.total_services) : '₱0'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Product Sales Breakdown */}
+                        <div className="space-y-4">
+                          <h5 className="text-sm font-medium text-gray-300 mb-3 flex items-center">
+                            <Package className="w-4 h-4 mr-2 text-blue-400" />
+                            Product Sales & Commissions
+                          </h5>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Units Sold:</span>
+                              <span className="text-white font-medium">{record.total_product_quantity || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Product Revenue:</span>
+                              <span className="text-white">{formatCurrency(record.total_transaction_revenue || 0)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Commission Earned:</span>
+                              <span className="text-[#FF8C42] font-medium">{formatCurrency(record.transaction_commission || 0)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Avg Commission Rate:</span>
+                              <span className="text-gray-300">
+                                {record.total_transaction_revenue > 0
+                                  ? `${((record.transaction_commission / record.total_transaction_revenue) * 100).toFixed(1)}%`
+                                  : '0%'}
                               </span>
                             </div>
                           </div>
@@ -1889,29 +2409,28 @@ const PayrollManagement = ({ onRefresh, user }) => {
                           </h5>
                           <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
-                              <span className="text-gray-400">Gross Commission (ref):</span>
+                              <span className="text-gray-400">Service Commission:</span>
                               <span className="text-white">{formatCurrency(record.gross_commission)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Product Commission:</span>
+                              <span className="text-white">{formatCurrency(record.transaction_commission || 0)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-400">Final Daily Salary:</span>
                               <span className="text-white font-medium">{formatCurrency(record.daily_pay || 0)}</span>
                             </div>
                             <div className="flex justify-between">
-                              <span className="text-gray-400">Tax Rate:</span>
-                              <span className="text-gray-300">
-                                {record.tax_deduction > 0 ? 
-                                  `${((record.tax_deduction / (record.daily_pay || 1)) * 100).toFixed(1)}%` : 
-                                  '0%'
-                                }
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
                               <span className="text-gray-400">Tax Deduction:</span>
-                              <span className="text-red-400">-{formatCurrency(record.tax_deduction)}</span>
+                              <span className="text-red-400">-{formatCurrency(record.tax_deduction || 0)}</span>
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-400">Other Deductions:</span>
-                              <span className="text-red-400">-{formatCurrency(record.other_deductions)}</span>
+                              <span className="text-red-400">-{formatCurrency(record.other_deductions || 0)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">Total Before Tax:</span>
+                              <span className="text-white font-medium">{formatCurrency((record.daily_pay || 0) + (record.transaction_commission || 0))}</span>
                             </div>
                             <div className="flex justify-between font-medium pt-2 border-t border-[#2A2A2A]/50">
                               <span className="text-white">Net Pay:</span>
@@ -2067,6 +2586,13 @@ const PayrollManagement = ({ onRefresh, user }) => {
             <span>Service Rates</span>
           </button>
           <button
+            onClick={() => setShowProductSharesModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
+          >
+            <Package className="h-4 w-4" />
+            <span>Product Shares</span>
+          </button>
+          <button
             onClick={() => setShowDailyRatesModal(true)}
             className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
           >
@@ -2133,11 +2659,27 @@ const PayrollManagement = ({ onRefresh, user }) => {
               Period Details
             </button>
           )}
+          {selectedPeriod && (
+            <button
+              onClick={() => setActiveView('product_commissions')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                activeView === 'product_commissions'
+                  ? 'bg-[#FF8C42] text-white'
+                  : 'text-gray-300 hover:text-white hover:bg-[#1A1A1A]'
+              }`}
+            >
+              Product Commissions
+            </button>
+          )}
         </div>
       </div>
 
       {/* Content */}
-      {activeView === 'overview' ? renderOverview() : renderPeriodDetails()}
+      {activeView === 'overview'
+        ? renderOverview()
+        : activeView === 'period'
+          ? renderPeriodDetails()
+          : renderProductCommissions()}
 
       {/* Modals */}
       {renderPeriodModal()}
@@ -2145,6 +2687,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
       {renderPaymentModal()}
       {renderServiceRatesModal()}
       {renderDailyRatesModal()}
+      {renderProductSharesModal()}
       {renderBookingsModal()}
       {renderDeleteModal()}
 

@@ -508,6 +508,16 @@ export default defineSchema({
     total_transactions: v.number(), // Number of POS transactions
     total_transaction_revenue: v.number(), // Revenue from POS transactions
     transaction_commission: v.number(), // Commission from POS transactions
+    total_product_quantity: v.optional(v.number()), // Total quantity of products sold
+    product_sales_detail: v.optional(v.array(v.object({
+      product_id: v.id("products"),
+      product_name: v.string(),
+      quantity: v.number(),
+      total_amount: v.number(),
+      share_type: v.union(v.literal("percentage"), v.literal("fixed")),
+      share_value: v.number(),
+      share_amount: v.number(),
+    }))),
     
     // Booking details snapshot (for reporting/printing)
     bookings_detail: v.optional(v.array(v.object({
@@ -574,6 +584,29 @@ export default defineSchema({
     .index("by_service", ["service_id"])
     .index("by_branch_service", ["branch_id", "service_id"])
     .index("by_active", ["is_active"]),
+
+  // Product commission/share settings per barber & product
+  product_commission_settings: defineTable({
+    branch_id: v.id("branches"),
+    barber_id: v.optional(v.id("barbers")),
+    product_id: v.id("products"),
+    share_type: v.union(
+      v.literal("percentage"), // percentage of product total
+      v.literal("fixed") // fixed amount per unit
+    ),
+    share_value: v.number(),
+    effective_from: v.number(),
+    effective_until: v.optional(v.number()),
+    is_active: v.boolean(),
+    created_by: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_barber", ["barber_id"])
+    .index("by_product", ["product_id"])
+    .index("by_branch_barber_product", ["branch_id", "barber_id", "product_id"])
+    .index("by_barber_active", ["barber_id", "is_active"]),
 
   // Barber daily rates table
   barber_daily_rates: defineTable({

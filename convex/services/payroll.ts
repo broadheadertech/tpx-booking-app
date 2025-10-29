@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query, action } from "../_generated/server";
 import { api } from "../_generated/api";
+import { Id } from "../_generated/dataModel";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 
 // PAYROLL SETTINGS MANAGEMENT
@@ -231,16 +232,64 @@ export const calculateBarberEarnings = query({
 
     const fallbackRate = barberCommissionRate?.commission_rate || payrollSettings?.default_commission_rate || 10;
 
+    // Load product commission/share settings for this barber within the period
+    type ProductShareSetting = {
+      share_type: "percentage" | "fixed";
+      share_value: number;
+      updatedAt?: number;
+    };
+
+    const productCommissionSettings = await ctx.db
+      .query("product_commission_settings")
+      .withIndex("by_branch", (q) => q.eq("branch_id", barber.branch_id))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("is_active"), true),
+          q.lte(q.field("effective_from"), args.period_end),
+          q.or(
+            q.eq(q.field("effective_until"), undefined),
+            q.gt(q.field("effective_until"), args.period_start)
+          )
+        )
+      )
+      .collect();
+
+    const productCommissionMap = new Map<string, ProductShareSetting>();
+    for (const setting of productCommissionSettings) {
+      const key = String(setting.product_id);
+      const current = productCommissionMap.get(key);
+      if (!current || (setting.updatedAt || 0) > (current.updatedAt || 0)) {
+        productCommissionMap.set(key, {
+          share_type: setting.share_type,
+          share_value: setting.share_value,
+          updatedAt: setting.updatedAt,
+        });
+      }
+    }
+
     // Compute service-level totals from completed bookings within the period
     let totalServices = 0;
     let totalServiceRevenue = 0;
     let serviceCommission = 0;
     // We'll compute days worked from bookings (per request)
 
-    // We'll fill bookingsInPeriod below; use it for totals
-    const totalTransactions = transactions.length;
-    const totalTransactionRevenue = 0; // No separate transaction revenue; accounted in bookings
-    const transactionCommission = 0; // No separate transaction commission
+    // Product sales tracking
+    let transactionsWithProducts = 0;
+    let totalProductRevenue = 0;
+    let totalProductQuantity = 0;
+    let productCommissionTotal = 0;
+
+    type ProductSalesDetail = {
+      product_id: Id<"products">;
+      product_name: string;
+      quantity: number;
+      total_amount: number;
+      share_type: "percentage" | "fixed";
+      share_value: number;
+      share_amount: number;
+    };
+
+    const productDetailMap = new Map<string, ProductSalesDetail>();
 
     // Daily rate computation (days with at least one completed & paid booking)
     // Load bookings for the barber and derive unique dates from booking records
@@ -286,6 +335,60 @@ export const calculateBarberEarnings = query({
       }
     }
 
+    // Process product sales from POS transactions in the period
+    for (const transaction of transactions) {
+      const productItems = Array.isArray(transaction.products) ? transaction.products : [];
+      if (productItems.length > 0) {
+        transactionsWithProducts += 1;
+      }
+
+      for (const productItem of productItems) {
+        const itemQuantity = productItem.quantity || 0;
+        const lineTotal = (productItem.price || 0) * itemQuantity;
+        const mapKey = String(productItem.product_id);
+        const shareSetting = productCommissionMap.get(mapKey);
+        const shareType = shareSetting?.share_type ?? "percentage";
+        const shareValue = shareSetting?.share_value ?? 0;
+
+        let shareAmount = 0;
+        if (shareType === "percentage") {
+          shareAmount = (lineTotal * shareValue) / 100;
+        } else {
+          shareAmount = shareValue * itemQuantity;
+        }
+
+        totalProductRevenue += lineTotal;
+        totalProductQuantity += itemQuantity;
+        productCommissionTotal += shareAmount;
+
+        const existingDetail = productDetailMap.get(mapKey);
+        if (existingDetail) {
+          existingDetail.quantity += itemQuantity;
+          existingDetail.total_amount += lineTotal;
+          existingDetail.share_amount += shareAmount;
+          // Preserve explicit share settings for clarity
+          existingDetail.share_type = shareType;
+          existingDetail.share_value = shareValue;
+        } else {
+          productDetailMap.set(mapKey, {
+            product_id: productItem.product_id,
+            product_name: productItem.product_name || "Product",
+            quantity: itemQuantity,
+            total_amount: lineTotal,
+            share_type: shareType,
+            share_value: shareValue,
+            share_amount: shareAmount,
+          });
+        }
+      }
+    }
+
+    const productSalesDetail = Array.from(productDetailMap.values()).map((detail) => ({
+      ...detail,
+      total_amount: Number(detail.total_amount),
+      share_amount: Number(detail.share_amount),
+    }));
+
     // Get active daily rate for barber
     const barberDailyRate = await ctx.db
       .query("barber_daily_rates")
@@ -313,25 +416,28 @@ export const calculateBarberEarnings = query({
     const totalBarberCommissions = serviceCommission;
     
     // Only apply daily rate if barber has completed bookings
-    let finalSalary = 0;
+    let baseSalary = 0;
     if (totalServices > 0) {
       // Apply the max rule: net_pay = max(total_barber_coms, barber_rate)
-      finalSalary = Math.max(totalBarberCommissions, dailyRate);
+      baseSalary = Math.max(totalBarberCommissions, dailyRate);
     } else {
       // No bookings = no salary
-      finalSalary = 0;
+      baseSalary = 0;
     }
     
     // Keep raw service commission for reference
     const grossCommission = serviceCommission; // This is the actual calculated commission
     
-    // Calculate deductions based on the final salary total
+    // Include product commissions in total earnings before deductions
+    const earningsBeforeDeductions = baseSalary + productCommissionTotal;
+
+    // Calculate deductions based on the combined total
     const taxRate = payrollSettings?.tax_rate || 0;
-    const taxDeduction = (finalSalary * taxRate) / 100;
+    const taxDeduction = (earningsBeforeDeductions * taxRate) / 100;
     const totalDeductions = taxDeduction;
     
-    // Net pay equals the final salary total minus deductions
-    const netPay = finalSalary - totalDeductions;
+    // Net pay equals combined earnings minus deductions
+    const netPay = earningsBeforeDeductions - totalDeductions;
 
     return {
       barber_id: args.barber_id,
@@ -343,15 +449,17 @@ export const calculateBarberEarnings = query({
       total_service_revenue: totalServiceRevenue,
       service_commission: serviceCommission,
       
-      // Transaction breakdown (legacy fields retained for UI; set to 0)
-      total_transactions: totalTransactions,
-      total_transaction_revenue: totalTransactionRevenue,
-      transaction_commission: transactionCommission,
+      // Transaction breakdown (POS product sales)
+      total_transactions: transactionsWithProducts,
+      total_transaction_revenue: totalProductRevenue,
+      transaction_commission: productCommissionTotal,
+      total_product_quantity: totalProductQuantity,
+      product_sales_detail: productSalesDetail,
       
       // Daily rate
       daily_rate: dailyRate,
       days_worked: daysWorked,
-      daily_pay: finalSalary,
+      daily_pay: baseSalary,
       
       // Totals
       gross_commission: grossCommission,
@@ -428,6 +536,75 @@ export const setServiceCommissionRate = mutation({
       branch_id: args.branch_id,
       service_id: args.service_id,
       commission_rate: args.commission_rate,
+      effective_from: effectiveFrom,
+      is_active: true,
+      created_by: args.created_by,
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
+// PRODUCT COMMISSION / SHARE SETTINGS
+export const getProductCommissionSettingsByBranch = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("product_commission_settings")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+  },
+});
+
+export const setProductCommissionSetting = mutation({
+  args: {
+    branch_id: v.id("branches"),
+    product_id: v.id("products"),
+    share_type: v.union(v.literal("percentage"), v.literal("fixed")),
+    share_value: v.number(),
+    effective_from: v.optional(v.number()),
+    created_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    if (args.share_type === "percentage") {
+      if (args.share_value < 0 || args.share_value > 100) {
+        throwUserError(
+          ERROR_CODES.INVALID_INPUT,
+          "Product percentage share must be between 0 and 100"
+        );
+      }
+    } else if (args.share_type === "fixed" && args.share_value < 0) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Fixed product share amount must be non-negative"
+      );
+    }
+
+    const now = Date.now();
+    const effectiveFrom = args.effective_from || now;
+
+    const existingSettings = await ctx.db
+      .query("product_commission_settings")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .filter((q) => q.eq(q.field("product_id"), args.product_id))
+      .collect();
+
+    for (const setting of existingSettings) {
+      if (setting.is_active) {
+        await ctx.db.patch(setting._id, {
+          is_active: false,
+          effective_until: effectiveFrom,
+          updatedAt: now,
+        });
+      }
+    }
+
+    return await ctx.db.insert("product_commission_settings", {
+      branch_id: args.branch_id,
+      barber_id: undefined,
+      product_id: args.product_id,
+      share_type: args.share_type,
+      share_value: args.share_value,
       effective_from: effectiveFrom,
       is_active: true,
       created_by: args.created_by,
@@ -763,6 +940,8 @@ export const calculatePayrollForPeriod = mutation({
         total_transactions: earnings.total_transactions,
         total_transaction_revenue: earnings.total_transaction_revenue,
         transaction_commission: earnings.transaction_commission,
+        total_product_quantity: earnings.total_product_quantity,
+        product_sales_detail: earnings.product_sales_detail,
         bookings_detail: earnings.bookings_detail,
         daily_rate: earnings.daily_rate,
         days_worked: earnings.days_worked,
@@ -790,8 +969,8 @@ export const calculatePayrollForPeriod = mutation({
       }
 
       totalEarnings += earnings.total_service_revenue + earnings.total_transaction_revenue;
-      // New rule: commissions total equals the final daily salary total (not commission + daily rate)
-      totalCommissions += earnings.daily_pay || 0;
+      // Commissions total includes base salary plus product commissions
+      totalCommissions += (earnings.daily_pay || 0) + (earnings.transaction_commission || 0);
       totalDeductions += earnings.total_deductions;
     }
 
