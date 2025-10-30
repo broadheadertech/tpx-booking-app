@@ -283,6 +283,7 @@ export const calculateBarberEarnings = query({
 
     // Group bookings by date for per-day calculation
     const bookingsByDate = new Map<string, any[]>();
+    const dailyCommissions = new Map<string, number>(); // Track commission earned per day
     const bookingsInPeriod: any[] = [];
 
     for (const b of allBookings) {
@@ -355,12 +356,17 @@ export const calculateBarberEarnings = query({
         // Calculate commission for this booking
         const serviceRate =
           serviceRateMap.get(String(b.service)) ?? fallbackRate;
-        serviceCommission += ((b.price || 0) * (serviceRate || 0)) / 100;
+        const bookingCommission = ((b.price || 0) * (serviceRate || 0)) / 100;
+        serviceCommission += bookingCommission;
+
+        // Track commission per day for correct daily pay calculation
+        const currentDayCommission = dailyCommissions.get(dateKey) || 0;
+        dailyCommissions.set(dateKey, currentDayCommission + bookingCommission);
       }
     }
 
-    // Get active daily rate for barber
-    const barberDailyRate = await ctx.db
+    // Get active daily rate for barber (prefer a rate effective within the period; if none, fall back to current active)
+    let barberDailyRate = await ctx.db
       .query("barber_daily_rates")
       .withIndex("by_barber_active", (q) =>
         q.eq("barber_id", args.barber_id).eq("is_active", true),
@@ -376,22 +382,50 @@ export const calculateBarberEarnings = query({
       )
       .first();
 
+    if (!barberDailyRate) {
+      // No rate within period; use the currently active rate as a sensible fallback
+      barberDailyRate = await ctx.db
+        .query("barber_daily_rates")
+        .withIndex("by_barber_active", (q) =>
+          q.eq("barber_id", args.barber_id).eq("is_active", true),
+        )
+        .first();
+    }
+
     const dailyRate = barberDailyRate?.daily_rate || 0;
+    console.log(
+      `Barber ${barber.full_name}: barberDailyRate =`,
+      barberDailyRate,
+      `dailyRate = ${dailyRate}`,
+    );
 
     // Correct rule from client:
     // total_barber_coms = sum of (each service price * service.rate%)
     // net_pay = max(total_barber_coms, barber_daily_rate)
     // BUT: Only if barber has at least 1 completed booking in the period
 
-    // serviceCommission is already calculated above as total_barber_coms
-    const totalBarberCommissions = serviceCommission;
+    // CORRECTED LOGIC: Calculate final salary using per-day calculation
+    // For each day worked: daily_pay = max(day_commission, daily_rate)
+    // Total final salary = sum of all daily pays
+    //
+    // Example: Daily Rate = ₱600
+    // Day 1: Commission ₱700 → Pay = max(700, 600) = ₱700
+    // Day 2: Commission ₱200 → Pay = max(200, 600) = ₱600
+    // Total Pay = ₱700 + ₱600 = ₱1,300
+    //
+    // OLD WRONG LOGIC: max(total_period_commission, daily_rate)
+    // Would give: max(700+200, 600) = max(900, 600) = ₱900 ✗
 
-    // Only apply daily rate if barber has completed bookings
     let finalSalary = 0;
     if (totalServices > 0) {
-      // Apply the max rule: net_pay = max(total_barber_coms, barber_daily_rate)
-      // BUT: Only if barber has at least 1 completed booking in the period
-      finalSalary = Math.max(totalBarberCommissions, dailyRate);
+      // Debug logging to check daily rates and commissions
+      console.log(`Barber ${barber.full_name}: dailyRate = ${dailyRate}, days worked = ${dailyCommissions.size}`);
+      for (const [dateKey, dayCommission] of dailyCommissions) {
+        const dayPay = Math.max(dayCommission, dailyRate);
+        console.log(`Date ${dateKey}: commission = ${dayCommission}, dayPay = ${dayPay}`);
+        finalSalary += dayPay;
+      }
+      console.log(`Total finalSalary = ${finalSalary}`);
     } else {
       // No bookings = no salary
       finalSalary = 0;
