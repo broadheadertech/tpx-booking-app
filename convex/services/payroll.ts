@@ -27,7 +27,7 @@ export const createOrUpdatePayrollSettings = mutation({
     payout_frequency: v.union(
       v.literal("weekly"),
       v.literal("bi_weekly"),
-      v.literal("monthly")
+      v.literal("monthly"),
     ),
     payout_day: v.number(),
     tax_rate: v.optional(v.number()),
@@ -35,16 +35,34 @@ export const createOrUpdatePayrollSettings = mutation({
   },
   handler: async (ctx, args) => {
     // Validate commission rate
-    if (args.default_commission_rate < 0 || args.default_commission_rate > 100) {
-      throwUserError(ERROR_CODES.INVALID_INPUT, "Commission rate must be between 0 and 100");
+    if (
+      args.default_commission_rate < 0 ||
+      args.default_commission_rate > 100
+    ) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Commission rate must be between 0 and 100",
+      );
     }
 
     // Validate payout day based on frequency
-    if (args.payout_frequency === "weekly" && (args.payout_day < 0 || args.payout_day > 6)) {
-      throwUserError(ERROR_CODES.INVALID_INPUT, "Weekly payout day must be between 0 (Sunday) and 6 (Saturday)");
+    if (
+      args.payout_frequency === "weekly" &&
+      (args.payout_day < 0 || args.payout_day > 6)
+    ) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Weekly payout day must be between 0 (Sunday) and 6 (Saturday)",
+      );
     }
-    if (args.payout_frequency === "monthly" && (args.payout_day < 1 || args.payout_day > 31)) {
-      throwUserError(ERROR_CODES.INVALID_INPUT, "Monthly payout day must be between 1 and 31");
+    if (
+      args.payout_frequency === "monthly" &&
+      (args.payout_day < 1 || args.payout_day > 31)
+    ) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Monthly payout day must be between 1 and 31",
+      );
     }
 
     const timestamp = Date.now();
@@ -92,15 +110,17 @@ export const getBarberCommissionRate = query({
     const now = Date.now();
     const commissionRate = await ctx.db
       .query("barber_commission_rates")
-      .withIndex("by_barber_active", (q) => q.eq("barber_id", args.barber_id).eq("is_active", true))
-      .filter((q) => 
+      .withIndex("by_barber_active", (q) =>
+        q.eq("barber_id", args.barber_id).eq("is_active", true),
+      )
+      .filter((q) =>
         q.and(
           q.lte(q.field("effective_from"), now),
           q.or(
             q.eq(q.field("effective_until"), undefined),
-            q.gt(q.field("effective_until"), now)
-          )
-        )
+            q.gt(q.field("effective_until"), now),
+          ),
+        ),
       )
       .first();
 
@@ -119,7 +139,10 @@ export const setBarberCommissionRate = mutation({
   },
   handler: async (ctx, args) => {
     if (args.commission_rate < 0 || args.commission_rate > 100) {
-      throwUserError(ERROR_CODES.INVALID_INPUT, "Commission rate must be between 0 and 100");
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Commission rate must be between 0 and 100",
+      );
     }
 
     const timestamp = Date.now();
@@ -128,7 +151,9 @@ export const setBarberCommissionRate = mutation({
     // Deactivate any existing active rates
     const existingRates = await ctx.db
       .query("barber_commission_rates")
-      .withIndex("by_barber_active", (q) => q.eq("barber_id", args.barber_id).eq("is_active", true))
+      .withIndex("by_barber_active", (q) =>
+        q.eq("barber_id", args.barber_id).eq("is_active", true),
+      )
       .collect();
 
     for (const rate of existingRates) {
@@ -183,9 +208,11 @@ export const calculateBarberEarnings = query({
       .collect();
 
     // Filter transactions that were completed in the period
-    const transactions = allTransactions.filter(transaction => {
+    const transactions = allTransactions.filter((transaction) => {
       const isCompleted = transaction.payment_status === "completed";
-      const isInPeriod = transaction.createdAt >= args.period_start && transaction.createdAt <= args.period_end;
+      const isInPeriod =
+        transaction.createdAt >= args.period_start &&
+        transaction.createdAt <= args.period_end;
       return isCompleted && isInPeriod;
     });
 
@@ -199,9 +226,9 @@ export const calculateBarberEarnings = query({
           q.lte(q.field("effective_from"), args.period_end),
           q.or(
             q.eq(q.field("effective_until"), undefined),
-            q.gt(q.field("effective_until"), args.period_start)
-          )
-        )
+            q.gt(q.field("effective_until"), args.period_start),
+          ),
+        ),
       )
       .collect();
 
@@ -217,19 +244,24 @@ export const calculateBarberEarnings = query({
     // Fallback commission rate if a service has no specific rate
     const barberCommissionRate = await ctx.db
       .query("barber_commission_rates")
-      .withIndex("by_barber_active", (q) => q.eq("barber_id", args.barber_id).eq("is_active", true))
-      .filter((q) => 
+      .withIndex("by_barber_active", (q) =>
+        q.eq("barber_id", args.barber_id).eq("is_active", true),
+      )
+      .filter((q) =>
         q.and(
           q.lte(q.field("effective_from"), args.period_end),
           q.or(
             q.eq(q.field("effective_until"), undefined),
-            q.gt(q.field("effective_until"), args.period_start)
-          )
-        )
+            q.gt(q.field("effective_until"), args.period_start),
+          ),
+        ),
       )
       .first();
 
-    const fallbackRate = barberCommissionRate?.commission_rate || payrollSettings?.default_commission_rate || 10;
+    const fallbackRate =
+      barberCommissionRate?.commission_rate ||
+      payrollSettings?.default_commission_rate ||
+      10;
 
     // Compute service-level totals from completed bookings within the period
     let totalServices = 0;
@@ -260,30 +292,44 @@ export const calculateBarberEarnings = query({
       if (b.date) {
         try {
           // Convert date string (e.g., "2024-01-15") to timestamp at start of day
-          const bookingDate = new Date(b.date + 'T00:00:00.000Z');
+          const bookingDate = new Date(b.date + "T00:00:00.000Z");
           bookingDateTimestamp = bookingDate.getTime();
         } catch (error) {
           // If date parsing fails, fall back to updatedAt
-          console.warn('Failed to parse booking date:', b.date, 'using updatedAt instead');
+          console.warn(
+            "Failed to parse booking date:",
+            b.date,
+            "using updatedAt instead",
+          );
         }
       }
 
-      const inPeriod = bookingDateTimestamp >= args.period_start && bookingDateTimestamp <= args.period_end;
+      const inPeriod =
+        bookingDateTimestamp >= args.period_start &&
+        bookingDateTimestamp <= args.period_end;
       if (completed && paid && inPeriod) {
-        const dateKey = b.date || new Date(new Date(b.updatedAt).toISOString().split('T')[0]).toISOString();
+        const dateKey =
+          b.date ||
+          new Date(
+            new Date(b.updatedAt).toISOString().split("T")[0],
+          ).toISOString();
         bookingDaySet.add(dateKey);
         // enrich with details for printing/snapshots
         const service = await ctx.db.get(b.service);
         let customerName = b.customer_name || "";
         if (!customerName && b.customer) {
           const customer = await ctx.db.get(b.customer);
-          customerName = (customer as any)?.nickname || (customer as any)?.username || (customer as any)?.email || "Customer";
+          customerName =
+            (customer as any)?.nickname ||
+            (customer as any)?.username ||
+            (customer as any)?.email ||
+            "Customer";
         }
-        
+
         // Calculate commission for this booking (we have access to b.service here)
         const rate = serviceRateMap.get(String(b.service)) ?? fallbackRate;
         serviceCommission += ((b.price || 0) * (rate || 0)) / 100;
-        
+
         // Store only the fields allowed by schema (no service_id)
         bookingsInPeriod.push({
           id: b._id,
@@ -291,11 +337,11 @@ export const calculateBarberEarnings = query({
           date: b.date,
           time: b.time,
           price: b.price,
-          service_name: service?.name || 'Service',
+          service_name: service?.name || "Service",
           customer_name: customerName,
           updatedAt: b.updatedAt,
         });
-        
+
         totalServices += 1;
         totalServiceRevenue += b.price || 0;
       }
@@ -304,15 +350,17 @@ export const calculateBarberEarnings = query({
     // Get active daily rate for barber
     const barberDailyRate = await ctx.db
       .query("barber_daily_rates")
-      .withIndex("by_barber_active", (q) => q.eq("barber_id", args.barber_id).eq("is_active", true))
-      .filter((q) => 
+      .withIndex("by_barber_active", (q) =>
+        q.eq("barber_id", args.barber_id).eq("is_active", true),
+      )
+      .filter((q) =>
         q.and(
           q.lte(q.field("effective_from"), args.period_end),
           q.or(
             q.eq(q.field("effective_until"), undefined),
-            q.gt(q.field("effective_until"), args.period_start)
-          )
-        )
+            q.gt(q.field("effective_until"), args.period_start),
+          ),
+        ),
       )
       .first();
 
@@ -323,10 +371,10 @@ export const calculateBarberEarnings = query({
     // total_barber_coms = sum of (each service price * service.rate%)
     // net_pay = max(total_barber_coms, barber_daily_rate)
     // BUT: Only if barber has at least 1 completed booking in the period
-    
+
     // serviceCommission is already calculated above as total_barber_coms
     const totalBarberCommissions = serviceCommission;
-    
+
     // Only apply daily rate if barber has completed bookings
     let finalSalary = 0;
     if (totalServices > 0) {
@@ -336,15 +384,15 @@ export const calculateBarberEarnings = query({
       // No bookings = no salary
       finalSalary = 0;
     }
-    
+
     // Keep raw service commission for reference
     const grossCommission = serviceCommission; // This is the actual calculated commission
-    
+
     // Calculate deductions based on the final salary total
     const taxRate = payrollSettings?.tax_rate || 0;
     const taxDeduction = (finalSalary * taxRate) / 100;
     const totalDeductions = taxDeduction;
-    
+
     // Net pay equals the final salary total minus deductions
     const netPay = finalSalary - totalDeductions;
 
@@ -352,38 +400,41 @@ export const calculateBarberEarnings = query({
       barber_id: args.barber_id,
       barber_name: barber.full_name,
       commission_rate: fallbackRate,
-      
+
       // Service earnings
       total_services: totalServices,
       total_service_revenue: totalServiceRevenue,
       service_commission: serviceCommission,
-      
+
       // Transaction breakdown (legacy fields retained for UI; set to 0)
       total_transactions: totalTransactions,
       total_transaction_revenue: totalTransactionRevenue,
       transaction_commission: transactionCommission,
-      
+
       // Daily rate
       daily_rate: dailyRate,
       days_worked: daysWorked,
       daily_pay: finalSalary,
-      
+
       // Totals
       gross_commission: grossCommission,
       tax_deduction: taxDeduction,
       other_deductions: 0,
       total_deductions: totalDeductions,
       net_pay: netPay,
-      
+
       // Details for verification
       bookings_detail: bookingsInPeriod,
-      transactions: transactions.map(t => ({
+      transactions: transactions.map((t) => ({
         id: t._id,
         transaction_id: t.transaction_id,
         receipt_number: t.receipt_number,
         total_amount: t.total_amount,
-        service_revenue: t.services.reduce((sum, s) => sum + (s.price * s.quantity), 0)
-      }))
+        service_revenue: t.services.reduce(
+          (sum, s) => sum + s.price * s.quantity,
+          0,
+        ),
+      })),
     };
   },
 });
@@ -419,7 +470,10 @@ export const setServiceCommissionRate = mutation({
   },
   handler: async (ctx, args) => {
     if (args.commission_rate < 0 || args.commission_rate > 100) {
-      throwUserError(ERROR_CODES.INVALID_INPUT, "Commission rate must be between 0 and 100");
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Commission rate must be between 0 and 100",
+      );
     }
     const now = Date.now();
     const effectiveFrom = args.effective_from || now;
@@ -427,7 +481,9 @@ export const setServiceCommissionRate = mutation({
     // Deactivate existing active rates for same service in branch
     const existing = await ctx.db
       .query("service_commission_rates")
-      .withIndex("by_branch_service", (q) => q.eq("branch_id", args.branch_id).eq("service_id", args.service_id))
+      .withIndex("by_branch_service", (q) =>
+        q.eq("branch_id", args.branch_id).eq("service_id", args.service_id),
+      )
       .filter((q) => q.eq(q.field("is_active"), true))
       .collect();
 
@@ -459,15 +515,17 @@ export const getBarberDailyRate = query({
     const now = Date.now();
     return await ctx.db
       .query("barber_daily_rates")
-      .withIndex("by_barber_active", (q) => q.eq("barber_id", args.barber_id).eq("is_active", true))
-      .filter((q) => 
+      .withIndex("by_barber_active", (q) =>
+        q.eq("barber_id", args.barber_id).eq("is_active", true),
+      )
+      .filter((q) =>
         q.and(
           q.lte(q.field("effective_from"), now),
           q.or(
             q.eq(q.field("effective_until"), undefined),
-            q.gt(q.field("effective_until"), now)
-          )
-        )
+            q.gt(q.field("effective_until"), now),
+          ),
+        ),
       )
       .first();
   },
@@ -483,7 +541,10 @@ export const setBarberDailyRate = mutation({
   },
   handler: async (ctx, args) => {
     if (args.daily_rate < 0) {
-      throwUserError(ERROR_CODES.INVALID_INPUT, "Daily rate must be non-negative");
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Daily rate must be non-negative",
+      );
     }
     const now = Date.now();
     const effectiveFrom = args.effective_from || now;
@@ -491,7 +552,9 @@ export const setBarberDailyRate = mutation({
     // Deactivate existing active daily rates
     const existing = await ctx.db
       .query("barber_daily_rates")
-      .withIndex("by_barber_active", (q) => q.eq("barber_id", args.barber_id).eq("is_active", true))
+      .withIndex("by_barber_active", (q) =>
+        q.eq("barber_id", args.barber_id).eq("is_active", true),
+      )
       .collect();
     for (const r of existing) {
       await ctx.db.patch(r._id, {
@@ -540,22 +603,31 @@ export const getBookingsByBarberAndPeriod = query({
     const filtered = bookings.filter((b) => {
       const completed = b.status === "completed";
       const paid = b.payment_status === "paid";
-      
+
       // Convert booking date string to timestamp for period comparison
       // Use booking date instead of updatedAt to ensure payroll reflects actual service dates
       let bookingDateTimestamp = b.updatedAt; // fallback to updatedAt
       if (b.date) {
         try {
           // Convert date string (e.g., "2024-01-15") to timestamp at start of day
-          const bookingDate = new Date(b.date + 'T00:00:00.000Z');
+          const bookingDate = new Date(b.date + "T00:00:00.000Z");
           bookingDateTimestamp = bookingDate.getTime();
         } catch (error) {
           // If date parsing fails, fall back to updatedAt
-          console.warn('Failed to parse booking date:', b.date, 'using updatedAt instead');
+          console.warn(
+            "Failed to parse booking date:",
+            b.date,
+            "using updatedAt instead",
+          );
         }
       }
-      
-      return completed && paid && bookingDateTimestamp >= args.period_start && bookingDateTimestamp <= args.period_end;
+
+      return (
+        completed &&
+        paid &&
+        bookingDateTimestamp >= args.period_start &&
+        bookingDateTimestamp <= args.period_end
+      );
     });
 
     // Populate service + customer display info
@@ -565,7 +637,11 @@ export const getBookingsByBarberAndPeriod = query({
         let customerName = b.customer_name || "";
         if (!customerName && b.customer) {
           const customer = await ctx.db.get(b.customer);
-          customerName = customer?.nickname || customer?.username || customer?.email || "Customer";
+          customerName =
+            customer?.nickname ||
+            customer?.username ||
+            customer?.email ||
+            "Customer";
         }
         return {
           id: b._id,
@@ -578,7 +654,7 @@ export const getBookingsByBarberAndPeriod = query({
           customer_name: customerName,
           updatedAt: b.updatedAt,
         };
-      })
+      }),
     );
 
     return withDetails;
@@ -594,7 +670,10 @@ export const getBookingsForPrint = action({
   },
   handler: async (ctx, args) => {
     // Reuse the query logic by invoking it via runQuery
-    const items = await ctx.runQuery(api.services.payroll.getBookingsByBarberAndPeriod, args as any);
+    const items = await ctx.runQuery(
+      api.services.payroll.getBookingsByBarberAndPeriod,
+      args as any,
+    );
     return items || [];
   },
 });
@@ -608,34 +687,54 @@ export const getBookingsSummaryForPrint = action({
   },
   handler: async (ctx, args) => {
     // Barber and branch
-    const barber = await ctx.runQuery(api.services.barbers.getBarberById, { id: args.barber_id as any });
-    if (!barber) return { groups: [], grandTotalAmount: 0, grandTotalCommission: 0 };
+    const barber = await ctx.runQuery(api.services.barbers.getBarberById, {
+      id: args.barber_id as any,
+    });
+    if (!barber)
+      return { groups: [], grandTotalAmount: 0, grandTotalCommission: 0 };
 
     // We base final salary on daily total sales; no percentage commission required here
 
     // Bookings
-    const items = await ctx.runQuery(api.services.payroll.getBookingsByBarberAndPeriod, args as any);
+    const items = await ctx.runQuery(
+      api.services.payroll.getBookingsByBarberAndPeriod,
+      args as any,
+    );
 
     // Group by date
     const groupsMap = new Map<string, any>();
     for (const b of items || []) {
-      const key = b.date || new Date(b.updatedAt).toISOString().split('T')[0];
-      const sale = (b.price || 0);
-      if (!groupsMap.has(key)) groupsMap.set(key, { date: key, rows: [], totalAmount: 0, totalCommission: 0 });
+      const key = b.date || new Date(b.updatedAt).toISOString().split("T")[0];
+      const sale = b.price || 0;
+      if (!groupsMap.has(key))
+        groupsMap.set(key, {
+          date: key,
+          rows: [],
+          totalAmount: 0,
+          totalCommission: 0,
+        });
       const g = groupsMap.get(key);
       g.rows.push({ ...b, commission: sale, commission_rate: undefined });
       g.totalAmount += sale;
       g.totalCommission += sale; // treat "commission" as daily sales for compatibility with UI
     }
 
-    const groups = Array.from(groupsMap.values()).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    const grandTotalAmount = groups.reduce((s,g) => s + g.totalAmount, 0);
-    const grandTotalCommission = groups.reduce((s,g) => s + g.totalCommission, 0);
+    const groups = Array.from(groupsMap.values()).sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    );
+    const grandTotalAmount = groups.reduce((s, g) => s + g.totalAmount, 0);
+    const grandTotalCommission = groups.reduce(
+      (s, g) => s + g.totalCommission,
+      0,
+    );
     // Determine active daily rate during the period (simple approach: current active rate)
     // For print display purposes, use the same effective rate as calculation logic used
     let dailyRate = 0;
     {
-      const nowRate = await ctx.runQuery(api.services.payroll.getBarberDailyRate, { barber_id: args.barber_id as any });
+      const nowRate = await ctx.runQuery(
+        api.services.payroll.getBarberDailyRate,
+        { barber_id: args.barber_id as any },
+      );
       dailyRate = nowRate?.daily_rate || 0;
     }
     // Compute final per-day pay as max(dailyRate, day sales)
@@ -643,8 +742,17 @@ export const getBookingsSummaryForPrint = action({
       g.dailyRate = dailyRate;
       g.selectedPay = Math.max(dailyRate, g.totalAmount);
     }
-    const grandTotalSelectedPay = groups.reduce((s,g) => s + (g.selectedPay || 0), 0);
-    return { groups, grandTotalAmount, grandTotalCommission, dailyRate, grandTotalSelectedPay };
+    const grandTotalSelectedPay = groups.reduce(
+      (s, g) => s + (g.selectedPay || 0),
+      0,
+    );
+    return {
+      groups,
+      grandTotalAmount,
+      grandTotalCommission,
+      dailyRate,
+      grandTotalSelectedPay,
+    };
   },
 });
 
@@ -671,12 +779,14 @@ export const getCurrentPayrollPeriod = query({
     const now = Date.now();
     const period = await ctx.db
       .query("payroll_periods")
-      .withIndex("by_branch_status", (q) => q.eq("branch_id", args.branch_id).eq("status", "draft"))
-      .filter((q) => 
+      .withIndex("by_branch_status", (q) =>
+        q.eq("branch_id", args.branch_id).eq("status", "draft"),
+      )
+      .filter((q) =>
         q.and(
           q.lte(q.field("period_start"), now),
-          q.gte(q.field("period_end"), now)
-        )
+          q.gte(q.field("period_end"), now),
+        ),
       )
       .first();
 
@@ -693,7 +803,7 @@ export const createPayrollPeriod = mutation({
     period_type: v.union(
       v.literal("weekly"),
       v.literal("bi_weekly"),
-      v.literal("monthly")
+      v.literal("monthly"),
     ),
     created_by: v.id("users"),
   },
@@ -731,23 +841,27 @@ export const calculatePayrollForPeriod = mutation({
       throwUserError(
         ERROR_CODES.INVALID_INPUT,
         "Cannot recalculate a payroll period that has already been paid.",
-        "Create a new payroll period for additional adjustments."
+        "Create a new payroll period for additional adjustments.",
       );
     }
 
     // Load existing records to support recalculation
     const existingRecords = await ctx.db
       .query("payroll_records")
-      .withIndex("by_payroll_period", (q) => q.eq("payroll_period_id", args.payroll_period_id))
+      .withIndex("by_payroll_period", (q) =>
+        q.eq("payroll_period_id", args.payroll_period_id),
+      )
       .collect();
 
     // Prevent recalculation when any record has already been paid
-    const hasPaidRecords = existingRecords.some((record) => record.status === "paid");
+    const hasPaidRecords = existingRecords.some(
+      (record) => record.status === "paid",
+    );
     if (hasPaidRecords) {
       throwUserError(
         ERROR_CODES.INVALID_INPUT,
         "Cannot recalculate a payroll period with paid records.",
-        "Revert the paid status before recalculating or create a new payroll period."
+        "Revert the paid status before recalculating or create a new payroll period.",
       );
     }
 
@@ -759,7 +873,9 @@ export const calculatePayrollForPeriod = mutation({
       .collect();
 
     // Merge active barbers with any barbers that already have records for this period
-    const barberMap = new Map(activeBarbers.map((barber) => [barber._id, barber]));
+    const barberMap = new Map(
+      activeBarbers.map((barber) => [barber._id, barber]),
+    );
     for (const record of existingRecords) {
       if (!barberMap.has(record.barber_id)) {
         const barber = await ctx.db.get(record.barber_id);
@@ -770,7 +886,9 @@ export const calculatePayrollForPeriod = mutation({
     }
 
     const barbers = Array.from(barberMap.values());
-    const existingRecordMap = new Map(existingRecords.map((record) => [record.barber_id, record]));
+    const existingRecordMap = new Map(
+      existingRecords.map((record) => [record.barber_id, record]),
+    );
 
     let totalEarnings = 0;
     let totalCommissions = 0;
@@ -779,11 +897,14 @@ export const calculatePayrollForPeriod = mutation({
 
     // Calculate earnings for each barber
     for (const barber of barbers) {
-      const earnings = await ctx.runQuery(api.services.payroll.calculateBarberEarnings, {
-        barber_id: barber._id,
-        period_start: period.period_start,
-        period_end: period.period_end,
-      });
+      const earnings = await ctx.runQuery(
+        api.services.payroll.calculateBarberEarnings,
+        {
+          barber_id: barber._id,
+          period_start: period.period_start,
+          period_end: period.period_end,
+        },
+      );
 
       const recordPayload: any = {
         total_services: earnings.total_services,
@@ -819,7 +940,8 @@ export const calculatePayrollForPeriod = mutation({
         });
       }
 
-      totalEarnings += earnings.total_service_revenue + earnings.total_transaction_revenue;
+      totalEarnings +=
+        earnings.total_service_revenue + earnings.total_transaction_revenue;
       // New rule: commissions total equals the final daily salary total (not commission + daily rate)
       totalCommissions += earnings.daily_pay || 0;
       totalDeductions += earnings.total_deductions;
@@ -858,7 +980,9 @@ export const getPayrollRecordsByPeriod = query({
   handler: async (ctx, args) => {
     const records = await ctx.db
       .query("payroll_records")
-      .withIndex("by_payroll_period", (q) => q.eq("payroll_period_id", args.payroll_period_id))
+      .withIndex("by_payroll_period", (q) =>
+        q.eq("payroll_period_id", args.payroll_period_id),
+      )
       .collect();
 
     // Populate barber details
@@ -867,10 +991,10 @@ export const getPayrollRecordsByPeriod = query({
         const barber = await ctx.db.get(record.barber_id);
         return {
           ...record,
-          barber_name: barber?.full_name || 'Unknown Barber',
-          barber_email: barber?.email || '',
+          barber_name: barber?.full_name || "Unknown Barber",
+          barber_email: barber?.email || "",
         };
-      })
+      }),
     );
 
     return recordsWithBarbers;
@@ -886,20 +1010,27 @@ export const deletePayrollPeriod = mutation({
       throwUserError(ERROR_CODES.PAYROLL_PERIOD_NOT_FOUND);
     }
     if (period.status === "paid") {
-      throwUserError(ERROR_CODES.INVALID_INPUT, "Cannot delete a paid payroll period");
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Cannot delete a paid payroll period",
+      );
     }
 
     // Fetch all payroll records for this period
     const records = await ctx.db
       .query("payroll_records")
-      .withIndex("by_payroll_period", (q) => q.eq("payroll_period_id", args.payroll_period_id))
+      .withIndex("by_payroll_period", (q) =>
+        q.eq("payroll_period_id", args.payroll_period_id),
+      )
       .collect();
 
     // Delete adjustments for each record, then the record
     for (const rec of records) {
       const adjustments = await ctx.db
         .query("payroll_adjustments")
-        .withIndex("by_payroll_record", (q) => q.eq("payroll_record_id", rec._id))
+        .withIndex("by_payroll_record", (q) =>
+          q.eq("payroll_record_id", rec._id),
+        )
         .collect();
       for (const adj of adjustments) {
         await ctx.db.delete(adj._id);
@@ -915,9 +1046,9 @@ export const deletePayrollPeriod = mutation({
 
 // Get payroll records for barber
 export const getPayrollRecordsByBarber = query({
-  args: { 
+  args: {
     barber_id: v.id("barbers"),
-    limit: v.optional(v.number())
+    limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const query = ctx.db
@@ -925,7 +1056,7 @@ export const getPayrollRecordsByBarber = query({
       .withIndex("by_barber", (q) => q.eq("barber_id", args.barber_id))
       .order("desc");
 
-    const records = args.limit 
+    const records = args.limit
       ? await query.take(args.limit)
       : await query.collect();
 
@@ -939,7 +1070,7 @@ export const getPayrollRecordsByBarber = query({
           period_end: period?.period_end,
           period_type: period?.period_type,
         };
-      })
+      }),
     );
 
     return recordsWithPeriods;
@@ -954,7 +1085,7 @@ export const markPayrollRecordAsPaid = mutation({
       v.literal("cash"),
       v.literal("bank_transfer"),
       v.literal("check"),
-      v.literal("digital_wallet")
+      v.literal("digital_wallet"),
     ),
     payment_reference: v.optional(v.string()),
     paid_by: v.id("users"),
@@ -995,7 +1126,7 @@ export const addPayrollAdjustment = mutation({
     adjustment_type: v.union(
       v.literal("bonus"),
       v.literal("deduction"),
-      v.literal("correction")
+      v.literal("correction"),
     ),
     amount: v.number(),
     reason: v.string(),
@@ -1041,7 +1172,9 @@ export const getAdjustmentsByPayrollRecord = query({
   handler: async (ctx, args) => {
     const adjustments = await ctx.db
       .query("payroll_adjustments")
-      .withIndex("by_payroll_record", (q) => q.eq("payroll_record_id", args.payroll_record_id))
+      .withIndex("by_payroll_record", (q) =>
+        q.eq("payroll_record_id", args.payroll_record_id),
+      )
       .collect();
 
     return adjustments;
@@ -1052,9 +1185,9 @@ export const getAdjustmentsByPayrollRecord = query({
 
 // Get payroll summary for branch
 export const getPayrollSummaryByBranch = query({
-  args: { 
+  args: {
     branch_id: v.id("branches"),
-    limit: v.optional(v.number())
+    limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const query = ctx.db
@@ -1062,7 +1195,7 @@ export const getPayrollSummaryByBranch = query({
       .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
       .order("desc");
 
-    const periods = args.limit 
+    const periods = args.limit
       ? await query.take(args.limit || 10)
       : await query.collect();
 
@@ -1070,16 +1203,19 @@ export const getPayrollSummaryByBranch = query({
       periods.map(async (period) => {
         const records = await ctx.db
           .query("payroll_records")
-          .withIndex("by_payroll_period", (q) => q.eq("payroll_period_id", period._id))
+          .withIndex("by_payroll_period", (q) =>
+            q.eq("payroll_period_id", period._id),
+          )
           .collect();
 
         return {
           ...period,
           total_barbers: records.length,
-          paid_records: records.filter(r => r.status === "paid").length,
-          pending_records: records.filter(r => r.status === "calculated").length,
+          paid_records: records.filter((r) => r.status === "paid").length,
+          pending_records: records.filter((r) => r.status === "calculated")
+            .length,
         };
-      })
+      }),
     );
 
     return summaryData;
@@ -1105,17 +1241,16 @@ export const testBarbersInBranch = query({
       .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
       .collect();
 
-
     return {
       branch_id: args.branch_id,
       barbers: barbers.length,
       bookings: bookings.length,
       transactions: transactions.length,
-      barberDetails: barbers.map(b => ({
+      barberDetails: barbers.map((b) => ({
         id: b._id,
         name: b.full_name,
-        active: b.is_active
-      }))
+        active: b.is_active,
+      })),
     };
   },
 });
@@ -1156,7 +1291,7 @@ export const generateNextPayrollPeriod = mutation({
       if (settings.payout_frequency === "weekly") {
         const dayOfWeek = now.getDay();
         const daysToSubtract = (dayOfWeek - settings.payout_day + 7) % 7;
-        periodStart = now.getTime() - (daysToSubtract * 24 * 60 * 60 * 1000);
+        periodStart = now.getTime() - daysToSubtract * 24 * 60 * 60 * 1000;
       } else {
         // For monthly, start from first of current month
         periodStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
@@ -1165,12 +1300,17 @@ export const generateNextPayrollPeriod = mutation({
 
     // Calculate period end based on frequency
     if (settings.payout_frequency === "weekly") {
-      periodEnd = periodStart + (7 * 24 * 60 * 60 * 1000) - 1;
+      periodEnd = periodStart + 7 * 24 * 60 * 60 * 1000 - 1;
     } else if (settings.payout_frequency === "bi_weekly") {
-      periodEnd = periodStart + (14 * 24 * 60 * 60 * 1000) - 1;
-    } else { // monthly
+      periodEnd = periodStart + 14 * 24 * 60 * 60 * 1000 - 1;
+    } else {
+      // monthly
       const startDate = new Date(periodStart);
-      const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+      const endDate = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth() + 1,
+        0,
+      );
       periodEnd = endDate.getTime();
     }
 
@@ -1181,5 +1321,107 @@ export const generateNextPayrollPeriod = mutation({
       period_type: settings.payout_frequency,
       created_by: args.created_by,
     });
+  },
+});
+
+// ACTION: Get service commission summary for payroll print
+export const getServiceCommissionSummary = action({
+  args: {
+    barber_id: v.id("barbers"),
+    period_start: v.number(),
+    period_end: v.number(),
+  },
+  handler: async (ctx, args) => {
+    // Get bookings for the barber in the period
+    const bookings = await ctx.runQuery(
+      api.services.payroll.getBookingsByBarberAndPeriod,
+      args as any,
+    );
+
+    // Get barber details to find branch
+    const barber = await ctx.runQuery(api.services.barbers.getBarberById, {
+      id: args.barber_id as any,
+    });
+    if (!barber)
+      return { services: [], totals: { quantity: 0, commission: 0 } };
+
+    // Get service commission rates for the branch
+    const serviceRates = await ctx.runQuery(
+      api.services.payroll.getServiceCommissionRatesByBranch,
+      { branch_id: barber.branch_id },
+    );
+
+    // Get barber's commission rate as fallback
+    const barberCommissionRate = await ctx.runQuery(
+      api.services.payroll.getBarberCommissionRate,
+      { barber_id: args.barber_id },
+    );
+
+    // Create service rate map for quick lookup
+    const serviceRateMap = new Map();
+    (Array.isArray(serviceRates) ? serviceRates : []).forEach((rate) => {
+      if (rate.is_active) {
+        serviceRateMap.set(rate.service_id, rate.commission_rate);
+      }
+    });
+
+    const fallbackRate = barberCommissionRate?.commission_rate || 10; // Default 10%
+
+    // Group bookings by service
+    const serviceMap = new Map<
+      string,
+      {
+        service_id: any;
+        service_name: string;
+        quantity: number;
+        total_commission: number;
+      }
+    >();
+
+    for (const booking of bookings || []) {
+      const serviceId = booking.service_id;
+      const serviceName = booking.service_name || "Unknown Service";
+      const price = booking.price || 0;
+
+      if (!serviceMap.has(serviceId)) {
+        serviceMap.set(serviceId, {
+          service_id: serviceId,
+          service_name: serviceName,
+          quantity: 0,
+          total_commission: 0,
+        });
+      }
+
+      const service = serviceMap.get(serviceId)!;
+      service.quantity += 1;
+
+      // Calculate commission based on service-specific rate or barber's fallback rate
+      const commissionRate = serviceRateMap.get(serviceId) ?? fallbackRate;
+      const commissionAmount = (price * commissionRate) / 100;
+      service.total_commission += commissionAmount;
+    }
+
+    // Convert to array and sort by commission amount (descending)
+    const summary = Array.from(serviceMap.values()).sort(
+      (a, b) => b.total_commission - a.total_commission,
+    );
+
+    // Calculate totals
+    const totalQuantity = summary.reduce(
+      (sum, service) => sum + service.quantity,
+      0,
+    );
+    const totalCommission = summary.reduce(
+      (sum, service) => sum + service.total_commission,
+      0,
+    );
+
+    return {
+      services: summary,
+      totals: {
+        quantity: totalQuantity,
+        commission: totalCommission,
+      },
+    };
   },
 });
