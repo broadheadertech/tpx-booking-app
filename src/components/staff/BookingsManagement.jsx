@@ -112,7 +112,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
       const matchesSearch =
         serviceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (booking.barber_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (booking.booking_code || '').toLowerCase().includes(searchTerm.toLowerCase())
+        (booking.booking_code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (booking.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase())
       const matchesFilter = filterStatus === 'all' || booking.status === filterStatus
       return matchesSearch && matchesFilter
     })
@@ -1341,6 +1342,9 @@ const BookingsManagement = ({ onRefresh, user }) => {
                   Service
                 </th>
                 <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                  Customer
+                </th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                   Date & Time
                 </th>
                 <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
@@ -1382,6 +1386,11 @@ const BookingsManagement = ({ onRefresh, user }) => {
                       </div>
                       <div className="text-sm text-gray-400">
                         {service?.duration_minutes}min
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-white">
+                        {booking.customer_name || 'N/A'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
