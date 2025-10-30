@@ -409,15 +409,20 @@ const POS = () => {
 
       let finalCustomerId = currentTransaction.customer?._id
       
-      // Auto-register walk-in customer if they have email
-      if (!currentTransaction.customer && currentTransaction.customer_name && currentTransaction.customer_email) {
+      // Auto-register walk-in customer ONLY if they have a valid email
+      // Check if email exists and is not empty after trimming
+      const hasValidEmail = currentTransaction.customer_email && 
+                            currentTransaction.customer_email.trim() !== '' &&
+                            currentTransaction.customer_email.includes('@')
+      
+      if (!currentTransaction.customer && currentTransaction.customer_name && hasValidEmail) {
         try {
           const generatedPassword = generateSecurePassword()
           const newUser = await createUser({
-            username: currentTransaction.customer_name,
-            email: currentTransaction.customer_email,
+            username: currentTransaction.customer_name.trim(),
+            email: currentTransaction.customer_email.trim(),
             password: generatedPassword,
-            mobile_number: currentTransaction.customer_phone || undefined,
+            mobile_number: currentTransaction.customer_phone?.trim() || undefined,
             role: 'customer',
             branch_id: user.branch_id // Assign new customers to the current branch
           })
@@ -428,14 +433,14 @@ const POS = () => {
           if (isEmailServiceConfigured()) {
             try {
               const emailResult = await sendWelcomeEmail({
-                email: currentTransaction.customer_email,
-                username: currentTransaction.customer_name,
+                email: currentTransaction.customer_email.trim(),
+                username: currentTransaction.customer_name.trim(),
                 password: generatedPassword,
                 loginUrl: `${window.location.origin}/auth/login`
               })
               
               if (emailResult.success) {
-                console.log('Welcome email sent successfully to:', currentTransaction.customer_email)
+                console.log('Welcome email sent successfully to:', currentTransaction.customer_email.trim())
               } else {
                 console.warn('Failed to send welcome email:', emailResult.error)
               }
@@ -449,12 +454,13 @@ const POS = () => {
           // Show password to staff for customer
           setActiveModal('customerCreated')
           setNewCustomerCredentials({
-            email: currentTransaction.customer_email,
+            email: currentTransaction.customer_email.trim(),
             password: generatedPassword
           })
         } catch (error) {
           console.error('Failed to create user account:', error)
           // Continue with transaction even if user creation fails
+          // The transaction will still record customer_name without an account
         }
       }
       // Debug logging
@@ -473,9 +479,9 @@ const POS = () => {
       
       const transactionData = {
         customer: finalCustomerId || undefined,
-        customer_name: currentTransaction.customer_name || undefined,
-        customer_phone: currentTransaction.customer_phone || undefined,
-        customer_email: currentTransaction.customer_email || undefined,
+        customer_name: currentTransaction.customer_name?.trim() || undefined, // Always record name, even without account
+        customer_phone: currentTransaction.customer_phone?.trim() || undefined,
+        customer_email: currentTransaction.customer_email?.trim() || undefined, // Only include if provided
         branch_id: resolvedBranchId, // Ensure branch_id is provided (barber branch preferred)
         barber: selectedBarber._id,
         services: currentTransaction.services,
@@ -1070,7 +1076,9 @@ const POS = () => {
                     />
                   </div>
                   
-                  {currentTransaction.customer_email && (
+                  {currentTransaction.customer_email && 
+                   currentTransaction.customer_email.trim() !== '' && 
+                   currentTransaction.customer_email.includes('@') && (
                     <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
                       <p className="text-xs text-green-400 font-medium flex items-center">
                         <CheckCircle className="w-3 h-3 mr-1" />

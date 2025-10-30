@@ -10,6 +10,10 @@ const BookingsManagement = ({ onRefresh, user }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('date')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false)
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingBooking, setEditingBooking] = useState(null)
   const [showQRCode, setShowQRCode] = useState(null)
@@ -22,6 +26,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [confirmModal, setConfirmModal] = useState({ show: false, booking: null, action: null })
+  const [deleteModal, setDeleteModal] = useState({ show: false, booking: null })
   const [activeTab, setActiveTab] = useState('bookings')
   const [selectedBooking, setSelectedBooking] = useState(null)
   const [showTransactionModal, setShowTransactionModal] = useState(false)
@@ -115,7 +120,27 @@ const BookingsManagement = ({ onRefresh, user }) => {
         (booking.booking_code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (booking.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase())
       const matchesFilter = filterStatus === 'all' || booking.status === filterStatus
-      return matchesSearch && matchesFilter
+      
+      // Date filter
+      let matchesDate = true
+      if (startDate || endDate) {
+        const bookingDate = new Date(booking.date)
+        bookingDate.setHours(0, 0, 0, 0)
+        
+        if (startDate) {
+          const start = new Date(startDate)
+          start.setHours(0, 0, 0, 0)
+          if (bookingDate < start) matchesDate = false
+        }
+        
+        if (endDate && matchesDate) {
+          const end = new Date(endDate)
+          end.setHours(23, 59, 59, 999)
+          if (bookingDate > end) matchesDate = false
+        }
+      }
+      
+      return matchesSearch && matchesFilter && matchesDate
     })
     .sort((a, b) => {
       if (sortBy === 'date') {
@@ -132,10 +157,22 @@ const BookingsManagement = ({ onRefresh, user }) => {
       return a._id.localeCompare(b._id)
     })
 
+  // Close date pickers when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.date-picker-container')) {
+        setShowStartDatePicker(false)
+        setShowEndDatePicker(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
   // Reset to page 1 when filter or search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterStatus, searchTerm, sortBy]);
+  }, [filterStatus, searchTerm, sortBy, startDate, endDate]);
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredBookings.length / itemsPerPage);
@@ -195,7 +232,6 @@ const BookingsManagement = ({ onRefresh, user }) => {
       time: booking.time && booking.time !== 'N/A' ? booking.time.slice(0, 5) : ''
     })
     setEditingBooking(booking)
-    setIsCreating(false)
     setError('')
   }
 
@@ -239,16 +275,23 @@ const BookingsManagement = ({ onRefresh, user }) => {
     }
   }
 
-  const handleDelete = async (booking) => {
-    if (!confirm(`Are you sure you want to delete booking #${booking.booking_code || booking._id}?`)) return
+  const handleDelete = (booking) => {
+    setDeleteModal({ show: true, booking })
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteModal.booking) return
 
     setLoading(true)
     try {
-      await deleteBookingMutation({ id: booking._id })
-      onRefresh()
+      await deleteBookingMutation({ id: deleteModal.booking._id })
+      setDeleteModal({ show: false, booking: null })
+      // Convex will automatically update the UI via real-time subscription
+      // No need to call onRefresh()
     } catch (err) {
       console.error('Error deleting booking:', err)
       setError(err.message || 'Failed to delete booking')
+      setDeleteModal({ show: false, booking: null })
     } finally {
       setLoading(false)
     }
@@ -258,7 +301,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
     setLoading(true)
     try {
       await updateBookingStatus({ id: booking._id, status: newStatus })
-      onRefresh()
+      // Convex will automatically update the UI via real-time subscription
+      // No need to call onRefresh()
     } catch (err) {
       console.error('Error updating booking status:', err)
       setError(err.message || 'Failed to update booking status')
@@ -328,7 +372,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
     setLoading(true)
     try {
       await updatePaymentStatus({ id: booking._id, payment_status: newStatus })
-      onRefresh()
+      // Convex will automatically update the UI via real-time subscription
+      // No need to call onRefresh()
     } catch (err) {
       console.error('Error updating payment status:', err)
       setError(err.message || 'Failed to update payment status')
@@ -815,6 +860,128 @@ const BookingsManagement = ({ onRefresh, user }) => {
     )
   }
 
+  // Skeleton Loading Component
+  const BookingSkeleton = () => (
+    <tr className="animate-pulse">
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-4 bg-[#2A2A2A] rounded w-24"></div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-4 bg-[#2A2A2A] rounded w-32 mb-2"></div>
+        <div className="h-3 bg-[#2A2A2A] rounded w-16"></div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-4 bg-[#2A2A2A] rounded w-28"></div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-4 bg-[#2A2A2A] rounded w-20 mb-2"></div>
+        <div className="h-3 bg-[#2A2A2A] rounded w-16"></div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-4 bg-[#2A2A2A] rounded w-24"></div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-6 bg-[#2A2A2A] rounded-full w-20"></div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-4 bg-[#2A2A2A] rounded w-16"></div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-6 bg-[#2A2A2A] rounded-full w-20"></div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-right">
+        <div className="flex justify-end space-x-2">
+          <div className="h-8 bg-[#2A2A2A] rounded w-16"></div>
+          <div className="h-8 bg-[#2A2A2A] rounded w-8"></div>
+        </div>
+      </td>
+    </tr>
+  )
+
+  // Delete Confirmation Modal
+  const DeleteConfirmationModal = () => {
+    if (!deleteModal.show || !deleteModal.booking) return null
+
+    const booking = deleteModal.booking
+    const service = services.find(s => s._id === booking.service)
+
+    return createPortal(
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{zIndex: 99999}}>
+        <div className="bg-[#1A1A1A] rounded-2xl p-6 max-w-md w-full shadow-2xl border border-[#2A2A2A]/50">
+          <div className="text-center space-y-4">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto bg-red-500/20">
+              <Trash2 className="w-6 h-6 text-red-400" />
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-bold mb-2 text-white">
+                Delete Booking
+              </h3>
+              <p className="text-sm text-gray-400 mb-4">
+                Are you sure you want to delete booking <span className="font-mono font-semibold text-white">#{booking.booking_code}</span>? This action cannot be undone.
+              </p>
+
+              <div className="text-left space-y-2 p-4 rounded-xl bg-[#2A2A2A]">
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-300">Customer:</span>
+                  <span className="text-sm font-bold text-white">
+                    {booking.customer_name || 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-300">Service:</span>
+                  <span className="text-sm font-bold text-white">
+                    {service?.name || 'Unknown'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-300">Date & Time:</span>
+                  <span className="text-sm font-bold text-white">
+                    {formatDate(booking.date)} at {formatTime(booking.time)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-300">Status:</span>
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${getStatusConfig(booking.status).bg} ${getStatusConfig(booking.status).text}`}>
+                    {getStatusConfig(booking.status).label}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setDeleteModal({ show: false, booking: null })}
+                className="flex-1 py-2 px-4 rounded-xl font-medium text-gray-300 bg-[#2A2A2A] hover:bg-[#333333] transition-colors"
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={loading}
+                className="flex-1 py-2 px-4 rounded-xl font-medium text-white transition-colors bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
+  }
+
   // Transaction Tab Component
   const TransactionTab = () => {
     if (!selectedBooking) {
@@ -832,7 +999,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
               </div>
             ) : (filteredBookings || []).length === 0 ? (
               <div className="text-center py-8">
-                <Calendar className="mx-auto h-12 w-12 text-gray-500" />
+                <Calendar className="mx-auto h-12 w-12 text-white" />
                 <h3 className="mt-2 text-sm font-medium text-white">No bookings found</h3>
                 <p className="mt-1 text-sm text-gray-400">
                   Create some bookings first to view transaction details.
@@ -1274,6 +1441,86 @@ const BookingsManagement = ({ onRefresh, user }) => {
               <option value="status">Sort by Status</option>
               <option value="service">Sort by Service</option>
             </select>
+
+            {/* Date Filters with Enhanced Date Picker */}
+            <div className="flex items-center space-x-2 relative date-picker-container">
+            <Calendar className="h-3 w-3 text-white" />              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowStartDatePicker(!showStartDatePicker)
+                    setShowEndDatePicker(false)
+                  }}
+                  className={`flex items-center space-x-1.5 px-2.5 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg text-xs hover:border-[#FF8C42]/50 transition-colors ${
+                    startDate ? 'border-[#FF8C42]/50' : ''
+                  }`}
+                >
+                  <Calendar className="h-3 w-3 text-gray-400" />
+                  <span className="min-w-[80px] text-left">
+                    {startDate ? new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Start Date'}
+                  </span>
+                </button>
+                {showStartDatePicker && (
+                  <div className="absolute top-full left-0 mt-1 z-50 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg shadow-xl p-3">
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        setStartDate(e.target.value)
+                        setShowStartDatePicker(false)
+                      }}
+                      className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                    />
+                  </div>
+                )}
+              </div>
+              <span className="text-gray-500 text-xs">to</span>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEndDatePicker(!showEndDatePicker)
+                    setShowStartDatePicker(false)
+                  }}
+                  className={`flex items-center space-x-1.5 px-2.5 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg text-xs hover:border-[#FF8C42]/50 transition-colors ${
+                    endDate ? 'border-[#FF8C42]/50' : ''
+                  }`}
+                >
+                  <Calendar className="h-3 w-3 text-white" />
+                  <span className="min-w-[80px] text-left">
+                    {endDate ? new Date(endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'End Date'}
+                  </span>
+                </button>
+                {showEndDatePicker && (
+                  <div className="absolute top-full right-0 mt-1 z-50 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg shadow-xl p-3">
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => {
+                        setEndDate(e.target.value)
+                        setShowEndDatePicker(false)
+                      }}
+                      min={startDate || undefined}
+                      className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                    />
+                  </div>
+                )}
+              </div>
+              {(startDate || endDate) && (
+                <button
+                  onClick={() => {
+                    setStartDate('')
+                    setEndDate('')
+                    setShowStartDatePicker(false)
+                    setShowEndDatePicker(false)
+                  }}
+                  className="px-2 py-1 text-xs text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded transition-colors"
+                  title="Clear date filters"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center space-x-2">
@@ -1365,16 +1612,35 @@ const BookingsManagement = ({ onRefresh, user }) => {
               </tr>
             </thead>
             <tbody className="bg-[#1A1A1A] divide-y divide-[#2A2A2A]/30">
-              {currentBookings.map((booking) => {
-                const statusConfig = getStatusConfig(booking.status)
-                const paymentStatusConfig = getPaymentStatusConfig(booking.payment_status || 'unpaid')
-                const currentPaymentStatus = booking.payment_status || 'unpaid'
-                const StatusIcon = statusConfig.icon
-                const PaymentStatusIcon = paymentStatusConfig.icon
-                const service = services.find(s => s._id === booking.service)
+              {bookings === undefined ? (
+                // Skeleton loading state
+                Array.from({ length: itemsPerPage }).map((_, index) => (
+                  <BookingSkeleton key={`skeleton-${index}`} />
+                ))
+              ) : currentBookings.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-6 py-12 text-center">
+                    <Calendar className="mx-auto h-12 w-12 text-white mb-3" />
+                    <h3 className="text-sm font-medium text-white mb-1">No bookings found</h3>
+                    <p className="text-sm text-gray-400">
+                      {searchTerm || filterStatus !== 'all' || startDate || endDate
+                        ? 'Try adjusting your search or filter criteria.'
+                        : 'Get started by creating a new booking.'
+                      }
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                currentBookings.map((booking) => {
+                  const statusConfig = getStatusConfig(booking.status)
+                  const paymentStatusConfig = getPaymentStatusConfig(booking.payment_status || 'unpaid')
+                  const currentPaymentStatus = booking.payment_status || 'unpaid'
+                  const StatusIcon = statusConfig.icon
+                  const PaymentStatusIcon = paymentStatusConfig.icon
+                  const service = services.find(s => s._id === booking.service)
 
-                return (
-                  <tr key={booking._id} className="hover:bg-[#1A1A1A]/50 transition-colors">
+                  return (
+                    <tr key={booking._id} className="hover:bg-[#1A1A1A]/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-mono font-bold text-white">
                         #{booking.booking_code}
@@ -1518,35 +1784,13 @@ const BookingsManagement = ({ onRefresh, user }) => {
                       </div>
                     </td>
                   </tr>
-                )
-              })}
+                  )
+                })
+              )}
             </tbody>
           </table>
         </div>
 
-        {filteredBookings.length === 0 && (
-          <div className="text-center py-12">
-            <Calendar className="mx-auto h-12 w-12 text-gray-500" />
-            <h3 className="mt-2 text-sm font-medium text-white">No bookings found</h3>
-            <p className="mt-1 text-sm text-gray-400">
-              {searchTerm || filterStatus !== 'all'
-                ? 'Try adjusting your search or filter criteria.'
-                : 'Get started by creating a new booking.'
-              }
-            </p>
-            {!searchTerm && filterStatus === 'all' && (
-              <div className="mt-6">
-                <button
-                  onClick={handleCreate}
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A]"
-                >
-                  <Plus className="-ml-1 mr-2 h-4 w-4" />
-                  New Booking
-                </button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Pagination Controls */}
@@ -1617,6 +1861,9 @@ const BookingsManagement = ({ onRefresh, user }) => {
 
       {/* QR Code Modal */}
       {showQRCode && <QRCodeModal booking={showQRCode} onClose={() => setShowQRCode(null)} />}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal />
 
       {/* Confirmation Modal */}
       {confirmModal.show && (

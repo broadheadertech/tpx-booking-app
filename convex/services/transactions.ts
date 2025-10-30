@@ -9,7 +9,11 @@ async function getOrCreateWalkInCustomer(ctx: any, branch_id: Id<"branches">, cu
   try {
     // For walk-in customers, we'll always create a new record
     // This ensures each walk-in transaction is properly tracked
-    const walkInUsername = `walkin_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    // Use customer name if provided, otherwise generate a unique walk-in username
+    const baseUsername = customerName?.trim() 
+      ? customerName.trim().replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()
+      : `walkin_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const walkInUsername = `${baseUsername}_${Date.now()}`;
     const walkInEmail = `${walkInUsername}@walkin.local`;
 
     const customerId = await ctx.db.insert("users", {
@@ -17,7 +21,7 @@ async function getOrCreateWalkInCustomer(ctx: any, branch_id: Id<"branches">, cu
       email: walkInEmail,
       password: "walkin_" + Math.random().toString(36), // Random password for walk-ins
       mobile_number: customerPhone || "",
-      nickname: customerName || "Walk-in Customer",
+      nickname: customerName?.trim() || "Walk-in Customer", // Store actual name in nickname
       role: "customer",
       branch_id: branch_id,
       is_active: true,
@@ -105,6 +109,9 @@ export const createTransaction = mutation({
 
     const transactionDocId = await ctx.db.insert("transactions", transactionData);
 
+    // Track created booking IDs for notifications
+    const createdBookingIds: Id<"bookings">[] = [];
+
     // Create booking records for services performed in POS (skip if it's a booking payment)
     if (args.services && args.services.length > 0 && !skip_booking_creation) {
       for (const serviceItem of args.services) {
@@ -145,8 +152,15 @@ export const createTransaction = mutation({
                 date: today,
                 time: new Date().toTimeString().slice(0, 5), // Current time
                 status: "completed", // Mark as completed since service was performed
-                notes: `POS Transaction - Receipt: ${receiptNumber}${args.customer_name ? ` - ${args.customer_name}` : ''}`
+                notes: `POS Transaction - Receipt: ${receiptNumber}${args.customer_name ? ` - ${args.customer_name}` : ''}`,
+                // Pass customer name/phone/email for walk-in customers
+                customer_name: args.customer_name?.trim() || undefined,
+                customer_phone: args.customer_phone?.trim() || undefined,
+                customer_email: args.customer_email?.trim() || undefined,
               });
+              
+              // Track booking ID for notifications
+              createdBookingIds.push(bookingId);
               
               // Update payment status to paid since transaction is completed
               await ctx.runMutation(api.services.bookings.updatePaymentStatus, {
@@ -154,6 +168,9 @@ export const createTransaction = mutation({
                 payment_status: "paid"
               });
             } else {
+                // Track existing booking ID for notifications
+                createdBookingIds.push(existingBooking._id);
+                
                 // Update existing booking to completed
                 await ctx.runMutation(api.services.bookings.updateBooking, {
                   id: existingBooking._id,
@@ -266,58 +283,67 @@ export const createTransaction = mutation({
       }
     }
 
-    // Send real-time payment notifications
-    try {
-      // Send payment received notification to customer
-      if (args.customer && args.payment_status === "completed") {
-        await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
-          bookingId: transactionDocId, // Using transaction ID as booking reference
-          notificationType: "CUSTOMER_PAYMENT_RECEIVED",
-          recipients: [
-            { type: "customer", userId: args.customer },
-          ],
-          metadata: {
-            amount: args.total_amount,
-            receipt_number: receiptNumber,
-            service_name: args.services[0]?.service_name || "Services",
-          }
-        });
-      }
+    // Send real-time payment notifications (only if bookings were created)
+    // Only send notifications if we have booking IDs, as the notification function requires a booking ID
+    if (createdBookingIds.length > 0) {
+      try {
+        // Use the first booking ID for notifications (or send multiple notifications if needed)
+        const primaryBookingId = createdBookingIds[0];
 
-      // Notify staff about new transaction
-      await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
-        bookingId: transactionDocId,
-        notificationType: "STAFF_NEW_BOOKING", // Using existing template
-        recipients: [
-          { type: "staff", branchId: args.branch_id },
-        ],
-        metadata: {
-          customer_name: args.customer_name || "Walk-in Customer",
-          service_name: args.services[0]?.service_name || "Services",
-          amount: args.total_amount,
-          date: new Date().toISOString().split('T')[0],
-          time: new Date().toTimeString().slice(0, 5),
+        // Send payment received notification to customer
+        if (args.customer && args.payment_status === "completed") {
+          await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+            bookingId: primaryBookingId,
+            notificationType: "CUSTOMER_PAYMENT_RECEIVED",
+            recipients: [
+              { type: "customer", userId: args.customer },
+            ],
+            metadata: {
+              amount: args.total_amount,
+              receipt_number: receiptNumber,
+              service_name: args.services[0]?.service_name || "Services",
+            }
+          });
         }
-      });
 
-      // If payment failed, notify staff about payment issue
-      if (args.payment_status === "failed" && args.customer) {
+        // Notify staff about new transaction
         await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
-          bookingId: transactionDocId,
-          notificationType: "STAFF_PAYMENT_ISSUE",
+          bookingId: primaryBookingId,
+          notificationType: "STAFF_NEW_BOOKING",
           recipients: [
             { type: "staff", branchId: args.branch_id },
           ],
           metadata: {
-            customer_name: args.customer_name || "Customer",
+            customer_name: args.customer_name || "Walk-in Customer",
+            service_name: args.services[0]?.service_name || "Services",
             amount: args.total_amount,
-            payment_method: args.payment_method,
+            date: new Date().toISOString().split('T')[0],
+            time: new Date().toTimeString().slice(0, 5),
           }
         });
+
+        // If payment failed, notify staff about payment issue
+        if (args.payment_status === "failed" && args.customer) {
+          await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+            bookingId: primaryBookingId,
+            notificationType: "STAFF_PAYMENT_ISSUE",
+            recipients: [
+              { type: "staff", branchId: args.branch_id },
+            ],
+            metadata: {
+              customer_name: args.customer_name || "Customer",
+              amount: args.total_amount,
+              payment_method: args.payment_method,
+            }
+          });
+        }
+      } catch (error) {
+        console.error("Failed to send payment notifications:", error);
+        // Don't fail the transaction if notifications fail
       }
-    } catch (error) {
-      console.error("Failed to send payment notifications:", error);
-      // Don't fail the transaction if notifications fail
+    } else {
+      // Log that notifications were skipped because no bookings were created
+      console.log("Skipping notifications - no bookings created for this transaction");
     }
 
     return {

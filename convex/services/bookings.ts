@@ -32,9 +32,11 @@ export const getAllBookings = query({
 
         return {
           ...booking,
-          customer_name: customer?.username || booking.customer_name || 'Unknown',
-          customer_email: customer?.email || booking.customer_email || '',
-          customer_phone: customer?.mobile_number || booking.customer_phone || '',
+          // Prioritize booking.customer_name (for walk-in customers with actual names)
+          // Only fall back to customer?.username if booking.customer_name is not set
+          customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
+          customer_email: booking.customer_email || customer?.email || '',
+          customer_phone: booking.customer_phone || customer?.mobile_number || '',
           service_name: service?.name || 'Unknown Service',
           service_price: service?.price || 0,
           service_duration: service?.duration_minutes || 0,
@@ -75,9 +77,11 @@ export const getBookingsByBranch = query({
 
         return {
           ...booking,
-          customer_name: customer?.username || booking.customer_name || 'Unknown',
-          customer_email: customer?.email || booking.customer_email || '',
-          customer_phone: customer?.mobile_number || booking.customer_phone || '',
+          // Prioritize booking.customer_name (for walk-in customers with actual names)
+          // Only fall back to customer?.username if booking.customer_name is not set
+          customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
+          customer_email: booking.customer_email || customer?.email || '',
+          customer_phone: booking.customer_phone || customer?.mobile_number || '',
           service_name: service?.name || 'Unknown Service',
           service_price: service?.price || 0,
           service_duration: service?.duration_minutes || 0,
@@ -151,9 +155,11 @@ export const getBookingsByBarber = query({
 
         return {
           ...booking,
-          customer_name: customer?.username || booking.customer_name || 'Unknown',
-          customer_email: customer?.email || booking.customer_email || '',
-          customer_phone: customer?.mobile_number || booking.customer_phone || '',
+          // Prioritize booking.customer_name (for walk-in customers with actual names)
+          // Only fall back to customer?.username if booking.customer_name is not set
+          customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
+          customer_email: booking.customer_email || customer?.email || '',
+          customer_phone: booking.customer_phone || customer?.mobile_number || '',
           service_name: service?.name || 'Unknown Service',
           service_price: service?.price || 0,
           service_duration: service?.duration_minutes || 0,
@@ -248,6 +254,9 @@ export const createBooking = mutation({
     notes: v.optional(v.string()),
     voucher_id: v.optional(v.id("vouchers")),
     discount_amount: v.optional(v.number()),
+    customer_name: v.optional(v.string()), // For walk-in customers - actual name entered
+    customer_phone: v.optional(v.string()),
+    customer_email: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Get service details for price
@@ -293,6 +302,10 @@ export const createBooking = mutation({
       discount_amount: discountAmount > 0 ? discountAmount : undefined,
       final_price: discountAmount > 0 ? finalPrice : undefined,
       notes: args.notes || undefined,
+      // Store customer name/phone/email if provided (for walk-in customers)
+      customer_name: args.customer_name?.trim() || undefined,
+      customer_phone: args.customer_phone?.trim() || undefined,
+      customer_email: args.customer_email?.trim() || undefined,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -597,9 +610,11 @@ export const getBookingsByStatus = query({
 
         return {
           ...booking,
-          customer_name: customer?.username || booking.customer_name || 'Unknown',
-          customer_email: customer?.email || booking.customer_email || '',
-          customer_phone: customer?.mobile_number || booking.customer_phone || '',
+          // Prioritize booking.customer_name (for walk-in customers with actual names)
+          // Only fall back to customer?.username if booking.customer_name is not set
+          customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
+          customer_email: booking.customer_email || customer?.email || '',
+          customer_phone: booking.customer_phone || customer?.mobile_number || '',
           service_name: service?.name || 'Unknown Service',
           barber_name: barber?.full_name || 'Not assigned',
           formattedDate: new Date(booking.date).toLocaleDateString(),
@@ -634,9 +649,11 @@ export const getTodaysBookings = query({
 
         return {
           ...booking,
-          customer_name: customer?.username || booking.customer_name || 'Unknown',
-          customer_email: customer?.email || booking.customer_email || '',
-          customer_phone: customer?.mobile_number || booking.customer_phone || '',
+          // Prioritize booking.customer_name (for walk-in customers with actual names)
+          // Only fall back to customer?.username if booking.customer_name is not set
+          customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
+          customer_email: booking.customer_email || customer?.email || '',
+          customer_phone: booking.customer_phone || customer?.mobile_number || '',
           service_name: service?.name || 'Unknown Service',
           barber_name: barber?.full_name || 'Not assigned',
           formattedTime: formatTime(booking.time),

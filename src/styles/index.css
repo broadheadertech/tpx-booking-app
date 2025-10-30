@@ -118,6 +118,17 @@
   }
 }
 
+/* Date input calendar icon styling for dark theme */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(2);
+  cursor: pointer;
+}
+
+input[type="date"]::-moz-calendar-picker-indicator {
+  filter: invert(1) brightness(2);
+  cursor: pointer;
+}
+
 /* Prevent zoom on input focus on iOS */
 @media screen and (max-width: 768px) {
   input[type="date"],

@@ -212,11 +212,13 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
                 />
               </div>
 
-              {walkInData.email && (
+              {walkInData.email && 
+               walkInData.email.trim() !== '' && 
+               walkInData.email.includes('@') && (
                 <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
                   <p className="text-xs text-green-400 font-medium flex items-center">
                     <Mail className="w-3 h-3 mr-1" />
-                    Customer account will be created automatically if email is provided
+                    Customer account will be created automatically
                   </p>
                 </div>
               )}
