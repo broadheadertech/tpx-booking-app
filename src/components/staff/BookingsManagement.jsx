@@ -5,6 +5,7 @@ import { api } from '../../../convex/_generated/api'
 import QRCode from 'qrcode'
 import { createPortal } from 'react-dom'
 import CreateBookingModal from './CreateBookingModal'
+import Modal from '../common/Modal'
 
 const BookingsManagement = ({ onRefresh, user }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -17,11 +18,12 @@ const BookingsManagement = ({ onRefresh, user }) => {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingBooking, setEditingBooking] = useState(null)
   const [showQRCode, setShowQRCode] = useState(null)
-  const [formData, setFormData] = useState({
+  const [editFormData, setEditFormData] = useState({
     service: '',
     barber: '',
     date: '',
-    time: ''
+    time: '',
+    notes: ''
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -30,6 +32,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
   const [activeTab, setActiveTab] = useState('bookings')
   const [selectedBooking, setSelectedBooking] = useState(null)
   const [showTransactionModal, setShowTransactionModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 8
   const [sendSms, setSendSms] = useState(false)
@@ -55,6 +58,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
   // Always call hooks in the same order to follow Rules of Hooks
   const bookingPayments = useQuery(api.services.bookings.getBookingPayments, { bookingId: selectedBooking?._id })
   const bookingTransactions = useQuery(api.services.bookings.getBookingTransactions, { bookingId: selectedBooking?._id })
+  const editBookingTransactions = useQuery(api.services.bookings.getBookingTransactions, { bookingId: editingBooking?._id })
 
   // Convex mutations
   const updateBookingStatus = useMutation(api.services.bookings.updateBooking)
@@ -224,25 +228,44 @@ const BookingsManagement = ({ onRefresh, user }) => {
     onRefresh()
   }
 
+  const resetEditForm = () => {
+    setEditFormData({
+      service: '',
+      barber: '',
+      date: '',
+      time: '',
+      notes: ''
+    })
+  }
+
   const handleEdit = (booking) => {
-    setFormData({
+    setEditFormData({
       service: booking.service,
       barber: booking.barber || '',
       date: booking.date,
-      time: booking.time && booking.time !== 'N/A' ? booking.time.slice(0, 5) : ''
+      time: booking.time && booking.time !== 'N/A' ? booking.time.slice(0, 5) : '',
+      notes: booking.notes || ''
     })
     setEditingBooking(booking)
+    setShowEditModal(true)
     setError('')
   }
 
-  const handleCancel = () => {
+  const handleCloseEditModal = () => {
+    setShowEditModal(false)
     setEditingBooking(null)
-    resetForm()
+    resetEditForm()
+    setError('')
   }
 
-  const handleSave = async () => {
-    if (!formData.service || !formData.date || !formData.time) {
+  const handleSaveEdit = async () => {
+    if (!editFormData.service || !editFormData.date || !editFormData.time) {
       setError('Service, date, and time are required')
+      return
+    }
+
+    if (!editingBooking) {
+      setError('No booking selected for editing')
       return
     }
 
@@ -251,25 +274,28 @@ const BookingsManagement = ({ onRefresh, user }) => {
 
     try {
       const bookingData = {
-        service: formData.service,
-        date: formData.date,
-        time: formData.time
+        id: editingBooking._id,
+        service: editFormData.service,
+        date: editFormData.date,
+        time: editFormData.time,
+        notes: editFormData.notes?.trim() || undefined
       }
 
-      // Only include barber if one is selected
-      if (formData.barber) {
-        bookingData.barber = formData.barber
+      // Only include barber if one is selected (empty string means no barber)
+      if (editFormData.barber && editFormData.barber.trim() !== '') {
+        bookingData.barber = editFormData.barber
+      } else {
+        // Explicitly set to undefined to remove the barber assignment
+        bookingData.barber = undefined
       }
 
-      if (editingBooking) {
-        await updateBookingStatus({ id: editingBooking._id, ...bookingData })
-      }
+      await updateBookingStatus(bookingData)
+      handleCloseEditModal()
 
-      handleCancel()
-      onRefresh()
+      // No need to call onRefresh() - Convex will automatically update the UI
     } catch (err) {
-      console.error('Error saving booking:', err)
-      setError(err.message || 'Failed to save booking')
+      console.error('Error updating booking:', err)
+      setError(err.message || 'Failed to update booking')
     } finally {
       setLoading(false)
     }
@@ -567,102 +593,304 @@ const BookingsManagement = ({ onRefresh, user }) => {
     return <canvas ref={miniQrRef} className="rounded" />
   }
 
-  const EditBookingForm = () => (
-    <div className="bg-[#1A1A1A] p-6 rounded-2xl border border-[#2A2A2A]/50 shadow-xl mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-white">
-          Edit Booking
-        </h3>
-        <button
-          onClick={handleCancel}
-          className="p-2 text-gray-400 hover:text-white hover:bg-[#333333] rounded-lg transition-colors"
-        >
-          <X className="h-5 w-5" />
-        </button>
-      </div>
+  // Edit Booking Modal Component
+  const EditBookingModal = () => {
+    if (!editingBooking) return null
 
-      {error && (
-        <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
-          <p className="text-sm text-red-300">{error}</p>
+    const currentService = services?.find(s => s._id === editFormData.service)
+
+    return (
+      <Modal
+        isOpen={showEditModal}
+        onClose={handleCloseEditModal}
+        title="Edit Booking"
+        size="xl"
+        variant="dark"
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left Column - Current Info */}
+          <div className="space-y-6">
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-500/20 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg flex items-center space-x-2">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <p className="text-sm">{error}</p>
+              </div>
+            )}
+
+            {/* Current Booking Info */}
+            <div className="bg-[#0F0F0F]/50 rounded-lg p-4 border border-[#333333]/50">
+              <h4 className="text-sm font-bold text-gray-200 mb-3 flex items-center">
+                <Eye className="w-4 h-4 text-[#FF8C42] mr-2" />
+                Current Booking
+              </h4>
+              <div className="grid grid-cols-1 gap-3 text-sm">
+                <div>
+                  <span className="text-gray-400">Booking Code:</span>
+                  <div className="text-white font-mono font-semibold">#{editingBooking.booking_code}</div>
+                </div>
+                <div>
+                  <span className="text-gray-400">Service:</span>
+                  <div className="text-white font-medium">{services?.find(s => s._id === editingBooking.service)?.name || 'Unknown'}</div>
+                </div>
+                <div>
+                  <span className="text-gray-400">Date & Time:</span>
+                  <div className="text-white font-medium">
+                    {formatDate(editingBooking.date)} at {formatTime(editingBooking.time)}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-gray-400">Barber:</span>
+                  <div className="text-white font-medium">{editingBooking.barber_name || 'Not assigned'}</div>
+                </div>
+                <div>
+                  <span className="text-gray-400">Current Status:</span>
+                  <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${getStatusConfig(editingBooking.status).bg} ${getStatusConfig(editingBooking.status).text}`}>
+                    {getStatusConfig(editingBooking.status).label}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-gray-400">Payment Status:</span>
+                  <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${getPaymentStatusConfig(editingBooking.payment_status || 'unpaid').bg} ${getPaymentStatusConfig(editingBooking.payment_status || 'unpaid').text}`}>
+                    {getPaymentStatusConfig(editingBooking.payment_status || 'unpaid').label}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Customer Details Section */}
+            <div className="bg-[#0F0F0F]/50 rounded-lg p-4 border border-[#333333]/50">
+              <h4 className="text-sm font-bold text-gray-200 mb-3 flex items-center">
+                <User className="w-4 h-4 text-[#FF8C42] mr-2" />
+                Customer Details
+              </h4>
+
+              {/* Loading state for transactions */}
+              {editingBooking && editBookingTransactions === undefined ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="w-4 h-4 border-2 border-[#FF8C42] border-t-transparent rounded-full animate-spin mr-2"></div>
+                  <span className="text-xs text-gray-400">Loading customer details...</span>
+                </div>
+              ) : (
+                <div className="space-y-3 text-sm">
+                  {/* Customer Name */}
+                  <div>
+                    <span className="text-gray-400">Name:</span>
+                    <div className="text-white font-medium">
+                      {editingBooking?.customer_name || 'N/A'}
+                      {editingBooking?.customer && (
+                        <span className="text-xs text-gray-400 ml-2">(Registered Customer)</span>
+                      )}
+                      {!editingBooking?.customer && editingBooking?.customer_name && (
+                        <span className="text-xs text-[#FF8C42] ml-2">(Walk-in Customer)</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Customer Phone */}
+                  <div>
+                    <span className="text-gray-400">Phone:</span>
+                    <div className="text-white font-medium">
+                      {editingBooking?.customer_phone || 'N/A'}
+                    </div>
+                  </div>
+
+                  {/* Customer Email */}
+                  <div>
+                    <span className="text-gray-400">Email:</span>
+                    <div className="text-white font-medium">
+                      {editingBooking?.customer_email || 'N/A'}
+                    </div>
+                  </div>
+
+                  {/* Customer Address (from transaction if available) */}
+                  <div>
+                    <span className="text-gray-400">Address:</span>
+                    <div className="text-white font-medium">
+                      {editBookingTransactions && editBookingTransactions.length > 0
+                        ? (editBookingTransactions[0]?.customer_address || 'N/A')
+                        : 'N/A'
+                      }
+                    </div>
+                  </div>
+
+                  {/* Transaction Details */}
+                  {editBookingTransactions && editBookingTransactions.length > 0 && (
+                    <>
+                      <div className="border-t border-[#333333]/50 pt-3 mt-4">
+                        <span className="text-gray-300 text-xs font-semibold">POS Transaction Details:</span>
+                      </div>
+
+                      {/* Transaction ID */}
+                      <div>
+                        <span className="text-gray-400">Transaction ID:</span>
+                        <div className="text-white font-mono text-xs">
+                          {editBookingTransactions[0]?.transaction_id}
+                        </div>
+                      </div>
+
+                      {/* Transaction Date */}
+                      <div>
+                        <span className="text-gray-400">Transaction Date:</span>
+                        <div className="text-white font-medium">
+                          {new Date(editBookingTransactions[0]?.createdAt).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Payment Method */}
+                      <div>
+                        <span className="text-gray-400">Payment Method:</span>
+                        <div className="text-white font-medium">
+                          {editBookingTransactions[0]?.payment_method || 'N/A'}
+                        </div>
+                      </div>
+
+                      {/* Total Amount */}
+                      <div>
+                        <span className="text-gray-400">Total Amount:</span>
+                        <div className="text-green-400 font-bold">
+                          ₱{editBookingTransactions[0]?.total_amount?.toFixed(2) || '0.00'}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column - Edit Form */}
+          <div className="space-y-6">
+            <div className="bg-[#0F0F0F]/50 rounded-lg p-4 border border-[#333333]/50">
+              <h4 className="text-sm font-bold text-gray-200 mb-4 flex items-center">
+                <Edit className="w-4 h-4 text-[#FF8C42] mr-2" />
+                Edit Booking Details
+              </h4>
+
+              <div className="grid grid-cols-1 gap-4">
+                {/* Service Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Service <span className="text-red-400">*</span>
+                  </label>
+                  <select
+                    value={editFormData.service}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, service: e.target.value }))}
+                    className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] transition-colors"
+                    required
+                  >
+                    <option value="">Select a service</option>
+                    {services?.map(service => (
+                      <option key={service._id} value={service._id}>
+                        {service.name} - ₱{parseFloat(service.price || 0).toFixed(2)} ({service.duration_minutes}min)
+                      </option>
+                    )) || []}
+                  </select>
+                  {currentService && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Duration: {currentService.duration_minutes}min • Price: ₱{parseFloat(currentService.price || 0).toFixed(2)}
+                    </p>
+                  )}
+                </div>
+
+                {/* Barber Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Barber</label>
+                  <select
+                    value={editFormData.barber}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, barber: e.target.value }))}
+                    className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] transition-colors"
+                  >
+                    <option value="">Any available barber</option>
+                    {barbers?.map(barber => (
+                      <option key={barber._id} value={barber._id}>
+                        {barber.full_name}
+                      </option>
+                    )) || []}
+                  </select>
+                </div>
+
+                {/* Date Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Date <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={editFormData.date}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, date: e.target.value }))}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] transition-colors"
+                    required
+                  />
+                </div>
+
+                {/* Time Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Time <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    value={editFormData.time}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, time: e.target.value }))}
+                    className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] transition-colors"
+                    required
+                  />
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Notes</label>
+                  <textarea
+                    value={editFormData.notes}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Add any additional notes about this booking..."
+                    rows={3}
+                    className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] transition-colors resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end space-x-3 pt-4">
+              <button
+                onClick={handleCloseEditModal}
+                className="px-6 py-2 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#333333] hover:text-white transition-colors"
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={loading}
+                className="flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    <span>Save Changes</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Service *</label>
-          <select
-            value={formData.service}
-            onChange={(e) => setFormData(prev => ({ ...prev, service: e.target.value }))}
-            className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
-            required
-          >
-            <option value="">Select a service</option>
-            {services?.map(service => (
-              <option key={service._id} value={service._id}>
-                {service.name} - ₱{parseFloat(service.price || 0).toFixed(2)} ({service.duration_minutes}min)
-              </option>
-            )) || []}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Barber (Optional)</label>
-          <select
-            value={formData.barber}
-            onChange={(e) => setFormData(prev => ({ ...prev, barber: e.target.value }))}
-            className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
-          >
-            <option value="">Any available barber</option>
-            {barbers?.map(barber => (
-              <option key={barber._id} value={barber._id}>
-                {barber.full_name}
-              </option>
-            )) || []}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Date *</label>
-          <input
-            type="date"
-            value={formData.date}
-            onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-            min={new Date().toISOString().split('T')[0]}
-            className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Time *</label>
-          <input
-            type="time"
-            value={formData.time}
-            onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
-            className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
-            required
-          />
-        </div>
-      </div>
-
-      <div className="flex justify-end space-x-3">
-        <button
-          onClick={handleCancel}
-          className="px-4 py-2 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#333333] hover:text-white transition-colors"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleSave}
-          disabled={loading}
-          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
-        >
-          <Save className="h-4 w-4" />
-          <span>{loading ? 'Saving...' : 'Save Booking'}</span>
-        </button>
-      </div>
-    </div>
-  )
+      </Modal>
+    )
+  }
 
   // Transaction Details Modal Component
   const TransactionDetailsModal = ({ booking, onClose }) => {
@@ -1542,8 +1770,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
         </div>
       </div>
 
-      {/* Edit Booking Form */}
-      {editingBooking && <EditBookingForm />}
+      {/* Edit Booking Modal */}
+      <EditBookingModal />
 
       {/* Tab Navigation */}
       <div className="bg-[#1A1A1A] p-2 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
