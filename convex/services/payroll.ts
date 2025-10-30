@@ -253,7 +253,22 @@ export const calculateBarberEarnings = query({
     for (const b of allBookings) {
       const completed = b.status === "completed";
       const paid = b.payment_status === "paid";
-      const inPeriod = b.updatedAt >= args.period_start && b.updatedAt <= args.period_end;
+
+      // Convert booking date string to timestamp for period comparison
+      // Use booking date instead of updatedAt to ensure payroll reflects actual service dates
+      let bookingDateTimestamp = b.updatedAt; // fallback to updatedAt
+      if (b.date) {
+        try {
+          // Convert date string (e.g., "2024-01-15") to timestamp at start of day
+          const bookingDate = new Date(b.date + 'T00:00:00.000Z');
+          bookingDateTimestamp = bookingDate.getTime();
+        } catch (error) {
+          // If date parsing fails, fall back to updatedAt
+          console.warn('Failed to parse booking date:', b.date, 'using updatedAt instead');
+        }
+      }
+
+      const inPeriod = bookingDateTimestamp >= args.period_start && bookingDateTimestamp <= args.period_end;
       if (completed && paid && inPeriod) {
         const dateKey = b.date || new Date(new Date(b.updatedAt).toISOString().split('T')[0]).toISOString();
         bookingDaySet.add(dateKey);

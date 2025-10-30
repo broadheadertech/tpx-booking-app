@@ -273,6 +273,9 @@ const BookingsManagement = ({ onRefresh, user }) => {
     setError('')
 
     try {
+      // Check if date was changed (affects payroll calculations)
+      const dateChanged = editFormData.date !== editingBooking.date
+
       const bookingData = {
         id: editingBooking._id,
         service: editFormData.service,
@@ -291,6 +294,12 @@ const BookingsManagement = ({ onRefresh, user }) => {
 
       await updateBookingStatus(bookingData)
       handleCloseEditModal()
+
+      // Show payroll recalculation warning if date changed
+      if (dateChanged) {
+        // Could add a toast notification here or set a temporary message
+        console.log('Booking date changed - payroll may need recalculation')
+      }
 
       // No need to call onRefresh() - Convex will automatically update the UI
     } catch (err) {
@@ -828,6 +837,10 @@ const BookingsManagement = ({ onRefresh, user }) => {
                     className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] transition-colors"
                     required
                   />
+                  <p className="text-xs text-amber-400 mt-1 flex items-center">
+                    <AlertCircle className="w-3 h-3 mr-1" />
+                    Changing the date may affect payroll calculations
+                  </p>
                 </div>
 
                 {/* Time Selection */}
