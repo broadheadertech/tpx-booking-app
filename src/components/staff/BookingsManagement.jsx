@@ -825,7 +825,6 @@ const BookingsManagement = ({ onRefresh, user }) => {
                     type="date"
                     value={editFormData.date}
                     onChange={(e) => setEditFormData(prev => ({ ...prev, date: e.target.value }))}
-                    min={new Date().toISOString().split('T')[0]}
                     className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] transition-colors"
                     required
                   />
