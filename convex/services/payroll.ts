@@ -341,7 +341,6 @@ export const calculateBarberEarnings = query({
           date: b.date,
           time: b.time,
           price: b.price,
-          service_id: b.service,
           service_name: service?.name || "Service",
           customer_name: customerName,
           updatedAt: b.updatedAt,
