@@ -351,6 +351,11 @@ export const calculateBarberEarnings = query({
 
         totalServices += 1;
         totalServiceRevenue += b.price || 0;
+
+        // Calculate commission for this booking
+        const serviceRate =
+          serviceRateMap.get(String(b.service)) ?? fallbackRate;
+        serviceCommission += ((b.price || 0) * (serviceRate || 0)) / 100;
       }
     }
 
@@ -384,7 +389,8 @@ export const calculateBarberEarnings = query({
     // Only apply daily rate if barber has completed bookings
     let finalSalary = 0;
     if (totalServices > 0) {
-      // Apply the max rule: net_pay = max(total_barber_coms, barber_rate)
+      // Apply the max rule: net_pay = max(total_barber_coms, barber_daily_rate)
+      // BUT: Only if barber has at least 1 completed booking in the period
       finalSalary = Math.max(totalBarberCommissions, dailyRate);
     } else {
       // No bookings = no salary
@@ -392,10 +398,9 @@ export const calculateBarberEarnings = query({
     }
 
     const daysWorked = bookingsByDate.size;
-    const finalSalary = totalDailyPay;
 
     // Keep raw service commission for reference
-    const grossCommission = totalCommission; // This is the actual calculated commission per day
+    const grossCommission = serviceCommission; // This is the actual calculated commission
 
     // Calculate deductions based on the final salary total
     const taxRate = payrollSettings?.tax_rate || 0;
@@ -413,7 +418,7 @@ export const calculateBarberEarnings = query({
       // Service earnings
       total_services: totalServices,
       total_service_revenue: totalServiceRevenue,
-      service_commission: totalCommission,
+      service_commission: serviceCommission,
 
       // Transaction breakdown (legacy fields retained for UI; set to 0)
       total_transactions: totalTransactions,
@@ -1361,11 +1366,6 @@ export const getServiceCommissionSummary = action({
     );
 
     // Get barber's daily rate
-    const barberDailyRate = await ctx.runQuery(
-      api.services.payroll.getBarberDailyRate,
-      { barber_id: args.barber_id },
-    );
-
     // Create service rate map for quick lookup
     const serviceRateMap = new Map();
     (Array.isArray(serviceRates) ? serviceRates : []).forEach((rate) => {
@@ -1375,6 +1375,12 @@ export const getServiceCommissionSummary = action({
     });
 
     const fallbackRate = barberCommissionRate?.commission_rate || 10; // Default 10%
+
+    // Get bookings for the barber in the period
+    const bookings = await ctx.runQuery(
+      api.services.payroll.getBookingsByBarberAndPeriod,
+      args as any,
+    );
 
     // Group bookings by service
     const serviceMap = new Map<
@@ -1421,8 +1427,10 @@ export const getServiceCommissionSummary = action({
       0,
     );
 
-    // Use totalPeriodCommission which includes per-day max logic
-    const totalCommission = totalPeriodCommission;
+    const totalCommission = summary.reduce(
+      (sum, service) => sum + service.total_commission,
+      0,
+    );
 
     return {
       services: summary,
