@@ -540,7 +540,22 @@ export const getBookingsByBarberAndPeriod = query({
     const filtered = bookings.filter((b) => {
       const completed = b.status === "completed";
       const paid = b.payment_status === "paid";
-      return completed && paid && b.updatedAt >= args.period_start && b.updatedAt <= args.period_end;
+      
+      // Convert booking date string to timestamp for period comparison
+      // Use booking date instead of updatedAt to ensure payroll reflects actual service dates
+      let bookingDateTimestamp = b.updatedAt; // fallback to updatedAt
+      if (b.date) {
+        try {
+          // Convert date string (e.g., "2024-01-15") to timestamp at start of day
+          const bookingDate = new Date(b.date + 'T00:00:00.000Z');
+          bookingDateTimestamp = bookingDate.getTime();
+        } catch (error) {
+          // If date parsing fails, fall back to updatedAt
+          console.warn('Failed to parse booking date:', b.date, 'using updatedAt instead');
+        }
+      }
+      
+      return completed && paid && bookingDateTimestamp >= args.period_start && bookingDateTimestamp <= args.period_end;
     });
 
     // Populate service + customer display info
