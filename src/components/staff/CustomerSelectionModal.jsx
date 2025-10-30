@@ -9,7 +9,8 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
   const [selectedCustomerType, setSelectedCustomerType] = useState('registered') // 'registered' or 'walkin'
   const [walkInData, setWalkInData] = useState({
     name: '',
-    phone: ''
+    phone: '',
+    email: ''
   })
 
   // Get all customers
@@ -43,7 +44,8 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
       type: 'walkin',
       customer: null,
       customer_name: walkInData.name.trim(),
-      customer_phone: walkInData.phone.trim()
+      customer_phone: walkInData.phone.trim() || undefined,
+      customer_email: walkInData.email.trim() || undefined
     })
     onClose()
   }
@@ -51,7 +53,7 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
   const resetModal = () => {
     setSearchTerm('')
     setSelectedCustomerType('registered')
-    setWalkInData({ name: '', phone: '' })
+    setWalkInData({ name: '', phone: '', email: '' })
   }
 
   useEffect(() => {
@@ -61,16 +63,16 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
   }, [isOpen])
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Select Customer" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title="Select Customer" size="lg" variant="dark">
       <div className="space-y-6">
         {/* Customer Type Selection */}
-        <div className="flex space-x-1 bg-gray-100 rounded-xl p-1">
+        <div className="flex space-x-1 bg-[#1A1A1A] rounded-xl p-1 border border-[#444444]/50">
           <button
             onClick={() => setSelectedCustomerType('registered')}
             className={`flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center justify-center space-x-2 ${
               selectedCustomerType === 'registered'
-                ? 'bg-[#FF8C42] text-white shadow-lg'
-                : 'text-gray-600 hover:text-[#FF8C42]'
+                ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
+                : 'text-gray-400 hover:text-[#FF8C42]'
             }`}
           >
             <User className="w-4 h-4" />
@@ -80,8 +82,8 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
             onClick={() => setSelectedCustomerType('walkin')}
             className={`flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center justify-center space-x-2 ${
               selectedCustomerType === 'walkin'
-                ? 'bg-[#FF8C42] text-white shadow-lg'
-                : 'text-gray-600 hover:text-[#FF8C42]'
+                ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
+                : 'text-gray-400 hover:text-[#FF8C42]'
             }`}
           >
             <UserPlus className="w-4 h-4" />
@@ -101,12 +103,12 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
                   placeholder="Search customers by name, email, or phone..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-3 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
                 />
               </div>
               <button
                 onClick={onScanQR}
-                className="px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
+                className="px-4 py-3 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors border border-blue-500/30 flex items-center space-x-2"
                 title="Scan Customer QR"
               >
                 <QrCode className="w-4 h-4" />
@@ -114,7 +116,7 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
               </button>
               <button
                 onClick={onAddNewCustomer}
-                className="px-4 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors flex items-center space-x-2"
+                className="px-4 py-3 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors border border-green-500/30 flex items-center space-x-2"
                 title="Add New Customer"
               >
                 <UserPlus className="w-4 h-4" />
@@ -123,26 +125,26 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
             </div>
 
             {/* Customer List */}
-            <div className="max-h-64 overflow-y-auto space-y-2">
+            <div className="max-h-64 overflow-y-auto space-y-2 custom-scrollbar">
               {filteredCustomers.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <User className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                  <p>{searchTerm ? 'No customers found' : 'No customers available'}</p>
+                <div className="text-center py-8 text-gray-400">
+                  <User className="w-8 h-8 mx-auto mb-2 opacity-50 text-gray-500" />
+                  <p className="text-gray-400">{searchTerm ? 'No customers found' : 'No customers available'}</p>
                 </div>
               ) : (
                 filteredCustomers.map((customer) => (
                   <button
                     key={customer._id}
                     onClick={() => handleCustomerSelect(customer)}
-                    className="w-full p-4 border border-gray-200 rounded-lg hover:border-[#FF8C42] hover:bg-[#FF8C42]/5 transition-all duration-200 text-left"
+                    className="w-full p-4 bg-[#1A1A1A] border border-[#555555]/30 rounded-lg hover:border-[#FF8C42]/50 hover:bg-[#FF8C42]/5 transition-all duration-200 text-left"
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-[#FF8C42] rounded-lg flex items-center justify-center">
+                      <div className="w-10 h-10 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center">
                         <User className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900">{customer.username}</h4>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
+                        <h4 className="font-semibold text-white">{customer.username}</h4>
+                        <div className="flex items-center space-x-4 text-sm text-gray-400">
                           <div className="flex items-center space-x-1">
                             <Mail className="w-3 h-3" />
                             <span>{customer.email}</span>
@@ -166,37 +168,58 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
         {/* Walk-in Customer Section */}
         {selectedCustomerType === 'walkin' && (
           <div className="space-y-4">
-            <div className="bg-blue-50 rounded-lg p-4">
+            <div className="bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-lg p-4 border border-blue-500/30">
               <div className="flex items-center space-x-2 mb-2">
-                <UserPlus className="w-5 h-5 text-blue-600" />
-                <h3 className="font-semibold text-blue-800">Walk-in Customer</h3>
+                <UserPlus className="w-5 h-5 text-blue-400" />
+                <h3 className="font-semibold text-white">Walk-in Customer</h3>
               </div>
-              <p className="text-sm text-blue-700">Enter basic information for a walk-in customer who doesn't have an account.</p>
+              <p className="text-sm text-gray-400">Enter basic information for a walk-in customer who doesn't have an account.</p>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Customer Name *</label>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">Customer Name *</label>
                 <input
                   type="text"
                   value={walkInData.name}
                   onChange={(e) => setWalkInData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Enter customer name"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                  placeholder="Customer Name *"
+                  className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
                   required
+                  autoFocus
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number (Optional)</label>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">Phone Number (Optional)</label>
                 <input
                   type="tel"
                   value={walkInData.phone}
                   onChange={(e) => setWalkInData(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="Enter phone number"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                  placeholder="Phone Number"
+                  className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-300 mb-2">Email Address (Optional)</label>
+                <input
+                  type="email"
+                  value={walkInData.email}
+                  onChange={(e) => setWalkInData(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="Email Address (for account creation)"
+                  className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                />
+              </div>
+
+              {walkInData.email && (
+                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+                  <p className="text-xs text-green-400 font-medium flex items-center">
+                    <Mail className="w-3 h-3 mr-1" />
+                    Customer account will be created automatically if email is provided
+                  </p>
+                </div>
+              )}
             </div>
 
             <button
@@ -211,10 +234,10 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
         )}
 
         {/* Cancel Button */}
-        <div className="pt-4 border-t">
+        <div className="pt-4 border-t border-[#444444]/30">
           <button
             onClick={onClose}
-            className="w-full py-3 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors"
+            className="w-full py-3 border border-[#555555] text-gray-300 font-semibold rounded-xl hover:bg-[#2A2A2A] hover:text-white transition-colors"
           >
             Cancel
           </button>

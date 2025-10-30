@@ -632,7 +632,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
             className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
             onClick={onClose}
           />
-          <div className="relative w-full max-w-4xl transform rounded-2xl bg-[#1A1A1A] shadow-2xl transition-all z-[10000] max-h-[90vh] overflow-y-auto border border-[#2A2A2A]/50">
+          <div className="relative w-full max-w-4xl transform rounded-2xl bg-[#1A1A1A] shadow-2xl transition-all z-[10000] max-h-[90vh] overflow-y-auto custom-scrollbar border border-[#2A2A2A]/50">
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b border-[#444444]/30">
               <h3 className="text-xl font-bold text-white">Transaction Details</h3>

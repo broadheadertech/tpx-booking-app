@@ -378,6 +378,12 @@ const POS = () => {
       return
     }
 
+    // Validate customer information for walk-in customers
+    if (!currentTransaction.customer && (!currentTransaction.customer_name || currentTransaction.customer_name.trim() === '')) {
+      alert('Please enter customer name for walk-in customer')
+      return
+    }
+
     setActiveModal('paymentConfirmation')
   }
 
@@ -412,7 +418,6 @@ const POS = () => {
             email: currentTransaction.customer_email,
             password: generatedPassword,
             mobile_number: currentTransaction.customer_phone || undefined,
-            address: currentTransaction.customer_address || undefined,
             role: 'customer',
             branch_id: user.branch_id // Assign new customers to the current branch
           })
@@ -471,7 +476,6 @@ const POS = () => {
         customer_name: currentTransaction.customer_name || undefined,
         customer_phone: currentTransaction.customer_phone || undefined,
         customer_email: currentTransaction.customer_email || undefined,
-        customer_address: currentTransaction.customer_address || undefined,
         branch_id: resolvedBranchId, // Ensure branch_id is provided (barber branch preferred)
         barber: selectedBarber._id,
         services: currentTransaction.services,
@@ -999,21 +1003,18 @@ const POS = () => {
                         {currentTransaction.customer.mobile_number && (
                           <p className="text-sm text-gray-400">{currentTransaction.customer.mobile_number}</p>
                         )}
-                        {currentTransaction.customer.address && (
-                          <p className="text-sm text-gray-400">{currentTransaction.customer.address}</p>
-                        )}
                       </div>
                     </div>
-                    <button
-                      onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '', customer_email: '', customer_address: '' }))}
-                      className="text-red-400 hover:text-red-300 transition-colors"
-                      title="Remove Customer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <button
+                        onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '', customer_email: '' }))}
+                        className="text-red-400 hover:text-red-300 transition-colors"
+                        title="Remove Customer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                   </div>
                 </div>
-              ) : currentTransaction.customer_name ? (
+              ) : currentTransaction.customer_name !== undefined && currentTransaction.customer_name !== null ? (
                 <div className="space-y-4">
                   <div className="p-4 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-500/30">
                     <div className="flex items-center justify-between">
@@ -1022,7 +1023,7 @@ const POS = () => {
                           <UserPlus className="w-5 h-5 text-blue-400" />
                         </div>
                         <div>
-                          <p className="font-semibold text-white">{currentTransaction.customer_name}</p>
+                          <p className="font-semibold text-white">{(currentTransaction.customer_name && currentTransaction.customer_name.trim()) || 'Walk-in Customer'}</p>
                           <p className="text-sm text-gray-400">Walk-in Customer</p>
                           {currentTransaction.customer_phone && (
                             <p className="text-sm text-gray-400">{currentTransaction.customer_phone}</p>
@@ -1030,13 +1031,10 @@ const POS = () => {
                           {currentTransaction.customer_email && (
                             <p className="text-sm text-gray-400">{currentTransaction.customer_email}</p>
                           )}
-                          {currentTransaction.customer_address && (
-                            <p className="text-sm text-gray-400">{currentTransaction.customer_address}</p>
-                          )}
                         </div>
                       </div>
                       <button
-                        onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '', customer_email: '', customer_address: '' }))}
+                        onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: null, customer_phone: '', customer_email: '' }))}
                         className="text-red-400 hover:text-red-300 transition-colors"
                         title="Remove Customer"
                       >
@@ -1050,9 +1048,11 @@ const POS = () => {
                     <input
                       type="text"
                       placeholder="Customer Name *"
-                      value={currentTransaction.customer_name}
+                      value={currentTransaction.customer_name || ''}
                       onChange={(e) => setCurrentTransaction(prev => ({ ...prev, customer_name: e.target.value }))}
                       className="px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                      required
+                      autoFocus
                     />
                     <input
                       type="tel"
@@ -1067,13 +1067,6 @@ const POS = () => {
                       value={currentTransaction.customer_email}
                       onChange={(e) => setCurrentTransaction(prev => ({ ...prev, customer_email: e.target.value }))}
                       className="px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
-                    />
-                    <textarea
-                      placeholder="Address (optional)"
-                      value={currentTransaction.customer_address}
-                      onChange={(e) => setCurrentTransaction(prev => ({ ...prev, customer_address: e.target.value }))}
-                      rows={2}
-                      className="px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] resize-none"
                     />
                   </div>
                   
@@ -1099,7 +1092,7 @@ const POS = () => {
                   <div className="text-center text-gray-500 text-sm">or</div>
                   
                   <button
-                    onClick={() => setCurrentTransaction(prev => ({ ...prev, customer_name: 'Walk-in Customer' }))}
+                    onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: ' ', customer_phone: '', customer_email: '' }))}
                     className="w-full p-4 border-2 border-dashed border-blue-500/30 rounded-lg hover:border-blue-500 hover:bg-blue-500/10 transition-all duration-200 flex items-center justify-center space-x-2 text-blue-400 hover:text-blue-300"
                   >
                     <UserPlus className="w-5 h-5" />
@@ -1165,7 +1158,7 @@ const POS = () => {
                 )}
               </div>
 
-              <div className="space-y-3 max-h-64 overflow-y-auto">
+              <div className="space-y-3 max-h-64 overflow-y-auto custom-scrollbar">
                 {/* Services */}
                 {currentTransaction.services.map((service, index) => (
                   <div key={`service-${index}`} className="flex items-center justify-between p-3 bg-[#1A1A1A] rounded-lg border border-[#555555]/30">

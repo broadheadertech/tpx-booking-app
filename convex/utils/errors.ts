@@ -32,6 +32,7 @@ export const ERROR_CODES = {
   TRANSACTION_NOT_FOUND: 'TRANSACTION_NOT_FOUND',
   TRANSACTION_ALREADY_REFUNDED: 'TRANSACTION_ALREADY_REFUNDED',
   TRANSACTION_PAYMENT_FAILED: 'TRANSACTION_PAYMENT_FAILED',
+  TRANSACTION_INVALID_CUSTOMER_NAME: 'TRANSACTION_INVALID_CUSTOMER_NAME',
   
   // Voucher errors
   VOUCHER_NOT_FOUND: 'VOUCHER_NOT_FOUND',
@@ -167,6 +168,13 @@ const ERROR_MESSAGES: Record<string, UserError> = {
     code: ERROR_CODES.TRANSACTION_ALREADY_REFUNDED,
     details: 'This transaction was previously refunded and cannot be refunded again.',
     action: 'Check your refund history or contact support if you have questions.'
+  },
+  
+  [ERROR_CODES.TRANSACTION_INVALID_CUSTOMER_NAME]: {
+    message: 'Customer name is required for walk-in transactions.',
+    code: ERROR_CODES.TRANSACTION_INVALID_CUSTOMER_NAME,
+    details: 'Please provide a valid customer name for walk-in customers.',
+    action: 'Enter the customer\'s name and try again.'
   },
   
   [ERROR_CODES.VOUCHER_NOT_FOUND]: {

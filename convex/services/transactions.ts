@@ -82,6 +82,11 @@ export const createTransaction = mutation({
     skip_booking_creation: v.optional(v.boolean()) // Flag to skip automatic booking creation
   },
   handler: async (ctx, args) => {
+    // Validate walk-in customer has a name
+    if (!args.customer && (!args.customer_name || args.customer_name.trim() === '')) {
+      throwUserError(ERROR_CODES.TRANSACTION_INVALID_CUSTOMER_NAME);
+    }
+
     // Generate unique transaction ID and receipt number
     const timestamp = Date.now();
     const transactionId = `TXN-${timestamp}`;
