@@ -13,8 +13,6 @@ const BookingsManagement = ({ onRefresh, user }) => {
   const [sortBy, setSortBy] = useState('date')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const [showStartDatePicker, setShowStartDatePicker] = useState(false)
-  const [showEndDatePicker, setShowEndDatePicker] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingBooking, setEditingBooking] = useState(null)
   const [showQRCode, setShowQRCode] = useState(null)
@@ -161,17 +159,6 @@ const BookingsManagement = ({ onRefresh, user }) => {
       return a._id.localeCompare(b._id)
     })
 
-  // Close date pickers when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (!event.target.closest('.date-picker-container')) {
-        setShowStartDatePicker(false)
-        setShowEndDatePicker(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   // Reset to page 1 when filter or search changes
   useEffect(() => {
@@ -1682,77 +1669,30 @@ const BookingsManagement = ({ onRefresh, user }) => {
               <option value="service">Sort by Service</option>
             </select>
 
-            {/* Date Filters with Enhanced Date Picker */}
-            <div className="flex items-center space-x-2 relative date-picker-container">
-            <Calendar className="h-3 w-3 text-white" />              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowStartDatePicker(!showStartDatePicker)
-                    setShowEndDatePicker(false)
-                  }}
-                  className={`flex items-center space-x-1.5 px-2.5 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg text-xs hover:border-[#FF8C42]/50 transition-colors ${
-                    startDate ? 'border-[#FF8C42]/50' : ''
-                  }`}
-                >
-                  <Calendar className="h-3 w-3 text-gray-400" />
-                  <span className="min-w-[80px] text-left">
-                    {startDate ? new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Start Date'}
-                  </span>
-                </button>
-                {showStartDatePicker && (
-                  <div className="absolute top-full left-0 mt-1 z-50 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg shadow-xl p-3">
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => {
-                        setStartDate(e.target.value)
-                        setShowStartDatePicker(false)
-                      }}
-                      className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
-                    />
-                  </div>
-                )}
-              </div>
+            {/* Date Filters */}
+            <div className="flex items-center space-x-2">
+              <Calendar className="h-3 w-3 text-white" />
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="px-2.5 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                placeholder="Start Date"
+              />
               <span className="text-gray-500 text-xs">to</span>
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowEndDatePicker(!showEndDatePicker)
-                    setShowStartDatePicker(false)
-                  }}
-                  className={`flex items-center space-x-1.5 px-2.5 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg text-xs hover:border-[#FF8C42]/50 transition-colors ${
-                    endDate ? 'border-[#FF8C42]/50' : ''
-                  }`}
-                >
-                  <Calendar className="h-3 w-3 text-white" />
-                  <span className="min-w-[80px] text-left">
-                    {endDate ? new Date(endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'End Date'}
-                  </span>
-                </button>
-                {showEndDatePicker && (
-                  <div className="absolute top-full right-0 mt-1 z-50 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg shadow-xl p-3">
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => {
-                        setEndDate(e.target.value)
-                        setShowEndDatePicker(false)
-                      }}
-                      min={startDate || undefined}
-                      className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
-                    />
-                  </div>
-                )}
-              </div>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate || undefined}
+                className="px-2.5 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                placeholder="End Date"
+              />
               {(startDate || endDate) && (
                 <button
                   onClick={() => {
                     setStartDate('')
                     setEndDate('')
-                    setShowStartDatePicker(false)
-                    setShowEndDatePicker(false)
                   }}
                   className="px-2 py-1 text-xs text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded transition-colors"
                   title="Clear date filters"
