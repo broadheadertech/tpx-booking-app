@@ -115,9 +115,7 @@ function Login() {
     try {
       setLoading(true)
       setError('')
-      // Optionally store guest state
-      localStorage.setItem('guestUser', JSON.stringify({ role: 'guest', name: 'Guest User' }))
-      navigate('/customer/dashboard') // or '/guest/dashboard' if you prefer
+      navigate('/guest/booking') // or '/guest/dashboard' if you prefer
     } catch (err) {
       setError('Unable to continue as guest. Please try again.')
     } finally {
@@ -247,7 +245,7 @@ function Login() {
                     disabled={loading}
                     className="w-full h-12 bg-[#2A2A2A] hover:bg-[#3A3A3A] active:bg-[#4A4A4A] text-white font-semibold rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 disabled:cursor-not-allowed text-sm"
                   >
-                    Continue as Guest
+                    Book as Guest
                   </button>
                   <p className="text-xs text-gray-500 text-center mt-2">
                     Limited access — your data won’t be saved
