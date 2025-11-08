@@ -524,11 +524,38 @@ export const createGuestUser = mutation({
       .withIndex("by_email", (q) => q.eq("email", args.email))
       .first();
 
-    if (existingUser) {
-      console.log(`Guest creation failed: Email ${args.email} already exists for user ${existingUser._id}`);
+    // If user exists and is a customer, return them for guest booking
+    if (existingUser && existingUser.role === "customer") {
+      console.log(`Guest booking: Existing customer found for email ${args.email}, user ID: ${existingUser._id}`);
+
+      // Update mobile number if different
+      if (args.mobile_number && args.mobile_number !== existingUser.mobile_number) {
+        await ctx.db.patch(existingUser._id, {
+          mobile_number: args.mobile_number,
+          updatedAt: now,
+        });
+        console.log(`Updated mobile number for existing customer ${existingUser._id}`);
+      }
+
+      return {
+        _id: existingUser._id,
+        username: existingUser.username,
+        email: existingUser.email,
+        nickname: existingUser.nickname || args.guest_name,
+        mobile_number: existingUser.mobile_number,
+        role: existingUser.role,
+        branch_id: existingUser.branch_id || args.branch_id,
+        is_active: existingUser.is_active,
+        isExistingUser: true, // Flag to indicate this was an existing user
+      };
+    }
+
+    // If user exists but is not a customer (staff, admin, etc.), don't allow guest booking
+    if (existingUser && existingUser.role !== "customer") {
+      console.log(`Guest creation blocked: Email ${args.email} belongs to ${existingUser.role} user ${existingUser._id}`);
       throwUserError(ERROR_CODES.AUTH_EMAIL_EXISTS,
-        `Email ${args.email} is already registered`,
-        "An account with this email already exists. Please try logging in or use a different email."
+        `This email is registered as a ${existingUser.role} account`,
+        "This email address is already registered as a staff or admin account. Please use a different email for guest booking."
       );
     }
 

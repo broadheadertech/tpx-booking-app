@@ -1253,6 +1253,13 @@ const GuestServiceBooking = ({ onBack }) => {
     message: "",
   });
 
+  // Success notification state
+  const [successNotification, setSuccessNotification] = useState({
+    isOpen: false,
+    title: "Success",
+    message: "",
+  });
+
   const showErrorDialog = (title, message) => {
     setErrorDialog({
       isOpen: true,
@@ -1265,6 +1272,31 @@ const GuestServiceBooking = ({ onBack }) => {
     setErrorDialog({
       isOpen: false,
       title: "Error",
+      message: "",
+    });
+  };
+
+  const showSuccessNotification = (title, message) => {
+    setSuccessNotification({
+      isOpen: true,
+      title: title,
+      message: message,
+    });
+
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      setSuccessNotification({
+        isOpen: false,
+        title: "Success",
+        message: "",
+      });
+    }, 3000);
+  };
+
+  const closeSuccessNotification = () => {
+    setSuccessNotification({
+      isOpen: false,
+      title: "Success",
       message: "",
     });
   };
@@ -1329,12 +1361,29 @@ const GuestServiceBooking = ({ onBack }) => {
       });
 
       sessionStorage.setItem("user_id", newUser._id);
-      sessionStorage.setItem("guest_username", guestUsername);
-      sessionStorage.setItem("guest_temp_password", generatedPassword);
+
+      // Handle existing vs new guest user
+      if (newUser.isExistingUser) {
+        console.log("✅ Existing customer found for guest booking:", newUser._id);
+        sessionStorage.setItem("guest_type", "existing_customer");
+        // Show success message for existing user
+        showSuccessNotification(
+          "Welcome Back!",
+          "We found your existing account. You can continue with your booking."
+        );
+      } else {
+        sessionStorage.setItem("guest_username", guestUsername);
+        sessionStorage.setItem("guest_temp_password", generatedPassword);
+        sessionStorage.setItem("guest_type", "new_guest");
+        console.log("✅ New guest account created successfully:", newUser._id);
+        showSuccessNotification(
+          "Account Created!",
+          "Your guest account has been created successfully."
+        );
+      }
 
       setStep(5);
       setIsSignedIn(true);
-      console.log("✅ Guest account created successfully:", newUser._id);
 
     } catch (error) {
       console.error("❌ Guest sign-in failed:", error);
@@ -1344,12 +1393,17 @@ const GuestServiceBooking = ({ onBack }) => {
       let errorMessage = "Failed to create guest account. Please try again.";
 
       if (error.message?.includes("email already exists") || error.message?.includes("AUTH_EMAIL_EXISTS")) {
-        title = "Email Already Registered";
-        errorMessage = "An account with this email already exists. Please try logging in with your existing account or use a different email address.";
-        setFormErrors({ email: "Email already registered" });
+        if (error.message?.includes("staff") || error.message?.includes("admin")) {
+          title = "Account Type Restricted";
+          errorMessage = "This email address is registered as a staff or admin account. Please use a different email for guest booking.";
+        } else {
+          title = "Booking Issue";
+          errorMessage = "There was an issue with your booking. Please try again or contact support.";
+        }
+        setFormErrors({ email: "Unable to use this email" });
       } else if (error.message?.includes("username already exists") || error.message?.includes("AUTH_USERNAME_EXISTS")) {
-        title = "Username Conflict";
-        errorMessage = "There was a username conflict. Please try again in a moment.";
+        title = "System Issue";
+        errorMessage = "There was a temporary issue creating your booking. Please try again.";
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -1957,6 +2011,37 @@ const GuestServiceBooking = ({ onBack }) => {
             >
               OK
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Success Notification */}
+      {successNotification.isOpen && (
+        <div className="fixed top-4 right-4 z-50 max-w-sm">
+          <div className="bg-green-500/90 backdrop-blur-sm text-white rounded-xl shadow-2xl border border-green-400/30 p-4">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-white mb-1">
+                  {successNotification.title}
+                </h4>
+                <p className="text-sm text-green-50">
+                  {successNotification.message}
+                </p>
+              </div>
+              <button
+                onClick={closeSuccessNotification}
+                className="flex-shrink-0 text-green-100 hover:text-white transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       )}
