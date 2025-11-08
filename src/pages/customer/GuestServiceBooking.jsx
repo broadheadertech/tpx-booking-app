@@ -711,7 +711,7 @@ const GuestServiceBooking = ({ onBack }) => {
     );
   };
 
- const renderServiceSelection = () => {
+  const renderServiceSelection = () => {
     if (loading || !services) {
       return (
         <div className="flex items-center justify-center py-12">
@@ -795,7 +795,6 @@ const GuestServiceBooking = ({ onBack }) => {
       </div>
     );
   };
-
 
   const renderTimeAndStaffSelection = () => (
     <div className="px-4 pb-6 max-w-2xl mx-auto space-y-6">
@@ -1246,7 +1245,6 @@ const GuestServiceBooking = ({ onBack }) => {
   };
 
   const renderGuestSignIn = () => {
-
     return (
       <div className="px-4 pb-6 max-w-2xl mx-auto">
         {/* Header */}
