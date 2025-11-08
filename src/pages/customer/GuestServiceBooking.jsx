@@ -711,28 +711,65 @@ const GuestServiceBooking = ({ onBack }) => {
     );
   };
 
-  const renderServiceSelection = () => {
-    if (loading || !services) {
-      return (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42]"></div>
-        </div>
-      );
-    }
+  const renderServiceSelection  = () => {
+  if (loading || !services) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42]"></div>
+      </div>
+    );
+  }
 
-    if (error) {
-      return (
-        <div className="text-center py-12 px-4">
-          <p className="text-sm text-red-400 mb-4">{error}</p>
+  if (error) {
+    return (
+      <div className="text-center py-12 px-4">
+        <p className="text-sm text-red-400 mb-4">{error}</p>
+        <button
+          onClick={loadBookingData}
+          className="px-6 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors text-sm font-medium"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  // Group services by category
+  const categories = services.reduce((acc, service) => {
+    const category = service.category || "Uncategorized";
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(service);
+    return acc;
+  }, {});
+
+  return (
+    <div className="px-4 pb-6 max-w-2xl mx-auto">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-white mb-1">Choose Service</h2>
+        <p className="text-sm text-gray-400">
+          Select the service you'd like to book at {selectedBranch?.name}
+        </p>
+      </div>
+
+      {/* Search Bar */}
+      <div className="mb-4 relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+        <input
+          type="text"
+          placeholder="Search services..."
+          value={serviceSearchTerm}
+          onChange={(e) => setServiceSearchTerm(e.target.value)}
+          className="w-full pl-10 pr-10 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:outline-none focus:border-[#FF8C42] transition-colors text-sm"
+        />
+        {serviceSearchTerm && (
           <button
-            onClick={loadBookingData}
-            className="px-6 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors text-sm font-medium"
+            onClick={() => setServiceSearchTerm("")}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
           >
-            Try Again
+            <X className="w-4 h-4" />
           </button>
-        </div>
-      );
-    }
+        )}
+      </div>
 
     // Group services by category
     const categories = services.reduce((acc, service) => {
@@ -872,8 +909,10 @@ const GuestServiceBooking = ({ onBack }) => {
           )}
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
+
 
   const renderTimeAndStaffSelection = () => (
     <div className="px-4 pb-6 max-w-2xl mx-auto space-y-6">
@@ -1324,6 +1363,7 @@ const GuestServiceBooking = ({ onBack }) => {
   };
 
   const renderGuestSignIn = () => {
+
     return (
       <div className="px-4 pb-6 max-w-2xl mx-auto">
         {/* Header */}
