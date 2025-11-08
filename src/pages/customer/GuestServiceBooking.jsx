@@ -1908,6 +1908,11 @@ const GuestServiceBooking = ({ onBack }) => {
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+
       {/* Step Indicator */}
       <div className="relative z-10">{renderStepIndicator()}</div>
 
