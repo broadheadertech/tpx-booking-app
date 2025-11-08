@@ -54,7 +54,7 @@ const Dashboard = () => {
   useEffect(() => {
     const handleSwitchToBookings = () => {
       console.log('Switching to bookings tab...')
-      setActiveSection('bookings')
+      setActiveSection('home')
     }
 
     window.addEventListener('switchToBookings', handleSwitchToBookings)
