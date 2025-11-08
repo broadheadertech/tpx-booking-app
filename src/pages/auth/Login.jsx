@@ -115,9 +115,7 @@ function Login() {
     try {
       setLoading(true)
       setError('')
-      // Optionally store guest state
-      localStorage.setItem('guestUser', JSON.stringify({ role: 'guest', name: 'Guest User' }))
-      navigate('/customer/dashboard') // or '/guest/dashboard' if you prefer
+      navigate('/guest/booking') // or '/guest/dashboard' if you prefer
     } catch (err) {
       setError('Unable to continue as guest. Please try again.')
     } finally {
