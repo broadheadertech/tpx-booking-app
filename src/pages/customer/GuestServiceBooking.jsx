@@ -744,53 +744,132 @@ const GuestServiceBooking = ({ onBack }) => {
 
     return (
       <div className="px-4 pb-6 max-w-2xl mx-auto">
-        {/* Header & Search */}
-        ...
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-white mb-1">Choose Service</h2>
+          <p className="text-sm text-gray-400">
+            Select the service you'd like to book at {selectedBranch?.name}
+          </p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-4 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search services..."
+            value={serviceSearchTerm}
+            onChange={(e) => setServiceSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-10 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:outline-none focus:border-[#FF8C42] transition-colors text-sm"
+          />
+          {serviceSearchTerm && (
+            <button
+              onClick={() => setServiceSearchTerm("")}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
         {/* Category Dropdowns */}
         <div className="space-y-3">
-          {Object.entries(categories).map(([categoryName, categoryServices]) => {
-            const filteredServices = categoryServices.filter((service) => {
-              const searchLower = serviceSearchTerm.toLowerCase();
+          {Object.entries(categories).map(
+            ([categoryName, categoryServices]) => {
+              // Filter services within this category based on search term
+              const filteredServices = categoryServices.filter((service) => {
+                const searchLower = serviceSearchTerm.toLowerCase();
+                return (
+                  service.name.toLowerCase().includes(searchLower) ||
+                  (service.description &&
+                    service.description.toLowerCase().includes(searchLower)) ||
+                  service.price.toString().includes(searchLower)
+                );
+              });
+
+              if (filteredServices.length === 0) return null;
+
+              const isOpen = openCategory === categoryName;
+
               return (
-                service.name.toLowerCase().includes(searchLower) ||
-                (service.description &&
-                  service.description.toLowerCase().includes(searchLower)) ||
-                service.price.toString().includes(searchLower)
-              );
-            });
-
-            if (filteredServices.length === 0) return null;
-
-            const isOpen = openCategory === categoryName;
-
-            return (
-              <div
-                key={categoryName}
-                className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]"
-              >
-                <button
-                  onClick={() => setOpenCategory(isOpen ? null : categoryName)}
-                  className="w-full text-left px-4 py-3 flex justify-between items-center text-white font-semibold"
+                <div
+                  key={categoryName}
+                  className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]"
                 >
-                  <span>{categoryName}</span>
-                  <span>{isOpen ? "−" : "+"}</span>
-                </button>
-                {isOpen && (
-                  <div className="space-y-2 px-4 pb-4">
-                    {filteredServices.map((service) => (
-                      <button
-                        key={service._id}
-                        onClick={() => handleServiceSelect(service)}
-                        className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[#FF8C42] rounded-lg p-4 text-left transition-all duration-200 flex justify-between items-start"
-                      >
-                        {/* service details */}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  <button
+                    onClick={() =>
+                      setOpenCategory(isOpen ? null : categoryName)
+                    }
+                    className="w-full text-left px-4 py-3 flex justify-between items-center text-white font-semibold"
+                  >
+                    <span>{categoryName}</span>
+                    <span>{isOpen ? "−" : "+"}</span>
+                  </button>
+
+                  {isOpen && (
+                    <div className="space-y-2 px-4 pb-4">
+                      {filteredServices.map((service) => {
+                        const availableBarbers = barbers
+                          ? barbers.filter(
+                              (barber) =>
+                                barber.services &&
+                                Array.isArray(barber.services) &&
+                                barber.services.some(
+                                  (serviceId) => serviceId === service._id
+                                )
+                            ).length
+                          : 0;
+
+                        return (
+                          <button
+                            key={service._id}
+                            onClick={() => handleServiceSelect(service)}
+                            className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[#FF8C42] rounded-lg p-4 text-left transition-all duration-200 flex justify-between items-start"
+                          >
+                            <div>
+                              <h3 className="text-base font-semibold text-white">
+                                {service.name}
+                              </h3>
+                              {service.description && (
+                                <p className="text-xs text-gray-400 line-clamp-2">
+                                  {service.description}
+                                </p>
+                              )}
+                              <span className="text-[#FF8C42] font-bold mt-1 block">
+                                ₱
+                                {parseFloat(
+                                  service.price || 0
+                                ).toLocaleString()}
+                              </span>
+                              {availableBarbers === 0 && (
+                                <p className="text-[10px] text-amber-500 mt-1">
+                                  Limited availability
+                                </p>
+                              )}
+                            </div>
+                            <div className="self-center text-gray-500">
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 5l7 7-7 7"
+                                />
+                              </svg>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+          )}
         </div>
       </div>
     );
@@ -1794,26 +1873,21 @@ const GuestServiceBooking = ({ onBack }) => {
       {/* Header */}
       
       <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
-  <div className="max-w-md mx-auto px-4">
-    <div className="relative flex items-center justify-center py-4">
-
-      {/* Back Arrow - Left aligned */}
-      <button
-        onClick={() => setStep((prev) => Math.max(prev - 1, 1))}
-        className="absolute left-0 flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-xl hover:bg-white/10 transition-all duration-200"
-      >
-        <ArrowLeft className="w-5 h-5" />
-      </button>
-
-      {/* Title - Centered */}
-      <div className="text-center">
-        <p className="text-lg font-light text-white">Book Service</p>
-        <p className="text-xs text-[#FF8C42]">Step {step} of 6</p>
+        <div className="max-w-md mx-auto px-4">
+          <div className="flex items-center justify-center py-4">
+            <button
+              onClick={onBack}
+              className="flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-xl hover:bg-white/10 transition-all duration-200"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="text-center">
+              <p className="text-lg font-light text-white">Book Service</p>
+              <p className="text-xs text-[#FF8C42]">Step {step} of 6</p>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</div>
-
 
       {/* Step Indicator */}
       <div className="relative z-10">{renderStepIndicator()}</div>
