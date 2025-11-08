@@ -735,28 +735,20 @@ const GuestServiceBooking = ({ onBack }) => {
     }
 
     // Group services by category
-    // Define the preferred category order
-    const categoryOrder = ["Haircut", "Package", "Other Services"];
-
-    // Group services by category
-    const categoriesMap = services.reduce((acc, service) => {
-      const category = service.category || "Other Services"; // default to "Other Services"
+    const categories = services.reduce((acc, service) => {
+      const category = service.category || "Other Services"; // default to Other Services
       if (!acc[category]) acc[category] = [];
       acc[category].push(service);
       return acc;
     }, {});
 
-    // Create a sorted array of category entries based on the preferred order
-    const categories = categoryOrder
-      .filter((cat) => categoriesMap[cat]) // only keep categories that exist
-      .map((cat) => [cat, categoriesMap[cat]]);
+    // Define desired order
+    const categoryOrder = ["Haircut", "Package", "Other Services"];
 
-    // If there are other uncategorized categories, append them at the end
-    Object.entries(categoriesMap).forEach(([cat, services]) => {
-      if (!categoryOrder.includes(cat)) {
-        categories.push([cat, services]);
-      }
-    });
+    // Create an array of categories in the desired order
+    const orderedCategories = categoryOrder
+      .map((cat) => ({ name: cat, services: categories[cat] || [] }))
+      .filter((cat) => cat.services.length > 0);
 
     return (
       <div className="px-4 pb-6 max-w-2xl mx-auto">
@@ -789,8 +781,8 @@ const GuestServiceBooking = ({ onBack }) => {
 
         {/* Category Dropdowns */}
         <div className="space-y-3">
-          {Object.entries(categories).map(
-            ([categoryName, categoryServices]) => {
+          {orderedCategories.map(
+            ({ name: categoryName, services: categoryServices }) => {
               // Filter services within this category based on search term
               const filteredServices = categoryServices.filter((service) => {
                 const searchLower = serviceSearchTerm.toLowerCase();
@@ -1907,11 +1899,6 @@ const GuestServiceBooking = ({ onBack }) => {
           </div>
         </div>
       </div>
-
-    </div>
-  </div>
-</div>
-
 
       {/* Step Indicator */}
       <div className="relative z-10">{renderStepIndicator()}</div>
