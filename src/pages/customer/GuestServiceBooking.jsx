@@ -735,28 +735,15 @@ const GuestServiceBooking = ({ onBack }) => {
     }
 
     // Group services by category
-    // Define the preferred category order
     const categoryOrder = ["Haircut", "Package", "Other Services"];
 
     // Group services by category
-    const categoriesMap = services.reduce((acc, service) => {
+    const categories = services.reduce((acc, service) => {
       const category = service.category || "Other Services"; // default to "Other Services"
       if (!acc[category]) acc[category] = [];
       acc[category].push(service);
       return acc;
     }, {});
-
-    // Create a sorted array of category entries based on the preferred order
-    const categories = categoryOrder
-      .filter((cat) => categoriesMap[cat]) // only keep categories that exist
-      .map((cat) => [cat, categoriesMap[cat]]);
-
-    // If there are other uncategorized categories, append them at the end
-    Object.entries(categoriesMap).forEach(([cat, services]) => {
-      if (!categoryOrder.includes(cat)) {
-        categories.push([cat, services]);
-      }
-    });
 
     return (
       <div className="px-4 pb-6 max-w-2xl mx-auto">
