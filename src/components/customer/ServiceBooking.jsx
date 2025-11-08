@@ -668,11 +668,11 @@ const ServiceBooking = ({ onBack }) => {
                       <div className="space-y-0.5 text-xs text-gray-400">
                         <p className="truncate">{branch.address}</p>
                         <div className="flex items-center gap-3">
-                          <span>{branch.phone}</span>
+                          {/* <span>{branch.phone}</span>
                           <span className="text-gray-600">•</span>
                           <span className="text-gray-500">
                             #{branch.branch_code}
-                          </span>
+                          </span> */}
                         </div>
                       </div>
                     </div>
