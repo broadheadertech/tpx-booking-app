@@ -21,7 +21,7 @@ import NotificationsPage from '../../components/customer/NotificationsPage'
 const Dashboard = () => {
   const { user, isAuthenticated } = useAuth()
   const location = useLocation()
-  const [activeSection, setActiveSection] = useState('booking')
+  const [activeSection, setActiveSection] = useState('home')
   const [showOnboarding, setShowOnboarding] = useState(false)
   
   // Hook for real-time notifications with toast alerts
@@ -32,7 +32,7 @@ const Dashboard = () => {
 
   // Check if we're EXACTLY on the customer dashboard route (not on booking or other pages)
   const isOnCustomerDashboard = location.pathname === '/customer/dashboard' &&
-    !location.pathname.includes('/booking') &&
+    !location.pathname.includes('/home') &&
     !location.pathname.includes('/client')
 
   // Early return if not on dashboard route - prevents navigation from showing on other pages
