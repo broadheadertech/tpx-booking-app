@@ -735,12 +735,28 @@ const GuestServiceBooking = ({ onBack }) => {
     }
 
     // Group services by category
-    const categories = services.reduce((acc, service) => {
-      const category = service.category || "Uncategorized";
+    // Define the preferred category order
+    const categoryOrder = ["Haircut", "Package", "Other Services"];
+
+    // Group services by category
+    const categoriesMap = services.reduce((acc, service) => {
+      const category = service.category || "Other Services"; // default to "Other Services"
       if (!acc[category]) acc[category] = [];
       acc[category].push(service);
       return acc;
     }, {});
+
+    // Create a sorted array of category entries based on the preferred order
+    const categories = categoryOrder
+      .filter((cat) => categoriesMap[cat]) // only keep categories that exist
+      .map((cat) => [cat, categoriesMap[cat]]);
+
+    // If there are other uncategorized categories, append them at the end
+    Object.entries(categoriesMap).forEach(([cat, services]) => {
+      if (!categoryOrder.includes(cat)) {
+        categories.push([cat, services]);
+      }
+    });
 
     return (
       <div className="px-4 pb-6 max-w-2xl mx-auto">
@@ -1871,29 +1887,26 @@ const GuestServiceBooking = ({ onBack }) => {
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
       {/* Header */}
-      
+
       <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
-  <div className="max-w-md mx-auto px-4">
-    <div className="relative flex items-center justify-center py-4">
+        <div className="max-w-md mx-auto px-4">
+          <div className="relative flex items-center justify-center py-4">
+            {/* Back Arrow - Left aligned */}
+            <button
+              onClick={() => setStep((prev) => Math.max(prev - 1, 1))}
+              className="absolute left-0 flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-xl hover:bg-white/10 transition-all duration-200"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
 
-      {/* Back Arrow - Left aligned */}
-      <button
-        onClick={() => setStep((prev) => Math.max(prev - 1, 1))}
-        className="absolute left-0 flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-xl hover:bg-white/10 transition-all duration-200"
-      >
-        <ArrowLeft className="w-5 h-5" />
-      </button>
-
-      {/* Title - Centered */}
-      <div className="text-center">
-        <p className="text-lg font-light text-white">Book Service</p>
-        <p className="text-xs text-[#FF8C42]">Step {step} of 6</p>
+            {/* Title - Centered */}
+            <div className="text-center">
+              <p className="text-lg font-light text-white">Book Service</p>
+              <p className="text-xs text-[#FF8C42]">Step {step} of 6</p>
+            </div>
+          </div>
+        </div>
       </div>
-
-    </div>
-  </div>
-</div>
-
 
       {/* Step Indicator */}
       <div className="relative z-10">{renderStepIndicator()}</div>
