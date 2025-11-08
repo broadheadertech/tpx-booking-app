@@ -231,7 +231,7 @@ const Landing = () => {
               <div className="flex flex-col sm:flex-row gap-4 mb-12">
                 <button
                   onClick={() =>
-                    navigate("/platform-selection", {
+                    navigate("/guest/booking", {
                       state: { action: "booking" },
                     })
                   }

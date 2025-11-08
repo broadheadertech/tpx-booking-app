@@ -110,6 +110,21 @@ function Login() {
     }
   }
 
+  // 🧩 NEW: Guest login handler
+  const handleGuestLogin = () => {
+    try {
+      setLoading(true)
+      setError('')
+      // Optionally store guest state
+      localStorage.setItem('guestUser', JSON.stringify({ role: 'guest', name: 'Guest User' }))
+      navigate('/customer/dashboard') // or '/guest/dashboard' if you prefer
+    } catch (err) {
+      setError('Unable to continue as guest. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
       {/* Subtle background pattern */}
@@ -195,7 +210,6 @@ function Login() {
                   <Link to="/auth/forgot-password" className="text-sm font-medium text-[#FF8C42] hover:text-[#FF7A2B] transition-colors active:text-[#FF6B1A]">
                     Forgot Password?
                   </Link>
-                 
                 </div>
                 
                 <div className="pt-2">
@@ -208,6 +222,7 @@ function Login() {
                   </button>
                 </div>
 
+                {/* Facebook Button */}
                 <div className="pt-2">
                   <div className="relative">
                     <button
@@ -223,7 +238,22 @@ function Login() {
                     </span>
                   </div>
                 </div>
-                
+
+                {/* 🧩 New Guest Button */}
+                <div className="pt-3">
+                  <button
+                    type="button"
+                    onClick={handleGuestLogin}
+                    disabled={loading}
+                    className="w-full h-12 bg-[#2A2A2A] hover:bg-[#3A3A3A] active:bg-[#4A4A4A] text-white font-semibold rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 disabled:cursor-not-allowed text-sm"
+                  >
+                    Continue as Guest
+                  </button>
+                  <p className="text-xs text-gray-500 text-center mt-2">
+                    Limited access — your data won’t be saved
+                  </p>
+                </div>
+
                 <div className="text-center pt-4 border-t border-[#2A2A2A]/30 mt-8">
                   <span className="text-sm text-gray-400">Don't have an account? </span>
                   <Link 
@@ -235,7 +265,6 @@ function Login() {
                 </div>
               </form>
             </div>
-
           </div>
         </div>
       </div>
