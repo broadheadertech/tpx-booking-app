@@ -1873,21 +1873,27 @@ const GuestServiceBooking = ({ onBack }) => {
       {/* Header */}
       
       <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
-        <div className="max-w-md mx-auto px-4">
-          <div className="flex items-center justify-center py-4">
-            <button
-              onClick={onBack}
-              className="flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-xl hover:bg-white/10 transition-all duration-200"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div className="text-center">
-              <p className="text-lg font-light text-white">Book Service</p>
-              <p className="text-xs text-[#FF8C42]">Step {step} of 6</p>
-            </div>
-          </div>
-        </div>
+  <div className="max-w-md mx-auto px-4">
+    <div className="relative flex items-center justify-center py-4">
+
+      {/* Back Arrow - Left aligned */}
+      <button
+        onClick={() => setStep((prev) => Math.max(prev - 1, 1))}
+        className="absolute left-0 flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-xl hover:bg-white/10 transition-all duration-200"
+      >
+        <ArrowLeft className="w-5 h-5" />
+      </button>
+
+      {/* Title - Centered */}
+      <div className="text-center">
+        <p className="text-lg font-light text-white">Book Service</p>
+        <p className="text-xs text-[#FF8C42]">Step {step} of 6</p>
       </div>
+
+    </div>
+  </div>
+</div>
+
 
       {/* Step Indicator */}
       <div className="relative z-10">{renderStepIndicator()}</div>
