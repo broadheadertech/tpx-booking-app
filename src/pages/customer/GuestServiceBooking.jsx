@@ -1017,7 +1017,7 @@ const GuestServiceBooking = ({ onBack }) => {
                 .toISOString()
                 .split("T")[0]
             } // 30 days ahead
-            className="w-full p-3 border-2 border-gray-200 rounded-lg text-base font-medium focus:outline-none focus:border-orange-500 transition-colors"
+            className="w-full p-3 border-2 border-gray-200 rounded-lg text-base font-medium focus:outline-none focus:border-orange-500 transition-colors  bg-white"
             style={{ color: "#36454F" }}
           />
         </div>
