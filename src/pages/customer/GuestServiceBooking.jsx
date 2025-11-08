@@ -58,40 +58,7 @@ const GuestServiceBooking = ({ onBack }) => {
   });
   const [isSignedIn, setIsSignedIn] = useState(false);
   const createUser = useMutation(api.services.auth.createUser);
-
-  // ✅ This handles guest form submission
-  const handleGuestSignIn = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    // Generate random password
-
-    const generatedPassword = Math.random().toString(36).slice(-8);
-
-    try {
-      // Example API call – adjust URL for your backend
-      const newUser = await createUser({
-        username: guestData.name.trim(),
-        email: guestData.email.trim(),
-        password: generatedPassword,
-        mobile_number: guestData.number?.trim() || undefined,
-        role: "customer",
-        branch_id: selectedBranch._id, // Assign new customers to the current branch
-      });
-
-      sessionStorage.setItem("user_id", newUser._id);
-
-      setStep(5);
-      console.log("Guest created:", newUser._id);
-      setIsSignedIn(true);
-      alert("You are now signed in as a guest!");
-    } catch (error) {
-      console.error("Guest sign-in failed:", error);
-      alert("Failed to sign in as guest");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const createGuestUser = useMutation(api.services.auth.createGuestUser);
   const { user, isAuthenticated } = useAuth();
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
@@ -101,14 +68,12 @@ const GuestServiceBooking = ({ onBack }) => {
   });
   const [selectedTime, setSelectedTime] = useState(null);
   const [selectedStaff, setSelectedStaff] = useState(null);
-  const [step, setStep] = useState(1); // 1: branch, 2: services, 3: date & time & staff, 4: confirmation, 5: success
+  const [step, setStep] = useState(1); // 1: branch, 2: services, 3: date & time & staff, 4: guest info, 5: confirmation, 6: success
   const [loading, setLoading] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [error, setError] = useState(null);
   const [createdBooking, setCreatedBooking] = useState(null);
   const [qrCodeLoading, setQrCodeLoading] = useState(true);
-  const [showPaymentMethods, setShowPaymentMethods] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
   const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
   const [branchSearchTerm, setBranchSearchTerm] = useState("");
@@ -579,8 +544,10 @@ const GuestServiceBooking = ({ onBack }) => {
       case 3:
         return "Select Date, Time & Barber";
       case 4:
-        return "Confirm Booking";
+        return "Your Information";
       case 5:
+        return "Confirm Booking";
+      case 6:
         return "Booking Confirmed";
       default:
         return "Book Service";
@@ -589,11 +556,11 @@ const GuestServiceBooking = ({ onBack }) => {
 
   const renderStepIndicator = () => (
     <div className="flex justify-center mb-4 px-4 py-2">
-      <div className="flex items-center space-x-3">
-        {[1, 2, 3, 4].map((stepNumber) => (
+      <div className="flex items-center space-x-2">
+        {[1, 2, 3, 4, 5].map((stepNumber) => (
           <div key={stepNumber} className="flex items-center">
             <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
                 step >= stepNumber ? "text-white shadow-md" : "text-gray-500"
               }`}
               style={{
@@ -602,9 +569,9 @@ const GuestServiceBooking = ({ onBack }) => {
             >
               {step > stepNumber ? "✓" : stepNumber}
             </div>
-            {stepNumber < 4 && (
+            {stepNumber < 5 && (
               <div
-                className={`w-8 h-0.5 mx-1 rounded transition-all duration-300`}
+                className={`w-4 h-0.5 mx-1 rounded transition-all duration-300`}
                 style={{
                   backgroundColor: step > stepNumber ? "#F68B24" : "#E0E0E0",
                 }}
@@ -1276,51 +1243,250 @@ const GuestServiceBooking = ({ onBack }) => {
     </div>
   );
 
+  // Form validation state for guest sign-in
+  const [formErrors, setFormErrors] = useState({});
+
+  // Error dialog state
+  const [errorDialog, setErrorDialog] = useState({
+    isOpen: false,
+    title: "Error",
+    message: "",
+  });
+
+  const showErrorDialog = (title, message) => {
+    setErrorDialog({
+      isOpen: true,
+      title: title,
+      message: message,
+    });
+  };
+
+  const closeErrorDialog = () => {
+    setErrorDialog({
+      isOpen: false,
+      title: "Error",
+      message: "",
+    });
+  };
+
+  const validateGuestForm = () => {
+    const errors = {};
+
+    if (!guestData.name.trim()) {
+      errors.name = "Full name is required";
+    } else if (guestData.name.trim().length < 2) {
+      errors.name = "Name must be at least 2 characters";
+    }
+
+    if (!guestData.email.trim()) {
+      errors.email = "Email is required";
+    } else if (!/\S+@\S+\.\S+/.test(guestData.email)) {
+      errors.email = "Please enter a valid email address";
+    }
+
+    if (!guestData.number.trim()) {
+      errors.number = "Phone number is required";
+    } else if (!/^\+?[0-9\s\-\(\)]{7,}$/.test(guestData.number)) {
+      errors.number = "Please enter a valid phone number";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleGuestSignInSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateGuestForm()) {
+      return;
+    }
+
+    // Show loading state
+    setLoading(true);
+    setFormErrors({});
+
+    try {
+      // Generate a unique username for guest users
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).slice(2, 6);
+      const guestUsername = `guest_${guestData.name.toLowerCase().replace(/\s+/g, '_')}_${timestamp}_${randomSuffix}`;
+      const generatedPassword = Math.random().toString(36).slice(-8);
+
+      console.log("Creating guest user with data:", {
+        username: guestUsername,
+        email: guestData.email.trim(),
+        mobile_number: guestData.number?.trim() || undefined,
+        branch_id: selectedBranch?._id,
+      });
+
+      const newUser = await createGuestUser({
+        username: guestUsername,
+        email: guestData.email.trim(),
+        password: generatedPassword,
+        mobile_number: guestData.number?.trim() || undefined,
+        branch_id: selectedBranch?._id,
+        guest_name: guestData.name.trim(), // Pass original guest name
+      });
+
+      sessionStorage.setItem("user_id", newUser._id);
+      sessionStorage.setItem("guest_username", guestUsername);
+      sessionStorage.setItem("guest_temp_password", generatedPassword);
+
+      setStep(5);
+      setIsSignedIn(true);
+      console.log("✅ Guest account created successfully:", newUser._id);
+
+    } catch (error) {
+      console.error("❌ Guest sign-in failed:", error);
+
+      // Handle specific error cases
+      let title = "Sign In Failed";
+      let errorMessage = "Failed to create guest account. Please try again.";
+
+      if (error.message?.includes("email already exists") || error.message?.includes("AUTH_EMAIL_EXISTS")) {
+        title = "Email Already Registered";
+        errorMessage = "An account with this email already exists. Please try logging in with your existing account or use a different email address.";
+        setFormErrors({ email: "Email already registered" });
+      } else if (error.message?.includes("username already exists") || error.message?.includes("AUTH_USERNAME_EXISTS")) {
+        title = "Username Conflict";
+        errorMessage = "There was a username conflict. Please try again in a moment.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      showErrorDialog(title, errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderGuestSignIn = () => {
+
     return (
-      <div className="bg-[#1A1A1A] backdrop-blur-xl rounded-3xl shadow-2xl border border-[#2A2A2A]/50 m-8">
-        <div className="p-8">
-          <h2 className="text-xl font-bold text-white mb-2">
-            Sign in as Guest
-          </h2>
-          <form onSubmit={handleGuestSignIn} className="space-y-3">
-            <input
-              type="text"
-              placeholder="Full Name"
-              value={guestData.name}
-              required
-              onChange={(e) =>
-                setGuestData({ ...guestData, name: e.target.value })
-              }
-              className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42] transition-all duration-300 text-base text-white placeholder-gray-400"
-            />
-            <input
-              type="email"
-              placeholder="Email Address"
-              value={guestData.email}
-              required
-              onChange={(e) =>
-                setGuestData({ ...guestData, email: e.target.value })
-              }
-              className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42] transition-all duration-300 text-base text-white placeholder-gray-400"
-            />
-            <input
-              type="text"
-              placeholder="Phone Number"
-              value={guestData.number}
-              required
-              onChange={(e) =>
-                setGuestData({ ...guestData, number: e.target.value })
-              }
-              className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42] transition-all duration-300 text-base text-white placeholder-gray-400"
-            />
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-orange-500 text-white py-2 rounded-lg font-semibold hover:bg-orange-600"
-            >
-              {loading ? "Signing in..." : "Continue as Guest"}
-            </button>
+      <div className="px-4 pb-6 max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="mb-6 text-center">
+          <h2 className="text-2xl font-light text-white mb-2">Your Information</h2>
+          <p className="text-sm text-gray-400">
+            We'll create a temporary guest account for your booking
+          </p>
+          <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full bg-[#FF8C42]/10 border border-[#FF8C42]/20">
+            <span className="text-xs text-[#FF8C42]">🔒 Secure & Private</span>
+          </div>
+        </div>
+
+        {/* Guest Form Card */}
+        <div className="bg-[#1A1A1A] backdrop-blur-xl rounded-2xl shadow-xl border border-[#2A2A2A]/50 p-6">
+          <form onSubmit={handleGuestSignInSubmit} className="space-y-5">
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-2">
+                Full Name <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Enter your full name"
+                value={guestData.name}
+                required
+                onChange={(e) => {
+                  setGuestData({ ...guestData, name: e.target.value });
+                  if (formErrors.name) {
+                    setFormErrors({ ...formErrors, name: "" });
+                  }
+                }}
+                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
+                  formErrors.name
+                    ? 'border-red-500 focus:border-red-500'
+                    : 'border-[#3A3A3A] focus:border-[#FF8C42]'
+                }`}
+              />
+              {formErrors.name && (
+                <p className="text-xs text-red-400 mt-1">{formErrors.name}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-2">
+                Email Address <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="email"
+                placeholder="Enter your email address"
+                value={guestData.email}
+                required
+                onChange={(e) => {
+                  setGuestData({ ...guestData, email: e.target.value });
+                  if (formErrors.email) {
+                    setFormErrors({ ...formErrors, email: "" });
+                  }
+                }}
+                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
+                  formErrors.email
+                    ? 'border-red-500 focus:border-red-500'
+                    : 'border-[#3A3A3A] focus:border-[#FF8C42]'
+                }`}
+              />
+              {formErrors.email && (
+                <p className="text-xs text-red-400 mt-1">{formErrors.email}</p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">We'll only use this for booking confirmation</p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-2">
+                Phone Number <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="tel"
+                placeholder="+63 912 345 6789"
+                value={guestData.number}
+                required
+                onChange={(e) => {
+                  setGuestData({ ...guestData, number: e.target.value });
+                  if (formErrors.number) {
+                    setFormErrors({ ...formErrors, number: "" });
+                  }
+                }}
+                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
+                  formErrors.number
+                    ? 'border-red-500 focus:border-red-500'
+                    : 'border-[#3A3A3A] focus:border-[#FF8C42]'
+                }`}
+              />
+              {formErrors.number && (
+                <p className="text-xs text-red-400 mt-1">{formErrors.number}</p>
+              )}
+              <p className="text-xs text-gray-500 mt-1">For booking updates and reminders</p>
+            </div>
+
+            <div className="pt-2 space-y-3">
+              <button
+                type="submit"
+                disabled={loading}
+                className={`w-full py-3 rounded-xl font-light transition-all duration-300 text-sm ${
+                  loading
+                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white hover:shadow-lg transform hover:scale-[1.02]'
+                }`}
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    <span>Creating your guest account...</span>
+                  </div>
+                ) : (
+                  'Continue to Booking'
+                )}
+              </button>
+
+              <div className="text-center">
+                <p className="text-xs text-gray-500">
+                  By continuing, you agree to create a guest account for booking purposes
+                </p>
+                <p className="text-xs text-gray-600 mt-1">
+                  You can always upgrade to a full account later
+                </p>
+              </div>
+            </div>
           </form>
         </div>
       </div>
@@ -1496,240 +1662,74 @@ const GuestServiceBooking = ({ onBack }) => {
             )}
           </div>
 
-          {/* Payment Options */}
+          {/* Payment Options - Pay Later Only */}
           <div className="border-t pt-3" style={{ borderColor: "#E0E0E0" }}>
             <h4 className="text-sm font-bold mb-3" style={{ color: "#36454F" }}>
               Complete Your Booking
             </h4>
 
-            {!showPaymentMethods ? (
-              <div className="grid grid-cols-2 gap-3 mb-3">
-  
-                <button
-                  onClick={() => setShowPaymentMethods(true)}
-                  disabled={true}
-                  className={`py-3 px-4 bg-green-500 text-white font-bold rounded-lg transition-all duration-200 text-sm flex items-center justify-center space-x-2 ${
-                    bookingLoading ? "opacity-75 cursor-not-allowed" : ""
-                  }`}
-                  onMouseEnter={(e) =>
-                    !bookingLoading &&
-                    (e.target.style.backgroundColor = "#16A34A")
-                  }
-                  onMouseLeave={(e) =>
-                    !bookingLoading &&
-                    (e.target.style.backgroundColor = "#22C55E")
-                  }
-                >
-                  <span>💳</span>
-                  <span>Pay Now</span>
-                </button>
-                <button
-                  onClick={() => handleConfirmBooking("pay_later")}
-                  disabled={bookingLoading}
-                  className={`py-3 px-4 border-2 font-bold rounded-lg transition-all duration-200 text-sm flex items-center justify-center space-x-2 ${
-                    bookingLoading ? "opacity-75 cursor-not-allowed" : ""
-                  }`}
-                  style={{
-                    borderColor: "#F68B24",
-                    color: bookingLoading ? "#CCCCCC" : "#F68B24",
-                  }}
-                  onMouseEnter={(e) =>
-                    !bookingLoading &&
-                    ((e.target.style.backgroundColor = "#F68B24"),
-                    (e.target.style.color = "white"))
-                  }
-                  onMouseLeave={(e) =>
-                    !bookingLoading &&
-                    ((e.target.style.backgroundColor = "transparent"),
-                    (e.target.style.color = "#F68B24"))
-                  }
-                >
-                  {bookingLoading ? (
-                    <div className="flex items-center justify-center space-x-2">
-                      <div className="animate-spin w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full"></div>
-                      <span>Booking...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <span>🏪</span>
-                      <span>Pay Later</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="bg-[#1A1A1A] rounded-lg p-3 border border-[#2A2A2A]">
-                  <h5 className="text-sm font-bold mb-2 text-white">
-                    Select Payment Method
-                  </h5>
-                  <div className="space-y-2">
-                    <button
-                      key="gcash"
-                      onClick={() => setSelectedPaymentMethod("gcash")}
-                      className={`w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-3 ${
-                        selectedPaymentMethod === "gcash"
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-200 hover:border-blue-300"
-                      }`}
-                    >
-                      <div className="w-8 h-8 bg-blue-500 rounded flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">G</span>
-                      </div>
-                      <div className="text-left">
-                        <p
-                          className="font-bold text-sm"
-                          style={{ color: "#36454F" }}
-                        >
-                          GCash
-                        </p>
-                        <p className="text-xs" style={{ color: "#8B8B8B" }}>
-                          Digital wallet payment
-                        </p>
-                      </div>
-                    </button>
-
-                    <button
-                      key="maya"
-                      onClick={() => setSelectedPaymentMethod("maya")}
-                      className={`w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-3 ${
-                        selectedPaymentMethod === "maya"
-                          ? "border-green-500 bg-green-50"
-                          : "border-gray-200 hover:border-green-300"
-                      }`}
-                    >
-                      <div className="w-8 h-8 bg-green-500 rounded flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">M</span>
-                      </div>
-                      <div className="text-left">
-                        <p
-                          className="font-bold text-sm"
-                          style={{ color: "#36454F" }}
-                        >
-                          Maya
-                        </p>
-                        <p className="text-xs" style={{ color: "#8B8B8B" }}>
-                          Digital wallet payment
-                        </p>
-                      </div>
-                    </button>
-
-                    <button
-                      key="card"
-                      onClick={() => setSelectedPaymentMethod("card")}
-                      className={`w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-3 ${
-                        selectedPaymentMethod === "card"
-                          ? "border-purple-500 bg-purple-50"
-                          : "border-gray-200 hover:border-purple-300"
-                      }`}
-                    >
-                      <div className="w-8 h-8 bg-purple-500 rounded flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">💳</span>
-                      </div>
-                      <div className="text-left">
-                        <p
-                          className="font-bold text-sm"
-                          style={{ color: "#36454F" }}
-                        >
-                          Credit/Debit Card
-                        </p>
-                        <p className="text-xs" style={{ color: "#8B8B8B" }}>
-                          Visa, Mastercard, etc.
-                        </p>
-                      </div>
-                    </button>
-                  </div>
+            <button
+              onClick={() => handleConfirmBooking("pay_later")}
+              disabled={bookingLoading}
+              className={`w-full py-3 px-4 rounded-lg transition-all duration-200 text-sm flex items-center justify-center space-x-2 font-bold ${
+                bookingLoading
+                  ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                  : "bg-orange-500 hover:bg-orange-600 text-white hover:shadow-lg"
+              }`}
+              style={{
+                backgroundColor: bookingLoading ? '#4B5563' : '#FF8C42',
+                color: bookingLoading ? '#D1D5DB' : '#FFFFFF',
+              }}
+              onMouseEnter={(e) => {
+                if (!bookingLoading) {
+                  e.target.style.backgroundColor = '#FF7A2B';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!bookingLoading) {
+                  e.target.style.backgroundColor = '#FF8C42';
+                }
+              }}
+            >
+              {bookingLoading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="animate-spin w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                  <span>Booking...</span>
                 </div>
+              ) : (
+                <>
+                  <span>🏪</span>
+                  <span>Complete Booking - Pay at Shop</span>
+                </>
+              )}
+            </button>
 
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => {
-                      setShowPaymentMethods(false);
-                      setSelectedPaymentMethod(null);
-                    }}
-                    className="flex-1 py-2 px-3 border font-bold rounded-lg transition-all duration-200 text-sm"
-                    style={{ borderColor: "#E0E0E0", color: "#8B8B8B" }}
-                    onMouseEnter={(e) => {
-                      e.target.style.backgroundColor = "#F5F5F5";
-                      e.target.style.color = "#36454F";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = "transparent";
-                      e.target.style.color = "#8B8B8B";
-                    }}
-                  >
-                    Back
-                  </button>
-                  <button
-                    onClick={() =>
-                      handleConfirmBooking("pay_now", selectedPaymentMethod)
-                    }
-                    disabled={!selectedPaymentMethod || bookingLoading}
-                    className={`flex-1 py-2 px-3 text-white font-bold rounded-lg transition-all duration-200 shadow-lg text-sm ${
-                      !selectedPaymentMethod || bookingLoading
-                        ? "opacity-75 cursor-not-allowed"
-                        : ""
-                    }`}
-                    style={{
-                      backgroundColor:
-                        !selectedPaymentMethod || bookingLoading
-                          ? "#CCCCCC"
-                          : "#22C55E",
-                    }}
-                    onMouseEnter={(e) =>
-                      !selectedPaymentMethod ||
-                      bookingLoading ||
-                      (e.target.style.backgroundColor = "#16A34A")
-                    }
-                    onMouseLeave={(e) =>
-                      !selectedPaymentMethod ||
-                      bookingLoading ||
-                      (e.target.style.backgroundColor = "#22C55E")
-                    }
-                  >
-                    {bookingLoading ? (
-                      <div className="flex items-center justify-center space-x-2">
-                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
-                        <span>Processing...</span>
-                      </div>
-                    ) : (
-                      "Confirm & Pay"
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {!showPaymentMethods && (
-              <p
-                className="text-xs text-center mb-3"
-                style={{ color: "#8B8B8B" }}
-              >
-                Choose your preferred payment option to complete booking
-              </p>
-            )}
+            <p
+              className="text-xs text-center mt-3"
+              style={{ color: "#8B8B8B" }}
+            >
+              Complete your booking now and pay when you arrive at the shop
+            </p>
           </div>
 
           {/* Go Back Button */}
-          {!showPaymentMethods && (
-            <div className="pt-2">
-              <button
-                onClick={() => setStep(3)}
-                className="w-full py-2 px-3 border font-bold rounded-lg transition-all duration-200 text-sm"
-                style={{ borderColor: "#E0E0E0", color: "#8B8B8B" }}
-                onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = "#F5F5F5";
-                  e.target.style.color = "#36454F";
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = "transparent";
-                  e.target.style.color = "#8B8B8B";
-                }}
-              >
-                ← Go Back to Edit Details
-              </button>
-            </div>
-          )}
+          <div className="pt-2">
+            <button
+              onClick={() => setStep(3)}
+              className="w-full py-2 px-3 border font-bold rounded-lg transition-all duration-200 text-sm"
+              style={{ borderColor: "#E0E0E0", color: "#8B8B8B" }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = "#F5F5F5";
+                e.target.style.color = "#36454F";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = "transparent";
+                e.target.style.color = "#8B8B8B";
+              }}
+            >
+              ← Go Back to Edit Details
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1745,29 +1745,29 @@ const GuestServiceBooking = ({ onBack }) => {
           >
             <CheckCircle className="w-10 h-10 text-white" />
           </div>
-          <h2 className="text-2xl font-black mb-2 text-white">
+          <h2 className="text-3xl font-light mb-2 text-white">
             Booking Confirmed!
           </h2>
-          <p className="font-medium text-gray-300">
+          <p className="font-light text-gray-300 text-sm">
             Your appointment has been successfully booked
           </p>
         </div>
 
         {/* QR Code */}
-        <div className="bg-[#1A1A1A] rounded-2xl p-8 border-2 border-[#2A2A2A] shadow-lg text-center">
-          <h3 className="text-lg font-black mb-4 text-white">
+        <div className="bg-[#1A1A1A] rounded-2xl p-8 border border-[#2A2A2A] shadow-lg text-center">
+          <h3 className="text-lg font-light mb-4 text-white">
             Your Booking QR Code
           </h3>
 
           {/* Real QR Code */}
-          <div className="flex justify-center mb-4">
-            <div className="p-4 bg-[#0A0A0A] rounded-2xl border-2 border-[#2A2A2A] shadow-sm">
-              <div className="relative w-48 h-48">
+          <div className="flex justify-center mb-6">
+            <div className="p-6 bg-white rounded-2xl shadow-sm border border-gray-200">
+              <div className="relative w-44 h-44">
                 {(qrCodeLoading || !getBookingById?.booking_code) && (
                   <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
                     <div className="text-center space-y-3">
-                      <div className="animate-spin w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full mx-auto"></div>
-                      <p className="text-sm text-gray-700">
+                      <div className="animate-spin w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full mx-auto"></div>
+                      <p className="text-xs text-gray-600">
                         {!getBookingById?.booking_code
                           ? "Loading booking details..."
                           : "Generating QR Code..."}
@@ -1777,7 +1777,7 @@ const GuestServiceBooking = ({ onBack }) => {
                 )}
                 <canvas
                   ref={qrRef}
-                  className="rounded-xl w-full h-full"
+                  className="rounded-lg w-full h-full"
                   style={{
                     display:
                       qrCodeLoading || !getBookingById?.booking_code
@@ -1789,11 +1789,11 @@ const GuestServiceBooking = ({ onBack }) => {
             </div>
           </div>
 
-          <div className="text-center space-y-2">
-            <div className="text-lg font-black text-white">
+          <div className="text-center space-y-3">
+            <div className="text-lg font-light text-white">
               Booking Code:{" "}
               {getBookingById?.booking_code ? (
-                getBookingById.booking_code
+                <span className="font-bold text-[#FF8C42]">{getBookingById.booking_code}</span>
               ) : (
                 <span className="inline-flex items-center space-x-2">
                   <span className="text-gray-400">Generating...</span>
@@ -1801,8 +1801,8 @@ const GuestServiceBooking = ({ onBack }) => {
                 </span>
               )}
             </div>
-            <p className="text-sm text-gray-400">
-              Screenshot, and Show this QR when you arrived.
+            <p className="text-xs text-gray-400">
+              Screenshot this QR code and show it when you arrive
             </p>
           </div>
         </div>
@@ -1815,22 +1815,23 @@ const GuestServiceBooking = ({ onBack }) => {
             borderColor: "rgba(246, 139, 36, 0.2)",
           }}
         >
+          <h4 className="text-sm font-light text-white mb-4 text-center">Booking Details</h4>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="font-medium text-gray-300">Branch:</span>
-              <span className="font-bold text-white">
+              <span className="font-light text-gray-400 text-sm">Branch:</span>
+              <span className="font-normal text-white text-sm">
                 {selectedBranch?.name}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="font-medium text-gray-300">Service:</span>
-              <span className="font-bold text-white">
+              <span className="font-light text-gray-400 text-sm">Service:</span>
+              <span className="font-normal text-white text-sm">
                 {selectedService?.name}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="font-medium text-gray-300">Date & Time:</span>
-              <span className="font-bold text-white">
+              <span className="font-light text-gray-400 text-sm">Date & Time:</span>
+              <span className="font-normal text-white text-sm">
                 {createdBooking?.date
                   ? new Date(createdBooking.date).toLocaleDateString()
                   : "Today"}
@@ -1838,12 +1839,12 @@ const GuestServiceBooking = ({ onBack }) => {
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="font-medium text-gray-300">Barber:</span>
+              <span className="font-light text-gray-400 text-sm">Barber:</span>
               <div className="flex items-center space-x-2">
                 {selectedStaff && (
-                  <BarberAvatar barber={selectedStaff} className="w-8 h-8" />
+                  <BarberAvatar barber={selectedStaff} className="w-6 h-6" />
                 )}
-                <span className="font-bold text-white">
+                <span className="font-normal text-white text-sm">
                   {selectedStaff?.full_name ||
                     selectedStaff?.name ||
                     "Any Barber"}
@@ -1852,25 +1853,25 @@ const GuestServiceBooking = ({ onBack }) => {
             </div>
             {selectedVoucher && (
               <div className="flex justify-between">
-                <span className="font-medium text-gray-300">Subtotal:</span>
-                <span className="font-bold line-through text-gray-400">
+                <span className="font-light text-gray-400 text-sm">Subtotal:</span>
+                <span className="font-normal line-through text-gray-500 text-sm">
                   ₱{selectedService?.price.toLocaleString()}
                 </span>
               </div>
             )}
             {selectedVoucher && (
               <div className="flex justify-between">
-                <span className="font-medium text-gray-300">
+                <span className="font-light text-gray-400 text-sm">
                   Voucher Discount:
                 </span>
-                <span className="font-bold text-green-400">
+                <span className="font-normal text-green-400 text-sm">
                   -₱{parseFloat(selectedVoucher.value || 0).toLocaleString()}
                 </span>
               </div>
             )}
             <div className="flex justify-between border-t pt-3 border-orange-500/30">
-              <span className="font-bold text-white">Total:</span>
-              <span className="font-black text-lg text-orange-400">
+              <span className="font-light text-white">Total:</span>
+              <span className="font-normal text-lg text-[#FF8C42]">
                 ₱
                 {createdBooking?.total_amount
                   ? parseFloat(createdBooking.total_amount).toLocaleString()
@@ -1897,9 +1898,9 @@ const GuestServiceBooking = ({ onBack }) => {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
         <div className="max-w-md mx-auto px-4">
-          <div className="flex items-center py-4">
+          <div className="flex items-center justify-center py-4">
             <div className="text-center">
-              <p className="text-lg font-bold text-white">Book Service</p>
+              <p className="text-lg font-light text-white">Book Service</p>
               <p className="text-xs text-[#FF8C42]">Step {step} of 6</p>
             </div>
           </div>
@@ -1918,6 +1919,47 @@ const GuestServiceBooking = ({ onBack }) => {
         {step === 5 && renderConfirmation()}
         {step === 6 && renderBookingSuccess()}
       </div>
+
+      {/* Error Dialog Modal */}
+      {errorDialog.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={closeErrorDialog}
+          ></div>
+
+          {/* Modal */}
+          <div className="relative bg-[#1A1A1A] rounded-2xl shadow-2xl border border-[#2A2A2A] max-w-md w-full mx-auto p-6">
+            {/* Error Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-lg font-semibold text-white text-center mb-2">
+              {errorDialog.title}
+            </h3>
+
+            {/* Message */}
+            <p className="text-sm text-gray-300 text-center mb-6 leading-relaxed">
+              {errorDialog.message}
+            </p>
+
+            {/* Action Button */}
+            <button
+              onClick={closeErrorDialog}
+              className="w-full py-3 bg-[#FF8C42] hover:bg-[#FF7A2B] text-white font-medium rounded-xl transition-all duration-200"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

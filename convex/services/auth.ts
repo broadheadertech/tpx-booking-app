@@ -505,6 +505,109 @@ export const createUser = mutation({
   },
 });
 
+// Create guest user mutation (for guest bookings with better redundancy handling)
+export const createGuestUser = mutation({
+  args: {
+    username: v.string(),
+    email: v.string(),
+    password: v.string(),
+    mobile_number: v.optional(v.string()),
+    branch_id: v.optional(v.id("branches")),
+    guest_name: v.string(), // Original guest name for logging
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // Check if email already exists
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+
+    if (existingUser) {
+      console.log(`Guest creation failed: Email ${args.email} already exists for user ${existingUser._id}`);
+      throwUserError(ERROR_CODES.AUTH_EMAIL_EXISTS,
+        `Email ${args.email} is already registered`,
+        "An account with this email already exists. Please try logging in or use a different email."
+      );
+    }
+
+    // Check if username already exists and generate unique one if needed
+    let finalUsername = args.username;
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    while (attempts < maxAttempts) {
+      const existingUsername = await ctx.db
+        .query("users")
+        .withIndex("by_username", (q) => q.eq("username", finalUsername))
+        .first();
+
+      if (!existingUsername) {
+        break; // Username is available
+      }
+
+      // Generate a new unique username
+      const timestamp = now;
+      const randomSuffix = Math.random().toString(36).slice(2, 8);
+      finalUsername = `guest_${args.guest_name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')}_${timestamp}_${randomSuffix}`;
+      attempts++;
+
+      console.log(`Username conflict detected, trying new username: ${finalUsername} (attempt ${attempts})`);
+    }
+
+    if (attempts >= maxAttempts) {
+      console.error(`Failed to generate unique username after ${maxAttempts} attempts for guest ${args.guest_name}`);
+      throwUserError(ERROR_CODES.VALIDATION_ERROR,
+        "Unable to generate unique username",
+        "Please try again in a moment."
+      );
+    }
+
+    // Create new guest user
+    const userId = await ctx.db.insert("users", {
+      username: finalUsername,
+      email: args.email,
+      password: hashPassword(args.password),
+      mobile_number: args.mobile_number || "",
+      address: undefined,
+      nickname: args.guest_name, // Store original guest name as nickname
+      birthday: undefined,
+      role: "customer",
+      branch_id: args.branch_id,
+      is_active: true,
+      avatar: undefined,
+      bio: undefined,
+      skills: [],
+      isVerified: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Get the created user
+    const user = await ctx.db.get(userId);
+
+    console.log(`✅ Guest user created successfully:`, {
+      id: userId,
+      username: finalUsername,
+      email: args.email,
+      guest_name: args.guest_name,
+      branch_id: args.branch_id
+    });
+
+    return {
+      _id: userId,
+      username: user?.username,
+      email: user?.email,
+      nickname: user?.nickname,
+      mobile_number: user?.mobile_number,
+      role: user?.role,
+      branch_id: user?.branch_id,
+      is_active: user?.is_active,
+    };
+  },
+});
+
 // Update user mutation (for admin use)
 export const updateUser = mutation({
   args: {
