@@ -79,6 +79,7 @@ const GuestServiceBooking = ({ onBack }) => {
   const [branchSearchTerm, setBranchSearchTerm] = useState("");
   const [serviceSearchTerm, setServiceSearchTerm] = useState("");
   const qrRef = useRef(null);
+   const [openCategory, setOpenCategory] = useState(null); // ✅ Top level hook
 
   // Convex queries
   const branches = useQuery(api.services.branches.getActiveBranches);
@@ -710,183 +711,162 @@ const GuestServiceBooking = ({ onBack }) => {
     );
   };
 
-  const renderServiceSelection = () => {
-    if (loading || !services) {
-      return (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42]"></div>
-        </div>
-      );
-    }
-
-    if (error) {
-      return (
-        <div className="text-center py-12 px-4">
-          <p className="text-sm text-red-400 mb-4">{error}</p>
-          <button
-            onClick={loadBookingData}
-            className="px-6 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors text-sm font-medium"
-          >
-            Try Again
-          </button>
-        </div>
-      );
-    }
-
-    // Filter services based on search
-    const filteredServices = services
-      ? services.filter((service) => {
-          const searchLower = serviceSearchTerm.toLowerCase();
-          return (
-            service.name.toLowerCase().includes(searchLower) ||
-            (service.description &&
-              service.description.toLowerCase().includes(searchLower)) ||
-            service.price.toString().includes(searchLower)
-          );
-        })
-      : [];
-
+  const renderServiceSelection  = () => {
+  if (loading || !services) {
     return (
-      <div className="px-4 pb-6 max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-white mb-1">Choose Service</h2>
-          <p className="text-sm text-gray-400">
-            Select the service you'd like to book at {selectedBranch?.name}
-          </p>
-        </div>
-
-        {/* Search Bar */}
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search services by name, description, or price..."
-              value={serviceSearchTerm}
-              onChange={(e) => setServiceSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:outline-none focus:border-[#FF8C42] transition-colors text-sm"
-            />
-            {serviceSearchTerm && (
-              <button
-                onClick={() => setServiceSearchTerm("")}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Service List - Modern & Professional */}
-        {filteredServices.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-sm text-gray-400">
-              No services found matching "{serviceSearchTerm}"
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredServices.map((service) => {
-              // Calculate available barbers for this service
-              const availableBarbers = barbers
-                ? barbers.filter(
-                    (barber) =>
-                      barber.services &&
-                      Array.isArray(barber.services) &&
-                      barber.services.some(
-                        (serviceId) => serviceId === service._id
-                      )
-                  ).length
-                : 0;
-
-              return (
-                <button
-                  key={service._id}
-                  onClick={() => handleServiceSelect(service)}
-                  className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[#FF8C42] rounded-lg p-4 text-left transition-all duration-200 group"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      {/* Service Name with Badge */}
-                      <div className="flex items-start gap-2 mb-1">
-                        <h3 className="text-base font-semibold text-white group-hover:text-[#FF8C42] transition-colors flex-1">
-                          {service.name}
-                        </h3>
-                        {availableBarbers > 0 && (
-                          <span className="flex-shrink-0 px-2 py-0.5 bg-[#FF8C42]/20 border border-[#FF8C42]/30 rounded text-[10px] font-semibold text-[#FF8C42]">
-                            {availableBarbers}{" "}
-                            {availableBarbers === 1 ? "Barber" : "Barbers"}
-                          </span>
-                        )}
-                      </div>
-
-                      {service.description && (
-                        <p className="text-xs text-gray-400 mb-2 line-clamp-2 leading-relaxed">
-                          {service.description}
-                        </p>
-                      )}
-
-                      {/* Service Details - Modern Layout */}
-                      <div className="flex items-center gap-3 text-xs">
-                        {service.duration_minutes && (
-                          <div className="flex items-center gap-1 text-gray-500">
-                            <Clock className="w-3 h-3" />
-                            <span>{service.duration_minutes} min</span>
-                          </div>
-                        )}
-                        {service.duration_minutes && (
-                          <span className="text-gray-700">•</span>
-                        )}
-                        <span className="text-[#FF8C42] font-bold">
-                          ₱{parseFloat(service.price || 0).toLocaleString()}
-                        </span>
-                      </div>
-
-                      {/* Availability Warning */}
-                      {availableBarbers === 0 && (
-                        <div className="mt-2 flex items-center gap-1 text-[10px] text-amber-500">
-                          <svg
-                            className="w-3 h-3"
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                          <span>Limited availability</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Arrow Indicator */}
-                    <div className="flex-shrink-0 text-gray-500 group-hover:text-[#FF8C42] transition-colors self-center">
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42]"></div>
       </div>
     );
-  };
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12 px-4">
+        <p className="text-sm text-red-400 mb-4">{error}</p>
+        <button
+          onClick={loadBookingData}
+          className="px-6 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors text-sm font-medium"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  // Group services by category
+  const categories = services.reduce((acc, service) => {
+    const category = service.category || "Uncategorized";
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(service);
+    return acc;
+  }, {});
+
+  return (
+    <div className="px-4 pb-6 max-w-2xl mx-auto">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-white mb-1">Choose Service</h2>
+        <p className="text-sm text-gray-400">
+          Select the service you'd like to book at {selectedBranch?.name}
+        </p>
+      </div>
+
+      {/* Search Bar */}
+      <div className="mb-4 relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+        <input
+          type="text"
+          placeholder="Search services..."
+          value={serviceSearchTerm}
+          onChange={(e) => setServiceSearchTerm(e.target.value)}
+          className="w-full pl-10 pr-10 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:outline-none focus:border-[#FF8C42] transition-colors text-sm"
+        />
+        {serviceSearchTerm && (
+          <button
+            onClick={() => setServiceSearchTerm("")}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Category Dropdowns */}
+      <div className="space-y-3">
+        {Object.entries(categories).map(([categoryName, categoryServices]) => {
+          // Filter services within this category based on search term
+          const filteredServices = categoryServices.filter((service) => {
+            const searchLower = serviceSearchTerm.toLowerCase();
+            return (
+              service.name.toLowerCase().includes(searchLower) ||
+              (service.description &&
+                service.description.toLowerCase().includes(searchLower)) ||
+              service.price.toString().includes(searchLower)
+            );
+          });
+
+          if (filteredServices.length === 0) return null;
+
+          const isOpen = openCategory === categoryName;
+
+          return (
+            <div key={categoryName} className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]">
+              <button
+                onClick={() =>
+                  setOpenCategory(isOpen ? null : categoryName)
+                }
+                className="w-full text-left px-4 py-3 flex justify-between items-center text-white font-semibold"
+              >
+                <span>{categoryName}</span>
+                <span>{isOpen ? "−" : "+"}</span>
+              </button>
+
+              {isOpen && (
+                <div className="space-y-2 px-4 pb-4">
+                  {filteredServices.map((service) => {
+                    const availableBarbers = barbers
+                      ? barbers.filter(
+                          (barber) =>
+                            barber.services &&
+                            Array.isArray(barber.services) &&
+                            barber.services.some(
+                              (serviceId) => serviceId === service._id
+                            )
+                        ).length
+                      : 0;
+
+                    return (
+                      <button
+                        key={service._id}
+                        onClick={() => handleServiceSelect(service)}
+                        className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[#FF8C42] rounded-lg p-4 text-left transition-all duration-200 flex justify-between items-start"
+                      >
+                        <div>
+                          <h3 className="text-base font-semibold text-white">
+                            {service.name}
+                          </h3>
+                          {service.description && (
+                            <p className="text-xs text-gray-400 line-clamp-2">
+                              {service.description}
+                            </p>
+                          )}
+                          <span className="text-[#FF8C42] font-bold mt-1 block">
+                            ₱{parseFloat(service.price || 0).toLocaleString()}
+                          </span>
+                          {availableBarbers === 0 && (
+                            <p className="text-[10px] text-amber-500 mt-1">
+                              Limited availability
+                            </p>
+                          )}
+                        </div>
+                        <div className="self-center text-gray-500">
+                          <svg
+                            className="w-5 h-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 
   const renderTimeAndStaffSelection = () => (
     <div className="space-y-4 px-4">
