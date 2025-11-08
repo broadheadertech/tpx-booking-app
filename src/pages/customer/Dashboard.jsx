@@ -21,7 +21,7 @@ import NotificationsPage from '../../components/customer/NotificationsPage'
 const Dashboard = () => {
   const { user, isAuthenticated } = useAuth()
   const location = useLocation()
-  const [activeSection, setActiveSection] = useState('home')
+  const [activeSection, setActiveSection] = useState('booking')
   const [showOnboarding, setShowOnboarding] = useState(false)
   
   // Hook for real-time notifications with toast alerts

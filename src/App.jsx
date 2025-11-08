@@ -20,6 +20,7 @@ import POS from "./pages/staff/POS";
 import AdminDashboard from "./pages/admin/Dashboard";
 import CustomerDashboard from "./pages/customer/Dashboard";
 import CustomerBooking from "./pages/customer/Booking";
+import GuestServiceBooking from "./pages/customer/GuestServiceBooking.jsx";
 import BarberDashboard from "./components/barber/BarberDashboard";
 import Kiosk from "./pages/Kiosk";
 import PaymentSuccess from "./pages/booking/payment/success.jsx";
@@ -40,144 +41,148 @@ function App() {
       <ToastProvider>
         <Router>
           <div className="min-h-screen bg-gray-light">
-          <Routes>
-            <Route
-              path="/"
-              element={
-                initialRoute === "/auth/login" ? (
-                  <Navigate to="/auth/login" replace />
-                ) : (
-                  <Landing />
-                )
-              }
-            />
-            <Route path="/landing" element={<Landing />} />
-            <Route path="/platform-selection" element={<PlatformSelection />} />
-            <Route path="/privacy" element={<Policy />} />
-            <Route path="/account-deletion" element={<AccountDeletion />} />
-            <Route path="/email-test" element={<EmailTest />} />
-            <Route
-              path="/auth/login"
-              element={
-                <AuthRedirect>
-                  <Login />
-                </AuthRedirect>
-              }
-            />
-            <Route
-              path="/auth/forgot-password"
-              element={
-                <AuthRedirect>
-                  <ForgotPassword />
-                </AuthRedirect>
-              }
-            />
-            <Route
-              path="/auth/reset-password"
-              element={
-                <AuthRedirect>
-                  <ResetPassword />
-                </AuthRedirect>
-              }
-            />
-            <Route
-              path="/auth/facebook/callback"
-              element={<FacebookCallback />}
-            />
-            <Route
-              path="/auth/register"
-              element={
-                <AuthRedirect>
-                  <Register />
-                </AuthRedirect>
-              }
-            />
-            <Route
-              path="/admin"
-              element={<Navigate to="/admin/dashboard" replace />}
-            />
-            <Route
-              path="/admin/dashboard"
-              element={
-                <ProtectedRoute requireSuperAdmin={true}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/staff"
-              element={<Navigate to="/staff/dashboard" replace />}
-            />
-            <Route
-              path="/staff/dashboard"
-              element={
-                <ProtectedRoute requireStaff={true}>
-                  <StaffDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/staff/pos"
-              element={
-                <ProtectedRoute requireStaff={true}>
-                  <POS />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/barber"
-              element={<Navigate to="/barber/dashboard" replace />}
-            />
-            <Route
-              path="/barber/dashboard"
-              element={
-                <ProtectedRoute requireBarber={true}>
-                  <BarberDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/customer/dashboard"
-              element={
-                <ProtectedRoute>
-                  <CustomerDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/customer/booking"
-              element={
-                <ProtectedRoute>
-                  <CustomerBooking />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/customer/client"
-              element={
-                <ProtectedRoute>
-                  <CustomerDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route 
-              path="/kiosk" 
-              element={
-                <ErrorBoundary>
-                  <Kiosk />
-                </ErrorBoundary>
-              } 
-            />
-            <Route
-              path="/booking/payment/success"
-              element={<PaymentSuccess />}
-            />
-            <Route
-              path="/booking/payment/failure"
-              element={<PaymentFailure />}
-            />
-            <Route path="/download-app" element={<DownloadApp />} />
-          </Routes>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  initialRoute === "/auth/login" ? (
+                    <Navigate to="/auth/login" replace />
+                  ) : (
+                    <Landing />
+                  )
+                }
+              />
+              <Route path="/landing" element={<Landing />} />
+              <Route path="/guest/booking" element={<GuestServiceBooking />} />
+              <Route
+                path="/platform-selection"
+                element={<PlatformSelection />}
+              />
+              <Route path="/privacy" element={<Policy />} />
+              <Route path="/account-deletion" element={<AccountDeletion />} />
+              <Route path="/email-test" element={<EmailTest />} />
+              <Route
+                path="/auth/login"
+                element={
+                  <AuthRedirect>
+                    <Login />
+                  </AuthRedirect>
+                }
+              />
+              <Route
+                path="/auth/forgot-password"
+                element={
+                  <AuthRedirect>
+                    <ForgotPassword />
+                  </AuthRedirect>
+                }
+              />
+              <Route
+                path="/auth/reset-password"
+                element={
+                  <AuthRedirect>
+                    <ResetPassword />
+                  </AuthRedirect>
+                }
+              />
+              <Route
+                path="/auth/facebook/callback"
+                element={<FacebookCallback />}
+              />
+              <Route
+                path="/auth/register"
+                element={
+                  <AuthRedirect>
+                    <Register />
+                  </AuthRedirect>
+                }
+              />
+              <Route
+                path="/admin"
+                element={<Navigate to="/admin/dashboard" replace />}
+              />
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <ProtectedRoute requireSuperAdmin={true}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/staff"
+                element={<Navigate to="/staff/dashboard" replace />}
+              />
+              <Route
+                path="/staff/dashboard"
+                element={
+                  <ProtectedRoute requireStaff={true}>
+                    <StaffDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/staff/pos"
+                element={
+                  <ProtectedRoute requireStaff={true}>
+                    <POS />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/barber"
+                element={<Navigate to="/barber/dashboard" replace />}
+              />
+              <Route
+                path="/barber/dashboard"
+                element={
+                  <ProtectedRoute requireBarber={true}>
+                    <BarberDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/customer/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <CustomerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/customer/booking"
+                element={
+                  <ProtectedRoute>
+                    <CustomerBooking />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/customer/client"
+                element={
+                  <ProtectedRoute>
+                    <CustomerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/kiosk"
+                element={
+                  <ErrorBoundary>
+                    <Kiosk />
+                  </ErrorBoundary>
+                }
+              />
+              <Route
+                path="/booking/payment/success"
+                element={<PaymentSuccess />}
+              />
+              <Route
+                path="/booking/payment/failure"
+                element={<PaymentFailure />}
+              />
+              <Route path="/download-app" element={<DownloadApp />} />
+            </Routes>
           </div>
         </Router>
       </ToastProvider>

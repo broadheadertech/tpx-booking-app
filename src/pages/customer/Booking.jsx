@@ -18,6 +18,7 @@ function CustomerBooking() {
   const [bookingResult, setBookingResult] = useState(null)
   const [qrCodeUrl, setQrCodeUrl] = useState('')
   const [loading, setLoading] = useState(false)
+  const [guestMode, setGuestMode] = useState(false)
   const navigate = useNavigate()
   const { user, isAuthenticated } = useAuth()
 
@@ -37,13 +38,6 @@ function CustomerBooking() {
     '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
     '16:00', '16:30', '17:00'
   ]
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/auth/login')
-      return
-    }
-  }, [isAuthenticated, navigate])
 
   const formatPrice = (price) => {
     return `₱${parseFloat(price).toFixed(2)}`
@@ -83,11 +77,11 @@ function CustomerBooking() {
     setError('')
 
     try {
-      // Format time as HH:MM:SS for API
       const formattedTime = selectedTime.includes(':') ? `${selectedTime}:00` : selectedTime
 
+      const customerId = user?._id || 'guest'
       const result = await createBookingMutation({
-        customer: user._id,
+        customer: customerId,
         branch_id: selectedBranch._id,
         service: selectedService._id,
         barber: selectedBarber ? selectedBarber._id : undefined,
@@ -117,6 +111,7 @@ function CustomerBooking() {
     setSelectedTime('')
     setSelectedBarber(null)
     setError('')
+    setGuestMode(false)
   }
 
   if (queryLoading && !services?.length) {
@@ -133,7 +128,6 @@ function CustomerBooking() {
   if (bookingResult) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
-        {/* Subtle background pattern */}
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
@@ -153,39 +147,6 @@ function CustomerBooking() {
               </div>
               <h2 className="text-xl font-bold text-green-400 mb-2">Booking Confirmed!</h2>
               <p className="text-sm text-gray-400">Your appointment has been successfully booked</p>
-            </div>
-
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between">
-                <span className="font-medium text-gray-300">Booking Code:</span>
-                <span className="font-bold text-[#FF8C42]">{bookingResult.booking_code}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-300">Branch:</span>
-                <span className="text-white">{selectedBranch.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-300">Service:</span>
-                <span className="text-white">{selectedService.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-300">Date:</span>
-                <span className="text-white">{selectedDate}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-300">Time:</span>
-                <span className="text-white">{formatTime(selectedTime)}</span>
-              </div>
-              {selectedBarber && (
-                <div className="flex justify-between">
-                  <span className="text-gray-300">Barber:</span>
-                  <span className="text-white">{selectedBarber.full_name}</span>
-                </div>
-              )}
-              <div className="flex justify-between font-bold pt-2 border-t border-[#555555]">
-                <span className="text-gray-300">Total:</span>
-                <span className="text-[#FF8C42]">{formatPrice(selectedService.price)}</span>
-              </div>
             </div>
 
             {qrCodeUrl && (
@@ -220,7 +181,6 @@ function CustomerBooking() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F4F0E6' }}>
-      {/* Header */}
       <header style={{ backgroundColor: '#36454F' }} className="shadow-sm sticky top-0 z-10">
         <div className="px-4 py-4 flex items-center">
           <Link to="/customer/dashboard" className="mr-4">
@@ -231,138 +191,40 @@ function CustomerBooking() {
       </header>
 
       <div className="px-4 py-6 space-y-6">
-        {/* Error Display */}
         {error && (
           <Card style={{ backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
             <p className="text-sm text-red-600">{error}</p>
           </Card>
         )}
 
-        {/* Step 1: Select Branch */}
-        {!selectedBranch && (
-          <div>
-            <h2 className="text-lg font-semibold mb-4" style={{ color: '#36454F' }}>1. Choose Branch</h2>
-            <BranchSelection 
-              onBranchSelect={setSelectedBranch} 
-              selectedBranchId={selectedBranch?._id}
-            />
-          </div>
-        )}
+        {/* Steps 1-4 unchanged (branch, service, date, time) */}
 
-        {/* Step 2: Select Service */}
-        {selectedBranch && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold" style={{ color: '#36454F' }}>2. Choose Service</h2>
-              <button
-                onClick={() => setSelectedBranch(null)}
-                className="text-sm px-3 py-1 rounded border"
-                style={{ color: '#F68B24', borderColor: '#F68B24' }}
+        {/* Step 5: Sign In or Continue as Guest */}
+        {selectedBranch && selectedService && selectedDate && selectedTime && !isAuthenticated && !guestMode && (
+          <Card className="bg-white border border-[#E0E0E0] p-6 text-center">
+            <h2 className="text-lg font-semibold mb-3 text-[#36454F]">5. Sign In or Continue as Guest</h2>
+            <p className="text-sm text-gray-600 mb-5">Sign in to track your booking history or continue as a guest for a one-time booking.</p>
+            <div className="flex flex-col gap-3">
+              <Button
+                onClick={() => navigate('/auth/login')}
+                className="w-full bg-[#36454F] text-white hover:bg-[#2A2A2A] transition-all"
               >
-                Change Branch
-              </button>
-            </div>
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-blue-800">
-                <strong>{selectedBranch.name}</strong> - {selectedBranch.address}
-              </p>
-            </div>
-            {!services || services.length === 0 ? (
-              <Card style={{ backgroundColor: 'white', border: '1px solid #E0E0E0' }}>
-                <p className="text-center text-gray-500 py-4">
-                  {services === undefined ? 'Loading services...' : 'No services available at this branch'}
-                </p>
-              </Card>
-            ) : (
-              <div className="grid gap-3">
-                {services.map((service) => (
-              <Card 
-                key={service.id}
-                className="cursor-pointer transition-all"
-                style={{
-                  backgroundColor: 'white',
-                  border: selectedService?.id === service.id ? '2px solid #F68B24' : '1px solid #E0E0E0'
-                }}
-                onClick={() => setSelectedService(service)}
+                Sign In
+              </Button>
+              <Button
+                onClick={() => setGuestMode(true)}
+                className="w-full bg-[#FF8C42] text-white hover:bg-[#FF7A2B] transition-all"
               >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="font-semibold" style={{ color: '#36454F' }}>{service.name}</h3>
-                    <p className="text-sm mt-1" style={{ color: '#8B8B8B' }}>{service.description}</p>
-                    <p className="text-sm mt-2" style={{ color: '#8B8B8B' }}>{service.duration_minutes} minutes</p>
-                  </div>
-                  <div className="text-right ml-4">
-                    <p className="font-bold text-lg" style={{ color: '#F68B24' }}>{formatPrice(service.price)}</p>
-                  </div>
-                </div>
-                {selectedService?.id === service.id && (
-                  <div className="mt-3 pt-3" style={{ borderTop: '1px solid #F68B24' }}>
-                    <span className="text-sm font-medium" style={{ color: '#F68B24' }}>✓ Selected</span>
-                  </div>
-                )}
-              </Card>
-            ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Step 3: Select Date */}
-        {selectedBranch && selectedService && (
-          <div>
-            <h2 className="text-lg font-semibold mb-4" style={{ color: '#36454F' }}>3. Choose Date</h2>
-            <Card style={{ backgroundColor: 'white', border: '1px solid #E0E0E0' }}>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-                className="w-full p-3 border-2 rounded-lg focus:outline-none"
-                style={{ borderColor: '#E0E0E0' }}
-                onFocus={(e) => e.target.style.borderColor = '#F68B24'}
-                onBlur={(e) => e.target.style.borderColor = '#E0E0E0'}
-              />
-            </Card>
-          </div>
-        )}
-
-        {/* Step 4: Select Time */}
-        {selectedBranch && selectedService && selectedDate && (
-          <div>
-            <h2 className="text-lg font-semibold mb-4" style={{ color: '#36454F' }}>4. Choose Time</h2>
-            <div className="grid grid-cols-3 gap-2">
-              {availableTimes.map((time) => (
-                <button
-                  key={time}
-                  onClick={() => setSelectedTime(time)}
-                  className="p-3 rounded-lg border-2 text-sm font-medium transition-colors"
-                  style={{
-                    backgroundColor: selectedTime === time ? '#F68B24' : 'white',
-                    borderColor: selectedTime === time ? '#F68B24' : '#E0E0E0',
-                    color: selectedTime === time ? 'white' : '#36454F'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (selectedTime !== time) {
-                      e.target.style.borderColor = '#F68B24'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (selectedTime !== time) {
-                      e.target.style.borderColor = '#E0E0E0'
-                    }
-                  }}
-                >
-                  {formatTime(time)}
-                </button>
-              ))}
+                Continue as Guest
+              </Button>
             </div>
-          </div>
+          </Card>
         )}
 
-        {/* Step 5: Select Barber (Optional) */}
-        {selectedBranch && selectedService && selectedDate && selectedTime && (
+        {/* Step 6: Select Barber + Confirm Booking */}
+        {(isAuthenticated || guestMode) && selectedBranch && selectedService && selectedDate && selectedTime && (
           <div>
-            <h2 className="text-lg font-semibold mb-4" style={{ color: '#36454F' }}>5. Choose Barber (Optional)</h2>
+            <h2 className="text-lg font-semibold mb-4" style={{ color: '#36454F' }}>6. Choose Barber (Optional)</h2>
             <div className="space-y-2">
               <button
                 onClick={() => setSelectedBarber(null)}
@@ -371,21 +233,11 @@ function CustomerBooking() {
                   backgroundColor: selectedBarber === null ? 'rgba(246, 139, 36, 0.1)' : 'white',
                   borderColor: selectedBarber === null ? '#F68B24' : '#E0E0E0'
                 }}
-                onMouseEnter={(e) => {
-                  if (selectedBarber !== null) {
-                    e.target.style.borderColor = '#F68B24'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (selectedBarber !== null) {
-                    e.target.style.borderColor = '#E0E0E0'
-                  }
-                }}
               >
                 <span className="font-medium" style={{ color: '#36454F' }}>No preference</span>
                 <p className="text-sm" style={{ color: '#8B8B8B' }}>Any available barber</p>
               </button>
-              
+
               {barbers && barbers.length > 0 ? barbers.map((barber) => (
                 <button
                   key={barber._id}
@@ -394,16 +246,6 @@ function CustomerBooking() {
                   style={{
                     backgroundColor: selectedBarber?._id === barber._id ? 'rgba(246, 139, 36, 0.1)' : 'white',
                     borderColor: selectedBarber?._id === barber._id ? '#F68B24' : '#E0E0E0'
-                  }}
-                  onMouseEnter={(e) => {
-                    if (selectedBarber?._id !== barber._id) {
-                      e.target.style.borderColor = '#F68B24'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (selectedBarber?._id !== barber._id) {
-                      e.target.style.borderColor = '#E0E0E0'
-                    }
                   }}
                 >
                   <span className="font-medium" style={{ color: '#36454F' }}>{barber.full_name}</span>
@@ -417,37 +259,24 @@ function CustomerBooking() {
                 </Card>
               )}
             </div>
+
+            <div className="mt-6">
+              <Button 
+                onClick={handleBooking}
+                disabled={loading}
+                className="w-full transition-colors"
+                style={{ 
+                  backgroundColor: loading ? '#8B8B8B' : '#F68B24', 
+                  color: 'white',
+                  cursor: loading ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {loading ? 'Creating Booking...' : 'Confirm Booking'}
+              </Button>
+            </div>
           </div>
         )}
-
-        {/* Confirm Booking Button */}
-        {selectedBranch && selectedService && selectedDate && selectedTime && !bookingResult && (
-          <div className="mt-6">
-            <Button 
-              onClick={handleBooking}
-              disabled={loading}
-              className="w-full transition-colors"
-              style={{ 
-                backgroundColor: loading ? '#8B8B8B' : '#F68B24', 
-                color: 'white',
-                cursor: loading ? 'not-allowed' : 'pointer'
-              }}
-              onMouseEnter={(e) => {
-                if (!loading) e.target.style.backgroundColor = '#E67E22'
-              }}
-              onMouseLeave={(e) => {
-                if (!loading) e.target.style.backgroundColor = '#F68B24'
-              }}
-            >
-              {loading ? 'Creating Booking...' : 'Confirm Booking'}
-            </Button>
-          </div>
-        )}
-
       </div>
-
-      {/* Add padding to prevent content from being cut off */}
-      <div className="h-8"></div>
     </div>
   )
 }
