@@ -79,7 +79,7 @@ const GuestServiceBooking = ({ onBack }) => {
   const [branchSearchTerm, setBranchSearchTerm] = useState("");
   const [serviceSearchTerm, setServiceSearchTerm] = useState("");
   const qrRef = useRef(null);
-   const [openCategory, setOpenCategory] = useState(null); // ✅ Top level hook
+  const [openCategory, setOpenCategory] = useState(null); // ✅ Top level hook
 
   // Convex queries
   const branches = useQuery(api.services.branches.getActiveBranches);
@@ -711,277 +711,257 @@ const GuestServiceBooking = ({ onBack }) => {
     );
   };
 
-  const renderServiceSelection  = () => {
-  if (loading || !services) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42]"></div>
-      </div>
-    );
-  }
+  const renderServiceSelection = () => {
+    if (loading || !services) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42]"></div>
+        </div>
+      );
+    }
 
-  if (error) {
-    return (
-      <div className="text-center py-12 px-4">
-        <p className="text-sm text-red-400 mb-4">{error}</p>
-        <button
-          onClick={loadBookingData}
-          className="px-6 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors text-sm font-medium"
-        >
-          Try Again
-        </button>
-      </div>
-    );
-  }
-
-  // Group services by category
-  const categories = services.reduce((acc, service) => {
-    const category = service.category || "Uncategorized";
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(service);
-    return acc;
-  }, {});
-
-  return (
-    <div className="px-4 pb-6 max-w-2xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-white mb-1">Choose Service</h2>
-        <p className="text-sm text-gray-400">
-          Select the service you'd like to book at {selectedBranch?.name}
-        </p>
-      </div>
-
-      {/* Search Bar */}
-      <div className="mb-4 relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
-        <input
-          type="text"
-          placeholder="Search services..."
-          value={serviceSearchTerm}
-          onChange={(e) => setServiceSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-10 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:outline-none focus:border-[#FF8C42] transition-colors text-sm"
-        />
-        {serviceSearchTerm && (
+    if (error) {
+      return (
+        <div className="text-center py-12 px-4">
+          <p className="text-sm text-red-400 mb-4">{error}</p>
           <button
-            onClick={() => setServiceSearchTerm("")}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+            onClick={loadBookingData}
+            className="px-6 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors text-sm font-medium"
           >
-            <X className="w-4 h-4" />
+            Try Again
           </button>
-        )}
-      </div>
+        </div>
+      );
+    }
 
-      {/* Category Dropdowns */}
-      <div className="space-y-3">
-        {Object.entries(categories).map(([categoryName, categoryServices]) => {
-          // Filter services within this category based on search term
-          const filteredServices = categoryServices.filter((service) => {
-            const searchLower = serviceSearchTerm.toLowerCase();
-            return (
-              service.name.toLowerCase().includes(searchLower) ||
-              (service.description &&
-                service.description.toLowerCase().includes(searchLower)) ||
-              service.price.toString().includes(searchLower)
-            );
-          });
+    // Group services by category
+    const categories = services.reduce((acc, service) => {
+      const category = service.category || "Uncategorized";
+      if (!acc[category]) acc[category] = [];
+      acc[category].push(service);
+      return acc;
+    }, {});
 
-          if (filteredServices.length === 0) return null;
+    return (
+      <div className="px-4 pb-6 max-w-2xl mx-auto">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-white mb-1">Choose Service</h2>
+          <p className="text-sm text-gray-400">
+            Select the service you'd like to book at {selectedBranch?.name}
+          </p>
+        </div>
 
-          const isOpen = openCategory === categoryName;
+        {/* Search Bar */}
+        <div className="mb-4 relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search services..."
+            value={serviceSearchTerm}
+            onChange={(e) => setServiceSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-10 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:outline-none focus:border-[#FF8C42] transition-colors text-sm"
+          />
+          {serviceSearchTerm && (
+            <button
+              onClick={() => setServiceSearchTerm("")}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
 
-          return (
-            <div key={categoryName} className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]">
-              <button
-                onClick={() =>
-                  setOpenCategory(isOpen ? null : categoryName)
-                }
-                className="w-full text-left px-4 py-3 flex justify-between items-center text-white font-semibold"
-              >
-                <span>{categoryName}</span>
-                <span>{isOpen ? "−" : "+"}</span>
-              </button>
+        {/* Category Dropdowns */}
+        <div className="space-y-3">
+          {Object.entries(categories).map(
+            ([categoryName, categoryServices]) => {
+              // Filter services within this category based on search term
+              const filteredServices = categoryServices.filter((service) => {
+                const searchLower = serviceSearchTerm.toLowerCase();
+                return (
+                  service.name.toLowerCase().includes(searchLower) ||
+                  (service.description &&
+                    service.description.toLowerCase().includes(searchLower)) ||
+                  service.price.toString().includes(searchLower)
+                );
+              });
 
-              {isOpen && (
-                <div className="space-y-2 px-4 pb-4">
-                  {filteredServices.map((service) => {
-                    const availableBarbers = barbers
-                      ? barbers.filter(
-                          (barber) =>
-                            barber.services &&
-                            Array.isArray(barber.services) &&
-                            barber.services.some(
-                              (serviceId) => serviceId === service._id
-                            )
-                        ).length
-                      : 0;
+              if (filteredServices.length === 0) return null;
 
-                    return (
-                      <button
-                        key={service._id}
-                        onClick={() => handleServiceSelect(service)}
-                        className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[#FF8C42] rounded-lg p-4 text-left transition-all duration-200 flex justify-between items-start"
-                      >
-                        <div>
-                          <h3 className="text-base font-semibold text-white">
-                            {service.name}
-                          </h3>
-                          {service.description && (
-                            <p className="text-xs text-gray-400 line-clamp-2">
-                              {service.description}
-                            </p>
-                          )}
-                          <span className="text-[#FF8C42] font-bold mt-1 block">
-                            ₱{parseFloat(service.price || 0).toLocaleString()}
-                          </span>
-                          {availableBarbers === 0 && (
-                            <p className="text-[10px] text-amber-500 mt-1">
-                              Limited availability
-                            </p>
-                          )}
-                        </div>
-                        <div className="self-center text-gray-500">
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
+              const isOpen = openCategory === categoryName;
+
+              return (
+                <div
+                  key={categoryName}
+                  className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]"
+                >
+                  <button
+                    onClick={() =>
+                      setOpenCategory(isOpen ? null : categoryName)
+                    }
+                    className="w-full text-left px-4 py-3 flex justify-between items-center text-white font-semibold"
+                  >
+                    <span>{categoryName}</span>
+                    <span>{isOpen ? "−" : "+"}</span>
+                  </button>
+
+                  {isOpen && (
+                    <div className="space-y-2 px-4 pb-4">
+                      {filteredServices.map((service) => {
+                        const availableBarbers = barbers
+                          ? barbers.filter(
+                              (barber) =>
+                                barber.services &&
+                                Array.isArray(barber.services) &&
+                                barber.services.some(
+                                  (serviceId) => serviceId === service._id
+                                )
+                            ).length
+                          : 0;
+
+                        return (
+                          <button
+                            key={service._id}
+                            onClick={() => handleServiceSelect(service)}
+                            className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[#FF8C42] rounded-lg p-4 text-left transition-all duration-200 flex justify-between items-start"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 5l7 7-7 7"
-                            />
-                          </svg>
-                        </div>
-                      </button>
-                    );
-                  })}
+                            <div>
+                              <h3 className="text-base font-semibold text-white">
+                                {service.name}
+                              </h3>
+                              {service.description && (
+                                <p className="text-xs text-gray-400 line-clamp-2">
+                                  {service.description}
+                                </p>
+                              )}
+                              <span className="text-[#FF8C42] font-bold mt-1 block">
+                                ₱
+                                {parseFloat(
+                                  service.price || 0
+                                ).toLocaleString()}
+                              </span>
+                              {availableBarbers === 0 && (
+                                <p className="text-[10px] text-amber-500 mt-1">
+                                  Limited availability
+                                </p>
+                              )}
+                            </div>
+                            <div className="self-center text-gray-500">
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 5l7 7-7 7"
+                                />
+                              </svg>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          );
-        })}
+              );
+            }
+          )}
+        </div>
       </div>
-    </div>
-  );
-};
-
+    );
+  };
 
   const renderTimeAndStaffSelection = () => (
-    <div className="space-y-4 px-4">
-      <div className="text-center mb-4">
-        <h2 className="text-xl font-bold mb-2 text-white">
+    <div className="px-4 pb-6 max-w-2xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="mb-2 text-center">
+        <h2 className="text-2xl font-bold text-white mb-1">
           Select Barber & Time
         </h2>
-        <p className="text-sm font-medium text-gray-400">
-          Choose your preferred barber, then pick a time
+        <p className="text-sm text-gray-400">
+          Choose your preferred barber, then pick a schedule
         </p>
       </div>
 
       {/* Selected Service Summary */}
-      <div className="bg-[#1A1A1A] rounded-xl p-3 border border-[#2A2A2A]">
-        <div className="flex items-center space-x-2">
+      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
           <div className="text-xl">{selectedService?.image}</div>
-          <div className="flex-1">
-            <h3 className="text-base font-bold text-white">
+          <div>
+            <h3 className="text-base font-semibold text-white">
               {selectedService?.name}
             </h3>
-            <div className="flex items-center space-x-3 text-sm">
-              <span className="font-bold text-[#FF8C42]">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-[#FF8C42] font-semibold">
                 ₱{selectedService?.price.toLocaleString()}
               </span>
-              <span className="font-medium" style={{ color: "#8B8B8B" }}>
-                {selectedService?.duration}
-              </span>
+              <span className="text-gray-500">•</span>
+              <span className="text-gray-400">{selectedService?.duration}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Staff Selection - Now First */}
-      <div
-        className="bg-white rounded-xl p-4 border shadow-sm"
-        style={{ borderColor: "#E0E0E0" }}
-      >
-        <h3 className="text-base font-bold mb-3" style={{ color: "#36454F" }}>
+      {/* Step 1: Barber Selection */}
+      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
+        <h3 className="text-lg font-bold text-white mb-3">
           Step 1: Choose Your Barber
         </h3>
-        <div className="grid grid-cols-1 gap-2">
-          {getAvailableBarbers().length > 0 ? (
-            getAvailableBarbers().map((barber) => (
+        {getAvailableBarbers().length > 0 ? (
+          <div className="grid grid-cols-1 gap-3">
+            {getAvailableBarbers().map((barber) => (
               <button
                 key={barber._id}
                 onClick={() => {
                   handleStaffSelect(barber);
-                  // Reset date and time when barber changes
                   setSelectedTime(null);
                 }}
-                className="w-full p-3 rounded-lg border-2 transition-all duration-200 text-left hover:shadow-sm"
-                style={{
-                  borderColor:
-                    selectedStaff?._id === barber._id ? "#F68B24" : "#E0E0E0",
-                  backgroundColor:
-                    selectedStaff?._id === barber._id
-                      ? "rgba(246, 139, 36, 0.1)"
-                      : "white",
-                }}
+                className={`w-full flex items-center gap-3 p-3 border rounded-lg transition-all duration-200 ${
+                  selectedStaff?._id === barber._id
+                    ? "border-[#FF8C42] bg-[#FF8C42]/10"
+                    : "border-[#2A2A2A] hover:border-[#FF8C42]/50"
+                }`}
               >
-                <div className="flex items-center space-x-3">
-                  {selectedStaff?._id === barber._id ? (
-                    <div className="relative">
-                      <BarberAvatar barber={barber} className="w-10 h-10" />
-                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                        <CheckCircle className="w-3 h-3 text-white" />
-                      </div>
-                    </div>
-                  ) : (
-                    <BarberAvatar barber={barber} className="w-10 h-10" />
-                  )}
-                  <div className="flex-1">
-                    <h4
-                      className="font-bold text-sm"
-                      style={{ color: "#36454F" }}
-                    >
-                      {barber.full_name || barber.name || "Professional Barber"}
-                    </h4>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <div className="flex text-yellow-400 text-xs">★★★★★</div>
-                      <span className="text-xs" style={{ color: "#8B8B8B" }}>
-                        5.0 • Professional
-                      </span>
-                    </div>
+                <BarberAvatar barber={barber} className="w-10 h-10" />
+                <div className="flex-1 text-left">
+                  <h4 className="text-sm font-semibold text-white">
+                    {barber.full_name || barber.name || "Professional Barber"}
+                  </h4>
+                  <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                    <span className="text-yellow-400">★★★★★</span>
+                    <span>5.0 • Professional</span>
                   </div>
                 </div>
+                {selectedStaff?._id === barber._id && (
+                  <CheckCircle className="w-5 h-5 text-[#FF8C42]" />
+                )}
               </button>
-            ))
-          ) : (
-            <div className="text-center py-6">
-              <div className="text-4xl mb-2">⚠️</div>
-              <p className="text-sm font-medium" style={{ color: "#F68B24" }}>
-                No barbers available for "{selectedService?.name}"
-              </p>
-              <p className="text-xs mt-1" style={{ color: "#8B8B8B" }}>
-                This service may not be offered by our current staff
-              </p>
-              <button
-                onClick={() => setStep(1)}
-                className="mt-3 px-4 py-2 bg-orange-500 text-white text-xs font-medium rounded-lg hover:bg-orange-600 transition-colors"
-              >
-                Choose Different Service
-              </button>
-            </div>
-          )}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-6">
+            <div className="text-3xl mb-2">⚠️</div>
+            <p className="text-sm text-[#FF8C42] font-medium">
+              No barbers available for "{selectedService?.name}"
+            </p>
+            <button
+              onClick={() => setStep(1)}
+              className="mt-3 px-4 py-2 bg-[#FF8C42] text-white text-xs font-medium rounded-lg hover:bg-[#FF7A2B] transition"
+            >
+              Choose Different Service
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Date Selection - Now Second, only show if barber is selected */}
+      {/* Step 2: Date Selection */}
       {selectedStaff && (
-        <div
-          className="bg-white rounded-xl p-4 border shadow-sm"
-          style={{ borderColor: "#E0E0E0" }}
-        >
-          <h3 className="text-base font-bold mb-3" style={{ color: "#36454F" }}>
+        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
+          <h3 className="text-lg font-bold text-white mb-3">
             Step 2: Select Date
           </h3>
           <input
@@ -989,31 +969,27 @@ const GuestServiceBooking = ({ onBack }) => {
             value={selectedDate}
             onChange={(e) => {
               setSelectedDate(e.target.value);
-              setSelectedTime(null); // Reset selected time when date changes
+              setSelectedTime(null);
             }}
-            min={new Date().toISOString().split("T")[0]} // Prevent past dates
+            min={new Date().toISOString().split("T")[0]}
             max={
               new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
                 .toISOString()
                 .split("T")[0]
-            } // 30 days ahead
-            className="w-full p-3 border-2 border-gray-200 rounded-lg text-base font-medium focus:outline-none focus:border-orange-500 transition-colors  bg-white"
-            style={{ color: "#36454F" }}
+            }
+            className="w-full px-3 py-2.5 rounded-lg bg-[#121212] border border-[#2A2A2A] text-gray-200 text-sm focus:outline-none focus:border-[#FF8C42] transition-colors"
           />
         </div>
       )}
 
-      {/* Time Slots - Now Third, only show if both barber and date are selected */}
+      {/* Step 3: Time Slots */}
       {selectedStaff && selectedDate && (
-        <div
-          className="bg-white rounded-xl p-4 border shadow-sm"
-          style={{ borderColor: "#E0E0E0" }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-base font-bold" style={{ color: "#36454F" }}>
+        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-lg font-bold text-white">
               Step 3: Available Times
             </h3>
-            <span className="text-xs" style={{ color: "#8B8B8B" }}>
+            <span className="text-xs text-gray-400">
               {new Date(selectedDate).toLocaleDateString("en-PH", {
                 weekday: "short",
                 month: "short",
@@ -1023,21 +999,17 @@ const GuestServiceBooking = ({ onBack }) => {
           </div>
 
           {loadingTimeSlots ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="flex items-center space-x-3">
-                <div className="animate-spin w-5 h-5 border-2 border-orange-500 border-t-transparent rounded-full"></div>
-                <span className="text-sm" style={{ color: "#8B8B8B" }}>
-                  Loading available times...
-                </span>
-              </div>
+            <div className="flex justify-center items-center py-6 space-x-2">
+              <div className="animate-spin w-5 h-5 border-2 border-[#FF8C42] border-t-transparent rounded-full"></div>
+              <span className="text-gray-400 text-sm">Loading times...</span>
             </div>
           ) : timeSlots.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="text-4xl mb-2">📅</div>
-              <p className="text-sm font-medium" style={{ color: "#F68B24" }}>
+            <div className="text-center py-6">
+              <div className="text-3xl mb-2">📅</div>
+              <p className="text-sm text-[#FF8C42] font-medium">
                 No available times
               </p>
-              <p className="text-xs mt-1" style={{ color: "#8B8B8B" }}>
+              <p className="text-xs text-gray-400 mt-1">
                 Please select a different date
               </p>
             </div>
@@ -1049,79 +1021,31 @@ const GuestServiceBooking = ({ onBack }) => {
                     key={slot.time}
                     onClick={() => slot.available && setSelectedTime(slot.time)}
                     disabled={!slot.available}
-                    className="p-2 rounded-lg font-semibold text-center transition-all duration-200 border text-sm relative"
-                    style={{
-                      backgroundColor: slot.available
-                        ? selectedTime === slot.time
-                          ? "#F68B24"
-                          : "#F5F5F5"
-                        : "#F0F0F0",
-                      color: slot.available
-                        ? selectedTime === slot.time
-                          ? "white"
-                          : "#36454F"
-                        : "#CCCCCC",
-                      borderColor: slot.available
-                        ? selectedTime === slot.time
-                          ? "#F68B24"
-                          : "transparent"
-                        : "transparent",
-                      cursor: slot.available ? "pointer" : "not-allowed",
-                    }}
-                    title={
+                    className={`p-2 text-sm rounded-lg border transition-all duration-200 ${
                       slot.available
-                        ? `Book at ${slot.displayTime}`
-                        : `${slot.displayTime} - ${
-                            slot.reason === "past"
-                              ? "Past time"
-                              : slot.reason === "booked"
-                                ? "Already booked"
-                                : "Unavailable"
-                          }`
-                    }
+                        ? selectedTime === slot.time
+                          ? "bg-[#FF8C42] text-white border-[#FF8C42]"
+                          : "bg-[#1F1F1F] text-gray-200 border-[#2A2A2A] hover:border-[#FF8C42]/50"
+                        : "bg-[#111111] text-gray-500 border-[#1F1F1F] cursor-not-allowed"
+                    }`}
                   >
                     {slot.displayTime}
-                    {!slot.available && (
-                      <div className="absolute top-1 right-1">
-                        <div
-                          className={`w-2 h-2 rounded-full ${
-                            slot.reason === "past"
-                              ? "bg-gray-400"
-                              : "bg-red-500"
-                          }`}
-                        ></div>
-                      </div>
-                    )}
                   </button>
                 ))}
               </div>
 
-              {/* Legend */}
-              <div className="flex items-center justify-center space-x-3 text-xs">
-                <div className="flex items-center space-x-1">
-                  <div
-                    className="w-3 h-3 rounded"
-                    style={{ backgroundColor: "#F5F5F5" }}
-                  ></div>
-                  <span style={{ color: "#8B8B8B" }}>Available</span>
+              <div className="flex justify-center gap-4 text-xs text-gray-400">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-[#1F1F1F] border border-[#2A2A2A] rounded"></div>
+                  <span>Available</span>
                 </div>
-                <div className="flex items-center space-x-1">
-                  <div
-                    className="w-3 h-3 rounded"
-                    style={{ backgroundColor: "#F68B24" }}
-                  ></div>
-                  <span style={{ color: "#8B8B8B" }}>Selected</span>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-[#FF8C42] rounded"></div>
+                  <span>Selected</span>
                 </div>
-                <div className="flex items-center space-x-1">
-                  <div
-                    className="w-3 h-3 rounded"
-                    style={{ backgroundColor: "#F0F0F0" }}
-                  ></div>
-                  <span style={{ color: "#8B8B8B" }}>Booked</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 rounded bg-gray-300"></div>
-                  <span style={{ color: "#8B8B8B" }}>Past</span>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 bg-[#111111] rounded"></div>
+                  <span>Booked</span>
                 </div>
               </div>
             </>
@@ -1129,14 +1053,11 @@ const GuestServiceBooking = ({ onBack }) => {
         </div>
       )}
 
-      {/* Continue Button - Only show when all selections are made */}
-      {selectedTime && selectedStaff && selectedDate && (
+      {/* Continue Button */}
+      {selectedStaff && selectedDate && selectedTime && (
         <button
           onClick={() => setStep(4)}
-          className="w-full py-3 text-white font-bold rounded-xl transition-all duration-200 shadow-lg"
-          style={{ backgroundColor: "#F68B24" }}
-          onMouseEnter={(e) => (e.target.style.backgroundColor = "#E67E22")}
-          onMouseLeave={(e) => (e.target.style.backgroundColor = "#F68B24")}
+          className="w-full py-3 bg-[#FF8C42] text-white font-bold rounded-lg hover:bg-[#FF7A2B] transition-all duration-200"
         >
           Continue to Confirmation
         </button>
@@ -1145,14 +1066,8 @@ const GuestServiceBooking = ({ onBack }) => {
       {/* Progress Indicator */}
       {selectedStaff && (
         <div className="text-center">
-          <div
-            className="inline-flex items-center space-x-2 px-4 py-2 rounded-full shadow-sm"
-            style={{ backgroundColor: "rgba(246, 139, 36, 0.1)" }}
-          >
-            <span
-              className="text-xs font-semibold"
-              style={{ color: "#F68B24" }}
-            >
+          <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-[#FF8C42]/10">
+            <span className="text-xs font-semibold text-[#FF8C42]">
               {selectedStaff && !selectedDate
                 ? "Step 2: Select Date"
                 : selectedStaff && selectedDate && !selectedTime
@@ -1321,7 +1236,7 @@ const GuestServiceBooking = ({ onBack }) => {
       // Generate a unique username for guest users
       const timestamp = Date.now();
       const randomSuffix = Math.random().toString(36).slice(2, 6);
-      const guestUsername = `guest_${guestData.name.toLowerCase().replace(/\s+/g, '_')}_${timestamp}_${randomSuffix}`;
+      const guestUsername = `guest_${guestData.name.toLowerCase().replace(/\s+/g, "_")}_${timestamp}_${randomSuffix}`;
       const generatedPassword = Math.random().toString(36).slice(-8);
 
       console.log("Creating guest user with data:", {
@@ -1344,7 +1259,10 @@ const GuestServiceBooking = ({ onBack }) => {
 
       // Handle existing vs new guest user
       if (newUser.isExistingUser) {
-        console.log("✅ Existing customer found for guest booking:", newUser._id);
+        console.log(
+          "✅ Existing customer found for guest booking:",
+          newUser._id
+        );
         sessionStorage.setItem("guest_type", "existing_customer");
         // Show success message for existing user
         showSuccessNotification(
@@ -1364,7 +1282,6 @@ const GuestServiceBooking = ({ onBack }) => {
 
       setStep(5);
       setIsSignedIn(true);
-
     } catch (error) {
       console.error("❌ Guest sign-in failed:", error);
 
@@ -1372,18 +1289,30 @@ const GuestServiceBooking = ({ onBack }) => {
       let title = "Sign In Failed";
       let errorMessage = "Failed to create guest account. Please try again.";
 
-      if (error.message?.includes("email already exists") || error.message?.includes("AUTH_EMAIL_EXISTS")) {
-        if (error.message?.includes("staff") || error.message?.includes("admin")) {
+      if (
+        error.message?.includes("email already exists") ||
+        error.message?.includes("AUTH_EMAIL_EXISTS")
+      ) {
+        if (
+          error.message?.includes("staff") ||
+          error.message?.includes("admin")
+        ) {
           title = "Account Type Restricted";
-          errorMessage = "This email address is registered as a staff or admin account. Please use a different email for guest booking.";
+          errorMessage =
+            "This email address is registered as a staff or admin account. Please use a different email for guest booking.";
         } else {
           title = "Booking Issue";
-          errorMessage = "There was an issue with your booking. Please try again or contact support.";
+          errorMessage =
+            "There was an issue with your booking. Please try again or contact support.";
         }
         setFormErrors({ email: "Unable to use this email" });
-      } else if (error.message?.includes("username already exists") || error.message?.includes("AUTH_USERNAME_EXISTS")) {
+      } else if (
+        error.message?.includes("username already exists") ||
+        error.message?.includes("AUTH_USERNAME_EXISTS")
+      ) {
         title = "System Issue";
-        errorMessage = "There was a temporary issue creating your booking. Please try again.";
+        errorMessage =
+          "There was a temporary issue creating your booking. Please try again.";
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -1395,12 +1324,13 @@ const GuestServiceBooking = ({ onBack }) => {
   };
 
   const renderGuestSignIn = () => {
-
     return (
       <div className="px-4 pb-6 max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-6 text-center">
-          <h2 className="text-2xl font-light text-white mb-2">Your Information</h2>
+          <h2 className="text-2xl font-light text-white mb-2">
+            Your Information
+          </h2>
           <p className="text-sm text-gray-400">
             We'll create a temporary guest account for your booking
           </p>
@@ -1429,8 +1359,8 @@ const GuestServiceBooking = ({ onBack }) => {
                 }}
                 className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
                   formErrors.name
-                    ? 'border-red-500 focus:border-red-500'
-                    : 'border-[#3A3A3A] focus:border-[#FF8C42]'
+                    ? "border-red-500 focus:border-red-500"
+                    : "border-[#3A3A3A] focus:border-[#FF8C42]"
                 }`}
               />
               {formErrors.name && (
@@ -1455,14 +1385,16 @@ const GuestServiceBooking = ({ onBack }) => {
                 }}
                 className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
                   formErrors.email
-                    ? 'border-red-500 focus:border-red-500'
-                    : 'border-[#3A3A3A] focus:border-[#FF8C42]'
+                    ? "border-red-500 focus:border-red-500"
+                    : "border-[#3A3A3A] focus:border-[#FF8C42]"
                 }`}
               />
               {formErrors.email && (
                 <p className="text-xs text-red-400 mt-1">{formErrors.email}</p>
               )}
-              <p className="text-xs text-gray-500 mt-1">We'll only use this for booking confirmation</p>
+              <p className="text-xs text-gray-500 mt-1">
+                We'll only use this for booking confirmation
+              </p>
             </div>
 
             <div>
@@ -1482,14 +1414,16 @@ const GuestServiceBooking = ({ onBack }) => {
                 }}
                 className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
                   formErrors.number
-                    ? 'border-red-500 focus:border-red-500'
-                    : 'border-[#3A3A3A] focus:border-[#FF8C42]'
+                    ? "border-red-500 focus:border-red-500"
+                    : "border-[#3A3A3A] focus:border-[#FF8C42]"
                 }`}
               />
               {formErrors.number && (
                 <p className="text-xs text-red-400 mt-1">{formErrors.number}</p>
               )}
-              <p className="text-xs text-gray-500 mt-1">For booking updates and reminders</p>
+              <p className="text-xs text-gray-500 mt-1">
+                For booking updates and reminders
+              </p>
             </div>
 
             <div className="pt-2 space-y-3">
@@ -1498,8 +1432,8 @@ const GuestServiceBooking = ({ onBack }) => {
                 disabled={loading}
                 className={`w-full py-3 rounded-xl font-light transition-all duration-300 text-sm ${
                   loading
-                    ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white hover:shadow-lg transform hover:scale-[1.02]'
+                    ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                    : "bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white hover:shadow-lg transform hover:scale-[1.02]"
                 }`}
               >
                 {loading ? (
@@ -1508,13 +1442,14 @@ const GuestServiceBooking = ({ onBack }) => {
                     <span>Creating your guest account...</span>
                   </div>
                 ) : (
-                  'Continue to Booking'
+                  "Continue to Booking"
                 )}
               </button>
 
               <div className="text-center">
                 <p className="text-xs text-gray-500">
-                  By continuing, you agree to create a guest account for booking purposes
+                  By continuing, you agree to create a guest account for booking
+                  purposes
                 </p>
                 <p className="text-xs text-gray-600 mt-1">
                   You can always upgrade to a full account later
@@ -1711,17 +1646,17 @@ const GuestServiceBooking = ({ onBack }) => {
                   : "bg-orange-500 hover:bg-orange-600 text-white hover:shadow-lg"
               }`}
               style={{
-                backgroundColor: bookingLoading ? '#4B5563' : '#FF8C42',
-                color: bookingLoading ? '#D1D5DB' : '#FFFFFF',
+                backgroundColor: bookingLoading ? "#4B5563" : "#FF8C42",
+                color: bookingLoading ? "#D1D5DB" : "#FFFFFF",
               }}
               onMouseEnter={(e) => {
                 if (!bookingLoading) {
-                  e.target.style.backgroundColor = '#FF7A2B';
+                  e.target.style.backgroundColor = "#FF7A2B";
                 }
               }}
               onMouseLeave={(e) => {
                 if (!bookingLoading) {
-                  e.target.style.backgroundColor = '#FF8C42';
+                  e.target.style.backgroundColor = "#FF8C42";
                 }
               }}
             >
@@ -1827,7 +1762,9 @@ const GuestServiceBooking = ({ onBack }) => {
             <div className="text-lg font-light text-white">
               Booking Code:{" "}
               {getBookingById?.booking_code ? (
-                <span className="font-bold text-[#FF8C42]">{getBookingById.booking_code}</span>
+                <span className="font-bold text-[#FF8C42]">
+                  {getBookingById.booking_code}
+                </span>
               ) : (
                 <span className="inline-flex items-center space-x-2">
                   <span className="text-gray-400">Generating...</span>
@@ -1849,7 +1786,9 @@ const GuestServiceBooking = ({ onBack }) => {
             borderColor: "rgba(246, 139, 36, 0.2)",
           }}
         >
-          <h4 className="text-sm font-light text-white mb-4 text-center">Booking Details</h4>
+          <h4 className="text-sm font-light text-white mb-4 text-center">
+            Booking Details
+          </h4>
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="font-light text-gray-400 text-sm">Branch:</span>
@@ -1864,7 +1803,9 @@ const GuestServiceBooking = ({ onBack }) => {
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="font-light text-gray-400 text-sm">Date & Time:</span>
+              <span className="font-light text-gray-400 text-sm">
+                Date & Time:
+              </span>
               <span className="font-normal text-white text-sm">
                 {createdBooking?.date
                   ? new Date(createdBooking.date).toLocaleDateString()
@@ -1887,7 +1828,9 @@ const GuestServiceBooking = ({ onBack }) => {
             </div>
             {selectedVoucher && (
               <div className="flex justify-between">
-                <span className="font-light text-gray-400 text-sm">Subtotal:</span>
+                <span className="font-light text-gray-400 text-sm">
+                  Subtotal:
+                </span>
                 <span className="font-normal line-through text-gray-500 text-sm">
                   ₱{selectedService?.price.toLocaleString()}
                 </span>
@@ -1920,9 +1863,7 @@ const GuestServiceBooking = ({ onBack }) => {
         </div>
 
         {/* Action Buttons */}
-        <div className="space-y-3">
-        
-        </div>
+        <div className="space-y-3"></div>
       </div>
     );
   };
@@ -1930,9 +1871,19 @@ const GuestServiceBooking = ({ onBack }) => {
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
       {/* Header */}
+
       <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
         <div className="max-w-md mx-auto px-4">
-          <div className="flex items-center justify-center py-4">
+          <div className="relative flex items-center justify-center py-4">
+            {/* Back Arrow - Left aligned */}
+            <button
+              onClick={() => setStep((prev) => Math.max(prev - 1, 1))}
+              className="absolute left-0 flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-xl hover:bg-white/10 transition-all duration-200"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+
+            {/* Title - Centered */}
             <div className="text-center">
               <p className="text-lg font-light text-white">Book Service</p>
               <p className="text-xs text-[#FF8C42]">Step {step} of 6</p>
@@ -1968,8 +1919,18 @@ const GuestServiceBooking = ({ onBack }) => {
             {/* Error Icon */}
             <div className="flex justify-center mb-4">
               <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
-                <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                <svg
+                  className="w-6 h-6 text-red-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
                 </svg>
               </div>
             </div>
@@ -2001,8 +1962,18 @@ const GuestServiceBooking = ({ onBack }) => {
           <div className="bg-green-500/90 backdrop-blur-sm text-white rounded-xl shadow-2xl border border-green-400/30 p-4">
             <div className="flex items-start space-x-3">
               <div className="flex-shrink-0">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               </div>
               <div className="flex-1">
@@ -2017,8 +1988,18 @@ const GuestServiceBooking = ({ onBack }) => {
                 onClick={closeSuccessNotification}
                 className="flex-shrink-0 text-green-100 hover:text-white transition-colors"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
