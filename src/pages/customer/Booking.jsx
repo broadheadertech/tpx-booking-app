@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import QRCode from 'qrcode'
 import Card from '../../components/common/Card'
@@ -33,11 +33,56 @@ function CustomerBooking() {
 
   const queryLoading = selectedBranch && (services === undefined || barbers === undefined)
 
-  const availableTimes = [
-    '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-    '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
-    '16:00', '16:30', '17:00'
-  ]
+  // Generate available times based on barber schedule
+  const availableTimes = React.useMemo(() => {
+    if (!selectedBarber || !selectedDate) {
+      // Default times if no barber selected
+      return [
+        '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+        '13:00', '13:30', '14:00', '14:30', '15:00', '15:30',
+        '16:00', '16:30', '17:00'
+      ]
+    }
+
+    // Get day of week from selected date
+    const dateObj = new Date(selectedDate)
+    const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+    
+    // Check if barber has schedule and if day is available
+    if (!selectedBarber.schedule || !selectedBarber.schedule[dayOfWeek]) {
+      return [] // No schedule defined
+    }
+
+    const daySchedule = selectedBarber.schedule[dayOfWeek]
+    
+    // If barber is not available on this day, return empty array
+    if (!daySchedule.available) {
+      return []
+    }
+
+    // Parse start and end times
+    const [startHour, startMin] = daySchedule.start.split(':').map(Number)
+    const [endHour, endMin] = daySchedule.end.split(':').map(Number)
+    
+    // Generate time slots in 30-minute intervals
+    const times = []
+    let currentHour = startHour
+    let currentMin = startMin
+    
+    while (currentHour < endHour || (currentHour === endHour && currentMin < endMin)) {
+      const timeString = `${currentHour.toString().padStart(2, '0')}:${currentMin.toString().padStart(2, '0')}`
+      times.push(timeString)
+      
+      // Increment by 30 minutes
+      currentMin += 30
+      if (currentMin >= 60) {
+        currentMin = 0
+        currentHour += 1
+      }
+    }
+    
+    return times
+  }, [selectedBarber, selectedDate])
 
   const formatPrice = (price) => {
     return `₱${parseFloat(price).toFixed(2)}`
