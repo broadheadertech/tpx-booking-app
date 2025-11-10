@@ -220,42 +220,42 @@ const NotificationsManagement = ({ onRefresh }) => {
   const unreadTotal = unreadCount || stats.unread
 
   return (
-    <div className="space-y-6">
-      {/* Header & Actions */}
-      <div className="bg-[#1A1A1A] border border-[#2A2A2A]/50 rounded-2xl px-6 py-5 shadow-xl shadow-black/30">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+    <div className="space-y-4">
+      {/* Compact Header */}
+      <div className="bg-[#2A2A2A] border border-[#444444]/50 rounded-xl p-4">
+        <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-3 rounded-2xl bg-[#FF8C42]/10 border border-[#FF8C42]/30 text-[#FF8C42] shadow-lg shadow-[#FF8C42]/10">
-              <BellRing className="w-6 h-6" />
+            <div className="p-2 rounded-lg bg-[#FF8C42]/10 border border-[#FF8C42]/30">
+              <Bell className="w-5 h-5 text-[#FF8C42]" />
             </div>
             <div>
-              <div className="flex items-center space-x-3">
-                <h1 className="text-2xl font-bold text-white tracking-tight">Notification Center</h1>
+              <div className="flex items-center space-x-2">
+                <h2 className="text-lg font-bold text-white">Notification Center</h2>
                 {unreadTotal > 0 && (
-                  <span className="px-3 py-1 text-xs font-semibold rounded-full bg-red-500/20 text-red-300 border border-red-500/40">
+                  <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-500/20 text-red-300">
                     {unreadTotal} unread
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-400">Stay updated with real-time alerts across bookings, payments, and system updates.</p>
+              <p className="text-xs text-gray-400">Stay updated with real-time alerts</p>
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#FF8C42] text-white font-semibold text-sm shadow-lg shadow-[#FF8C42]/30 hover:shadow-[#FF8C42]/40 transition-all duration-200"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#FF8C42] text-white text-sm font-medium hover:bg-[#FF8C42]/90 transition-colors"
             >
               <Bell className="w-4 h-4" />
-              Compose Alert
+              <span className="hidden sm:inline">Compose Alert</span>
             </button>
             <button
               onClick={handleMarkAllAsRead}
               disabled={mutating || !unreadTotal}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-white/10 text-gray-200 text-sm font-semibold hover:bg-white/10 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[#444444] text-gray-300 text-sm font-medium hover:bg-[#333333] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {mutating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCheck className="w-4 h-4" />}
-              Mark all read
+              <span className="hidden sm:inline">Mark all read</span>
             </button>
           </div>
         </div>
@@ -276,114 +276,121 @@ const NotificationsManagement = ({ onRefresh }) => {
         </div>
       )}
 
-      {/* Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Compact Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           {
-            label: 'Total',
+            label: 'TOTAL',
             value: stats.total,
-            description: 'Notifications received',
+            description: 'NOTIFICATIONS RECEIVED',
             icon: <Bell className="w-5 h-5" />,
-            accent: 'from-[#FF8C42]/15 via-[#FF8C42]/5 to-transparent border-[#FF8C42]/30 text-[#FF9F5C]'
+            color: 'text-gray-400',
+            bg: 'bg-gradient-to-br from-[#2A2A2A] to-[#333333]',
+            border: 'border-[#444444]/50'
           },
           {
-            label: 'Unread',
+            label: 'UNREAD',
             value: stats.unread,
-            description: 'Requires attention',
+            description: 'REQUIRES ATTENTION',
             icon: <AlertCircle className="w-5 h-5" />,
-            accent: 'from-red-500/20 via-red-500/10 to-transparent border-red-500/30 text-red-300'
+            color: 'text-[#FF8C42]',
+            bg: 'bg-gradient-to-br from-red-900/20 to-red-800/10',
+            border: 'border-red-500/30'
           },
           {
-            label: 'Bookings',
+            label: 'BOOKINGS',
             value: stats.booking,
-            description: 'Scheduling alerts',
+            description: 'SCHEDULING ALERTS',
             icon: <Calendar className="w-5 h-5" />,
-            accent: 'from-blue-500/20 via-blue-500/10 to-transparent border-blue-500/30 text-blue-300'
+            color: 'text-blue-400',
+            bg: 'bg-gradient-to-br from-blue-900/20 to-blue-800/10',
+            border: 'border-blue-500/30'
           },
           {
-            label: 'Payments',
+            label: 'PAYMENTS',
             value: stats.payment,
-            description: 'Billing updates',
+            description: 'BILLING UPDATES',
             icon: <DollarSign className="w-5 h-5" />,
-            accent: 'from-green-500/20 via-green-500/10 to-transparent border-green-500/30 text-green-300'
+            color: 'text-green-400',
+            bg: 'bg-gradient-to-br from-green-900/20 to-green-800/10',
+            border: 'border-green-500/30'
           }
-        ].map(({ label, value, description, icon, accent }) => (
+        ].map(({ label, value, description, icon, color, bg, border }) => (
           <div
             key={label}
-            className={`relative overflow-hidden rounded-2xl border px-5 py-6 bg-gradient-to-br ${accent} backdrop-blur-sm shadow-lg shadow-black/20`}
+            className={`rounded-xl border ${border} ${bg} p-4`}
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400 font-medium uppercase tracking-[0.12em]">{label}</p>
-                <p className="mt-3 text-3xl font-bold text-white">{value}</p>
-                <p className="mt-2 text-xs text-gray-500 uppercase tracking-[0.2em]">{description}</p>
-              </div>
-              <div className="w-11 h-11 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-center text-white/70">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-gray-400 font-semibold tracking-wider">{label}</span>
+              <div className={color}>
                 {icon}
               </div>
             </div>
+            <div className="text-3xl font-bold text-white mb-1">{value}</div>
+            <div className="text-[10px] text-gray-500 uppercase tracking-wider">{description}</div>
           </div>
         ))}
       </div>
 
-      {/* Controls */}
-      <div className="bg-[#1A1A1A] border border-[#2A2A2A]/50 rounded-2xl px-6 py-5 shadow-xl shadow-black/30">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Search notifications..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-11 pl-11 pr-4 rounded-xl bg-[#121212] border border-[#2F2F2F] text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/60 focus:border-transparent text-sm"
-              />
-            </div>
-
-            <div className="flex items-center gap-2 bg-[#121212] border border-[#2F2F2F] rounded-xl px-2 py-1">
-              {[
-                { value: 'all', label: 'All', icon: <Bell className="w-4 h-4" /> },
-                { value: 'booking', label: 'Bookings', icon: <Calendar className="w-4 h-4" /> },
-                { value: 'payment', label: 'Payments', icon: <DollarSign className="w-4 h-4" /> },
-                { value: 'system', label: 'System', icon: <Settings className="w-4 h-4" /> },
-                { value: 'promotion', label: 'Promos', icon: <Gift className="w-4 h-4" /> },
-                { value: 'reminder', label: 'Reminders', icon: <Clock className="w-4 h-4" /> },
-                { value: 'alert', label: 'Alerts', icon: <AlertCircle className="w-4 h-4" /> }
-              ].map((option) => {
-                const isActive = filterType === option.value
-                return (
-                  <button
-                    key={option.value}
-                    onClick={() => setFilterType(option.value)}
-                    type="button"
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-200 ${
-                      isActive
-                        ? 'bg-[#FF8C42]/20 text-[#FF9F5C] border border-[#FF8C42]/30 shadow-lg shadow-[#FF8C42]/20'
-                        : 'text-gray-400 hover:text-gray-200'
-                    }`}
-                  >
-                    {option.icon}
-                    <span>{option.label}</span>
-                  </button>
-                )
-              })}
-            </div>
+      {/* Compact Controls */}
+      <div className="bg-[#2A2A2A] border border-[#444444]/50 rounded-xl p-4">
+        <div className="flex flex-col gap-3">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Search notifications..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-10 pl-10 pr-4 rounded-lg bg-[#1A1A1A] border border-[#444444] text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#FF8C42] text-sm"
+            />
           </div>
 
-          <div className="flex items-center justify-between sm:justify-end gap-4">
-            <label className="inline-flex items-center gap-3 text-sm text-gray-300 font-medium">
+          {/* Filter Pills */}
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { value: 'all', label: 'All', icon: <Bell className="w-4 h-4" /> },
+              { value: 'booking', label: 'Bookings', icon: <Calendar className="w-4 h-4" /> },
+              { value: 'payment', label: 'Payments', icon: <DollarSign className="w-4 h-4" /> },
+              { value: 'system', label: 'System', icon: <Settings className="w-4 h-4" /> },
+              { value: 'promotion', label: 'Promos', icon: <Gift className="w-4 h-4" /> },
+              { value: 'reminder', label: 'Reminders', icon: <Clock className="w-4 h-4" /> },
+              { value: 'alert', label: 'Alerts', icon: <AlertCircle className="w-4 h-4" /> }
+            ].map((option) => {
+              const isActive = filterType === option.value
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => setFilterType(option.value)}
+                  type="button"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    isActive
+                      ? 'bg-[#FF8C42] text-white'
+                      : 'bg-[#1A1A1A] text-gray-400 hover:text-gray-200 border border-[#444444]'
+                  }`}
+                >
+                  {option.icon}
+                  <span>{option.label}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Bottom Row */}
+          <div className="flex items-center justify-between">
+            <label className="inline-flex items-center gap-2 text-xs text-gray-300 font-medium">
               <input
                 type="checkbox"
                 checked={showUnreadOnly}
                 onChange={(e) => setShowUnreadOnly(e.target.checked)}
-                className="h-4 w-4 rounded border-[#3A3A3A] bg-[#121212] text-[#FF8C42] focus:ring-[#FF8C42]"
+                className="w-4 h-4 rounded border-[#444444] bg-[#1A1A1A] text-[#FF8C42] focus:ring-[#FF8C42]"
               />
               Show unread only
             </label>
             <button
               onClick={onRefresh}
-              className="px-4 py-2 rounded-xl border border-white/10 text-sm text-gray-200 hover:bg-white/10 transition-all duration-200"
+              className="px-3 py-1.5 rounded-lg border border-[#444444] text-xs text-gray-300 hover:bg-[#333333] transition-colors"
             >
               Refresh feed
             </button>
@@ -391,56 +398,56 @@ const NotificationsManagement = ({ onRefresh }) => {
         </div>
       </div>
 
-      {/* Notifications List */}
-      <div className="bg-[#1A1A1A] border border-[#2A2A2A]/50 rounded-3xl p-6 space-y-4 shadow-2xl shadow-black/40">
+      {/* Compact Notifications List */}
+      <div className="bg-[#2A2A2A] border border-[#444444]/50 rounded-xl overflow-hidden">
         {isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <div className="flex flex-col items-center gap-3 text-gray-400 text-sm">
-              <Loader2 className="w-6 h-6 animate-spin" />
+          <div className="flex items-center justify-center py-12">
+            <div className="flex flex-col items-center gap-2 text-gray-400 text-sm">
+              <Loader2 className="w-5 h-5 animate-spin" />
               <span>Loading notifications…</span>
             </div>
           </div>
         ) : filteredNotifications.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="mx-auto w-16 h-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-4">
-              <BellOff className="w-7 h-7 text-gray-500" />
+          <div className="text-center py-12">
+            <div className="mx-auto w-12 h-12 rounded-full bg-[#1A1A1A] border border-[#444444] flex items-center justify-center mb-3">
+              <BellOff className="w-6 h-6 text-gray-500" />
             </div>
-            <h3 className="text-lg font-semibold text-white">No notifications found</h3>
-            <p className="text-sm text-gray-500 mt-2">{showUnreadOnly ? 'All notifications are read. Try turning off the unread filter.' : "You're all caught up!"}</p>
+            <h3 className="text-base font-semibold text-white mb-1">No notifications found</h3>
+            <p className="text-sm text-gray-500">{showUnreadOnly ? 'All notifications are read' : "You're all caught up!"}</p>
           </div>
         ) : (
-          filteredNotifications.map((notification) => {
-            const priority = resolvePriorityStyles(notification.priority)
-            const isUnread = !notification.is_read
+          <div className="divide-y divide-[#444444]/30">
+            {filteredNotifications.map((notification) => {
+              const priority = resolvePriorityStyles(notification.priority)
+              const isUnread = !notification.is_read
 
-            return (
-              <div
-                key={notification._id}
-                className={`relative overflow-hidden rounded-2xl border px-5 py-5 transition-all duration-200 group ${
-                  isUnread
-                    ? 'border-[#FF8C42]/30 bg-[#1F1F1F] shadow-lg shadow-[#FF8C42]/10'
-                    : 'border-[#2F2F2F] bg-[#181818] opacity-90'
-                }`}
-              >
-                {isUnread && (
-                  <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-[#FF8C42] animate-pulse" aria-hidden="true" />
-                )}
-                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                  <div className="flex items-start gap-4 flex-1">
-                    <div className={`p-3 rounded-xl border ${priority.container} shadow-inner shadow-black/40`}>{getNotificationIcon(notification.type)}</div>
-                    <div className="flex-1 min-w-0 space-y-3">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <h3 className="text-lg font-semibold text-white truncate flex-1">
+              return (
+                <div
+                  key={notification._id}
+                  className={`px-4 py-4 hover:bg-[#333333]/50 transition-colors ${
+                    isUnread ? 'bg-[#2A2A2A] border-l-2 border-l-[#FF8C42]' : ''
+                  }`}
+                >
+                  {isUnread && (
+                    <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-[#FF8C42]" aria-hidden="true" />
+                  )}
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-lg border ${priority.container}`}>
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <h3 className="text-sm font-semibold text-white">
                           {notification.title}
                         </h3>
-                        <span className={`text-xs font-semibold px-3 py-1 rounded-full border uppercase tracking-[0.2em] ${priority.container}`}>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border uppercase ${priority.container}`}>
                           {notification.priority}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-line">
+                      <p className="text-sm text-gray-300 mb-2">
                         {notification.message}
                       </p>
-                      <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 uppercase tracking-[0.18em]">
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           {formatDate(notification.createdAt)}
@@ -455,33 +462,30 @@ const NotificationsManagement = ({ onRefresh }) => {
                         </span>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 self-end">
-                    {!notification.is_read && (
+                    <div className="flex items-center gap-1">
+                      {!notification.is_read && (
+                        <button
+                          onClick={() => handleMarkAsRead(notification._id)}
+                          className="p-2 rounded-lg bg-[#FF8C42]/20 text-[#FF8C42] hover:bg-[#FF8C42]/30 transition-colors"
+                          title="Mark read"
+                        >
+                          <CheckCheck className="w-4 h-4" />
+                        </button>
+                      )}
                       <button
-                        onClick={() => handleMarkAsRead(notification._id)}
-                        className="px-3 py-2 rounded-lg bg-[#FF8C42]/20 text-[#FF9F5C] text-xs font-semibold hover:bg-[#FF8C42]/30 transition-colors"
+                        onClick={() => handleDelete(notification._id)}
+                        className="p-2 rounded-lg border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-colors"
+                        title="Delete"
                       >
-                        Mark read
+                        <Trash2 className="w-4 h-4" />
                       </button>
-                    )}
-                    <button
-                      onClick={() => handleDelete(notification._id)}
-                      className="px-3 py-2 rounded-lg border border-red-500/30 text-red-300 text-xs font-semibold hover:bg-red-500/10 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
-          })
+              )
+            })}
+          </div>
         )}
-
-        <div className="flex flex-wrap items-center justify-between gap-4 text-xs text-gray-500 uppercase tracking-[0.25em] pt-2">
-          <span>Notifications expire after 7 days</span>
-          <span>{stats.total} total notifications</span>
-        </div>
       </div>
 
       <NotificationComposerModal
