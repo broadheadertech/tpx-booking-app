@@ -55,21 +55,21 @@ const PaymentConfirmationModal = ({ isOpen, onClose, onConfirm, transactionData,
   }, [isOpen])
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Confirm Payment" variant="dark" size="md">
-      <div className="space-y-3">
+    <Modal isOpen={isOpen} onClose={onClose} title="Confirm Payment" variant="dark" size="md" compact={true}>
+      <div className="space-y-2.5 lg:space-y-3">
         {/* Transaction Summary - Primary Focus */}
-        <div className="bg-gradient-to-br from-[#1A1A1A] to-[#0A0A0A] rounded-xl p-4 border border-[#2A2A2A]">
-          <div className="space-y-3">
+        <div className="bg-gradient-to-br from-[#1A1A1A] to-[#0A0A0A] rounded-lg lg:rounded-xl p-3 lg:p-4 border border-[#2A2A2A]">
+          <div className="space-y-2 lg:space-y-3">
             {/* Total Amount - Most Prominent */}
-            <div className="bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-lg p-3 text-center">
-              <p className="text-xs font-semibold text-white/80 mb-1">Total Amount</p>
-              <p className="text-3xl font-black text-white">
+            <div className="bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-lg p-2.5 lg:p-3 text-center">
+              <p className="text-[10px] lg:text-xs font-semibold text-white/80 mb-1">Total Amount</p>
+              <p className="text-2xl lg:text-3xl font-black text-white">
                 ₱{transactionData.total_amount.toFixed(2)}
               </p>
             </div>
 
             {/* Breakdown */}
-            <div className="space-y-2 text-xs">
+            <div className="space-y-1.5 lg:space-y-2 text-[10px] lg:text-xs">
               <div className="flex justify-between items-center px-2 py-1.5 bg-[#2A2A2A] rounded">
                 <span className="text-gray-400">Subtotal</span>
                 <span className="text-gray-200 font-semibold">₱{transactionData.subtotal.toFixed(2)}</span>
@@ -169,24 +169,24 @@ const PaymentConfirmationModal = ({ isOpen, onClose, onConfirm, transactionData,
         {/* Items Summary - Compact */}
         {(transactionData.services.length > 0 || (transactionData.products && transactionData.products.length > 0)) && (
           <div className="space-y-1.5">
-            <p className="text-xs font-bold text-gray-300 px-1">Items</p>
-            <div className="max-h-24 overflow-y-auto space-y-1 pr-1">
+            <p className="text-[10px] lg:text-xs font-bold text-gray-300 px-1">Items</p>
+            <div className="max-h-20 lg:max-h-24 overflow-y-auto space-y-1 pr-1">
               {transactionData.services.map((service, index) => (
-                <div key={`service-${index}`} className="flex justify-between items-center py-1.5 px-2 bg-[#2A2A2A] rounded text-xs">
-                  <div>
-                    <span className="text-gray-200 font-semibold">{service.service_name}</span>
+                <div key={`service-${index}`} className="flex justify-between items-center py-1.5 px-2 bg-[#2A2A2A] rounded text-[10px] lg:text-xs">
+                  <div className="min-w-0 flex-1 mr-2">
+                    <span className="text-gray-200 font-semibold truncate">{service.service_name}</span>
                     <span className="text-gray-500 ml-1.5">×{service.quantity}</span>
                   </div>
-                  <span className="text-[#FF8C42] font-bold">₱{(service.price * service.quantity).toFixed(2)}</span>
+                  <span className="text-[#FF8C42] font-bold flex-shrink-0">₱{(service.price * service.quantity).toFixed(2)}</span>
                 </div>
               ))}
               {transactionData.products && transactionData.products.map((product, index) => (
-                <div key={`product-${index}`} className="flex justify-between items-center py-1.5 px-2 bg-[#2A2A2A] rounded text-xs">
-                  <div>
-                    <span className="text-gray-200 font-semibold">{product.product_name}</span>
+                <div key={`product-${index}`} className="flex justify-between items-center py-1.5 px-2 bg-[#2A2A2A] rounded text-[10px] lg:text-xs">
+                  <div className="min-w-0 flex-1 mr-2">
+                    <span className="text-gray-200 font-semibold truncate">{product.product_name}</span>
                     <span className="text-gray-500 ml-1.5">×{product.quantity}</span>
                   </div>
-                  <span className="text-[#FF8C42] font-bold">₱{(product.price * product.quantity).toFixed(2)}</span>
+                  <span className="text-[#FF8C42] font-bold flex-shrink-0">₱{(product.price * product.quantity).toFixed(2)}</span>
                 </div>
               ))}
             </div>
@@ -194,27 +194,28 @@ const PaymentConfirmationModal = ({ isOpen, onClose, onConfirm, transactionData,
         )}
 
         {/* Action Buttons */}
-        <div className="flex space-x-2.5 pt-2">
+        <div className="flex space-x-2 lg:space-x-2.5 pt-1.5 lg:pt-2">
           <button
             onClick={onClose}
             disabled={isProcessing}
-            className="flex-1 py-2.5 border border-[#555555] text-gray-300 font-semibold rounded-lg hover:bg-[#1A1A1A] hover:border-gray-400 transition-all duration-200 disabled:opacity-50 text-sm"
+            className="flex-1 py-2 lg:py-2.5 border border-[#555555] text-gray-300 font-semibold rounded-lg text-xs lg:text-sm hover:bg-[#1A1A1A] hover:border-gray-400 transition-all duration-200 disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
             disabled={isProcessing || (paymentMethod === 'cash' && (!cashReceived || parseFloat(cashReceived) < transactionData.total_amount))}
-            className="flex-1 py-2.5 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white font-bold rounded-lg hover:from-[#FF7A2B] hover:to-[#E67E37] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1.5 text-sm"
+            className="flex-1 py-2 lg:py-2.5 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white font-bold rounded-lg hover:from-[#FF7A2B] hover:to-[#E67E37] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1.5 text-xs lg:text-sm"
           >
             {isProcessing ? (
               <>
-                <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent"></div>
-                <span>Processing...</span>
+                <div className="animate-spin rounded-full h-3 w-3 lg:h-3.5 lg:w-3.5 border-2 border-white border-t-transparent"></div>
+                <span className="hidden lg:inline">Processing...</span>
+                <span className="lg:hidden">Processing</span>
               </>
             ) : (
               <>
-                <CheckCircle className="w-4 h-4" />
+                <CheckCircle className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
                 <span>Confirm</span>
               </>
             )}

@@ -1,0 +1,65 @@
+/* Print styles for thermal receipt printers */
+@media print {
+  /* Hide everything except receipt */
+  body * {
+    visibility: hidden;
+  }
+  
+  .print-receipt,
+  .print-receipt * {
+    visibility: visible;
+  }
+  
+  .print-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    display: block !important;
+  }
+  
+  /* Page setup for thermal printer */
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+  
+  /* Receipt content styling */
+  .print-receipt pre {
+    font-family: 'Courier New', 'Courier', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+    padding: 5mm;
+  }
+  
+  /* No page breaks inside receipt */
+  .print-receipt {
+    page-break-inside: avoid;
+  }
+  
+  /* Remove shadows and backgrounds for printing */
+  * {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+}
+
+/* Alternative 58mm paper size */
+@media print and (max-width: 58mm) {
+  @page {
+    size: 58mm auto;
+  }
+  
+  .print-receipt {
+    width: 58mm;
+  }
+  
+  .print-receipt pre {
+    font-size: 10px;
+  }
+}
