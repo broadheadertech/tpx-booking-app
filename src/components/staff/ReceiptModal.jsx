@@ -29,10 +29,16 @@ const ReceiptModal = ({
     return typeof window !== 'undefined' && window.Capacitor
   }
 
-  // Reusable hidden-iframe printer for URLs (PDF/HTML)
-  const printWithIframeUrl = (url) => {
+  const printHtmlWithIframe = (html) => {
     return new Promise((resolve) => {
+      if (typeof document === 'undefined') {
+        resolve(false)
+        return
+      }
+
       const iframe = document.createElement('iframe')
+      printIframeRef.current = iframe
+
       iframe.style.position = 'fixed'
       iframe.style.right = '0'
       iframe.style.bottom = '0'
@@ -41,46 +47,78 @@ const ReceiptModal = ({
       iframe.style.border = '0'
       iframe.style.opacity = '0'
       iframe.style.pointerEvents = 'none'
-      iframe.style.zIndex = '-9999'
-      document.body.appendChild(iframe)
-      const cleanup = () => {
-        try { document.body.removeChild(iframe) } catch (_) {}
-      }
-      const onAfter = () => {
-        cleanup()
-        resolve(true)
-      }
-      iframe.onload = () => {
-        try {
-          const w = iframe.contentWindow
-          if (w) {
-            try { w.addEventListener('afterprint', onAfter) } catch (_) {}
-            setTimeout(() => {
-              try {
-                w.focus()
-                w.print()
-                setTimeout(onAfter, 60000) // safety cleanup
-              } catch (_) {
-                cleanup()
-                resolve(false)
-              }
-            }, 250)
-          } else {
-            cleanup()
-            resolve(false)
+      iframe.style.zIndex = '-1'
+
+      let finished = false
+
+      const cleanup = (success) => {
+        if (finished) return
+        finished = true
+
+        requestAnimationFrame(() => {
+          try {
+            iframe.removeEventListener('load', handleLoad)
+          } catch (_) {}
+
+          try {
+            if (iframe.parentNode) {
+              iframe.parentNode.removeChild(iframe)
+            }
+          } catch (_) {}
+
+          if (printIframeRef.current === iframe) {
+            printIframeRef.current = null
           }
-        } catch (_) {
-          cleanup()
-          resolve(false)
+
+          resolve(success)
+        })
+      }
+
+      const handleLoad = () => {
+        try {
+          const frameWindow = iframe.contentWindow
+          if (!frameWindow) throw new Error('Missing iframe window')
+
+          const handleAfterPrint = () => cleanup(true)
+
+          try {
+            frameWindow.addEventListener('afterprint', handleAfterPrint)
+          } catch (_) {
+            frameWindow.onafterprint = handleAfterPrint
+          }
+
+          frameWindow.focus()
+
+          setTimeout(() => {
+            try {
+              frameWindow.print()
+              setTimeout(() => cleanup(true), 2000)
+            } catch (err) {
+              console.error('Iframe print failed:', err)
+              cleanup(false)
+            }
+          }, 100)
+        } catch (error) {
+          console.error('Iframe print error:', error)
+          cleanup(false)
         }
       }
-      setTimeout(() => {
-        if (!iframe.contentDocument) {
-          cleanup()
-          resolve(false)
-        }
-      }, 2000)
-      iframe.src = url
+
+      iframe.addEventListener('load', handleLoad)
+
+      document.body.appendChild(iframe)
+
+      const doc = iframe.contentDocument || iframe.contentWindow?.document
+      if (!doc) {
+        cleanup(false)
+        return
+      }
+
+      doc.open()
+      doc.write(html)
+      doc.close()
+
+      setTimeout(() => cleanup(false), 6000)
     })
   }
 
@@ -206,176 +244,57 @@ const ReceiptModal = ({
 
       // 1) ESC/POS via Android bridge (direct thermal printing)
       const androidOk = tryAndroidEscPosPrint()
-      if (androidOk) return
+      if (androidOk) {
+        return
+      }
 
-      // Build HTML once for later paths (no inline scripts)
-      const receiptHTML = generateReceiptHTML()
-      const fullHTML = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Receipt - ${transactionData.receipt_number || transactionData.transaction_id}</title>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-              /* Thermal printer optimized styles for 58mm paper */
-              @page {
-                size: 58mm auto;
-                margin: 0mm;
-              }
-              * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-              }
-              html, body {
-                width: 58mm;
-                max-width: 58mm;
-                margin: 0;
-                padding: 0;
-                font-family: 'Courier New', Courier, monospace;
-                font-size: 11px;
-                line-height: 1.3;
-                color: #000 !important;
-                background: #fff !important;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-              }
-              body {
-                padding: 3mm 2mm;
-              }
-              @media print {
-                @page {
-                  size: 58mm auto;
-                  margin: 0mm;
-                }
-                html, body {
-                  width: 58mm !important;
-                  max-width: 58mm !important;
-                }
-                body {
-                  padding: 3mm 2mm !important;
-                }
-              }
-              .receipt-container {
-                width: 100%;
-                max-width: 54mm;
-                margin: 0 auto;
-                color: #000 !important;
-              }
-              table {
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 10px;
-                color: #000 !important;
-              }
-              td {
-                padding: 2px 1px;
-                color: #000 !important;
-                vertical-align: top;
-              }
-              .header {
-                text-align: center;
-                margin-bottom: 5px;
-                padding-bottom: 5px;
-                border-bottom: 1px dashed #000;
-              }
-              .business-name {
-                font-size: 14px;
-                font-weight: bold;
-                margin-bottom: 2px;
-                text-transform: uppercase;
-              }
-              .branch-name {
-                font-size: 11px;
-                font-weight: bold;
-                margin-bottom: 2px;
-              }
-              .address, .phone {
-                font-size: 9px;
-                margin-bottom: 1px;
-              }
-              .separator {
-                border-top: 1px dashed #000;
-                margin: 5px 0;
-                height: 0;
-              }
-              .separator-thick {
-                border-top: 2px solid #000;
-                margin: 5px 0;
-                height: 0;
-              }
-              .receipt-title {
-                text-align: center;
-                font-size: 12px;
-                font-weight: bold;
-                margin: 5px 0;
-                text-transform: uppercase;
-              }
-              .footer {
-                text-align: center;
-                margin-top: 8px;
-                font-size: 9px;
-                border-top: 1px dashed #000;
-                padding-top: 5px;
-              }
-              .thank-you {
-                font-weight: bold;
-                margin-bottom: 3px;
-                font-size: 10px;
-              }
-              .footer-note {
-                font-size: 8px;
-                margin-top: 2px;
-              }
-              .receipt-number {
-                font-family: 'Courier New', monospace;
-                font-size: 9px;
-                letter-spacing: 0.5px;
-              }
-            </style>
-          </head>
-          <body style="background:#FFFFFF; color:#000000; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
-            ${receiptHTML}
-          </body>
-        </html>
-      `
+      const simpleHTML = generateSimpleThermalHTML()
 
-      // 2) Capacitor native printing
+      // 2) Capacitor native printing (for mobile apps)
       if (isCapacitor() && window.Capacitor?.Plugins?.Printer) {
         try {
-          const simpleHTML = generateSimpleThermalHTML()
           await window.Capacitor.Plugins.Printer.print({
             html: simpleHTML,
             name: `Receipt-${transactionData.receipt_number || transactionData.transaction_id}`,
           })
-          isPrintingRef.current = false
           return
-        } catch (_) {}
-      }
-
-      // 3) HTML iframe print (best for Android thermal printers)
-      const tryHtmlIframePrint = async () => {
-        try {
-          const blob = new Blob([fullHTML], { type: 'text/html' })
-          const url = URL.createObjectURL(blob)
-          const ok = await printWithIframeUrl(url)
-          setTimeout(() => URL.revokeObjectURL(url), 1500)
-          return ok
-        } catch (_) {
-          return false
+        } catch (err) {
+          console.warn('Capacitor print failed:', err)
         }
       }
-      
-      const htmlOk = await tryHtmlIframePrint()
-      if (htmlOk) return
+
+      // 3) Hidden iframe printing (best compatibility for browsers & Android WebViews)
+      const iframePrinted = await printHtmlWithIframe(simpleHTML)
+      if (iframePrinted) {
+        return
+      }
 
       // 4) window.open fallback
-      const win = window.open('', '_blank', 'width=300,height=600')
-      if (win) {
-        win.document.write(fullHTML)
-        win.document.close()
-        try { win.focus(); win.print() } catch (_) {}
+      const printWindow = window.open('', '_blank', 'width=300,height=600,menubar=no,toolbar=no,location=no')
+      
+      if (printWindow) {
+        try {
+          printWindow.document.open()
+          printWindow.document.write(simpleHTML)
+          printWindow.document.close()
+        } catch (err) {
+          console.error('Unable to write receipt HTML to new window:', err)
+        }
+        
+        const triggerPrint = () => {
+          try {
+            printWindow.focus()
+            printWindow.print()
+          } catch (err) {
+            console.error('window.print() fallback failed:', err)
+          }
+        }
+
+        if ('onload' in printWindow) {
+          printWindow.onload = () => setTimeout(triggerPrint, 150)
+        } else {
+          setTimeout(triggerPrint, 250)
+        }
       } else {
         alert('Please allow popups to print receipts')
       }
@@ -385,7 +304,7 @@ const ReceiptModal = ({
     } finally {
       setTimeout(() => {
         isPrintingRef.current = false
-      }, 1000)
+      }, 750)
     }
   }
 
@@ -395,13 +314,77 @@ const ReceiptModal = ({
     const timestamp = transactionData.timestamp || Date.now()
     const dateStr = formatDate(timestamp)
     const timeStr = formatTime(timestamp)
-    
+
+    const escapeHtml = (value) => {
+      if (value === null || value === undefined) return ''
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+    }
+
+    const formatCurrencyValue = (value) => {
+      const amount = Number.isFinite(Number(value)) ? Number(value) : 0
+      return `₱${amount.toFixed(2)}`
+    }
+
+    const sanitizePaymentMethod = () => escapeHtml((transactionData.payment_method || 'cash').replace(/_/g, ' ').toUpperCase())
+
+    const servicesHtml = Array.isArray(transactionData.services)
+      ? transactionData.services.map((service) => {
+          const quantity = Number(service?.quantity || 1)
+          const price = Number(service?.price || 0)
+          const total = quantity * price
+          const name = escapeHtml(service?.service_name || service?.name || 'Service')
+          const unitText = escapeHtml(`${quantity}x ${formatCurrencyValue(price)}`)
+
+          return `
+    <div class="bold">${name}</div>
+    <table class="small">
+      <tr>
+        <td>${unitText}</td>
+        <td class="right">${formatCurrencyValue(total)}</td>
+      </tr>
+    </table>
+    `
+        }).join('')
+      : ''
+
+    const productsHtml = Array.isArray(transactionData.products)
+      ? transactionData.products.map((product) => {
+          const quantity = Number(product?.quantity || 1)
+          const price = Number(product?.price || 0)
+          const total = quantity * price
+          const name = escapeHtml(product?.product_name || product?.name || 'Product')
+          const unitText = escapeHtml(`${quantity}x ${formatCurrencyValue(price)}`)
+
+          return `
+    <div class="bold">${name}</div>
+    <table class="small">
+      <tr>
+        <td>${unitText}</td>
+        <td class="right">${formatCurrencyValue(total)}</td>
+      </tr>
+    </table>
+    `
+        }).join('')
+      : ''
+
+    const discountAmount = Number(transactionData.discount_amount || 0)
+    const taxAmount = Number(transactionData.tax_amount || 0)
+    const subtotalAmount = Number(transactionData.subtotal || 0)
+    const totalAmount = Number(transactionData.total_amount || 0)
+    const cashReceived = Number(transactionData.cash_received || 0)
+    const changeAmount = Number(transactionData.change_amount || 0)
+
     return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=58mm">
-  <title>Receipt ${receiptNumber}</title>
+  <title>Receipt ${escapeHtml(receiptNumber)}</title>
   <style>
     @page { 
       size: 58mm auto; 
@@ -414,96 +397,80 @@ const ReceiptModal = ({
     }
     body { 
       width: 58mm;
+      min-width: 58mm;
+      max-width: 58mm;
       font-family: 'Courier New', monospace;
       font-size: 10px;
       line-height: 1.4;
       padding: 2mm;
       color: #000;
       background: #fff;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     @media print {
-      body { width: 58mm; }
+      body { width: 58mm; min-width: 58mm; max-width: 58mm; }
     }
-    .center { text-align: center; }
+    .center { text-align: center; display: block; }
     .bold { font-weight: bold; }
     .line { border-bottom: 1px dashed #000; margin: 2mm 0; }
     .line2 { border-bottom: 1px solid #000; margin: 2mm 0; }
     table { width: 100%; border-collapse: collapse; }
-    td { padding: 1px 0; }
+    td { padding: 1px 0; vertical-align: top; }
     .right { text-align: right; }
     .small { font-size: 8px; }
+    .section { margin-bottom: 2mm; display: block; }
   </style>
 </head>
 <body>
-  <div class="center bold" style="font-size: 12px;">TIPUNOX</div>
-  <div class="center bold">ANGELES BARBERSHOP</div>
-  ${branchInfo?.name ? `<div class="center small">${branchInfo.name}</div>` : ''}
-  ${branchInfo?.address ? `<div class="center small">${branchInfo.address}</div>` : ''}
-  ${branchInfo?.phone ? `<div class="center small">Tel: ${branchInfo.phone}</div>` : ''}
+  <span class="center bold" style="font-size: 12px;">${escapeHtml('TIPUNOX')}</span>
+  <span class="center bold">${escapeHtml('ANGELES BARBERSHOP')}</span>
+  ${branchInfo?.name ? `<span class="center small">${escapeHtml(branchInfo.name)}</span>` : ''}
+  ${branchInfo?.address ? `<span class="center small">${escapeHtml(branchInfo.address)}</span>` : ''}
+  ${branchInfo?.phone ? `<span class="center small">Tel: ${escapeHtml(branchInfo.phone)}</span>` : ''}
   <div class="line"></div>
   
-  <div class="center bold">OFFICIAL RECEIPT</div>
+  <span class="center bold">OFFICIAL RECEIPT</span>
   <div class="line"></div>
   
-  <table class="small">
-    <tr><td>Receipt No:</td><td class="right">${receiptNumber}</td></tr>
-    <tr><td>Date:</td><td class="right">${dateStr}</td></tr>
-    <tr><td>Time:</td><td class="right">${timeStr}</td></tr>
-    <tr><td>Cashier:</td><td class="right">${staffInfo?.username || staffInfo?.full_name || 'Staff'}</td></tr>
-    ${transactionData.barber_name ? `<tr><td>Barber:</td><td class="right">${transactionData.barber_name}</td></tr>` : ''}
-    ${transactionData.customer_name ? `<tr><td>Customer:</td><td class="right">${transactionData.customer_name}</td></tr>` : ''}
-  </table>
+  <div class="section">
+    <table class="small">
+      <tr><td>Receipt No:</td><td class="right">${escapeHtml(receiptNumber)}</td></tr>
+      <tr><td>Date:</td><td class="right">${escapeHtml(dateStr)}</td></tr>
+      <tr><td>Time:</td><td class="right">${escapeHtml(timeStr)}</td></tr>
+      <tr><td>Cashier:</td><td class="right">${escapeHtml(staffInfo?.username || staffInfo?.full_name || 'Staff')}</td></tr>
+      ${transactionData.barber_name ? `<tr><td>Barber:</td><td class="right">${escapeHtml(transactionData.barber_name)}</td></tr>` : ''}
+      ${transactionData.customer_name ? `<tr><td>Customer:</td><td class="right">${escapeHtml(transactionData.customer_name)}</td></tr>` : ''}
+    </table>
+  </div>
   <div class="line2"></div>
   
-  ${transactionData.services && transactionData.services.length > 0 ? transactionData.services.map(service => {
-    const itemTotal = (service.quantity || 1) * (service.price || 0)
-    return `
-    <div class="bold">${service.service_name || service.name || 'Service'}</div>
-    <table class="small">
-      <tr>
-        <td>${service.quantity || 1}x ₱${(service.price || 0).toFixed(2)}</td>
-        <td class="right">₱${itemTotal.toFixed(2)}</td>
-      </tr>
-    </table>
-    `
-  }).join('') : ''}
-  
-  ${transactionData.products && transactionData.products.length > 0 ? transactionData.products.map(product => {
-    const itemTotal = (product.quantity || 1) * (product.price || 0)
-    return `
-    <div class="bold">${product.product_name || product.name || 'Product'}</div>
-    <table class="small">
-      <tr>
-        <td>${product.quantity || 1}x ₱${(product.price || 0).toFixed(2)}</td>
-        <td class="right">₱${itemTotal.toFixed(2)}</td>
-      </tr>
-    </table>
-    `
-  }).join('') : ''}
+  ${servicesHtml}
+  ${productsHtml}
   
   <div class="line"></div>
   <table>
-    <tr><td class="bold">Subtotal:</td><td class="right bold">₱${(transactionData.subtotal || 0).toFixed(2)}</td></tr>
-    ${transactionData.discount_amount > 0 ? `<tr><td class="bold">Discount:</td><td class="right bold">-₱${transactionData.discount_amount.toFixed(2)}</td></tr>` : ''}
-    ${transactionData.tax_amount > 0 ? `<tr><td class="bold">Tax:</td><td class="right bold">₱${transactionData.tax_amount.toFixed(2)}</td></tr>` : ''}
+    <tr><td class="bold">Subtotal:</td><td class="right bold">${formatCurrencyValue(subtotalAmount)}</td></tr>
+    ${discountAmount > 0 ? `<tr><td class="bold">Discount:</td><td class="right bold">-${formatCurrencyValue(discountAmount)}</td></tr>` : ''}
+    ${taxAmount > 0 ? `<tr><td class="bold">Tax:</td><td class="right bold">${formatCurrencyValue(taxAmount)}</td></tr>` : ''}
   </table>
   <div class="line2"></div>
   
   <table style="font-size: 11px;">
-    <tr><td class="bold">TOTAL:</td><td class="right bold">₱${(transactionData.total_amount || 0).toFixed(2)}</td></tr>
+    <tr><td class="bold">TOTAL:</td><td class="right bold">${formatCurrencyValue(totalAmount)}</td></tr>
   </table>
   <div class="line2"></div>
   
   <table class="small">
-    <tr><td class="bold">Payment:</td><td class="right">${(transactionData.payment_method || 'cash').replace('_', ' ').toUpperCase()}</td></tr>
-    ${transactionData.payment_method === 'cash' && transactionData.cash_received ? `<tr><td>Cash:</td><td class="right">₱${transactionData.cash_received.toFixed(2)}</td></tr>` : ''}
-    ${transactionData.payment_method === 'cash' && transactionData.change_amount ? `<tr><td>Change:</td><td class="right">₱${transactionData.change_amount.toFixed(2)}</td></tr>` : ''}
+    <tr><td class="bold">Payment:</td><td class="right">${sanitizePaymentMethod()}</td></tr>
+    ${transactionData.payment_method === 'cash' && cashReceived ? `<tr><td>Cash:</td><td class="right">${formatCurrencyValue(cashReceived)}</td></tr>` : ''}
+    ${transactionData.payment_method === 'cash' && changeAmount ? `<tr><td>Change:</td><td class="right">${formatCurrencyValue(changeAmount)}</td></tr>` : ''}
   </table>
   
   <div class="line"></div>
-  <div class="center bold" style="margin-top: 3mm;">Thank you!</div>
-  <div class="center small">Please come again!</div>
-  <div class="center small" style="margin-top: 2mm;">Receipt #${receiptNumber}</div>
+  <span class="center bold" style="margin-top: 3mm;">Thank you!</span>
+  <span class="center small">Please come again!</span>
+  <span class="center small" style="margin-top: 2mm;">Receipt #${escapeHtml(receiptNumber)}</span>
   <br>
 </body>
 </html>`
@@ -521,191 +488,6 @@ const ReceiptModal = ({
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
-  }
-
-  const generateReceiptHTML = () => {
-    const receiptNumber = transactionData.receipt_number || transactionData.transaction_id || 'N/A'
-    const timestamp = transactionData.timestamp || Date.now()
-    const dateStr = formatDate(timestamp)
-    const timeStr = formatTime(timestamp)
-    
-    // Escape HTML to prevent XSS
-    const escapeHtml = (text) => {
-      if (!text) return ''
-      return String(text)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;')
-    }
-    
-    // Format text for thermal printer (simple table-based layout)
-    // Using 48mm width (standard printable width for 58mm paper with 5mm margins on each side)
-    let html = `
-      <div class="receipt-container" style="width: 48mm !important; max-width: 48mm !important; min-width: 48mm !important; margin: 0 auto; display: block; visibility: visible; color: #000000;">
-        <!-- Header -->
-        <div style="text-align: center; margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px dashed #000; display: block; width: 100%;">
-          <div style="font-size: 12px; font-weight: bold; margin-bottom: 1px; text-transform: uppercase; display: block; line-height: 1.2;">TIPUNOX</div>
-          <div style="font-size: 10px; font-weight: bold; margin-bottom: 1px; text-transform: uppercase; display: block; line-height: 1.2;">ANGELES BARBERSHOP</div>
-          ${branchInfo?.name ? `<div style="font-size: 9px; font-weight: bold; margin-bottom: 1px; display: block; line-height: 1.2;">${escapeHtml(branchInfo.name)}</div>` : ''}
-          ${branchInfo?.address ? `<div style="font-size: 7px; margin-bottom: 1px; display: block; line-height: 1.2;">${escapeHtml(branchInfo.address)}</div>` : ''}
-          ${branchInfo?.phone ? `<div style="font-size: 7px; margin-bottom: 1px; display: block; line-height: 1.2;">Tel: ${escapeHtml(branchInfo.phone)}</div>` : ''}
-        </div>
-        
-        <div style="border-top: 1px dashed #000; margin: 4px 0; display: block; height: 0; width: 100%;"></div>
-        
-        <!-- Receipt Title -->
-        <div style="text-align: center; font-size: 10px; font-weight: bold; margin: 4px 0; text-transform: uppercase; display: block; line-height: 1.2;">OFFICIAL RECEIPT</div>
-        
-        <!-- Transaction Info -->
-        <table style="width: 100%; margin-bottom: 2px; font-size: 9px; border-collapse: collapse; max-width: 48mm;">
-          <tr>
-            <td style="font-weight: bold; padding: 1px 2px;">Receipt No:</td>
-            <td style="text-align: right; padding: 1px 2px;">${escapeHtml(receiptNumber)}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: bold; padding: 1px 2px;">Date:</td>
-            <td style="text-align: right; padding: 1px 2px;">${escapeHtml(dateStr)}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: bold; padding: 1px 2px;">Time:</td>
-            <td style="text-align: right; padding: 1px 2px;">${escapeHtml(timeStr)}</td>
-          </tr>
-          <tr>
-            <td style="font-weight: bold; padding: 1px 2px;">Cashier:</td>
-            <td style="text-align: right; padding: 1px 2px;">${escapeHtml(staffInfo?.username || staffInfo?.full_name || 'Staff')}</td>
-          </tr>
-          ${transactionData.barber_name ? `
-          <tr>
-            <td style="font-weight: bold; padding: 1px 2px;">Barber:</td>
-            <td style="text-align: right; padding: 1px 2px;">${escapeHtml(transactionData.barber_name)}</td>
-          </tr>
-          ` : ''}
-          ${transactionData.customer_name ? `
-          <tr>
-            <td style="font-weight: bold; padding: 1px 2px;">Customer:</td>
-            <td style="text-align: right; padding: 1px 2px;">${escapeHtml(transactionData.customer_name)}</td>
-          </tr>
-          ` : ''}
-        </table>
-        
-        <div style="border-top: 1px dashed #000; margin: 4px 0; display: block; height: 0; width: 100%;"></div>
-        
-        <!-- Items Header -->
-        <table style="width: 100%; margin: 4px 0 3px 0; font-weight: bold; font-size: 9px; border-bottom: 1px solid #000; border-collapse: collapse; max-width: 48mm;">
-          <tr>
-            <td style="padding: 1px 2px;">Item</td>
-            <td style="text-align: right; padding: 1px 2px;">Amount</td>
-          </tr>
-        </table>
-        
-        <!-- Services -->
-        ${transactionData.services && transactionData.services.length > 0 ? transactionData.services.map(service => {
-          const itemTotal = (service.quantity || 1) * (service.price || 0)
-          const serviceName = escapeHtml(service.service_name || service.name || 'Service')
-          return `
-            <table style="width: 100%; margin-bottom: 3px; font-size: 9px; border-collapse: collapse; max-width: 48mm;">
-              <tr>
-                <td colspan="2" style="font-weight: bold; font-size: 9px; padding: 1px 2px;">${serviceName}</td>
-              </tr>
-              <tr>
-                <td style="font-size: 8px; padding-left: 5px; padding: 1px 2px;">${service.quantity || 1}x ₱${(service.price || 0).toFixed(2)}</td>
-                <td style="text-align: right; font-size: 8px; padding: 1px 2px;">₱${itemTotal.toFixed(2)}</td>
-              </tr>
-            </table>
-          `
-        }).join('') : ''}
-        
-        <!-- Products -->
-        ${transactionData.products && transactionData.products.length > 0 ? transactionData.products.map(product => {
-          const itemTotal = (product.quantity || 1) * (product.price || 0)
-          const productName = escapeHtml(product.product_name || product.name || 'Product')
-          return `
-            <table style="width: 100%; margin-bottom: 3px; font-size: 9px; border-collapse: collapse; max-width: 48mm;">
-              <tr>
-                <td colspan="2" style="font-weight: bold; font-size: 9px; padding: 1px 2px;">${productName}</td>
-              </tr>
-              <tr>
-                <td style="font-size: 8px; padding-left: 5px; padding: 1px 2px;">${product.quantity || 1}x ₱${(product.price || 0).toFixed(2)}</td>
-                <td style="text-align: right; font-size: 8px; padding: 1px 2px;">₱${itemTotal.toFixed(2)}</td>
-              </tr>
-            </table>
-          `
-        }).join('') : ''}
-        
-        <div style="border-top: 1px dashed #000; margin: 4px 0; display: block; height: 0; width: 100%;"></div>
-        
-        <!-- Totals -->
-        <table style="width: 100%; margin-top: 4px; font-size: 9px; border-collapse: collapse; max-width: 48mm;">
-          <tr>
-            <td style="font-weight: bold; padding: 1px 2px;">Subtotal:</td>
-            <td style="text-align: right; font-weight: bold; padding: 1px 2px;">₱${(transactionData.subtotal || 0).toFixed(2)}</td>
-          </tr>
-          ${transactionData.discount_amount > 0 ? `
-          <tr>
-            <td style="font-weight: bold; padding: 1px 2px;">Discount:</td>
-            <td style="text-align: right; font-weight: bold; padding: 1px 2px;">-₱${transactionData.discount_amount.toFixed(2)}</td>
-          </tr>
-          ` : ''}
-          ${transactionData.voucher_applied ? `
-          <tr>
-            <td style="font-weight: bold; padding: 1px 2px;">Voucher:</td>
-            <td style="text-align: right; font-weight: bold; padding: 1px 2px;">-₱${transactionData.discount_amount.toFixed(2)}</td>
-          </tr>
-          ` : ''}
-          ${transactionData.tax_amount > 0 ? `
-          <tr>
-            <td style="font-weight: bold; padding: 1px 2px;">Tax:</td>
-            <td style="text-align: right; font-weight: bold; padding: 1px 2px;">₱${transactionData.tax_amount.toFixed(2)}</td>
-          </tr>
-          ` : ''}
-        </table>
-        
-        <div style="border-top: 2px solid #000; margin: 4px 0; display: block; height: 0; width: 100%;"></div>
-        
-        <table style="width: 100%; margin-top: 3px; font-size: 10px; border-collapse: collapse; max-width: 48mm;">
-          <tr>
-            <td style="font-weight: bold; padding: 1px 2px;">TOTAL:</td>
-            <td style="text-align: right; font-weight: bold; padding: 1px 2px;">₱${(transactionData.total_amount || 0).toFixed(2)}</td>
-          </tr>
-        </table>
-        
-        <div style="border-top: 2px solid #000; margin: 4px 0; display: block; height: 0; width: 100%;"></div>
-        
-        <!-- Payment Info -->
-        <table style="width: 100%; margin-top: 4px; font-size: 9px; border-collapse: collapse; max-width: 48mm;">
-          <tr>
-            <td style="font-weight: bold; padding: 1px 2px;">Payment:</td>
-            <td style="text-align: right; padding: 1px 2px;">${escapeHtml((transactionData.payment_method || 'cash').replace('_', ' ').toUpperCase())}</td>
-          </tr>
-          ${transactionData.payment_method === 'cash' && transactionData.cash_received ? `
-          <tr>
-            <td style="font-weight: bold; padding: 1px 2px;">Cash Received:</td>
-            <td style="text-align: right; padding: 1px 2px;">₱${transactionData.cash_received.toFixed(2)}</td>
-          </tr>
-          ` : ''}
-          ${transactionData.payment_method === 'cash' && transactionData.change_amount ? `
-          <tr>
-            <td style="font-weight: bold; padding: 1px 2px;">Change:</td>
-            <td style="text-align: right; padding: 1px 2px;">₱${transactionData.change_amount.toFixed(2)}</td>
-          </tr>
-          ` : ''}
-        </table>
-        
-        <!-- Footer -->
-        <div style="text-align: center; margin-top: 6px; font-size: 7px; border-top: 1px dashed #000; padding-top: 4px; display: block; width: 100%; line-height: 1.3;">
-          <div style="font-weight: bold; margin-bottom: 2px; display: block; font-size: 8px;">Thank you for your business!</div>
-          <div style="display: block;">Please come again!</div>
-          <div style="font-size: 6px; margin-top: 2px; display: block; line-height: 1.2;">This serves as your official receipt</div>
-          <div style="font-size: 6px; margin-top: 4px; display: block; line-height: 1.2;">
-            Receipt #: <span style="font-family: 'Courier New', monospace; font-size: 7px; letter-spacing: 0.5px;">${escapeHtml(receiptNumber)}</span>
-          </div>
-        </div>
-      </div>
-    `
-    
-    return html
   }
 
   const generateReceiptText = () => {
