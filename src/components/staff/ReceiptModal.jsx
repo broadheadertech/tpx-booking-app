@@ -105,6 +105,8 @@ const ReceiptModal = ({
                 line-height: 1.15;
                 color: #000000 !important;
                 background: #FFFFFF !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
                 display: block !important;
                 visibility: visible !important;
                 overflow: visible !important;
@@ -131,6 +133,8 @@ const ReceiptModal = ({
                   padding: 2mm 2mm !important;
                   color: #000000 !important;
                   background: #FFFFFF !important;
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
                   display: block !important;
                   visibility: visible !important;
                 }
@@ -275,7 +279,7 @@ const ReceiptModal = ({
               }
             </style>
           </head>
-          <body>
+          <body style="background:#FFFFFF; color:#000000; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
             ${receiptHTML}
             <script>
               (function() {
@@ -307,30 +311,28 @@ const ReceiptModal = ({
         </html>
       `
 
-      // For web browsers (desktop), use window.open approach (most reliable)
-      if (!isAndroid() && !isMobile() && !isCapacitor()) {
-        const printWindow = window.open('', '_blank', 'width=300,height=600')
-        if (!printWindow) {
-          alert('Please allow popups to print receipts')
+      // Try window.open print approach first (reliable across browsers and many Android POS WebViews)
+      const printWindow = window.open('', '_blank', 'width=300,height=600')
+      if (printWindow) {
+        try {
+          printWindow.document.write(fullHTML)
+          printWindow.document.close()
+          // Auto-close after print
+          printWindow.addEventListener('afterprint', () => {
+            setTimeout(() => {
+              try {
+                printWindow.close()
+              } catch (e) {}
+            }, 150)
+          })
+          // The script in the HTML will handle auto-printing
           return
+        } catch (e) {
+          try {
+            printWindow.close()
+          } catch (_) {}
+          // Continue to other strategies if this fails
         }
-
-        printWindow.document.write(fullHTML)
-        printWindow.document.close()
-
-        // Auto-close after print
-        printWindow.addEventListener('afterprint', () => {
-          setTimeout(() => {
-            try {
-              printWindow.close()
-            } catch (e) {
-              // Window might not be closable
-            }
-          }, 100)
-        })
-
-        // The script in the HTML will handle auto-printing
-        return
       }
 
       // For mobile/Android/Capacitor: Try Capacitor plugin first if available
