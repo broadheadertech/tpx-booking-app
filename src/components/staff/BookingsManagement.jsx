@@ -36,6 +36,16 @@ const BookingsManagement = ({ onRefresh, user }) => {
   const itemsPerPage = 8
   const [sendSms, setSendSms] = useState(false)
   const [openDropdown, setOpenDropdown] = useState(null)
+  const [currentTime, setCurrentTime] = useState(Date.now())
+
+  // Update time every minute for countdown timers
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now())
+    }, 60000) // Update every minute
+
+    return () => clearInterval(interval)
+  }, [])
 
   // Convex queries - use branch-scoped queries for staff, global for super_admin
   const bookings = user?.role === 'super_admin' 
@@ -478,6 +488,79 @@ const BookingsManagement = ({ onRefresh, user }) => {
       })
     } catch (error) {
       return timeString // Return original if parsing fails
+    }
+  }
+
+  // Calculate time remaining until booking
+  const getTimeRemaining = (bookingDate, bookingTime) => {
+    try {
+      const now = new Date()
+      const bookingDateTime = new Date(`${bookingDate}T${bookingTime}`)
+      const diffMs = bookingDateTime - now
+      const diffMins = Math.floor(diffMs / 60000)
+
+      if (diffMins < 0) {
+        return { text: 'Past', color: 'gray', show: false }
+      }
+
+      if (diffMins < 10) {
+        return { 
+          text: `${diffMins}m`, 
+          color: 'red', 
+          show: true,
+          bgClass: 'bg-red-500/20',
+          textClass: 'text-red-400',
+          borderClass: 'border-red-500/30'
+        }
+      }
+
+      if (diffMins < 20) {
+        return { 
+          text: `${diffMins}m`, 
+          color: 'yellow', 
+          show: true,
+          bgClass: 'bg-yellow-500/20',
+          textClass: 'text-yellow-400',
+          borderClass: 'border-yellow-500/30'
+        }
+      }
+
+      if (diffMins < 30) {
+        return { 
+          text: `${diffMins}m`, 
+          color: 'green', 
+          show: true,
+          bgClass: 'bg-green-500/20',
+          textClass: 'text-green-400',
+          borderClass: 'border-green-500/30'
+        }
+      }
+
+      if (diffMins < 60) {
+        return { text: `${diffMins}m`, color: 'blue', show: true,
+          bgClass: 'bg-blue-500/20',
+          textClass: 'text-blue-400',
+          borderClass: 'border-blue-500/30'
+        }
+      }
+
+      const hours = Math.floor(diffMins / 60)
+      if (hours < 24) {
+        return { text: `${hours}h`, color: 'blue', show: true,
+          bgClass: 'bg-blue-500/20',
+          textClass: 'text-blue-400',
+          borderClass: 'border-blue-500/30'
+        }
+      }
+
+      const days = Math.floor(hours / 24)
+      return { text: `${days}d`, color: 'gray', show: true,
+        bgClass: 'bg-gray-500/20',
+        textClass: 'text-gray-400',
+        borderClass: 'border-gray-500/30'
+      }
+    } catch (error) {
+      return { text: '', color: 'gray', show: false }
     }
   }
 
@@ -1905,15 +1988,48 @@ const BookingsManagement = ({ onRefresh, user }) => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-white">
-                        {booking.customer_name || 'N/A'}
+                        {(() => {
+                          const name = booking.customer_name || 'N/A'
+                          // Clean up guest names like guest_samples_1762847861795_qvbv
+                          if (name.startsWith('guest_')) {
+                            // Extract the base name and show just "Guest (samples)"
+                            const parts = name.split('_')
+                            if (parts.length >= 2) {
+                              const baseName = parts[1].replace(/[_\d]/g, '')
+                              return `Guest${baseName ? ` (${baseName.substring(0, 10)})` : ''}`
+                            }
+                            return 'Guest'
+                          }
+                          // Clean up walk-in names like walkin_1762840519194_e9587qljl
+                          if (name.startsWith('walkin_')) {
+                            return 'Walk-in'
+                          }
+                          return name
+                        })()}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-white">
-                        {formatDate(booking.date)}
-                      </div>
-                      <div className="text-sm text-gray-400">
-                        {formatTime(booking.time)}
+                      <div className="flex items-center gap-2">
+                        <div>
+                          <div className="text-sm text-white">
+                            {formatDate(booking.date)}
+                          </div>
+                          <div className="text-sm text-gray-400">
+                            {formatTime(booking.time)}
+                          </div>
+                        </div>
+                        {(() => {
+                          const timeRemaining = getTimeRemaining(booking.date, booking.time)
+                          if (timeRemaining.show && booking.status !== 'completed' && booking.status !== 'cancelled') {
+                            return (
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border ${timeRemaining.bgClass} ${timeRemaining.textClass} ${timeRemaining.borderClass}`}>
+                                <Clock className="h-3 w-3 mr-1" />
+                                {timeRemaining.text}
+                              </span>
+                            )
+                          }
+                          return null
+                        })()}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
