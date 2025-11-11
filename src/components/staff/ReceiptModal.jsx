@@ -62,8 +62,144 @@ const ReceiptModal = ({
     })
   }
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     try {
+      // Try PDF-based print first for best 58mm compatibility
+      const tryPdfPrint = async () => {
+        try {
+          const { jsPDF } = await import('jspdf')
+          const receiptText = generateReceiptText()
+          const sanitized = receiptText.replace(/₱/g, 'PHP ')
+          
+          // Layout settings for 58mm thermal
+          const pageWidthMm = 58
+          const leftPaddingMm = 2
+          const rightPaddingMm = 2
+          const usableWidthMm = pageWidthMm - leftPaddingMm - rightPaddingMm
+          const lineHeightMm = 4 // 4mm per line for readability on thermal
+          const topPaddingMm = 2
+          const bottomPaddingMm = 2
+          
+          const lines = sanitized.split('\n')
+          const contentHeightMm = Math.max(lineHeightMm, lines.length * lineHeightMm)
+          const totalHeightMm = topPaddingMm + contentHeightMm + bottomPaddingMm
+          
+          const doc = new jsPDF({
+            unit: 'mm',
+            format: [pageWidthMm, totalHeightMm],
+            orientation: 'portrait',
+          })
+          
+          if (doc.internal && doc.internal.pageSize && typeof doc.internal.pageSize.setHeight === 'function') {
+            doc.internal.pageSize.setHeight(totalHeightMm)
+          }
+          
+          doc.setFont('courier', 'normal')
+          doc.setFontSize(8)
+          
+          let y = topPaddingMm + 3
+          const x = leftPaddingMm
+          
+          for (const line of lines) {
+            const maxChars = Math.floor(usableWidthMm * 3.5)
+            const chunks = []
+            let idx = 0
+            const value = line || ''
+            while (idx < value.length) {
+              chunks.push(value.slice(idx, idx + maxChars))
+              idx += maxChars
+            }
+            if (chunks.length === 0) chunks.push('')
+            for (const chunk of chunks) {
+              doc.text(chunk, x, y, { baseline: 'top' })
+              y += lineHeightMm
+            }
+          }
+          
+          // Request viewer to open print dialog automatically
+          if (typeof doc.autoPrint === 'function') {
+            doc.autoPrint()
+          }
+          
+          const blob = doc.output('blob')
+          const url = URL.createObjectURL(blob)
+          
+          // Use hidden iframe to trigger print automatically
+          const iframe = document.createElement('iframe')
+          iframe.style.position = 'fixed'
+          iframe.style.right = '0'
+          iframe.style.bottom = '0'
+          iframe.style.width = '0'
+          iframe.style.height = '0'
+          iframe.style.border = '0'
+          iframe.style.opacity = '0'
+          iframe.style.pointerEvents = 'none'
+          iframe.style.zIndex = '-9999'
+          document.body.appendChild(iframe)
+          
+          return await new Promise((resolve) => {
+            const cleanup = () => {
+              try {
+                document.body.removeChild(iframe)
+              } catch (_) {}
+              setTimeout(() => URL.revokeObjectURL(url), 1500)
+            }
+            iframe.onload = () => {
+              try {
+                const w = iframe.contentWindow
+                if (w && typeof w.print === 'function') {
+                  // Attach afterprint to cleanup after user finishes
+                  try {
+                    w.addEventListener('afterprint', () => {
+                      cleanup()
+                      resolve(true)
+                    })
+                  } catch (_) {
+                    // Some environments may not support afterprint on iframe window
+                  }
+                  // Delay slightly to ensure render, then trigger print
+                  setTimeout(() => {
+                    try {
+                      w.focus()
+                      w.print()
+                      // Safety cleanup if afterprint never fires
+                      setTimeout(() => {
+                        cleanup()
+                        resolve(true)
+                      }, 60000) // 60s fallback
+                    } catch (e) {
+                      cleanup()
+                      resolve(false)
+                    }
+                  }, 250)
+                } else {
+                  cleanup()
+                  resolve(false)
+                }
+              } catch (_) {
+                cleanup()
+                resolve(false)
+              }
+            }
+            // Fallback if onload doesn't fire
+            setTimeout(() => {
+              if (!iframe.contentDocument) {
+                cleanup()
+                resolve(false)
+              }
+            }, 2000)
+            iframe.src = url
+          })
+        } catch (e) {
+          return false
+        }
+      }
+      
+      const pdfOk = await tryPdfPrint()
+      if (pdfOk) {
+        return
+      }
+
       const receiptHTML = generateReceiptHTML()
       // Simplified HTML for thermal printers - no complex CSS
       const fullHTML = `
@@ -454,6 +590,63 @@ const ReceiptModal = ({
     }
   }
 
+  const handleDownloadPDF = async () => {
+    try {
+      const { jsPDF } = await import('jspdf')
+      const receiptText = generateReceiptText()
+      const sanitized = receiptText.replace(/₱/g, 'PHP ')
+      
+      const pageWidthMm = 58
+      const leftPaddingMm = 2
+      const rightPaddingMm = 2
+      const usableWidthMm = pageWidthMm - leftPaddingMm - rightPaddingMm
+      const lineHeightMm = 4
+      const topPaddingMm = 2
+      const bottomPaddingMm = 2
+      
+      const lines = sanitized.split('\n')
+      const contentHeightMm = Math.max(lineHeightMm, lines.length * lineHeightMm)
+      const totalHeightMm = topPaddingMm + contentHeightMm + bottomPaddingMm
+      
+      const doc = new jsPDF({
+        unit: 'mm',
+        format: [pageWidthMm, totalHeightMm],
+        orientation: 'portrait',
+      })
+      
+      if (doc.internal && doc.internal.pageSize && typeof doc.internal.pageSize.setHeight === 'function') {
+        doc.internal.pageSize.setHeight(totalHeightMm)
+      }
+      
+      doc.setFont('courier', 'normal')
+      doc.setFontSize(8)
+      
+      let y = topPaddingMm + 3
+      const x = leftPaddingMm
+      
+      for (const line of lines) {
+        const maxChars = Math.floor(usableWidthMm * 3.5)
+        const chunks = []
+        let idx = 0
+        const value = line || ''
+        while (idx < value.length) {
+          chunks.push(value.slice(idx, idx + maxChars))
+          idx += maxChars
+        }
+        if (chunks.length === 0) chunks.push('')
+        for (const chunk of chunks) {
+          doc.text(chunk, x, y, { baseline: 'top' })
+          y += lineHeightMm
+        }
+      }
+      
+      doc.save(`receipt-${(transactionData.receipt_number || transactionData.transaction_id || 'receipt')}.pdf`)
+    } catch (error) {
+      console.error('PDF generation error:', error)
+      alert('PDF generation is unavailable. Please install "jspdf" or use Download Text.')
+    }
+  }
+
   const handleDownload = () => {
     // Create a text version of the receipt
     const receiptText = generateReceiptText()
@@ -794,13 +987,21 @@ const ReceiptModal = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <button
               onClick={handlePrint}
               className="py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white font-bold rounded-xl hover:from-[#FF7A2B] hover:to-[#E67E37] transition-all flex items-center justify-center space-x-2"
             >
               <Printer className="w-5 h-5" />
               <span>Print Receipt</span>
+            </button>
+            
+            <button
+              onClick={handleDownloadPDF}
+              className="py-3 border-2 border-[#555555] text-gray-300 font-semibold rounded-xl hover:border-[#FF8C42] hover:text-[#FF8C42] hover:bg-[#FF8C42]/10 transition-all flex items-center justify-center space-x-2"
+            >
+              <Download className="w-5 h-5" />
+              <span>PDF</span>
             </button>
             
             <button

@@ -44,6 +44,7 @@
     "date-fns": "^4.1.0",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.23.22",
+    "jspdf": "^3.0.3",
     "jsqr": "^1.4.0",
     "ky": "^1.8.2",
     "lucide-react": "^0.536.0",
