@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef, useEffect } from 'react'
 import Modal from '../common/Modal'
 import { Printer, Download, X, CheckCircle } from 'lucide-react'
 
@@ -9,8 +9,38 @@ const ReceiptModal = ({
   branchInfo,
   staffInfo 
 }) => {
+  const printIframeRef = useRef(null)
 
   if (!transactionData) return null
+
+  // Cleanup iframe on unmount
+  useEffect(() => {
+    return () => {
+      if (printIframeRef.current && printIframeRef.current.parentNode) {
+        printIframeRef.current.parentNode.removeChild(printIframeRef.current)
+        printIframeRef.current = null
+      }
+    }
+  }, [])
+
+  // Detect Android device
+  const isAndroid = () => {
+    if (typeof window === 'undefined') return false
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera
+    return /Android/i.test(userAgent)
+  }
+
+  // Detect if running in Capacitor (native app)
+  const isCapacitor = () => {
+    return typeof window !== 'undefined' && window.Capacitor
+  }
+
+  // Detect mobile device
+  const isMobile = () => {
+    if (typeof window === 'undefined') return false
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)
+  }
 
   const formatDate = (timestamp) => {
     const date = new Date(timestamp)
@@ -33,225 +63,349 @@ const ReceiptModal = ({
   }
 
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank', 'width=300,height=600')
-    if (!printWindow) {
-      alert('Please allow popups to print receipts')
-      return
-    }
-
-    const receiptHTML = generateReceiptHTML()
-    
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Receipt - ${transactionData.receipt_number || transactionData.transaction_id}</title>
-          <meta charset="utf-8">
-          <style>
-            * {
-              margin: 0;
-              padding: 0;
-              box-sizing: border-box;
-            }
-            
-            @page {
-              size: 58mm auto;
-              margin: 0;
-            }
-            
-            body {
-              font-family: 'Courier New', Courier, monospace;
-              width: 58mm;
-              max-width: 58mm;
-              padding: 5mm 4mm;
-              font-size: 11px;
-              line-height: 1.3;
-              color: #000;
-              background: #fff;
-            }
-            
-            @media print {
-              body {
-                padding: 5mm 4mm;
+    try {
+      const receiptHTML = generateReceiptHTML()
+      const fullHTML = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Receipt - ${transactionData.receipt_number || transactionData.transaction_id}</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
+              
+              @page {
+                size: 58mm auto;
                 margin: 0;
               }
               
-              .no-print {
-                display: none !important;
+              body {
+                font-family: 'Courier New', Courier, monospace;
+                width: 58mm;
+                max-width: 58mm;
+                padding: 5mm 4mm;
+                font-size: 11px;
+                line-height: 1.3;
+                color: #000;
+                background: #fff;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
               }
+              
+              @media print {
+                body {
+                  padding: 5mm 4mm;
+                  margin: 0;
+                }
+                
+                .no-print {
+                  display: none !important;
+                }
+              }
+              
+              .receipt-container {
+                width: 100%;
+                max-width: 50mm;
+                margin: 0 auto;
+              }
+              
+              .header {
+                text-align: center;
+                margin-bottom: 8px;
+                border-bottom: 1px dashed #000;
+                padding-bottom: 6px;
+              }
+              
+              .business-name {
+                font-size: 14px;
+                font-weight: bold;
+                margin-bottom: 2px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+              }
+              
+              .branch-name {
+                font-size: 11px;
+                font-weight: bold;
+                margin-bottom: 2px;
+              }
+              
+              .address, .phone {
+                font-size: 9px;
+                margin-bottom: 1px;
+              }
+              
+              .separator {
+                border-top: 1px dashed #000;
+                margin: 6px 0;
+              }
+              
+              .separator-thick {
+                border-top: 2px solid #000;
+                margin: 6px 0;
+              }
+              
+              .receipt-title {
+                text-align: center;
+                font-size: 12px;
+                font-weight: bold;
+                margin: 6px 0;
+                text-transform: uppercase;
+              }
+              
+              .info-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 2px;
+                font-size: 10px;
+              }
+              
+              .info-label {
+                font-weight: bold;
+              }
+              
+              .info-value {
+                text-align: right;
+              }
+              
+              .items-header {
+                display: flex;
+                justify-content: space-between;
+                margin: 6px 0 4px 0;
+                font-weight: bold;
+                font-size: 10px;
+                border-bottom: 1px solid #000;
+                padding-bottom: 2px;
+              }
+              
+              .item-row {
+                margin-bottom: 4px;
+                font-size: 10px;
+              }
+              
+              .item-name {
+                font-weight: bold;
+                margin-bottom: 1px;
+              }
+              
+              .item-details {
+                display: flex;
+                justify-content: space-between;
+                font-size: 9px;
+                padding-left: 4px;
+              }
+              
+              .totals {
+                margin-top: 6px;
+              }
+              
+              .total-row {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 2px;
+                font-size: 10px;
+              }
+              
+              .total-label {
+                font-weight: bold;
+              }
+              
+              .total-amount {
+                font-weight: bold;
+                text-align: right;
+              }
+              
+              .grand-total {
+                font-size: 12px;
+                font-weight: bold;
+                margin-top: 4px;
+              }
+              
+              .payment-info {
+                margin-top: 6px;
+                font-size: 10px;
+              }
+              
+              .footer {
+                text-align: center;
+                margin-top: 10px;
+                font-size: 9px;
+                border-top: 1px dashed #000;
+                padding-top: 6px;
+              }
+              
+              .thank-you {
+                font-weight: bold;
+                margin-bottom: 4px;
+              }
+              
+              .footer-note {
+                font-size: 8px;
+                margin-top: 4px;
+              }
+              
+              .barcode-area {
+                text-align: center;
+                margin: 8px 0;
+                padding: 4px 0;
+                border-top: 1px dashed #000;
+                border-bottom: 1px dashed #000;
+              }
+              
+              .receipt-number {
+                font-family: 'Courier New', monospace;
+                font-size: 10px;
+                letter-spacing: 1px;
+              }
+            </style>
+          </head>
+          <body>
+            ${receiptHTML}
+          </body>
+        </html>
+      `
+
+      // For Android, mobile devices, and Capacitor apps, use iframe approach
+      if (isAndroid() || isMobile() || isCapacitor()) {
+        // Remove existing iframe if present
+        if (printIframeRef.current && printIframeRef.current.parentNode) {
+          printIframeRef.current.parentNode.removeChild(printIframeRef.current)
+        }
+
+        // Create new hidden iframe
+        const printIframe = document.createElement('iframe')
+        printIframe.style.position = 'fixed'
+        printIframe.style.right = '0'
+        printIframe.style.bottom = '0'
+        printIframe.style.width = '0'
+        printIframe.style.height = '0'
+        printIframe.style.border = '0'
+        printIframe.style.opacity = '0'
+        printIframe.style.pointerEvents = 'none'
+        printIframe.style.zIndex = '-9999'
+        document.body.appendChild(printIframe)
+        printIframeRef.current = printIframe
+
+        // Write content to iframe
+        const iframeDoc = printIframe.contentDocument || printIframe.contentWindow?.document
+        if (!iframeDoc) {
+          throw new Error('Cannot access iframe document')
+        }
+
+        iframeDoc.open()
+        iframeDoc.write(fullHTML)
+        iframeDoc.close()
+
+        // Wait for iframe to load, then print
+        const attemptPrint = () => {
+          try {
+            const iframeWindow = printIframe.contentWindow || printIframe.contentDocument?.defaultView
+            if (iframeWindow && typeof iframeWindow.print === 'function') {
+              // Small delay to ensure content is rendered
+              setTimeout(() => {
+                try {
+                  iframeWindow.print()
+                } catch (printError) {
+                  console.error('Print execution error:', printError)
+                  // Fallback: open in new window
+                  openFallbackWindow()
+                }
+              }, 300)
+            } else {
+              openFallbackWindow()
             }
-            
-            .receipt-container {
-              width: 100%;
-              max-width: 50mm;
-              margin: 0 auto;
+          } catch (error) {
+            console.error('Print setup error:', error)
+            openFallbackWindow()
+          }
+        }
+
+        const openFallbackWindow = () => {
+          try {
+            const fallbackWindow = window.open('', '_blank', 'width=300,height=600')
+            if (fallbackWindow) {
+              fallbackWindow.document.write(fullHTML)
+              fallbackWindow.document.close()
+              setTimeout(() => {
+                try {
+                  fallbackWindow.print()
+                } catch (e) {
+                  console.error('Fallback print error:', e)
+                  alert('Printing may not be available on this device. Please use the download option or share this receipt manually.')
+                }
+              }, 500)
+            } else {
+              alert('Please allow popups to print receipts, or use the download option.')
             }
-            
-            .header {
-              text-align: center;
-              margin-bottom: 8px;
-              border-bottom: 1px dashed #000;
-              padding-bottom: 6px;
+          } catch (e) {
+            console.error('Fallback window error:', e)
+            alert('Printing is not available. Please use the download option.')
+          }
+        }
+
+        // Wait for iframe to load
+        if (printIframe.contentDocument && printIframe.contentDocument.readyState === 'complete') {
+          attemptPrint()
+        } else {
+          printIframe.onload = attemptPrint
+          // Fallback timeout
+          setTimeout(() => {
+            if (printIframe.contentDocument && printIframe.contentDocument.readyState === 'complete') {
+              attemptPrint()
+            } else {
+              openFallbackWindow()
             }
-            
-            .business-name {
-              font-size: 14px;
-              font-weight: bold;
-              margin-bottom: 2px;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
+          }, 1000)
+        }
+      } else {
+        // Desktop: use window.open approach
+        const printWindow = window.open('', '_blank', 'width=300,height=600')
+        if (!printWindow) {
+          alert('Please allow popups to print receipts')
+          return
+        }
+
+        printWindow.document.write(fullHTML)
+        printWindow.document.close()
+
+        // Wait for content to load before printing
+        printWindow.onload = () => {
+          setTimeout(() => {
+            try {
+              printWindow.print()
+              setTimeout(() => {
+                printWindow.close()
+              }, 500)
+            } catch (error) {
+              console.error('Print error:', error)
+              alert('Print dialog could not be opened. Please try again.')
             }
-            
-            .branch-name {
-              font-size: 11px;
-              font-weight: bold;
-              margin-bottom: 2px;
+          }, 250)
+        }
+
+        // If window is already loaded
+        if (printWindow.document.readyState === 'complete') {
+          setTimeout(() => {
+            try {
+              printWindow.print()
+              setTimeout(() => {
+                printWindow.close()
+              }, 500)
+            } catch (error) {
+              console.error('Print error:', error)
             }
-            
-            .address, .phone {
-              font-size: 9px;
-              margin-bottom: 1px;
-            }
-            
-            .separator {
-              border-top: 1px dashed #000;
-              margin: 6px 0;
-            }
-            
-            .separator-thick {
-              border-top: 2px solid #000;
-              margin: 6px 0;
-            }
-            
-            .receipt-title {
-              text-align: center;
-              font-size: 12px;
-              font-weight: bold;
-              margin: 6px 0;
-              text-transform: uppercase;
-            }
-            
-            .info-row {
-              display: flex;
-              justify-content: space-between;
-              margin-bottom: 2px;
-              font-size: 10px;
-            }
-            
-            .info-label {
-              font-weight: bold;
-            }
-            
-            .info-value {
-              text-align: right;
-            }
-            
-            .items-header {
-              display: flex;
-              justify-content: space-between;
-              margin: 6px 0 4px 0;
-              font-weight: bold;
-              font-size: 10px;
-              border-bottom: 1px solid #000;
-              padding-bottom: 2px;
-            }
-            
-            .item-row {
-              margin-bottom: 4px;
-              font-size: 10px;
-            }
-            
-            .item-name {
-              font-weight: bold;
-              margin-bottom: 1px;
-            }
-            
-            .item-details {
-              display: flex;
-              justify-content: space-between;
-              font-size: 9px;
-              padding-left: 4px;
-            }
-            
-            .totals {
-              margin-top: 6px;
-            }
-            
-            .total-row {
-              display: flex;
-              justify-content: space-between;
-              margin-bottom: 2px;
-              font-size: 10px;
-            }
-            
-            .total-label {
-              font-weight: bold;
-            }
-            
-            .total-amount {
-              font-weight: bold;
-              text-align: right;
-            }
-            
-            .grand-total {
-              font-size: 12px;
-              font-weight: bold;
-              margin-top: 4px;
-            }
-            
-            .payment-info {
-              margin-top: 6px;
-              font-size: 10px;
-            }
-            
-            .footer {
-              text-align: center;
-              margin-top: 10px;
-              font-size: 9px;
-              border-top: 1px dashed #000;
-              padding-top: 6px;
-            }
-            
-            .thank-you {
-              font-weight: bold;
-              margin-bottom: 4px;
-            }
-            
-            .footer-note {
-              font-size: 8px;
-              margin-top: 4px;
-            }
-            
-            .barcode-area {
-              text-align: center;
-              margin: 8px 0;
-              padding: 4px 0;
-              border-top: 1px dashed #000;
-              border-bottom: 1px dashed #000;
-            }
-            
-            .receipt-number {
-              font-family: 'Courier New', monospace;
-              font-size: 10px;
-              letter-spacing: 1px;
-            }
-          </style>
-        </head>
-        <body>
-          ${receiptHTML}
-          <script>
-            window.onload = function() {
-              window.print();
-              setTimeout(function() {
-                window.close();
-              }, 500);
-            };
-          </script>
-        </body>
-      </html>
-    `)
-    
-    printWindow.document.close()
+          }, 250)
+        }
+      }
+    } catch (error) {
+      console.error('Print function error:', error)
+      alert('An error occurred while printing. Please try the download option instead.')
+    }
   }
 
   const handleDownload = () => {
