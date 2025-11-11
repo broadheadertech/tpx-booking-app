@@ -62,8 +62,109 @@ const ReceiptModal = ({
     })
   }
 
+  // Build ESC/POS text with basic commands
+  const generateEscPosText = () => {
+    const ESC = '\x1B'
+    const GS = '\x1D'
+    const initialize = ESC + '@'
+    const alignCenter = ESC + 'a' + '\x01'
+    const alignLeft = ESC + 'a' + '\x00'
+    const boldOn = ESC + 'E' + '\x01'
+    const boldOff = ESC + 'E' + '\x00'
+    const cutPartial = GS + 'V' + '\x42' + '\x00'
+    const feed1 = '\n'
+    const feed2 = '\n\n'
+    const width = 32
+    const padCenter = (text) => {
+      const s = String(text || '')
+      const len = Math.min(width, s.length)
+      const left = Math.max(0, Math.floor((width - len) / 2))
+      return ' '.repeat(left) + s.slice(0, width)
+    }
+    const leftRight = (left, right) => {
+      const l = String(left || '')
+      const r = String(right || '')
+      const spaces = Math.max(1, width - l.length - r.length)
+      return l + ' '.repeat(spaces) + r
+    }
+    const dash = '-'.repeat(width)
+    const eq = '='.repeat(width)
+    const lines = []
+    lines.push(initialize)
+    lines.push(alignCenter + boldOn + padCenter('TIPUNOX') + boldOff + feed1)
+    lines.push(alignCenter + boldOn + padCenter('ANGELES BARBERSHOP') + boldOff + feed1)
+    if (branchInfo?.name) lines.push(alignCenter + padCenter(branchInfo.name) + feed1)
+    if (branchInfo?.address) lines.push(alignCenter + padCenter(branchInfo.address) + feed1)
+    if (branchInfo?.phone) lines.push(alignCenter + padCenter(`Tel: ${branchInfo.phone}`) + feed1)
+    lines.push(alignLeft + eq + feed1)
+    lines.push(alignCenter + boldOn + padCenter('OFFICIAL RECEIPT') + boldOff + feed1)
+    lines.push(alignLeft + leftRight('Receipt No:', String(transactionData.receipt_number || transactionData.transaction_id || 'N/A')) + feed1)
+    lines.push(alignLeft + leftRight('Date:', formatDate(transactionData.timestamp || Date.now())) + feed1)
+    lines.push(alignLeft + leftRight('Cashier:', String(staffInfo?.username || staffInfo?.full_name || 'Staff')) + feed1)
+    if (transactionData.barber_name) lines.push(alignLeft + leftRight('Barber:', String(transactionData.barber_name)) + feed1)
+    if (transactionData.customer_name) lines.push(alignLeft + leftRight('Customer:', String(transactionData.customer_name)) + feed1)
+    lines.push(alignLeft + eq + feed1)
+    lines.push(alignLeft + leftRight('Item', 'Amount') + feed1)
+    lines.push(alignLeft + dash + feed1)
+    if (transactionData.services?.length) {
+      transactionData.services.forEach(service => {
+        const name = String(service?.service_name || service?.name || 'Service')
+        const qty = service?.quantity || 1
+        const price = (service?.price || 0).toFixed(2)
+        const total = (qty * (service?.price || 0)).toFixed(2)
+        lines.push(alignLeft + boldOn + name.slice(0, width) + boldOff + feed1)
+        lines.push(alignLeft + leftRight(`  ${qty}x PHP ${price}`, `PHP ${total}`) + feed1)
+      })
+    }
+    if (transactionData.products?.length) {
+      transactionData.products.forEach(product => {
+        const name = String(product?.product_name || product?.name || 'Product')
+        const qty = product?.quantity || 1
+        const price = (product?.price || 0).toFixed(2)
+        const total = (qty * (product?.price || 0)).toFixed(2)
+        lines.push(alignLeft + boldOn + name.slice(0, width) + boldOff + feed1)
+        lines.push(alignLeft + leftRight(`  ${qty}x PHP ${price}`, `PHP ${total}`) + feed1)
+      })
+    }
+    lines.push(alignLeft + dash + feed1)
+    lines.push(alignLeft + leftRight('Subtotal:', `PHP ${(transactionData.subtotal || 0).toFixed(2)}`) + feed1)
+    if (transactionData.discount_amount > 0) lines.push(alignLeft + leftRight('Discount:', `-PHP ${transactionData.discount_amount.toFixed(2)}`) + feed1)
+    if (transactionData.tax_amount > 0) lines.push(alignLeft + leftRight('Tax:', `PHP ${transactionData.tax_amount.toFixed(2)}`) + feed1)
+    lines.push(alignLeft + eq + feed1)
+    lines.push(alignLeft + boldOn + leftRight('TOTAL:', `PHP ${(transactionData.total_amount || 0).toFixed(2)}`) + boldOff + feed1)
+    lines.push(alignLeft + eq + feed1)
+    lines.push(alignLeft + leftRight('Payment:', String((transactionData.payment_method || 'cash').replace('_', ' ').toUpperCase())) + feed1)
+    if (transactionData.payment_method === 'cash') {
+      if (transactionData.cash_received) lines.push(alignLeft + leftRight('Cash Received:', `PHP ${transactionData.cash_received.toFixed(2)}`) + feed1)
+      if (transactionData.change_amount) lines.push(alignLeft + leftRight('Change:', `PHP ${transactionData.change_amount.toFixed(2)}`) + feed1)
+    }
+    lines.push(feed1)
+    lines.push(alignCenter + boldOn + padCenter('Thank you for your business!') + boldOff + feed1)
+    lines.push(alignCenter + padCenter('Please come again!') + feed1)
+    lines.push(feed2)
+    lines.push(cutPartial)
+    return lines.join('')
+  }
+
+  const tryAndroidEscPosPrint = () => {
+    try {
+      if (typeof window !== 'undefined' && window.Android && typeof window.Android.printText === 'function') {
+        const payload = generateEscPosText()
+        window.Android.printText(payload)
+        return true
+      }
+    } catch (_) {}
+    return false
+  }
+
   const handlePrint = async () => {
     try {
+      // Prefer ESC/POS via Android bridge if available
+      const androidOk = tryAndroidEscPosPrint()
+      if (androidOk) {
+        return
+      }
+      
       // Try PDF-based print first for best 58mm compatibility
       const tryPdfPrint = async () => {
         try {
