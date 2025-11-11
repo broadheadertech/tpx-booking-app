@@ -335,7 +335,7 @@ export function createUserError(
 }
 
 /**
- * Throws a user-friendly error
+ * Throws a user-friendly error with structured data
  * @param code - Error code from ERROR_CODES
  * @param customMessage - Optional custom message
  * @param customDetails - Optional custom details
@@ -346,11 +346,15 @@ export function throwUserError(
   customDetails?: string
 ): never {
   const error = createUserError(code, customMessage, customDetails);
-  // Throw a simple, user-friendly message format
-  const errorMessage = customDetails 
-    ? `${customMessage || error.message} ${customDetails}`
-    : customMessage || error.message;
-  throw new Error(errorMessage);
+  // Throw error with structured JSON data that frontend can parse
+  // Format: JSON string embedded in error message for Convex serialization
+  const structuredError = JSON.stringify({
+    code: error.code,
+    message: error.message,
+    details: error.details,
+    action: error.action
+  });
+  throw new Error(structuredError);
 }
 
 /**

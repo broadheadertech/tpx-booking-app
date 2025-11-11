@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React from 'react'
 import Modal from '../common/Modal'
 import { Printer, Download, X, CheckCircle } from 'lucide-react'
 
@@ -9,7 +9,6 @@ const ReceiptModal = ({
   branchInfo,
   staffInfo 
 }) => {
-  const receiptRef = useRef(null)
 
   if (!transactionData) return null
 
@@ -24,8 +23,235 @@ const ReceiptModal = ({
     })
   }
 
+  const formatTime = (timestamp) => {
+    const date = new Date(timestamp)
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })
+  }
+
   const handlePrint = () => {
-    window.print()
+    const printWindow = window.open('', '_blank', 'width=300,height=600')
+    if (!printWindow) {
+      alert('Please allow popups to print receipts')
+      return
+    }
+
+    const receiptHTML = generateReceiptHTML()
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Receipt - ${transactionData.receipt_number || transactionData.transaction_id}</title>
+          <meta charset="utf-8">
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            
+            @page {
+              size: 58mm auto;
+              margin: 0;
+            }
+            
+            body {
+              font-family: 'Courier New', Courier, monospace;
+              width: 58mm;
+              max-width: 58mm;
+              padding: 5mm 4mm;
+              font-size: 11px;
+              line-height: 1.3;
+              color: #000;
+              background: #fff;
+            }
+            
+            @media print {
+              body {
+                padding: 5mm 4mm;
+                margin: 0;
+              }
+              
+              .no-print {
+                display: none !important;
+              }
+            }
+            
+            .receipt-container {
+              width: 100%;
+              max-width: 50mm;
+              margin: 0 auto;
+            }
+            
+            .header {
+              text-align: center;
+              margin-bottom: 8px;
+              border-bottom: 1px dashed #000;
+              padding-bottom: 6px;
+            }
+            
+            .business-name {
+              font-size: 14px;
+              font-weight: bold;
+              margin-bottom: 2px;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            
+            .branch-name {
+              font-size: 11px;
+              font-weight: bold;
+              margin-bottom: 2px;
+            }
+            
+            .address, .phone {
+              font-size: 9px;
+              margin-bottom: 1px;
+            }
+            
+            .separator {
+              border-top: 1px dashed #000;
+              margin: 6px 0;
+            }
+            
+            .separator-thick {
+              border-top: 2px solid #000;
+              margin: 6px 0;
+            }
+            
+            .receipt-title {
+              text-align: center;
+              font-size: 12px;
+              font-weight: bold;
+              margin: 6px 0;
+              text-transform: uppercase;
+            }
+            
+            .info-row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 2px;
+              font-size: 10px;
+            }
+            
+            .info-label {
+              font-weight: bold;
+            }
+            
+            .info-value {
+              text-align: right;
+            }
+            
+            .items-header {
+              display: flex;
+              justify-content: space-between;
+              margin: 6px 0 4px 0;
+              font-weight: bold;
+              font-size: 10px;
+              border-bottom: 1px solid #000;
+              padding-bottom: 2px;
+            }
+            
+            .item-row {
+              margin-bottom: 4px;
+              font-size: 10px;
+            }
+            
+            .item-name {
+              font-weight: bold;
+              margin-bottom: 1px;
+            }
+            
+            .item-details {
+              display: flex;
+              justify-content: space-between;
+              font-size: 9px;
+              padding-left: 4px;
+            }
+            
+            .totals {
+              margin-top: 6px;
+            }
+            
+            .total-row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 2px;
+              font-size: 10px;
+            }
+            
+            .total-label {
+              font-weight: bold;
+            }
+            
+            .total-amount {
+              font-weight: bold;
+              text-align: right;
+            }
+            
+            .grand-total {
+              font-size: 12px;
+              font-weight: bold;
+              margin-top: 4px;
+            }
+            
+            .payment-info {
+              margin-top: 6px;
+              font-size: 10px;
+            }
+            
+            .footer {
+              text-align: center;
+              margin-top: 10px;
+              font-size: 9px;
+              border-top: 1px dashed #000;
+              padding-top: 6px;
+            }
+            
+            .thank-you {
+              font-weight: bold;
+              margin-bottom: 4px;
+            }
+            
+            .footer-note {
+              font-size: 8px;
+              margin-top: 4px;
+            }
+            
+            .barcode-area {
+              text-align: center;
+              margin: 8px 0;
+              padding: 4px 0;
+              border-top: 1px dashed #000;
+              border-bottom: 1px dashed #000;
+            }
+            
+            .receipt-number {
+              font-family: 'Courier New', monospace;
+              font-size: 10px;
+              letter-spacing: 1px;
+            }
+          </style>
+        </head>
+        <body>
+          ${receiptHTML}
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() {
+                window.close();
+              }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `)
+    
+    printWindow.document.close()
   }
 
   const handleDownload = () => {
@@ -42,9 +268,169 @@ const ReceiptModal = ({
     URL.revokeObjectURL(url)
   }
 
+  const generateReceiptHTML = () => {
+    const receiptNumber = transactionData.receipt_number || transactionData.transaction_id || 'N/A'
+    const timestamp = transactionData.timestamp || Date.now()
+    const dateStr = formatDate(timestamp)
+    const timeStr = formatTime(timestamp)
+    
+    let html = `
+      <div class="receipt-container">
+        <!-- Header -->
+        <div class="header">
+          <div class="business-name">TIPUNOX</div>
+          <div class="business-name" style="font-size: 12px;">ANGELES BARBERSHOP</div>
+          ${branchInfo?.name ? `<div class="branch-name">${branchInfo.name}</div>` : ''}
+          ${branchInfo?.address ? `<div class="address">${branchInfo.address}</div>` : ''}
+          ${branchInfo?.phone ? `<div class="phone">Tel: ${branchInfo.phone}</div>` : ''}
+        </div>
+        
+        <div class="separator"></div>
+        
+        <!-- Receipt Title -->
+        <div class="receipt-title">OFFICIAL RECEIPT</div>
+        
+        <!-- Transaction Info -->
+        <div class="info-row">
+          <span class="info-label">Receipt No:</span>
+          <span class="info-value">${receiptNumber}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Date:</span>
+          <span class="info-value">${dateStr}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Time:</span>
+          <span class="info-value">${timeStr}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Cashier:</span>
+          <span class="info-value">${staffInfo?.username || staffInfo?.full_name || 'Staff'}</span>
+        </div>
+        ${transactionData.barber_name ? `
+        <div class="info-row">
+          <span class="info-label">Barber:</span>
+          <span class="info-value">${transactionData.barber_name}</span>
+        </div>
+        ` : ''}
+        ${transactionData.customer_name ? `
+        <div class="info-row">
+          <span class="info-label">Customer:</span>
+          <span class="info-value">${transactionData.customer_name}</span>
+        </div>
+        ` : ''}
+        
+        <div class="separator"></div>
+        
+        <!-- Items Header -->
+        <div class="items-header">
+          <span>Item</span>
+          <span>Amount</span>
+        </div>
+        
+        <!-- Services -->
+        ${transactionData.services && transactionData.services.length > 0 ? transactionData.services.map(service => {
+          const itemTotal = (service.quantity || 1) * (service.price || 0)
+          return `
+            <div class="item-row">
+              <div class="item-name">${service.service_name || service.name || 'Service'}</div>
+              <div class="item-details">
+                <span>${service.quantity || 1}x ₱${(service.price || 0).toFixed(2)}</span>
+                <span>₱${itemTotal.toFixed(2)}</span>
+              </div>
+            </div>
+          `
+        }).join('') : ''}
+        
+        <!-- Products -->
+        ${transactionData.products && transactionData.products.length > 0 ? transactionData.products.map(product => {
+          const itemTotal = (product.quantity || 1) * (product.price || 0)
+          return `
+            <div class="item-row">
+              <div class="item-name">${product.product_name || product.name || 'Product'}</div>
+              <div class="item-details">
+                <span>${product.quantity || 1}x ₱${(product.price || 0).toFixed(2)}</span>
+                <span>₱${itemTotal.toFixed(2)}</span>
+              </div>
+            </div>
+          `
+        }).join('') : ''}
+        
+        <div class="separator"></div>
+        
+        <!-- Totals -->
+        <div class="totals">
+          <div class="total-row">
+            <span class="total-label">Subtotal:</span>
+            <span class="total-amount">₱${(transactionData.subtotal || 0).toFixed(2)}</span>
+          </div>
+          ${transactionData.discount_amount > 0 ? `
+          <div class="total-row">
+            <span class="total-label">Discount:</span>
+            <span class="total-amount">-₱${transactionData.discount_amount.toFixed(2)}</span>
+          </div>
+          ` : ''}
+          ${transactionData.voucher_applied ? `
+          <div class="total-row">
+            <span class="total-label">Voucher:</span>
+            <span class="total-amount">-₱${transactionData.discount_amount.toFixed(2)}</span>
+          </div>
+          ` : ''}
+          ${transactionData.tax_amount > 0 ? `
+          <div class="total-row">
+            <span class="total-label">Tax:</span>
+            <span class="total-amount">₱${transactionData.tax_amount.toFixed(2)}</span>
+          </div>
+          ` : ''}
+        </div>
+        
+        <div class="separator-thick"></div>
+        
+        <div class="total-row grand-total">
+          <span>TOTAL:</span>
+          <span>₱${(transactionData.total_amount || 0).toFixed(2)}</span>
+        </div>
+        
+        <div class="separator-thick"></div>
+        
+        <!-- Payment Info -->
+        <div class="payment-info">
+          <div class="info-row">
+            <span class="info-label">Payment:</span>
+            <span class="info-value">${(transactionData.payment_method || 'cash').replace('_', ' ').toUpperCase()}</span>
+          </div>
+          ${transactionData.payment_method === 'cash' && transactionData.cash_received ? `
+          <div class="info-row">
+            <span class="info-label">Cash Received:</span>
+            <span class="info-value">₱${transactionData.cash_received.toFixed(2)}</span>
+          </div>
+          ` : ''}
+          ${transactionData.payment_method === 'cash' && transactionData.change_amount ? `
+          <div class="info-row">
+            <span class="info-label">Change:</span>
+            <span class="info-value">₱${transactionData.change_amount.toFixed(2)}</span>
+          </div>
+          ` : ''}
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+          <div class="thank-you">Thank you for your business!</div>
+          <div>Please come again!</div>
+          <div class="footer-note">This serves as your official receipt</div>
+          <div class="footer-note" style="margin-top: 6px;">
+            Receipt #: <span class="receipt-number">${receiptNumber}</span>
+          </div>
+        </div>
+      </div>
+    `
+    
+    return html
+  }
+
   const generateReceiptText = () => {
     const lines = []
-    const width = 42 // Characters width for 80mm paper
+    const width = 32 // Characters width for 58mm paper (approximately 32 chars at 11px font)
     
     const center = (text) => {
       const padding = Math.max(0, Math.floor((width - text.length) / 2))
@@ -60,10 +446,13 @@ const ReceiptModal = ({
     const dashedLine = '-'.repeat(width)
     
     // Header
-    lines.push(center('TPX BARBERSHOP'))
-    lines.push(center(branchInfo?.name || 'Main Branch'))
+    lines.push(center('TIPUNOX'))
+    lines.push(center('ANGELES BARBERSHOP'))
+    if (branchInfo?.name) {
+      lines.push(center(branchInfo.name))
+    }
     if (branchInfo?.address) {
-      lines.push(center(branchInfo.address))
+      lines.push(center(branchInfo.address.substring(0, width)))
     }
     if (branchInfo?.phone) {
       lines.push(center(`Tel: ${branchInfo.phone}`))
@@ -73,14 +462,14 @@ const ReceiptModal = ({
     // Transaction Info
     lines.push(center('OFFICIAL RECEIPT'))
     lines.push('')
-    lines.push(leftRight('Receipt No:', transactionData.receipt_number || transactionData.transaction_id))
-    lines.push(leftRight('Date:', formatDate(transactionData.timestamp || Date.now())))
-    lines.push(leftRight('Cashier:', staffInfo?.username || 'Staff'))
+    lines.push(leftRight('Receipt No:', (transactionData.receipt_number || transactionData.transaction_id || 'N/A').substring(0, 15)))
+    lines.push(leftRight('Date:', formatDate(transactionData.timestamp || Date.now()).substring(0, 15)))
+    lines.push(leftRight('Cashier:', (staffInfo?.username || 'Staff').substring(0, 15)))
     if (transactionData.barber_name) {
-      lines.push(leftRight('Barber:', transactionData.barber_name))
+      lines.push(leftRight('Barber:', transactionData.barber_name.substring(0, 15)))
     }
     if (transactionData.customer_name) {
-      lines.push(leftRight('Customer:', transactionData.customer_name))
+      lines.push(leftRight('Customer:', transactionData.customer_name.substring(0, 15)))
     }
     lines.push(separator)
     
@@ -91,11 +480,11 @@ const ReceiptModal = ({
     // Services
     if (transactionData.services && transactionData.services.length > 0) {
       transactionData.services.forEach(service => {
-        const itemLine = `${service.service_name}`
-        lines.push(itemLine)
+        const name = (service.service_name || service.name || 'Service').substring(0, 20)
+        lines.push(name)
         const detailLine = leftRight(
-          `  ${service.quantity}x ₱${service.price.toFixed(2)}`,
-          `₱${(service.quantity * service.price).toFixed(2)}`
+          `  ${service.quantity || 1}x ₱${(service.price || 0).toFixed(2)}`,
+          `₱${((service.quantity || 1) * (service.price || 0)).toFixed(2)}`
         )
         lines.push(detailLine)
       })
@@ -104,11 +493,11 @@ const ReceiptModal = ({
     // Products
     if (transactionData.products && transactionData.products.length > 0) {
       transactionData.products.forEach(product => {
-        const itemLine = `${product.product_name}`
-        lines.push(itemLine)
+        const name = (product.product_name || product.name || 'Product').substring(0, 20)
+        lines.push(name)
         const detailLine = leftRight(
-          `  ${product.quantity}x ₱${product.price.toFixed(2)}`,
-          `₱${(product.quantity * product.price).toFixed(2)}`
+          `  ${product.quantity || 1}x ₱${(product.price || 0).toFixed(2)}`,
+          `₱${((product.quantity || 1) * (product.price || 0)).toFixed(2)}`
         )
         lines.push(detailLine)
       })
@@ -117,7 +506,7 @@ const ReceiptModal = ({
     lines.push(dashedLine)
     
     // Totals
-    lines.push(leftRight('Subtotal:', `₱${transactionData.subtotal.toFixed(2)}`))
+    lines.push(leftRight('Subtotal:', `₱${(transactionData.subtotal || 0).toFixed(2)}`))
     
     if (transactionData.discount_amount > 0) {
       lines.push(leftRight('Discount:', `-₱${transactionData.discount_amount.toFixed(2)}`))
@@ -128,13 +517,13 @@ const ReceiptModal = ({
     }
     
     lines.push(separator)
-    lines.push(leftRight('TOTAL:', `₱${transactionData.total_amount.toFixed(2)}`))
+    lines.push(leftRight('TOTAL:', `₱${(transactionData.total_amount || 0).toFixed(2)}`))
     lines.push(separator)
     
     // Payment Info
     lines.push('')
-    const paymentMethodLabel = transactionData.payment_method.replace('_', ' ').toUpperCase()
-    lines.push(leftRight('Payment Method:', paymentMethodLabel))
+    const paymentMethodLabel = (transactionData.payment_method || 'cash').replace('_', ' ').toUpperCase()
+    lines.push(leftRight('Payment:', paymentMethodLabel))
     
     if (transactionData.payment_method === 'cash') {
       if (transactionData.cash_received) {
@@ -150,10 +539,11 @@ const ReceiptModal = ({
     
     // Footer
     lines.push('')
-    lines.push(center('Thank you for your business!'))
+    lines.push(center('Thank you for your'))
+    lines.push(center('business!'))
     lines.push(center('Please come again!'))
     lines.push('')
-    lines.push(center('This serves as your official receipt'))
+    lines.push(center('Official receipt'))
     lines.push('')
     
     return lines.join('\n')
@@ -206,14 +596,6 @@ const ReceiptModal = ({
         </div>
       </Modal>
 
-      {/* Print-only Receipt */}
-      <div className="print-receipt hidden">
-        <div ref={receiptRef} style={{ fontFamily: 'monospace', width: '80mm', fontSize: '12px', padding: '10mm' }}>
-          <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
-            {generateReceiptText()}
-          </pre>
-        </div>
-      </div>
     </>
   )
 }

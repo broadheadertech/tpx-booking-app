@@ -40,8 +40,31 @@ function ResetPassword() {
         toast.success('Password reset', 'You can now sign in with your new password')
         navigate('/auth/login')
       } else {
-        toast.error('Reset failed', res.error || 'Please try again')
+        // Parse error message for better user experience
+        let errorMessage = res.error || 'Failed to reset password'
+        if (errorMessage.toLowerCase().includes('expired') || errorMessage.toLowerCase().includes('invalid')) {
+          errorMessage = 'Your password reset link has expired or is invalid. Please request a new one.'
+        }
+        toast.error('Reset failed', errorMessage)
       }
+    } catch (error) {
+      console.error('Reset password error:', error)
+      let errorMessage = 'Failed to reset password. Please try again.'
+      if (error?.message) {
+        try {
+          const parsed = JSON.parse(error.message)
+          if (parsed.message) {
+            errorMessage = parsed.message
+          }
+        } catch {
+          if (error.message.toLowerCase().includes('expired') || error.message.toLowerCase().includes('invalid')) {
+            errorMessage = 'Your password reset link has expired or is invalid. Please request a new one.'
+          } else {
+            errorMessage = error.message
+          }
+        }
+      }
+      toast.error('Reset failed', errorMessage)
     } finally {
       setLoading(false)
     }

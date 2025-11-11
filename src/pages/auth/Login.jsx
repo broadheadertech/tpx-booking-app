@@ -98,7 +98,13 @@ function Login() {
           navigate('/customer/dashboard')
         }
       } else {
-        setError(result.error)
+        // Clean error message to remove any technical prefixes
+        let cleanError = result.error || 'An error occurred';
+        cleanError = cleanError.replace(/^(Server Error|Uncaught Error|Error):\s*/i, '');
+        cleanError = cleanError.replace(/Server\s+Error\s+Uncaught\s+Error:\s*/gi, '');
+        cleanError = cleanError.trim();
+        
+        setError(cleanError)
         setErrorDetails(result.details || '')
         setErrorAction(result.action || '')
       }
@@ -161,20 +167,18 @@ function Login() {
               {error && (
                 <div className="mb-4">
                   <ErrorDisplay 
-                    error={error} 
-                    variant="compact"
+                    error={{
+                      message: error,
+                      details: errorDetails,
+                      action: errorAction
+                    }}
+                    variant="default"
                     onClose={() => {
                       setError('')
                       setErrorDetails('')
                       setErrorAction('')
                     }}
                   />
-                  {errorDetails && (
-                    <p className="text-xs text-gray-400 mt-2">{errorDetails}</p>
-                  )}
-                  {errorAction && (
-                    <p className="text-xs text-[#FF8C42] mt-1">{errorAction}</p>
-                  )}
                 </div>
               )}
               <form onSubmit={handleSubmit} className="space-y-6">

@@ -13,19 +13,43 @@ const ErrorDisplay = ({
 
   const formattedError = formatErrorForDisplay(error)
 
+  // Check if we're in a dark theme context (for auth pages)
+  const isDarkTheme = className.includes('dark') || document.body.classList.contains('dark') || 
+                      window.location.pathname.includes('/auth')
+  
+  const darkThemeClasses = {
+    container: 'bg-red-500/10 border-red-500/30',
+    icon: 'text-red-400',
+    message: 'text-red-300',
+    details: 'text-red-200',
+    action: 'text-[#FF8C42]',
+    closeButton: 'text-red-400 hover:text-red-300'
+  }
+  
+  const lightThemeClasses = {
+    container: 'bg-red-50 border-red-200',
+    icon: 'text-red-500',
+    message: 'text-red-800',
+    details: 'text-red-600',
+    action: 'text-red-600',
+    closeButton: 'text-red-400 hover:text-red-600'
+  }
+  
+  const theme = isDarkTheme ? darkThemeClasses : lightThemeClasses
+
   if (variant === 'inline') {
     return (
-      <div className={`flex items-start space-x-3 p-3 bg-red-50 border border-red-200 rounded-lg ${className}`}>
-        <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+      <div className={`flex items-start space-x-3 p-3 ${theme.container} border rounded-lg ${className}`}>
+        <AlertCircle className={`w-4 h-4 ${theme.icon} flex-shrink-0 mt-0.5`} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm text-red-800">
+          <p className={`text-sm ${theme.message}`}>
             {formattedError.message}
           </p>
         </div>
         {onClose && (
           <button
             onClick={onClose}
-            className="text-red-400 hover:text-red-600 transition-colors"
+            className={`${theme.closeButton} transition-colors`}
           >
             <X className="w-4 h-4" />
           </button>
@@ -36,12 +60,12 @@ const ErrorDisplay = ({
 
   if (variant === 'compact') {
     return (
-      <div className={`bg-red-50 border border-red-200 rounded-lg p-4 ${className}`}>
+      <div className={`${theme.container} border rounded-lg p-4 ${className}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <AlertCircle className="w-5 h-5 text-red-500" />
+            <AlertCircle className={`w-5 h-5 ${theme.icon}`} />
             <div>
-              <p className="text-sm font-medium text-red-800">
+              <p className={`text-sm font-medium ${theme.message}`}>
                 {formattedError.message}
               </p>
             </div>
@@ -50,7 +74,7 @@ const ErrorDisplay = ({
             {onClose && (
               <button
                 onClick={onClose}
-                className="text-red-400 hover:text-red-600 transition-colors"
+                className={`${theme.closeButton} transition-colors`}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -61,28 +85,38 @@ const ErrorDisplay = ({
     )
   }
 
-  // Default variant
+  // Default variant - combine message and details into one human-friendly message
+  // Make it more conversational and natural
+  let humanMessage = formattedError.message;
+  
+  if (formattedError.details) {
+    // Combine message and details naturally
+    if (formattedError.message.endsWith('.') || formattedError.message.endsWith('!') || formattedError.message.endsWith('?')) {
+      humanMessage = `${formattedError.message} ${formattedError.details}`;
+    } else {
+      humanMessage = `${formattedError.message}. ${formattedError.details}`;
+    }
+  }
+  
+  // Remove any remaining technical prefixes that might have slipped through
+  humanMessage = humanMessage.replace(/^(Server Error|Uncaught Error|Error):\s*/i, '');
+  humanMessage = humanMessage.trim();
+  
   return (
-    <div className={`bg-red-50 border border-red-200 rounded-lg p-4 ${className}`}>
+    <div className={`${theme.container} border rounded-xl p-4 ${className}`}>
       <div className="flex items-start space-x-3">
-        <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+        <AlertCircle className={`w-5 h-5 ${theme.icon} flex-shrink-0 mt-0.5`} />
         
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <p className="text-sm font-medium text-red-800 mb-1">
-                {formattedError.message}
+              <p className={`text-sm font-medium ${theme.message}`}>
+                {humanMessage}
               </p>
               
-              {formattedError.details && (
-                <p className="text-xs text-red-600 mb-2">
-                  {formattedError.details}
-                </p>
-              )}
-              
               {formattedError.action && (
-                <p className="text-xs text-red-600">
-                  {formattedError.action}
+                <p className={`text-xs ${theme.action} mt-2`}>
+                  💡 {formattedError.action}
                 </p>
               )}
             </div>
@@ -90,14 +124,12 @@ const ErrorDisplay = ({
             {onClose && (
               <button
                 onClick={onClose}
-                className="text-red-400 hover:text-red-600 transition-colors ml-3"
+                className={`${theme.closeButton} transition-colors ml-3`}
               >
                 <X className="w-4 h-4" />
               </button>
             )}
           </div>
-          
-
         </div>
       </div>
     </div>

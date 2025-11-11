@@ -18,12 +18,12 @@ const StatsCards = ({ stats = [] }) => {
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
       {stats.map((stat, index) => {
         const IconComponent = getIcon(stat.icon, stat.label)
 
         return (
-          <div key={index} className="bg-[#1A1A1A] p-4 rounded-xl border border-[#2A2A2A]/50 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-[1.02]">
+          <div key={index} className="bg-[#1A1A1A] p-3 sm:p-4 rounded-xl border border-[#2A2A2A]/50 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-[1.02]">
             <div className="flex items-center justify-between gap-3">
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-gray-400 mb-1 truncate">{stat.label}</p>

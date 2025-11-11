@@ -1,6 +1,114 @@
 // Frontend error handling utilities for parsing and displaying user-friendly errors
 
 /**
+ * Extracts JSON from error message
+ * @param {string} message - Raw error message
+ * @returns {Object|null} Parsed JSON object or null
+ */
+function extractJSON(message) {
+  if (!message) return null;
+  
+  // Find JSON object start
+  const jsonStart = message.indexOf('{');
+  if (jsonStart === -1) return null;
+  
+  // Find where JSON ends (before " at " or end of string)
+  const atIndex = message.indexOf(' at ', jsonStart);
+  const endIndex = atIndex !== -1 ? atIndex : message.length;
+  
+  // Extract JSON string
+  let jsonStr = message.substring(jsonStart, endIndex).trim();
+  
+  // Remove trailing punctuation if present
+  jsonStr = jsonStr.replace(/[.,;:]$/, '');
+  
+  try {
+    const parsed = JSON.parse(jsonStr);
+    if (parsed && typeof parsed === 'object' && parsed.message) {
+      return parsed;
+    }
+  } catch (e) {
+    // Try to find complete JSON by matching braces
+    let braceCount = 0;
+    let jsonEnd = jsonStart;
+    for (let i = jsonStart; i < message.length; i++) {
+      if (message[i] === '{') braceCount++;
+      if (message[i] === '}') braceCount--;
+      if (braceCount === 0) {
+        jsonEnd = i + 1;
+        break;
+      }
+    }
+    if (jsonEnd > jsonStart) {
+      try {
+        const parsed = JSON.parse(message.substring(jsonStart, jsonEnd));
+        if (parsed && typeof parsed === 'object' && parsed.message) {
+          return parsed;
+        }
+      } catch (e2) {
+        // Failed to parse
+      }
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Strips Convex metadata and stack traces from error messages
+ * @param {string} message - Raw error message
+ * @returns {string} Clean error message
+ */
+function cleanConvexError(message) {
+  if (!message) return '';
+  
+  // First, try to extract JSON error if present
+  const jsonData = extractJSON(message);
+  if (jsonData && jsonData.message) {
+    return jsonData.message;
+  }
+  
+  let cleaned = message;
+  
+  // Remove Convex metadata patterns: [CONVEX M(...)]
+  cleaned = cleaned.replace(/\[CONVEX M\([^\]]+\)\]/g, '');
+  
+  // Remove Request ID patterns: [Request ID: ...]
+  cleaned = cleaned.replace(/\[Request ID: [^\]]+\]/g, '');
+  
+  // Remove "Server Error Uncaught Error:" prefix (with all variations)
+  // Match with flexible spacing
+  cleaned = cleaned.replace(/Server\s+Error\s+Uncaught\s+Error:\s*/gi, '');
+  cleaned = cleaned.replace(/Server\s+Error\s+Uncaught\s+Error\s*/gi, '');
+  cleaned = cleaned.replace(/Server Error Uncaught Error:\s*/gi, '');
+  cleaned = cleaned.replace(/Server Error Uncaught Error\s*/gi, '');
+  cleaned = cleaned.replace(/Uncaught\s+Error:\s*/gi, '');
+  cleaned = cleaned.replace(/Uncaught\s+Error\s*/gi, '');
+  cleaned = cleaned.replace(/Server\s+Error:\s*/gi, '');
+  cleaned = cleaned.replace(/Server\s+Error\s*/gi, '');
+  
+  // Remove stack traces (lines starting with "at")
+  cleaned = cleaned.replace(/\s*at\s+[^\n]+/g, '');
+  
+  // Remove "Called by client" text
+  cleaned = cleaned.replace(/\s*Called by client\s*/gi, '');
+  
+  // Try to extract JSON error again after cleaning (in case it was embedded)
+  const jsonDataAfter = extractJSON(cleaned);
+  if (jsonDataAfter && jsonDataAfter.message) {
+    return jsonDataAfter.message;
+  }
+  
+  // Clean up extra whitespace and newlines
+  cleaned = cleaned.trim().replace(/\s+/g, ' ');
+  
+  // Remove any remaining technical prefixes
+  cleaned = cleaned.replace(/^(Error|Exception|Uncaught):\s*/i, '');
+  
+  return cleaned;
+}
+
+/**
  * Parses error messages from Convex and extracts user-friendly information
  * @param {Error|string} error - The error object or message
  * @returns {Object} Parsed error with user-friendly properties
@@ -14,44 +122,61 @@ export function parseError(error) {
   try {
     // Handle different error formats
     if (typeof error === 'string') {
+      // Clean Convex metadata first
+      const cleaned = cleanConvexError(error);
+      
       // Try to parse JSON error message
-      if (error.includes('{"message"')) {
-        const jsonMatch = error.match(/\{"message".*?\}/);
+      if (cleaned.includes('{"message"')) {
+        const jsonMatch = cleaned.match(/\{[\s\S]*"message"[\s\S]*\}/);
         if (jsonMatch) {
-          const errorData = JSON.parse(jsonMatch[0]);
-          errorMessage = errorData.message || 'An error occurred';
-          errorCode = errorData.code || 'UNKNOWN_ERROR';
-          errorDetails = errorData.details || '';
-          errorAction = errorData.action || '';
+          try {
+            const errorData = JSON.parse(jsonMatch[0]);
+            errorMessage = errorData.message || 'An error occurred';
+            errorCode = errorData.code || 'UNKNOWN_ERROR';
+            errorDetails = errorData.details || '';
+            errorAction = errorData.action || '';
+          } catch (e) {
+            errorMessage = cleaned;
+          }
         } else {
-          errorMessage = error;
+          errorMessage = cleaned;
         }
       } else {
-        errorMessage = error;
+        errorMessage = cleaned;
       }
     } else if (error?.message) {
       // Handle Error objects
       const message = error.message;
-      if (message.includes('{"message"')) {
-        const jsonMatch = message.match(/\{"message".*?\}/);
+      
+      // Clean Convex metadata first
+      const cleaned = cleanConvexError(message);
+      
+      // Try to parse JSON error message
+      if (cleaned.includes('{"message"')) {
+        const jsonMatch = cleaned.match(/\{[\s\S]*"message"[\s\S]*\}/);
         if (jsonMatch) {
-          const errorData = JSON.parse(jsonMatch[0]);
-          errorMessage = errorData.message || 'An error occurred';
-          errorCode = errorData.code || 'UNKNOWN_ERROR';
-          errorDetails = errorData.details || '';
-          errorAction = errorData.action || '';
+          try {
+            const errorData = JSON.parse(jsonMatch[0]);
+            errorMessage = errorData.message || 'An error occurred';
+            errorCode = errorData.code || 'UNKNOWN_ERROR';
+            errorDetails = errorData.details || '';
+            errorAction = errorData.action || '';
+          } catch (e) {
+            errorMessage = cleaned;
+          }
         } else {
-          errorMessage = message;
+          errorMessage = cleaned;
         }
       } else {
-        errorMessage = message;
+        errorMessage = cleaned;
       }
     } else {
       errorMessage = 'An unexpected error occurred';
     }
   } catch (parseError) {
     // Fallback if JSON parsing fails
-    errorMessage = error?.message || error || 'An unexpected error occurred';
+    const rawMessage = error?.message || error || 'An unexpected error occurred';
+    errorMessage = cleanConvexError(rawMessage) || 'An unexpected error occurred';
   }
 
   return {
@@ -65,10 +190,24 @@ export function parseError(error) {
 
 /**
  * Formats error for display in UI components
- * @param {Error|string} error - The error to format
+ * @param {Error|string|Object} error - The error to format (can be string, Error, or object with message/details/action)
  * @returns {Object} Formatted error object
  */
 export function formatErrorForDisplay(error) {
+  // Handle structured error objects
+  if (error && typeof error === 'object' && !(error instanceof Error)) {
+    if (error.message || error.details || error.action) {
+      return {
+        title: 'Error',
+        message: error.message || 'An error occurred',
+        details: error.details || '',
+        action: error.action || '',
+        type: getErrorType(error.code || ''),
+        code: error.code || ''
+      };
+    }
+  }
+  
   const parsed = parseError(error);
   
   return {
