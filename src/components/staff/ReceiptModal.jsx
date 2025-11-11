@@ -10,6 +10,7 @@ const ReceiptModal = ({
   staffInfo 
 }) => {
   const printIframeRef = useRef(null)
+  const isPrintingRef = useRef(false)
 
   if (!transactionData) return null
 
@@ -23,23 +24,64 @@ const ReceiptModal = ({
     }
   }, [])
 
-  // Detect Android device
-  const isAndroid = () => {
-    if (typeof window === 'undefined') return false
-    const userAgent = navigator.userAgent || navigator.vendor || window.opera
-    return /Android/i.test(userAgent)
-  }
-
   // Detect if running in Capacitor (native app)
   const isCapacitor = () => {
     return typeof window !== 'undefined' && window.Capacitor
   }
 
-  // Detect mobile device
-  const isMobile = () => {
-    if (typeof window === 'undefined') return false
-    const userAgent = navigator.userAgent || navigator.vendor || window.opera
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)
+  // Reusable hidden-iframe printer for URLs (PDF/HTML)
+  const printWithIframeUrl = (url) => {
+    return new Promise((resolve) => {
+      const iframe = document.createElement('iframe')
+      iframe.style.position = 'fixed'
+      iframe.style.right = '0'
+      iframe.style.bottom = '0'
+      iframe.style.width = '0'
+      iframe.style.height = '0'
+      iframe.style.border = '0'
+      iframe.style.opacity = '0'
+      iframe.style.pointerEvents = 'none'
+      iframe.style.zIndex = '-9999'
+      document.body.appendChild(iframe)
+      const cleanup = () => {
+        try { document.body.removeChild(iframe) } catch (_) {}
+      }
+      const onAfter = () => {
+        cleanup()
+        resolve(true)
+      }
+      iframe.onload = () => {
+        try {
+          const w = iframe.contentWindow
+          if (w) {
+            try { w.addEventListener('afterprint', onAfter) } catch (_) {}
+            setTimeout(() => {
+              try {
+                w.focus()
+                w.print()
+                setTimeout(onAfter, 60000) // safety cleanup
+              } catch (_) {
+                cleanup()
+                resolve(false)
+              }
+            }, 250)
+          } else {
+            cleanup()
+            resolve(false)
+          }
+        } catch (_) {
+          cleanup()
+          resolve(false)
+        }
+      }
+      setTimeout(() => {
+        if (!iframe.contentDocument) {
+          cleanup()
+          resolve(false)
+        }
+      }, 2000)
+      iframe.src = url
+    })
   }
 
   const formatDate = (timestamp) => {
@@ -159,25 +201,93 @@ const ReceiptModal = ({
 
   const handlePrint = async () => {
     try {
-      // Prefer ESC/POS via Android bridge if available
+      if (isPrintingRef.current) return
+      isPrintingRef.current = true
+
+      // 1) ESC/POS via Android bridge
       const androidOk = tryAndroidEscPosPrint()
-      if (androidOk) {
-        return
+      if (androidOk) return
+
+      // Build HTML once for later paths (no inline scripts)
+      const receiptHTML = generateReceiptHTML()
+      const fullHTML = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Receipt - ${transactionData.receipt_number || transactionData.transaction_id}</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              @page { size: 58mm auto; margin: 0; padding: 0; }
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              html { width: 58mm; height: auto; margin: 0; padding: 0; }
+              body {
+                width: 58mm !important; max-width: 58mm !important; min-width: 58mm !important;
+                margin: 0 !important; padding: 2mm 2mm !important;
+                font-family: 'Courier New', Courier, monospace; font-size: 10px; line-height: 1.15;
+                color: #000000 !important; background: #FFFFFF !important;
+                -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
+                display: block !important; visibility: visible !important; overflow: visible !important;
+              }
+              @media print {
+                @page { size: 58mm auto; margin: 0; padding: 0; }
+                html { width: 58mm !important; margin: 0 !important; padding: 0 !important; }
+                body {
+                  width: 58mm !important; max-width: 58mm !important; min-width: 58mm !important;
+                  margin: 0 !important; padding: 2mm 2mm !important;
+                  color: #000000 !important; background: #FFFFFF !important;
+                  -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
+                  display: block !important; visibility: visible !important;
+                }
+                * { visibility: visible !important; color: #000000 !important; background: transparent !important; }
+                .receipt-container { width: 48mm !important; margin: 0 auto !important; display: block !important; }
+                table { width: 100% !important; max-width: 48mm !important; }
+              }
+              .receipt-container { width: 48mm !important; margin: 0 auto; display: block !important; color: #000000 !important; }
+              table { width: 100%; max-width: 48mm; border-collapse: collapse; margin: 0; padding: 0; font-size: 9px; color: #000000 !important; }
+              td { padding: 1px 2px; color: #000000 !important; font-size: inherit; }
+              .header { text-align: center; margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px dashed #000; display: block; width: 100%; }
+              .business-name { font-size: 12px; font-weight: bold; margin-bottom: 1px; text-transform: uppercase; display: block; line-height: 1.2; }
+              .branch-name { font-size: 9px; font-weight: bold; margin-bottom: 1px; display: block; line-height: 1.2; }
+              .address, .phone { font-size: 7px; margin-bottom: 1px; display: block; line-height: 1.2; }
+              .separator { border-top: 1px dashed #000; margin: 4px 0; display: block; height: 0; width: 100%; }
+              .separator-thick { border-top: 2px solid #000; margin: 4px 0; display: block; height: 0; width: 100%; }
+              .receipt-title { text-align: center; font-size: 10px; font-weight: bold; margin: 4px 0; text-transform: uppercase; display: block; line-height: 1.2; }
+              .footer { text-align: center; margin-top: 6px; font-size: 7px; border-top: 1px dashed #000; padding-top: 4px; display: block; width: 100%; line-height: 1.3; }
+              .thank-you { font-weight: bold; margin-bottom: 2px; display: block; font-size: 8px; }
+              .footer-note { font-size: 6px; margin-top: 2px; display: block; line-height: 1.2; }
+              .receipt-number { font-family: 'Courier New', monospace; font-size: 7px; letter-spacing: 0.5px; }
+            </style>
+          </head>
+          <body style="background:#FFFFFF; color:#000000; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+            ${receiptHTML}
+          </body>
+        </html>
+      `
+
+      // 2) Capacitor native printing
+      if (isCapacitor() && window.Capacitor?.Plugins?.Printer) {
+        try {
+          await window.Capacitor.Plugins.Printer.print({
+            html: fullHTML,
+            name: `Receipt-${transactionData.receipt_number || transactionData.transaction_id}`,
+          })
+          return
+        } catch (_) {}
       }
-      
-      // Try PDF-based print first for best 58mm compatibility
+
+      // 3) PDF auto-print via hidden iframe
       const tryPdfPrint = async () => {
         try {
           const { jsPDF } = await import('jspdf')
           const receiptText = generateReceiptText()
           const sanitized = receiptText.replace(/₱/g, 'PHP ')
           
-          // Layout settings for 58mm thermal
           const pageWidthMm = 58
           const leftPaddingMm = 2
           const rightPaddingMm = 2
           const usableWidthMm = pageWidthMm - leftPaddingMm - rightPaddingMm
-          const lineHeightMm = 4 // 4mm per line for readability on thermal
+          const lineHeightMm = 4
           const topPaddingMm = 2
           const bottomPaddingMm = 2
           
@@ -185,22 +295,15 @@ const ReceiptModal = ({
           const contentHeightMm = Math.max(lineHeightMm, lines.length * lineHeightMm)
           const totalHeightMm = topPaddingMm + contentHeightMm + bottomPaddingMm
           
-          const doc = new jsPDF({
-            unit: 'mm',
-            format: [pageWidthMm, totalHeightMm],
-            orientation: 'portrait',
-          })
-          
+          const doc = new jsPDF({ unit: 'mm', format: [pageWidthMm, totalHeightMm], orientation: 'portrait' })
           if (doc.internal && doc.internal.pageSize && typeof doc.internal.pageSize.setHeight === 'function') {
             doc.internal.pageSize.setHeight(totalHeightMm)
           }
-          
           doc.setFont('courier', 'normal')
           doc.setFontSize(8)
           
           let y = topPaddingMm + 3
           const x = leftPaddingMm
-          
           for (const line of lines) {
             const maxChars = Math.floor(usableWidthMm * 3.5)
             const chunks = []
@@ -216,535 +319,39 @@ const ReceiptModal = ({
               y += lineHeightMm
             }
           }
-          
-          // Request viewer to open print dialog automatically
-          if (typeof doc.autoPrint === 'function') {
-            doc.autoPrint()
-          }
-          
           const blob = doc.output('blob')
           const url = URL.createObjectURL(blob)
-          
-          // Use hidden iframe to trigger print automatically
-          const iframe = document.createElement('iframe')
-          iframe.style.position = 'fixed'
-          iframe.style.right = '0'
-          iframe.style.bottom = '0'
-          iframe.style.width = '0'
-          iframe.style.height = '0'
-          iframe.style.border = '0'
-          iframe.style.opacity = '0'
-          iframe.style.pointerEvents = 'none'
-          iframe.style.zIndex = '-9999'
-          document.body.appendChild(iframe)
-          
-          return await new Promise((resolve) => {
-            const cleanup = () => {
-              try {
-                document.body.removeChild(iframe)
-              } catch (_) {}
-              setTimeout(() => URL.revokeObjectURL(url), 1500)
-            }
-            iframe.onload = () => {
-              try {
-                const w = iframe.contentWindow
-                if (w && typeof w.print === 'function') {
-                  // Attach afterprint to cleanup after user finishes
-                  try {
-                    w.addEventListener('afterprint', () => {
-                      cleanup()
-                      resolve(true)
-                    })
-                  } catch (_) {
-                    // Some environments may not support afterprint on iframe window
-                  }
-                  // Delay slightly to ensure render, then trigger print
-                  setTimeout(() => {
-                    try {
-                      w.focus()
-                      w.print()
-                      // Safety cleanup if afterprint never fires
-                      setTimeout(() => {
-                        cleanup()
-                        resolve(true)
-                      }, 60000) // 60s fallback
-                    } catch (e) {
-                      cleanup()
-                      resolve(false)
-                    }
-                  }, 250)
-                } else {
-                  cleanup()
-                  resolve(false)
-                }
-              } catch (_) {
-                cleanup()
-                resolve(false)
-              }
-            }
-            // Fallback if onload doesn't fire
-            setTimeout(() => {
-              if (!iframe.contentDocument) {
-                cleanup()
-                resolve(false)
-              }
-            }, 2000)
-            iframe.src = url
-          })
-        } catch (e) {
+          const ok = await printWithIframeUrl(url)
+          setTimeout(() => URL.revokeObjectURL(url), 1500)
+          return ok
+        } catch (_) {
           return false
         }
       }
-      
       const pdfOk = await tryPdfPrint()
-      if (pdfOk) {
-        return
+      if (pdfOk) return
+
+      // 4) HTML via hidden iframe (blob URL)
+      const htmlBlob = new Blob([fullHTML], { type: 'text/html' })
+      const htmlUrl = URL.createObjectURL(htmlBlob)
+      const htmlOk = await printWithIframeUrl(htmlUrl)
+      setTimeout(() => URL.revokeObjectURL(htmlUrl), 1500)
+      if (htmlOk) return
+
+      // 5) window.open fallback
+      const win = window.open('', '_blank', 'width=300,height=600')
+      if (win) {
+        win.document.write(fullHTML)
+        win.document.close()
+        try { win.focus(); win.print() } catch (_) {}
+      } else {
+        alert('Please allow popups to print receipts, or use the download option.')
       }
-
-      const receiptHTML = generateReceiptHTML()
-      // Simplified HTML for thermal printers - no complex CSS
-      const fullHTML = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Receipt - ${transactionData.receipt_number || transactionData.transaction_id}</title>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-              /* Page size for 58mm thermal printer */
-              @page {
-                size: 58mm auto;
-                margin: 0mm;
-                padding: 0mm;
-              }
-              
-              * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-              }
-              
-              html {
-                width: 58mm;
-                height: auto;
-                margin: 0;
-                padding: 0;
-              }
-              
-              body {
-                width: 58mm !important;
-                max-width: 58mm !important;
-                min-width: 58mm !important;
-                margin: 0 !important;
-                padding: 2mm 2mm !important;
-                font-family: 'Courier New', Courier, monospace;
-                font-size: 10px;
-                line-height: 1.15;
-                color: #000000 !important;
-                background: #FFFFFF !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                display: block !important;
-                visibility: visible !important;
-                overflow: visible !important;
-              }
-              
-              @media print {
-                @page {
-                  size: 58mm auto;
-                  margin: 0mm;
-                  padding: 0mm;
-                }
-                
-                html {
-                  width: 58mm !important;
-                  margin: 0 !important;
-                  padding: 0 !important;
-                }
-                
-                body {
-                  width: 58mm !important;
-                  max-width: 58mm !important;
-                  min-width: 58mm !important;
-                  margin: 0 !important;
-                  padding: 2mm 2mm !important;
-                  color: #000000 !important;
-                  background: #FFFFFF !important;
-                  -webkit-print-color-adjust: exact !important;
-                  print-color-adjust: exact !important;
-                  display: block !important;
-                  visibility: visible !important;
-                }
-                
-                * {
-                  visibility: visible !important;
-                  color: #000000 !important;
-                  background: transparent !important;
-                }
-                
-                .receipt-container {
-                  width: 48mm !important;
-                  max-width: 48mm !important;
-                  min-width: 48mm !important;
-                  margin: 0 auto !important;
-                  display: block !important;
-                  visibility: visible !important;
-                  color: #000000 !important;
-                }
-                
-                table {
-                  width: 100% !important;
-                  max-width: 48mm !important;
-                }
-              }
-              
-              .receipt-container {
-                width: 48mm !important;
-                max-width: 48mm !important;
-                min-width: 48mm !important;
-                margin: 0 auto;
-                display: block !important;
-                visibility: visible !important;
-                color: #000000 !important;
-              }
-              
-              /* Table styles for thermal printer compatibility */
-              table {
-                width: 100%;
-                max-width: 48mm;
-                border-collapse: collapse;
-                margin: 0;
-                padding: 0;
-                font-size: 9px;
-                color: #000000 !important;
-              }
-              
-              td {
-                padding: 1px 2px;
-                color: #000000 !important;
-                font-size: inherit;
-              }
-              
-              .header {
-                text-align: center;
-                margin-bottom: 4px;
-                padding-bottom: 4px;
-                border-bottom: 1px dashed #000;
-                display: block;
-                width: 100%;
-              }
-              
-              .business-name {
-                font-size: 12px;
-                font-weight: bold;
-                margin-bottom: 1px;
-                text-transform: uppercase;
-                display: block;
-                line-height: 1.2;
-              }
-              
-              .branch-name {
-                font-size: 9px;
-                font-weight: bold;
-                margin-bottom: 1px;
-                display: block;
-                line-height: 1.2;
-              }
-              
-              .address, .phone {
-                font-size: 7px;
-                margin-bottom: 1px;
-                display: block;
-                line-height: 1.2;
-              }
-              
-              .separator {
-                border-top: 1px dashed #000;
-                margin: 4px 0;
-                display: block;
-                height: 0;
-                width: 100%;
-              }
-              
-              .separator-thick {
-                border-top: 2px solid #000;
-                margin: 4px 0;
-                display: block;
-                height: 0;
-                width: 100%;
-              }
-              
-              .receipt-title {
-                text-align: center;
-                font-size: 10px;
-                font-weight: bold;
-                margin: 4px 0;
-                text-transform: uppercase;
-                display: block;
-                line-height: 1.2;
-              }
-              
-              .footer {
-                text-align: center;
-                margin-top: 6px;
-                font-size: 7px;
-                border-top: 1px dashed #000;
-                padding-top: 4px;
-                display: block;
-                width: 100%;
-                line-height: 1.3;
-              }
-              
-              .thank-you {
-                font-weight: bold;
-                margin-bottom: 2px;
-                display: block;
-                font-size: 8px;
-              }
-              
-              .footer-note {
-                font-size: 6px;
-                margin-top: 2px;
-                display: block;
-                line-height: 1.2;
-              }
-              
-              .receipt-number {
-                font-family: 'Courier New', monospace;
-                font-size: 7px;
-                letter-spacing: 0.5px;
-              }
-            </style>
-          </head>
-          <body style="background:#FFFFFF; color:#000000; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
-            ${receiptHTML}
-            <script>
-              (function() {
-                function printNow() {
-                  try {
-                    window.print();
-                  } catch (e) {
-                    console.error('Print error:', e);
-                  }
-                }
-                
-                if (document.readyState === 'complete') {
-                  printNow();
-                } else {
-                  window.addEventListener('load', printNow);
-                  setTimeout(printNow, 100);
-                }
-                
-                window.addEventListener('afterprint', function() {
-                  setTimeout(function() {
-                    try {
-                      window.close();
-                    } catch (e) {}
-                  }, 100);
-                });
-              })();
-            </script>
-          </body>
-        </html>
-      `
-
-      // Try window.open print approach first (reliable across browsers and many Android POS WebViews)
-      const printWindow = window.open('', '_blank', 'width=300,height=600')
-      if (printWindow) {
-        try {
-          printWindow.document.write(fullHTML)
-          printWindow.document.close()
-          // Auto-close after print
-          printWindow.addEventListener('afterprint', () => {
-            setTimeout(() => {
-              try {
-                printWindow.close()
-              } catch (e) {}
-            }, 150)
-          })
-          // The script in the HTML will handle auto-printing
-          return
-        } catch (e) {
-          try {
-            printWindow.close()
-          } catch (_) {}
-          // Continue to other strategies if this fails
-        }
-      }
-
-      // For mobile/Android/Capacitor: Try Capacitor plugin first if available
-      if (isCapacitor() && window.Capacitor?.Plugins?.Printer) {
-        try {
-          window.Capacitor.Plugins.Printer.print({
-            html: fullHTML,
-            name: `Receipt-${transactionData.receipt_number || transactionData.transaction_id}`
-          }).catch(() => {
-            // Fallback to standard print if plugin fails
-            printWithIframe()
-          })
-          return
-        } catch (error) {
-          console.error('Capacitor print error:', error)
-          // Fallback to standard print
-        }
-      }
-
-      // Mobile/Android: Use iframe approach
-      const printWithIframe = () => {
-        // Remove existing iframe if present
-        if (printIframeRef.current && printIframeRef.current.parentNode) {
-          printIframeRef.current.parentNode.removeChild(printIframeRef.current)
-          printIframeRef.current = null
-        }
-
-        // Create new hidden iframe
-        const printIframe = document.createElement('iframe')
-        printIframe.style.position = 'fixed'
-        printIframe.style.right = '0'
-        printIframe.style.bottom = '0'
-        printIframe.style.width = '0'
-        printIframe.style.height = '0'
-        printIframe.style.border = '0'
-        printIframe.style.opacity = '0'
-        printIframe.style.pointerEvents = 'none'
-        printIframe.style.zIndex = '-9999'
-        document.body.appendChild(printIframe)
-        printIframeRef.current = printIframe
-
-        // Write content to iframe
-        const iframeDoc = printIframe.contentDocument || printIframe.contentWindow?.document
-        if (!iframeDoc) {
-          // Fallback to window.open
-          openPrintWindow()
-          return
-        }
-
-        iframeDoc.open()
-        iframeDoc.write(fullHTML)
-        iframeDoc.close()
-
-        // Print immediately when ready
-        const printNow = () => {
-          try {
-            const iframeWindow = printIframe.contentWindow || printIframe.contentDocument?.defaultView
-            if (iframeWindow && typeof iframeWindow.print === 'function') {
-              iframeWindow.print()
-            } else {
-              openPrintWindow()
-            }
-          } catch (error) {
-            console.error('Print error:', error)
-            openPrintWindow()
-          }
-        }
-
-        // Check if already loaded
-        if (iframeDoc.readyState === 'complete') {
-          printNow()
-        } else {
-          printIframe.onload = printNow
-          setTimeout(() => {
-            if (iframeDoc.readyState === 'complete') {
-              printNow()
-            } else {
-              openPrintWindow()
-            }
-          }, 100)
-        }
-      }
-
-      // Fallback: open print window (for mobile)
-      const openPrintWindow = () => {
-        try {
-          const printWindow = window.open('', '_blank', 'width=300,height=600')
-          if (!printWindow) {
-            alert('Please allow popups to print receipts, or use the download option.')
-            return
-          }
-
-          printWindow.document.write(fullHTML)
-          printWindow.document.close()
-
-          // Auto-close after print
-          printWindow.addEventListener('afterprint', () => {
-            setTimeout(() => {
-              try {
-                printWindow.close()
-              } catch (e) {
-                // Window might not be closable
-              }
-            }, 100)
-          })
-
-          // The script in HTML will handle auto-printing
-        } catch (error) {
-          console.error('Print window error:', error)
-          alert('Printing is not available. Please use the download option.')
-        }
-      }
-
-      // Execute mobile print
-      printWithIframe()
     } catch (error) {
       console.error('Print function error:', error)
       alert('An error occurred while printing. Please try the download option instead.')
-    }
-  }
-
-  const handleDownloadPDF = async () => {
-    try {
-      const { jsPDF } = await import('jspdf')
-      const receiptText = generateReceiptText()
-      const sanitized = receiptText.replace(/₱/g, 'PHP ')
-      
-      const pageWidthMm = 58
-      const leftPaddingMm = 2
-      const rightPaddingMm = 2
-      const usableWidthMm = pageWidthMm - leftPaddingMm - rightPaddingMm
-      const lineHeightMm = 4
-      const topPaddingMm = 2
-      const bottomPaddingMm = 2
-      
-      const lines = sanitized.split('\n')
-      const contentHeightMm = Math.max(lineHeightMm, lines.length * lineHeightMm)
-      const totalHeightMm = topPaddingMm + contentHeightMm + bottomPaddingMm
-      
-      const doc = new jsPDF({
-        unit: 'mm',
-        format: [pageWidthMm, totalHeightMm],
-        orientation: 'portrait',
-      })
-      
-      if (doc.internal && doc.internal.pageSize && typeof doc.internal.pageSize.setHeight === 'function') {
-        doc.internal.pageSize.setHeight(totalHeightMm)
-      }
-      
-      doc.setFont('courier', 'normal')
-      doc.setFontSize(8)
-      
-      let y = topPaddingMm + 3
-      const x = leftPaddingMm
-      
-      for (const line of lines) {
-        const maxChars = Math.floor(usableWidthMm * 3.5)
-        const chunks = []
-        let idx = 0
-        const value = line || ''
-        while (idx < value.length) {
-          chunks.push(value.slice(idx, idx + maxChars))
-          idx += maxChars
-        }
-        if (chunks.length === 0) chunks.push('')
-        for (const chunk of chunks) {
-          doc.text(chunk, x, y, { baseline: 'top' })
-          y += lineHeightMm
-        }
-      }
-      
-      doc.save(`receipt-${(transactionData.receipt_number || transactionData.transaction_id || 'receipt')}.pdf`)
-    } catch (error) {
-      console.error('PDF generation error:', error)
-      alert('PDF generation is unavailable. Please install "jspdf" or use Download Text.')
+    } finally {
+      isPrintingRef.current = false
     }
   }
 
@@ -1088,21 +695,13 @@ const ReceiptModal = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <button
               onClick={handlePrint}
               className="py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white font-bold rounded-xl hover:from-[#FF7A2B] hover:to-[#E67E37] transition-all flex items-center justify-center space-x-2"
             >
               <Printer className="w-5 h-5" />
               <span>Print Receipt</span>
-            </button>
-            
-            <button
-              onClick={handleDownloadPDF}
-              className="py-3 border-2 border-[#555555] text-gray-300 font-semibold rounded-xl hover:border-[#FF8C42] hover:text-[#FF8C42] hover:bg-[#FF8C42]/10 transition-all flex items-center justify-center space-x-2"
-            >
-              <Download className="w-5 h-5" />
-              <span>PDF</span>
             </button>
             
             <button
