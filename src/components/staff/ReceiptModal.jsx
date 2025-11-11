@@ -218,45 +218,121 @@ const ReceiptModal = ({
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
-              @page { size: 58mm auto; margin: 0; padding: 0; }
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              html { width: 58mm; height: auto; margin: 0; padding: 0; }
+              /* Thermal printer optimized styles for 58mm paper */
+              @page {
+                size: 58mm auto;
+                margin: 0mm;
+              }
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
+              html, body {
+                width: 58mm;
+                max-width: 58mm;
+                margin: 0;
+                padding: 0;
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 11px;
+                line-height: 1.3;
+                color: #000 !important;
+                background: #fff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
               body {
-                width: 58mm !important; max-width: 58mm !important; min-width: 58mm !important;
-                margin: 0 !important; padding: 2mm 2mm !important;
-                font-family: 'Courier New', Courier, monospace; font-size: 10px; line-height: 1.15;
-                color: #000000 !important; background: #FFFFFF !important;
-                -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
-                display: block !important; visibility: visible !important; overflow: visible !important;
+                padding: 3mm 2mm;
               }
               @media print {
-                @page { size: 58mm auto; margin: 0; padding: 0; }
-                html { width: 58mm !important; margin: 0 !important; padding: 0 !important; }
-                body {
-                  width: 58mm !important; max-width: 58mm !important; min-width: 58mm !important;
-                  margin: 0 !important; padding: 2mm 2mm !important;
-                  color: #000000 !important; background: #FFFFFF !important;
-                  -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
-                  display: block !important; visibility: visible !important;
+                @page {
+                  size: 58mm auto;
+                  margin: 0mm;
                 }
-                * { visibility: visible !important; color: #000000 !important; background: transparent !important; }
-                .receipt-container { width: 48mm !important; margin: 0 auto !important; display: block !important; }
-                table { width: 100% !important; max-width: 48mm !important; }
+                html, body {
+                  width: 58mm !important;
+                  max-width: 58mm !important;
+                }
+                body {
+                  padding: 3mm 2mm !important;
+                }
               }
-              .receipt-container { width: 48mm !important; margin: 0 auto; display: block !important; color: #000000 !important; }
-              table { width: 100%; max-width: 48mm; border-collapse: collapse; margin: 0; padding: 0; font-size: 9px; color: #000000 !important; }
-              td { padding: 1px 2px; color: #000000 !important; font-size: inherit; }
-              .header { text-align: center; margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px dashed #000; display: block; width: 100%; }
-              .business-name { font-size: 12px; font-weight: bold; margin-bottom: 1px; text-transform: uppercase; display: block; line-height: 1.2; }
-              .branch-name { font-size: 9px; font-weight: bold; margin-bottom: 1px; display: block; line-height: 1.2; }
-              .address, .phone { font-size: 7px; margin-bottom: 1px; display: block; line-height: 1.2; }
-              .separator { border-top: 1px dashed #000; margin: 4px 0; display: block; height: 0; width: 100%; }
-              .separator-thick { border-top: 2px solid #000; margin: 4px 0; display: block; height: 0; width: 100%; }
-              .receipt-title { text-align: center; font-size: 10px; font-weight: bold; margin: 4px 0; text-transform: uppercase; display: block; line-height: 1.2; }
-              .footer { text-align: center; margin-top: 6px; font-size: 7px; border-top: 1px dashed #000; padding-top: 4px; display: block; width: 100%; line-height: 1.3; }
-              .thank-you { font-weight: bold; margin-bottom: 2px; display: block; font-size: 8px; }
-              .footer-note { font-size: 6px; margin-top: 2px; display: block; line-height: 1.2; }
-              .receipt-number { font-family: 'Courier New', monospace; font-size: 7px; letter-spacing: 0.5px; }
+              .receipt-container {
+                width: 100%;
+                max-width: 54mm;
+                margin: 0 auto;
+                color: #000 !important;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 10px;
+                color: #000 !important;
+              }
+              td {
+                padding: 2px 1px;
+                color: #000 !important;
+                vertical-align: top;
+              }
+              .header {
+                text-align: center;
+                margin-bottom: 5px;
+                padding-bottom: 5px;
+                border-bottom: 1px dashed #000;
+              }
+              .business-name {
+                font-size: 14px;
+                font-weight: bold;
+                margin-bottom: 2px;
+                text-transform: uppercase;
+              }
+              .branch-name {
+                font-size: 11px;
+                font-weight: bold;
+                margin-bottom: 2px;
+              }
+              .address, .phone {
+                font-size: 9px;
+                margin-bottom: 1px;
+              }
+              .separator {
+                border-top: 1px dashed #000;
+                margin: 5px 0;
+                height: 0;
+              }
+              .separator-thick {
+                border-top: 2px solid #000;
+                margin: 5px 0;
+                height: 0;
+              }
+              .receipt-title {
+                text-align: center;
+                font-size: 12px;
+                font-weight: bold;
+                margin: 5px 0;
+                text-transform: uppercase;
+              }
+              .footer {
+                text-align: center;
+                margin-top: 8px;
+                font-size: 9px;
+                border-top: 1px dashed #000;
+                padding-top: 5px;
+              }
+              .thank-you {
+                font-weight: bold;
+                margin-bottom: 3px;
+                font-size: 10px;
+              }
+              .footer-note {
+                font-size: 8px;
+                margin-top: 2px;
+              }
+              .receipt-number {
+                font-family: 'Courier New', monospace;
+                font-size: 9px;
+                letter-spacing: 0.5px;
+              }
             </style>
           </head>
           <body style="background:#FFFFFF; color:#000000; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
@@ -276,50 +352,10 @@ const ReceiptModal = ({
         } catch (_) {}
       }
 
-      // 3) PDF auto-print via hidden iframe
-      const tryPdfPrint = async () => {
+      // 3) HTML iframe print (best for Android thermal printers)
+      const tryHtmlIframePrint = async () => {
         try {
-          const { jsPDF } = await import('jspdf')
-          const receiptText = generateReceiptText()
-          const sanitized = receiptText.replace(/₱/g, 'PHP ')
-          
-          const pageWidthMm = 58
-          const leftPaddingMm = 2
-          const rightPaddingMm = 2
-          const usableWidthMm = pageWidthMm - leftPaddingMm - rightPaddingMm
-          const lineHeightMm = 4
-          const topPaddingMm = 2
-          const bottomPaddingMm = 2
-          
-          const lines = sanitized.split('\n')
-          const contentHeightMm = Math.max(lineHeightMm, lines.length * lineHeightMm)
-          const totalHeightMm = topPaddingMm + contentHeightMm + bottomPaddingMm
-          
-          const doc = new jsPDF({ unit: 'mm', format: [pageWidthMm, totalHeightMm], orientation: 'portrait' })
-          if (doc.internal && doc.internal.pageSize && typeof doc.internal.pageSize.setHeight === 'function') {
-            doc.internal.pageSize.setHeight(totalHeightMm)
-          }
-          doc.setFont('courier', 'normal')
-          doc.setFontSize(8)
-          
-          let y = topPaddingMm + 3
-          const x = leftPaddingMm
-          for (const line of lines) {
-            const maxChars = Math.floor(usableWidthMm * 3.5)
-            const chunks = []
-            let idx = 0
-            const value = line || ''
-            while (idx < value.length) {
-              chunks.push(value.slice(idx, idx + maxChars))
-              idx += maxChars
-            }
-            if (chunks.length === 0) chunks.push('')
-            for (const chunk of chunks) {
-              doc.text(chunk, x, y, { baseline: 'top' })
-              y += lineHeightMm
-            }
-          }
-          const blob = doc.output('blob')
+          const blob = new Blob([fullHTML], { type: 'text/html' })
           const url = URL.createObjectURL(blob)
           const ok = await printWithIframeUrl(url)
           setTimeout(() => URL.revokeObjectURL(url), 1500)
@@ -328,17 +364,11 @@ const ReceiptModal = ({
           return false
         }
       }
-      const pdfOk = await tryPdfPrint()
-      if (pdfOk) return
-
-      // 4) HTML via hidden iframe (blob URL)
-      const htmlBlob = new Blob([fullHTML], { type: 'text/html' })
-      const htmlUrl = URL.createObjectURL(htmlBlob)
-      const htmlOk = await printWithIframeUrl(htmlUrl)
-      setTimeout(() => URL.revokeObjectURL(htmlUrl), 1500)
+      
+      const htmlOk = await tryHtmlIframePrint()
       if (htmlOk) return
 
-      // 5) window.open fallback
+      // 4) window.open fallback
       const win = window.open('', '_blank', 'width=300,height=600')
       if (win) {
         win.document.write(fullHTML)
