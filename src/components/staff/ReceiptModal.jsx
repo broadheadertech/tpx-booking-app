@@ -206,10 +206,140 @@ const ReceiptModal = ({
 
       // 1) ESC/POS via Android bridge (direct thermal printing)
       const androidOk = tryAndroidEscPosPrint()
-      if (androidOk) {
-        isPrintingRef.current = false
-        return
-      }
+      if (androidOk) return
+
+      // Build HTML once for later paths (no inline scripts)
+      const receiptHTML = generateReceiptHTML()
+      const fullHTML = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Receipt - ${transactionData.receipt_number || transactionData.transaction_id}</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+              /* Thermal printer optimized styles for 58mm paper */
+              @page {
+                size: 58mm auto;
+                margin: 0mm;
+              }
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
+              html, body {
+                width: 58mm;
+                max-width: 58mm;
+                margin: 0;
+                padding: 0;
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 11px;
+                line-height: 1.3;
+                color: #000 !important;
+                background: #fff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              body {
+                padding: 3mm 2mm;
+              }
+              @media print {
+                @page {
+                  size: 58mm auto;
+                  margin: 0mm;
+                }
+                html, body {
+                  width: 58mm !important;
+                  max-width: 58mm !important;
+                }
+                body {
+                  padding: 3mm 2mm !important;
+                }
+              }
+              .receipt-container {
+                width: 100%;
+                max-width: 54mm;
+                margin: 0 auto;
+                color: #000 !important;
+              }
+              table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 10px;
+                color: #000 !important;
+              }
+              td {
+                padding: 2px 1px;
+                color: #000 !important;
+                vertical-align: top;
+              }
+              .header {
+                text-align: center;
+                margin-bottom: 5px;
+                padding-bottom: 5px;
+                border-bottom: 1px dashed #000;
+              }
+              .business-name {
+                font-size: 14px;
+                font-weight: bold;
+                margin-bottom: 2px;
+                text-transform: uppercase;
+              }
+              .branch-name {
+                font-size: 11px;
+                font-weight: bold;
+                margin-bottom: 2px;
+              }
+              .address, .phone {
+                font-size: 9px;
+                margin-bottom: 1px;
+              }
+              .separator {
+                border-top: 1px dashed #000;
+                margin: 5px 0;
+                height: 0;
+              }
+              .separator-thick {
+                border-top: 2px solid #000;
+                margin: 5px 0;
+                height: 0;
+              }
+              .receipt-title {
+                text-align: center;
+                font-size: 12px;
+                font-weight: bold;
+                margin: 5px 0;
+                text-transform: uppercase;
+              }
+              .footer {
+                text-align: center;
+                margin-top: 8px;
+                font-size: 9px;
+                border-top: 1px dashed #000;
+                padding-top: 5px;
+              }
+              .thank-you {
+                font-weight: bold;
+                margin-bottom: 3px;
+                font-size: 10px;
+              }
+              .footer-note {
+                font-size: 8px;
+                margin-top: 2px;
+              }
+              .receipt-number {
+                font-family: 'Courier New', monospace;
+                font-size: 9px;
+                letter-spacing: 0.5px;
+              }
+            </style>
+          </head>
+          <body style="background:#FFFFFF; color:#000000; -webkit-print-color-adjust:exact; print-color-adjust:exact;">
+            ${receiptHTML}
+          </body>
+        </html>
+      `
 
       // 2) Capacitor native printing
       if (isCapacitor() && window.Capacitor?.Plugins?.Printer) {
@@ -221,26 +351,31 @@ const ReceiptModal = ({
           })
           isPrintingRef.current = false
           return
-        } catch (err) {
-          console.warn('Capacitor print failed:', err)
-        }
+        } catch (_) {}
       }
 
-      // 3) Direct window.open for thermal printing (most reliable for Android/POS)
-      const simpleHTML = generateSimpleThermalHTML()
-      const printWindow = window.open('', '_blank', 'width=300,height=600,menubar=no,toolbar=no,location=no')
-      
-      if (printWindow) {
-        printWindow.document.write(simpleHTML)
-        printWindow.document.close()
-        
-        // Wait for content to load then print
-        printWindow.onload = () => {
-          setTimeout(() => {
-            printWindow.focus()
-            printWindow.print()
-          }, 250)
+      // 3) HTML iframe print (best for Android thermal printers)
+      const tryHtmlIframePrint = async () => {
+        try {
+          const blob = new Blob([fullHTML], { type: 'text/html' })
+          const url = URL.createObjectURL(blob)
+          const ok = await printWithIframeUrl(url)
+          setTimeout(() => URL.revokeObjectURL(url), 1500)
+          return ok
+        } catch (_) {
+          return false
         }
+      }
+      
+      const htmlOk = await tryHtmlIframePrint()
+      if (htmlOk) return
+
+      // 4) window.open fallback
+      const win = window.open('', '_blank', 'width=300,height=600')
+      if (win) {
+        win.document.write(fullHTML)
+        win.document.close()
+        try { win.focus(); win.print() } catch (_) {}
       } else {
         alert('Please allow popups to print receipts')
       }
