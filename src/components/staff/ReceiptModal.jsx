@@ -65,6 +65,7 @@ const ReceiptModal = ({
   const handlePrint = () => {
     try {
       const receiptHTML = generateReceiptHTML()
+      // Simplified HTML for thermal printers - no complex CSS
       const fullHTML = `
         <!DOCTYPE html>
         <html>
@@ -73,208 +74,288 @@ const ReceiptModal = ({
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
+              /* Page size for 58mm thermal printer */
+              @page {
+                size: 58mm auto;
+                margin: 0mm;
+                padding: 0mm;
+              }
+              
               * {
                 margin: 0;
                 padding: 0;
                 box-sizing: border-box;
               }
               
-              @page {
-                size: 58mm auto;
+              html {
+                width: 58mm;
+                height: auto;
                 margin: 0;
+                padding: 0;
               }
               
               body {
+                width: 58mm !important;
+                max-width: 58mm !important;
+                min-width: 58mm !important;
+                margin: 0 !important;
+                padding: 2mm 2mm !important;
                 font-family: 'Courier New', Courier, monospace;
-                width: 58mm;
-                max-width: 58mm;
-                padding: 5mm 4mm;
-                font-size: 11px;
-                line-height: 1.3;
-                color: #000;
-                background: #fff;
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
+                font-size: 10px;
+                line-height: 1.15;
+                color: #000000 !important;
+                background: #FFFFFF !important;
+                display: block !important;
+                visibility: visible !important;
+                overflow: visible !important;
               }
               
               @media print {
-                body {
-                  padding: 5mm 4mm;
-                  margin: 0;
+                @page {
+                  size: 58mm auto;
+                  margin: 0mm;
+                  padding: 0mm;
                 }
                 
-                .no-print {
-                  display: none !important;
+                html {
+                  width: 58mm !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                }
+                
+                body {
+                  width: 58mm !important;
+                  max-width: 58mm !important;
+                  min-width: 58mm !important;
+                  margin: 0 !important;
+                  padding: 2mm 2mm !important;
+                  color: #000000 !important;
+                  background: #FFFFFF !important;
+                  display: block !important;
+                  visibility: visible !important;
+                }
+                
+                * {
+                  visibility: visible !important;
+                  color: #000000 !important;
+                  background: transparent !important;
+                }
+                
+                .receipt-container {
+                  width: 48mm !important;
+                  max-width: 48mm !important;
+                  min-width: 48mm !important;
+                  margin: 0 auto !important;
+                  display: block !important;
+                  visibility: visible !important;
+                  color: #000000 !important;
+                }
+                
+                table {
+                  width: 100% !important;
+                  max-width: 48mm !important;
                 }
               }
               
               .receipt-container {
-                width: 100%;
-                max-width: 50mm;
+                width: 48mm !important;
+                max-width: 48mm !important;
+                min-width: 48mm !important;
                 margin: 0 auto;
+                display: block !important;
+                visibility: visible !important;
+                color: #000000 !important;
+              }
+              
+              /* Table styles for thermal printer compatibility */
+              table {
+                width: 100%;
+                max-width: 48mm;
+                border-collapse: collapse;
+                margin: 0;
+                padding: 0;
+                font-size: 9px;
+                color: #000000 !important;
+              }
+              
+              td {
+                padding: 1px 2px;
+                color: #000000 !important;
+                font-size: inherit;
               }
               
               .header {
                 text-align: center;
-                margin-bottom: 8px;
+                margin-bottom: 4px;
+                padding-bottom: 4px;
                 border-bottom: 1px dashed #000;
-                padding-bottom: 6px;
+                display: block;
+                width: 100%;
               }
               
               .business-name {
-                font-size: 14px;
+                font-size: 12px;
                 font-weight: bold;
-                margin-bottom: 2px;
+                margin-bottom: 1px;
                 text-transform: uppercase;
-                letter-spacing: 0.5px;
+                display: block;
+                line-height: 1.2;
               }
               
               .branch-name {
-                font-size: 11px;
+                font-size: 9px;
                 font-weight: bold;
-                margin-bottom: 2px;
+                margin-bottom: 1px;
+                display: block;
+                line-height: 1.2;
               }
               
               .address, .phone {
-                font-size: 9px;
+                font-size: 7px;
                 margin-bottom: 1px;
+                display: block;
+                line-height: 1.2;
               }
               
               .separator {
                 border-top: 1px dashed #000;
-                margin: 6px 0;
+                margin: 4px 0;
+                display: block;
+                height: 0;
+                width: 100%;
               }
               
               .separator-thick {
                 border-top: 2px solid #000;
-                margin: 6px 0;
+                margin: 4px 0;
+                display: block;
+                height: 0;
+                width: 100%;
               }
               
               .receipt-title {
                 text-align: center;
-                font-size: 12px;
+                font-size: 10px;
                 font-weight: bold;
-                margin: 6px 0;
+                margin: 4px 0;
                 text-transform: uppercase;
-              }
-              
-              .info-row {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 2px;
-                font-size: 10px;
-              }
-              
-              .info-label {
-                font-weight: bold;
-              }
-              
-              .info-value {
-                text-align: right;
-              }
-              
-              .items-header {
-                display: flex;
-                justify-content: space-between;
-                margin: 6px 0 4px 0;
-                font-weight: bold;
-                font-size: 10px;
-                border-bottom: 1px solid #000;
-                padding-bottom: 2px;
-              }
-              
-              .item-row {
-                margin-bottom: 4px;
-                font-size: 10px;
-              }
-              
-              .item-name {
-                font-weight: bold;
-                margin-bottom: 1px;
-              }
-              
-              .item-details {
-                display: flex;
-                justify-content: space-between;
-                font-size: 9px;
-                padding-left: 4px;
-              }
-              
-              .totals {
-                margin-top: 6px;
-              }
-              
-              .total-row {
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 2px;
-                font-size: 10px;
-              }
-              
-              .total-label {
-                font-weight: bold;
-              }
-              
-              .total-amount {
-                font-weight: bold;
-                text-align: right;
-              }
-              
-              .grand-total {
-                font-size: 12px;
-                font-weight: bold;
-                margin-top: 4px;
-              }
-              
-              .payment-info {
-                margin-top: 6px;
-                font-size: 10px;
+                display: block;
+                line-height: 1.2;
               }
               
               .footer {
                 text-align: center;
-                margin-top: 10px;
-                font-size: 9px;
+                margin-top: 6px;
+                font-size: 7px;
                 border-top: 1px dashed #000;
-                padding-top: 6px;
+                padding-top: 4px;
+                display: block;
+                width: 100%;
+                line-height: 1.3;
               }
               
               .thank-you {
                 font-weight: bold;
-                margin-bottom: 4px;
+                margin-bottom: 2px;
+                display: block;
+                font-size: 8px;
               }
               
               .footer-note {
-                font-size: 8px;
-                margin-top: 4px;
-              }
-              
-              .barcode-area {
-                text-align: center;
-                margin: 8px 0;
-                padding: 4px 0;
-                border-top: 1px dashed #000;
-                border-bottom: 1px dashed #000;
+                font-size: 6px;
+                margin-top: 2px;
+                display: block;
+                line-height: 1.2;
               }
               
               .receipt-number {
                 font-family: 'Courier New', monospace;
-                font-size: 10px;
-                letter-spacing: 1px;
+                font-size: 7px;
+                letter-spacing: 0.5px;
               }
             </style>
           </head>
           <body>
             ${receiptHTML}
+            <script>
+              (function() {
+                function printNow() {
+                  try {
+                    window.print();
+                  } catch (e) {
+                    console.error('Print error:', e);
+                  }
+                }
+                
+                if (document.readyState === 'complete') {
+                  printNow();
+                } else {
+                  window.addEventListener('load', printNow);
+                  setTimeout(printNow, 100);
+                }
+                
+                window.addEventListener('afterprint', function() {
+                  setTimeout(function() {
+                    try {
+                      window.close();
+                    } catch (e) {}
+                  }, 100);
+                });
+              })();
+            </script>
           </body>
         </html>
       `
 
-      // For Android, mobile devices, and Capacitor apps, use iframe approach
-      if (isAndroid() || isMobile() || isCapacitor()) {
+      // For web browsers (desktop), use window.open approach (most reliable)
+      if (!isAndroid() && !isMobile() && !isCapacitor()) {
+        const printWindow = window.open('', '_blank', 'width=300,height=600')
+        if (!printWindow) {
+          alert('Please allow popups to print receipts')
+          return
+        }
+
+        printWindow.document.write(fullHTML)
+        printWindow.document.close()
+
+        // Auto-close after print
+        printWindow.addEventListener('afterprint', () => {
+          setTimeout(() => {
+            try {
+              printWindow.close()
+            } catch (e) {
+              // Window might not be closable
+            }
+          }, 100)
+        })
+
+        // The script in the HTML will handle auto-printing
+        return
+      }
+
+      // For mobile/Android/Capacitor: Try Capacitor plugin first if available
+      if (isCapacitor() && window.Capacitor?.Plugins?.Printer) {
+        try {
+          window.Capacitor.Plugins.Printer.print({
+            html: fullHTML,
+            name: `Receipt-${transactionData.receipt_number || transactionData.transaction_id}`
+          }).catch(() => {
+            // Fallback to standard print if plugin fails
+            printWithIframe()
+          })
+          return
+        } catch (error) {
+          console.error('Capacitor print error:', error)
+          // Fallback to standard print
+        }
+      }
+
+      // Mobile/Android: Use iframe approach
+      const printWithIframe = () => {
         // Remove existing iframe if present
         if (printIframeRef.current && printIframeRef.current.parentNode) {
           printIframeRef.current.parentNode.removeChild(printIframeRef.current)
+          printIframeRef.current = null
         }
 
         // Create new hidden iframe
@@ -294,114 +375,77 @@ const ReceiptModal = ({
         // Write content to iframe
         const iframeDoc = printIframe.contentDocument || printIframe.contentWindow?.document
         if (!iframeDoc) {
-          throw new Error('Cannot access iframe document')
+          // Fallback to window.open
+          openPrintWindow()
+          return
         }
 
         iframeDoc.open()
         iframeDoc.write(fullHTML)
         iframeDoc.close()
 
-        // Wait for iframe to load, then print
-        const attemptPrint = () => {
+        // Print immediately when ready
+        const printNow = () => {
           try {
             const iframeWindow = printIframe.contentWindow || printIframe.contentDocument?.defaultView
             if (iframeWindow && typeof iframeWindow.print === 'function') {
-              // Small delay to ensure content is rendered
-              setTimeout(() => {
-                try {
-                  iframeWindow.print()
-                } catch (printError) {
-                  console.error('Print execution error:', printError)
-                  // Fallback: open in new window
-                  openFallbackWindow()
-                }
-              }, 300)
+              iframeWindow.print()
             } else {
-              openFallbackWindow()
+              openPrintWindow()
             }
           } catch (error) {
-            console.error('Print setup error:', error)
-            openFallbackWindow()
+            console.error('Print error:', error)
+            openPrintWindow()
           }
         }
 
-        const openFallbackWindow = () => {
-          try {
-            const fallbackWindow = window.open('', '_blank', 'width=300,height=600')
-            if (fallbackWindow) {
-              fallbackWindow.document.write(fullHTML)
-              fallbackWindow.document.close()
-              setTimeout(() => {
-                try {
-                  fallbackWindow.print()
-                } catch (e) {
-                  console.error('Fallback print error:', e)
-                  alert('Printing may not be available on this device. Please use the download option or share this receipt manually.')
-                }
-              }, 500)
-            } else {
-              alert('Please allow popups to print receipts, or use the download option.')
-            }
-          } catch (e) {
-            console.error('Fallback window error:', e)
-            alert('Printing is not available. Please use the download option.')
-          }
-        }
-
-        // Wait for iframe to load
-        if (printIframe.contentDocument && printIframe.contentDocument.readyState === 'complete') {
-          attemptPrint()
+        // Check if already loaded
+        if (iframeDoc.readyState === 'complete') {
+          printNow()
         } else {
-          printIframe.onload = attemptPrint
-          // Fallback timeout
+          printIframe.onload = printNow
           setTimeout(() => {
-            if (printIframe.contentDocument && printIframe.contentDocument.readyState === 'complete') {
-              attemptPrint()
+            if (iframeDoc.readyState === 'complete') {
+              printNow()
             } else {
-              openFallbackWindow()
+              openPrintWindow()
             }
-          }, 1000)
-        }
-      } else {
-        // Desktop: use window.open approach
-        const printWindow = window.open('', '_blank', 'width=300,height=600')
-        if (!printWindow) {
-          alert('Please allow popups to print receipts')
-          return
-        }
-
-        printWindow.document.write(fullHTML)
-        printWindow.document.close()
-
-        // Wait for content to load before printing
-        printWindow.onload = () => {
-          setTimeout(() => {
-            try {
-              printWindow.print()
-              setTimeout(() => {
-                printWindow.close()
-              }, 500)
-            } catch (error) {
-              console.error('Print error:', error)
-              alert('Print dialog could not be opened. Please try again.')
-            }
-          }, 250)
-        }
-
-        // If window is already loaded
-        if (printWindow.document.readyState === 'complete') {
-          setTimeout(() => {
-            try {
-              printWindow.print()
-              setTimeout(() => {
-                printWindow.close()
-              }, 500)
-            } catch (error) {
-              console.error('Print error:', error)
-            }
-          }, 250)
+          }, 100)
         }
       }
+
+      // Fallback: open print window (for mobile)
+      const openPrintWindow = () => {
+        try {
+          const printWindow = window.open('', '_blank', 'width=300,height=600')
+          if (!printWindow) {
+            alert('Please allow popups to print receipts, or use the download option.')
+            return
+          }
+
+          printWindow.document.write(fullHTML)
+          printWindow.document.close()
+
+          // Auto-close after print
+          printWindow.addEventListener('afterprint', () => {
+            setTimeout(() => {
+              try {
+                printWindow.close()
+              } catch (e) {
+                // Window might not be closable
+              }
+            }, 100)
+          })
+
+          // The script in HTML will handle auto-printing
+        } catch (error) {
+          console.error('Print window error:', error)
+          alert('Printing is not available. Please use the download option.')
+        }
+      }
+
+      // Execute mobile print
+      printWithIframe()
     } catch (error) {
       console.error('Print function error:', error)
       alert('An error occurred while printing. Please try the download option instead.')
@@ -428,152 +472,177 @@ const ReceiptModal = ({
     const dateStr = formatDate(timestamp)
     const timeStr = formatTime(timestamp)
     
+    // Escape HTML to prevent XSS
+    const escapeHtml = (text) => {
+      if (!text) return ''
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+    }
+    
+    // Format text for thermal printer (simple table-based layout)
+    // Using 48mm width (standard printable width for 58mm paper with 5mm margins on each side)
     let html = `
-      <div class="receipt-container">
+      <div class="receipt-container" style="width: 48mm !important; max-width: 48mm !important; min-width: 48mm !important; margin: 0 auto; display: block; visibility: visible; color: #000000;">
         <!-- Header -->
-        <div class="header">
-          <div class="business-name">TIPUNOX</div>
-          <div class="business-name" style="font-size: 12px;">ANGELES BARBERSHOP</div>
-          ${branchInfo?.name ? `<div class="branch-name">${branchInfo.name}</div>` : ''}
-          ${branchInfo?.address ? `<div class="address">${branchInfo.address}</div>` : ''}
-          ${branchInfo?.phone ? `<div class="phone">Tel: ${branchInfo.phone}</div>` : ''}
+        <div style="text-align: center; margin-bottom: 4px; padding-bottom: 4px; border-bottom: 1px dashed #000; display: block; width: 100%;">
+          <div style="font-size: 12px; font-weight: bold; margin-bottom: 1px; text-transform: uppercase; display: block; line-height: 1.2;">TIPUNOX</div>
+          <div style="font-size: 10px; font-weight: bold; margin-bottom: 1px; text-transform: uppercase; display: block; line-height: 1.2;">ANGELES BARBERSHOP</div>
+          ${branchInfo?.name ? `<div style="font-size: 9px; font-weight: bold; margin-bottom: 1px; display: block; line-height: 1.2;">${escapeHtml(branchInfo.name)}</div>` : ''}
+          ${branchInfo?.address ? `<div style="font-size: 7px; margin-bottom: 1px; display: block; line-height: 1.2;">${escapeHtml(branchInfo.address)}</div>` : ''}
+          ${branchInfo?.phone ? `<div style="font-size: 7px; margin-bottom: 1px; display: block; line-height: 1.2;">Tel: ${escapeHtml(branchInfo.phone)}</div>` : ''}
         </div>
         
-        <div class="separator"></div>
+        <div style="border-top: 1px dashed #000; margin: 4px 0; display: block; height: 0; width: 100%;"></div>
         
         <!-- Receipt Title -->
-        <div class="receipt-title">OFFICIAL RECEIPT</div>
+        <div style="text-align: center; font-size: 10px; font-weight: bold; margin: 4px 0; text-transform: uppercase; display: block; line-height: 1.2;">OFFICIAL RECEIPT</div>
         
         <!-- Transaction Info -->
-        <div class="info-row">
-          <span class="info-label">Receipt No:</span>
-          <span class="info-value">${receiptNumber}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Date:</span>
-          <span class="info-value">${dateStr}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Time:</span>
-          <span class="info-value">${timeStr}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Cashier:</span>
-          <span class="info-value">${staffInfo?.username || staffInfo?.full_name || 'Staff'}</span>
-        </div>
-        ${transactionData.barber_name ? `
-        <div class="info-row">
-          <span class="info-label">Barber:</span>
-          <span class="info-value">${transactionData.barber_name}</span>
-        </div>
-        ` : ''}
-        ${transactionData.customer_name ? `
-        <div class="info-row">
-          <span class="info-label">Customer:</span>
-          <span class="info-value">${transactionData.customer_name}</span>
-        </div>
-        ` : ''}
+        <table style="width: 100%; margin-bottom: 2px; font-size: 9px; border-collapse: collapse; max-width: 48mm;">
+          <tr>
+            <td style="font-weight: bold; padding: 1px 2px;">Receipt No:</td>
+            <td style="text-align: right; padding: 1px 2px;">${escapeHtml(receiptNumber)}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; padding: 1px 2px;">Date:</td>
+            <td style="text-align: right; padding: 1px 2px;">${escapeHtml(dateStr)}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; padding: 1px 2px;">Time:</td>
+            <td style="text-align: right; padding: 1px 2px;">${escapeHtml(timeStr)}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; padding: 1px 2px;">Cashier:</td>
+            <td style="text-align: right; padding: 1px 2px;">${escapeHtml(staffInfo?.username || staffInfo?.full_name || 'Staff')}</td>
+          </tr>
+          ${transactionData.barber_name ? `
+          <tr>
+            <td style="font-weight: bold; padding: 1px 2px;">Barber:</td>
+            <td style="text-align: right; padding: 1px 2px;">${escapeHtml(transactionData.barber_name)}</td>
+          </tr>
+          ` : ''}
+          ${transactionData.customer_name ? `
+          <tr>
+            <td style="font-weight: bold; padding: 1px 2px;">Customer:</td>
+            <td style="text-align: right; padding: 1px 2px;">${escapeHtml(transactionData.customer_name)}</td>
+          </tr>
+          ` : ''}
+        </table>
         
-        <div class="separator"></div>
+        <div style="border-top: 1px dashed #000; margin: 4px 0; display: block; height: 0; width: 100%;"></div>
         
         <!-- Items Header -->
-        <div class="items-header">
-          <span>Item</span>
-          <span>Amount</span>
-        </div>
+        <table style="width: 100%; margin: 4px 0 3px 0; font-weight: bold; font-size: 9px; border-bottom: 1px solid #000; border-collapse: collapse; max-width: 48mm;">
+          <tr>
+            <td style="padding: 1px 2px;">Item</td>
+            <td style="text-align: right; padding: 1px 2px;">Amount</td>
+          </tr>
+        </table>
         
         <!-- Services -->
         ${transactionData.services && transactionData.services.length > 0 ? transactionData.services.map(service => {
           const itemTotal = (service.quantity || 1) * (service.price || 0)
+          const serviceName = escapeHtml(service.service_name || service.name || 'Service')
           return `
-            <div class="item-row">
-              <div class="item-name">${service.service_name || service.name || 'Service'}</div>
-              <div class="item-details">
-                <span>${service.quantity || 1}x ₱${(service.price || 0).toFixed(2)}</span>
-                <span>₱${itemTotal.toFixed(2)}</span>
-              </div>
-            </div>
+            <table style="width: 100%; margin-bottom: 3px; font-size: 9px; border-collapse: collapse; max-width: 48mm;">
+              <tr>
+                <td colspan="2" style="font-weight: bold; font-size: 9px; padding: 1px 2px;">${serviceName}</td>
+              </tr>
+              <tr>
+                <td style="font-size: 8px; padding-left: 5px; padding: 1px 2px;">${service.quantity || 1}x ₱${(service.price || 0).toFixed(2)}</td>
+                <td style="text-align: right; font-size: 8px; padding: 1px 2px;">₱${itemTotal.toFixed(2)}</td>
+              </tr>
+            </table>
           `
         }).join('') : ''}
         
         <!-- Products -->
         ${transactionData.products && transactionData.products.length > 0 ? transactionData.products.map(product => {
           const itemTotal = (product.quantity || 1) * (product.price || 0)
+          const productName = escapeHtml(product.product_name || product.name || 'Product')
           return `
-            <div class="item-row">
-              <div class="item-name">${product.product_name || product.name || 'Product'}</div>
-              <div class="item-details">
-                <span>${product.quantity || 1}x ₱${(product.price || 0).toFixed(2)}</span>
-                <span>₱${itemTotal.toFixed(2)}</span>
-              </div>
-            </div>
+            <table style="width: 100%; margin-bottom: 3px; font-size: 9px; border-collapse: collapse; max-width: 48mm;">
+              <tr>
+                <td colspan="2" style="font-weight: bold; font-size: 9px; padding: 1px 2px;">${productName}</td>
+              </tr>
+              <tr>
+                <td style="font-size: 8px; padding-left: 5px; padding: 1px 2px;">${product.quantity || 1}x ₱${(product.price || 0).toFixed(2)}</td>
+                <td style="text-align: right; font-size: 8px; padding: 1px 2px;">₱${itemTotal.toFixed(2)}</td>
+              </tr>
+            </table>
           `
         }).join('') : ''}
         
-        <div class="separator"></div>
+        <div style="border-top: 1px dashed #000; margin: 4px 0; display: block; height: 0; width: 100%;"></div>
         
         <!-- Totals -->
-        <div class="totals">
-          <div class="total-row">
-            <span class="total-label">Subtotal:</span>
-            <span class="total-amount">₱${(transactionData.subtotal || 0).toFixed(2)}</span>
-          </div>
+        <table style="width: 100%; margin-top: 4px; font-size: 9px; border-collapse: collapse; max-width: 48mm;">
+          <tr>
+            <td style="font-weight: bold; padding: 1px 2px;">Subtotal:</td>
+            <td style="text-align: right; font-weight: bold; padding: 1px 2px;">₱${(transactionData.subtotal || 0).toFixed(2)}</td>
+          </tr>
           ${transactionData.discount_amount > 0 ? `
-          <div class="total-row">
-            <span class="total-label">Discount:</span>
-            <span class="total-amount">-₱${transactionData.discount_amount.toFixed(2)}</span>
-          </div>
+          <tr>
+            <td style="font-weight: bold; padding: 1px 2px;">Discount:</td>
+            <td style="text-align: right; font-weight: bold; padding: 1px 2px;">-₱${transactionData.discount_amount.toFixed(2)}</td>
+          </tr>
           ` : ''}
           ${transactionData.voucher_applied ? `
-          <div class="total-row">
-            <span class="total-label">Voucher:</span>
-            <span class="total-amount">-₱${transactionData.discount_amount.toFixed(2)}</span>
-          </div>
+          <tr>
+            <td style="font-weight: bold; padding: 1px 2px;">Voucher:</td>
+            <td style="text-align: right; font-weight: bold; padding: 1px 2px;">-₱${transactionData.discount_amount.toFixed(2)}</td>
+          </tr>
           ` : ''}
           ${transactionData.tax_amount > 0 ? `
-          <div class="total-row">
-            <span class="total-label">Tax:</span>
-            <span class="total-amount">₱${transactionData.tax_amount.toFixed(2)}</span>
-          </div>
+          <tr>
+            <td style="font-weight: bold; padding: 1px 2px;">Tax:</td>
+            <td style="text-align: right; font-weight: bold; padding: 1px 2px;">₱${transactionData.tax_amount.toFixed(2)}</td>
+          </tr>
           ` : ''}
-        </div>
+        </table>
         
-        <div class="separator-thick"></div>
+        <div style="border-top: 2px solid #000; margin: 4px 0; display: block; height: 0; width: 100%;"></div>
         
-        <div class="total-row grand-total">
-          <span>TOTAL:</span>
-          <span>₱${(transactionData.total_amount || 0).toFixed(2)}</span>
-        </div>
+        <table style="width: 100%; margin-top: 3px; font-size: 10px; border-collapse: collapse; max-width: 48mm;">
+          <tr>
+            <td style="font-weight: bold; padding: 1px 2px;">TOTAL:</td>
+            <td style="text-align: right; font-weight: bold; padding: 1px 2px;">₱${(transactionData.total_amount || 0).toFixed(2)}</td>
+          </tr>
+        </table>
         
-        <div class="separator-thick"></div>
+        <div style="border-top: 2px solid #000; margin: 4px 0; display: block; height: 0; width: 100%;"></div>
         
         <!-- Payment Info -->
-        <div class="payment-info">
-          <div class="info-row">
-            <span class="info-label">Payment:</span>
-            <span class="info-value">${(transactionData.payment_method || 'cash').replace('_', ' ').toUpperCase()}</span>
-          </div>
+        <table style="width: 100%; margin-top: 4px; font-size: 9px; border-collapse: collapse; max-width: 48mm;">
+          <tr>
+            <td style="font-weight: bold; padding: 1px 2px;">Payment:</td>
+            <td style="text-align: right; padding: 1px 2px;">${escapeHtml((transactionData.payment_method || 'cash').replace('_', ' ').toUpperCase())}</td>
+          </tr>
           ${transactionData.payment_method === 'cash' && transactionData.cash_received ? `
-          <div class="info-row">
-            <span class="info-label">Cash Received:</span>
-            <span class="info-value">₱${transactionData.cash_received.toFixed(2)}</span>
-          </div>
+          <tr>
+            <td style="font-weight: bold; padding: 1px 2px;">Cash Received:</td>
+            <td style="text-align: right; padding: 1px 2px;">₱${transactionData.cash_received.toFixed(2)}</td>
+          </tr>
           ` : ''}
           ${transactionData.payment_method === 'cash' && transactionData.change_amount ? `
-          <div class="info-row">
-            <span class="info-label">Change:</span>
-            <span class="info-value">₱${transactionData.change_amount.toFixed(2)}</span>
-          </div>
+          <tr>
+            <td style="font-weight: bold; padding: 1px 2px;">Change:</td>
+            <td style="text-align: right; padding: 1px 2px;">₱${transactionData.change_amount.toFixed(2)}</td>
+          </tr>
           ` : ''}
-        </div>
+        </table>
         
         <!-- Footer -->
-        <div class="footer">
-          <div class="thank-you">Thank you for your business!</div>
-          <div>Please come again!</div>
-          <div class="footer-note">This serves as your official receipt</div>
-          <div class="footer-note" style="margin-top: 6px;">
-            Receipt #: <span class="receipt-number">${receiptNumber}</span>
+        <div style="text-align: center; margin-top: 6px; font-size: 7px; border-top: 1px dashed #000; padding-top: 4px; display: block; width: 100%; line-height: 1.3;">
+          <div style="font-weight: bold; margin-bottom: 2px; display: block; font-size: 8px;">Thank you for your business!</div>
+          <div style="display: block;">Please come again!</div>
+          <div style="font-size: 6px; margin-top: 2px; display: block; line-height: 1.2;">This serves as your official receipt</div>
+          <div style="font-size: 6px; margin-top: 4px; display: block; line-height: 1.2;">
+            Receipt #: <span style="font-family: 'Courier New', monospace; font-size: 7px; letter-spacing: 0.5px;">${escapeHtml(receiptNumber)}</span>
           </div>
         </div>
       </div>
