@@ -204,7 +204,7 @@ const ReceiptModal = ({
       if (isPrintingRef.current) return
       isPrintingRef.current = true
 
-      // 1) ESC/POS via Android bridge
+      // 1) ESC/POS via Android bridge (direct thermal printing)
       const androidOk = tryAndroidEscPosPrint()
       if (androidOk) return
 
@@ -344,10 +344,12 @@ const ReceiptModal = ({
       // 2) Capacitor native printing
       if (isCapacitor() && window.Capacitor?.Plugins?.Printer) {
         try {
+          const simpleHTML = generateSimpleThermalHTML()
           await window.Capacitor.Plugins.Printer.print({
-            html: fullHTML,
+            html: simpleHTML,
             name: `Receipt-${transactionData.receipt_number || transactionData.transaction_id}`,
           })
+          isPrintingRef.current = false
           return
         } catch (_) {}
       }
@@ -375,14 +377,136 @@ const ReceiptModal = ({
         win.document.close()
         try { win.focus(); win.print() } catch (_) {}
       } else {
-        alert('Please allow popups to print receipts, or use the download option.')
+        alert('Please allow popups to print receipts')
       }
     } catch (error) {
-      console.error('Print function error:', error)
-      alert('An error occurred while printing. Please try the download option instead.')
+      console.error('Print error:', error)
+      alert('Printing failed. Please try again or contact support.')
     } finally {
-      isPrintingRef.current = false
+      setTimeout(() => {
+        isPrintingRef.current = false
+      }, 1000)
     }
+  }
+
+  // Generate simplified HTML optimized for thermal printers (58mm paper)
+  const generateSimpleThermalHTML = () => {
+    const receiptNumber = transactionData.receipt_number || transactionData.transaction_id || 'N/A'
+    const timestamp = transactionData.timestamp || Date.now()
+    const dateStr = formatDate(timestamp)
+    const timeStr = formatTime(timestamp)
+    
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=58mm">
+  <title>Receipt ${receiptNumber}</title>
+  <style>
+    @page { 
+      size: 58mm auto; 
+      margin: 0; 
+    }
+    * { 
+      margin: 0; 
+      padding: 0; 
+      box-sizing: border-box; 
+    }
+    body { 
+      width: 58mm;
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      line-height: 1.4;
+      padding: 2mm;
+      color: #000;
+      background: #fff;
+    }
+    @media print {
+      body { width: 58mm; }
+    }
+    .center { text-align: center; }
+    .bold { font-weight: bold; }
+    .line { border-bottom: 1px dashed #000; margin: 2mm 0; }
+    .line2 { border-bottom: 1px solid #000; margin: 2mm 0; }
+    table { width: 100%; border-collapse: collapse; }
+    td { padding: 1px 0; }
+    .right { text-align: right; }
+    .small { font-size: 8px; }
+  </style>
+</head>
+<body>
+  <div class="center bold" style="font-size: 12px;">TIPUNOX</div>
+  <div class="center bold">ANGELES BARBERSHOP</div>
+  ${branchInfo?.name ? `<div class="center small">${branchInfo.name}</div>` : ''}
+  ${branchInfo?.address ? `<div class="center small">${branchInfo.address}</div>` : ''}
+  ${branchInfo?.phone ? `<div class="center small">Tel: ${branchInfo.phone}</div>` : ''}
+  <div class="line"></div>
+  
+  <div class="center bold">OFFICIAL RECEIPT</div>
+  <div class="line"></div>
+  
+  <table class="small">
+    <tr><td>Receipt No:</td><td class="right">${receiptNumber}</td></tr>
+    <tr><td>Date:</td><td class="right">${dateStr}</td></tr>
+    <tr><td>Time:</td><td class="right">${timeStr}</td></tr>
+    <tr><td>Cashier:</td><td class="right">${staffInfo?.username || staffInfo?.full_name || 'Staff'}</td></tr>
+    ${transactionData.barber_name ? `<tr><td>Barber:</td><td class="right">${transactionData.barber_name}</td></tr>` : ''}
+    ${transactionData.customer_name ? `<tr><td>Customer:</td><td class="right">${transactionData.customer_name}</td></tr>` : ''}
+  </table>
+  <div class="line2"></div>
+  
+  ${transactionData.services && transactionData.services.length > 0 ? transactionData.services.map(service => {
+    const itemTotal = (service.quantity || 1) * (service.price || 0)
+    return `
+    <div class="bold">${service.service_name || service.name || 'Service'}</div>
+    <table class="small">
+      <tr>
+        <td>${service.quantity || 1}x ₱${(service.price || 0).toFixed(2)}</td>
+        <td class="right">₱${itemTotal.toFixed(2)}</td>
+      </tr>
+    </table>
+    `
+  }).join('') : ''}
+  
+  ${transactionData.products && transactionData.products.length > 0 ? transactionData.products.map(product => {
+    const itemTotal = (product.quantity || 1) * (product.price || 0)
+    return `
+    <div class="bold">${product.product_name || product.name || 'Product'}</div>
+    <table class="small">
+      <tr>
+        <td>${product.quantity || 1}x ₱${(product.price || 0).toFixed(2)}</td>
+        <td class="right">₱${itemTotal.toFixed(2)}</td>
+      </tr>
+    </table>
+    `
+  }).join('') : ''}
+  
+  <div class="line"></div>
+  <table>
+    <tr><td class="bold">Subtotal:</td><td class="right bold">₱${(transactionData.subtotal || 0).toFixed(2)}</td></tr>
+    ${transactionData.discount_amount > 0 ? `<tr><td class="bold">Discount:</td><td class="right bold">-₱${transactionData.discount_amount.toFixed(2)}</td></tr>` : ''}
+    ${transactionData.tax_amount > 0 ? `<tr><td class="bold">Tax:</td><td class="right bold">₱${transactionData.tax_amount.toFixed(2)}</td></tr>` : ''}
+  </table>
+  <div class="line2"></div>
+  
+  <table style="font-size: 11px;">
+    <tr><td class="bold">TOTAL:</td><td class="right bold">₱${(transactionData.total_amount || 0).toFixed(2)}</td></tr>
+  </table>
+  <div class="line2"></div>
+  
+  <table class="small">
+    <tr><td class="bold">Payment:</td><td class="right">${(transactionData.payment_method || 'cash').replace('_', ' ').toUpperCase()}</td></tr>
+    ${transactionData.payment_method === 'cash' && transactionData.cash_received ? `<tr><td>Cash:</td><td class="right">₱${transactionData.cash_received.toFixed(2)}</td></tr>` : ''}
+    ${transactionData.payment_method === 'cash' && transactionData.change_amount ? `<tr><td>Change:</td><td class="right">₱${transactionData.change_amount.toFixed(2)}</td></tr>` : ''}
+  </table>
+  
+  <div class="line"></div>
+  <div class="center bold" style="margin-top: 3mm;">Thank you!</div>
+  <div class="center small">Please come again!</div>
+  <div class="center small" style="margin-top: 2mm;">Receipt #${receiptNumber}</div>
+  <br>
+</body>
+</html>`
   }
 
   const handleDownload = () => {
