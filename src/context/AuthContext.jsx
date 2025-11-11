@@ -2,31 +2,216 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 
+// Helper function to extract JSON from error message
+function extractJSON(message) {
+  if (!message) return null;
+  
+  // Find JSON object start
+  const jsonStart = message.indexOf('{');
+  if (jsonStart === -1) return null;
+  
+  // Find where JSON ends (before " at " or end of string)
+  const atIndex = message.indexOf(' at ', jsonStart);
+  const endIndex = atIndex !== -1 ? atIndex : message.length;
+  
+  // Extract JSON string
+  let jsonStr = message.substring(jsonStart, endIndex).trim();
+  
+  // Remove trailing punctuation if present
+  jsonStr = jsonStr.replace(/[.,;:]$/, '');
+  
+  try {
+    const parsed = JSON.parse(jsonStr);
+    if (parsed && typeof parsed === 'object' && parsed.message) {
+      return parsed;
+    }
+  } catch (e) {
+    // Try to find complete JSON by matching braces
+    let braceCount = 0;
+    let jsonEnd = jsonStart;
+    for (let i = jsonStart; i < message.length; i++) {
+      if (message[i] === '{') braceCount++;
+      if (message[i] === '}') braceCount--;
+      if (braceCount === 0) {
+        jsonEnd = i + 1;
+        break;
+      }
+    }
+    if (jsonEnd > jsonStart) {
+      try {
+        const parsed = JSON.parse(message.substring(jsonStart, jsonEnd));
+        if (parsed && typeof parsed === 'object' && parsed.message) {
+          return parsed;
+        }
+      } catch (e2) {
+        // Failed to parse
+      }
+    }
+  }
+  
+  return null;
+}
+
+// Helper function to clean Convex metadata from error messages
+function cleanConvexError(message) {
+  if (!message) return '';
+  
+  // First, try to extract JSON error if present
+  const jsonData = extractJSON(message);
+  if (jsonData && jsonData.message) {
+    return jsonData.message;
+  }
+  
+  let cleaned = message;
+  
+  // Remove Convex metadata patterns: [CONVEX M(...)]
+  cleaned = cleaned.replace(/\[CONVEX M\([^\]]+\)\]/g, '');
+  
+  // Remove Request ID patterns: [Request ID: ...]
+  cleaned = cleaned.replace(/\[Request ID: [^\]]+\]/g, '');
+  
+  // Remove "Server Error Uncaught Error:" prefix
+  cleaned = cleaned.replace(/Server Error Uncaught Error:\s*/gi, '');
+  
+  // Remove stack traces (lines starting with "at")
+  cleaned = cleaned.replace(/\s*at\s+[^\n]+/g, '');
+  
+  // Remove "Called by client" text
+  cleaned = cleaned.replace(/\s*Called by client\s*/gi, '');
+  
+  // Try to extract JSON error again after cleaning (in case it was embedded)
+  const jsonDataAfter = extractJSON(cleaned);
+  if (jsonDataAfter && jsonDataAfter.message) {
+    return jsonDataAfter.message;
+  }
+  
+  // Clean up extra whitespace and newlines
+  cleaned = cleaned.trim().replace(/\s+/g, ' ');
+  
+  return cleaned;
+}
+
 // Helper function to parse Convex error messages
 function parseConvexError(error) {
   try {
     if (error?.message) {
-      // Try to parse JSON error from Convex
-      const parsed = JSON.parse(error.message)
-      if (parsed.message) {
+      // First, try to extract structured JSON error
+      const jsonData = extractJSON(error.message);
+      if (jsonData && jsonData.message && jsonData.code) {
         return {
-          message: parsed.message,
-          details: parsed.details || '',
-          action: parsed.action || '',
-          code: parsed.code || ''
+          message: jsonData.message,
+          details: jsonData.details || '',
+          action: jsonData.action || '',
+          code: jsonData.code || ''
+        }
+      }
+      
+      // Clean Convex metadata
+      const cleanedMessage = cleanConvexError(error.message);
+      
+      // Try to parse JSON error from cleaned message (structured error format)
+      try {
+        const parsed = JSON.parse(cleanedMessage)
+        if (parsed.message && parsed.code) {
+          return {
+            message: parsed.message,
+            details: parsed.details || '',
+            action: parsed.action || '',
+            code: parsed.code || ''
+          }
+        }
+      } catch (jsonError) {
+        // Not JSON, check if it's a human-readable string
+        // Map common error patterns to user-friendly messages
+        const message = cleanedMessage.toLowerCase()
+        
+        // Authentication errors
+        if (message.includes('email') && message.includes('already exists')) {
+          return {
+            message: 'An account with this email already exists.',
+            details: 'This email address is already registered in our system.',
+            action: 'Try signing in instead, or use a different email address to create a new account.',
+            code: 'AUTH_EMAIL_EXISTS'
+          }
+        }
+        if (message.includes('username') && message.includes('already exists')) {
+          return {
+            message: 'This username is already taken.',
+            details: 'Someone else is already using this username.',
+            action: 'Please choose a different username for your account.',
+            code: 'AUTH_USERNAME_EXISTS'
+          }
+        }
+        if (message.includes('invalid') && (message.includes('password') || message.includes('credential'))) {
+          return {
+            message: 'The email or password you entered is incorrect.',
+            details: 'Please check your email and password and try again.',
+            action: 'Double-check your credentials or use the "Forgot Password" option if needed.',
+            code: 'AUTH_INVALID_CREDENTIALS'
+          }
+        }
+        if (message.includes('inactive') || message.includes('deactivated')) {
+          return {
+            message: 'Your account has been deactivated.',
+            details: 'This account is currently inactive and cannot be used to sign in.',
+            action: 'Please contact our support team to reactivate your account.',
+            code: 'AUTH_ACCOUNT_INACTIVE'
+          }
+        }
+        if (message.includes('session') && message.includes('expired')) {
+          return {
+            message: 'Your session has expired.',
+            details: 'For security reasons, you need to sign in again.',
+            action: 'Please sign in again to continue using the application.',
+            code: 'AUTH_SESSION_EXPIRED'
+          }
+        }
+        if (message.includes('branch') && message.includes('required')) {
+          return {
+            message: 'Branch assignment is required.',
+            details: 'Staff, barbers, branch admins, and admins must be assigned to a branch.',
+            action: 'Please contact an administrator to assign you to a branch.',
+            code: 'VALIDATION_ERROR'
+          }
+        }
+        if (message.includes('reset') && (message.includes('expired') || message.includes('invalid'))) {
+          return {
+            message: 'Password reset link is invalid or expired.',
+            details: 'Your password reset link has expired or is invalid.',
+            action: 'Please request a new password reset link.',
+            code: 'AUTH_INVALID_CREDENTIALS'
+          }
+        }
+        if (message.includes('facebook') && (message.includes('invalid') || message.includes('failed'))) {
+          return {
+            message: 'Facebook login failed.',
+            details: 'Unable to authenticate with Facebook. The token may be invalid or expired.',
+            action: 'Please try logging in again or use email/password instead.',
+            code: 'AUTH_INVALID_CREDENTIALS'
+          }
+        }
+        
+        // Default fallback for unparseable errors
+        return {
+          message: cleanedMessage || 'An unexpected error occurred',
+          details: 'Please try again or contact support if the problem persists.',
+          action: '',
+          code: 'OPERATION_FAILED'
         }
       }
     }
   } catch (e) {
-    // Not a JSON error, return as-is
+    // Fallback for any parsing errors
+    console.error('Error parsing Convex error:', e)
   }
   
   // Return a friendly message for unparseable errors
+  const cleanedMessage = error?.message ? cleanConvexError(error.message) : 'An unexpected error occurred';
   return {
-    message: error?.message || 'An unexpected error occurred',
+    message: cleanedMessage || 'An unexpected error occurred',
     details: 'Please try again or contact support if the problem persists.',
     action: '',
-    code: ''
+    code: 'OPERATION_FAILED'
   }
 }
 

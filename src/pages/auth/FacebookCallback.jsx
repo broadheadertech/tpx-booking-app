@@ -32,10 +32,33 @@ function FacebookCallback() {
         if (result.success) {
           navigate('/customer/dashboard')
         } else {
-          setError(result.error || 'Facebook login failed')
+          // Parse error for better user experience
+          let errorMessage = result.error || 'Facebook login failed'
+          if (errorMessage.toLowerCase().includes('invalid') || errorMessage.toLowerCase().includes('expired')) {
+            errorMessage = 'Facebook authentication failed. The login token is invalid or expired. Please try again.'
+          } else if (errorMessage.toLowerCase().includes('development')) {
+            errorMessage = 'Facebook login is currently unavailable. Please use email/password login instead.'
+          }
+          setError(errorMessage)
         }
       } catch (e) {
-        setError('Facebook login error. Please try again.')
+        console.error('Facebook login error:', e)
+        let errorMessage = 'Facebook login error. Please try again.'
+        if (e?.message) {
+          try {
+            const parsed = JSON.parse(e.message)
+            if (parsed.message) {
+              errorMessage = parsed.message
+            }
+          } catch {
+            if (e.message.toLowerCase().includes('invalid') || e.message.toLowerCase().includes('expired')) {
+              errorMessage = 'Facebook authentication failed. Please try logging in again.'
+            } else {
+              errorMessage = e.message || errorMessage
+            }
+          }
+        }
+        setError(errorMessage)
       } finally {
         setLoading(false)
       }

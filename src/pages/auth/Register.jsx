@@ -121,24 +121,60 @@ function Register() {
     } catch (error) {
       console.error('Registration error:', error)
       
-      let errorMessage = 'An unexpected error occurred. Please try again.'
-      
-      if (error.message) {
-        if (error.message.includes('Email already exists')) {
-          errorMessage = 'This email address is already registered. Please use a different email or try logging in.'
-          setErrors({ ...errors, email: errorMessage })
-        } else if (error.message.includes('Username already exists')) {
-          errorMessage = 'This full name is already taken. Please use a different name.'
-          setErrors({ ...errors, fullName: errorMessage })
-        } else if (error.message.includes('Branch ID is required')) {
-          errorMessage = 'Registration failed. Please contact support.'
-        } else {
-          errorMessage = error.message
-        }
+      // Parse error using the same logic as AuthContext
+      let parsedError = {
+        message: 'An unexpected error occurred. Please try again.',
+        details: 'Please try again or contact support if the problem persists.',
+        action: '',
+        code: ''
       }
       
-      if (!error.message?.includes('already exists')) {
-        setErrors({ general: errorMessage })
+      try {
+        // Try to parse structured error
+        if (error?.message) {
+          try {
+            const parsed = JSON.parse(error.message)
+            if (parsed.message && parsed.code) {
+              parsedError = parsed
+            }
+          } catch (jsonError) {
+            // Not JSON, check for common patterns
+            const message = error.message.toLowerCase()
+            if (message.includes('email') && (message.includes('already exists') || message.includes('exists'))) {
+              parsedError = {
+                message: 'An account with this email already exists.',
+                details: 'This email address is already registered in our system.',
+                action: 'Try signing in instead, or use a different email address.',
+                code: 'AUTH_EMAIL_EXISTS'
+              }
+              setErrors({ email: parsedError.message })
+            } else if (message.includes('username') && (message.includes('already exists') || message.includes('taken'))) {
+              parsedError = {
+                message: 'This username is already taken.',
+                details: 'Someone else is already using this username.',
+                action: 'Please choose a different name.',
+                code: 'AUTH_USERNAME_EXISTS'
+              }
+              setErrors({ fullName: parsedError.message })
+            } else if (message.includes('branch') && message.includes('required')) {
+              parsedError = {
+                message: 'Registration failed.',
+                details: 'Branch assignment is required for this account type.',
+                action: 'Please contact support for assistance.',
+                code: 'VALIDATION_ERROR'
+              }
+            } else {
+              parsedError.message = error.message
+            }
+          }
+        }
+      } catch (parseError) {
+        console.error('Error parsing registration error:', parseError)
+      }
+      
+      // Set general error if not field-specific
+      if (!errors.email && !errors.fullName) {
+        setErrors({ general: parsedError.message })
       }
     } finally {
       setLoading(false)

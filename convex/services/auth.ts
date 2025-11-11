@@ -233,7 +233,7 @@ export const loginWithFacebook = action({
       const debugRes = await fetch(debugUrl);
       const debugJson = await debugRes.json();
       if (!debugRes.ok || !debugJson?.data?.is_valid || debugJson?.data?.app_id !== appId) {
-        throwUserError(ERROR_CODES.VALIDATION_ERROR, "Facebook login failed", "The Facebook token provided is invalid or expired. Please try logging in again.");
+        throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS, "Facebook login failed", "The Facebook authentication token is invalid or expired. Please try logging in again.");
       }
       // Optionally exchange for a long-lived token
       const exchangeUrl = `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId}&client_secret=${appSecret}&fb_exchange_token=${encodeURIComponent(args.access_token)}`;
@@ -250,11 +250,11 @@ export const loginWithFacebook = action({
     const fields = "id,name,email,picture.type(large)";
     const res = await fetch(`https://graph.facebook.com/v18.0/me?fields=${fields}&access_token=${accessTokenToUse}`);
     if (!res.ok) {
-      throwUserError(ERROR_CODES.VALIDATION_ERROR, "Could not retrieve Facebook profile", "Unable to fetch your Facebook profile information. Please try again.");
+      throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS, "Facebook login failed", "Unable to retrieve your Facebook profile information. Please try logging in again.");
     }
     const profile: any = await res.json();
     if (!profile || (!profile.email && !profile.id)) {
-      throwUserError(ERROR_CODES.VALIDATION_ERROR, "Invalid Facebook profile", "Could not retrieve valid profile information from Facebook. Please try again.");
+      throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS, "Facebook login failed", "Could not retrieve valid profile information from Facebook. Please try logging in again.");
     }
 
     // Pass minimal normalized info to mutation
@@ -327,7 +327,7 @@ export const loginWithFacebookInternal = mutation({
     }
 
     if (!user) {
-      throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS, "Facebook login error", "Unable to complete Facebook login. Please try again or contact support.");
+      throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS, "Facebook login failed", "Unable to complete Facebook login. Please try again or use email/password login instead.");
     }
 
     // Create a session for this user
