@@ -1511,116 +1511,89 @@ const BookingsManagement = ({ onRefresh, user }) => {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-        <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Total</p>
-              <p className="text-xl font-black text-[#FF8C42]">{stats.total}</p>
+    <div className="space-y-3 sm:space-y-4">
+      {/* Compact Merged Stats Cards */}
+      <div className="bg-gradient-to-br from-[#1A1A1A] to-[#222222] rounded-xl sm:rounded-2xl border border-[#2A2A2A]/50 shadow-lg p-3 sm:p-4">
+        {/* Booking Status Stats */}
+        <div className="mb-3 sm:mb-4">
+          <h3 className="text-xs sm:text-sm font-bold text-gray-300 mb-2 sm:mb-3 uppercase tracking-wide">Booking Status</h3>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
+            <div className="bg-[#0F0F0F]/50 rounded-lg p-2 sm:p-2.5 border border-[#2A2A2A]/30">
+              <div className="flex flex-col items-center text-center">
+                <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase mb-1">Total</p>
+                <p className="text-lg sm:text-xl font-black text-[#FF8C42]">{stats.total}</p>
+                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-[#FF8C42] mt-1" />
+              </div>
             </div>
-            <div className="w-8 h-8 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
-              <Calendar className="h-4 w-4 text-[#FF8C42]" />
+
+            <div className="bg-[#0F0F0F]/50 rounded-lg p-2 sm:p-2.5 border border-[#2A2A2A]/30">
+              <div className="flex flex-col items-center text-center">
+                <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase mb-1">Today</p>
+                <p className="text-lg sm:text-xl font-black text-[#FF8C42]">{stats.today}</p>
+                <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-[#FF8C42] mt-1" />
+              </div>
+            </div>
+
+            <div className="bg-[#0F0F0F]/50 rounded-lg p-2 sm:p-2.5 border border-[#2A2A2A]/30">
+              <div className="flex flex-col items-center text-center">
+                <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase mb-1">Pending</p>
+                <p className="text-lg sm:text-xl font-black text-[#FF8C42]">{stats.pending}</p>
+                <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-[#FF8C42] mt-1" />
+              </div>
+            </div>
+
+            <div className="bg-[#0F0F0F]/50 rounded-lg p-2 sm:p-2.5 border border-[#2A2A2A]/30">
+              <div className="flex flex-col items-center text-center">
+                <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase mb-1">Booked</p>
+                <p className="text-lg sm:text-xl font-black text-[#FF8C42]">{stats.booked}</p>
+                <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-[#FF8C42] mt-1" />
+              </div>
+            </div>
+
+            <div className="bg-[#0F0F0F]/50 rounded-lg p-2 sm:p-2.5 border border-[#2A2A2A]/30">
+              <div className="flex flex-col items-center text-center">
+                <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase mb-1">Confirmed</p>
+                <p className="text-lg sm:text-xl font-black text-[#FF8C42]">{stats.confirmed}</p>
+                <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-[#FF8C42] mt-1" />
+              </div>
+            </div>
+
+            <div className="bg-[#0F0F0F]/50 rounded-lg p-2 sm:p-2.5 border border-[#2A2A2A]/30">
+              <div className="flex flex-col items-center text-center">
+                <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase mb-1">Cancelled</p>
+                <p className="text-lg sm:text-xl font-black text-[#FF8C42]">{stats.cancelled}</p>
+                <XCircle className="h-3 w-3 sm:h-4 sm:w-4 text-[#FF8C42] mt-1" />
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Today</p>
-              <p className="text-xl font-black text-[#FF8C42]">{stats.today}</p>
+        {/* Payment Status Stats */}
+        <div className="border-t border-[#2A2A2A]/50 pt-3 sm:pt-4">
+          <h3 className="text-xs sm:text-sm font-bold text-gray-300 mb-2 sm:mb-3 uppercase tracking-wide">Payment Status</h3>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="bg-[#0F0F0F]/50 rounded-lg p-2 sm:p-2.5 border border-green-500/20">
+              <div className="flex flex-col items-center text-center">
+                <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase mb-1">Paid</p>
+                <p className="text-lg sm:text-xl font-black text-green-400">{stats.paid}</p>
+                <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-400 mt-1" />
+              </div>
             </div>
-            <div className="w-8 h-8 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
-              <Clock className="h-4 w-4 text-[#FF8C42]" />
-            </div>
-          </div>
-        </div>
 
-        <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Pending</p>
-              <p className="text-xl font-black text-[#FF8C42]">{stats.pending}</p>
+            <div className="bg-[#0F0F0F]/50 rounded-lg p-2 sm:p-2.5 border border-red-500/20">
+              <div className="flex flex-col items-center text-center">
+                <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase mb-1">Unpaid</p>
+                <p className="text-lg sm:text-xl font-black text-red-400">{stats.unpaid}</p>
+                <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-red-400 mt-1" />
+              </div>
             </div>
-            <div className="w-8 h-8 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
-              <AlertCircle className="h-4 w-4 text-[#FF8C42]" />
-            </div>
-          </div>
-        </div>
 
-        <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Booked</p>
-              <p className="text-xl font-black text-[#FF8C42]">{stats.booked}</p>
-            </div>
-            <div className="w-8 h-8 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
-              <CheckCircle className="h-4 w-4 text-[#FF8C42]" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Confirmed</p>
-              <p className="text-xl font-black text-[#FF8C42]">{stats.confirmed}</p>
-            </div>
-            <div className="w-8 h-8 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
-              <CheckCircle className="h-4 w-4 text-[#FF8C42]" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Cancelled</p>
-              <p className="text-xl font-black text-[#FF8C42]">{stats.cancelled}</p>
-            </div>
-            <div className="w-8 h-8 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
-              <XCircle className="h-4 w-4 text-[#FF8C42]" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Payment Status Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Paid</p>
-              <p className="text-xl font-black text-green-400">{stats.paid}</p>
-            </div>
-            <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
-              <CheckCircle className="h-4 w-4 text-green-400" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Unpaid</p>
-              <p className="text-xl font-black text-red-400">{stats.unpaid}</p>
-            </div>
-            <div className="w-8 h-8 rounded-lg bg-red-500/20 flex items-center justify-center">
-              <CreditCard className="h-4 w-4 text-red-400" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Refunded</p>
-              <p className="text-xl font-black text-yellow-400">{stats.refunded}</p>
-            </div>
-            <div className="w-8 h-8 rounded-lg bg-yellow-500/20 flex items-center justify-center">
-              <XCircle className="h-4 w-4 text-yellow-400" />
+            <div className="bg-[#0F0F0F]/50 rounded-lg p-2 sm:p-2.5 border border-yellow-500/20">
+              <div className="flex flex-col items-center text-center">
+                <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase mb-1">Refunded</p>
+                <p className="text-lg sm:text-xl font-black text-yellow-400">{stats.refunded}</p>
+                <XCircle className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 mt-1" />
+              </div>
             </div>
           </div>
         </div>

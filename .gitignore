@@ -36,3 +36,9 @@ claude-flow
 hive-mind-prompt-*.txt
 /.claude
 /docs
+.env.local
+.env.local
+.env
+.env.local
+.env.local
+.env.local

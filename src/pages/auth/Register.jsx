@@ -163,7 +163,7 @@ function Register() {
                 action: 'Please contact support for assistance.',
                 code: 'VALIDATION_ERROR'
               }
-            } else {
+        } else {
               parsedError.message = error.message
             }
           }

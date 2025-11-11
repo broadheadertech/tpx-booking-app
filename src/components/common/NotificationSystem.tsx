@@ -313,16 +313,16 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, clas
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={onOpenModal}
-      className="relative p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/10"
+      className={`relative p-1.5 sm:p-2 text-gray-400 hover:text-white transition-colors rounded-lg sm:rounded-xl hover:bg-white/10 touch-manipulation w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 flex items-center justify-center ${className}`}
     >
-      <Bell size={20} />
+      <Bell className="w-4 h-4 sm:w-4 sm:h-4 md:w-5 md:h-5" />
 
       {stats && stats.unreadCount > 0 && (
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-[#FF8C42] text-white text-xs
-            font-semibold rounded-full flex items-center justify-center px-1 shadow-lg"
+          className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] bg-[#FF8C42] text-white text-[10px] sm:text-xs
+            font-semibold rounded-full flex items-center justify-center px-0.5 sm:px-1 shadow-lg"
         >
           {stats.unreadCount > 99 ? '99+' : stats.unreadCount}
         </motion.div>

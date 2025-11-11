@@ -98,7 +98,13 @@ function Login() {
           navigate('/customer/dashboard')
         }
       } else {
-        setError(result.error)
+        // Clean error message to remove any technical prefixes
+        let cleanError = result.error || 'An error occurred';
+        cleanError = cleanError.replace(/^(Server Error|Uncaught Error|Error):\s*/i, '');
+        cleanError = cleanError.replace(/Server\s+Error\s+Uncaught\s+Error:\s*/gi, '');
+        cleanError = cleanError.trim();
+        
+        setError(cleanError)
         setErrorDetails(result.details || '')
         setErrorAction(result.action || '')
       }

@@ -63,6 +63,8 @@ const POS = () => {
   const [activeModal, setActiveModal] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('services') // 'services' or 'products'
+  const [selectedCategory, setSelectedCategory] = useState(null) // Category filter: 'Haircut', 'Package', 'Other Services', or null for all
+  const [openCategory, setOpenCategory] = useState(null) // For category dropdown toggle
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [viewMode, setViewMode] = useState('card') // 'card' or 'table'
   const [currentPage, setCurrentPage] = useState(1)
@@ -243,15 +245,44 @@ const POS = () => {
     setActiveModal(null)
   }
 
-  // Filter items based on search term
-  const filteredServices = activeServices.filter(service =>
-    service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    service.category.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  // Map service categories to standard categories
+  const mapServiceCategory = (category) => {
+    if (!category) return 'Other Services'
+    const catLower = category.toLowerCase()
+    if (catLower.includes('haircut') || catLower.includes('hair')) {
+      return 'Haircut'
+    }
+    if (catLower.includes('package')) {
+      return 'Package'
+    }
+    return 'Other Services'
+  }
+
+  // Group services by category
+  const servicesByCategory = activeServices.reduce((acc, service) => {
+    const category = mapServiceCategory(service.category)
+    if (!acc[category]) acc[category] = []
+    acc[category].push(service)
+    return acc
+  }, {})
+
+  // Filter items based on search term and category
+  const filterServicesByCategory = (services) => {
+    return services.filter(service =>
+      service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (service.category && service.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (service.description && service.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+  }
+
+  const filteredServices = selectedCategory
+    ? filterServicesByCategory(servicesByCategory[selectedCategory] || [])
+    : filterServicesByCategory(activeServices)
 
   const filteredProducts = activeProducts.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase())
+    (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
   // Pagination logic
@@ -265,7 +296,7 @@ const POS = () => {
   // Reset to page 1 when search term changes or tab changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, activeTab, viewMode])
+  }, [searchTerm, activeTab, viewMode, selectedCategory])
 
   // Handle page change
   const handlePageChange = (page) => {
@@ -663,7 +694,7 @@ const POS = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] pb-32">
         {/* Mobile Header - Compact */}
-        <div className="sticky top-0 z-50 bg-[#050505] border-b border-[#1A1A1A]/30">
+        <div className="sticky top-0 z-50 bg-[#050505] border-b border-[#1A1A1A]/30" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="px-3 py-2">
             <div className="flex items-center justify-between gap-2">
               <Link to="/staff" className="w-9 h-9 bg-[#0A0A0A] rounded-lg flex items-center justify-center border border-[#1A1A1A]/50">
@@ -881,7 +912,11 @@ const POS = () => {
           {/* Services/Products Tabs */}
           <div className="flex space-x-2 bg-[#1A1A1A] rounded-xl p-1">
             <button
-              onClick={() => setActiveTab('services')}
+              onClick={() => {
+                setActiveTab('services')
+                setSelectedCategory(null)
+                setOpenCategory(null)
+              }}
               className={`flex-1 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${
                 activeTab === 'services'
                   ? 'bg-[#FF8C42] text-white'
@@ -892,7 +927,11 @@ const POS = () => {
               Services
             </button>
             <button
-              onClick={() => setActiveTab('products')}
+              onClick={() => {
+                setActiveTab('products')
+                setSelectedCategory(null)
+                setOpenCategory(null)
+              }}
               className={`flex-1 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${
                 activeTab === 'products'
                   ? 'bg-[#FF8C42] text-white'
@@ -904,32 +943,69 @@ const POS = () => {
             </button>
           </div>
 
-          {/* Mobile Catalog - List View */}
-          <div className="space-y-2">
-            {activeTab === 'services' ? (
-              filteredServices.map((service) => (
-                <button
-                  key={service._id}
-                  onClick={() => addService(service)}
-                  className="w-full p-4 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl border border-[#444444]/50 text-left hover:border-[#FF8C42] transition-all"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-white text-sm mb-1">{service.name}</h4>
-                      <p className="text-xs text-gray-400 line-clamp-1 mb-2">{service.description}</p>
-                      <div className="flex items-center space-x-3">
-                        <span className="text-base font-bold text-[#FF8C42]">₱{service.price}</span>
-                        <span className="text-xs text-gray-500">{service.duration_minutes} min</span>
+          {/* Category Dropdown - Only for Services */}
+          {activeTab === 'services' && (
+            <div className="space-y-2">
+              {['Haircut', 'Package', 'Other Services'].map((categoryName) => {
+                const categoryServices = servicesByCategory[categoryName] || []
+                const filteredCategoryServices = filterServicesByCategory(categoryServices)
+                
+                if (filteredCategoryServices.length === 0) return null
+
+                const isOpen = openCategory === categoryName
+
+                return (
+                  <div
+                    key={categoryName}
+                    className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]"
+                  >
+                    <button
+                      onClick={() => setOpenCategory(isOpen ? null : categoryName)}
+                      className="w-full text-left px-4 py-3 flex justify-between items-center text-white font-semibold hover:bg-[#222222] transition-colors rounded-lg"
+                    >
+                      <span className="text-sm">{categoryName}</span>
+                      <span className="text-lg text-gray-400">{isOpen ? "−" : "+"}</span>
+                    </button>
+
+                    {isOpen && (
+                      <div className="space-y-2 px-4 pb-4 pt-2">
+                        {filteredCategoryServices.map((service) => (
+                          <button
+                            key={service._id}
+                            onClick={() => addService(service)}
+                            className="w-full p-4 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl border border-[#444444]/50 text-left hover:border-[#FF8C42] transition-all"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-white text-sm mb-1">{service.name}</h4>
+                                {service.description && (
+                                  <p className="text-xs text-gray-400 line-clamp-1 mb-2">{service.description}</p>
+                                )}
+                                <div className="flex items-center space-x-3">
+                                  <span className="text-base font-bold text-[#FF8C42]">₱{service.price}</span>
+                                  {service.duration_minutes && (
+                                    <span className="text-xs text-gray-500">{service.duration_minutes} min</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="ml-3 w-10 h-10 bg-[#FF8C42]/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                <Plus className="w-5 h-5 text-[#FF8C42]" />
+                              </div>
+                            </div>
+                          </button>
+                        ))}
                       </div>
-                    </div>
-                    <div className="ml-3 w-10 h-10 bg-[#FF8C42]/20 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Plus className="w-5 h-5 text-[#FF8C42]" />
-                    </div>
+                    )}
                   </div>
-                </button>
-              ))
-            ) : (
-              filteredProducts.map((product) => (
+                )
+              })}
+            </div>
+          )}
+
+          {/* Products List - No Categories */}
+          {activeTab === 'products' && (
+            <div className="space-y-2">
+              {filteredProducts.map((product) => (
                 <button
                   key={product._id}
                   onClick={() => addProduct(product)}
@@ -938,7 +1014,9 @@ const POS = () => {
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <h4 className="font-semibold text-white text-sm mb-1">{product.name}</h4>
-                      <p className="text-xs text-gray-400 line-clamp-1 mb-2">{product.description}</p>
+                      {product.description && (
+                        <p className="text-xs text-gray-400 line-clamp-1 mb-2">{product.description}</p>
+                      )}
                       <div className="flex items-center space-x-3">
                         <span className="text-base font-bold text-[#FF8C42]">₱{product.price}</span>
                         <span className="text-xs text-gray-500">Stock: {product.stock}</span>
@@ -949,9 +1027,9 @@ const POS = () => {
                     </div>
                   </div>
                 </button>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Mobile Cart Drawer */}
@@ -1366,7 +1444,11 @@ const POS = () => {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex space-x-1 bg-[#1A1A1A] rounded-xl p-1 mb-4 sm:mb-0">
                     <button
-                      onClick={() => setActiveTab('services')}
+                      onClick={() => {
+                        setActiveTab('services')
+                        setSelectedCategory(null)
+                        setOpenCategory(null)
+                      }}
                       className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
                         activeTab === 'services'
                           ? 'bg-[#FF8C42] text-white shadow-lg'
@@ -1377,7 +1459,11 @@ const POS = () => {
                       Services
                     </button>
                     <button
-                      onClick={() => setActiveTab('products')}
+                      onClick={() => {
+                        setActiveTab('products')
+                        setSelectedCategory(null)
+                        setOpenCategory(null)
+                      }}
                       className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
                         activeTab === 'products'
                           ? 'bg-[#FF8C42] text-white shadow-lg'
@@ -1439,30 +1525,107 @@ const POS = () => {
                 </div>
               </div>
 
-              {/* Services/Products Display */}
-              {viewMode === 'card' ? (
-                /* Card View */
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {activeTab === 'services' ? (
-                    paginatedItems.map((service) => (
-                      <button
-                        key={service._id}
-                        onClick={() => addService(service)}
-                        className="p-4 bg-[#1A1A1A] border border-[#555555] rounded-xl hover:border-[#FF8C42] hover:bg-[#FF8C42]/5 transition-all duration-200 text-left group"
+              {/* Category Dropdown - Only for Services */}
+              {activeTab === 'services' && (
+                <div className="mb-6 space-y-3">
+                  {['Haircut', 'Package', 'Other Services'].map((categoryName) => {
+                    const categoryServices = servicesByCategory[categoryName] || []
+                    const filteredCategoryServices = filterServicesByCategory(categoryServices)
+                    
+                    if (filteredCategoryServices.length === 0) return null
+
+                    const isOpen = openCategory === categoryName
+
+                    return (
+                      <div
+                        key={categoryName}
+                        className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]"
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold text-white group-hover:text-[#FF8C42]">{service.name}</h4>
-                          <Plus className="w-4 h-4 text-gray-400 group-hover:text-[#FF8C42]" />
-                        </div>
-                        <p className="text-sm text-gray-400 mb-2">{service.description}</p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-lg font-bold text-[#FF8C42]">₱{service.price}</span>
-                          <span className="text-xs text-gray-500">{service.duration_minutes} min</span>
-                        </div>
-                      </button>
-                    ))
-                  ) : (
-                    paginatedItems.map((product) => (
+                        <button
+                          onClick={() => setOpenCategory(isOpen ? null : categoryName)}
+                          className="w-full text-left px-4 py-3 flex justify-between items-center text-white font-semibold hover:bg-[#222222] transition-colors rounded-lg"
+                        >
+                          <span className="text-sm">{categoryName}</span>
+                          <span className="text-lg text-gray-400">{isOpen ? "−" : "+"}</span>
+                        </button>
+
+                        {isOpen && (
+                          <div className="p-4">
+                            {viewMode === 'card' ? (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {filteredCategoryServices.map((service) => (
+                                  <button
+                                    key={service._id}
+                                    onClick={() => addService(service)}
+                                    className="p-4 bg-[#1A1A1A] border border-[#555555] rounded-xl hover:border-[#FF8C42] hover:bg-[#FF8C42]/5 transition-all duration-200 text-left group"
+                                  >
+                                    <div className="flex items-center justify-between mb-2">
+                                      <h4 className="font-semibold text-white group-hover:text-[#FF8C42]">{service.name}</h4>
+                                      <Plus className="w-4 h-4 text-gray-400 group-hover:text-[#FF8C42]" />
+                                    </div>
+                                    {service.description && (
+                                      <p className="text-sm text-gray-400 mb-2">{service.description}</p>
+                                    )}
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-lg font-bold text-[#FF8C42]">₱{service.price}</span>
+                                      {service.duration_minutes && (
+                                        <span className="text-xs text-gray-500">{service.duration_minutes} min</span>
+                                      )}
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="overflow-x-auto">
+                                <table className="w-full bg-[#1A1A1A] rounded-xl border border-[#555555]">
+                                  <thead className="bg-[#2A2A2A]">
+                                    <tr>
+                                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Name</th>
+                                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Description</th>
+                                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Price</th>
+                                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Duration</th>
+                                      <th className="px-4 py-3 text-center text-sm font-semibold text-gray-300 border-b border-[#555555]">Action</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {filteredCategoryServices.map((service) => (
+                                      <tr
+                                        key={service._id}
+                                        className="hover:bg-[#333333] transition-colors border-b border-[#444444] last:border-b-0"
+                                      >
+                                        <td className="px-4 py-3 text-sm font-medium text-white">{service.name}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-400 max-w-xs truncate">{service.description || '-'}</td>
+                                        <td className="px-4 py-3 text-sm font-bold text-[#FF8C42]">₱{service.price}</td>
+                                        <td className="px-4 py-3 text-sm text-gray-500">{service.duration_minutes || '-'} min</td>
+                                        <td className="px-4 py-3 text-center">
+                                          <button
+                                            onClick={() => addService(service)}
+                                            className="px-3 py-1 bg-[#FF8C42] text-white text-sm rounded-lg hover:bg-[#E67E22] transition-colors flex items-center justify-center space-x-1 mx-auto"
+                                          >
+                                            <Plus className="w-3 h-3" />
+                                            <span>Add</span>
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Services/Products Display - Only show if no category dropdown (for products) */}
+              {activeTab === 'products' && (
+                viewMode === 'card' ? (
+                  /* Card View */
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {paginatedItems.map((product) => (
                       <button
                         key={product._id}
                         onClick={() => addProduct(product)}
@@ -1472,60 +1635,54 @@ const POS = () => {
                           <h4 className="font-semibold text-white group-hover:text-[#FF8C42]">{product.name}</h4>
                           <Plus className="w-4 h-4 text-gray-400 group-hover:text-[#FF8C42]" />
                         </div>
-                        <p className="text-sm text-gray-400 mb-2">{product.description}</p>
+                        {product.description && (
+                          <p className="text-sm text-gray-400 mb-2">{product.description}</p>
+                        )}
                         <div className="flex items-center justify-between">
                           <span className="text-lg font-bold text-[#FF8C42]">₱{product.price}</span>
                           <span className="text-xs text-gray-500">Stock: {product.stock}</span>
                         </div>
                       </button>
-                    ))
-                  )}
-                </div>
-              ) : (
-                /* Table View */
-                <div className="overflow-x-auto">
-                  <table className="w-full bg-[#1A1A1A] rounded-xl border border-[#555555]">
-                    <thead className="bg-[#2A2A2A]">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Name</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Description</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Price</th>
-                        {activeTab === 'services' ? (
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Duration</th>
-                        ) : (
+                    ))}
+                  </div>
+                ) : (
+                  /* Table View */
+                  <div className="overflow-x-auto">
+                    <table className="w-full bg-[#1A1A1A] rounded-xl border border-[#555555]">
+                      <thead className="bg-[#2A2A2A]">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Name</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Description</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Price</th>
                           <th className="px-4 py-3 text-left text-sm font-semibold text-gray-300 border-b border-[#555555]">Stock</th>
-                        )}
-                        <th className="px-4 py-3 text-center text-sm font-semibold text-gray-300 border-b border-[#555555]">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {paginatedItems.map((item) => (
-                        <tr
-                          key={item._id}
-                          className="hover:bg-[#333333] transition-colors border-b border-[#444444] last:border-b-0"
-                        >
-                          <td className="px-4 py-3 text-sm font-medium text-white">{item.name}</td>
-                          <td className="px-4 py-3 text-sm text-gray-400 max-w-xs truncate">{item.description}</td>
-                          <td className="px-4 py-3 text-sm font-bold text-[#FF8C42]">₱{item.price}</td>
-                          {activeTab === 'services' ? (
-                            <td className="px-4 py-3 text-sm text-gray-500">{item.duration_minutes} min</td>
-                          ) : (
-                            <td className="px-4 py-3 text-sm text-gray-500">{item.stock}</td>
-                          )}
-                          <td className="px-4 py-3 text-center">
-                            <button
-                              onClick={() => activeTab === 'services' ? addService(item) : addProduct(item)}
-                              className="px-3 py-1 bg-[#FF8C42] text-white text-sm rounded-lg hover:bg-[#E67E22] transition-colors flex items-center justify-center space-x-1 mx-auto"
-                            >
-                              <Plus className="w-3 h-3" />
-                              <span>Add</span>
-                            </button>
-                          </td>
+                          <th className="px-4 py-3 text-center text-sm font-semibold text-gray-300 border-b border-[#555555]">Action</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {paginatedItems.map((item) => (
+                          <tr
+                            key={item._id}
+                            className="hover:bg-[#333333] transition-colors border-b border-[#444444] last:border-b-0"
+                          >
+                            <td className="px-4 py-3 text-sm font-medium text-white">{item.name}</td>
+                            <td className="px-4 py-3 text-sm text-gray-400 max-w-xs truncate">{item.description || '-'}</td>
+                            <td className="px-4 py-3 text-sm font-bold text-[#FF8C42]">₱{item.price}</td>
+                            <td className="px-4 py-3 text-sm text-gray-500">{item.stock}</td>
+                            <td className="px-4 py-3 text-center">
+                              <button
+                                onClick={() => addProduct(item)}
+                                className="px-3 py-1 bg-[#FF8C42] text-white text-sm rounded-lg hover:bg-[#E67E22] transition-colors flex items-center justify-center space-x-1 mx-auto"
+                              >
+                                <Plus className="w-3 h-3" />
+                                <span>Add</span>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
               )}
 
               {/* Pagination Controls */}

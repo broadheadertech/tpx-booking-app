@@ -55,7 +55,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
   }
 
   return (
-    <div className="bg-[#0A0A0A] backdrop-blur-sm border border-[#1A1A1A]/30 rounded-xl shadow-2xl shadow-black/40 overflow-visible relative z-10">
+    <div className="bg-[#0A0A0A] backdrop-blur-sm border border-[#1A1A1A]/30 rounded-xl sm:rounded-2xl shadow-2xl shadow-black/40 overflow-visible relative z-10">
       {/* Desktop Navigation */}
       <nav className="hidden lg:flex items-center justify-center p-1.5">
         <div className="flex items-center space-x-0.5 bg-[#050505]/60 rounded-lg p-1">
@@ -165,7 +165,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
 
       {/* Mobile Navigation - No Horizontal Scroll */}
       <nav className="lg:hidden">
-        <div className="flex flex-wrap gap-1 p-2 justify-center">
+        <div className="flex flex-wrap gap-1.5 sm:gap-2 p-2 sm:p-3 justify-center">
           {/* Show primary tabs first */}
           {primaryTabs.map((tab) => {
             const IconComponent = getIconComponent(tab.id)
@@ -174,28 +174,28 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
               <div key={tab.id} className="relative">
                 <button
                   onClick={() => handleTabClick(tab.id)}
-                  className={`flex flex-col items-center justify-center px-2 py-2 rounded-lg font-medium text-xs transition-all duration-200 whitespace-nowrap relative flex-shrink-0 ${
+                  className={`flex flex-col items-center justify-center px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-medium text-xs transition-all duration-200 whitespace-nowrap relative flex-shrink-0 min-w-[60px] sm:min-w-[70px] touch-manipulation ${
                     activeTab === tab.id
-                      ? 'bg-gradient-to-b from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
-                      : 'text-gray-300 hover:text-white hover:bg-[#2A2A2A]'
+                      ? 'bg-gradient-to-b from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg scale-105'
+                      : 'text-gray-300 hover:text-white hover:bg-[#2A2A2A] active:scale-95'
                   }`}
                 >
-                  <div className={`flex items-center justify-center w-5 h-5 mb-1 transition-all duration-200 ${
+                  <div className={`flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 mb-1 transition-all duration-200 ${
                     activeTab === tab.id
                       ? 'text-white'
                       : 'text-gray-400'
                   }`}>
-                    <IconComponent className="w-4 h-4" />
+                    <IconComponent className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
-                  <span className="font-semibold text-[10px]">{tab.label}</span>
+                  <span className="font-semibold text-[10px] sm:text-xs leading-tight">{tab.label}</span>
                   {activeTab === tab.id && (
                     <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full" />
                   )}
 
                   {/* Badge for bookings */}
-                  {tab.badge > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[14px] h-[14px] flex items-center justify-center px-0.5">
-                      {tab.badge > 99 ? '99' : tab.badge}
+                  {tab.id === 'bookings' && incompleteBookingsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
+                      {incompleteBookingsCount > 99 ? '99+' : incompleteBookingsCount}
                     </span>
                   )}
                 </button>
@@ -207,22 +207,22 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
           <div className="relative">
             <button
               onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
-              className={`flex flex-col items-center justify-center px-2 py-2 rounded-md font-medium text-xs transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+              className={`flex flex-col items-center justify-center px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-medium text-xs transition-all duration-200 whitespace-nowrap flex-shrink-0 min-w-[60px] sm:min-w-[70px] touch-manipulation ${
                 activeSecondaryTab
-                  ? 'bg-gradient-to-b from-[#FF8C42] to-[#FF7A2B] text-white shadow-md'
-                  : 'text-gray-400 hover:text-white hover:bg-[#1A1A1A]/40'
+                  ? 'bg-gradient-to-b from-[#FF8C42] to-[#FF7A2B] text-white shadow-md scale-105'
+                  : 'text-gray-400 hover:text-white hover:bg-[#1A1A1A]/40 active:scale-95'
               }`}
             >
-              <div className={`flex items-center justify-center w-5 h-5 mb-1 transition-all duration-200 ${
+              <div className={`flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 mb-1 transition-all duration-200 ${
                 activeSecondaryTab ? 'text-white' : 'text-gray-400'
               }`}>
                 {activeSecondaryTab ? (
-                  React.createElement(getIconComponent(activeSecondaryTab.id), { className: "w-4 h-4" })
+                  React.createElement(getIconComponent(activeSecondaryTab.id), { className: "w-4 h-4 sm:w-5 sm:h-5" })
                 ) : (
-                  <MoreHorizontal className="w-4 h-4" />
+                  <MoreHorizontal className="w-4 h-4 sm:w-5 sm:h-5" />
                 )}
               </div>
-              <span className="font-semibold text-[10px]">
+              <span className="font-semibold text-[10px] sm:text-xs leading-tight">
                 {activeSecondaryTab ? activeSecondaryTab.label : 'More'}
               </span>
               {activeSecondaryTab && (
@@ -232,25 +232,25 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
             
             {/* Mobile Dropdown */}
               {isMoreDropdownOpen && (
-                <div className="absolute top-full right-0 mt-2 w-40 bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl shadow-2xl border border-[#2A2A2A]/50 py-2" style={{zIndex: 10, position: 'absolute'}}>
+                <div className="absolute top-full right-0 mt-2 w-48 sm:w-52 bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl shadow-2xl border border-[#2A2A2A]/50 py-2 z-50 max-h-[60vh] overflow-y-auto custom-scrollbar">
                 {secondaryTabs.map((tab) => {
                   const IconComponent = getIconComponent(tab.id)
                   return (
                     <button
                       key={tab.id}
                       onClick={() => handleTabClick(tab.id)}
-                      className={`w-full flex items-center space-x-3 px-3 py-2 text-left transition-all duration-200 ${
+                      className={`w-full flex items-center space-x-3 px-4 py-2.5 sm:py-3 text-left transition-all duration-200 touch-manipulation active:scale-95 ${
                         activeTab === tab.id
                           ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white'
                           : 'text-gray-300 hover:bg-[#333333] hover:text-[#FF8C42]'
                       }`}
                     >
-                      <div className={`flex items-center justify-center w-4 h-4 ${
+                      <div className={`flex items-center justify-center w-5 h-5 flex-shrink-0 ${
                         activeTab === tab.id ? 'text-white' : 'text-gray-400'
                       }`}>
-                        <IconComponent className="w-4 h-4" />
+                        <IconComponent className="w-4 h-4 sm:w-5 sm:h-5" />
                       </div>
-                      <span className="font-semibold text-xs">{tab.label}</span>
+                      <span className="font-semibold text-xs sm:text-sm">{tab.label}</span>
                     </button>
                   )
                 })}

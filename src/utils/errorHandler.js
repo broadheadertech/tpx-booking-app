@@ -76,8 +76,16 @@ function cleanConvexError(message) {
   // Remove Request ID patterns: [Request ID: ...]
   cleaned = cleaned.replace(/\[Request ID: [^\]]+\]/g, '');
   
-  // Remove "Server Error Uncaught Error:" prefix
+  // Remove "Server Error Uncaught Error:" prefix (with all variations)
+  // Match with flexible spacing
+  cleaned = cleaned.replace(/Server\s+Error\s+Uncaught\s+Error:\s*/gi, '');
+  cleaned = cleaned.replace(/Server\s+Error\s+Uncaught\s+Error\s*/gi, '');
   cleaned = cleaned.replace(/Server Error Uncaught Error:\s*/gi, '');
+  cleaned = cleaned.replace(/Server Error Uncaught Error\s*/gi, '');
+  cleaned = cleaned.replace(/Uncaught\s+Error:\s*/gi, '');
+  cleaned = cleaned.replace(/Uncaught\s+Error\s*/gi, '');
+  cleaned = cleaned.replace(/Server\s+Error:\s*/gi, '');
+  cleaned = cleaned.replace(/Server\s+Error\s*/gi, '');
   
   // Remove stack traces (lines starting with "at")
   cleaned = cleaned.replace(/\s*at\s+[^\n]+/g, '');
@@ -93,6 +101,9 @@ function cleanConvexError(message) {
   
   // Clean up extra whitespace and newlines
   cleaned = cleaned.trim().replace(/\s+/g, ' ');
+  
+  // Remove any remaining technical prefixes
+  cleaned = cleaned.replace(/^(Error|Exception|Uncaught):\s*/i, '');
   
   return cleaned;
 }

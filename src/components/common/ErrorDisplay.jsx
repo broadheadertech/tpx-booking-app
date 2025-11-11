@@ -85,7 +85,23 @@ const ErrorDisplay = ({
     )
   }
 
-  // Default variant
+  // Default variant - combine message and details into one human-friendly message
+  // Make it more conversational and natural
+  let humanMessage = formattedError.message;
+  
+  if (formattedError.details) {
+    // Combine message and details naturally
+    if (formattedError.message.endsWith('.') || formattedError.message.endsWith('!') || formattedError.message.endsWith('?')) {
+      humanMessage = `${formattedError.message} ${formattedError.details}`;
+    } else {
+      humanMessage = `${formattedError.message}. ${formattedError.details}`;
+    }
+  }
+  
+  // Remove any remaining technical prefixes that might have slipped through
+  humanMessage = humanMessage.replace(/^(Server Error|Uncaught Error|Error):\s*/i, '');
+  humanMessage = humanMessage.trim();
+  
   return (
     <div className={`${theme.container} border rounded-xl p-4 ${className}`}>
       <div className="flex items-start space-x-3">
@@ -94,19 +110,13 @@ const ErrorDisplay = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <p className={`text-sm font-medium ${theme.message} mb-1`}>
-                {formattedError.message}
+              <p className={`text-sm font-medium ${theme.message}`}>
+                {humanMessage}
               </p>
               
-              {formattedError.details && (
-                <p className={`text-xs ${theme.details} mb-2`}>
-                  {formattedError.details}
-                </p>
-              )}
-              
               {formattedError.action && (
-                <p className={`text-xs ${theme.action}`}>
-                  {formattedError.action}
+                <p className={`text-xs ${theme.action} mt-2`}>
+                  💡 {formattedError.action}
                 </p>
               )}
             </div>

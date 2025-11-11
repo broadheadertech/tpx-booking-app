@@ -263,8 +263,8 @@ function StaffDashboard() {
       />
       
       <div className="flex-1">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="space-y-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8 lg:py-12">
+          <div className="space-y-4 sm:space-y-6 md:space-y-8 lg:space-y-12">
             <QuickActions 
               onAddCustomer={handleAddCustomer}
               onCreateBooking={handleCreateBooking}
@@ -280,7 +280,7 @@ function StaffDashboard() {
               onTabChange={setActiveTab}
               incompleteBookingsCount={incompleteBookingsCount}
             />
-            <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-3xl shadow-2xl border border-[#2A2A2A]/50 p-10 backdrop-blur-sm">
+            <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl border border-[#2A2A2A]/50 p-3 sm:p-4 md:p-6 lg:p-8 xl:p-10 backdrop-blur-sm overflow-hidden">
               {renderTabContent()}
             </div>
           </div>
