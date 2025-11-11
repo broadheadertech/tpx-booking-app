@@ -1987,25 +1987,32 @@ const BookingsManagement = ({ onRefresh, user }) => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-white">
-                        {(() => {
-                          const name = booking.customer_name || 'N/A'
-                          // Clean up guest names like guest_samples_1762847861795_qvbv
-                          if (name.startsWith('guest_')) {
-                            // Extract the base name and show just "Guest (samples)"
-                            const parts = name.split('_')
-                            if (parts.length >= 2) {
-                              const baseName = parts[1].replace(/[_\d]/g, '')
-                              return `Guest${baseName ? ` (${baseName.substring(0, 10)})` : ''}`
+                      <div>
+                        <div className="text-sm font-medium text-white">
+                          {(() => {
+                            const name = booking.customer_name || 'N/A'
+                            // Clean up guest names like guest_samples_1762847861795_qvbv
+                            if (name.startsWith('guest_')) {
+                              // Extract the base name and show just "Guest (samples)"
+                              const parts = name.split('_')
+                              if (parts.length >= 2) {
+                                const baseName = parts[1].replace(/[_\d]/g, '')
+                                return `Guest${baseName ? ` (${baseName.substring(0, 10)})` : ''}`
+                              }
+                              return 'Guest'
                             }
-                            return 'Guest'
-                          }
-                          // Clean up walk-in names like walkin_1762840519194_e9587qljl
-                          if (name.startsWith('walkin_')) {
-                            return 'Walk-in'
-                          }
-                          return name
-                        })()}
+                            // Clean up walk-in names like walkin_1762840519194_e9587qljl
+                            if (name.startsWith('walkin_')) {
+                              return 'Walk-in'
+                            }
+                            return name
+                          })()}
+                        </div>
+                        {booking.customer_phone && (
+                          <div className="text-xs text-gray-400 font-mono mt-0.5">
+                            {booking.customer_phone}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
