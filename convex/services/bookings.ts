@@ -813,6 +813,91 @@ export const getBookingTransactions = query({
   },
 });
 
+// Cancel booking - works for any status including confirmed
+export const cancelBooking = mutation({
+  args: {
+    id: v.id("bookings"),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const booking = await ctx.db.get(args.id);
+    
+    if (!booking) {
+      throwUserError(ERROR_CODES.BOOKING_NOT_FOUND);
+    }
+
+    // Check if booking is already cancelled or completed
+    if (booking.status === 'cancelled') {
+      throwUserError(
+        ERROR_CODES.BOOKING_ALREADY_CANCELLED,
+        'Booking is already cancelled',
+        'This booking has already been cancelled.'
+      );
+    }
+
+    if (booking.status === 'completed') {
+      throwUserError(
+        ERROR_CODES.BOOKING_ALREADY_COMPLETED,
+        'Cannot cancel completed booking',
+        'This booking has already been completed and cannot be cancelled.'
+      );
+    }
+
+    // Update booking status to cancelled
+    await ctx.db.patch(args.id, {
+      status: 'cancelled',
+      updatedAt: Date.now(),
+      notes: args.reason ? `${booking.notes || ''}\nCancellation reason: ${args.reason}`.trim() : booking.notes,
+    });
+
+    // Send cancellation notifications
+    try {
+      const recipients: Array<{ type: "customer" | "staff" | "barber" | "admin"; userId?: Id<"users">; branchId?: Id<"branches">; }> = [];
+      
+      // Notify customer if exists
+      if (booking.customer) {
+        recipients.push({ type: "customer", userId: booking.customer });
+      }
+      
+      // Notify staff
+      recipients.push({ type: "staff", branchId: booking.branch_id });
+      
+      await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+        bookingId: args.id,
+        notificationType: "CUSTOMER_BOOKING_CANCELLED",
+        recipients,
+        metadata: {
+          reason: args.reason || "Cancelled by staff",
+          previous_status: booking.status,
+        }
+      });
+      
+      // Notify barber if assigned
+      if (booking.barber) {
+        const barberRecord = await ctx.db.get(booking.barber);
+        if (barberRecord && barberRecord.user) {
+          await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+            bookingId: args.id,
+            notificationType: "BARBER_APPOINTMENT_CANCELLED",
+            recipients: [
+              { type: "barber", userId: barberRecord.user },
+            ],
+            metadata: {
+              reason: args.reason || "Cancelled by staff",
+              previous_status: booking.status,
+            }
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to send cancellation notifications:", error);
+      // Don't fail the cancellation if notifications fail
+    }
+
+    return { success: true, booking_id: args.id };
+  },
+});
+
 // Migration function to update existing bookings with payment_status
 export const migratePaymentStatus = mutation({
   args: {},
