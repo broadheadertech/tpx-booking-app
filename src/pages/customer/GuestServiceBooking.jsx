@@ -120,6 +120,24 @@ const GuestServiceBooking = ({ onBack }) => {
   );
   const redeemVoucher = useMutation(api.services.vouchers.redeemVoucher);
 
+  // Initialize component and clear any stale guest data
+  useEffect(() => {
+    // Clear any existing guest session data to ensure clean start
+    sessionStorage.removeItem("user_id");
+    sessionStorage.removeItem("guest_email");
+    sessionStorage.removeItem("guest_name");
+    sessionStorage.removeItem("guest_number");
+    sessionStorage.removeItem("guest_type");
+
+    // Reset guest data state
+    setGuestData({
+      name: "",
+      email: "",
+      number: "",
+    });
+    setIsSignedIn(false);
+  }, []);
+
   // Check for pre-selected service from AI assistant
   useEffect(() => {
     const preSelectedServiceData = sessionStorage.getItem("preSelectedService");
@@ -236,9 +254,11 @@ const GuestServiceBooking = ({ onBack }) => {
     selectedVoucher,
   ]);
 
-  // Filter available vouchers from Convex data
+  // Filter available vouchers from Convex data (guest users typically don't have vouchers)
   const getAvailableVouchers = () => {
-    if (!vouchers) return [];
+    // For guest users, typically no vouchers are available
+    // This prevents confusion when guest users see voucher options they can't use
+    if (!isSignedIn || !vouchers) return [];
 
     return vouchers.filter((voucher) => {
       const isNotExpired = voucher.expires_at > Date.now();
@@ -253,15 +273,27 @@ const GuestServiceBooking = ({ onBack }) => {
     if (!selectedDate || !selectedStaff || !selectedBranch) return [];
 
     const slots = [];
-    // Use branch-configured booking hours, default to 10am-8pm
-    const startHour = selectedBranch.booking_start_hour ?? 10; // Default 10 AM
-    const endHour = selectedBranch.booking_end_hour ?? 20; // Default 8 PM (20:00)
     const currentDate = new Date();
     const selectedDateObj = new Date(selectedDate);
     const isToday =
       selectedDateObj.toDateString() === currentDate.toDateString();
     const currentHour = currentDate.getHours();
     const currentMinute = currentDate.getMinutes();
+
+    // Get day of week for schedule check
+    const dayOfWeek = selectedDateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    
+    // Check barber's schedule for this day
+    const barberSchedule = selectedStaff.schedule?.[dayOfWeek];
+    
+    // If barber doesn't have schedule or is not available this day, return empty
+    if (!barberSchedule || !barberSchedule.available) {
+      return [];
+    }
+
+    // Use barber's scheduled hours instead of branch hours
+    const [startHour, startMin] = barberSchedule.start.split(':').map(Number);
+    const [endHour, endMin] = barberSchedule.end.split(':').map(Number);
 
     // Get booked times for this barber on this date
     const bookedTimes = existingBookings
@@ -340,6 +372,14 @@ const GuestServiceBooking = ({ onBack }) => {
       return;
     }
 
+    // Ensure we have a user ID from guest account creation
+    const userId = sessionStorage.getItem("user_id");
+    if (!userId) {
+      alert("Guest account not created properly. Please try again.");
+      setStep(4); // Go back to guest info step
+      return;
+    }
+
     try {
       setBookingLoading(true);
 
@@ -349,7 +389,7 @@ const GuestServiceBooking = ({ onBack }) => {
         : selectedTime;
 
       const bookingData = {
-        customer: sessionStorage.getItem("user_id"),
+        customer: userId,
         service: selectedService._id,
         barber: selectedStaff?._id || undefined,
         branch_id: selectedBranch._id,
@@ -404,18 +444,18 @@ const GuestServiceBooking = ({ onBack }) => {
         setStep(6); // Success step for pay later
       }
 
-      // Redeem voucher if one was selected
-      if (selectedVoucher?.code) {
+      // Redeem voucher if one was selected (skip for guests since vouchers require user account)
+      if (selectedVoucher?.code && userId) {
         try {
           console.log(
             "Redeeming voucher:",
             selectedVoucher.code,
-            "User:",
-            user._id
+            "User ID:",
+            userId
           );
           const redemptionResult = await redeemVoucher({
             code: selectedVoucher.code,
-            user_id: user._id,
+            user_id: userId,
           });
 
           console.log("✅ Voucher redeemed successfully:", {
@@ -435,7 +475,7 @@ const GuestServiceBooking = ({ onBack }) => {
           console.error("⚠️ Error during voucher redemption:", {
             code: selectedVoucher.code,
             error: voucherError?.message || voucherError,
-            userId: user._id,
+            userId: userId,
           });
           // Log the error but don't break the booking flow
           // The booking is still successful, but notify user about voucher issue
@@ -461,7 +501,7 @@ const GuestServiceBooking = ({ onBack }) => {
 
       if (finalAmount === 0) {
         // If amount is 0 after voucher, no payment needed
-        setStep(5);
+        setStep(6);
         return true;
       }
 
@@ -471,13 +511,17 @@ const GuestServiceBooking = ({ onBack }) => {
         bookingId,
       });
 
+      // Get guest user info for payment processing
+      const guestEmail = guestData.email || sessionStorage.getItem("guest_email");
+      const guestName = guestData.name || sessionStorage.getItem("guest_name");
+
       // Call Convex payment action
       const paymentResult = await createPaymentRequest({
         amount: finalAmount,
         paymentMethod: paymentMethod,
         bookingId: bookingId,
-        customerEmail: user.email,
-        customerName: user.full_name || user.name,
+        customerEmail: guestEmail,
+        customerName: guestName,
       });
 
       console.log("Payment created successfully:", paymentResult);
@@ -488,7 +532,7 @@ const GuestServiceBooking = ({ onBack }) => {
         return true;
       } else {
         // If no redirect URL, show success
-        setStep(5);
+        setStep(6);
         return true;
       }
     } catch (error) {
@@ -533,6 +577,19 @@ const GuestServiceBooking = ({ onBack }) => {
     paymentType = "pay_later",
     paymentMethod = null
   ) => {
+    // Validate that guest account is properly created before proceeding
+    const userId = sessionStorage.getItem("user_id");
+    const guestEmail = sessionStorage.getItem("guest_email");
+
+    if (!userId || !guestEmail) {
+      showErrorDialog(
+        "Guest Account Required",
+        "Please complete the guest information form before booking."
+      );
+      setStep(4); // Go back to guest info step
+      return;
+    }
+
     await handleCreateBooking(paymentType, paymentMethod);
   };
 
@@ -558,7 +615,7 @@ const GuestServiceBooking = ({ onBack }) => {
   const renderStepIndicator = () => (
     <div className="flex justify-center mb-4 px-4 py-2">
       <div className="flex items-center space-x-2">
-        {[1, 2, 3, 4, 5].map((stepNumber) => (
+        {[1, 2, 3, 4, 5, 6].map((stepNumber) => (
           <div key={stepNumber} className="flex items-center">
             <div
               className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
@@ -570,7 +627,7 @@ const GuestServiceBooking = ({ onBack }) => {
             >
               {step > stepNumber ? "✓" : stepNumber}
             </div>
-            {stepNumber < 5 && (
+            {stepNumber < 6 && (
               <div
                 className={`w-4 h-0.5 mx-1 rounded transition-all duration-300`}
                 style={{
@@ -725,7 +782,7 @@ const GuestServiceBooking = ({ onBack }) => {
         <div className="text-center py-12 px-4">
           <p className="text-sm text-red-400 mb-4">{error}</p>
           <button
-            onClick={loadBookingData}
+            onClick={() => window.location.reload()}
             className="px-6 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors text-sm font-medium"
           >
             Try Again
@@ -736,19 +793,11 @@ const GuestServiceBooking = ({ onBack }) => {
 
     // Group services by category
     const categories = services.reduce((acc, service) => {
-      const category = service.category || "Other Services"; // default to Other Services
+      const category = service.category || "Uncategorized"; // default to match ServiceBooking
       if (!acc[category]) acc[category] = [];
       acc[category].push(service);
       return acc;
     }, {});
-
-    // Define desired order
-    const categoryOrder = ["Haircut", "Package", "Other Services"];
-
-    // Create an array of categories in the desired order
-    const orderedCategories = categoryOrder
-      .map((cat) => ({ name: cat, services: categories[cat] || [] }))
-      .filter((cat) => cat.services.length > 0);
 
     return (
       <div className="px-4 pb-6 max-w-2xl mx-auto">
@@ -781,8 +830,8 @@ const GuestServiceBooking = ({ onBack }) => {
 
         {/* Category Dropdowns */}
         <div className="space-y-3">
-          {orderedCategories.map(
-            ({ name: categoryName, services: categoryServices }) => {
+          {Object.entries(categories).map(
+            ([categoryName, categoryServices]) => {
               // Filter services within this category based on search term
               const filteredServices = categoryServices.filter((service) => {
                 const searchLower = serviceSearchTerm.toLowerCase();
@@ -1263,7 +1312,20 @@ const GuestServiceBooking = ({ onBack }) => {
         guest_name: guestData.name.trim(), // Pass original guest name
       });
 
+      // CRITICAL: Store user ID and guest data in sessionStorage for booking creation
       sessionStorage.setItem("user_id", newUser._id);
+      sessionStorage.setItem("guest_email", guestData.email.trim());
+      sessionStorage.setItem("guest_name", guestData.name.trim());
+      sessionStorage.setItem("guest_number", guestData.number?.trim() || "");
+      sessionStorage.setItem("guest_branch_id", selectedBranch?._id);
+
+      console.log("✅ Guest account created/verified:", {
+        userId: newUser._id,
+        email: guestData.email.trim(),
+        name: guestData.name.trim(),
+        branchId: selectedBranch?._id,
+        isExisting: newUser.isExistingUser || false
+      });
 
       // Handle existing vs new guest user
       if (newUser.isExistingUser) {
@@ -1538,7 +1600,11 @@ const GuestServiceBooking = ({ onBack }) => {
                 </span>
               </div>
               <span className="font-bold text-sm" style={{ color: "#36454F" }}>
-                Today, {selectedTime}
+                {selectedDate ? new Date(selectedDate).toLocaleDateString("en-PH", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                }) : "Today"}, {selectedTime}
               </span>
             </div>
             <div className="flex items-center justify-between py-1">
@@ -1871,7 +1937,17 @@ const GuestServiceBooking = ({ onBack }) => {
         </div>
 
         {/* Action Buttons */}
-        <div className="space-y-3"></div>
+        <div className="space-y-3">
+          <button
+            onClick={onBack}
+            className="w-full py-4 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
+            style={{ backgroundColor: "#F68B24" }}
+            onMouseEnter={(e) => (e.target.style.backgroundColor = "#E67E22")}
+            onMouseLeave={(e) => (e.target.style.backgroundColor = "#F68B24")}
+          >
+            Back to Home
+          </button>
+        </div>
       </div>
     );
   };
@@ -1885,7 +1961,15 @@ const GuestServiceBooking = ({ onBack }) => {
           <div className="relative flex items-center justify-center py-4">
             {/* Back Arrow - Left aligned */}
             <button
-              onClick={() => setStep((prev) => Math.max(prev - 1, 1))}
+              onClick={() => {
+                if (step === 1) {
+                  // If on first step, navigate to login page
+                  window.location.href = "/auth/login";
+                } else {
+                  // Otherwise, go to previous step
+                  setStep((prev) => Math.max(prev - 1, 1));
+                }
+              }}
               className="absolute left-0 flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-xl hover:bg-white/10 transition-all duration-200"
             >
               <ArrowLeft className="w-5 h-5" />

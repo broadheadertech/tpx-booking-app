@@ -247,15 +247,27 @@ const ServiceBooking = ({ onBack }) => {
     if (!selectedDate || !selectedStaff || !selectedBranch) return [];
 
     const slots = [];
-    // Use branch-configured booking hours, default to 10am-8pm
-    const startHour = selectedBranch.booking_start_hour ?? 10; // Default 10 AM
-    const endHour = selectedBranch.booking_end_hour ?? 20; // Default 8 PM (20:00)
     const currentDate = new Date();
     const selectedDateObj = new Date(selectedDate);
     const isToday =
       selectedDateObj.toDateString() === currentDate.toDateString();
     const currentHour = currentDate.getHours();
     const currentMinute = currentDate.getMinutes();
+
+    // Get day of week for schedule check
+    const dayOfWeek = selectedDateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    
+    // Check barber's schedule for this day
+    const barberSchedule = selectedStaff.schedule?.[dayOfWeek];
+    
+    // If barber doesn't have schedule or is not available this day, return empty
+    if (!barberSchedule || !barberSchedule.available) {
+      return [];
+    }
+
+    // Use barber's scheduled hours instead of branch hours
+    const [startHour, startMin] = barberSchedule.start.split(':').map(Number);
+    const [endHour, endMin] = barberSchedule.end.split(':').map(Number);
 
     // Get booked times for this barber on this date
     const bookedTimes = existingBookings

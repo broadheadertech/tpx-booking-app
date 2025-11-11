@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { User, Star, Phone, Mail, X, Edit, Save, BookOpen, Calendar, Clock, MapPin, ChevronDown, ChevronUp } from 'lucide-react'
+import { User, Star, Phone, Mail, X, Edit, Save, BookOpen, Calendar, Clock, MapPin } from 'lucide-react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import LoadingSpinner from '../common/LoadingSpinner'
@@ -11,7 +11,7 @@ const BarberModal = ({
   barber, 
   services = [], 
   onRefresh,
-  initialView = 'details'
+  initialView = 'details' // 'details' or 'bookings'
 }) => {
   const [activeView, setActiveView] = useState(initialView)
   const [isEditing, setIsEditing] = useState(false)
@@ -20,18 +20,8 @@ const BarberModal = ({
   const [formData, setFormData] = useState({
     full_name: '',
     is_active: true,
-    services: [],
-    schedule: {
-      monday: { available: false, start: '09:00', end: '17:00' },
-      tuesday: { available: false, start: '09:00', end: '17:00' },
-      wednesday: { available: false, start: '09:00', end: '17:00' },
-      thursday: { available: false, start: '09:00', end: '17:00' },
-      friday: { available: false, start: '09:00', end: '17:00' },
-      saturday: { available: false, start: '09:00', end: '17:00' },
-      sunday: { available: false, start: '09:00', end: '17:00' }
-    }
+    services: []
   })
-  const [expandedDay, setExpandedDay] = useState(null)
 
   // Convex mutation and queries
   const updateBarber = useMutation(api.services.barbers.updateBarber)
@@ -48,16 +38,7 @@ const BarberModal = ({
       setFormData({
         full_name: barber.full_name || '',
         is_active: barber.is_active !== undefined ? barber.is_active : true,
-        services: barber.services || [],
-        schedule: barber.schedule || {
-          monday: { available: false, start: '09:00', end: '17:00' },
-          tuesday: { available: false, start: '09:00', end: '17:00' },
-          wednesday: { available: false, start: '09:00', end: '17:00' },
-          thursday: { available: false, start: '09:00', end: '17:00' },
-          friday: { available: false, start: '09:00', end: '17:00' },
-          saturday: { available: false, start: '09:00', end: '17:00' },
-          sunday: { available: false, start: '09:00', end: '17:00' }
-        }
+        services: barber.services || []
       })
     }
   }, [barber])
@@ -68,7 +49,6 @@ const BarberModal = ({
       setActiveView(initialView)
       setIsEditing(false)
       setError('')
-      setExpandedDay(null)
       initializeFormData()
     }
   }, [isOpen, barber, initialView, initializeFormData])
@@ -77,7 +57,6 @@ const BarberModal = ({
     setIsEditing(false)
     setError('')
     setActiveView('details')
-    setExpandedDay(null)
     onClose()
   }, [onClose])
 
@@ -89,7 +68,6 @@ const BarberModal = ({
   const handleCancelEdit = useCallback(() => {
     setIsEditing(false)
     setError('')
-    setExpandedDay(null)
     initializeFormData()
   }, [initializeFormData])
 
@@ -99,23 +77,6 @@ const BarberModal = ({
       return
     }
 
-    // Validate schedule - at least one day should be available
-    const hasAvailableDay = Object.values(formData.schedule).some(day => day.available)
-    if (!hasAvailableDay) {
-      setError('At least one working day must be selected')
-      return
-    }
-
-    // Validate time ranges
-    for (const [day, schedule] of Object.entries(formData.schedule)) {
-      if (schedule.available) {
-        if (schedule.start >= schedule.end) {
-          setError(`Invalid time range for ${day}: Start time must be before end time`)
-          return
-        }
-      }
-    }
-
     setLoading(true)
     setError('')
 
@@ -123,13 +84,11 @@ const BarberModal = ({
       const barberData = {
         full_name: formData.full_name.trim(),
         is_active: formData.is_active,
-        services: formData.services,
-        schedule: formData.schedule
+        services: formData.services
       }
 
       await updateBarber({ id: barber._id, ...barberData })
       setIsEditing(false)
-      setExpandedDay(null)
       if (onRefresh) onRefresh()
     } catch (err) {
       setError(err.message || 'Failed to save barber')
@@ -141,37 +100,6 @@ const BarberModal = ({
   const handleInputChange = useCallback((field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }, [])
-
-  const handleScheduleChange = useCallback((day, field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      schedule: {
-        ...prev.schedule,
-        [day]: {
-          ...prev.schedule[day],
-          [field]: value
-        }
-      }
-    }))
-  }, [])
-
-  const handleCopySchedule = useCallback((fromDay, toDay) => {
-    setFormData(prev => ({
-      ...prev,
-      schedule: {
-        ...prev.schedule,
-        [toDay]: { ...prev.schedule[fromDay] }
-      }
-    }))
-  }, [])
-
-  const handleSetAllDays = useCallback((available, start = '09:00', end = '22:00') => {
-    const newSchedule = {}
-    Object.keys(formData.schedule).forEach(day => {
-      newSchedule[day] = { available, start, end }
-    })
-    setFormData(prev => ({ ...prev, schedule: newSchedule }))
-  }, [formData.schedule])
 
   const getWorkingDays = useCallback((schedule) => {
     return Object.values(schedule || {}).filter(day => day?.available).length
@@ -196,46 +124,21 @@ const BarberModal = ({
     return statusStyles[status] || statusStyles.pending
   }, [])
 
-  const generateTimeOptions = () => {
-    const times = []
-    for (let hour = 6; hour <= 22; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
-        const time24 = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-        
-        // Convert to 12-hour format
-        const period = hour >= 12 ? 'PM' : 'AM'
-        const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
-        const time12 = `${hour12}:${minute.toString().padStart(2, '0')} ${period}`
-        
-        times.push({ value: time24, label: time12 })
-      }
-    }
-    return times
-  }
-
-  const formatTimeTo12Hour = (time24) => {
-    const [hour, minute] = time24.split(':').map(Number)
-    const period = hour >= 12 ? 'PM' : 'AM'
-    const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
-    return `${hour12}:${minute.toString().padStart(2, '0')} ${period}`
-  }
-
   if (!isOpen || !barber) return null
 
   const workingDays = getWorkingDays(barber.schedule)
   const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-  const timeOptions = generateTimeOptions()
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] overflow-y-auto">
-      <div className="flex min-h-full items-center justify-center p-2 sm:p-4">
+      <div className="flex min-h-full items-center justify-center p-4">
         <div 
           className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
           onClick={handleClose}
         />
-        <div className="relative w-full max-w-6xl max-h-[95vh] overflow-hidden transform rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] border border-[#444444]/50 shadow-2xl transition-all z-[10000] my-4">
+        <div className="relative w-full max-w-3xl max-h-[85vh] overflow-hidden transform rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] border border-[#444444]/50 shadow-2xl transition-all z-[10000]">
           {/* Header */}
-          <div className="sticky top-0 bg-gradient-to-r from-[#242424] to-[#2F2F2F] border-b border-[#3A3A3A] p-4 sm:p-5 lg:p-6 z-10">
+          <div className="sticky top-0 bg-gradient-to-r from-[#242424] to-[#2F2F2F] border-b border-[#3A3A3A] p-4 z-10">
             <div className="flex justify-between items-start">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center">
@@ -277,17 +180,6 @@ const BarberModal = ({
               </button>
               <button
                 type="button"
-                onClick={() => setActiveView('schedule')}
-                className={`py-2 px-2 border-b-2 font-medium text-sm cursor-pointer select-none ${
-                  activeView === 'schedule'
-                    ? 'border-[#FF8C42] text-[#FF8C42]'
-                    : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500'
-                } transition-colors`}
-              >
-                Schedule
-              </button>
-              <button
-                type="button"
                 onClick={() => setActiveView('bookings')}
                 className={`py-2 px-2 border-b-2 font-medium text-sm cursor-pointer select-none ${
                   activeView === 'bookings'
@@ -301,7 +193,7 @@ const BarberModal = ({
           </div>
 
           {/* Content */}
-          <div className="p-4 sm:p-6 lg:p-8 max-h-[calc(95vh-180px)] overflow-y-auto">
+          <div className="p-4 max-h-[calc(85vh-160px)] overflow-y-auto">
             {error && (
               <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
                 <p className="text-sm text-red-300">{error}</p>
@@ -428,9 +320,9 @@ const BarberModal = ({
                       </div>
 
                       <div>
-                        <h3 className="font-semibold text-white mb-2">Quick Schedule View</h3>
+                        <h3 className="font-semibold text-white mb-2">Work Schedule</h3>
                         <div className="space-y-2">
-                          {daysOfWeek.slice(0, 7).map(day => {
+                          {daysOfWeek.map(day => {
                             const daySchedule = barber.schedule?.[day] || { available: false }
                             return (
                               <div key={day} className="flex justify-between items-center">
@@ -439,7 +331,7 @@ const BarberModal = ({
                                 </span>
                                 {daySchedule.available ? (
                                   <span className="inline-flex items-center text-sm font-medium text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded-md">
-                                    {formatTimeTo12Hour(daySchedule.start)} – {formatTimeTo12Hour(daySchedule.end)}
+                                    {daySchedule.start} – {daySchedule.end}
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center text-sm font-medium text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-md">Off</span>
@@ -450,141 +342,6 @@ const BarberModal = ({
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            ) : activeView === 'schedule' ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-5 w-5 text-[#FF8C42]" />
-                    <h3 className="text-lg font-semibold text-white">Work Schedule Management</h3>
-                  </div>
-                  {isEditing && (
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleSetAllDays(true, '09:00', '22:00')}
-                        className="px-3 py-1.5 text-xs bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg hover:bg-green-500/30 transition-colors"
-                      >
-                        Set All Available
-                      </button>
-                      <button
-                        onClick={() => handleSetAllDays(false)}
-                        className="px-3 py-1.5 text-xs bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors"
-                      >
-                        Set All Off
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  {daysOfWeek.map((day) => {
-                    const daySchedule = isEditing ? formData.schedule[day] : (barber.schedule?.[day] || { available: false, start: '09:00', end: '17:00' })
-                    const isExpanded = expandedDay === day
-
-                    return (
-                      <div
-                        key={day}
-                        className={`bg-[#1E1E1E] border rounded-xl overflow-hidden transition-all ${
-                          daySchedule.available ? 'border-green-500/30' : 'border-[#2F2F2F]'
-                        }`}
-                      >
-                        <div className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3 flex-1">
-                              {isEditing && (
-                                <input
-                                  type="checkbox"
-                                  checked={daySchedule.available}
-                                  onChange={(e) => handleScheduleChange(day, 'available', e.target.checked)}
-                                  className="h-5 w-5 text-[#FF8C42] focus:ring-[#FF8C42] rounded"
-                                />
-                              )}
-                              <div className="flex-1">
-                                <span className="text-base capitalize font-semibold text-white">
-                                  {day}
-                                </span>
-                                {!isExpanded && daySchedule.available && (
-                                  <span className="ml-3 text-sm text-gray-400">
-                                    {formatTimeTo12Hour(daySchedule.start)} – {formatTimeTo12Hour(daySchedule.end)}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            
-                            {!daySchedule.available ? (
-                              <span className="px-3 py-1 text-sm font-medium text-red-400 bg-red-500/10 border border-red-500/20 rounded-md">
-                                Off Day
-                              </span>
-                            ) : isEditing ? (
-                              <button
-                                onClick={() => setExpandedDay(isExpanded ? null : day)}
-                                className="p-2 hover:bg-[#2A2A2A] rounded-lg transition-colors"
-                              >
-                                {isExpanded ? <ChevronUp className="h-5 w-5 text-gray-400" /> : <ChevronDown className="h-5 w-5 text-gray-400" />}
-                              </button>
-                            ) : (
-                              <span className="px-3 py-1 text-sm font-medium text-green-400 bg-green-500/10 border border-green-500/20 rounded-md">
-                                Available
-                              </span>
-                            )}
-                          </div>
-
-                          {isExpanded && isEditing && daySchedule.available && (
-                            <div className="mt-4 grid grid-cols-2 gap-4 pt-4 border-t border-[#2F2F2F]">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2">Start Time</label>
-                                <select
-                                  value={daySchedule.start}
-                                  onChange={(e) => handleScheduleChange(day, 'start', e.target.value)}
-                                  className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
-                                >
-                                  {timeOptions.map(time => (
-                                    <option key={time.value} value={time.value}>{time.label}</option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2">End Time</label>
-                                <select
-                                  value={daySchedule.end}
-                                  onChange={(e) => handleScheduleChange(day, 'end', e.target.value)}
-                                  className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
-                                >
-                                  {timeOptions.map(time => (
-                                    <option key={time.value} value={time.value}>{time.label}</option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div className="col-span-2">
-                                <p className="text-xs text-gray-400 mb-2">Copy this schedule to:</p>
-                                <div className="flex flex-wrap gap-2">
-                                  {daysOfWeek.filter(d => d !== day).map(otherDay => (
-                                    <button
-                                      key={otherDay}
-                                      onClick={() => handleCopySchedule(day, otherDay)}
-                                      className="px-2 py-1 text-xs bg-[#2A2A2A] text-gray-300 border border-[#444444] rounded hover:bg-[#333333] hover:border-[#FF8C42]/50 transition-colors capitalize"
-                                    >
-                                      {otherDay}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-
-                {!isEditing && (
-                  <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-                    <p className="text-sm text-blue-300">
-                      💡 <strong>Tip:</strong> This schedule determines when customers can book appointments with this barber. 
-                      Click "Edit" to modify working days and hours.
-                    </p>
                   </div>
                 )}
               </div>
@@ -667,7 +424,7 @@ const BarberModal = ({
           {/* Footer */}
           <div className="p-4 border-t border-[#3A3A3A] flex justify-between items-center bg-[#232323]">
             <div className="flex space-x-3">
-              {(activeView === 'details' || activeView === 'schedule') && !isEditing && (
+              {activeView === 'details' && !isEditing && (
                 <button
                   onClick={handleEdit}
                   className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#ff7a22] transition-colors"

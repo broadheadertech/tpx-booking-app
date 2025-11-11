@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { User, Mail, Phone, Scissors, Camera, Upload, X } from 'lucide-react'
+import { User, Mail, Phone, Scissors, Camera, Upload, X, Clock, ChevronDown, ChevronUp } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
@@ -20,7 +20,16 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
     services: [],
     experience: '0 years',
     avatar: '',
-    avatarStorageId: undefined
+    avatarStorageId: undefined,
+    schedule: {
+      monday: { available: true, start: '09:00', end: '22:00' },
+      tuesday: { available: true, start: '09:00', end: '22:00' },
+      wednesday: { available: true, start: '09:00', end: '22:00' },
+      thursday: { available: true, start: '09:00', end: '22:00' },
+      friday: { available: true, start: '09:00', end: '22:00' },
+      saturday: { available: true, start: '09:00', end: '22:00' },
+      sunday: { available: false, start: '09:00', end: '22:00' }
+    }
   })
 
   // Update form data when editingBarber changes
@@ -38,7 +47,16 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
         services: editingBarber.services || [],
         experience: editingBarber.experience || '0 years',
         avatar: editingBarber.avatar || '',
-        avatarStorageId: editingBarber.avatarStorageId || undefined
+        avatarStorageId: editingBarber.avatarStorageId || undefined,
+        schedule: editingBarber.schedule || {
+          monday: { available: true, start: '09:00', end: '17:00' },
+          tuesday: { available: true, start: '09:00', end: '17:00' },
+          wednesday: { available: true, start: '09:00', end: '17:00' },
+          thursday: { available: true, start: '09:00', end: '17:00' },
+          friday: { available: true, start: '09:00', end: '17:00' },
+          saturday: { available: true, start: '09:00', end: '17:00' },
+          sunday: { available: false, start: '09:00', end: '17:00' }
+        }
       })
     } else {
       setFormData({
@@ -53,7 +71,16 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
         services: [],
         experience: '0 years',
         avatar: '',
-        avatarStorageId: undefined
+        avatarStorageId: undefined,
+        schedule: {
+          monday: { available: true, start: '09:00', end: '17:00' },
+          tuesday: { available: true, start: '09:00', end: '17:00' },
+          wednesday: { available: true, start: '09:00', end: '17:00' },
+          thursday: { available: true, start: '09:00', end: '17:00' },
+          friday: { available: true, start: '09:00', end: '17:00' },
+          saturday: { available: true, start: '09:00', end: '17:00' },
+          sunday: { available: false, start: '09:00', end: '17:00' }
+        }
       })
     }
   }, [editingBarber])
@@ -62,6 +89,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [expandedDay, setExpandedDay] = useState(null)
 
   // Convex queries and mutations
   const services = useQuery(api.services.services.getAllServices)
@@ -78,6 +106,51 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
+  }
+
+  const handleScheduleChange = (day, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      schedule: {
+        ...prev.schedule,
+        [day]: {
+          ...prev.schedule[day],
+          [field]: value
+        }
+      }
+    }))
+  }
+
+  const handleSetAllDays = (available, start = '09:00', end = '22:00') => {
+    const newSchedule = {}
+    Object.keys(formData.schedule).forEach(day => {
+      newSchedule[day] = { available, start, end }
+    })
+    setFormData(prev => ({ ...prev, schedule: newSchedule }))
+  }
+
+  const generateTimeOptions = () => {
+    const times = []
+    for (let hour = 6; hour <= 22; hour++) {
+      for (let minute = 0; minute < 60; minute += 30) {
+        const time24 = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+        
+        // Convert to 12-hour format
+        const period = hour >= 12 ? 'PM' : 'AM'
+        const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+        const time12 = `${hour12}:${minute.toString().padStart(2, '0')} ${period}`
+        
+        times.push({ value: time24, label: time12 })
+      }
+    }
+    return times
+  }
+
+  const formatTimeTo12Hour = (time24) => {
+    const [hour, minute] = time24.split(':').map(Number)
+    const period = hour >= 12 ? 'PM' : 'AM'
+    const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
+    return `${hour12}:${minute.toString().padStart(2, '0')} ${period}`
   }
 
   // Image upload function using Convex storage
@@ -171,7 +244,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
           services: formData.services,
           experience: formData.experience || '0 years',
           avatar: formData.avatar || '',
-          avatarStorageId: formData.avatarStorageId || undefined
+          avatarStorageId: formData.avatarStorageId || undefined,
+          schedule: formData.schedule
         }
 
         // Update barber profile
@@ -204,7 +278,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
           branch_id: user.branch_id,
           experience: formData.experience || '0 years',
           avatar: formData.avatar || '',
-          avatarStorageId: formData.avatarStorageId || undefined
+          avatarStorageId: formData.avatarStorageId || undefined,
+          schedule: formData.schedule
         }
 
         await createBarberWithAccount(barberData)
@@ -233,7 +308,16 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
           services: [],
           experience: '0 years',
           avatar: '',
-          avatarStorageId: undefined
+          avatarStorageId: undefined,
+          schedule: {
+            monday: { available: true, start: '09:00', end: '17:00' },
+            tuesday: { available: true, start: '09:00', end: '17:00' },
+            wednesday: { available: true, start: '09:00', end: '17:00' },
+            thursday: { available: true, start: '09:00', end: '17:00' },
+            friday: { available: true, start: '09:00', end: '17:00' },
+            saturday: { available: true, start: '09:00', end: '17:00' },
+            sunday: { available: false, start: '09:00', end: '17:00' }
+          }
         })
         setSuccess('')
         onClose()
@@ -284,9 +368,19 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
       services: [],
       experience: '0 years',
       avatar: '',
-      avatarStorageId: undefined
+      avatarStorageId: undefined,
+      schedule: {
+        monday: { available: true, start: '09:00', end: '17:00' },
+        tuesday: { available: true, start: '09:00', end: '17:00' },
+        wednesday: { available: true, start: '09:00', end: '17:00' },
+        thursday: { available: true, start: '09:00', end: '17:00' },
+        friday: { available: true, start: '09:00', end: '17:00' },
+        saturday: { available: true, start: '09:00', end: '17:00' },
+        sunday: { available: false, start: '09:00', end: '17:00' }
+      }
     })
     setError('')
+    setExpandedDay(null)
     onClose()
   }
 
@@ -294,12 +388,12 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] overflow-y-auto">
-      <div className="flex min-h-full items-center justify-center p-4">
+      <div className="flex min-h-full items-center justify-center p-2 sm:p-4">
         <div 
           className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
           onClick={handleClose}
         />
-        <div className="relative w-full max-w-2xl transform rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] border border-[#444444]/50 shadow-2xl transition-all z-[10000]">
+        <div className="relative w-full max-w-5xl max-h-[95vh] transform rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] border border-[#444444]/50 shadow-2xl transition-all z-[10000] my-4">
           <div className="flex items-center justify-between p-4 border-b border-[#444444]/50">
             <h2 className="text-lg font-bold text-white">{editingBarber ? 'Edit Barber' : 'Create New Barber'}</h2>
             <button
@@ -309,8 +403,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
               <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
             </button>
           </div>
-          <div className="p-4">
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="max-h-[calc(95vh-120px)] overflow-y-auto">
+            <form onSubmit={handleSubmit} className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
               {/* Success Message */}
               {success && (
                 <div className="bg-green-500/10 border-l-4 border-green-500 px-4 py-3 rounded-lg">
@@ -615,52 +709,126 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
               </div>
             </div>
 
-            {/* Barber Preview */}
-            <div className="bg-gradient-to-br from-[#FF8C42]/5 to-[#FF7A2B]/5 border-2 border-[#FF8C42]/20 rounded-xl p-4">
-              <h4 className="text-gray-200 font-medium text-sm mb-2 uppercase tracking-wide">Barber Preview</h4>
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300 text-sm">Name:</span>
-                  <span className="text-gray-200 font-medium text-sm">{formData.full_name || 'Barber Name'}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300 text-sm">Email:</span>
-                  <span className="text-gray-200 font-medium text-sm">{formData.email || 'email@example.com'}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300 text-sm">Experience:</span>
-                  <span className="text-gray-200 font-medium text-sm">{formData.experience}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300 text-sm">Services:</span>
-                  <span className="text-[#FF8C42] font-bold text-sm">{formData.services.length} selected</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300 text-sm">Status:</span>
-                  <span className={`font-bold text-sm ${
-                    formData.is_active ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {formData.is_active ? 'Active' : 'Inactive'}
-                  </span>
+            {/* Work Schedule */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-gray-300 font-medium text-sm flex items-center">
+                  <Clock className="w-4 h-4 mr-2 text-[#FF8C42]" />
+                  Work Schedule
+                </label>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSetAllDays(true, '09:00', '22:00')}
+                    className="px-2 py-1 text-xs bg-green-500/20 text-green-400 border border-green-500/30 rounded hover:bg-green-500/30 transition-colors"
+                  >
+                    All On
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSetAllDays(false)}
+                    className="px-2 py-1 text-xs bg-red-500/20 text-red-400 border border-red-500/30 rounded hover:bg-red-500/30 transition-colors"
+                  >
+                    All Off
+                  </button>
                 </div>
               </div>
+              <div className="max-h-64 overflow-y-auto border border-[#444444] rounded-lg p-2 bg-[#1A1A1A] space-y-2">
+                {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => {
+                  const daySchedule = formData.schedule[day]
+                  const isExpanded = expandedDay === day
+                  const timeOptions = generateTimeOptions()
+
+                  return (
+                    <div
+                      key={day}
+                      className={`bg-[#2A2A2A] border rounded-lg overflow-hidden transition-all ${
+                        daySchedule.available ? 'border-green-500/30' : 'border-[#444444]'
+                      }`}
+                    >
+                      <div className="p-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2 flex-1">
+                            <input
+                              type="checkbox"
+                              checked={daySchedule.available}
+                              onChange={(e) => handleScheduleChange(day, 'available', e.target.checked)}
+                              className="h-4 w-4 text-[#FF8C42] focus:ring-[#FF8C42] rounded"
+                            />
+                            <span className="text-sm capitalize font-medium text-white">
+                              {day}
+                            </span>
+                            {!isExpanded && daySchedule.available && (
+                              <span className="text-xs text-gray-400 ml-2">
+                                {formatTimeTo12Hour(daySchedule.start)} – {formatTimeTo12Hour(daySchedule.end)}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {daySchedule.available && (
+                            <button
+                              type="button"
+                              onClick={() => setExpandedDay(isExpanded ? null : day)}
+                              className="p-1 hover:bg-[#333333] rounded transition-colors"
+                            >
+                              {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+                            </button>
+                          )}
+                        </div>
+
+                        {isExpanded && daySchedule.available && (
+                          <div className="mt-2 grid grid-cols-2 gap-2 pt-2 border-t border-[#444444]">
+                            <div>
+                              <label className="block text-xs text-gray-400 mb-1">Start</label>
+                              <select
+                                value={daySchedule.start}
+                                onChange={(e) => handleScheduleChange(day, 'start', e.target.value)}
+                                className="w-full px-2 py-1 bg-[#1A1A1A] border border-[#444444] text-white rounded text-xs focus:ring-1 focus:ring-[#FF8C42]"
+                              >
+                                {timeOptions.map(time => (
+                                  <option key={time.value} value={time.value}>{time.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs text-gray-400 mb-1">End</label>
+                              <select
+                                value={daySchedule.end}
+                                onChange={(e) => handleScheduleChange(day, 'end', e.target.value)}
+                                className="w-full px-2 py-1 bg-[#1A1A1A] border border-[#444444] text-white rounded text-xs focus:ring-1 focus:ring-[#FF8C42]"
+                              >
+                                {timeOptions.map(time => (
+                                  <option key={time.value} value={time.value}>{time.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                Set the days and hours when this barber is available for bookings
+              </p>
             </div>
           </div>
         </div>
 
                 {/* Action Buttons */}
-                <div className="flex space-x-3 pt-4 border-t border-[#444444]/50">
+                <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 pt-6 mt-6 border-t border-[#444444]/50">
                   <button
                     type="button"
                     onClick={handleClose}
-                    className="flex-1 px-3 py-2 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg text-sm hover:bg-[#555555]/70 transition-all duration-200"
+                    className="flex-1 px-4 py-2.5 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg text-sm font-medium hover:bg-[#555555]/70 transition-all duration-200"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={loading || !services}
-                    className="flex-1 px-3 py-2 bg-[#FF8C42] text-white rounded-lg text-sm hover:bg-[#FF8C42]/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-2.5 bg-[#FF8C42] text-white rounded-lg text-sm font-medium hover:bg-[#FF8C42]/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Saving...' : (editingBarber ? 'Update Barber' : 'Create Barber')}
                   </button>

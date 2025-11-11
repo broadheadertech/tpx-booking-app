@@ -8,6 +8,7 @@ import QRScannerModal from '../../components/staff/QRScannerModal'
 import AddCustomerModal from '../../components/staff/AddCustomerModal'
 import PaymentConfirmationModal from '../../components/staff/PaymentConfirmationModal'
 import CustomerSelectionModal from '../../components/staff/CustomerSelectionModal'
+import ReceiptModal from '../../components/staff/ReceiptModal'
 import Modal from '../../components/common/Modal'
 import { sendWelcomeEmail, isEmailServiceConfigured } from '../../services/emailService'
 import { APP_VERSION } from '../../config/version'
@@ -47,7 +48,7 @@ const POS = () => {
   const [selectedBarber, setSelectedBarber] = useState(null)
   const [currentTransaction, setCurrentTransaction] = useState({
     customer: null,
-    customer_name: '',
+    customer_name: null,
     customer_phone: '',
     customer_email: '',
     customer_address: '',
@@ -67,8 +68,24 @@ const POS = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const [currentBooking, setCurrentBooking] = useState(null) // Store booking data for POS
   const [newCustomerCredentials, setNewCustomerCredentials] = useState(null) // Store new customer credentials
+  const [completedTransaction, setCompletedTransaction] = useState(null) // Store completed transaction for receipt
+  
+  // Mobile-specific states
+  const [showMobileCart, setShowMobileCart] = useState(false)
+  const [expandedSection, setExpandedSection] = useState('catalog') // 'barber', 'customer', 'catalog'
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024)
+  
   const itemsPerPage = 9 // For card view
   const tableItemsPerPage = 15 // For table view
+  
+  // Detect mobile viewport
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // Convex queries - use branch-scoped queries for staff
   const services = user?.role === 'super_admin'
@@ -340,7 +357,7 @@ const POS = () => {
   const clearTransaction = () => {
     setCurrentTransaction({
       customer: null,
-      customer_name: '',
+      customer_name: null,
       customer_phone: '',
       customer_email: '',
       customer_address: '',
@@ -556,13 +573,37 @@ const POS = () => {
         successMessage = `POS transaction completed! ${items.join(' and ')} processed successfully.`
       }
 
-      setActiveModal('paymentSuccess')
+      // Generate transaction identifiers for receipt
+      const timestamp = Date.now()
+      const transactionId = `TXN-${timestamp}`
+      const receiptNumber = `RCP-${timestamp}`
+      
+      // Store completed transaction data for receipt
+      const completedTransactionData = {
+        transaction_id: transactionId,
+        receipt_number: receiptNumber,
+        timestamp: timestamp,
+        customer_name: currentTransaction.customer_name,
+        barber_name: selectedBarber.full_name,
+        services: currentTransaction.services,
+        products: currentTransaction.products,
+        subtotal: currentTransaction.subtotal,
+        discount_amount: currentTransaction.discount_amount,
+        tax_amount: currentTransaction.tax_amount,
+        total_amount: currentTransaction.total_amount,
+        payment_method: paymentData.payment_method,
+        cash_received: paymentData.cash_received,
+        change_amount: paymentData.change_amount
+      }
+      
+      setCompletedTransaction(completedTransactionData)
 
-      // Auto-close success modal and clear transaction after 3 seconds
-      setTimeout(() => {
-        setActiveModal(null)
-        clearTransaction()
-      }, 3000)
+      // Show receipt modal instead of generic success
+      setActiveModal('receipt')
+      
+      // Clear transaction data after showing receipt
+      clearTransaction()
+      setSelectedBarber(null)
     } catch (error) {
       console.error('Transaction failed:', error)
       alert('Transaction failed. Please try again.')
@@ -615,6 +656,577 @@ const POS = () => {
     )
   }
 
+  // Mobile Layout
+  if (isMobile) {
+    const totalItems = currentTransaction.services.length + currentTransaction.products.length
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] pb-32">
+        {/* Mobile Header - Compact */}
+        <div className="sticky top-0 z-50 bg-[#050505] border-b border-[#1A1A1A]/30">
+          <div className="px-3 py-2">
+            <div className="flex items-center justify-between gap-2">
+              <Link to="/staff" className="w-9 h-9 bg-[#0A0A0A] rounded-lg flex items-center justify-center border border-[#1A1A1A]/50">
+                <ArrowLeft className="w-4 h-4 text-gray-400" />
+              </Link>
+              
+              <div className="flex items-center space-x-2 flex-1 min-w-0">
+                <div className="w-9 h-9 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center flex-shrink-0">
+                  <CreditCard className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-sm font-bold text-white truncate">POS System</h1>
+                  <p className="text-[10px] text-[#FF8C42]">Point of Sale</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowMobileCart(!showMobileCart)}
+                className="relative w-9 h-9 bg-[#FF8C42]/20 rounded-lg flex items-center justify-center border border-[#FF8C42]/30"
+              >
+                <Receipt className="w-4 h-4 text-[#FF8C42]" />
+                {totalItems > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#FF8C42] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {totalItems}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Content */}
+        <div className="relative z-10 px-3 py-3 space-y-3">
+          {/* Barber Selection - Collapsible */}
+          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl border border-[#444444]/50 overflow-hidden">
+            <button
+              onClick={() => setExpandedSection(expandedSection === 'barber' ? null : 'barber')}
+              className="w-full px-4 py-3 flex items-center justify-between"
+            >
+              <div className="flex items-center space-x-3">
+                <Scissors className="w-5 h-5 text-[#FF8C42]" />
+                <div className="text-left">
+                  <h3 className="text-sm font-bold text-white">
+                    {selectedBarber ? selectedBarber.full_name : 'Select Barber'}
+                  </h3>
+                  <p className="text-[10px] text-gray-400">
+                    {selectedBarber ? 'Tap to change' : 'Required'}
+                  </p>
+                </div>
+              </div>
+              {selectedBarber ? (
+                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#FF8C42]/30">
+                  <BarberAvatar barber={selectedBarber} className="w-10 h-10" />
+                </div>
+              ) : (
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              )}
+            </button>
+            
+            {expandedSection === 'barber' && (
+              <div className="px-4 pb-4 grid grid-cols-3 gap-2">
+                {activeBarbers.map((barber) => (
+                  <button
+                    key={barber._id}
+                    onClick={() => {
+                      setSelectedBarber(barber)
+                      setExpandedSection(null)
+                    }}
+                    className={`p-3 rounded-lg border transition-all ${
+                      selectedBarber?._id === barber._id
+                        ? 'border-[#FF8C42] bg-[#FF8C42]/10'
+                        : 'border-[#555555] hover:border-[#FF8C42]/50'
+                    }`}
+                  >
+                    <div className="w-12 h-12 rounded-full overflow-hidden mx-auto mb-2 border-2 border-[#FF8C42]/30">
+                      <BarberAvatar barber={barber} className="w-12 h-12" />
+                    </div>
+                    <p className="text-[10px] font-semibold text-white text-center truncate">{barber.full_name}</p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Customer Selection - Collapsible */}
+          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl border border-[#444444]/50 overflow-hidden">
+            <button
+              onClick={() => setExpandedSection(expandedSection === 'customer' ? null : 'customer')}
+              className="w-full px-4 py-3 flex items-center justify-between"
+            >
+              <div className="flex items-center space-x-3">
+                <User className="w-5 h-5 text-[#FF8C42]" />
+                <div className="text-left">
+                  <h3 className="text-sm font-bold text-white">
+                    {currentTransaction.customer?.username || currentTransaction.customer_name || 'Select Customer'}
+                  </h3>
+                  <p className="text-[10px] text-gray-400">
+                    {currentTransaction.customer ? 'Registered' : currentTransaction.customer_name ? 'Walk-in' : 'Required'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setActiveModal('scanner')
+                  }}
+                  className="p-2 bg-blue-500/20 rounded-lg border border-blue-500/30 cursor-pointer hover:bg-blue-500/30 transition-colors"
+                  role="button"
+                  tabIndex={0}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.stopPropagation()
+                      setActiveModal('scanner')
+                    }
+                  }}
+                >
+                  <QrCode className="w-4 h-4 text-blue-400" />
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </div>
+            </button>
+            
+            {expandedSection === 'customer' && (
+              <div className="px-4 pb-4 space-y-2">
+                <button
+                  onClick={() => {
+                    setActiveModal('customerSelection')
+                    setExpandedSection(null)
+                  }}
+                  className="w-full p-3 border-2 border-dashed border-[#555555] rounded-lg hover:border-[#FF8C42] hover:bg-[#FF8C42]/10 flex items-center justify-center space-x-2 text-gray-400"
+                >
+                  <User className="w-4 h-4" />
+                  <span className="text-sm font-medium">Select Existing</span>
+                </button>
+                
+                <button
+                  onClick={() => {
+                    setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: 'Walk-in', customer_phone: '', customer_email: '' }))
+                    setExpandedSection(null)
+                  }}
+                  className="w-full p-3 border-2 border-dashed border-blue-500/30 rounded-lg hover:border-blue-500 hover:bg-blue-500/10 flex items-center justify-center space-x-2 text-blue-400"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span className="text-sm font-medium">Walk-in Customer</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Walk-in Customer Form */}
+          {currentTransaction.customer_name !== undefined && currentTransaction.customer_name !== null && !currentTransaction.customer && (
+            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl border border-[#444444]/50 p-4 space-y-3">
+              <h4 className="text-sm font-bold text-white flex items-center">
+                <UserPlus className="w-4 h-4 mr-2 text-blue-400" />
+                Walk-in Customer Details
+              </h4>
+              <input
+                type="text"
+                placeholder="Walk-in"
+                value={currentTransaction.customer_name || 'Walk-in'}
+                onChange={(e) => setCurrentTransaction(prev => ({ ...prev, customer_name: e.target.value }))}
+                className="w-full px-3 py-2.5 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg text-sm"
+              />
+              <input
+                type="tel"
+                placeholder="Phone Number"
+                value={currentTransaction.customer_phone}
+                onChange={(e) => setCurrentTransaction(prev => ({ ...prev, customer_phone: e.target.value }))}
+                className="w-full px-3 py-2.5 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg text-sm"
+              />
+              <input
+                type="email"
+                placeholder="Email (for account creation)"
+                value={currentTransaction.customer_email}
+                onChange={(e) => setCurrentTransaction(prev => ({ ...prev, customer_email: e.target.value }))}
+                className="w-full px-3 py-2.5 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg text-sm"
+              />
+            </div>
+          )}
+
+          {/* Current Booking Badge */}
+          {currentBooking && (
+            <div className="bg-gradient-to-r from-[#FF8C42]/20 to-[#FF7A2B]/20 border border-[#FF8C42]/30 rounded-xl p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Receipt className="w-4 h-4 text-[#FF8C42]" />
+                  <div>
+                    <p className="text-xs font-bold text-white">Booking #{currentBooking.booking_code}</p>
+                    <p className="text-[10px] text-gray-400">Processing payment</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleCancelBookingAttachment}
+                  className="p-1.5 bg-red-500/20 rounded-lg"
+                >
+                  <X className="w-3.5 h-3.5 text-red-400" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder={`Search ${activeTab}...`}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-[#2A2A2A] border border-[#444444]/50 text-white placeholder-gray-400 rounded-xl text-sm"
+            />
+          </div>
+
+          {/* Services/Products Tabs */}
+          <div className="flex space-x-2 bg-[#1A1A1A] rounded-xl p-1">
+            <button
+              onClick={() => setActiveTab('services')}
+              className={`flex-1 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${
+                activeTab === 'services'
+                  ? 'bg-[#FF8C42] text-white'
+                  : 'text-gray-400'
+              }`}
+            >
+              <Scissors className="w-4 h-4 inline mr-2" />
+              Services
+            </button>
+            <button
+              onClick={() => setActiveTab('products')}
+              className={`flex-1 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${
+                activeTab === 'products'
+                  ? 'bg-[#FF8C42] text-white'
+                  : 'text-gray-400'
+              }`}
+            >
+              <Package className="w-4 h-4 inline mr-2" />
+              Products
+            </button>
+          </div>
+
+          {/* Mobile Catalog - List View */}
+          <div className="space-y-2">
+            {activeTab === 'services' ? (
+              filteredServices.map((service) => (
+                <button
+                  key={service._id}
+                  onClick={() => addService(service)}
+                  className="w-full p-4 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl border border-[#444444]/50 text-left hover:border-[#FF8C42] transition-all"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-white text-sm mb-1">{service.name}</h4>
+                      <p className="text-xs text-gray-400 line-clamp-1 mb-2">{service.description}</p>
+                      <div className="flex items-center space-x-3">
+                        <span className="text-base font-bold text-[#FF8C42]">₱{service.price}</span>
+                        <span className="text-xs text-gray-500">{service.duration_minutes} min</span>
+                      </div>
+                    </div>
+                    <div className="ml-3 w-10 h-10 bg-[#FF8C42]/20 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Plus className="w-5 h-5 text-[#FF8C42]" />
+                    </div>
+                  </div>
+                </button>
+              ))
+            ) : (
+              filteredProducts.map((product) => (
+                <button
+                  key={product._id}
+                  onClick={() => addProduct(product)}
+                  className="w-full p-4 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl border border-[#444444]/50 text-left hover:border-[#FF8C42] transition-all"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-white text-sm mb-1">{product.name}</h4>
+                      <p className="text-xs text-gray-400 line-clamp-1 mb-2">{product.description}</p>
+                      <div className="flex items-center space-x-3">
+                        <span className="text-base font-bold text-[#FF8C42]">₱{product.price}</span>
+                        <span className="text-xs text-gray-500">Stock: {product.stock}</span>
+                      </div>
+                    </div>
+                    <div className="ml-3 w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Plus className="w-5 h-5 text-blue-400" />
+                    </div>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Mobile Cart Drawer */}
+        {showMobileCart && (
+          <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setShowMobileCart(false)}>
+            <div
+              className="absolute bottom-0 left-0 right-0 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-t-3xl max-h-[80vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sticky top-0 bg-[#2A2A2A] border-b border-[#444444]/50 px-4 py-3 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-white">Order Summary</h3>
+                <button onClick={() => setShowMobileCart(false)} className="p-2 hover:bg-white/10 rounded-lg">
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+              
+              <div className="p-4 space-y-3">
+                {currentTransaction.services.map((service, index) => (
+                  <div key={`service-${index}`} className="flex items-center justify-between p-3 bg-[#1A1A1A] rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-white text-sm">{service.service_name}</p>
+                      <p className="text-xs text-gray-400">₱{service.price} each</p>
+                    </div>
+                    <div className="flex items-center space-x-2 ml-3">
+                      <button
+                        onClick={() => updateQuantity('services', index, -1)}
+                        className="w-7 h-7 bg-[#444444] rounded-full flex items-center justify-center"
+                      >
+                        <Minus className="w-3.5 h-3.5 text-gray-300" />
+                      </button>
+                      <span className="w-6 text-center font-semibold text-white text-sm">{service.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity('services', index, 1)}
+                        className="w-7 h-7 bg-[#FF8C42] rounded-full flex items-center justify-center"
+                      >
+                        <Plus className="w-3.5 h-3.5 text-white" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                
+                {currentTransaction.products.map((product, index) => (
+                  <div key={`product-${index}`} className="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-white text-sm">{product.product_name}</p>
+                      <p className="text-xs text-gray-400">₱{product.price} each</p>
+                    </div>
+                    <div className="flex items-center space-x-2 ml-3">
+                      <button
+                        onClick={() => updateQuantity('products', index, -1)}
+                        className="w-7 h-7 bg-[#444444] rounded-full flex items-center justify-center"
+                      >
+                        <Minus className="w-3.5 h-3.5 text-gray-300" />
+                      </button>
+                      <span className="w-6 text-center font-semibold text-white text-sm">{product.quantity}</span>
+                      <button
+                        onClick={() => updateQuantity('products', index, 1)}
+                        className="w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center"
+                      >
+                        <Plus className="w-3.5 h-3.5 text-white" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {totalItems === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Calculator className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm text-gray-400">No items added yet</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Bottom Navigation - Fixed */}
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#050505] border-t border-[#1A1A1A]/30 px-3 py-3 space-y-2">
+          {/* Payment Summary Row */}
+          <div className="flex items-center justify-between px-3">
+            <div>
+              <p className="text-xs text-gray-400">Total Amount</p>
+              <p className="text-2xl font-bold text-white">₱{currentTransaction.total_amount.toFixed(2)}</p>
+              {currentTransaction.discount_amount > 0 && (
+                <p className="text-xs text-green-400">-₱{currentTransaction.discount_amount.toFixed(2)} discount</p>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                setShowMobileCart(!showMobileCart)
+              }}
+              className="px-4 py-2 bg-white/5 rounded-lg border border-white/10 text-white text-sm"
+            >
+              {totalItems} {totalItems === 1 ? 'item' : 'items'}
+            </button>
+          </div>
+
+          {/* Action Buttons Row */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => clearTransaction()}
+              disabled={totalItems === 0}
+              className="py-3 border border-red-500/30 text-red-400 font-semibold rounded-xl hover:bg-red-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Clear</span>
+            </button>
+            
+            <button
+              onClick={openPaymentModal}
+              disabled={!selectedBarber || totalItems === 0}
+              className="py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white font-bold rounded-xl hover:from-[#FF7A2B] hover:to-[#E67E37] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
+            >
+              <CreditCard className="w-4 h-4" />
+              <span>Pay Now</span>
+            </button>
+          </div>
+        </div>
+
+        {/* All Modals - Shared between mobile and desktop */}
+        {activeModal === 'scanner' && (
+          <QRScannerModal
+            isOpen={true}
+            onClose={() => setActiveModal(null)}
+            onVoucherScanned={handleVoucherScanned}
+            onBookingScanned={(booking) => {
+              if (booking.customer) {
+                setCurrentTransaction(prev => ({
+                  ...prev,
+                  customer: booking.customer
+                }))
+              }
+              setActiveModal(null)
+            }}
+          />
+        )}
+
+        {activeModal === 'customerSelection' && (
+          <CustomerSelectionModal
+            isOpen={true}
+            onClose={() => setActiveModal(null)}
+            onCustomerSelected={handleCustomerSelection}
+            onScanQR={() => setActiveModal('scanner')}
+            onAddNewCustomer={() => setActiveModal('addCustomer')}
+          />
+        )}
+
+        {activeModal === 'addCustomer' && (
+          <AddCustomerModal
+            isOpen={true}
+            onClose={() => setActiveModal('customerSelection')}
+            onCustomerAdded={(customer) => {
+              setCurrentTransaction(prev => ({
+                ...prev,
+                customer: customer
+              }))
+              setActiveModal(null)
+            }}
+          />
+        )}
+
+        {activeModal === 'paymentConfirmation' && (
+          <PaymentConfirmationModal
+            isOpen={true}
+            onClose={() => setActiveModal(null)}
+            onConfirm={processPayment}
+            transactionData={{
+              subtotal: currentTransaction.subtotal,
+              discount_amount: currentTransaction.discount_amount,
+              tax_amount: currentTransaction.tax_amount,
+              total_amount: currentTransaction.total_amount,
+              services: currentTransaction.services,
+              products: currentTransaction.products
+            }}
+            paymentMethod={paymentMethod}
+            setPaymentMethod={setPaymentMethod}
+          />
+        )}
+
+        {activeModal === 'receipt' && completedTransaction && (
+          <ReceiptModal
+            isOpen={true}
+            onClose={() => {
+              setActiveModal(null)
+              setCompletedTransaction(null)
+            }}
+            transactionData={completedTransaction}
+            branchInfo={currentBranch}
+            staffInfo={user}
+          />
+        )}
+
+        {activeModal === 'cancelBooking' && (
+          <Modal isOpen={true} onClose={() => setActiveModal(null)} title="Cancel Booking" size="sm">
+            <div className="text-center py-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-red-500/20 to-red-600/20 rounded-full flex items-center justify-center mx-auto mb-3 border-2 border-red-500/30">
+                <X className="w-6 h-6 text-red-400" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Cancel Booking #{currentBooking?.booking_code}?</h3>
+              <p className="text-red-700 text-sm mb-4 px-2">
+                This will detach the booking and convert to a regular POS transaction.
+              </p>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setActiveModal(null)}
+                  className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-all duration-200 text-sm"
+                >
+                  Keep
+                </button>
+                <button
+                  onClick={handleConfirmCancelBooking}
+                  className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium rounded-lg transition-all duration-200 text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </Modal>
+        )}
+
+        {activeModal === 'customerCreated' && newCustomerCredentials && (
+          <Modal isOpen={true} onClose={() => { setActiveModal(null); setNewCustomerCredentials(null); }} title="Customer Account Created" size="md">
+            <div className="text-center py-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-green-500/30">
+                <CheckCircle className="w-8 h-8 text-green-500" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Customer Account Created!</h3>
+              <p className="text-gray-600 mb-6 text-sm">
+                Please provide the following credentials to the customer:
+              </p>
+              
+              <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email:</label>
+                    <div className="flex items-center justify-between bg-white border border-gray-200 rounded-md px-3 py-2">
+                      <span className="font-mono text-sm text-gray-900">{newCustomerCredentials.email}</span>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(newCustomerCredentials.email)}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Password:</label>
+                    <div className="flex items-center justify-between bg-white border border-gray-200 rounded-md px-3 py-2">
+                      <span className="font-mono text-sm text-gray-900">{newCustomerCredentials.password}</span>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(newCustomerCredentials.password)}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => { setActiveModal(null); setNewCustomerCredentials(null); }}
+                className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium rounded-lg transition-all duration-200"
+              >
+                Continue with Transaction
+              </button>
+            </div>
+          </Modal>
+        )}
+      </div>
+    )
+  }
+
+  // Desktop Layout (existing code)
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A]">
       {/* Subtle background pattern */}
@@ -1053,8 +1665,8 @@ const POS = () => {
                   <div className="grid grid-cols-1 gap-3">
                     <input
                       type="text"
-                      placeholder="Customer Name *"
-                      value={currentTransaction.customer_name || ''}
+                      placeholder="Walk-in"
+                      value={currentTransaction.customer_name || 'Walk-in'}
                       onChange={(e) => setCurrentTransaction(prev => ({ ...prev, customer_name: e.target.value }))}
                       className="px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
                       required
@@ -1100,7 +1712,7 @@ const POS = () => {
                   <div className="text-center text-gray-500 text-sm">or</div>
                   
                   <button
-                    onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: ' ', customer_phone: '', customer_email: '' }))}
+                    onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: 'Walk-in', customer_phone: '', customer_email: '' }))}
                     className="w-full p-4 border-2 border-dashed border-blue-500/30 rounded-lg hover:border-blue-500 hover:bg-blue-500/10 transition-all duration-200 flex items-center justify-center space-x-2 text-blue-400 hover:text-blue-300"
                   >
                     <UserPlus className="w-5 h-5" />

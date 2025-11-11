@@ -278,14 +278,14 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="QR Scanner" size="md">
-      <div className="space-y-4">
+    <Modal isOpen={isOpen} onClose={handleClose} title="QR Scanner" size="md" variant="dark">
+      <div className="space-y-3 lg:space-y-4">
         
         {/* Camera Section */}
         {!scanResult && (
           <div className="relative">
             {/* Camera Feed */}
-            <div className="relative bg-black rounded-xl overflow-hidden" style={{ aspectRatio: '16/10' }}>
+            <div className="relative bg-black rounded-lg lg:rounded-xl overflow-hidden" style={{ aspectRatio: '4/3' }}>
               <video
                 ref={videoRef}
                 className="w-full h-full object-cover"
@@ -297,8 +297,8 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
               {/* Scanning Overlay */}
               {isScanning && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-40 h-40 border-2 border-[#FF8C42] rounded-2xl animate-pulse">
-                    <div className="absolute inset-3 border border-[#FF8C42] rounded-xl opacity-50"></div>
+                  <div className="w-32 h-32 lg:w-40 lg:h-40 border-2 border-[#FF8C42] rounded-xl lg:rounded-2xl animate-pulse">
+                    <div className="absolute inset-2 lg:inset-3 border border-[#FF8C42] rounded-lg lg:rounded-xl opacity-50"></div>
                   </div>
                 </div>
               )}
@@ -318,9 +318,9 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
               {/* Ready State */}
               {!isScanning && !error && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                  <div className="text-center text-white">
-                    <QrCode className="w-12 h-12 mx-auto mb-3 opacity-70" />
-                    <p className="font-semibold">Ready to Scan</p>
+                  <div className="text-center text-white px-4">
+                    <QrCode className="w-10 h-10 lg:w-12 lg:h-12 mx-auto mb-2 lg:mb-3 opacity-70" />
+                    <p className="font-semibold text-sm lg:text-base">Ready to Scan</p>
                     <p className="text-xs opacity-80 mt-1">Position QR code in frame</p>
                   </div>
                 </div>
@@ -361,12 +361,12 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
             )}
 
             {/* Camera Controls */}
-            <div className="mt-3 flex justify-center gap-2">
+            <div className="mt-2 lg:mt-3 flex justify-center gap-2">
               {!isScanning ? (
                 <Button
                   onClick={startScanning}
                   disabled={!selectedCamera}
-                  className="bg-[#FF8C42] hover:bg-[#FF7A2B] text-white px-6"
+                  className="bg-[#FF8C42] hover:bg-[#FF7A2B] text-white px-4 lg:px-6 py-2.5 text-sm lg:text-base"
                 >
                   <Camera className="w-4 h-4 mr-2" />
                   Start Scanning
@@ -375,7 +375,7 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
                 <Button
                   onClick={stopScanning}
                   variant="outline"
-                  className="border-red-500 text-red-500 hover:bg-red-50 px-6"
+                  className="border-red-500 text-red-500 hover:bg-red-50 px-4 lg:px-6 py-2.5 text-sm lg:text-base"
                 >
                   <XCircle className="w-4 h-4 mr-2" />
                   Stop
@@ -384,8 +384,8 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
             </div>
 
             {/* Instructions */}
-            <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-              <div className="flex items-center justify-center space-x-4 text-xs text-blue-700">
+            <div className="mt-2 lg:mt-3 p-2.5 lg:p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+              <div className="flex items-center justify-center space-x-3 lg:space-x-4 text-xs text-blue-400">
                 <div className="flex items-center space-x-1">
                   <Calendar className="w-3 h-3" />
                   <span>Booking QRs</span>
@@ -401,105 +401,105 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
 
         {/* Scan Result */}
         {scanResult && (
-          <div className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm">
+          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#1A1A1A] border border-[#444444] rounded-lg lg:rounded-xl p-3 lg:p-4 shadow-sm">
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className={`p-2 rounded-lg ${
-                  scanResult.type === 'booking' ? 'bg-blue-100' : 'bg-purple-100'
+            <div className="flex items-center justify-between mb-3 lg:mb-4">
+              <div className="flex items-center space-x-2 lg:space-x-3 min-w-0 flex-1">
+                <div className={`p-2 rounded-lg flex-shrink-0 ${
+                  scanResult.type === 'booking' ? 'bg-blue-500/20' : 'bg-purple-500/20'
                 }`}>
                   {scanResult.type === 'booking' ? (
-                    <Calendar className={`w-5 h-5 ${
-                      scanResult.type === 'booking' ? 'text-blue-600' : 'text-purple-600'
+                    <Calendar className={`w-4 h-4 lg:w-5 lg:h-5 ${
+                      scanResult.type === 'booking' ? 'text-blue-400' : 'text-purple-400'
                     }`} />
                   ) : (
-                    <Gift className="w-5 h-5 text-purple-600" />
+                    <Gift className="w-4 h-4 lg:w-5 lg:h-5 text-purple-400" />
                   )}
                 </div>
-                <div>
-                  <h3 className="font-bold text-[#1A1A1A] font-mono text-lg">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-bold text-white font-mono text-sm lg:text-lg truncate">
                     {scanResult.code}
                   </h3>
-                  <p className="text-sm text-gray-600 capitalize">
+                  <p className="text-xs lg:text-sm text-gray-400 capitalize">
                     {scanResult.type === 'booking' ? 'Booking Details' : 'Voucher Details'}
                   </p>
                 </div>
               </div>
-              <span className={`px-3 py-1 text-xs font-bold rounded-full uppercase ${
+              <span className={`px-2 lg:px-3 py-1 text-[10px] lg:text-xs font-bold rounded-full uppercase flex-shrink-0 ${
                 scanResult.status === 'confirmed' || scanResult.status === 'redeemed' 
-                  ? 'bg-green-100 text-green-700 border border-green-200'
+                  ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                   : scanResult.status === 'validated'
-                  ? 'bg-green-100 text-green-700 border border-green-200'
-                  : 'bg-blue-100 text-blue-700 border border-blue-200'
+                  ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                  : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
               }`}>
                 {scanResult.status}
               </span>
             </div>
             
             {/* Details Grid */}
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-2 gap-2 lg:gap-4 mb-3 lg:mb-4">
               {scanResult.type === 'booking' ? (
                 <>
-                  <div className="bg-white rounded-lg p-3 border">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <User className="w-4 h-4 text-gray-500" />
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Customer</span>
+                  <div className="bg-[#1A1A1A] rounded-lg p-2.5 lg:p-3 border border-[#444444]">
+                    <div className="flex items-center space-x-1.5 lg:space-x-2 mb-1">
+                      <User className="w-3 h-3 lg:w-4 lg:h-4 text-gray-500" />
+                      <span className="text-[10px] lg:text-xs font-medium text-gray-500 uppercase tracking-wide">Customer</span>
                     </div>
-                    <p className="font-semibold text-[#1A1A1A]">{scanResult.customer_name}</p>
+                    <p className="font-semibold text-white text-xs lg:text-sm truncate">{scanResult.customer_name}</p>
                   </div>
                   
-                  <div className="bg-white rounded-lg p-3 border">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <DollarSign className="w-4 h-4 text-gray-500" />
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Price</span>
+                  <div className="bg-[#1A1A1A] rounded-lg p-2.5 lg:p-3 border border-[#444444]">
+                    <div className="flex items-center space-x-1.5 lg:space-x-2 mb-1">
+                      <DollarSign className="w-3 h-3 lg:w-4 lg:h-4 text-gray-500" />
+                      <span className="text-[10px] lg:text-xs font-medium text-gray-500 uppercase tracking-wide">Price</span>
                     </div>
-                    <p className="font-bold text-[#FF8C42] text-lg">₱{scanResult.price}</p>
+                    <p className="font-bold text-[#FF8C42] text-base lg:text-lg">₱{scanResult.price}</p>
                   </div>
                   
-                  <div className="bg-white rounded-lg p-3 border">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <Calendar className="w-4 h-4 text-gray-500" />
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Date & Time</span>
+                  <div className="bg-[#1A1A1A] rounded-lg p-2.5 lg:p-3 border border-[#444444]">
+                    <div className="flex items-center space-x-1.5 lg:space-x-2 mb-1">
+                      <Calendar className="w-3 h-3 lg:w-4 lg:h-4 text-gray-500" />
+                      <span className="text-[10px] lg:text-xs font-medium text-gray-500 uppercase tracking-wide">Date & Time</span>
                     </div>
-                    <p className="font-semibold text-[#1A1A1A] text-sm">{scanResult.date}</p>
-                    <p className="text-[#FF8C42] font-medium text-sm">{scanResult.time}</p>
+                    <p className="font-semibold text-white text-xs lg:text-sm truncate">{scanResult.date}</p>
+                    <p className="text-[#FF8C42] font-medium text-xs lg:text-sm">{scanResult.time}</p>
                   </div>
                   
-                  <div className="bg-white rounded-lg p-3 border">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <User className="w-4 h-4 text-gray-500" />
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Barber</span>
+                  <div className="bg-[#1A1A1A] rounded-lg p-2.5 lg:p-3 border border-[#444444]">
+                    <div className="flex items-center space-x-1.5 lg:space-x-2 mb-1">
+                      <User className="w-3 h-3 lg:w-4 lg:h-4 text-gray-500" />
+                      <span className="text-[10px] lg:text-xs font-medium text-gray-500 uppercase tracking-wide">Barber</span>
                     </div>
-                    <p className="font-semibold text-[#1A1A1A]">{scanResult.barber_name}</p>
-                    <p className="text-gray-600 text-sm">{scanResult.service_name}</p>
+                    <p className="font-semibold text-white text-xs lg:text-sm truncate">{scanResult.barber_name}</p>
+                    <p className="text-gray-400 text-[10px] lg:text-xs truncate">{scanResult.service_name}</p>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="bg-white rounded-lg p-3 border">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <Gift className="w-4 h-4 text-gray-500" />
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Code</span>
+                  <div className="bg-[#1A1A1A] rounded-lg p-2.5 lg:p-3 border border-[#444444]">
+                    <div className="flex items-center space-x-1.5 lg:space-x-2 mb-1">
+                      <Gift className="w-3 h-3 lg:w-4 lg:h-4 text-gray-500" />
+                      <span className="text-[10px] lg:text-xs font-medium text-gray-500 uppercase tracking-wide">Code</span>
                     </div>
-                    <p className="font-semibold text-[#1A1A1A]">{scanResult.code}</p>
+                    <p className="font-semibold text-white text-xs lg:text-sm truncate">{scanResult.code}</p>
                   </div>
                   
-                  <div className="bg-white rounded-lg p-3 border">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <DollarSign className="w-4 h-4 text-gray-500" />
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Value</span>
+                  <div className="bg-[#1A1A1A] rounded-lg p-2.5 lg:p-3 border border-[#444444]">
+                    <div className="flex items-center space-x-1.5 lg:space-x-2 mb-1">
+                      <DollarSign className="w-3 h-3 lg:w-4 lg:h-4 text-gray-500" />
+                      <span className="text-[10px] lg:text-xs font-medium text-gray-500 uppercase tracking-wide">Value</span>
                     </div>
-                    <p className="font-bold text-[#FF8C42] text-lg">{scanResult.value}</p>
+                    <p className="font-bold text-[#FF8C42] text-base lg:text-lg">{scanResult.value}</p>
                   </div>
                   
-                  <div className="bg-white rounded-lg p-3 border col-span-2">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <Calendar className="w-4 h-4 text-gray-500" />
-                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Expires</span>
+                  <div className="bg-[#1A1A1A] rounded-lg p-2.5 lg:p-3 border border-[#444444] col-span-2">
+                    <div className="flex items-center space-x-1.5 lg:space-x-2 mb-1">
+                      <Calendar className="w-3 h-3 lg:w-4 lg:h-4 text-gray-500" />
+                      <span className="text-[10px] lg:text-xs font-medium text-gray-500 uppercase tracking-wide">Expires</span>
                     </div>
-                    <p className="font-semibold text-[#1A1A1A]">{scanResult.expires_at}</p>
+                    <p className="font-semibold text-white text-xs lg:text-sm">{scanResult.expires_at}</p>
                     {scanResult.user !== 'N/A' && (
-                      <p className="text-gray-600 text-sm mt-1">User: {scanResult.user}</p>
+                      <p className="text-gray-400 text-xs lg:text-sm mt-1">User: {scanResult.user}</p>
                     )}
                   </div>
                 </>
@@ -508,22 +508,22 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
 
             {/* Status Messages */}
             {scanResult.status === 'scanned' && (
-              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+              <div className="p-2.5 lg:p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg mb-3 lg:mb-4">
                 <div className="flex items-center space-x-2">
-                  <QrCode className="w-4 h-4 text-blue-600" />
-                  <p className="text-sm font-medium text-blue-800">
-                    {scanResult.type === 'booking' ? 'Booking' : 'Voucher'} scanned successfully — Ready to {scanResult.type === 'booking' ? 'confirm' : 'use'}
+                  <QrCode className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                  <p className="text-xs lg:text-sm font-medium text-blue-300">
+                    {scanResult.type === 'booking' ? 'Booking' : 'Voucher'} scanned — Ready to {scanResult.type === 'booking' ? 'confirm' : 'use'}
                   </p>
                 </div>
               </div>
             )}
 
             {(scanResult.status === 'confirmed' || scanResult.status === 'redeemed') && (
-              <div className="p-3 bg-green-50 border border-green-200 rounded-lg mb-4">
+              <div className="p-2.5 lg:p-3 bg-green-500/10 border border-green-500/30 rounded-lg mb-3 lg:mb-4">
                 <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <p className="text-sm font-medium text-green-800">
-                    ✓ {scanResult.type === 'booking' ? 'Booking confirmed!' : 'Voucher used!'} Transaction completed successfully.
+                  <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                  <p className="text-xs lg:text-sm font-medium text-green-300">
+                    ✓ {scanResult.type === 'booking' ? 'Booking confirmed!' : 'Voucher used!'} Transaction completed.
                   </p>
                 </div>
               </div>
@@ -533,35 +533,37 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
 
         {/* Error Message */}
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div className="p-2.5 lg:p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
             <div className="flex items-center space-x-2">
-              <XCircle className="w-4 h-4 text-red-600" />
-              <p className="text-red-800 font-medium text-sm">{error}</p>
+              <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              <p className="text-red-300 font-medium text-xs lg:text-sm">{error}</p>
             </div>
           </div>
         )}
 
         {/* Action Buttons */}
-         <div className="flex justify-center gap-3 pt-4 border-t border-gray-200">
+         <div className="flex justify-center gap-2 lg:gap-3 pt-3 lg:pt-4 border-t border-[#444444]">
            {scanResult && scanResult.status !== 'confirmed' && scanResult.status !== 'redeemed' && (
              <Button
                onClick={handleConfirm}
                disabled={isProcessing}
-               className={`flex items-center justify-center text-white px-6 py-3 font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none ${
+               className={`flex items-center justify-center text-white px-4 lg:px-6 py-2.5 lg:py-3 font-semibold rounded-lg text-sm lg:text-base transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
                  scanResult.type === 'booking'
-                   ? 'bg-green-600 hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2'
-                   : 'bg-[#FF8C42] hover:bg-[#E67A1A] focus:ring-2 focus:ring-orange-500 focus:ring-offset-2'
+                   ? 'bg-green-600 hover:bg-green-700'
+                   : 'bg-[#FF8C42] hover:bg-[#E67A1A]'
                }`}
              >
                {isProcessing ? (
                  <>
-                   <RefreshCw className="w-5 h-5 mr-3 animate-spin" />
-                   <span>Processing...</span>
+                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                   <span className="hidden lg:inline">Processing...</span>
+                   <span className="lg:hidden">Processing</span>
                  </>
                ) : (
                  <>
-                   <CheckCircle className="w-5 h-5 mr-3" />
-                   <span>{scanResult.type === 'booking' ? 'Confirm Booking' : 'Use Voucher'}</span>
+                   <CheckCircle className="w-4 h-4 mr-2" />
+                   <span className="hidden lg:inline">{scanResult.type === 'booking' ? 'Confirm Booking' : 'Use Voucher'}</span>
+                   <span className="lg:hidden">Confirm</span>
                  </>
                )}
              </Button>
@@ -572,10 +574,11 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
                variant="outline"
                onClick={handleScanAgain}
                disabled={isProcessing}
-               className="flex items-center justify-center px-5 py-3 border-2 border-gray-300 text-gray-700 font-medium rounded-lg hover:border-[#FF8C42] hover:text-[#FF8C42] hover:bg-orange-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+               className="flex items-center justify-center px-4 lg:px-5 py-2.5 lg:py-3 border-2 border-[#555555] text-gray-300 font-medium rounded-lg text-sm lg:text-base hover:border-[#FF8C42] hover:text-[#FF8C42] hover:bg-[#FF8C42]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
              >
-               <Camera className="w-5 h-5 mr-2" />
-               <span>Scan Again</span>
+               <Camera className="w-4 h-4 mr-2" />
+               <span className="hidden lg:inline">Scan Again</span>
+               <span className="lg:hidden">Again</span>
              </Button>
            )}
            
@@ -583,7 +586,7 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
              variant="outline"
              onClick={handleClose}
              disabled={isProcessing}
-             className="flex items-center justify-center px-5 py-3 border-2 border-gray-300 text-gray-700 font-medium rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+             className="flex items-center justify-center px-4 lg:px-5 py-2.5 lg:py-3 border-2 border-[#555555] text-gray-300 font-medium rounded-lg text-sm lg:text-base hover:border-gray-400 hover:bg-[#1A1A1A] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
            >
              <span>Close</span>
            </Button>

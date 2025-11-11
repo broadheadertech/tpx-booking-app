@@ -280,6 +280,37 @@ export const createBooking = mutation({
       throwUserError(ERROR_CODES.BOOKING_PAST_DATE);
     }
 
+    // Validate barber schedule if barber is specified
+    if (args.barber) {
+      const barber = await ctx.db.get(args.barber);
+      if (!barber) {
+        throwUserError(ERROR_CODES.BARBER_NOT_FOUND, 'Selected barber not found.');
+      }
+
+      // Get day of week from booking date
+      const dayOfWeek = bookingDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+      const daySchedule = barber.schedule?.[dayOfWeek];
+
+      // Check if barber is available on this day
+      if (!daySchedule || !daySchedule.available) {
+        throwUserError(
+          ERROR_CODES.BOOKING_TIME_UNAVAILABLE,
+          'Barber is not available on the selected day',
+          `The barber is not working on ${dayOfWeek}s. Please select a different day.`
+        );
+      }
+
+      // Validate booking time is within barber's working hours
+      const bookingTime = args.time.substring(0, 5); // Get HH:MM format
+      if (bookingTime < daySchedule.start || bookingTime >= daySchedule.end) {
+        throwUserError(
+          ERROR_CODES.BOOKING_TIME_UNAVAILABLE,
+          'Selected time is outside barber working hours',
+          `The barber works from ${daySchedule.start} to ${daySchedule.end} on ${dayOfWeek}s. Please select a time within these hours.`
+        );
+      }
+    }
+
     const bookingCode = generateBookingCode();
     
     // Calculate final price with discount
@@ -857,6 +888,37 @@ export const createWalkInBooking = mutation({
     
     if (bookingDate < today) {
       throwUserError(ERROR_CODES.BOOKING_PAST_DATE);
+    }
+
+    // Validate barber schedule if barber is specified
+    if (args.barber) {
+      const barber = await ctx.db.get(args.barber);
+      if (!barber) {
+        throwUserError(ERROR_CODES.BARBER_NOT_FOUND, 'Selected barber not found.');
+      }
+
+      // Get day of week from booking date
+      const dayOfWeek = bookingDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+      const daySchedule = barber.schedule?.[dayOfWeek];
+
+      // Check if barber is available on this day
+      if (!daySchedule || !daySchedule.available) {
+        throwUserError(
+          ERROR_CODES.BOOKING_TIME_UNAVAILABLE,
+          'Barber is not available on the selected day',
+          `The barber is not working on ${dayOfWeek}s. Please select a different day.`
+        );
+      }
+
+      // Validate booking time is within barber's working hours
+      const bookingTime = args.time.substring(0, 5); // Get HH:MM format
+      if (bookingTime < daySchedule.start || bookingTime >= daySchedule.end) {
+        throwUserError(
+          ERROR_CODES.BOOKING_TIME_UNAVAILABLE,
+          'Selected time is outside barber working hours',
+          `The barber works from ${daySchedule.start} to ${daySchedule.end} on ${dayOfWeek}s. Please select a time within these hours.`
+        );
+      }
     }
 
     const bookingCode = generateBookingCode();

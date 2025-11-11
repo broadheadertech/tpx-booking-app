@@ -174,17 +174,37 @@ export const ToastProvider = ({ children }) => {
   );
 };
 
-// Toast container component
+// Toast container component - Shows only 1 toast at a time
 const ToastContainer = () => {
   const { toasts, removeToast } = useToast();
 
+  // Only show the first toast
+  const currentToast = toasts[0];
+  const remainingCount = toasts.length - 1;
+
   return (
-    <div className="fixed top-4 left-4 z-[9999] space-y-2 pointer-events-none max-w-sm">
-      <AnimatePresence>
-        {toasts.map((toast) => (
-          <ToastItem key={toast.id} toast={toast} onRemove={removeToast} />
-        ))}
+    <div className="fixed top-4 left-4 z-[9999] pointer-events-none max-w-sm">
+      <AnimatePresence mode="wait">
+        {currentToast && (
+          <ToastItem key={currentToast.id} toast={currentToast} onRemove={removeToast} />
+        )}
       </AnimatePresence>
+      
+      {/* Show remaining count */}
+      {remainingCount > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          className="mt-2 ml-2 pointer-events-auto"
+        >
+          <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-[#2A2A2A]/95 border border-[#444444]/50 backdrop-blur-md">
+            <span className="text-xs text-gray-400">
+              +{remainingCount} more message{remainingCount > 1 ? 's' : ''}
+            </span>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 };
