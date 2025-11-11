@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode, CreditCard, Receipt, DollarSign, Eye, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react'
+import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode, CreditCard, Receipt, DollarSign, Eye, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Check, Ban } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import QRCode from 'qrcode'
@@ -27,6 +27,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
   const [error, setError] = useState('')
   const [confirmModal, setConfirmModal] = useState({ show: false, booking: null, action: null })
   const [deleteModal, setDeleteModal] = useState({ show: false, booking: null })
+  const [cancelModal, setCancelModal] = useState({ show: false, booking: null })
   const [activeTab, setActiveTab] = useState('bookings')
   const [selectedBooking, setSelectedBooking] = useState(null)
   const [showTransactionModal, setShowTransactionModal] = useState(false)
@@ -34,6 +35,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 8
   const [sendSms, setSendSms] = useState(false)
+  const [openDropdown, setOpenDropdown] = useState(null)
 
   // Convex queries - use branch-scoped queries for staff, global for super_admin
   const bookings = user?.role === 'super_admin' 
@@ -62,6 +64,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
   const updateBookingStatus = useMutation(api.services.bookings.updateBooking)
   const deleteBookingMutation = useMutation(api.services.bookings.deleteBooking)
   const updatePaymentStatus = useMutation(api.services.bookings.updatePaymentStatus)
+  const cancelBookingMutation = useMutation(api.services.bookings.cancelBooking)
 
   const getStatusConfig = (status) => {
     switch (status) {
@@ -328,6 +331,25 @@ const BookingsManagement = ({ onRefresh, user }) => {
     } catch (err) {
       console.error('Error updating booking status:', err)
       setError(err.message || 'Failed to update booking status')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCancelBooking = async () => {
+    if (!cancelModal.booking) return
+
+    setLoading(true)
+    try {
+      await cancelBookingMutation({ 
+        id: cancelModal.booking._id, 
+        reason: 'Cancelled by staff' 
+      })
+      setCancelModal({ show: false, booking: null })
+      // Convex will automatically update the UI via real-time subscription
+    } catch (err) {
+      console.error('Error cancelling booking:', err)
+      setError(err.message || 'Failed to cancel booking')
     } finally {
       setLoading(false)
     }
@@ -1125,6 +1147,96 @@ const BookingsManagement = ({ onRefresh, user }) => {
     </tr>
   )
 
+  // Cancel Confirmation Modal
+  const CancelConfirmationModal = () => {
+    if (!cancelModal.show || !cancelModal.booking) return null
+
+    const booking = cancelModal.booking
+    const service = services.find(s => s._id === booking.service)
+
+    return createPortal(
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{zIndex: 99999}}>
+        <div className="bg-[#1A1A1A] rounded-2xl p-6 max-w-md w-full shadow-2xl border border-[#2A2A2A]/50">
+          <div className="text-center space-y-4">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto bg-red-500/20">
+              <Ban className="w-6 h-6 text-red-400" />
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-bold mb-2 text-white">
+                Cancel Confirmed Booking
+              </h3>
+              <p className="text-sm text-gray-400 mb-4">
+                Are you sure you want to cancel this confirmed booking? The customer and barber will be notified.
+              </p>
+
+              <div className="text-left space-y-2 p-4 rounded-xl bg-[#2A2A2A]">
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-300">Booking Code:</span>
+                  <span className="text-sm font-mono font-bold text-white">
+                    #{booking.booking_code}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-300">Customer:</span>
+                  <span className="text-sm font-bold text-white">
+                    {booking.customer_name || 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-300">Service:</span>
+                  <span className="text-sm font-bold text-white">
+                    {service?.name || 'Unknown'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-300">Date & Time:</span>
+                  <span className="text-sm font-bold text-white">
+                    {formatDate(booking.date)} at {formatTime(booking.time)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-gray-300">Barber:</span>
+                  <span className="text-sm font-bold text-white">
+                    {booking.barber_name || 'Not assigned'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setCancelModal({ show: false, booking: null })}
+                className="flex-1 py-2 px-4 rounded-xl font-medium text-gray-300 bg-[#2A2A2A] hover:bg-[#333333] transition-colors"
+                disabled={loading}
+              >
+                Keep Booking
+              </button>
+              <button
+                onClick={handleCancelBooking}
+                disabled={loading}
+                className="flex-1 py-2 px-4 rounded-xl font-medium text-white transition-colors bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Cancelling...</span>
+                  </>
+                ) : (
+                  <>
+                    <Ban className="w-4 h-4" />
+                    <span>Cancel Booking</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )
+  }
+
   // Delete Confirmation Modal
   const DeleteConfirmationModal = () => {
     if (!deleteModal.show || !deleteModal.booking) return null
@@ -1512,88 +1624,72 @@ const BookingsManagement = ({ onRefresh, user }) => {
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      {/* Compact Merged Stats Cards */}
-      <div className="bg-gradient-to-br from-[#1A1A1A] to-[#222222] rounded-xl sm:rounded-2xl border border-[#2A2A2A]/50 shadow-lg p-3 sm:p-4">
-        {/* Booking Status Stats */}
-        <div className="mb-3 sm:mb-4">
-          <h3 className="text-xs sm:text-sm font-bold text-gray-300 mb-2 sm:mb-3 uppercase tracking-wide">Booking Status</h3>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
-            <div className="bg-[#0F0F0F]/50 rounded-lg p-2 sm:p-2.5 border border-[#2A2A2A]/30">
-              <div className="flex flex-col items-center text-center">
-                <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase mb-1">Total</p>
-                <p className="text-lg sm:text-xl font-black text-[#FF8C42]">{stats.total}</p>
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-[#FF8C42] mt-1" />
-              </div>
+      {/* Ultra Compact Stats Bar */}
+      <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] px-4 py-2.5">
+        <div className="flex items-center justify-between gap-6 flex-wrap">
+          {/* Left: Booking Stats */}
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-3.5 w-3.5 text-gray-500" />
+              <span className="text-xs text-gray-400 font-medium">Total:</span>
+              <span className="text-sm font-bold text-white">{stats.total}</span>
             </div>
-
-            <div className="bg-[#0F0F0F]/50 rounded-lg p-2 sm:p-2.5 border border-[#2A2A2A]/30">
-              <div className="flex flex-col items-center text-center">
-                <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase mb-1">Today</p>
-                <p className="text-lg sm:text-xl font-black text-[#FF8C42]">{stats.today}</p>
-                <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-[#FF8C42] mt-1" />
-              </div>
+            
+            <div className="h-4 w-px bg-[#2A2A2A]"></div>
+            
+            <div className="flex items-center gap-2 px-2 py-1 rounded bg-[#FF8C42]/10">
+              <Clock className="h-3.5 w-3.5 text-[#FF8C42]" />
+              <span className="text-xs text-gray-400 font-medium">Today:</span>
+              <span className="text-sm font-bold text-white">{stats.today}</span>
             </div>
-
-            <div className="bg-[#0F0F0F]/50 rounded-lg p-2 sm:p-2.5 border border-[#2A2A2A]/30">
-              <div className="flex flex-col items-center text-center">
-                <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase mb-1">Pending</p>
-                <p className="text-lg sm:text-xl font-black text-[#FF8C42]">{stats.pending}</p>
-                <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 text-[#FF8C42] mt-1" />
+            
+            <div className="h-4 w-px bg-[#2A2A2A]"></div>
+            
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <AlertCircle className="h-3.5 w-3.5 text-gray-500" />
+                <span className="text-xs text-gray-500">Pending</span>
+                <span className="text-sm font-bold text-white">{stats.pending}</span>
               </div>
-            </div>
-
-            <div className="bg-[#0F0F0F]/50 rounded-lg p-2 sm:p-2.5 border border-[#2A2A2A]/30">
-              <div className="flex flex-col items-center text-center">
-                <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase mb-1">Booked</p>
-                <p className="text-lg sm:text-xl font-black text-[#FF8C42]">{stats.booked}</p>
-                <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-[#FF8C42] mt-1" />
+              
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="h-3.5 w-3.5 text-gray-500" />
+                <span className="text-xs text-gray-500">Booked</span>
+                <span className="text-sm font-bold text-white">{stats.booked}</span>
               </div>
-            </div>
-
-            <div className="bg-[#0F0F0F]/50 rounded-lg p-2 sm:p-2.5 border border-[#2A2A2A]/30">
-              <div className="flex flex-col items-center text-center">
-                <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase mb-1">Confirmed</p>
-                <p className="text-lg sm:text-xl font-black text-[#FF8C42]">{stats.confirmed}</p>
-                <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-[#FF8C42] mt-1" />
+              
+              <div className="flex items-center gap-1.5">
+                <CheckCircle className="h-3.5 w-3.5 text-gray-500" />
+                <span className="text-xs text-gray-500">Confirmed</span>
+                <span className="text-sm font-bold text-white">{stats.confirmed}</span>
               </div>
-            </div>
-
-            <div className="bg-[#0F0F0F]/50 rounded-lg p-2 sm:p-2.5 border border-[#2A2A2A]/30">
-              <div className="flex flex-col items-center text-center">
-                <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase mb-1">Cancelled</p>
-                <p className="text-lg sm:text-xl font-black text-[#FF8C42]">{stats.cancelled}</p>
-                <XCircle className="h-3 w-3 sm:h-4 sm:w-4 text-[#FF8C42] mt-1" />
+              
+              <div className="flex items-center gap-1.5">
+                <XCircle className="h-3.5 w-3.5 text-gray-500" />
+                <span className="text-xs text-gray-500">Cancelled</span>
+                <span className="text-sm font-bold text-white">{stats.cancelled}</span>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Payment Status Stats */}
-        <div className="border-t border-[#2A2A2A]/50 pt-3 sm:pt-4">
-          <h3 className="text-xs sm:text-sm font-bold text-gray-300 mb-2 sm:mb-3 uppercase tracking-wide">Payment Status</h3>
-          <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            <div className="bg-[#0F0F0F]/50 rounded-lg p-2 sm:p-2.5 border border-green-500/20">
-              <div className="flex flex-col items-center text-center">
-                <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase mb-1">Paid</p>
-                <p className="text-lg sm:text-xl font-black text-green-400">{stats.paid}</p>
-                <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-400 mt-1" />
-              </div>
+          {/* Right: Payment Stats */}
+          <div className="flex items-center gap-3 pl-4 border-l border-[#2A2A2A]">
+            <div className="flex items-center gap-1.5">
+              <CheckCircle className="h-3.5 w-3.5 text-gray-500" />
+              <span className="text-xs text-gray-500">Paid</span>
+              <span className="text-sm font-bold text-white">{stats.paid}</span>
             </div>
-
-            <div className="bg-[#0F0F0F]/50 rounded-lg p-2 sm:p-2.5 border border-red-500/20">
-              <div className="flex flex-col items-center text-center">
-                <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase mb-1">Unpaid</p>
-                <p className="text-lg sm:text-xl font-black text-red-400">{stats.unpaid}</p>
-                <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-red-400 mt-1" />
-              </div>
+            
+            <div className="flex items-center gap-1.5">
+              <CreditCard className="h-3.5 w-3.5 text-gray-500" />
+              <span className="text-xs text-gray-500">Unpaid</span>
+              <span className="text-sm font-bold text-white">{stats.unpaid}</span>
             </div>
-
-            <div className="bg-[#0F0F0F]/50 rounded-lg p-2 sm:p-2.5 border border-yellow-500/20">
-              <div className="flex flex-col items-center text-center">
-                <p className="text-[9px] sm:text-[10px] font-semibold text-gray-400 uppercase mb-1">Refunded</p>
-                <p className="text-lg sm:text-xl font-black text-yellow-400">{stats.refunded}</p>
-                <XCircle className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 mt-1" />
-              </div>
+            
+            <div className="flex items-center gap-1.5">
+              <XCircle className="h-3.5 w-3.5 text-gray-500" />
+              <span className="text-xs text-gray-500">Refunded</span>
+              <span className="text-sm font-bold text-white">{stats.refunded}</span>
             </div>
           </div>
         </div>
@@ -1601,56 +1697,55 @@ const BookingsManagement = ({ onRefresh, user }) => {
 
 
 
-      {/* Controls */}
-      <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0">
-          <div className="flex flex-col md:flex-row md:items-center space-y-3 md:space-y-0 md:space-x-3">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
+      {/* Compact Filters Bar */}
+      <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] px-3 py-2">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          {/* Left: Search & Filters */}
+          <div className="flex items-center gap-2 flex-wrap flex-1 min-w-[250px]">
+            {/* Search */}
+            <div className="relative flex-shrink-0">
+              <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-500" />
               <input
                 type="text"
-                placeholder="Search bookings..."
+                placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 pr-3 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42] text-xs"
+                className="pl-8 pr-3 py-1.5 w-40 bg-[#0A0A0A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-md focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42] text-xs"
               />
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Filter className="h-3.5 w-3.5 text-gray-500" />
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
-              >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="booked">Booked</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </div>
+            {/* Status Filter */}
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="bg-[#0A0A0A] border border-[#2A2A2A] text-white text-gray-400 rounded-md px-2 py-1.5 text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42] hover:border-[#FF8C42]/50 transition-colors"
+            >
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="booked">Booked</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
 
+            {/* Sort By */}
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg px-2.5 py-1.5 text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+              className="bg-[#0A0A0A] border border-[#2A2A2A] text-white text-gray-400 rounded-md px-2 py-1.5 text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42] hover:border-[#FF8C42]/50 transition-colors"
             >
               <option value="date">Sort by Date</option>
               <option value="status">Sort by Status</option>
               <option value="service">Sort by Service</option>
             </select>
 
-            {/* Date Filters */}
-            <div className="flex items-center space-x-2">
-              <Calendar className="h-3 w-3 text-white" />
+            {/* Date Range */}
+            <div className="flex items-center gap-1.5">
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="px-2.5 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
-                placeholder="Start Date"
+                className="px-2 py-1.5 w-32 bg-[#0A0A0A] border border-[#2A2A2A] text-white text-gray-400 rounded-md text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
               />
               <span className="text-gray-500 text-xs">to</span>
               <input
@@ -1658,8 +1753,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 min={startDate || undefined}
-                className="px-2.5 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
-                placeholder="End Date"
+                className="px-2 py-1.5 w-32 bg-[#0A0A0A] border border-[#2A2A2A] text-white text-gray-400 rounded-md text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
               />
               {(startDate || endDate) && (
                 <button
@@ -1667,29 +1761,31 @@ const BookingsManagement = ({ onRefresh, user }) => {
                     setStartDate('')
                     setEndDate('')
                   }}
-                  className="px-2 py-1 text-xs text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded transition-colors"
-                  title="Clear date filters"
+                  className="p-1 text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded transition-colors"
+                  title="Clear dates"
                 >
-                  <X className="h-3 w-3" />
+                  <X className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
+          {/* Right: Action Buttons */}
+          <div className="flex items-center gap-2">
             <button
               onClick={onRefresh}
-              className="flex items-center space-x-1.5 px-3 py-1.5 bg-[#1A1A1A] text-gray-400 rounded-lg hover:bg-[#2A2A2A] hover:text-white transition-colors text-xs border border-[#2A2A2A]"
+              className="p-1.5 text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded-md transition-colors"
+              title="Refresh"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>Refresh</span>
+              <RotateCcw className="h-4 w-4" />
             </button>
             <button
               onClick={handleCreate}
-              className="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-all duration-200 text-xs shadow-lg"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-md hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-all text-xs font-medium shadow-sm"
             >
               <Plus className="h-3.5 w-3.5" />
-              <span>New Booking</span>
+              <span className="hidden sm:inline">New Booking</span>
+              <span className="sm:hidden">New</span>
             </button>
           </div>
         </div>
@@ -1856,84 +1952,157 @@ const BookingsManagement = ({ onRefresh, user }) => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
+                      <div className="flex items-center justify-end gap-2">
+                        {/* Quick Actions - Always visible */}
                         <button
                           onClick={() => setShowQRCode(booking)}
-                          className="inline-flex items-center px-2.5 py-1.5 border border-[#FF8C42]/30 text-xs font-medium rounded text-[#FF8C42] bg-[#FF8C42]/20 hover:bg-[#FF8C42]/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FF8C42]"
+                          className="p-1.5 text-[#FF8C42] hover:bg-[#FF8C42]/10 rounded-md transition-colors"
                           title="View QR Code"
                         >
-                          <QrCode className="h-3 w-3 mr-1" />
-                          QR
+                          <QrCode className="h-4 w-4" />
                         </button>
                         {booking.status === 'completed' && currentPaymentStatus === 'paid' && (
                           <button
                             onClick={() => handleViewTransaction(booking)}
-                            className="inline-flex items-center px-2.5 py-1.5 border border-blue-500/30 text-xs font-medium rounded text-blue-400 bg-blue-400/20 hover:bg-blue-400/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400"
-                            title="View Transaction Details"
+                            className="p-1.5 text-blue-400 hover:bg-blue-400/10 rounded-md transition-colors"
+                            title="View Transaction"
                           >
-                            <Receipt className="h-3 w-3 mr-1" />
-                            TXN
+                            <Receipt className="h-4 w-4" />
                           </button>
                         )}
-                        {booking.status === 'pending' && (
-                          <>
-                            <button
-                              onClick={() => handleStatusChange(booking, 'booked')}
-                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-blue-400 bg-blue-400/20 hover:bg-blue-400/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400"
-                              disabled={loading}
-                            >
-                              Book
-                            </button>
-                            <button
-                              onClick={() => handleStatusChange(booking, 'cancelled')}
-                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-red-400 bg-red-400/20 hover:bg-red-400/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400"
-                              disabled={loading}
-                            >
-                              Cancel
-                            </button>
-                          </>
-                        )}
-                        {booking.status === 'booked' && (
-                          <>
-                            <button
-                              onClick={() => setConfirmModal({ show: true, booking, action: 'confirm' })}
-                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-green-400 bg-green-400/20 hover:bg-green-400/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400"
-                              disabled={loading}
-                            >
-                              Confirm
-                            </button>
-                            <button
-                              onClick={() => handleStatusChange(booking, 'cancelled')}
-                              className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-red-400 bg-red-400/20 hover:bg-red-400/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-400"
-                              disabled={loading}
-                            >
-                              Cancel
-                            </button>
-                          </>
-                        )}
-                        {booking.status === 'confirmed' && (
+                        
+                        {/* Dropdown Menu */}
+                        <div className="relative">
                           <button
-                            onClick={() => setConfirmModal({ show: true, booking, action: 'complete' })}
-                            className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-[#FF8C42] bg-[#FF8C42]/20 hover:bg-[#FF8C42]/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#FF8C42]"
-                            disabled={loading}
+                            onClick={() => setOpenDropdown(openDropdown === booking._id ? null : booking._id)}
+                            className="p-1.5 text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded-md transition-colors"
+                            title="More actions"
                           >
-                            Complete
+                            <MoreVertical className="h-4 w-4" />
                           </button>
-                        )}
-                        <button
-                          onClick={() => handleEdit(booking)}
-                          className="text-blue-400 hover:text-blue-300"
-                          disabled={loading}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(booking)}
-                          className="text-red-400 hover:text-red-300"
-                          disabled={loading}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                          
+                          {openDropdown === booking._id && (
+                            <>
+                              {/* Backdrop */}
+                              <div 
+                                className="fixed inset-0 z-10" 
+                                onClick={() => setOpenDropdown(null)}
+                              />
+                              
+                              {/* Dropdown Menu */}
+                              <div className="absolute right-0 mt-1 w-48 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg shadow-xl z-20 py-1">
+                                {/* Status Actions */}
+                                {booking.status === 'pending' && (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        handleStatusChange(booking, 'booked')
+                                        setOpenDropdown(null)
+                                      }}
+                                      className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                      disabled={loading}
+                                    >
+                                      <Check className="h-4 w-4 text-blue-400" />
+                                      <span>Book</span>
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        handleStatusChange(booking, 'cancelled')
+                                        setOpenDropdown(null)
+                                      }}
+                                      className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                      disabled={loading}
+                                    >
+                                      <Ban className="h-4 w-4 text-red-400" />
+                                      <span>Cancel</span>
+                                    </button>
+                                  </>
+                                )}
+                                {booking.status === 'booked' && (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        setConfirmModal({ show: true, booking, action: 'confirm' })
+                                        setOpenDropdown(null)
+                                      }}
+                                      className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                      disabled={loading}
+                                    >
+                                      <CheckCircle className="h-4 w-4 text-green-400" />
+                                      <span>Confirm</span>
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        handleStatusChange(booking, 'cancelled')
+                                        setOpenDropdown(null)
+                                      }}
+                                      className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                      disabled={loading}
+                                    >
+                                      <Ban className="h-4 w-4 text-red-400" />
+                                      <span>Cancel</span>
+                                    </button>
+                                  </>
+                                )}
+                                {booking.status === 'confirmed' && (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        setConfirmModal({ show: true, booking, action: 'complete' })
+                                        setOpenDropdown(null)
+                                      }}
+                                      className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                      disabled={loading}
+                                    >
+                                      <CheckCircle className="h-4 w-4 text-[#FF8C42]" />
+                                      <span>Complete</span>
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        setCancelModal({ show: true, booking })
+                                        setOpenDropdown(null)
+                                      }}
+                                      className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                      disabled={loading}
+                                    >
+                                      <Ban className="h-4 w-4 text-red-400" />
+                                      <span>Cancel Booking</span>
+                                    </button>
+                                  </>
+                                )}
+                                
+                                {/* Divider */}
+                                {(booking.status === 'pending' || booking.status === 'booked' || booking.status === 'confirmed') && (
+                                  <div className="my-1 border-t border-[#2A2A2A]"></div>
+                                )}
+                                
+                                {/* Edit & Delete */}
+                                <button
+                                  onClick={() => {
+                                    handleEdit(booking)
+                                    setOpenDropdown(null)
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                  disabled={loading}
+                                >
+                                  <Edit className="h-4 w-4 text-blue-400" />
+                                  <span>Edit</span>
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    handleDelete(booking)
+                                    setOpenDropdown(null)
+                                  }}
+                                  className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                  disabled={loading}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-400" />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -2014,6 +2183,9 @@ const BookingsManagement = ({ onRefresh, user }) => {
 
       {/* QR Code Modal */}
       {showQRCode && <QRCodeModal booking={showQRCode} onClose={() => setShowQRCode(null)} />}
+
+      {/* Cancel Confirmation Modal */}
+      <CancelConfirmationModal />
 
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal />

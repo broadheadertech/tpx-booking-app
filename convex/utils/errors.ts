@@ -22,6 +22,9 @@ export const ERROR_CODES = {
   BOOKING_TIME_CONFLICT: 'BOOKING_TIME_CONFLICT',
   BOOKING_PAST_DATE: 'BOOKING_PAST_DATE',
   BOOKING_INVALID_CUSTOMER_NAME: 'BOOKING_INVALID_CUSTOMER_NAME',
+  BOOKING_ALREADY_CANCELLED: 'BOOKING_ALREADY_CANCELLED',
+  BOOKING_ALREADY_COMPLETED: 'BOOKING_ALREADY_COMPLETED',
+  BOOKING_TIME_UNAVAILABLE: 'BOOKING_TIME_UNAVAILABLE',
   
   // Barber errors
   BARBER_NOT_FOUND: 'BARBER_NOT_FOUND',
@@ -133,6 +136,27 @@ const ERROR_MESSAGES: Record<string, UserError> = {
     code: ERROR_CODES.BOOKING_INVALID_CUSTOMER_NAME,
     details: 'Please provide a valid customer name for the booking.',
     action: 'Enter the customer\'s name and try again.'
+  },
+  
+  [ERROR_CODES.BOOKING_ALREADY_CANCELLED]: {
+    message: 'Booking is already cancelled.',
+    code: ERROR_CODES.BOOKING_ALREADY_CANCELLED,
+    details: 'This booking has already been cancelled and cannot be cancelled again.',
+    action: 'No further action is required for this booking.'
+  },
+  
+  [ERROR_CODES.BOOKING_ALREADY_COMPLETED]: {
+    message: 'Cannot cancel completed booking.',
+    code: ERROR_CODES.BOOKING_ALREADY_COMPLETED,
+    details: 'This booking has already been completed and cannot be cancelled.',
+    action: 'If you need to process a refund, please contact support.'
+  },
+  
+  [ERROR_CODES.BOOKING_TIME_UNAVAILABLE]: {
+    message: 'Selected time is unavailable.',
+    code: ERROR_CODES.BOOKING_TIME_UNAVAILABLE,
+    details: 'The time slot you selected is not available for booking.',
+    action: 'Please select a different time slot or check barber availability.'
   },
   
   [ERROR_CODES.BARBER_NOT_FOUND]: {
