@@ -249,13 +249,11 @@ const Dashboard = () => {
           <div className="max-w-md mx-auto px-4">
             <div className="flex justify-between items-center py-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center shadow-lg">
-                  <img 
-                    src="/img/tipuno_x_logo_white.avif" 
-                    alt="TipunoX Angeles Barbershop Logo" 
-                    className="w-6 h-6 object-contain"
-                  />
-                </div>
+                <img 
+                  src="/img/tipuno_x_logo_white.avif" 
+                  alt="TipunoX Angeles Barbershop Logo" 
+                  className="w-16 h-16 object-contain"
+                />
                 <div>
                   <h1 className="text-sm font-bold text-white">TipunoX Angeles</h1>
                   <p className="text-xs font-medium text-[#FF8C42]">Barbershop</p>
