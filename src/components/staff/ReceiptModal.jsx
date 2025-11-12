@@ -58,12 +58,12 @@ const ReceiptModal = ({
           const name = escapeHtml(service?.service_name || service?.name || 'Service')
           return `
             <tr>
-              <td class="bold" style="font-size: 13px; padding-left: 0;">${name}</td>
-              <td class="right bold" style="font-size: 13px; padding-right: 0;">${formatCurrency(total)}</td>
+              <td class="bold" style="font-size: 13px;">${name}</td>
+              <td class="right bold" style="font-size: 13px;">${formatCurrency(total)}</td>
             </tr>
             <tr>
-              <td style="font-size: 11px; padding-left: 3mm;">${qty}x ${formatCurrency(price)}</td>
-              <td style="padding-right: 0;"></td>
+              <td style="font-size: 11px; padding-left: 2mm;">${qty}x ${formatCurrency(price)}</td>
+              <td></td>
             </tr>
           `
         }).join('')
@@ -77,12 +77,12 @@ const ReceiptModal = ({
           const name = escapeHtml(product?.product_name || product?.name || 'Product')
           return `
             <tr>
-              <td class="bold" style="font-size: 13px; padding-left: 0;">${name}</td>
-              <td class="right bold" style="font-size: 13px; padding-right: 0;">${formatCurrency(total)}</td>
+              <td class="bold" style="font-size: 13px;">${name}</td>
+              <td class="right bold" style="font-size: 13px;">${formatCurrency(total)}</td>
             </tr>
             <tr>
-              <td style="font-size: 11px; padding-left: 3mm;">${qty}x ${formatCurrency(price)}</td>
-              <td style="padding-right: 0;"></td>
+              <td style="font-size: 11px; padding-left: 2mm;">${qty}x ${formatCurrency(price)}</td>
+              <td></td>
             </tr>
           `
         }).join('')
@@ -115,35 +115,31 @@ const ReceiptModal = ({
       width: 58mm;
       min-width: 58mm;
       max-width: 58mm;
-      margin: 0 auto;
       font-family: 'Courier New', Courier, monospace;
       font-size: 13px;
       line-height: 1.3;
-      padding: 1mm 3mm;
+      padding: 1mm 2mm;
       color: #000;
       background: #fff;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
     @media print {
-      html, body { 
+      body { 
         width: 58mm !important;
         min-width: 58mm !important;
         max-width: 58mm !important;
-        margin: 0 auto !important;
-        padding: 1mm 3mm !important;
+        padding: 1mm 2mm !important;
       }
     }
-    .center { text-align: center; width: 100%; display: block; margin-left: 0; margin-right: 0; }
+    .center { text-align: center; width: 100%; display: block; }
     .bold { font-weight: bold; }
-    .right { text-align: right; padding-right: 0; }
+    .right { text-align: right; }
     .small { font-size: 11px; }
-    .line { border-bottom: 1px dashed #000; margin: 1.5mm 0; width: 100%; display: block; }
-    .line2 { border-bottom: 2px solid #000; margin: 1.5mm 0; width: 100%; display: block; }
-    table { width: 100%; border-collapse: collapse; margin: 0.5mm 0; table-layout: fixed; }
-    td { padding: 1.5px 0; vertical-align: top; word-wrap: break-word; }
-    td:first-child { width: 60%; }
-    td:last-child { width: 40%; text-align: right; }
+    .line { border-bottom: 1px dashed #000; margin: 1.5mm 0; width: 100%; }
+    .line2 { border-bottom: 2px solid #000; margin: 1.5mm 0; width: 100%; }
+    table { width: 100%; border-collapse: collapse; margin: 0.5mm 0; }
+    td { padding: 1.5px 0; vertical-align: top; }
   </style>
 </head>
 <body>
