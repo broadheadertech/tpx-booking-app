@@ -12,6 +12,7 @@ export default defineSchema({
     is_active: v.boolean(),
     booking_start_hour: v.optional(v.number()), // Start hour for bookings (0-23, default: 10)
     booking_end_hour: v.optional(v.number()), // End hour for bookings (0-23, default: 20)
+    carousel_images: v.optional(v.array(v.string())), // Array of carousel image URLs
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -509,6 +510,11 @@ export default defineSchema({
     total_transaction_revenue: v.number(), // Revenue from POS transactions
     transaction_commission: v.number(), // Commission from POS transactions
     
+    // Product earnings breakdown
+    total_products: v.optional(v.number()), // Number of products sold
+    total_product_revenue: v.optional(v.number()), // Total revenue from products
+    product_commission: v.optional(v.number()), // Commission from product sales
+    
     // Booking details snapshot (for reporting/printing)
     bookings_detail: v.optional(v.array(v.object({
       id: v.id("bookings"),
@@ -519,6 +525,21 @@ export default defineSchema({
       service_name: v.string(),
       customer_name: v.string(),
       updatedAt: v.number(),
+    }))),
+    
+    // Product transaction details snapshot (for reporting/printing)
+    products_detail: v.optional(v.array(v.object({
+      id: v.id("transactions"),
+      transaction_id: v.string(),
+      date: v.number(),
+      product_name: v.string(),
+      quantity: v.number(),
+      price: v.number(),
+      total_amount: v.number(),
+      customer_name: v.string(),
+      commission_type: v.string(), // "percentage" or "fixed_amount"
+      commission_rate: v.number(),
+      commission_amount: v.number(),
     }))),
     
     // Deductions
@@ -573,6 +594,25 @@ export default defineSchema({
     .index("by_branch", ["branch_id"])
     .index("by_service", ["service_id"])
     .index("by_branch_service", ["branch_id", "service_id"])
+    .index("by_active", ["is_active"]),
+
+  // Product commission rates table (per product, per branch)
+  product_commission_rates: defineTable({
+    branch_id: v.id("branches"),
+    product_id: v.id("products"),
+    commission_type: v.union(v.literal("percentage"), v.literal("fixed_amount")), // Type of commission
+    commission_rate: v.optional(v.number()), // Percentage for this product (if type is percentage)
+    fixed_amount: v.optional(v.number()), // Fixed amount per unit (if type is fixed_amount)
+    effective_from: v.number(),
+    effective_until: v.optional(v.number()),
+    is_active: v.boolean(),
+    created_by: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_product", ["product_id"])
+    .index("by_branch_product", ["branch_id", "product_id"])
     .index("by_active", ["is_active"]),
 
   // Barber daily rates table

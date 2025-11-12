@@ -274,6 +274,90 @@ export const calculateBarberEarnings = query({
     const totalTransactionRevenue = 0; // No separate transaction revenue; accounted in bookings
     const transactionCommission = 0; // No separate transaction commission
 
+    // Load product commission rates for this branch
+    const productRates = await ctx.db
+      .query("product_commission_rates")
+      .withIndex("by_branch", (q) => q.eq("branch_id", barber.branch_id))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("is_active"), true),
+          q.lte(q.field("effective_from"), args.period_end),
+          q.or(
+            q.eq(q.field("effective_until"), undefined),
+            q.gt(q.field("effective_until"), args.period_start),
+          ),
+        ),
+      )
+      .collect();
+
+    const productRateMap = new Map<string, { type: string, rate?: number, amount?: number }>();
+    for (const r of productRates) {
+      // @ts-ignore
+      productRateMap.set(r.product_id as string, {
+        type: r.commission_type,
+        rate: r.commission_rate,
+        amount: r.fixed_amount
+      });
+    }
+
+    // Calculate product commissions from transactions
+    let totalProducts = 0;
+    let totalProductRevenue = 0;
+    let productCommission = 0;
+    const productsDetail: any[] = [];
+
+    for (const transaction of transactions) {
+      if (transaction.products) {
+        for (const product of transaction.products) {
+          totalProducts += product.quantity;
+          const productRevenue = product.price * product.quantity;
+          totalProductRevenue += productRevenue;
+
+          // Calculate commission for this product based on type
+          const productConfig = productRateMap.get(product.product_id);
+          let productComm = 0;
+          let commissionRate = fallbackRate;
+          let commissionType = "percentage";
+          
+          if (productConfig) {
+            commissionType = productConfig.type;
+            if (productConfig.type === "fixed_amount" && productConfig.amount !== undefined) {
+              // Fixed amount per unit
+              productComm = productConfig.amount * product.quantity;
+              commissionRate = productConfig.amount; // Store fixed amount in rate field for display
+            } else if (productConfig.type === "percentage" && productConfig.rate !== undefined) {
+              // Percentage of revenue
+              productComm = (productRevenue * productConfig.rate) / 100;
+              commissionRate = productConfig.rate;
+            } else {
+              // Fallback to percentage
+              productComm = (productRevenue * fallbackRate) / 100;
+            }
+          } else {
+            // No specific rate, use fallback percentage
+            productComm = (productRevenue * fallbackRate) / 100;
+          }
+          
+          productCommission += productComm;
+
+          // Store product details for reporting
+          productsDetail.push({
+            id: transaction._id,
+            transaction_id: transaction.transaction_id,
+            date: transaction.createdAt,
+            product_name: product.product_name,
+            quantity: product.quantity,
+            price: product.price,
+            total_amount: productRevenue,
+            customer_name: transaction.customer_name || "Walk-in",
+            commission_type: commissionType,
+            commission_rate: commissionRate,
+            commission_amount: productComm,
+          });
+        }
+      }
+    }
+
     // Per-day commission and daily rate calculation
     // Load bookings for the barber and group by date
     const allBookings = await ctx.db
@@ -285,6 +369,17 @@ export const calculateBarberEarnings = query({
     const bookingsByDate = new Map<string, any[]>();
     const dailyCommissions = new Map<string, number>(); // Track commission earned per day
     const bookingsInPeriod: any[] = [];
+
+    // Also track product commissions by date for daily pay calculation
+    const dailyProductCommissions = new Map<string, number>();
+    for (const productDetail of productsDetail) {
+      const dateKey = new Date(productDetail.date).toISOString().split("T")[0];
+      const currentDayProductComm = dailyProductCommissions.get(dateKey) || 0;
+      dailyProductCommissions.set(
+        dateKey,
+        currentDayProductComm + productDetail.commission_amount,
+      );
+    }
 
     for (const b of allBookings) {
       const completed = b.status === "completed";
@@ -416,25 +511,38 @@ export const calculateBarberEarnings = query({
     // OLD WRONG LOGIC: max(total_period_commission, daily_rate)
     // Would give: max(700+200, 600) = max(900, 600) = ₱900 ✗
 
+    // Merge booking dates and product transaction dates for complete day coverage
+    const allWorkDates = new Set([
+      ...dailyCommissions.keys(),
+      ...dailyProductCommissions.keys(),
+    ]);
+
     let finalSalary = 0;
-    if (totalServices > 0) {
+    if (totalServices > 0 || totalProducts > 0) {
       // Debug logging to check daily rates and commissions
-      console.log(`Barber ${barber.full_name}: dailyRate = ${dailyRate}, days worked = ${dailyCommissions.size}`);
-      for (const [dateKey, dayCommission] of dailyCommissions) {
-        const dayPay = Math.max(dayCommission, dailyRate);
-        console.log(`Date ${dateKey}: commission = ${dayCommission}, dayPay = ${dayPay}`);
+      console.log(
+        `Barber ${barber.full_name}: dailyRate = ${dailyRate}, days worked = ${allWorkDates.size}`,
+      );
+      for (const dateKey of allWorkDates) {
+        const dayServiceCommission = dailyCommissions.get(dateKey) || 0;
+        const dayProductCommission = dailyProductCommissions.get(dateKey) || 0;
+        const dayTotalCommission = dayServiceCommission + dayProductCommission;
+        const dayPay = Math.max(dayTotalCommission, dailyRate);
+        console.log(
+          `Date ${dateKey}: service comm = ${dayServiceCommission}, product comm = ${dayProductCommission}, total comm = ${dayTotalCommission}, dayPay = ${dayPay}`,
+        );
         finalSalary += dayPay;
       }
       console.log(`Total finalSalary = ${finalSalary}`);
     } else {
-      // No bookings = no salary
+      // No bookings or products = no salary
       finalSalary = 0;
     }
 
-    const daysWorked = bookingsByDate.size;
+    const daysWorked = allWorkDates.size;
 
     // Keep raw service commission for reference
-    const grossCommission = serviceCommission; // This is the actual calculated commission
+    const grossCommission = serviceCommission + productCommission; // Total commission from services + products
 
     // Calculate deductions based on the final salary total
     const taxRate = payrollSettings?.tax_rate || 0;
@@ -453,6 +561,11 @@ export const calculateBarberEarnings = query({
       total_services: totalServices,
       total_service_revenue: totalServiceRevenue,
       service_commission: serviceCommission,
+
+      // Product earnings
+      total_products: totalProducts,
+      total_product_revenue: totalProductRevenue,
+      product_commission: productCommission,
 
       // Transaction breakdown (legacy fields retained for UI; set to 0)
       total_transactions: totalTransactions,
@@ -473,6 +586,7 @@ export const calculateBarberEarnings = query({
 
       // Details for verification
       bookings_detail: bookingsInPeriod,
+      products_detail: productsDetail,
       transactions: transactions.map((t) => ({
         id: t._id,
         transaction_id: t.transaction_id,
@@ -480,6 +594,10 @@ export const calculateBarberEarnings = query({
         total_amount: t.total_amount,
         service_revenue: t.services.reduce(
           (sum, s) => sum + s.price * s.quantity,
+          0,
+        ),
+        product_revenue: (t.products || []).reduce(
+          (sum, p) => sum + p.price * p.quantity,
           0,
         ),
       })),
@@ -495,6 +613,80 @@ export const getServiceCommissionRatesByBranch = query({
       .query("service_commission_rates")
       .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
       .collect();
+  },
+});
+
+// PRODUCT COMMISSION RATES
+export const getProductCommissionRatesByBranch = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("product_commission_rates")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+  },
+});
+
+export const setProductCommissionRate = mutation({
+  args: {
+    branch_id: v.id("branches"),
+    product_id: v.id("products"),
+    commission_type: v.union(v.literal("percentage"), v.literal("fixed_amount")),
+    commission_rate: v.optional(v.number()),
+    fixed_amount: v.optional(v.number()),
+    effective_from: v.optional(v.number()),
+    created_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Validate based on commission type
+    if (args.commission_type === "percentage") {
+      if (args.commission_rate === undefined || args.commission_rate < 0 || args.commission_rate > 100) {
+        throwUserError(
+          ERROR_CODES.INVALID_INPUT,
+          "Commission rate must be between 0 and 100 for percentage type",
+        );
+      }
+    } else if (args.commission_type === "fixed_amount") {
+      if (args.fixed_amount === undefined || args.fixed_amount < 0) {
+        throwUserError(
+          ERROR_CODES.INVALID_INPUT,
+          "Fixed amount must be a non-negative number",
+        );
+      }
+    }
+
+    const now = Date.now();
+    const effectiveFrom = args.effective_from || now;
+
+    // Deactivate existing active rates for same product in branch
+    const existing = await ctx.db
+      .query("product_commission_rates")
+      .withIndex("by_branch_product", (q) =>
+        q.eq("branch_id", args.branch_id).eq("product_id", args.product_id),
+      )
+      .filter((q) => q.eq(q.field("is_active"), true))
+      .collect();
+
+    for (const r of existing) {
+      await ctx.db.patch(r._id, {
+        is_active: false,
+        effective_until: effectiveFrom,
+        updatedAt: now,
+      });
+    }
+
+    return await ctx.db.insert("product_commission_rates", {
+      branch_id: args.branch_id,
+      product_id: args.product_id,
+      commission_type: args.commission_type,
+      commission_rate: args.commission_rate,
+      fixed_amount: args.fixed_amount,
+      effective_from: effectiveFrom,
+      is_active: true,
+      created_by: args.created_by,
+      createdAt: now,
+      updatedAt: now,
+    });
   },
 });
 
@@ -962,7 +1154,11 @@ export const calculatePayrollForPeriod = mutation({
         total_transactions: earnings.total_transactions,
         total_transaction_revenue: earnings.total_transaction_revenue,
         transaction_commission: earnings.transaction_commission,
+        total_products: earnings.total_products || 0,
+        total_product_revenue: earnings.total_product_revenue || 0,
+        product_commission: earnings.product_commission || 0,
         bookings_detail: earnings.bookings_detail,
+        products_detail: earnings.products_detail || [],
         daily_rate: earnings.daily_rate,
         days_worked: earnings.days_worked,
         daily_pay: earnings.daily_pay,
@@ -1369,6 +1565,158 @@ export const generateNextPayrollPeriod = mutation({
       period_type: settings.payout_frequency,
       created_by: args.created_by,
     });
+  },
+});
+
+// ACTION: Get product commission summary for payroll print
+export const getProductCommissionSummary = action({
+  args: {
+    barber_id: v.id("barbers"),
+    period_start: v.number(),
+    period_end: v.number(),
+  },
+  handler: async (ctx, args) => {
+    // Get barber details to find branch
+    const barber = await ctx.runQuery(api.services.barbers.getBarberById, {
+      id: args.barber_id as any,
+    });
+    if (!barber)
+      return { products: [], totals: { quantity: 0, revenue: 0, commission: 0 } };
+
+    // Get product commission rates for the branch
+    const productRates = await ctx.runQuery(
+      api.services.payroll.getProductCommissionRatesByBranch,
+      { branch_id: barber.branch_id },
+    );
+
+    // Get barber's commission rate as fallback
+    const barberCommissionRate = await ctx.runQuery(
+      api.services.payroll.getBarberCommissionRate,
+      { barber_id: args.barber_id },
+    );
+
+    // Create product rate map for quick lookup
+    const productRateMap = new Map();
+    (Array.isArray(productRates) ? productRates : []).forEach((rate) => {
+      if (rate.is_active) {
+        productRateMap.set(rate.product_id, {
+          type: rate.commission_type,
+          rate: rate.commission_rate,
+          amount: rate.fixed_amount
+        });
+      }
+    });
+
+    const fallbackRate = barberCommissionRate?.commission_rate || 10; // Default 10%
+
+    // Get transactions for the barber in the period
+    const allTransactions = await ctx.runQuery(
+      api.services.transactions.getTransactionsByBarber,
+      { barber_id: args.barber_id as any },
+    );
+
+    // Filter transactions by period and completed status
+    const transactions = (allTransactions || []).filter((t) => {
+      return (
+        t.payment_status === "completed" &&
+        t.createdAt >= args.period_start &&
+        t.createdAt <= args.period_end
+      );
+    });
+
+    // Group products by product ID
+    const productMap = new Map<
+      string,
+      {
+        product_id: any;
+        product_name: string;
+        quantity: number;
+        total_revenue: number;
+        total_commission: number;
+        commission_type: string;
+        commission_value: number;
+      }
+    >();
+
+    for (const transaction of transactions) {
+      if (transaction.products) {
+        for (const product of transaction.products) {
+          const productId = product.product_id;
+          const productName = product.product_name || "Unknown Product";
+          const revenue = product.price * product.quantity;
+
+          // Calculate commission based on product-specific rate or barber's fallback rate
+          const productConfig = productRateMap.get(productId);
+          let commissionAmount = 0;
+          let commissionType = "percentage";
+          let commissionValue = fallbackRate;
+          
+          if (productConfig) {
+            commissionType = productConfig.type;
+            if (productConfig.type === "fixed_amount" && productConfig.amount !== undefined) {
+              // Fixed amount per unit
+              commissionAmount = productConfig.amount * product.quantity;
+              commissionValue = productConfig.amount;
+            } else if (productConfig.type === "percentage" && productConfig.rate !== undefined) {
+              // Percentage of revenue
+              commissionAmount = (revenue * productConfig.rate) / 100;
+              commissionValue = productConfig.rate;
+            } else {
+              // Fallback to percentage
+              commissionAmount = (revenue * fallbackRate) / 100;
+            }
+          } else {
+            // No specific rate, use fallback percentage
+            commissionAmount = (revenue * fallbackRate) / 100;
+          }
+
+          if (!productMap.has(productId)) {
+            productMap.set(productId, {
+              product_id: productId,
+              product_name: productName,
+              quantity: 0,
+              total_revenue: 0,
+              total_commission: 0,
+              commission_type: commissionType,
+              commission_value: commissionValue,
+            });
+          }
+
+          const productEntry = productMap.get(productId)!;
+          productEntry.quantity += product.quantity;
+          productEntry.total_revenue += revenue;
+          productEntry.total_commission += commissionAmount;
+        }
+      }
+    }
+
+    // Convert to array and sort by commission amount (descending)
+    const summary = Array.from(productMap.values()).sort(
+      (a, b) => b.total_commission - a.total_commission,
+    );
+
+    // Calculate totals
+    const totalQuantity = summary.reduce(
+      (sum, product) => sum + product.quantity,
+      0,
+    );
+    const totalRevenue = summary.reduce(
+      (sum, product) => sum + product.total_revenue,
+      0,
+    );
+    const totalCommission = summary.reduce(
+      (sum, product) => sum + product.total_commission,
+      0,
+    );
+
+    return {
+      products: summary,
+      totals: {
+        quantity: totalQuantity,
+        revenue: totalRevenue,
+        commission: totalCommission,
+      },
+    };
   },
 });
 

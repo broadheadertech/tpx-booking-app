@@ -37,8 +37,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const [showPeriodModal, setShowPeriodModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showServiceRatesModal, setShowServiceRatesModal] = useState(false);
+  const [showProductRatesModal, setShowProductRatesModal] = useState(false);
   const [showDailyRatesModal, setShowDailyRatesModal] = useState(false);
   const [showBookingsModal, setShowBookingsModal] = useState(false);
+  const [showProductsModal, setShowProductsModal] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
@@ -56,8 +58,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
     endDate: "",
   });
   const [serviceRateEdits, setServiceRateEdits] = useState({});
+  const [productRateEdits, setProductRateEdits] = useState({});
   const [dailyRateEdits, setDailyRateEdits] = useState({});
   const [savingServiceRates, setSavingServiceRates] = useState(false);
+  const [savingProductRates, setSavingProductRates] = useState(false);
   const [savingDailyRates, setSavingDailyRates] = useState(false);
 
   // Check if user is available
@@ -140,6 +144,16 @@ const PayrollManagement = ({ onRefresh, user }) => {
     user && user.branch_id ? { branch_id: user.branch_id } : "skip",
   );
 
+  const productCommissionRates = useQuery(
+    api.services.payroll.getProductCommissionRatesByBranch,
+    user && user.branch_id ? { branch_id: user.branch_id } : "skip",
+  );
+
+  const productsInBranch = useQuery(
+    api.services.products.getAllProducts,
+    {},
+  );
+
   const barberDailyRates = useQuery(
     api.services.payroll.getBarberDailyRatesByBranch,
     user && user.branch_id ? { branch_id: user.branch_id } : "skip",
@@ -170,6 +184,11 @@ const PayrollManagement = ({ onRefresh, user }) => {
       : "skip",
   );
 
+  // Lazy fetch products for selected record when modal is open
+  const productsForRecord = selectedRecord && selectedPeriod
+    ? selectedRecord.products_detail || []
+    : [];
+
   // Mutations
   const createOrUpdateSettings = useMutation(
     api.services.payroll.createOrUpdatePayrollSettings,
@@ -187,6 +206,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const setServiceCommissionRate = useMutation(
     api.services.payroll.setServiceCommissionRate,
   );
+  const setProductCommissionRate = useMutation(
+    api.services.payroll.setProductCommissionRate,
+  );
   const setBarberDailyRate = useMutation(
     api.services.payroll.setBarberDailyRate,
   );
@@ -198,6 +220,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
   );
   const getServiceCommissionSummary = useAction(
     api.services.payroll.getServiceCommissionSummary,
+  );
+  const getProductCommissionSummary = useAction(
+    api.services.payroll.getProductCommissionSummary,
   );
   const deletePayrollPeriodMutation = useMutation(
     api.services.payroll.deletePayrollPeriod,
@@ -619,6 +644,17 @@ const PayrollManagement = ({ onRefresh, user }) => {
     return map;
   }, [barberDailyRates]);
 
+  const productRateMap = useMemo(() => {
+    const map = new Map();
+    (Array.isArray(productCommissionRates)
+      ? productCommissionRates
+      : []
+    ).forEach((r) => {
+      map.set(r.product_id, r);
+    });
+    return map;
+  }, [productCommissionRates]);
+
   // Format currency
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat("en-PH", {
@@ -711,6 +747,102 @@ const PayrollManagement = ({ onRefresh, user }) => {
       `;
     }
 
+    // Generate product commission summary HTML
+    let productSummaryHtml = "";
+    if (
+      record.product_summary &&
+      record.product_summary.products &&
+      record.product_summary.products.length > 0
+    ) {
+      const productRows = record.product_summary.products
+        .map((product) => {
+          const commissionDisplay = product.commission_type === "fixed_amount"
+            ? `${format(product.commission_value)}/unit`
+            : `${product.commission_value}%`;
+          return `
+            <div class="row">
+              <span style="flex: 3; text-align: left;">${product.product_name} <span class="muted">(${commissionDisplay})</span></span>
+              <span style="flex: 1; text-align: center;">${product.quantity}</span>
+              <span style="flex: 1; text-align: right;">${format(product.total_commission)}</span>
+            </div>
+          `;
+        })
+        .join("");
+
+      const productTotalsRow = `
+        <div class="row" style="font-weight: 800; border-top: 1px solid #2b2b2b; padding-top: 6px; margin-top: 6px;">
+          <span style="flex: 3; text-align: left;">TOTALS:</span>
+          <span style="flex: 1; text-align: center;">${record.product_summary.totals.quantity}</span>
+          <span style="flex: 1; text-align: right;">${format(record.product_summary.totals.commission)}</span>
+        </div>
+      `;
+
+      productSummaryHtml = `
+        <div class="service-summary">
+          <div style="font-weight: 600; margin-bottom: 8px; color: white;">Product Commission Summary</div>
+          <div class="service-table">
+            <div class="service-header">
+              <span>Product Name</span>
+              <span>Qty</span>
+              <span>Commission</span>
+            </div>
+            ${productRows}
+            ${productTotalsRow}
+          </div>
+        </div>
+      `;
+    }
+
+    // Product details list
+    let productsListHtml = "";
+    const productsDetail = Array.isArray(record.products_detail) ? record.products_detail : [];
+    if (productsDetail.length) {
+      // Group by date
+      const productsByDate = {};
+      productsDetail.forEach((p) => {
+        const dateKey = new Date(p.date).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+        if (!productsByDate[dateKey]) {
+          productsByDate[dateKey] = [];
+        }
+        productsByDate[dateKey].push(p);
+      });
+
+      const productBlocks = Object.keys(productsByDate)
+        .sort((a, b) => new Date(a) - new Date(b))
+        .map((dateKey) => {
+          const items = productsByDate[dateKey];
+          const dateTotal = items.reduce((sum, p) => sum + p.total_amount, 0);
+          const dateCommission = items.reduce((sum, p) => sum + p.commission_amount, 0);
+          
+          const rows = items
+            .map((p) => {
+              const commissionLabel = p.commission_type === "fixed_amount" 
+                ? `${format(p.commission_rate)}/unit` 
+                : `${p.commission_rate}%`;
+              return `<div class="row"><span><span class="muted">${dateKey}</span> — ${p.product_name} <span class="muted">• Qty: ${p.quantity} • ${commissionLabel} • ${p.customer_name} • ${p.transaction_id}</span></span><span>${format(p.total_amount)} <span class="muted">(+${format(p.commission_amount)})</span></span></div>`;
+            })
+            .join("");
+          
+          const footer = `<div class="row" style="font-weight:600"><span>Total (${dateKey})</span><span>${format(dateTotal)} | Commission: ${format(dateCommission)}</span></div>`;
+          return rows + footer + "<hr/>";
+        })
+        .join("");
+
+      const grandTotal = productsDetail.reduce((sum, p) => sum + p.total_amount, 0);
+      const grandCommission = productsDetail.reduce((sum, p) => sum + p.commission_amount, 0);
+      const grand = `<div class="row" style="font-weight:800"><span>Product Grand Total</span><span>${format(grandTotal)} | Commission: ${format(grandCommission)}</span></div>`;
+      
+      productsListHtml = `
+        <hr/>
+        <div style="font-weight: 600; margin: 12px 0 8px; color: white;">Product Transaction Details</div>
+        ${productBlocks}${grand}
+      `;
+    }
+
     // bookings per-date with totals & commissions if available
     let bookingsHtml = "";
     if (
@@ -735,8 +867,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
           return rows + footer + "<hr/>";
         })
         .join("");
-      const grand = `<div class="row" style="font-weight:800"><span>Grand Total</span><span>${format(record.bookings_summary.grandTotalAmount)} | Sales: ${format(record.bookings_summary.grandTotalAmount)} | Final Daily Salary: ${format(record.bookings_summary.grandTotalSelectedPay || 0)}</span></div>`;
-      bookingsHtml = `<hr/>${blocks}${grand}`;
+      const grand = `<div class="row" style="font-weight:800"><span>Service Grand Total</span><span>${format(record.bookings_summary.grandTotalAmount)} | Sales: ${format(record.bookings_summary.grandTotalAmount)} | Final Daily Salary: ${format(record.bookings_summary.grandTotalSelectedPay || 0)}</span></div>`;
+      bookingsHtml = `<hr/><div style="font-weight: 600; margin: 12px 0 8px; color: white;">Service Booking Details</div>${blocks}${grand}`;
     } else {
       const items = Array.isArray(record.bookings_detail)
         ? record.bookings_detail
@@ -761,7 +893,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
             return `<div class="row"><span><span class="muted">${dt} ${tm}</span> — ${b.service_name} <span class="muted">• ${b.customer_name} • ${b.booking_code}</span></span><span>${format(b.price)}</span></div>`;
           })
           .join("");
-        bookingsHtml = `<hr/>${rows}`;
+        bookingsHtml = `<hr/><div style="font-weight: 600; margin: 12px 0 8px; color: white;">Service Booking Details</div>${rows}`;
       }
     }
     return `
@@ -778,14 +910,20 @@ const PayrollManagement = ({ onRefresh, user }) => {
           <div>
             <div class="row"><span class="muted">Services</span><span>${record.total_services}</span></div>
             <div class="row"><span class="muted">Service Revenue</span><span>${format(record.total_service_revenue)}</span></div>
+            <div class="row"><span class="muted">Products Sold</span><span>${record.total_products || 0}</span></div>
+            <div class="row"><span class="muted">Product Revenue</span><span>${format(record.total_product_revenue || 0)}</span></div>
           </div>
           <div>
-            <div class="row"><span class="muted">Final Daily Salary (per-day max of rate vs commission)</span><span>${format(record.daily_pay || 0)}</span></div>
+            <div class="row"><span class="muted">Service Commission</span><span>${format(record.gross_commission - (record.product_commission || 0))}</span></div>
+            <div class="row"><span class="muted">Product Commission</span><span>${format(record.product_commission || 0)}</span></div>
+            <div class="row"><span class="muted">Final Daily Salary</span><span>${format(record.daily_pay || 0)}</span></div>
             <hr/>
             <div class="row" style="font-weight:800"><span>Net Pay</span><span class="accent">${format(record.net_pay)}</span></div>
           </div>
         </div>
         ${serviceSummaryHtml}
+        ${productSummaryHtml}
+        ${productsListHtml}
         ${bookingsHtml}
       </div>
     `;
@@ -830,7 +968,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     if (!record.bookings_detail || record.bookings_detail.length === 0) {
       if (selectedPeriod) {
         try {
-          const [items, summary, serviceSummary] = await Promise.all([
+          const [items, summary, serviceSummary, productSummary] = await Promise.all([
             getBookingsForPrint({
               barber_id: record.barber_id,
               period_start: selectedPeriod.period_start,
@@ -846,31 +984,45 @@ const PayrollManagement = ({ onRefresh, user }) => {
               period_start: selectedPeriod.period_start,
               period_end: selectedPeriod.period_end,
             }),
+            getProductCommissionSummary({
+              barber_id: record.barber_id,
+              period_start: selectedPeriod.period_start,
+              period_end: selectedPeriod.period_end,
+            }),
           ]);
           enriched = {
             ...record,
             bookings_detail: items,
             bookings_summary: summary,
             service_summary: serviceSummary,
+            product_summary: productSummary,
           };
         } catch (e) {
           // ignore and print without bookings
         }
       }
     } else if (selectedPeriod) {
-      // Even if we have bookings_detail, fetch service summary for print
+      // Even if we have bookings_detail, fetch service and product summary for print
       try {
-        const serviceSummary = await getServiceCommissionSummary({
-          barber_id: record.barber_id,
-          period_start: selectedPeriod.period_start,
-          period_end: selectedPeriod.period_end,
-        });
+        const [serviceSummary, productSummary] = await Promise.all([
+          getServiceCommissionSummary({
+            barber_id: record.barber_id,
+            period_start: selectedPeriod.period_start,
+            period_end: selectedPeriod.period_end,
+          }),
+          getProductCommissionSummary({
+            barber_id: record.barber_id,
+            period_start: selectedPeriod.period_start,
+            period_end: selectedPeriod.period_end,
+          }),
+        ]);
         enriched = {
           ...record,
           service_summary: serviceSummary,
+          product_summary: productSummary,
         };
       } catch (e) {
-        // ignore and print without service summary
+        // ignore and print without summaries
         enriched = record;
       }
     }
@@ -889,7 +1041,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
       records.map(async (r) => {
         if (!selectedPeriod) return r;
         try {
-          const [items, summary, serviceSummary] = await Promise.all([
+          const [items, summary, serviceSummary, productSummary] = await Promise.all([
             r.bookings_detail && r.bookings_detail.length > 0
               ? Promise.resolve(r.bookings_detail)
               : getBookingsForPrint({
@@ -907,12 +1059,18 @@ const PayrollManagement = ({ onRefresh, user }) => {
               period_start: selectedPeriod.period_start,
               period_end: selectedPeriod.period_end,
             }),
+            getProductCommissionSummary({
+              barber_id: r.barber_id,
+              period_start: selectedPeriod.period_start,
+              period_end: selectedPeriod.period_end,
+            }),
           ]);
           return {
             ...r,
             bookings_detail: items,
             bookings_summary: summary,
             service_summary: serviceSummary,
+            product_summary: productSummary,
           };
         } catch (e) {
           return r;
@@ -1418,6 +1576,204 @@ const PayrollManagement = ({ onRefresh, user }) => {
     );
   };
 
+  // Render Products modal (grouped by date)
+  const renderProductsModal = () => {
+    if (!showProductsModal || !selectedRecord) return null;
+
+    const items = productsForRecord;
+    const productRates = Array.isArray(productCommissionRates)
+      ? productCommissionRates
+      : [];
+    const payrollSettings = payrollSettingsData || {
+      default_commission_rate: 10,
+    };
+
+    // Create product rate map for quick lookup
+    const prodRateMap = new Map();
+    productRates.forEach((rate) => {
+      if (rate.is_active) {
+        prodRateMap.set(rate.product_id, rate.commission_rate);
+      }
+    });
+
+    // Get barber's fallback commission rate
+    const barberCommissionRate = barberCommissionRates?.find(
+      (r) => r.barber_id === selectedRecord.barber_id,
+    );
+    const fallbackRate =
+      barberCommissionRate?.commission_rate ||
+      payrollSettings.default_commission_rate ||
+      10;
+
+    // Group by date
+    const grouped = items.reduce((acc, p) => {
+      const key = p.date
+        ? new Date(p.date).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0];
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(p);
+      return acc;
+    }, {});
+
+    const sortedDates = Object.keys(grouped).sort(
+      (a, b) => new Date(b) - new Date(a),
+    );
+
+    // Calculate totals
+    const totalQuantity = items.reduce((sum, p) => sum + (p.quantity || 0), 0);
+    const totalRevenue = items.reduce(
+      (sum, p) => sum + (p.total_amount || 0),
+      0,
+    );
+    const totalCommission = items.reduce(
+      (sum, p) => sum + (p.commission_amount || 0),
+      0,
+    );
+
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowProductsModal(false)}
+          />
+          <div className="relative w-full max-w-4xl rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
+              <div>
+                <h2 className="text-xl font-bold text-white">
+                  Products • {selectedRecord.barber_name}
+                </h2>
+                <p className="text-sm text-gray-400">
+                  {formatDate(selectedPeriod.period_start)} –{" "}
+                  {formatDate(selectedPeriod.period_end)}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowProductsModal(false)}
+                className="w-8 h-8 rounded-lg bg-[#3A3A3A]/60 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4 text-gray-300 hover:text-[#FF8C42]" />
+              </button>
+            </div>
+
+            {/* Summary Stats */}
+            <div className="px-6 py-4 bg-[#171717] border-b border-[#2A2A2A]/50">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white">
+                    {totalQuantity}
+                  </div>
+                  <div className="text-sm text-gray-400">Total Products Sold</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-cyan-400">
+                    {formatCurrency(totalRevenue)}
+                  </div>
+                  <div className="text-sm text-gray-400">Total Revenue</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-400">
+                    {formatCurrency(totalCommission)}
+                  </div>
+                  <div className="text-sm text-gray-400">Total Commission</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {items.length === 0 && (
+                <div className="bg-[#121212] border border-[#2A2A2A]/50 rounded-lg p-6 text-center text-gray-400">
+                  No product sales found for this period.
+                </div>
+              )}
+
+              {sortedDates.map((date) => (
+                <div
+                  key={date}
+                  className="rounded-xl bg-[#121212] border border-[#2A2A2A]/50 overflow-hidden"
+                >
+                  <div className="px-5 py-3 bg-[#171717] border-b border-[#2A2A2A] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-cyan-400" />
+                      <span className="text-white font-medium">
+                        {new Date(date).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+                    <span className="text-sm text-gray-400">
+                      {grouped[date].length} product
+                      {grouped[date].length > 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  <div className="divide-y divide-[#222]">
+                    {grouped[date].map((p, idx) => {
+                      return (
+                        <div
+                          key={`${p.transaction_id || idx}-${idx}`}
+                          className="px-5 py-4 hover:bg-[#161616] transition-colors"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-4 flex-1">
+                              <div className="flex-1 min-w-0">
+                                <div className="text-white font-semibold">
+                                  {p.product_name}
+                                </div>
+                                <div className="text-xs text-gray-400 mt-1">
+                                  {p.customer_name || "Walk-in"} • Qty: {p.quantity}
+                                </div>
+
+                                {/* Commission Details */}
+                                <div className="mt-2 flex items-center gap-4 text-xs">
+                                  <div className="flex items-center gap-1">
+                                    <Percent className="w-3 h-3 text-blue-400" />
+                                    <span className="text-gray-400">
+                                      {p.commission_type === "fixed_amount" ? "Fixed:" : "Rate:"}
+                                    </span>
+                                    <span className="text-blue-400 font-medium">
+                                      {p.commission_type === "fixed_amount" 
+                                        ? `${formatCurrency(p.commission_rate || 0)}/unit`
+                                        : `${p.commission_rate || fallbackRate}%`
+                                      }
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <DollarSign className="w-3 h-3 text-green-400" />
+                                    <span className="text-gray-400">
+                                      Commission:
+                                    </span>
+                                    <span className="text-green-400 font-medium">
+                                      {formatCurrency(p.commission_amount || 0)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right pl-3 shrink-0">
+                              <div className="text-cyan-400 font-semibold text-lg">
+                                {formatCurrency(p.total_amount || 0)}
+                              </div>
+                              <div className="text-xs text-gray-400">
+                                Product Revenue
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    );
+  };
+
   // Render Service Commission Rates modal
   const renderServiceRatesModal = () => {
     if (!showServiceRatesModal) return null;
@@ -1542,6 +1898,193 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   className="px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 disabled:opacity-50 text-sm"
                 >
                   {savingServiceRates ? "Saving…" : "Save All Changes"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    );
+  };
+
+  // Render Product Commission Rates modal
+  const renderProductRatesModal = () => {
+    if (!showProductRatesModal) return null;
+    const productsArray = Array.isArray(productsInBranch)
+      ? productsInBranch
+      : [];
+
+    const handleSaveAll = async () => {
+      if (!user?.branch_id) return;
+      const entries = Object.entries(productRateEdits)
+        .map(([productId, val]) => {
+          const existing = productRateMap.get(productId);
+          const type = val.type || existing?.commission_type || "percentage";
+          return {
+            productId,
+            type,
+            rate: type === "percentage" ? parseFloat(String(val.value)) : undefined,
+            amount: type === "fixed_amount" ? parseFloat(String(val.value)) : undefined,
+          };
+        })
+        .filter((e) => {
+          if (e.type === "percentage" && (isNaN(e.rate) || e.rate === undefined)) return false;
+          if (e.type === "fixed_amount" && (isNaN(e.amount) || e.amount === undefined)) return false;
+          return true;
+        })
+        .filter((e) => {
+          const existing = productRateMap.get(e.productId);
+          if (!existing) return true;
+          if (existing.commission_type !== e.type) return true;
+          if (e.type === "percentage" && Number(existing.commission_rate) !== Number(e.rate)) return true;
+          if (e.type === "fixed_amount" && Number(existing.fixed_amount) !== Number(e.amount)) return true;
+          return false;
+        });
+
+      if (entries.length === 0) return;
+      setSavingProductRates(true);
+      try {
+        for (const e of entries) {
+          await setProductCommissionRate({
+            branch_id: user.branch_id,
+            product_id: e.productId,
+            commission_type: e.type,
+            commission_rate: e.rate,
+            fixed_amount: e.amount,
+            created_by: user._id,
+          });
+        }
+        setProductRateEdits({});
+      } catch (err) {
+        console.error(err);
+        setError("Failed to save some product commission rates");
+      } finally {
+        setSavingProductRates(false);
+      }
+    };
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowProductRatesModal(false)}
+          />
+          <div className="relative w-full max-w-3xl rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
+              <div>
+                <h2 className="text-xl font-bold text-white">
+                  Product Commission Rates
+                </h2>
+                <p className="text-sm text-gray-400 mt-1">
+                  Set fixed amount or percentage commission for each product
+                </p>
+              </div>
+              <button
+                onClick={() => setShowProductRatesModal(false)}
+                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center"
+              >
+                <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="max-h-[60vh] overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-gray-400 border-b border-[#2A2A2A]/50">
+                      <th className="text-left py-2 px-2">Product</th>
+                      <th className="text-center py-2 px-2">Current</th>
+                      <th className="text-center py-2 px-2">Type</th>
+                      <th className="text-right py-2 px-2">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {productsArray.map((prod) => {
+                      const existing = productRateMap.get(prod._id);
+                      const editData = productRateEdits[prod._id];
+                      const currentType = editData?.type || existing?.commission_type || "percentage";
+                      const currentValue = editData?.value ?? 
+                        (existing ? 
+                          (existing.commission_type === "fixed_amount" ? existing.fixed_amount : existing.commission_rate) 
+                          : "");
+                      
+                      return (
+                        <tr
+                          key={prod._id}
+                          className="border-b border-[#2A2A2A]/20"
+                        >
+                          <td className="py-2 px-2 text-white">{prod.name}</td>
+                          <td className="py-2 px-2 text-center text-gray-300">
+                            {existing ? (
+                              existing.commission_type === "fixed_amount" ? 
+                                `₱${existing.fixed_amount}` : 
+                                `${existing.commission_rate}%`
+                            ) : "—"}
+                          </td>
+                          <td className="py-2 px-2 text-center">
+                            <select
+                              value={currentType}
+                              onChange={(e) =>
+                                setProductRateEdits((prev) => ({
+                                  ...prev,
+                                  [prod._id]: {
+                                    type: e.target.value,
+                                    value: currentValue
+                                  },
+                                }))
+                              }
+                              className="w-32 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                            >
+                              <option value="percentage">Percentage</option>
+                              <option value="fixed_amount">Fixed Amount</option>
+                            </select>
+                          </td>
+                          <td className="py-2 px-2 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              {currentType === "percentage" && <span className="text-gray-400">%</span>}
+                              {currentType === "fixed_amount" && <span className="text-gray-400">₱</span>}
+                              <input
+                                type="number"
+                                min="0"
+                                max={currentType === "percentage" ? "100" : undefined}
+                                step={currentType === "percentage" ? "0.1" : "1"}
+                                value={currentValue}
+                                onChange={(e) =>
+                                  setProductRateEdits((prev) => ({
+                                    ...prev,
+                                    [prod._id]: {
+                                      type: currentType,
+                                      value: e.target.value
+                                    },
+                                  }))
+                                }
+                                placeholder={currentType === "percentage" ? "0-100" : "Amount"}
+                                className="w-24 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent text-right"
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <button
+                  onClick={() => setShowProductRatesModal(false)}
+                  className="px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] text-sm"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={handleSaveAll}
+                  disabled={
+                    savingProductRates ||
+                    Object.keys(productRateEdits).length === 0
+                  }
+                  className="px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 disabled:opacity-50 text-sm"
+                >
+                  {savingProductRates ? "Saving…" : "Save All Changes"}
                 </button>
               </div>
             </div>
@@ -2323,6 +2866,15 @@ const PayrollManagement = ({ onRefresh, user }) => {
                           View Bookings
                         </button>
                         <button
+                          onClick={() => {
+                            setSelectedRecord(record);
+                            setShowProductsModal(true);
+                          }}
+                          className="px-3 py-1 bg-[#444444]/60 border border-[#2A2A2A] text-gray-200 rounded text-xs hover:bg-[#2A2A2A] transition-colors"
+                        >
+                          View Products
+                        </button>
+                        <button
                           onClick={() => toggleRecordExpansion(record._id)}
                           className="p-1 text-gray-400 hover:text-white transition-colors"
                         >
@@ -2361,7 +2913,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   {expandedRecords.has(record._id) && (
                     <div className="mt-4 pt-4 border-t border-[#2A2A2A]/50">
                       {/* Detailed Breakdown */}
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
                         {/* Service Earnings Breakdown */}
                         <div className="space-y-4">
                           <h5 className="text-sm font-medium text-gray-300 mb-3 flex items-center">
@@ -2387,18 +2939,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
                             </div>
                             <div className="flex justify-between">
                               <span className="text-gray-400">
-                                Commission Rate:
-                              </span>
-                              <span className="text-blue-400">
-                                {record.commission_rate}%
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-400">
-                                Calculated Commission:
+                                Service Commission:
                               </span>
                               <span className="text-[#FF8C42] font-medium">
-                                {formatCurrency(record.gross_commission)}
+                                {formatCurrency(record.service_commission || (record.total_service_revenue * (record.commission_rate || 0) / 100))}
                               </span>
                             </div>
                             <div className="flex justify-between">
@@ -2410,6 +2954,53 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                   ? formatCurrency(
                                       record.total_service_revenue /
                                         record.total_services,
+                                    )
+                                  : "₱0"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Product Earnings Breakdown */}
+                        <div className="space-y-4">
+                          <h5 className="text-sm font-medium text-gray-300 mb-3 flex items-center">
+                            <DollarSign className="w-4 h-4 mr-2 text-cyan-400" />
+                            Product Earnings
+                          </h5>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">
+                                Total Products:
+                              </span>
+                              <span className="text-white font-medium">
+                                {record.total_products || 0}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">
+                                Product Revenue:
+                              </span>
+                              <span className="text-white">
+                                {formatCurrency(record.total_product_revenue || 0)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">
+                                Product Commission:
+                              </span>
+                              <span className="text-cyan-400 font-medium">
+                                {formatCurrency(record.product_commission || 0)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-400">
+                                Avg per Product:
+                              </span>
+                              <span className="text-gray-300">
+                                {record.total_products > 0
+                                  ? formatCurrency(
+                                      record.total_product_revenue /
+                                        record.total_products,
                                     )
                                   : "₱0"}
                               </span>
@@ -2681,7 +3272,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+      <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-black text-white">Payroll Management</h2>
           <p className="text-gray-300 mt-1">
@@ -2689,39 +3280,61 @@ const PayrollManagement = ({ onRefresh, user }) => {
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setShowSettings(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
+            className="flex items-center gap-1.5 px-3 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
+            title="Settings"
           >
             <Settings className="h-4 w-4" />
-            <span>Settings</span>
+            <span className="hidden xl:inline">Settings</span>
           </button>
+
+          <div className="h-6 w-px bg-[#2A2A2A]" />
+
           <button
             onClick={() => setShowServiceRatesModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
+            className="flex items-center gap-1.5 px-3 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
+            title="Service Commission Rates"
           >
             <Percent className="h-4 w-4" />
-            <span>Service Rates</span>
+            <span className="hidden xl:inline">Service</span>
           </button>
+
+          <button
+            onClick={() => setShowProductRatesModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
+            title="Product Commission Rates"
+          >
+            <Percent className="h-4 w-4" />
+            <span className="hidden xl:inline">Product</span>
+          </button>
+
           <button
             onClick={() => setShowDailyRatesModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
+            className="flex items-center gap-1.5 px-3 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
+            title="Daily Rates"
           >
             <DollarSign className="h-4 w-4" />
-            <span>Daily Rates</span>
+            <span className="hidden xl:inline">Daily</span>
           </button>
+
+          <div className="h-6 w-px bg-[#2A2A2A]" />
+
           <button
             onClick={handleRefresh}
             disabled={loading}
-            className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-3 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Refresh Data"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            <span>{loading ? "Loading..." : "Refresh"}</span>
+            <span className="hidden xl:inline">{loading ? "Loading..." : "Refresh"}</span>
           </button>
+
           <button
             onClick={handleExport}
-            className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200 text-sm"
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200 text-sm font-medium shadow-lg shadow-[#FF8C42]/20"
+            title="Export to CSV"
           >
             <Download className="h-4 w-4" />
             <span>Export</span>
@@ -2781,8 +3394,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
       {renderSettingsModal()}
       {renderPaymentModal()}
       {renderServiceRatesModal()}
+      {renderProductRatesModal()}
       {renderDailyRatesModal()}
       {renderBookingsModal()}
+      {renderProductsModal()}
       {renderDeleteModal()}
 
       {/* Recalculate Confirmation Modal */}
