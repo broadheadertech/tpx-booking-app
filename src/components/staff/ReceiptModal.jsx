@@ -111,7 +111,7 @@ const ReceiptModal = ({
       padding: 0;
       box-sizing: border-box;
     }
-    body {
+    html, body {
       width: 58mm;
       min-width: 58mm;
       max-width: 58mm;
