@@ -254,6 +254,7 @@ export const updateBranch = mutation({
     is_active: v.optional(v.boolean()),
     booking_start_hour: v.optional(v.number()),
     booking_end_hour: v.optional(v.number()),
+    carousel_images: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;

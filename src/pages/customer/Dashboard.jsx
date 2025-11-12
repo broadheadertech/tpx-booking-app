@@ -9,7 +9,7 @@ import MyBookings from '../../components/customer/MyBookings'
 import PremiumOnboarding from '../../components/customer/PremiumOnboarding'
 import AIBarberAssistant from '../../components/customer/AIBarberAssistant'
 import Profile from './Profile'
-import bannerImage from '../../assets/img/banner.jpg'
+import Carousel from '../../components/customer/Carousel'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
@@ -72,6 +72,8 @@ const Dashboard = () => {
   const barbers = useQuery(api.services.barbers.getActiveBarbers)
   const bookings = user?._id ? useQuery(api.services.bookings.getBookingsByCustomer, { customerId: user._id }) : undefined
   const vouchers = user?._id ? useQuery(api.services.vouchers.getVouchersByUser, { userId: user._id }) : undefined
+  const branches = useQuery(api.services.branches.getAllBranches)
+  const currentBranch = branches?.find(b => b.is_active) || branches?.[0]
   
   // Handle query errors
   useEffect(() => {
@@ -152,58 +154,14 @@ const Dashboard = () => {
       default:
         return (
           <div className="space-y-6">
-            {/* Hero Section with Image */}
+            {/* Hero Section with Carousel */}
             <div className="relative overflow-hidden rounded-2xl mx-4 shadow-2xl">
-              {/* Background Image */}
-              <div className="h-56 relative">
-                {/* Banner Image */}
-                <div 
-                  className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-                  style={{
-                    backgroundImage: `url(${bannerImage})`,
-                    filter: 'brightness(0.4) contrast(1.2) saturate(1.1)'
-                  }}
-                ></div>
-                
-                {/* Dark theme gradient overlays */}
-                <div className="absolute inset-0 bg-gradient-to-br from-[#FF8C42]/30 via-transparent to-[#1A1A1A]/80"></div>
-                <div className="absolute inset-0 bg-gradient-to-t from-[#1A1A1A]/70 via-transparent to-transparent"></div>
-                
-                {/* Animated particles effect */}
-                <div className="absolute inset-0 opacity-30">
-                  <div className="absolute top-4 left-4 w-2 h-2 bg-[#FF8C42] rounded-full animate-pulse"></div>
-                  <div className="absolute top-12 right-8 w-1 h-1 bg-white rounded-full animate-ping"></div>
-                  <div className="absolute bottom-16 left-8 w-1.5 h-1.5 bg-[#FF8C42]/70 rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
-                  <div className="absolute bottom-8 right-4 w-1 h-1 bg-white rounded-full animate-ping" style={{animationDelay: '2s'}}></div>
-                </div>
-                
-                {/* Bottom wave - removed to fit rounded design */}
-              </div>
-              
-              {/* Content Overlay */}
-              <div className="absolute inset-0 flex flex-col justify-center items-center text-center px-6">
-                {/* Professional Typography */}
-                <div className="space-y-4">
-                  <h1 className="text-4xl md:text-5xl font-light text-white drop-shadow-2xl tracking-wider">
-                    <span className="font-thin">TipunoX Angeles</span>
-                    <span className="font-extralight text-[#FF8C42] ml-2">BARBERSHOP</span>
-                  </h1>
-                  
-                  {/* Minimalist divider */}
-                  <div className="flex justify-center">
-                    <div className="w-20 h-px bg-gradient-to-r from-transparent via-[#FF8C42] to-transparent"></div>
-                  </div>
-                  
-                  <p className="text-white/90 font-light text-sm tracking-widest uppercase">
-                    Premium Grooming Experience
-                  </p>
-                  
-                  {/* Welcome message */}
-                  <p className="text-white/70 font-light text-xs mt-2">
-                    Welcome to your personal grooming dashboard
-                  </p>
-                </div>
-              </div>
+              {/* Carousel Background */}
+              <Carousel 
+                images={currentBranch?.carousel_images || []} 
+                autoPlay={true} 
+                interval={5000}
+              />
             </div>
 
             {/* Quick Stats - Simplified */}
