@@ -58,12 +58,12 @@ const ReceiptModal = ({
           const name = escapeHtml(service?.service_name || service?.name || 'Service')
           return `
             <tr>
-              <td class="bold" style="font-size: 13px; padding-left: 0;">${name}</td>
-              <td class="right bold" style="font-size: 13px; padding-right: 0;">${formatCurrency(total)}</td>
+              <td class="bold" style="font-size: 14px;">${name}</td>
+              <td class="right bold" style="font-size: 14px;">${formatCurrency(total)}</td>
             </tr>
             <tr>
-              <td style="font-size: 11px; padding-left: 3mm;">${qty}x ${formatCurrency(price)}</td>
-              <td style="padding-right: 0;"></td>
+              <td style="font-size: 12px; padding-left: 4mm;">${qty}x ${formatCurrency(price)}</td>
+              <td></td>
             </tr>
           `
         }).join('')
@@ -77,12 +77,12 @@ const ReceiptModal = ({
           const name = escapeHtml(product?.product_name || product?.name || 'Product')
           return `
             <tr>
-              <td class="bold" style="font-size: 13px; padding-left: 0;">${name}</td>
-              <td class="right bold" style="font-size: 13px; padding-right: 0;">${formatCurrency(total)}</td>
+              <td class="bold" style="font-size: 14px;">${name}</td>
+              <td class="right bold" style="font-size: 14px;">${formatCurrency(total)}</td>
             </tr>
             <tr>
-              <td style="font-size: 11px; padding-left: 3mm;">${qty}x ${formatCurrency(price)}</td>
-              <td style="padding-right: 0;"></td>
+              <td style="font-size: 12px; padding-left: 4mm;">${qty}x ${formatCurrency(price)}</td>
+              <td></td>
             </tr>
           `
         }).join('')
@@ -111,15 +111,18 @@ const ReceiptModal = ({
       padding: 0;
       box-sizing: border-box;
     }
-    html, body {
-      width: 58mm;
-      min-width: 58mm;
-      max-width: 58mm;
-      margin: 0 auto;
+    html {
+      width: 100%;
+      height: 100%;
+    }
+    body {
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
       font-family: 'Courier New', Courier, monospace;
-      font-size: 13px;
-      line-height: 1.3;
-      padding: 1mm 3mm;
+      font-size: 14px;
+      line-height: 1.35;
+      padding: 2mm 4mm;
       color: #000;
       background: #fff;
       -webkit-print-color-adjust: exact;
@@ -127,37 +130,36 @@ const ReceiptModal = ({
     }
     @media print {
       html, body { 
-        width: 58mm !important;
-        min-width: 58mm !important;
-        max-width: 58mm !important;
-        margin: 0 auto !important;
-        padding: 1mm 3mm !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 2mm 4mm !important;
       }
     }
-    .center { text-align: center; width: 100%; display: block; margin-left: 0; margin-right: 0; }
+    .center { text-align: center; width: 100%; display: block; }
     .bold { font-weight: bold; }
-    .right { text-align: right; padding-right: 0; }
-    .small { font-size: 11px; }
-    .line { border-bottom: 1px dashed #000; margin: 1.5mm 0; width: 100%; display: block; }
-    .line2 { border-bottom: 2px solid #000; margin: 1.5mm 0; width: 100%; display: block; }
-    table { width: 100%; border-collapse: collapse; margin: 0.5mm 0; table-layout: fixed; }
-    td { padding: 1.5px 0; vertical-align: top; word-wrap: break-word; }
-    td:first-child { width: 60%; }
-    td:last-child { width: 40%; text-align: right; }
+    .right { text-align: right; }
+    .small { font-size: 12px; }
+    .line { border-bottom: 1px dashed #000; margin: 2mm 0; width: 100%; display: block; }
+    .line2 { border-bottom: 2px solid #000; margin: 2mm 0; width: 100%; display: block; }
+    table { width: 100%; border-collapse: collapse; margin: 1mm 0; }
+    td { padding: 2px 0; vertical-align: top; }
+    td:first-child { padding-right: 5mm; }
+    td:last-child { text-align: right; }
   </style>
 </head>
 <body>
-  <div class="center bold" style="font-size: 18px; margin-bottom: 1mm; letter-spacing: 1px;">TIPUNOX</div>
-  <div class="center bold" style="font-size: 15px; margin-bottom: 0.5mm;">ANGELES BARBERSHOP</div>
-  ${branchInfo?.name ? `<div class="center" style="font-size: 11px; margin-bottom: 0.3mm;">${escapeHtml(branchInfo.name)}</div>` : ''}
-  ${branchInfo?.address ? `<div class="center" style="font-size: 11px; margin-bottom: 0.3mm;">${escapeHtml(branchInfo.address)}</div>` : ''}
-  ${branchInfo?.phone ? `<div class="center" style="font-size: 11px; margin-bottom: 0.5mm;">Tel: ${escapeHtml(branchInfo.phone)}</div>` : ''}
+  <div class="center bold" style="font-size: 20px; margin-bottom: 1.5mm; letter-spacing: 1.5px;">TIPUNOX</div>
+  <div class="center bold" style="font-size: 17px; margin-bottom: 1mm;">ANGELES BARBERSHOP</div>
+  ${branchInfo?.name ? `<div class="center" style="font-size: 12px; margin-bottom: 0.5mm;">${escapeHtml(branchInfo.name)}</div>` : ''}
+  ${branchInfo?.address ? `<div class="center" style="font-size: 12px; margin-bottom: 0.5mm;">${escapeHtml(branchInfo.address)}</div>` : ''}
+  ${branchInfo?.phone ? `<div class="center" style="font-size: 12px; margin-bottom: 1mm;">Tel: ${escapeHtml(branchInfo.phone)}</div>` : ''}
   <div class="line"></div>
   
-  <div class="center bold" style="font-size: 14px; margin: 1mm 0;">OFFICIAL RECEIPT</div>
+  <div class="center bold" style="font-size: 15px; margin: 1.5mm 0;">OFFICIAL RECEIPT</div>
   <div class="line"></div>
   
-  <table style="font-size: 12px;">
+  <table style="font-size: 13px;">
     <tr><td>Receipt No:</td><td class="right">${escapeHtml(receiptNumber)}</td></tr>
     <tr><td>Date:</td><td class="right">${escapeHtml(dateStr)}</td></tr>
     <tr><td>Time:</td><td class="right">${escapeHtml(timeStr)}</td></tr>
@@ -167,34 +169,34 @@ const ReceiptModal = ({
   </table>
   <div class="line2"></div>
   
-  <table style="font-size: 13px;">
+  <table style="font-size: 14px;">
     ${servicesHtml}
     ${productsHtml}
   </table>
   
   <div class="line"></div>
-  <table style="font-size: 13px;">
+  <table style="font-size: 14px;">
     <tr><td class="bold">Subtotal:</td><td class="right bold">${formatCurrency(subtotal)}</td></tr>
     ${discount > 0 ? `<tr><td class="bold">Discount:</td><td class="right bold">-${formatCurrency(discount)}</td></tr>` : ''}
     ${tax > 0 ? `<tr><td class="bold">Tax:</td><td class="right bold">${formatCurrency(tax)}</td></tr>` : ''}
   </table>
   <div class="line2"></div>
   
-  <table style="font-size: 16px; margin: 1mm 0;">
+  <table style="font-size: 18px; margin: 1.5mm 0;">
     <tr><td class="bold">TOTAL:</td><td class="right bold">${formatCurrency(total)}</td></tr>
   </table>
   <div class="line2"></div>
   
-  <table style="font-size: 12px;">
+  <table style="font-size: 13px;">
     <tr><td class="bold">Payment:</td><td class="right">${paymentMethod}</td></tr>
     ${transactionData.payment_method === 'cash' && cashReceived > 0 ? `<tr><td>Cash:</td><td class="right">${formatCurrency(cashReceived)}</td></tr>` : ''}
     ${transactionData.payment_method === 'cash' && change > 0 ? `<tr><td>Change:</td><td class="right">${formatCurrency(change)}</td></tr>` : ''}
   </table>
   
   <div class="line"></div>
-  <div class="center bold" style="margin-top: 2mm; font-size: 14px;">Thank you!</div>
-  <div class="center" style="font-size: 12px;">Please come again!</div>
-  <div class="center" style="margin-top: 1.5mm; font-size: 10px;">Receipt #${escapeHtml(receiptNumber)}</div>
+  <div class="center bold" style="margin-top: 2mm; font-size: 15px;">Thank you!</div>
+  <div class="center" style="font-size: 13px;">Please come again!</div>
+  <div class="center" style="margin-top: 2mm; font-size: 11px;">Receipt #${escapeHtml(receiptNumber)}</div>
 </body>
 </html>`
   }
