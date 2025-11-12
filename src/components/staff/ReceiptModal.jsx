@@ -58,11 +58,11 @@ const ReceiptModal = ({
           const name = escapeHtml(service?.service_name || service?.name || 'Service')
           return `
             <tr>
-              <td>${name}</td>
-              <td class="right">${formatCurrency(total)}</td>
+              <td class="bold" style="font-size: 13px;">${name}</td>
+              <td class="right bold" style="font-size: 13px;">${formatCurrency(total)}</td>
             </tr>
             <tr>
-              <td class="small">${qty}x ${formatCurrency(price)}</td>
+              <td style="font-size: 11px; padding-left: 2mm;">${qty}x ${formatCurrency(price)}</td>
               <td></td>
             </tr>
           `
@@ -77,11 +77,11 @@ const ReceiptModal = ({
           const name = escapeHtml(product?.product_name || product?.name || 'Product')
           return `
             <tr>
-              <td>${name}</td>
-              <td class="right">${formatCurrency(total)}</td>
+              <td class="bold" style="font-size: 13px;">${name}</td>
+              <td class="right bold" style="font-size: 13px;">${formatCurrency(total)}</td>
             </tr>
             <tr>
-              <td class="small">${qty}x ${formatCurrency(price)}</td>
+              <td style="font-size: 11px; padding-left: 2mm;">${qty}x ${formatCurrency(price)}</td>
               <td></td>
             </tr>
           `
@@ -113,40 +113,47 @@ const ReceiptModal = ({
     }
     body {
       width: 58mm;
-      font-family: 'Courier New', monospace;
-      font-size: 10px;
+      min-width: 58mm;
+      max-width: 58mm;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px;
       line-height: 1.3;
-      padding: 3mm;
+      padding: 1mm 2mm;
       color: #000;
       background: #fff;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
     @media print {
-      body { width: 58mm; }
+      body { 
+        width: 58mm !important;
+        min-width: 58mm !important;
+        max-width: 58mm !important;
+        padding: 1mm 2mm !important;
+      }
     }
-    .center { text-align: center; }
+    .center { text-align: center; width: 100%; display: block; }
     .bold { font-weight: bold; }
     .right { text-align: right; }
-    .small { font-size: 8px; }
-    .line { border-bottom: 1px dashed #000; margin: 2mm 0; }
-    .line2 { border-bottom: 1px solid #000; margin: 2mm 0; }
-    table { width: 100%; border-collapse: collapse; margin: 1mm 0; }
-    td { padding: 1px 0; }
+    .small { font-size: 11px; }
+    .line { border-bottom: 1px dashed #000; margin: 1.5mm 0; width: 100%; }
+    .line2 { border-bottom: 2px solid #000; margin: 1.5mm 0; width: 100%; }
+    table { width: 100%; border-collapse: collapse; margin: 0.5mm 0; }
+    td { padding: 1.5px 0; vertical-align: top; }
   </style>
 </head>
 <body>
-  <div class="center bold" style="font-size: 12px; margin-bottom: 2mm;">TIPUNOX</div>
-  <div class="center bold">ANGELES BARBERSHOP</div>
-  ${branchInfo?.name ? `<div class="center small">${escapeHtml(branchInfo.name)}</div>` : ''}
-  ${branchInfo?.address ? `<div class="center small">${escapeHtml(branchInfo.address)}</div>` : ''}
-  ${branchInfo?.phone ? `<div class="center small">Tel: ${escapeHtml(branchInfo.phone)}</div>` : ''}
+  <div class="center bold" style="font-size: 18px; margin-bottom: 1mm; letter-spacing: 1px;">TIPUNOX</div>
+  <div class="center bold" style="font-size: 15px; margin-bottom: 0.5mm;">ANGELES BARBERSHOP</div>
+  ${branchInfo?.name ? `<div class="center" style="font-size: 11px; margin-bottom: 0.3mm;">${escapeHtml(branchInfo.name)}</div>` : ''}
+  ${branchInfo?.address ? `<div class="center" style="font-size: 11px; margin-bottom: 0.3mm;">${escapeHtml(branchInfo.address)}</div>` : ''}
+  ${branchInfo?.phone ? `<div class="center" style="font-size: 11px; margin-bottom: 0.5mm;">Tel: ${escapeHtml(branchInfo.phone)}</div>` : ''}
   <div class="line"></div>
   
-  <div class="center bold">OFFICIAL RECEIPT</div>
+  <div class="center bold" style="font-size: 14px; margin: 1mm 0;">OFFICIAL RECEIPT</div>
   <div class="line"></div>
   
-  <table>
+  <table style="font-size: 12px;">
     <tr><td>Receipt No:</td><td class="right">${escapeHtml(receiptNumber)}</td></tr>
     <tr><td>Date:</td><td class="right">${escapeHtml(dateStr)}</td></tr>
     <tr><td>Time:</td><td class="right">${escapeHtml(timeStr)}</td></tr>
@@ -156,34 +163,34 @@ const ReceiptModal = ({
   </table>
   <div class="line2"></div>
   
-  <table>
+  <table style="font-size: 13px;">
     ${servicesHtml}
     ${productsHtml}
   </table>
   
   <div class="line"></div>
-  <table>
+  <table style="font-size: 13px;">
     <tr><td class="bold">Subtotal:</td><td class="right bold">${formatCurrency(subtotal)}</td></tr>
     ${discount > 0 ? `<tr><td class="bold">Discount:</td><td class="right bold">-${formatCurrency(discount)}</td></tr>` : ''}
     ${tax > 0 ? `<tr><td class="bold">Tax:</td><td class="right bold">${formatCurrency(tax)}</td></tr>` : ''}
   </table>
   <div class="line2"></div>
   
-  <table style="font-size: 11px;">
+  <table style="font-size: 16px; margin: 1mm 0;">
     <tr><td class="bold">TOTAL:</td><td class="right bold">${formatCurrency(total)}</td></tr>
   </table>
   <div class="line2"></div>
   
-  <table class="small">
+  <table style="font-size: 12px;">
     <tr><td class="bold">Payment:</td><td class="right">${paymentMethod}</td></tr>
     ${transactionData.payment_method === 'cash' && cashReceived > 0 ? `<tr><td>Cash:</td><td class="right">${formatCurrency(cashReceived)}</td></tr>` : ''}
     ${transactionData.payment_method === 'cash' && change > 0 ? `<tr><td>Change:</td><td class="right">${formatCurrency(change)}</td></tr>` : ''}
   </table>
   
   <div class="line"></div>
-  <div class="center bold" style="margin-top: 3mm;">Thank you!</div>
-  <div class="center small">Please come again!</div>
-  <div class="center small" style="margin-top: 2mm;">Receipt #${escapeHtml(receiptNumber)}</div>
+  <div class="center bold" style="margin-top: 2mm; font-size: 14px;">Thank you!</div>
+  <div class="center" style="font-size: 12px;">Please come again!</div>
+  <div class="center" style="margin-top: 1.5mm; font-size: 10px;">Receipt #${escapeHtml(receiptNumber)}</div>
 </body>
 </html>`
   }
