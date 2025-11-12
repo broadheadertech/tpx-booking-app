@@ -111,14 +111,10 @@ const ReceiptModal = ({
       padding: 0;
       box-sizing: border-box;
     }
-    html {
-      width: 100%;
-      height: 100%;
-    }
-    body {
-      width: 100%;
-      max-width: 100%;
-      margin: 0;
+    html, body {
+      width: 58mm;
+      min-width: 58mm;
+      max-width: 58mm;
       font-family: 'Courier New', Courier, monospace;
       font-size: 14px;
       line-height: 1.35;
