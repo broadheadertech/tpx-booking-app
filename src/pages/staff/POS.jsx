@@ -716,12 +716,7 @@ const POS = () => {
         }
       }
       
-      setAlertModal({
-        show: true,
-        title: 'Transaction Failed',
-        message: errorMessage,
-        type: 'error'
-      })
+      alert(errorMessage)
       setActiveModal(null)
     }
   }
