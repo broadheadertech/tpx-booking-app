@@ -32,7 +32,7 @@ async function getOrCreateWalkInCustomer(ctx: any, branch_id: Id<"branches">, cu
       email: walkInEmail,
       password: "walkin_" + Math.random().toString(36), // Random password for walk-ins
       mobile_number: customerPhone || "",
-      nickname: customerName?.trim() || "Walk-in Customer", // Store actual name in nickname
+      nickname: customerName?.trim() || "", // Store actual name in nickname
       role: "customer",
       branch_id: branch_id,
       is_active: true,
