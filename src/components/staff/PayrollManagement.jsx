@@ -903,7 +903,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
             <div class="title">${record.barber_name}</div>
             <div class="muted">Payroll Period: ${dateRange}</div>
           </div>
-          <div class="accent">Net Pay: ${format(record.net_pay)}</div>
+          <div class="accent">Grand Total: ${format(record.net_pay)}</div>
         </div>
         <hr/>
         <div class="grid">
@@ -918,7 +918,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
             <div class="row"><span class="muted">Product Commission</span><span>${format(record.product_commission || 0)}</span></div>
             <div class="row"><span class="muted">Final Daily Salary</span><span>${format(record.daily_pay || 0)}</span></div>
             <hr/>
-            <div class="row" style="font-weight:800"><span>Net Pay</span><span class="accent">${format(record.net_pay)}</span></div>
+            <div class="row" style="font-weight:800"><span>Grand Total</span><span class="accent">${format(record.net_pay)}</span></div>
           </div>
         </div>
         ${serviceSummaryHtml}
