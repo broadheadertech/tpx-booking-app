@@ -494,22 +494,28 @@ export const calculateBarberEarnings = query({
       `dailyRate = ${dailyRate}`,
     );
 
-    // Correct rule from client:
-    // total_barber_coms = sum of (each service price * service.rate%)
-    // net_pay = max(total_barber_coms, barber_daily_rate)
-    // BUT: Only if barber has at least 1 completed booking in the period
-
-    // CORRECTED LOGIC: Calculate final salary using per-day calculation
-    // For each day worked: daily_pay = max(day_commission, daily_rate)
-    // Total final salary = sum of all daily pays
+    // PAYROLL CALCULATION RULES:
+    // 
+    // 1. Service Earnings: Compare service commission vs daily rate (take higher)
+    //    daily_service_pay = max(day_service_commission, daily_rate)
     //
-    // Example: Daily Rate = ₱600
-    // Day 1: Commission ₱700 → Pay = max(700, 600) = ₱700
-    // Day 2: Commission ₱200 → Pay = max(200, 600) = ₱600
-    // Total Pay = ₱700 + ₱600 = ₱1,300
+    // 2. Product Commission: ADDED as bonus on top of service pay
+    //    daily_total_pay = daily_service_pay + day_product_commission
     //
-    // OLD WRONG LOGIC: max(total_period_commission, daily_rate)
-    // Would give: max(700+200, 600) = max(900, 600) = ₱900 ✗
+    // 3. Final Salary: Sum all daily pays across the period
+    //
+    // Example: Daily Rate = ₱500
+    // Day 1: Service Commission ₱0, Product Commission ₱100
+    //   → Service Pay = max(₱0, ₱500) = ₱500
+    //   → Total Pay = ₱500 + ₱100 = ₱600 ✓
+    //
+    // Day 2: Service Commission ₱700, Product Commission ₱50
+    //   → Service Pay = max(₱700, ₱500) = ₱700
+    //   → Total Pay = ₱700 + ₱50 = ₱750 ✓
+    //
+    // Final Salary = ₱600 + ₱750 = ₱1,350
+    //
+    // NOTE: Product commission is always added as bonus, not compared with daily rate
 
     // Merge booking dates and product transaction dates for complete day coverage
     const allWorkDates = new Set([
@@ -526,10 +532,14 @@ export const calculateBarberEarnings = query({
       for (const dateKey of allWorkDates) {
         const dayServiceCommission = dailyCommissions.get(dateKey) || 0;
         const dayProductCommission = dailyProductCommissions.get(dateKey) || 0;
-        const dayTotalCommission = dayServiceCommission + dayProductCommission;
-        const dayPay = Math.max(dayTotalCommission, dailyRate);
+        
+        // NEW LOGIC: Product commission is ADDED on top of daily salary
+        // Compare service commission vs daily rate, then add product commission
+        const dayServicePay = Math.max(dayServiceCommission, dailyRate);
+        const dayPay = dayServicePay + dayProductCommission;
+        
         console.log(
-          `Date ${dateKey}: service comm = ${dayServiceCommission}, product comm = ${dayProductCommission}, total comm = ${dayTotalCommission}, dayPay = ${dayPay}`,
+          `Date ${dateKey}: service comm = ${dayServiceCommission}, product comm = ${dayProductCommission}, service pay = ${dayServicePay}, final dayPay (with product bonus) = ${dayPay}`,
         );
         finalSalary += dayPay;
       }
