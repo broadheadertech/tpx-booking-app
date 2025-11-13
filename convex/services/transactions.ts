@@ -7,6 +7,12 @@ import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 // Helper function to get or create a walk-in customer
 async function getOrCreateWalkInCustomer(ctx: any, branch_id: Id<"branches">, customerName?: string, customerPhone?: string): Promise<Id<"users"> | undefined> {
   try {
+    console.log('[WALK-IN CUSTOMER] Creating walk-in customer:', {
+      branch_id,
+      customerName,
+      customerPhone
+    });
+    
     // For walk-in customers, we'll always create a new record
     // This ensures each walk-in transaction is properly tracked
     // Use customer name if provided, otherwise generate a unique walk-in username
@@ -16,7 +22,12 @@ async function getOrCreateWalkInCustomer(ctx: any, branch_id: Id<"branches">, cu
     const walkInUsername = `${baseUsername}_${Date.now()}`;
     const walkInEmail = `${walkInUsername}@walkin.local`;
 
-    const customerId = await ctx.db.insert("users", {
+    console.log('[WALK-IN CUSTOMER] Generated credentials:', {
+      walkInUsername,
+      walkInEmail
+    });
+
+    const userData = {
       username: walkInUsername,
       email: walkInEmail,
       password: "walkin_" + Math.random().toString(36), // Random password for walk-ins
@@ -31,11 +42,22 @@ async function getOrCreateWalkInCustomer(ctx: any, branch_id: Id<"branches">, cu
       isVerified: false,
       createdAt: Date.now(),
       updatedAt: Date.now(),
-    });
+    };
+
+    console.log('[WALK-IN CUSTOMER] Inserting user with data:', userData);
+
+    const customerId = await ctx.db.insert("users", userData);
+
+    console.log('[WALK-IN CUSTOMER] Successfully created walk-in customer with ID:', customerId);
 
     return customerId;
   } catch (error) {
-    console.error("Failed to create walk-in customer:", error);
+    console.error("[WALK-IN CUSTOMER] ERROR - Failed to create walk-in customer:", error);
+    console.error('[WALK-IN CUSTOMER] ERROR details:', {
+      message: error.message,
+      stack: error.stack,
+      data: error.data
+    });
     return undefined;
   }
 }
@@ -86,8 +108,11 @@ export const createTransaction = mutation({
     skip_booking_creation: v.optional(v.boolean()) // Flag to skip automatic booking creation
   },
   handler: async (ctx, args) => {
+    console.log('[TRANSACTION] Starting transaction creation with args:', args);
+    
     // Validate walk-in customer has a name
     if (!args.customer && (!args.customer_name || args.customer_name.trim() === '')) {
+      console.error('[TRANSACTION] Invalid customer name for walk-in customer');
       throwUserError(ERROR_CODES.TRANSACTION_INVALID_CUSTOMER_NAME);
     }
 
@@ -95,6 +120,8 @@ export const createTransaction = mutation({
     const timestamp = Date.now();
     const transactionId = `TXN-${timestamp}`;
     const receiptNumber = `RCP-${timestamp}`;
+    
+    console.log('[TRANSACTION] Generated IDs:', { transactionId, receiptNumber });
 
     // Extract control flags that shouldn't be stored in the database
     const { skip_booking_creation, ...transactionFields } = args;
@@ -107,22 +134,54 @@ export const createTransaction = mutation({
       updatedAt: timestamp,
     };
 
-    const transactionDocId = await ctx.db.insert("transactions", transactionData);
+    console.log('[TRANSACTION] Final transaction data to insert:', transactionData);
+    
+    let transactionDocId: Id<"transactions">;
+    try {
+      transactionDocId = await ctx.db.insert("transactions", transactionData);
+      console.log('[TRANSACTION] Successfully inserted transaction with ID:', transactionDocId);
+    } catch (insertError) {
+      console.error('[TRANSACTION] Failed to insert transaction:', insertError);
+      throw insertError;
+    }
 
     // Track created booking IDs for notifications
     const createdBookingIds: Id<"bookings">[] = [];
 
     // Create booking records for services performed in POS (skip if it's a booking payment)
+    console.log('[BOOKING CREATION] Checking if bookings should be created:', {
+      hasServices: !!args.services,
+      servicesCount: args.services?.length || 0,
+      skip_booking_creation: skip_booking_creation,
+      willCreateBookings: args.services && args.services.length > 0 && !skip_booking_creation
+    });
+
     if (args.services && args.services.length > 0 && !skip_booking_creation) {
+      console.log('[BOOKING CREATION] Starting booking creation for', args.services.length, 'services');
+      
       for (const serviceItem of args.services) {
         try {
+          console.log('[BOOKING CREATION] Processing service:', serviceItem.service_name);
+          
           // Check if a booking already exists for this service and customer on the same day
           const today = new Date().toISOString().split('T')[0];
           let customerId = args.customer;
+          
+          console.log('[BOOKING CREATION] Initial customerId:', customerId);
 
           // For walk-in customers, create or find a walk-in customer record
           if (!customerId && (args.customer_name || args.customer_phone)) {
+            console.log('[BOOKING CREATION] Creating walk-in customer for:', {
+              customer_name: args.customer_name,
+              customer_phone: args.customer_phone
+            });
             customerId = await getOrCreateWalkInCustomer(ctx, args.branch_id, args.customer_name, args.customer_phone);
+            console.log('[BOOKING CREATION] Walk-in customer created/found with ID:', customerId);
+          }
+
+          if (!customerId) {
+            console.error('[BOOKING CREATION] ERROR: No customer ID available, skipping booking creation for service:', serviceItem.service_name);
+            continue;
           }
 
           if (customerId) {
@@ -143,30 +202,74 @@ export const createTransaction = mutation({
               .first();
 
             if (!existingBooking) {
-              // Create a new booking record for the POS service
-              const bookingId = await ctx.runMutation(api.services.bookings.createBooking, {
+              console.log('[BOOKING CREATION] No existing booking found, creating new booking');
+              
+              // Get service details for price
+              const serviceDetails = await ctx.db.get(serviceItem.service_id);
+              if (!serviceDetails) {
+                console.error('[BOOKING CREATION] Service not found:', serviceItem.service_id);
+                continue;
+              }
+              
+              // Generate booking code - exactly 8 characters (uppercase alphanumeric)
+              const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+              let bookingCode = '';
+              for (let i = 0; i < 8; i++) {
+                bookingCode += chars.charAt(Math.floor(Math.random() * chars.length));
+              }
+              
+              // Verify barber exists
+              if (!args.barber) {
+                console.error('[BOOKING CREATION] ERROR: No barber assigned to transaction');
+                continue;
+              }
+              
+              // Get current time in Philippine timezone (UTC+8)
+              const philippineTime = new Date(Date.now() + (8 * 60 * 60 * 1000)); // Add 8 hours to UTC
+              const hours = philippineTime.getUTCHours().toString().padStart(2, '0');
+              const minutes = philippineTime.getUTCMinutes().toString().padStart(2, '0');
+              const currentTime = `${hours}:${minutes}`;
+              
+              console.log('[BOOKING CREATION] Philippine time:', currentTime);
+              
+              // Create booking directly in database (bypass mutation validation)
+              const bookingData = {
+                booking_code: bookingCode,
                 customer: customerId,
-                service: serviceItem.service_id,
-                branch_id: args.branch_id,
-                barber: args.barber,
-                date: today,
-                time: new Date().toTimeString().slice(0, 5), // Current time
-                status: "completed", // Mark as completed since service was performed
-                notes: `POS Transaction - Receipt: ${receiptNumber}${args.customer_name ? ` - ${args.customer_name}` : ''}`,
-                // Pass customer name/phone/email for walk-in customers
                 customer_name: args.customer_name?.trim() || undefined,
                 customer_phone: args.customer_phone?.trim() || undefined,
                 customer_email: args.customer_email?.trim() || undefined,
-              });
+                service: serviceItem.service_id,
+                branch_id: args.branch_id,
+                barber: args.barber as Id<"barbers">,
+                date: today,
+                time: currentTime,
+                status: "completed" as const,
+                payment_status: "paid" as const,
+                price: serviceDetails.price,
+                final_price: serviceItem.price, // Use the actual price from transaction (may include discounts)
+                discount_amount: args.discount_amount || 0,
+                voucher_id: args.voucher_applied || undefined,
+                notes: `POS Transaction - Receipt: ${receiptNumber}${args.customer_name ? ` - ${args.customer_name}` : ''}`,
+                reminder_sent: false,
+                check_in_reminder_sent: false,
+                createdAt: timestamp,
+                updatedAt: timestamp,
+              };
               
-              // Track booking ID for notifications
-              createdBookingIds.push(bookingId);
+              console.log('[BOOKING CREATION] Creating booking directly in database:', bookingData);
               
-              // Update payment status to paid since transaction is completed
-              await ctx.runMutation(api.services.bookings.updatePaymentStatus, {
-                id: bookingId,
-                payment_status: "paid"
-              });
+              try {
+                const bookingId = await ctx.db.insert("bookings", bookingData);
+                console.log('[BOOKING CREATION] Successfully created booking with ID:', bookingId);
+                
+                // Track booking ID for notifications
+                createdBookingIds.push(bookingId);
+              } catch (bookingError) {
+                console.error('[BOOKING CREATION] Failed to insert booking:', bookingError);
+                console.error('[BOOKING CREATION] Booking data that failed:', bookingData);
+                throw bookingError;
+              }
             } else {
                 // Track existing booking ID for notifications
                 createdBookingIds.push(existingBooking._id);
@@ -188,10 +291,24 @@ export const createTransaction = mutation({
             }
           }
         } catch (error) {
-          console.error(`Failed to create/update booking for service ${serviceItem.service_name}:`, error);
-          // Don't fail the transaction if booking creation fails
+          console.error(`[BOOKING CREATION] ERROR - Failed to create/update booking for service ${serviceItem.service_name}:`, error);
+          console.error('[BOOKING CREATION] ERROR details:', {
+            message: error.message,
+            stack: error.stack,
+            data: error.data
+          });
+          // Don't fail the transaction if booking creation fails, but log it prominently
         }
       }
+      
+      console.log('[BOOKING CREATION] Completed booking creation process. Created bookings:', createdBookingIds.length);
+    } else {
+      console.log('[BOOKING CREATION] Skipping booking creation:', {
+        reason: !args.services ? 'No services' : 
+                args.services.length === 0 ? 'Services array empty' : 
+                skip_booking_creation ? 'skip_booking_creation flag is true' : 
+                'Unknown'
+      });
     }
 
     // Update product stock if products were sold

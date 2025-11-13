@@ -525,6 +525,20 @@ const POS = () => {
         }
       }
       
+      // Validate all required fields before creating transaction
+      if (!resolvedBranchId) {
+        throw new Error('Branch ID is required for transaction')
+      }
+      if (!selectedBarber?._id) {
+        throw new Error('Barber ID is required for transaction')
+      }
+      if (!user?._id) {
+        throw new Error('Staff ID (processed_by) is required for transaction')
+      }
+      if (!currentTransaction.services || currentTransaction.services.length === 0) {
+        throw new Error('At least one service is required for transaction')
+      }
+
       const transactionData = {
         customer: finalCustomerId || undefined,
         customer_name: currentTransaction.customer_name?.trim() || undefined, // Always record name, even without account
@@ -556,11 +570,25 @@ const POS = () => {
       const posBooking = sessionStorage.getItem('posBooking')
       const isBookingPayment = posBooking && currentTransaction.services.length > 0
 
+      console.log('[POS] Transaction preparation:', {
+        hasBookingInSession: !!posBooking,
+        servicesCount: currentTransaction.services.length,
+        isBookingPayment: isBookingPayment,
+        skip_booking_creation: isBookingPayment || false
+      })
+
       // Include the skip_booking_creation flag in transaction data
-      await createTransaction({
+      console.log('[POS] Creating transaction with data:', {
         ...transactionData,
         skip_booking_creation: isBookingPayment || false
       })
+      
+      const result = await createTransaction({
+        ...transactionData,
+        skip_booking_creation: isBookingPayment || false
+      })
+      
+      console.log('[POS] Transaction created successfully:', result)
 
       // Update the existing booking if this is a booking payment
       if (isBookingPayment) {
@@ -637,7 +665,27 @@ const POS = () => {
       setSelectedBarber(null)
     } catch (error) {
       console.error('Transaction failed:', error)
-      alert('Transaction failed. Please try again.')
+      console.error('Error details:', {
+        message: error.message,
+        data: error.data,
+        stack: error.stack
+      })
+      
+      // Provide more specific error messages
+      let errorMessage = 'Transaction failed. Please try again.'
+      if (error.message) {
+        if (error.message.includes('TRANSACTION_INVALID_CUSTOMER_NAME')) {
+          errorMessage = 'Please enter a valid customer name for walk-in customers.'
+        } else if (error.message.includes('validation')) {
+          errorMessage = 'Invalid transaction data. Please check all fields and try again.'
+        } else if (error.message.includes('permission')) {
+          errorMessage = 'Permission denied. Please check your access rights.'
+        } else {
+          errorMessage = `Transaction failed: ${error.message}`
+        }
+      }
+      
+      alert(errorMessage)
       setActiveModal(null)
     }
   }
@@ -2147,6 +2195,19 @@ const POS = () => {
           }}
           paymentMethod={paymentMethod}
           setPaymentMethod={setPaymentMethod}
+        />
+      )}
+
+      {activeModal === 'receipt' && completedTransaction && (
+        <ReceiptModal
+          isOpen={true}
+          onClose={() => {
+            setActiveModal(null)
+            setCompletedTransaction(null)
+          }}
+          transactionData={completedTransaction}
+          branchInfo={currentBranch}
+          staffInfo={user}
         />
       )}
 
