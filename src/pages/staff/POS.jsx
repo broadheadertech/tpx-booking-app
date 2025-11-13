@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight, X, AlertCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
@@ -71,6 +71,7 @@ const POS = () => {
   const [currentBooking, setCurrentBooking] = useState(null) // Store booking data for POS
   const [newCustomerCredentials, setNewCustomerCredentials] = useState(null) // Store new customer credentials
   const [completedTransaction, setCompletedTransaction] = useState(null) // Store completed transaction for receipt
+  const [alertModal, setAlertModal] = useState({ show: false, title: '', message: '', type: 'warning' }) // Alert modal state
   
   // Mobile-specific states
   const [showMobileCart, setShowMobileCart] = useState(false)
@@ -405,30 +406,55 @@ const POS = () => {
   // Open payment confirmation modal
   const openPaymentModal = () => {
     if (!user || !user._id) {
-      alert('User not authenticated. Please log in again.')
+      setAlertModal({
+        show: true,
+        title: 'Authentication Required',
+        message: 'User not authenticated. Please log in again.',
+        type: 'error'
+      })
       return
     }
 
     if (!selectedBarber) {
-      alert('Please select a barber')
+      setAlertModal({
+        show: true,
+        title: 'Barber Required',
+        message: 'Please select a barber before processing payment.',
+        type: 'warning'
+      })
       return
     }
 
     // Ensure we have a valid branch context (prefer barber's branch, then user's branch)
     const resolvedBranchId = selectedBarber?.branch_id || user?.branch_id
     if (!resolvedBranchId) {
-      alert('No branch selected or associated. Please select a barber from a branch or set your branch.')
+      setAlertModal({
+        show: true,
+        title: 'Branch Required',
+        message: 'No branch selected or associated. Please select a barber from a branch or set your branch.',
+        type: 'warning'
+      })
       return
     }
 
     if (currentTransaction.services.length === 0 && currentTransaction.products.length === 0) {
-      alert('Please add at least one service or product')
+      setAlertModal({
+        show: true,
+        title: 'Items Required',
+        message: 'Please add at least one service or product before processing payment.',
+        type: 'warning'
+      })
       return
     }
 
     // Validate customer information for walk-in customers
     if (!currentTransaction.customer && (!currentTransaction.customer_name || currentTransaction.customer_name.trim() === '')) {
-      alert('Please enter customer name for walk-in customer')
+      setAlertModal({
+        show: true,
+        title: 'Customer Name Required',
+        message: 'Please enter customer name for walk-in customer.',
+        type: 'warning'
+      })
       return
     }
 
@@ -451,7 +477,12 @@ const POS = () => {
       // Resolve branch to use for the transaction (barber branch takes precedence)
       const resolvedBranchId = selectedBarber?.branch_id || user?.branch_id
       if (!resolvedBranchId) {
-        alert('Cannot process payment: Missing branch. Please select a barber from a branch or set your branch.')
+        setAlertModal({
+          show: true,
+          title: 'Branch Required',
+          message: 'Cannot process payment: Missing branch. Please select a barber from a branch or set your branch.',
+          type: 'error'
+        })
         return
       }
 
@@ -685,7 +716,12 @@ const POS = () => {
         }
       }
       
-      alert(errorMessage)
+      setAlertModal({
+        show: true,
+        title: 'Transaction Failed',
+        message: errorMessage,
+        type: 'error'
+      })
       setActiveModal(null)
     }
   }
@@ -709,7 +745,12 @@ const POS = () => {
     // Ensure we have a valid voucher ID
     const voucherId = voucher._id || voucher.id
     if (!voucherId) {
-      alert('Invalid voucher: No ID found')
+      setAlertModal({
+        show: true,
+        title: 'Invalid Voucher',
+        message: 'Invalid voucher: No ID found',
+        type: 'error'
+      })
       return
     }
     
@@ -720,7 +761,12 @@ const POS = () => {
       discount_amount: voucher.value || 0
     }))
     setActiveModal(null)
-    alert(`Voucher applied! Discount: ₱${voucher.value || 0}`)
+    setAlertModal({
+      show: true,
+      title: 'Voucher Applied',
+      message: `Voucher applied successfully! Discount: ₱${voucher.value || 0}`,
+      type: 'success'
+    })
   }
 
   // Show loading if user is not loaded yet
@@ -881,7 +927,7 @@ const POS = () => {
                 
                 <button
                   onClick={() => {
-                    setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: 'Walk-in', customer_phone: '', customer_email: '' }))
+                    setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '', customer_email: '' }))
                     setExpandedSection(null)
                   }}
                   className="w-full p-3 border-2 border-dashed border-blue-500/30 rounded-lg hover:border-blue-500 hover:bg-blue-500/10 flex items-center justify-center space-x-2 text-blue-400"
@@ -902,10 +948,12 @@ const POS = () => {
               </h4>
               <input
                 type="text"
-                placeholder="Walk-in"
-                value={currentTransaction.customer_name || 'Walk-in'}
+                placeholder="Enter customer full name"
+                value={currentTransaction.customer_name || ''}
                 onChange={(e) => setCurrentTransaction(prev => ({ ...prev, customer_name: e.target.value }))}
                 className="w-full px-3 py-2.5 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg text-sm"
+                required
+                autoFocus
               />
               <input
                 type="tel"
@@ -1870,8 +1918,8 @@ const POS = () => {
                   <div className="grid grid-cols-1 gap-3">
                     <input
                       type="text"
-                      placeholder="Walk-in"
-                      value={currentTransaction.customer_name || 'Walk-in'}
+                      placeholder="Enter customer full name"
+                      value={currentTransaction.customer_name || ''}
                       onChange={(e) => setCurrentTransaction(prev => ({ ...prev, customer_name: e.target.value }))}
                       className="px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
                       required
@@ -1917,7 +1965,7 @@ const POS = () => {
                   <div className="text-center text-gray-500 text-sm">or</div>
                   
                   <button
-                    onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: 'Walk-in', customer_phone: '', customer_email: '' }))}
+                    onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '', customer_email: '' }))}
                     className="w-full p-4 border-2 border-dashed border-blue-500/30 rounded-lg hover:border-blue-500 hover:bg-blue-500/10 transition-all duration-200 flex items-center justify-center space-x-2 text-blue-400 hover:text-blue-300"
                   >
                     <UserPlus className="w-5 h-5" />
@@ -2125,7 +2173,12 @@ const POS = () => {
               </button>
 
                 <button
-                  onClick={() => alert('Receipt functionality coming soon!')}
+                  onClick={() => setAlertModal({
+                    show: true,
+                    title: 'Coming Soon',
+                    message: 'Receipt printing functionality is coming soon!',
+                    type: 'warning'
+                  })}
                   className="w-full py-2 border border-[#555555] text-gray-300 font-semibold rounded-xl hover:bg-[#FF8C42]/10 hover:border-[#FF8C42] hover:text-[#FF8C42] transition-colors flex items-center justify-center space-x-2"
                 >
                   <Receipt className="w-4 h-4" />
@@ -2259,6 +2312,43 @@ const POS = () => {
                 Cancel
               </button>
             </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Alert Modal for Validation Messages */}
+      {alertModal.show && (
+        <Modal 
+          isOpen={true} 
+          onClose={() => setAlertModal({ show: false, title: '', message: '', type: 'warning' })} 
+          title={alertModal.title} 
+          size="sm"
+        >
+          <div className="text-center py-6">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border-2 ${
+              alertModal.type === 'error' ? 'bg-red-500/20 border-red-500/30' :
+              alertModal.type === 'success' ? 'bg-green-500/20 border-green-500/30' :
+              'bg-yellow-500/20 border-yellow-500/30'
+            }`}>
+              <AlertCircle className={`w-8 h-8 ${
+                alertModal.type === 'error' ? 'text-red-500' :
+                alertModal.type === 'success' ? 'text-green-500' :
+                'text-yellow-500'
+              }`} />
+            </div>
+            <p className="text-gray-700 mb-6 text-base">
+              {alertModal.message}
+            </p>
+            <button
+              onClick={() => setAlertModal({ show: false, title: '', message: '', type: 'warning' })}
+              className={`w-full px-6 py-3 text-white font-medium rounded-lg transition-all duration-200 ${
+                alertModal.type === 'error' ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700' :
+                alertModal.type === 'success' ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700' :
+                'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700'
+              }`}
+            >
+              OK
+            </button>
           </div>
         </Modal>
       )}
