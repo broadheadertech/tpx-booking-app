@@ -4,221 +4,150 @@ import { api } from '../../convex/_generated/api';
 import { useToast } from '../components/common/ToastNotification';
 import { useAuth } from '../context/AuthContext';
 
+const STORAGE_KEY = 'last_seen_notifications';
+
 // Hook to show toast notifications for new arrivals
 export const useRealtimeNotifications = () => {
   const { user } = useAuth();
   const toast = useToast();
-  const lastNotificationCount = useRef(0);
   const processedNotifications = useRef(new Set());
-  const isInitialLoad = useRef(true);
-  
-  // Development mode - show all notifications including on initial load
-  const isDev = import.meta.env.DEV;
+  const hasInitialized = useRef(false);
 
   // Get notifications for the current user
   const notifications = useQuery(
     api.services.notifications.getUserNotifications,
-    user?._id ? { userId: user._id, limit: 10 } : "skip"
+    user?._id ? { userId: user._id, limit: 20 } : "skip"
   );
 
   useEffect(() => {
     if (!notifications || !user) return;
 
     const unreadNotifications = notifications.filter(n => !n.is_read);
-    const currentCount = unreadNotifications.length;
 
-    console.log('[Notifications] Loaded:', currentCount, 'unread notifications', unreadNotifications);
+    // Initialize - load previously seen notifications from localStorage
+    if (!hasInitialized.current) {
+      hasInitialized.current = true;
+      
+      try {
+        const storedData = localStorage.getItem(`${STORAGE_KEY}_${user._id}`);
+        if (storedData) {
+          const lastSeenIds = JSON.parse(storedData);
+          lastSeenIds.forEach(id => processedNotifications.current.add(id));
+        }
+      } catch (error) {
+        console.error('[Notifications] Error loading seen notifications:', error);
+      }
 
-    // Skip showing toasts on initial load - only for new arrivals (unless in dev mode)
-    if (isInitialLoad.current && !isDev) {
-      // Mark all current unread notifications as processed without showing toasts
+      // Mark all current notifications as seen on first load
       unreadNotifications.forEach(n => {
         processedNotifications.current.add(n._id);
       });
-      isInitialLoad.current = false;
-      lastNotificationCount.current = currentCount;
-      console.log('[Notifications] Initial load - marked as processed, no toasts shown');
+
+      // Save to localStorage
+      try {
+        const idsArray = Array.from(processedNotifications.current);
+        localStorage.setItem(`${STORAGE_KEY}_${user._id}`, JSON.stringify(idsArray));
+      } catch (error) {
+        console.error('[Notifications] Error saving seen notifications:', error);
+      }
+
       return;
     }
 
-    // In dev mode, show on initial load too
-    if (isInitialLoad.current && isDev) {
-      isInitialLoad.current = false;
-      console.log('[Notifications] Initial load in DEV mode - will show toasts');
-    }
+    // Find truly NEW notifications that haven't been seen before
+    const newNotifications = unreadNotifications.filter(n => 
+      !processedNotifications.current.has(n._id)
+    );
 
-    // Check for new unread notifications (count increased OR in dev mode)
-    if (currentCount > lastNotificationCount.current || isDev) {
-      // Find new notifications that haven't been processed
-      const newNotifications = unreadNotifications.filter(n => 
-        !processedNotifications.current.has(n._id)
-      );
+    if (newNotifications.length === 0) return;
 
-      console.log('[Notifications] New notifications:', newNotifications.length);
+    // Show toast for each new notification
+    newNotifications.forEach(notification => {
+      // Mark as processed to avoid duplicate toasts
+      processedNotifications.current.add(notification._id);
 
-      // Show toast for each new notification
-      newNotifications.forEach(notification => {
-        // Mark as processed to avoid duplicate toasts
-        processedNotifications.current.add(notification._id);
-
-        console.log('[Notifications] Showing toast for:', notification.title);
-
-        // Show appropriate toast based on notification type
-        switch (notification.type) {
-          case 'booking':
-            // Special handling for booking received vs confirmed
-            const isBookingReceived = notification.title.includes('Booking Received');
-            const isBookingConfirmed = notification.title.includes('Booking Confirmed');
-
-            // Only show action button for customers
-            const isCustomer = user?.role === 'customer';
-
-            toast.booking(
-              notification.title,
-              notification.message,
-              {
-                duration: isBookingConfirmed ? 7000 : 6000,
-                action: isCustomer ? {
-                  label: notification.action_label || 'View Booking',
-                  onClick: () => {
-                    // Trigger a custom event to switch to bookings tab
-                    console.log('Dispatching switchToBookings event...')
-                    window.dispatchEvent(new CustomEvent('switchToBookings'));
-                  },
-                  showArrow: true
-                } : undefined
-              }
-            );
-            break;
-            
-          case 'payment':
-            toast.payment(
-              notification.title,
-              notification.message,
-              {
-                duration: 6000,
-                action: notification.action_url ? {
-                  label: notification.action_label || 'View Payment',
-                  onClick: () => {
-                    window.location.href = notification.action_url;
-                  },
-                  showArrow: true
-                } : undefined
-              }
-            );
-            break;
-            
-          case 'reminder':
-            toast.reminder(
-              notification.title,
-              notification.message,
-              {
-                duration: 8000, // Reminders stay longer
-                action: notification.action_url ? {
-                  label: notification.action_label || 'View Details',
-                  onClick: () => {
-                    window.location.href = notification.action_url;
-                  },
-                  showArrow: true
-                } : undefined
-              }
-            );
-            break;
-            
-          case 'promotion':
-            toast.promotion(
-              notification.title,
-              notification.message,
-              {
-                duration: 7000,
-                action: notification.action_url ? {
-                  label: notification.action_label || 'View Offer',
-                  onClick: () => {
-                    window.location.href = notification.action_url;
-                  },
-                  showArrow: true
-                } : undefined
-              }
-            );
-            break;
-            
-          case 'alert':
-            if (notification.priority === 'urgent' || notification.priority === 'high') {
-              toast.error(
-                notification.title,
-                notification.message,
-                {
-                  duration: 10000, // Urgent alerts stay the longest
-                  action: notification.action_url ? {
-                    label: notification.action_label || 'Take Action',
-                    onClick: () => {
-                      window.location.href = notification.action_url;
-                    },
-                    showArrow: true
-                  } : undefined
+      // Show appropriate toast based on notification type
+      switch (notification.type) {
+        case 'booking':
+          const isCustomer = user?.role === 'customer';
+          toast.booking(
+            notification.title,
+            notification.message,
+            {
+              duration: 6000,
+              action: isCustomer ? {
+                label: notification.action_label || 'View',
+                onClick: () => {
+                  window.dispatchEvent(new CustomEvent('switchToBookings'));
                 }
-              );
-            } else {
-              toast.warning(
-                notification.title,
-                notification.message,
-                {
-                  duration: 8000,
-                  action: notification.action_url ? {
-                    label: notification.action_label || 'View Details',
-                    onClick: () => {
-                      window.location.href = notification.action_url;
-                    },
-                    showArrow: true
-                  } : undefined
-                }
-              );
+              } : undefined
             }
-            break;
-            
-          case 'system':
-            toast.info(
+          );
+          break;
+          
+        case 'payment':
+          toast.payment(
+            notification.title,
+            notification.message,
+            { duration: 6000 }
+          );
+          break;
+          
+        case 'reminder':
+          toast.reminder(
+            notification.title,
+            notification.message,
+            { duration: 7000 }
+          );
+          break;
+          
+        case 'promotion':
+          toast.promotion(
+            notification.title,
+            notification.message,
+            { duration: 6000 }
+          );
+          break;
+          
+        case 'alert':
+          if (notification.priority === 'urgent' || notification.priority === 'high') {
+            toast.error(
               notification.title,
               notification.message,
-              {
-                duration: 6000,
-                action: notification.action_url ? {
-                  label: notification.action_label || 'View Details',
-                  onClick: () => {
-                    window.location.href = notification.action_url;
-                  },
-                  showArrow: true
-                } : undefined
-              }
+              { duration: 8000 }
             );
-            break;
-            
-          default:
-            toast.info(
+          } else {
+            toast.warning(
               notification.title,
               notification.message,
-              {
-                duration: 5000,
-                action: notification.action_url ? {
-                  label: notification.action_label || 'View',
-                  onClick: () => {
-                    window.location.href = notification.action_url;
-                  },
-                  showArrow: true
-                } : undefined
-              }
+              { duration: 6000 }
             );
-        }
-      });
-    }
+          }
+          break;
+          
+        case 'system':
+          toast.info(
+            notification.title,
+            notification.message,
+            { duration: 5000 }
+          );
+          break;
+          
+        default:
+          toast.info(
+            notification.title,
+            notification.message,
+            { duration: 5000 }
+          );
+      }
+    });
 
-    // Update the last known count
-    lastNotificationCount.current = currentCount;
-
-    // Clean up old processed notifications (keep last 50)
-    if (processedNotifications.current.size > 50) {
-      const entries = Array.from(processedNotifications.current);
-      processedNotifications.current = new Set(entries.slice(-50));
+    // Save updated processed notifications to localStorage
+    try {
+      const idsArray = Array.from(processedNotifications.current).slice(-100); // Keep last 100
+      localStorage.setItem(`${STORAGE_KEY}_${user._id}`, JSON.stringify(idsArray));
+    } catch (error) {
+      console.error('[Notifications] Error saving seen notifications:', error);
     }
   }, [notifications, user, toast]);
 

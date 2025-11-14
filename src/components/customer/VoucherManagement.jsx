@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, Gift, Clock, CheckCircle, XCircle, QrCode, Ticket, Camera, Upload, Keyboard, X } from 'lucide-react'
+import { ArrowLeft, Gift, Clock, CheckCircle, XCircle, QrCode, Ticket, Camera, Upload, Keyboard, X, Banknote, Percent, Info, AlertTriangle } from 'lucide-react'
 import QRCode from 'qrcode'
 import jsQR from 'jsqr'
 import { useQuery, useMutation } from 'convex/react'
@@ -62,13 +62,13 @@ const VoucherManagement = ({ onBack }) => {
   const getTypeIcon = (type) => {
     switch (type) {
       case 'cash':
-        return '💰'
+        return <Banknote className="w-4 h-4 text-[#FF8C42]" />
       case 'percentage':
-        return '🎯'
+        return <Percent className="w-4 h-4 text-[#FF8C42]" />
       case 'discount':
-        return '🎫'
+        return <Ticket className="w-4 h-4 text-[#FF8C42]" />
       default:
-        return '🎁'
+        return <Gift className="w-4 h-4 text-[#FF8C42]" />
     }
   }
 
@@ -159,7 +159,7 @@ const VoucherManagement = ({ onBack }) => {
       const value = result.voucher.value || voucherValue || 'Unknown'
       setNotification({
         type: 'success',
-        title: '🎉 Voucher Claimed Successfully!',
+        title: 'Voucher Claimed Successfully',
         message: `Code: ${voucherCode}\nValue: ₱${parseFloat(value).toLocaleString()}\nYou can now use this voucher at the barbershop.`
       })
 
@@ -171,13 +171,13 @@ const VoucherManagement = ({ onBack }) => {
         // Handle claim error
         let errorMessage = error.message
         if (errorMessage.includes('expired')) {
-          errorMessage = '⏰ This voucher has expired'
+          errorMessage = 'This voucher has expired'
         } else if (errorMessage.includes('already') || errorMessage.includes('assigned')) {
-          errorMessage = '✅ This voucher has already been claimed'
+          errorMessage = 'This voucher has already been claimed'
         } else if (errorMessage.includes('Invalid') || errorMessage.includes('not found')) {
-          errorMessage = '❌ Invalid voucher code. Please check and try again.'
+          errorMessage = 'Invalid voucher code. Please check and try again.'
         } else if (errorMessage.includes('maximum') || errorMessage.includes('limit')) {
-          errorMessage = '🚫 This voucher has reached its usage limit'
+          errorMessage = 'This voucher has reached its usage limit'
         } else {
           errorMessage = errorMessage || 'Failed to claim voucher. Please try again.'
         }
@@ -453,33 +453,13 @@ const VoucherManagement = ({ onBack }) => {
     const getNotificationStyles = (type) => {
       switch (type) {
         case 'success':
-          return {
-            bg: '#F0FDF4',
-            border: '#22C55E',
-            icon: '✅',
-            iconBg: '#22C55E'
-          }
+          return { bg: '#F0FDF4', border: '#22C55E', Icon: CheckCircle, iconBg: '#22C55E' }
         case 'error':
-          return {
-            bg: '#FEF2F2',
-            border: '#EF4444',
-            icon: '❌',
-            iconBg: '#EF4444'
-          }
+          return { bg: '#FEF2F2', border: '#EF4444', Icon: XCircle, iconBg: '#EF4444' }
         case 'warning':
-          return {
-            bg: '#FFFBEB',
-            border: '#F59E0B',
-            icon: '⚠️',
-            iconBg: '#F59E0B'
-          }
+          return { bg: '#FFFBEB', border: '#F59E0B', Icon: AlertTriangle, iconBg: '#F59E0B' }
         default:
-          return {
-            bg: '#F4F0E6',
-            border: '#F68B24',
-            icon: 'ℹ️',
-            iconBg: '#F68B24'
-          }
+          return { bg: '#F4F0E6', border: '#F68B24', Icon: Info, iconBg: '#F68B24' }
       }
     }
 
@@ -487,21 +467,18 @@ const VoucherManagement = ({ onBack }) => {
 
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border-2" style={{backgroundColor: styles.bg, borderColor: styles.border}}>
+        <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border-2" style={{backgroundColor: styles.bg, borderColor: styles.border}} role="dialog" aria-modal="true" aria-labelledby="notification-title" tabIndex="-1">
           <div className="text-center space-y-4">
             <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto" style={{backgroundColor: styles.iconBg}}>
-              <span className="text-2xl">{styles.icon}</span>
+              <styles.Icon className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-black mb-2" style={{color: '#36454F'}}>{notification.title}</h3>
+              <h3 id="notification-title" className="text-lg font-black mb-2" style={{color: '#36454F'}}>{notification.title}</h3>
               <p className="text-sm whitespace-pre-line" style={{color: '#8B8B8B'}}>{notification.message}</p>
             </div>
             <button
               onClick={onClose}
-              className="w-full py-3 text-white font-bold rounded-xl transition-all duration-200"
-              style={{backgroundColor: '#F68B24'}}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#E67E22'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#F68B24'}
+              className="w-full py-3 bg-[#F68B24] hover:bg-[#E67E22] text-white font-bold rounded-xl transition-all duration-200"
             >
               OK
             </button>
@@ -513,33 +490,36 @@ const VoucherManagement = ({ onBack }) => {
 
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
+      {/* Header - Mobile Native */}
+      <div className="sticky top-0 z-40 bg-gradient-to-b from-[#0A0A0A] to-[#0A0A0A]/95 backdrop-blur-2xl border-b border-[#1A1A1A] shadow-lg">
         <div className="max-w-md mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             <button
               onClick={onBack}
-              className="flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-xl hover:bg-white/10 transition-all duration-200 touch-manipulation"
+              className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-br from-[#1A1A1A] to-[#141414] text-white font-bold rounded-2xl hover:bg-[#1A1A1A] border border-[#2A2A2A] active:scale-95 transition-all duration-200 shadow-lg"
             >
               <ArrowLeft className="w-5 h-5" />
               <span className="text-sm">Back</span>
             </button>
             <div className="text-right">
-              <p className="text-lg font-bold text-white">My Vouchers</p>
-              <p className="text-xs text-[#FF8C42]">{availableVouchers.length + redeemedVouchers.length} total</p>
+              <p className="text-xl font-black text-white">Vouchers</p>
+              <p className="text-xs font-bold text-[#FF8C42]">{availableVouchers.length + redeemedVouchers.length} total</p>
             </div>
           </div>
         </div>
       </div>
 
       <div className="relative z-10 max-w-md mx-auto px-4 py-6">
-        {/* Title & Actions */}
-        <div className="text-center mb-6">
-          <div className="w-12 h-12 rounded-full bg-[#FF8C42] flex items-center justify-center mx-auto mb-3">
-            <Gift className="w-6 h-6 text-white" />
+        {/* Hero Section - Mobile Native */}
+        <div className="relative overflow-hidden rounded-[32px] p-6 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] shadow-2xl mb-6">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
+          <div className="relative z-10 text-center">
+            <div className="w-16 h-16 rounded-3xl bg-white/20 backdrop-blur-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <Gift className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-2xl font-black mb-2 text-white">Your Vouchers</h1>
+            <p className="text-sm font-semibold text-white/90">Tap vouchers to view details</p>
           </div>
-          <h1 className="text-xl font-black mb-2 text-white">Your Vouchers</h1>
-          <p className="text-sm font-medium mb-4 text-gray-400">View and manage your vouchers</p>
         </div>
 
         {/* Loading State */}
@@ -581,18 +561,20 @@ const VoucherManagement = ({ onBack }) => {
           </div>
         )}
 
-        {/* Claimed Vouchers */}
+        {/* Available Vouchers - Mobile Native Cards */}
         {!loading && !error && availableVouchers.length > 0 && (
-          <div className="space-y-2 mb-3">
-            <h2 className="text-base font-black flex items-center px-2 text-white">
-              <CheckCircle className="w-3.5 h-3.5 text-green-500 mr-2" />
-              Available Vouchers ({availableVouchers.length})
-            </h2>
-            <div className="space-y-2">
+          <div className="space-y-3 mb-6">
+            <div className="flex items-center justify-between px-2">
+              <h2 className="text-lg font-black flex items-center text-white">
+                <CheckCircle className="w-5 h-5 text-green-400 mr-2" />
+                Available ({availableVouchers.length})
+              </h2>
+            </div>
+            <div className="space-y-3">
               {availableVouchers.map((voucher) => (
                 <div
                   key={voucher._id}
-                  className="bg-[#1A1A1A] rounded-lg p-3 border border-[#2A2A2A] hover:border-[#FF8C42]/30 transition-all touch-manipulation"
+                  className="bg-gradient-to-br from-[#1A1A1A] to-[#141414] rounded-3xl p-5 border border-[#2A2A2A] hover:border-[#FF8C42]/50 active:scale-98 transition-all duration-200 shadow-lg"
                 >
                   {/* Voucher Header */}
                   <div className="flex justify-between items-start mb-2">
@@ -640,20 +622,17 @@ const VoucherManagement = ({ onBack }) => {
                     </div>
                   </div>
 
-                  {/* View QR Code Button - Only for claimed vouchers */}
+                  {/* View QR Code Button - Mobile Native */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
                       setSelectedVoucher(voucher)
                       setShowQRCode(true)
                     }}
-                    className="w-full py-2 text-white font-bold rounded-lg transition-all duration-200 flex items-center justify-center space-x-1 touch-manipulation"
-                    style={{backgroundColor: '#22C55E'}}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#16A34A'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = '#22C55E'}
+                    className="w-full py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-black rounded-2xl active:scale-95 transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg"
                   >
-                    <QrCode className="w-3.5 h-3.5" />
-                    <span className="text-xs">QR Code</span>
+                    <QrCode className="w-5 h-5" />
+                    <span className="text-sm">View QR Code</span>
                   </button>
                 </div>
               ))}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
 import QRCode from 'qrcode'
 import Card from '../../components/common/Card'
 import Button from '../../components/common/Button'
@@ -225,20 +226,20 @@ function CustomerBooking() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F4F0E6' }}>
-      <header style={{ backgroundColor: '#36454F' }} className="shadow-sm sticky top-0 z-10">
+    <div className="min-h-screen bg-[#0A0A0A]">
+      <header className="bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A] sticky top-0 z-10">
         <div className="px-4 py-4 flex items-center">
-          <Link to="/customer/dashboard" className="mr-4">
-            <span className="text-xl" style={{ color: '#F4F0E6' }}>←</span>
+          <Link to="/customer/dashboard" className="mr-4 text-white hover:text-white/80">
+            <ArrowLeft className="w-5 h-5" />
           </Link>
-          <h1 className="text-xl font-bold" style={{ color: '#F4F0E6' }}>Book Appointment</h1>
+          <h1 className="text-xl font-bold text-white">Book Appointment</h1>
         </div>
       </header>
 
       <div className="px-4 py-6 space-y-6">
         {error && (
-          <Card style={{ backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5' }}>
-            <p className="text-sm text-red-600">{error}</p>
+          <Card className="bg-red-500/20 border border-red-500/30 p-4">
+            <p className="text-sm text-red-300">{error}</p>
           </Card>
         )}
 
@@ -246,19 +247,19 @@ function CustomerBooking() {
 
         {/* Step 5: Sign In or Continue as Guest */}
         {selectedBranch && selectedService && selectedDate && selectedTime && !isAuthenticated && !guestMode && (
-          <Card className="bg-white border border-[#E0E0E0] p-6 text-center">
-            <h2 className="text-lg font-semibold mb-3 text-[#36454F]">5. Sign In or Continue as Guest</h2>
-            <p className="text-sm text-gray-600 mb-5">Sign in to track your booking history or continue as a guest for a one-time booking.</p>
+          <Card className="bg-[#1A1A1A] border border-[#2A2A2A] p-6 text-center">
+            <h2 className="text-lg font-semibold mb-3 text-white">5. Sign In or Continue as Guest</h2>
+            <p className="text-sm text-gray-400 mb-5">Sign in to track your booking history or continue as a guest for a one-time booking.</p>
             <div className="flex flex-col gap-3">
               <Button
                 onClick={() => navigate('/auth/login')}
-                className="w-full bg-[#36454F] text-white hover:bg-[#2A2A2A] transition-all"
+                className="w-full bg-[#1F1F1F] text-white border border-[#2A2A2A] hover:bg-[#2A2A2A] transition-all"
               >
                 Sign In
               </Button>
               <Button
                 onClick={() => setGuestMode(true)}
-                className="w-full bg-[#FF8C42] text-white hover:bg-[#FF7A2B] transition-all"
+                className="w-full bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white hover:shadow-lg transition-all"
               >
                 Continue as Guest
               </Button>
@@ -269,32 +270,24 @@ function CustomerBooking() {
         {/* Step 6: Select Barber + Confirm Booking */}
         {(isAuthenticated || guestMode) && selectedBranch && selectedService && selectedDate && selectedTime && (
           <div>
-            <h2 className="text-lg font-semibold mb-4" style={{ color: '#36454F' }}>6. Choose Barber (Optional)</h2>
+            <h2 className="text-lg font-semibold mb-4 text-white">6. Choose Barber (Optional)</h2>
             <div className="space-y-2">
               <button
                 onClick={() => setSelectedBarber(null)}
-                className="w-full p-4 rounded-lg border-2 text-left transition-colors"
-                style={{
-                  backgroundColor: selectedBarber === null ? 'rgba(246, 139, 36, 0.1)' : 'white',
-                  borderColor: selectedBarber === null ? '#F68B24' : '#E0E0E0'
-                }}
+                className={`w-full p-4 rounded-lg border-2 text-left transition-colors ${selectedBarber === null ? 'border-[#FF8C42] bg-[#FF8C42]/10' : 'border-[#2A2A2A] bg-[#1A1A1A]'}`}
               >
-                <span className="font-medium" style={{ color: '#36454F' }}>No preference</span>
-                <p className="text-sm" style={{ color: '#8B8B8B' }}>Any available barber</p>
+                <span className="font-medium text-white">No preference</span>
+                <p className="text-sm text-gray-400">Any available barber</p>
               </button>
 
               {barbers && barbers.length > 0 ? barbers.map((barber) => (
                 <button
                   key={barber._id}
                   onClick={() => setSelectedBarber(barber)}
-                  className="w-full p-4 rounded-lg border-2 text-left transition-colors"
-                  style={{
-                    backgroundColor: selectedBarber?._id === barber._id ? 'rgba(246, 139, 36, 0.1)' : 'white',
-                    borderColor: selectedBarber?._id === barber._id ? '#F68B24' : '#E0E0E0'
-                  }}
+                  className={`w-full p-4 rounded-lg border-2 text-left transition-colors ${selectedBarber?._id === barber._id ? 'border-[#FF8C42] bg-[#FF8C42]/10' : 'border-[#2A2A2A] bg-[#1A1A1A] hover:border-[#FF8C42]/50'}`}
                 >
-                  <span className="font-medium" style={{ color: '#36454F' }}>{barber.full_name}</span>
-                  <p className="text-sm" style={{ color: '#8B8B8B' }}>Professional barber</p>
+                  <span className="font-medium text-white">{barber.full_name}</span>
+                  <p className="text-sm text-gray-400">Professional barber</p>
                 </button>
               )) : (
                 <Card style={{ backgroundColor: 'white', border: '1px solid #E0E0E0' }}>
@@ -309,12 +302,7 @@ function CustomerBooking() {
               <Button 
                 onClick={handleBooking}
                 disabled={loading}
-                className="w-full transition-colors"
-                style={{ 
-                  backgroundColor: loading ? '#8B8B8B' : '#F68B24', 
-                  color: 'white',
-                  cursor: loading ? 'not-allowed' : 'pointer'
-                }}
+                className={`w-full transition-colors ${loading ? 'bg-gray-600 text-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white hover:shadow-lg'}`}
               >
                 {loading ? 'Creating Booking...' : 'Confirm Booking'}
               </Button>

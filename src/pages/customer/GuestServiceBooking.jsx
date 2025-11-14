@@ -10,6 +10,9 @@ import {
   Search,
   X,
   MapPin,
+  AlertTriangle,
+  Lock,
+  Banknote,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from "convex/react";
@@ -1001,7 +1004,7 @@ const GuestServiceBooking = ({ onBack }) => {
           </div>
         ) : (
           <div className="text-center py-6">
-            <div className="text-3xl mb-2">⚠️</div>
+            <AlertTriangle className="w-6 h-6 text-amber-500 mx-auto mb-2" />
             <p className="text-sm text-[#FF8C42] font-medium">
               No barbers available for "{selectedService?.name}"
             </p>
@@ -1062,7 +1065,7 @@ const GuestServiceBooking = ({ onBack }) => {
             </div>
           ) : timeSlots.length === 0 ? (
             <div className="text-center py-6">
-              <div className="text-3xl mb-2">📅</div>
+            <Calendar className="w-6 h-6 text-[#FF8C42] mx-auto mb-2" />
               <p className="text-sm text-[#FF8C42] font-medium">
                 No available times
               </p>
@@ -1405,7 +1408,8 @@ const GuestServiceBooking = ({ onBack }) => {
             We'll create a temporary guest account for your booking
           </p>
           <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full bg-[#FF8C42]/10 border border-[#FF8C42]/20">
-            <span className="text-xs text-[#FF8C42]">🔒 Secure & Private</span>
+            <Lock className="w-3.5 h-3.5 text-[#FF8C42] mr-1" />
+            <span className="text-xs text-[#FF8C42]">Secure & Private</span>
           </div>
         </div>
 
@@ -1660,7 +1664,7 @@ const GuestServiceBooking = ({ onBack }) => {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <div className="text-sm">🎁</div>
+                          <Gift className="w-4 h-4" style={{ color: "#F68B24" }} />
                           <div>
                             <p
                               className="text-xs font-bold"
@@ -1686,13 +1690,9 @@ const GuestServiceBooking = ({ onBack }) => {
                   ))}
                 </div>
                 {selectedVoucher && (
-                  <div
-                    className="text-xs text-center p-2 rounded"
-                    style={{ backgroundColor: "#F0F8FF", color: "#36454F" }}
-                  >
-                    💰 You'll save ₱
-                    {parseFloat(selectedVoucher.value || 0).toFixed(2)} with
-                    this voucher
+                  <div className="text-xs text-center p-2 rounded flex items-center justify-center gap-2" style={{ backgroundColor: "#F0F8FF", color: "#36454F" }}>
+                    <Banknote className="w-4 h-4" />
+                    <span>You'll save ₱{parseFloat(selectedVoucher.value || 0).toFixed(2)} with this voucher</span>
                   </div>
                 )}
               </div>
@@ -1714,25 +1714,11 @@ const GuestServiceBooking = ({ onBack }) => {
             <button
               onClick={() => handleConfirmBooking("pay_later")}
               disabled={bookingLoading}
-              className={`w-full py-3 px-4 rounded-lg transition-all duration-200 text-sm flex items-center justify-center space-x-2 font-bold ${
+              className={`w-full py-3 px-4 rounded-lg transition-all duration-200 text-sm flex items-center justify-center gap-2 font-bold ${
                 bookingLoading
                   ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                  : "bg-orange-500 hover:bg-orange-600 text-white hover:shadow-lg"
+                  : "bg-[#FF8C42] hover:bg-[#FF7A2B] text-white hover:shadow-lg"
               }`}
-              style={{
-                backgroundColor: bookingLoading ? "#4B5563" : "#FF8C42",
-                color: bookingLoading ? "#D1D5DB" : "#FFFFFF",
-              }}
-              onMouseEnter={(e) => {
-                if (!bookingLoading) {
-                  e.target.style.backgroundColor = "#FF7A2B";
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!bookingLoading) {
-                  e.target.style.backgroundColor = "#FF8C42";
-                }
-              }}
             >
               {bookingLoading ? (
                 <div className="flex items-center justify-center space-x-2">
@@ -1741,7 +1727,7 @@ const GuestServiceBooking = ({ onBack }) => {
                 </div>
               ) : (
                 <>
-                  <span>🏪</span>
+                  <Building className="w-4 h-4" />
                   <span>Complete Booking - Pay at Shop</span>
                 </>
               )}
@@ -1759,16 +1745,7 @@ const GuestServiceBooking = ({ onBack }) => {
           <div className="pt-2">
             <button
               onClick={() => setStep(3)}
-              className="w-full py-2 px-3 border font-bold rounded-lg transition-all duration-200 text-sm"
-              style={{ borderColor: "#E0E0E0", color: "#8B8B8B" }}
-              onMouseEnter={(e) => {
-                e.target.style.backgroundColor = "#F5F5F5";
-                e.target.style.color = "#36454F";
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.backgroundColor = "transparent";
-                e.target.style.color = "#8B8B8B";
-              }}
+              className="w-full py-2 px-3 border border-[#2A2A2A] text-gray-400 hover:bg-[#1A1A1A] hover:text-white font-bold rounded-lg transition-all duration-200 text-sm"
             >
               ← Go Back to Edit Details
             </button>
@@ -1940,10 +1917,7 @@ const GuestServiceBooking = ({ onBack }) => {
         <div className="space-y-3">
           <button
             onClick={onBack}
-            className="w-full py-4 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
-            style={{ backgroundColor: "#F68B24" }}
-            onMouseEnter={(e) => (e.target.style.backgroundColor = "#E67E22")}
-            onMouseLeave={(e) => (e.target.style.backgroundColor = "#F68B24")}
+            className="w-full py-4 bg-[#F68B24] hover:bg-[#E67E22] text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
           >
             Back to Home
           </button>
@@ -2007,7 +1981,13 @@ const GuestServiceBooking = ({ onBack }) => {
           ></div>
 
           {/* Modal */}
-          <div className="relative bg-[#1A1A1A] rounded-2xl shadow-2xl border border-[#2A2A2A] max-w-md w-full mx-auto p-6">
+          <div
+            className="relative bg-[#1A1A1A] rounded-2xl shadow-2xl border border-[#2A2A2A] max-w-md w-full mx-auto p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="error-dialog-title"
+            tabIndex="-1"
+          >
             {/* Error Icon */}
             <div className="flex justify-center mb-4">
               <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
@@ -2028,7 +2008,7 @@ const GuestServiceBooking = ({ onBack }) => {
             </div>
 
             {/* Title */}
-            <h3 className="text-lg font-semibold text-white text-center mb-2">
+            <h3 id="error-dialog-title" className="text-lg font-semibold text-white text-center mb-2">
               {errorDialog.title}
             </h3>
 
@@ -2050,7 +2030,7 @@ const GuestServiceBooking = ({ onBack }) => {
 
       {/* Success Notification */}
       {successNotification.isOpen && (
-        <div className="fixed top-4 right-4 z-50 max-w-sm">
+        <div className="fixed top-4 right-4 z-50 max-w-sm" role="status" aria-live="polite">
           <div className="bg-green-500/90 backdrop-blur-sm text-white rounded-xl shadow-2xl border border-green-400/30 p-4">
             <div className="flex items-start space-x-3">
               <div className="flex-shrink-0">

@@ -10,6 +10,9 @@ import {
   Search,
   X,
   MapPin,
+  AlertTriangle,
+  CreditCard,
+  Banknote,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from "convex/react";
@@ -948,7 +951,7 @@ const ServiceBooking = ({ onBack }) => {
           </div>
         ) : (
           <div className="text-center py-6">
-            <div className="text-3xl mb-2">⚠️</div>
+            <AlertTriangle className="w-6 h-6 text-amber-500 mx-auto mb-2" />
             <p className="text-sm text-[#FF8C42] font-medium">
               No barbers available for "{selectedService?.name}"
             </p>
@@ -1009,13 +1012,9 @@ const ServiceBooking = ({ onBack }) => {
             </div>
           ) : timeSlots.length === 0 ? (
             <div className="text-center py-6">
-              <div className="text-3xl mb-2">📅</div>
-              <p className="text-sm text-[#FF8C42] font-medium">
-                No available times
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                Please select a different date
-              </p>
+              <Calendar className="w-6 h-6 text-[#FF8C42] mx-auto mb-2" />
+              <p className="text-sm text-[#FF8C42] font-medium">No available times</p>
+              <p className="text-xs text-gray-400 mt-1">Please select a different date</p>
             </div>
           ) : (
             <>
@@ -1266,7 +1265,7 @@ const ServiceBooking = ({ onBack }) => {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <div className="text-sm">🎁</div>
+                          <Gift className="w-4 h-4" style={{ color: "#F68B24" }} />
                           <div>
                             <p
                               className="text-xs font-bold"
@@ -1292,13 +1291,9 @@ const ServiceBooking = ({ onBack }) => {
                   ))}
                 </div>
                 {selectedVoucher && (
-                  <div
-                    className="text-xs text-center p-2 rounded"
-                    style={{ backgroundColor: "#F0F8FF", color: "#36454F" }}
-                  >
-                    💰 You'll save ₱
-                    {parseFloat(selectedVoucher.value || 0).toFixed(2)} with
-                    this voucher
+                  <div className="text-xs text-center p-2 rounded flex items-center justify-center gap-2" style={{ backgroundColor: "#F0F8FF", color: "#36454F" }}>
+                    <Banknote className="w-4 h-4" />
+                    <span>You'll save ₱{parseFloat(selectedVoucher.value || 0).toFixed(2)} with this voucher</span>
                   </div>
                 )}
               </div>
@@ -1322,50 +1317,28 @@ const ServiceBooking = ({ onBack }) => {
                 <button
                   onClick={() => setShowPaymentMethods(true)}
                   disabled={bookingLoading}
-                  className={`py-3 px-4 bg-green-500 text-white font-bold rounded-lg transition-all duration-200 text-sm flex items-center justify-center space-x-2 ${
+                  className={`py-3 px-4 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg transition-all duration-200 text-sm flex items-center justify-center gap-2 ${
                     bookingLoading ? "opacity-75 cursor-not-allowed" : ""
                   }`}
-                  onMouseEnter={(e) =>
-                    !bookingLoading &&
-                    (e.target.style.backgroundColor = "#16A34A")
-                  }
-                  onMouseLeave={(e) =>
-                    !bookingLoading &&
-                    (e.target.style.backgroundColor = "#22C55E")
-                  }
                 >
-                  <span>💳</span>
+                  <CreditCard className="w-4 h-4" />
                   <span>Pay Now</span>
                 </button>
                 <button
                   onClick={() => handleConfirmBooking("pay_later")}
                   disabled={bookingLoading}
-                  className={`py-3 px-4 border-2 font-bold rounded-lg transition-all duration-200 text-sm flex items-center justify-center space-x-2 ${
+                  className={`py-3 px-4 border-2 border-[#F68B24] text-[#F68B24] hover:bg-[#F68B24] hover:text-white font-bold rounded-lg transition-all duration-200 text-sm flex items-center justify-center gap-2 ${
                     bookingLoading ? "opacity-75 cursor-not-allowed" : ""
                   }`}
-                  style={{
-                    borderColor: "#F68B24",
-                    color: bookingLoading ? "#CCCCCC" : "#F68B24",
-                  }}
-                  onMouseEnter={(e) =>
-                    !bookingLoading &&
-                    ((e.target.style.backgroundColor = "#F68B24"),
-                    (e.target.style.color = "white"))
-                  }
-                  onMouseLeave={(e) =>
-                    !bookingLoading &&
-                    ((e.target.style.backgroundColor = "transparent"),
-                    (e.target.style.color = "#F68B24"))
-                  }
                 >
                   {bookingLoading ? (
-                    <div className="flex items-center justify-center space-x-2">
+                    <div className="flex items-center justify-center gap-2">
                       <div className="animate-spin w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full"></div>
                       <span>Booking...</span>
                     </div>
                   ) : (
                     <>
-                      <span>🏪</span>
+                      <Building className="w-4 h-4" />
                       <span>Pay Later</span>
                     </>
                   )}
@@ -1438,7 +1411,7 @@ const ServiceBooking = ({ onBack }) => {
                       }`}
                     >
                       <div className="w-8 h-8 bg-purple-500 rounded flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">💳</span>
+                        <CreditCard className="w-4 h-4 text-white" />
                       </div>
                       <div className="text-left">
                         <p
@@ -1461,16 +1434,7 @@ const ServiceBooking = ({ onBack }) => {
                       setShowPaymentMethods(false);
                       setSelectedPaymentMethod(null);
                     }}
-                    className="flex-1 py-2 px-3 border font-bold rounded-lg transition-all duration-200 text-sm"
-                    style={{ borderColor: "#E0E0E0", color: "#8B8B8B" }}
-                    onMouseEnter={(e) => {
-                      e.target.style.backgroundColor = "#F5F5F5";
-                      e.target.style.color = "#36454F";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = "transparent";
-                      e.target.style.color = "#8B8B8B";
-                    }}
+                    className="flex-1 py-2 px-3 border border-[#2A2A2A] text-gray-400 hover:bg-[#1A1A1A] hover:text-white font-bold rounded-lg transition-all duration-200 text-sm"
                   >
                     Back
                   </button>
@@ -1527,21 +1491,12 @@ const ServiceBooking = ({ onBack }) => {
           {/* Go Back Button */}
           {!showPaymentMethods && (
             <div className="pt-2">
-              <button
-                onClick={() => setStep(3)}
-                className="w-full py-2 px-3 border font-bold rounded-lg transition-all duration-200 text-sm"
-                style={{ borderColor: "#E0E0E0", color: "#8B8B8B" }}
-                onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = "#F5F5F5";
-                  e.target.style.color = "#36454F";
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = "transparent";
-                  e.target.style.color = "#8B8B8B";
-                }}
-              >
-                ← Go Back to Edit Details
-              </button>
+                  <button
+                    onClick={() => setStep(3)}
+                    className="w-full py-2 px-3 border border-[#2A2A2A] text-gray-400 hover:bg-[#1A1A1A] hover:text-white font-bold rounded-lg transition-all duration-200 text-sm"
+                  >
+                    ← Go Back to Edit Details
+                  </button>
             </div>
           )}
         </div>
