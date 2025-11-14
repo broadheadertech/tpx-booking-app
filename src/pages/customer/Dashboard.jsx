@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
-import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User, Bot, Bell } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User, Bot, Bell, Wallet, Building } from 'lucide-react'
 import ServiceBooking from '../../components/customer/ServiceBooking'
 import CustomerProfile from '../../components/customer/CustomerProfile'
 import VoucherManagement from '../../components/customer/VoucherManagement'
@@ -21,6 +21,7 @@ import NotificationsPage from '../../components/customer/NotificationsPage'
 const Dashboard = () => {
   const { user, isAuthenticated } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
   const [activeSection, setActiveSection] = useState('home')
   const [showOnboarding, setShowOnboarding] = useState(false)
   
@@ -94,6 +95,7 @@ const Dashboard = () => {
   const sections = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'bookings', label: 'Bookings', icon: History },
+    { id: 'wallet', label: 'Wallet', icon: Wallet },
     { id: 'vouchers', label: 'Vouchers', icon: Gift },
     { id: 'ai-assistant', label: 'TPX AI', icon: Bot }
   ]
@@ -154,29 +156,40 @@ const Dashboard = () => {
       default:
         return (
           <div className="space-y-6">
-            {/* Hero Section with Carousel */}
-            <div className="relative overflow-hidden rounded-2xl mx-4 shadow-2xl">
-              {/* Carousel Background */}
-              <Carousel 
-                images={currentBranch?.carousel_images || []} 
-                autoPlay={true} 
-                interval={5000}
-              />
+            {/* Hero Section - Premium Carousel */}
+            <div className="px-4 mb-8">
+              <div className="relative overflow-hidden rounded-[28px] shadow-2xl">
+                <Carousel 
+                  images={currentBranch?.carousel_images || []} 
+                  autoPlay={true} 
+                  interval={5000}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+                
+                {/* Welcome Text Overlay */}
+                <div className="absolute bottom-0 left-0 right-0 p-6 z-10">
+                  <h2 className="text-2xl font-black text-white mb-1">Welcome Back</h2>
+                  <p className="text-sm text-white/80 font-medium">Your next grooming experience awaits</p>
+                </div>
+              </div>
             </div>
 
-            {/* Quick Stats - Simplified */}
-            <div className="px-4 mt-6 relative z-10">
+            {/* Quick Stats - Premium Design */}
+            <div className="px-4 mb-8">
               <div className="grid grid-cols-2 gap-4">
                 {quickStats.map((stat) => {
-                  const IconComponent = stat.icon
                   return (
-                    <div key={stat.label} className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
-                      <div className="text-center">
-                        <div className="w-12 h-12 rounded-xl bg-[#FF8C42] flex items-center justify-center mx-auto mb-2">
-                          <IconComponent className="w-6 h-6 text-white" />
-                        </div>
-                        <div className="text-2xl font-bold text-white">{stat.value}</div>
-                        <div className="text-sm font-medium text-gray-400">{stat.label}</div>
+                    <div 
+                      key={stat.label} 
+                      className="relative bg-[#0A0A0A] rounded-[24px] p-6 border-2 border-[#FF8C42]/40 hover:border-[#FF8C42] active:scale-[0.98] transition-all duration-200 group"
+                    >
+                      {/* Subtle gradient background */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-[#FF8C42]/5 to-transparent rounded-[24px] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      
+                      {/* Content */}
+                      <div className="relative">
+                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{stat.label}</div>
+                        <div className="text-5xl font-black text-white">{stat.value}</div>
                       </div>
                     </div>
                   )
@@ -184,53 +197,49 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Main Actions - Streamlined */}
-            <div className="px-4 space-y-4">
-         
-              {/* Primary Action - Book Service */}
+            {/* Primary CTA - Premium Design */}
+            <div className="px-4 mb-8">
               <button
                 onClick={() => setActiveSection('booking')}
-                className="w-full p-6 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                className="w-full relative rounded-[24px] overflow-hidden group active:scale-[0.98] transition-all duration-300"
               >
-                <div className="flex items-center justify-center space-x-4">
-                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
-                    <Calendar className="w-8 h-8 text-white" />
+                {/* Dark background with gradient border effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-[#FF8C42] via-[#FF7A2B] to-[#FF8C42] bg-[length:200%_100%] animate-gradient p-[2px] rounded-[24px]">
+                  <div className="w-full h-full bg-[#0A0A0A] rounded-[22px]" />
+                </div>
+                
+                {/* Glow effect on hover */}
+                <div className="absolute inset-0 bg-gradient-to-r from-[#FF8C42]/0 via-[#FF8C42]/20 to-[#FF8C42]/0 opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-500" />
+                
+                {/* Content */}
+                <div className="relative z-10 p-6 flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    {/* Icon with gradient background */}
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-2xl blur-md opacity-60" />
+                      <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center">
+                        <Calendar className="w-7 h-7 text-white" />
+                      </div>
+                    </div>
+                    
+                    {/* Text */}
+                    <div className="text-left">
+                      <div className="text-xl font-black text-white mb-0.5">Book Appointment</div>
+                      <div className="text-sm text-gray-400 font-medium">Schedule your next visit</div>
+                    </div>
                   </div>
-                  <div className="text-left">
-                    <h3 className="text-lg font-bold text-white">Book Your Service</h3>
-                    <p className="text-white/80">Schedule your next appointment</p>
+                  
+                  {/* Arrow with orange gradient */}
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                    </svg>
                   </div>
                 </div>
               </button>
-
-              {/* Secondary Actions */}
-            
             </div>
 
-            {/* Shop Info */}
-            <div className="bg-[#1A1A1A] mx-4 rounded-xl p-4 border border-[#2A2A2A]">
-              <h3 className="text-sm font-bold mb-3 text-center text-white">Shop Information</h3>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2">
-                  <div className="w-6 h-6 rounded-lg bg-[#FF8C42] flex items-center justify-center">
-                    <MapPin className="w-3 h-3 text-white" />
-                  </div>
-                  <span className="text-xs font-medium text-gray-300">123 Main Street, Quezon City</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-6 h-6 rounded-lg bg-[#FF8C42] flex items-center justify-center">
-                    <Phone className="w-3 h-3 text-white" />
-                  </div>
-                  <span className="text-xs font-medium text-gray-300">+63 912 345 6789</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-6 h-6 rounded-lg bg-[#FF8C42] flex items-center justify-center">
-                    <Clock className="w-3 h-3 text-white" />
-                  </div>
-                  <span className="text-xs font-medium text-gray-300">9:00 AM - 8:00 PM (Mon-Sat)</span>
-                </div>
-              </div>
-            </div>
+
           </div>
         )
     }
@@ -243,37 +252,39 @@ const Dashboard = () => {
         <PremiumOnboarding onComplete={handleOnboardingComplete} />
       )}
       
-      {/* Header - Hide when on sections with their own navigation */}
+      {/* Header - Premium Design */}
       {!['booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
-        <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
+        <div className="sticky top-0 z-40 bg-[#0A0A0A]/98 backdrop-blur-2xl border-b border-[#1A1A1A]">
           <div className="max-w-md mx-auto px-4">
-            <div className="flex justify-between items-center py-4">
+            <div className="flex justify-between items-center py-5">
               <div className="flex items-center space-x-3">
-                <img 
-                  src="/img/tipuno_x_logo_white.avif" 
-                  alt="TipunoX Angeles Barbershop Logo" 
-                  className="w-16 h-16 object-contain"
-                />
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#FF8C42]/20 to-[#FF7A2B]/20 rounded-2xl blur-xl" />
+                  <img 
+                    src="/img/tipuno_x_logo_white.avif" 
+                    alt="TipunoX Angeles Barbershop Logo" 
+                    className="w-14 h-14 object-contain relative z-10"
+                  />
+                </div>
                 <div>
-                  <h1 className="text-sm font-bold text-white">TipunoX Angeles</h1>
-                  <p className="text-xs font-medium text-[#FF8C42]">Barbershop</p>
+                  <h1 className="text-base font-black text-white">TipunoX</h1>
+                  <p className="text-xs font-semibold text-[#FF8C42]">Angeles</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
                 <NotificationBell userId={user?._id} onOpenModal={() => setActiveSection('notifications')} />
-                <div className="text-right">
-                  <p className="text-xs font-medium text-white">Welcome</p>
-                  <p className="text-xs text-gray-400">{new Date().toLocaleDateString()}</p>
-                </div>
                 <button
                   onClick={() => setActiveSection('profile')}
-                  className="w-8 h-8 rounded-full overflow-hidden ring-1 ring-white/10 hover:ring-white/20 transition-colors"
+                  className="relative group"
                 >
-                  <img
-                    src={(user && user.avatar) ? user.avatar : '/img/avatar_default.jpg'}
-                    alt={user?.username || 'Profile'}
-                    className="w-full h-full object-cover"
-                  />
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-full opacity-0 group-hover:opacity-100 blur-md transition-opacity duration-300" />
+                  <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-[#1A1A1A] group-hover:ring-[#FF8C42]/50 transition-all duration-300">
+                    <img
+                      src={(user && user.avatar) ? user.avatar : '/img/avatar_default.jpg'}
+                      alt={user?.username || 'Profile'}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 </button>
               </div>
             </div>
@@ -286,38 +297,52 @@ const Dashboard = () => {
         {renderContent()}
       </div>
 
-      {/* Bottom Navigation - Only show when not onboarding and not on pages with their own navigation */}
+      {/* Bottom Navigation - Premium Floating Bar */}
       {!showOnboarding && !['booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0A0A0A]/95 backdrop-blur-xl shadow-2xl border-t border-[#1A1A1A]">
-        <div className="max-w-md mx-auto px-3">
-          <div className="grid grid-cols-4 py-3">
-            {sections.map((section) => {
-              const IconComponent = section.icon
-              const isActive = activeSection === section.id
-              return (
-                <button
-                  key={section.id}
-                  onClick={() => setActiveSection(section.id)}
-                  className={`flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-300 relative ${
-                    isActive 
-                      ? 'bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg' 
-                      : 'text-gray-400 hover:text-gray-300'
-                  }`}
-                >
-                  {/* Active indicator dot */}
-                  {isActive && (
-                    <div className="absolute -top-1 w-1 h-1 rounded-full bg-white/60" />
-                  )}
-                  
-                  <div className={`p-2 rounded-xl mb-1 transition-all duration-300 ${isActive ? 'bg-white/20 scale-110' : 'bg-transparent'}`}>
-                    <IconComponent className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs font-medium tracking-wide">{section.label}</span>
-                </button>
-              )
-            })}
+        <div className="fixed bottom-0 left-0 right-0 z-50 pb-safe">
+          <div className="max-w-md mx-auto px-4 pb-6">
+            <div className="bg-[#0A0A0A]/95 backdrop-blur-2xl rounded-[28px] border border-[#1A1A1A] shadow-2xl p-2">
+              <div role="navigation" aria-label="Primary" className="grid grid-cols-5 gap-1">
+                {sections.map((section) => {
+                  const IconComponent = section.icon
+                  const isActive = activeSection === section.id
+                  return (
+                    <button
+                      key={section.id}
+                      onClick={() => {
+                        if (section.id === 'wallet') {
+                          navigate('/customer/wallet')
+                        } else {
+                          setActiveSection(section.id)
+                        }
+                      }}
+                      className={`flex flex-col items-center justify-center py-3 px-2 rounded-[20px] transition-all duration-300 relative active:scale-95 ${
+                        isActive 
+                          ? 'bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B]' 
+                          : 'hover:bg-white/5'
+                      }`}
+                      aria-current={isActive ? 'page' : undefined}
+                    >
+                      {/* Active indicator - minimal line */}
+                      {isActive && (
+                        <div className="absolute top-1 w-6 h-0.5 rounded-full bg-white/60" />
+                      )}
+                      
+                      <IconComponent className={`w-6 h-6 mb-1 transition-all ${
+                        isActive ? 'text-white' : 'text-gray-500'
+                      }`} />
+                      
+                      <span className={`text-[10px] font-semibold transition-all ${
+                        isActive ? 'text-white' : 'text-gray-500'
+                      }`}>
+                        {section.label}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
           </div>
-        </div>
         </div>
       )}
     </div>
