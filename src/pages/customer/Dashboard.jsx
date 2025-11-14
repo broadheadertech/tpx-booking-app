@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
-import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User, Bot, Bell } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User, Bot, Bell, Wallet } from 'lucide-react'
 import ServiceBooking from '../../components/customer/ServiceBooking'
 import CustomerProfile from '../../components/customer/CustomerProfile'
 import VoucherManagement from '../../components/customer/VoucherManagement'
@@ -21,6 +21,7 @@ import NotificationsPage from '../../components/customer/NotificationsPage'
 const Dashboard = () => {
   const { user, isAuthenticated } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
   const [activeSection, setActiveSection] = useState('home')
   const [showOnboarding, setShowOnboarding] = useState(false)
   
@@ -94,6 +95,7 @@ const Dashboard = () => {
   const sections = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'bookings', label: 'Bookings', icon: History },
+    { id: 'wallet', label: 'Wallet', icon: Wallet },
     { id: 'vouchers', label: 'Vouchers', icon: Gift },
     { id: 'ai-assistant', label: 'TPX AI', icon: Bot }
   ]
@@ -290,14 +292,20 @@ const Dashboard = () => {
       {!showOnboarding && !['booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
         <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0A0A0A]/95 backdrop-blur-xl shadow-2xl border-t border-[#1A1A1A]">
         <div className="max-w-md mx-auto px-3">
-          <div className="grid grid-cols-4 py-3">
+          <div className="grid grid-cols-5 py-3">
             {sections.map((section) => {
               const IconComponent = section.icon
               const isActive = activeSection === section.id
               return (
                 <button
                   key={section.id}
-                  onClick={() => setActiveSection(section.id)}
+                  onClick={() => {
+                    if (section.id === 'wallet') {
+                      navigate('/customer/wallet')
+                    } else {
+                      setActiveSection(section.id)
+                    }
+                  }}
                   className={`flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-300 relative ${
                     isActive 
                       ? 'bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg' 

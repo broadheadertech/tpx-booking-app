@@ -21,6 +21,7 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import CustomerDashboard from "./pages/customer/Dashboard";
 import CustomerBooking from "./pages/customer/Booking";
 import GuestServiceBooking from "./pages/customer/GuestServiceBooking.jsx";
+import Wallet from "./pages/customer/Wallet.jsx";
 import BarberDashboard from "./components/barber/BarberDashboard";
 import Kiosk from "./pages/Kiosk";
 import PaymentSuccess from "./pages/booking/payment/success.jsx";
@@ -162,6 +163,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <CustomerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/customer/wallet"
+                element={
+                  <ProtectedRoute>
+                    <Wallet />
                   </ProtectedRoute>
                 }
               />
