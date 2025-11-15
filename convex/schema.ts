@@ -713,6 +713,36 @@ export default defineSchema({
     error: v.optional(v.string()),
     createdAt: v.number(),
   })
-    .index("by_campaign", ["campaign_id"])
+    .index("by_campaign", ["campaign_id"]) 
+    .index("by_status", ["status"]),
+
+  // Wallets
+  wallets: defineTable({
+    user_id: v.id("users"),
+    balance: v.number(),
+    currency: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["user_id"]),
+
+  // Wallet transactions
+  wallet_transactions: defineTable({
+    user_id: v.id("users"),
+    type: v.union(v.literal("topup"), v.literal("payment"), v.literal("refund")),
+    amount: v.number(),
+    status: v.union(v.literal("pending"), v.literal("completed"), v.literal("failed")),
+    provider: v.optional(v.string()),
+    reference_id: v.optional(v.string()),
+    source_id: v.optional(v.string()),
+    payment_id: v.optional(v.string()),
+    description: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["user_id"]) 
+    .index("by_reference", ["reference_id"]) 
+    .index("by_source", ["source_id"]) 
+    .index("by_payment", ["payment_id"]) 
     .index("by_status", ["status"]),
 });

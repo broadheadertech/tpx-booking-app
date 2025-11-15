@@ -41,7 +41,7 @@ function App() {
     <AuthProvider>
       <ToastProvider>
         <Router>
-          <div className="min-h-screen bg-gray-light">
+          <div className="min-h-screen bg-[#0A0A0A]">
             <Routes>
               <Route
                 path="/"
@@ -191,7 +191,7 @@ function App() {
                 element={<PaymentFailure />}
               />
               <Route path="/download-app" element={<DownloadApp />} />
-            </Routes>
+              </Routes>
           </div>
         </Router>
       </ToastProvider>
