@@ -693,6 +693,205 @@ const PayrollManagement = ({ onRefresh, user }) => {
     @media print { body{padding:0;background:#fff;color:#111} .card{border-color:#ddd;background:#fff} .accent{color:#111} .service-table{border-color:#ddd;background:#fff} }
   `;
 
+  // NEW: Generate daily breakdown cards for a payroll record
+  const dailyBreakdownSection = (record) => {
+    const format = (amt) =>
+      new Intl.NumberFormat("en-PH", {
+        style: "currency",
+        currency: "PHP",
+        minimumFractionDigits: 0,
+      }).format(amt || 0);
+    const dateRange = selectedPeriod
+      ? `${formatDate(selectedPeriod.period_start)} – ${formatDate(selectedPeriod.period_end)}`
+      : "";
+
+    // Group bookings by date
+    const bookingsByDate = {};
+    const bookingsDetail = Array.isArray(record.bookings_detail) ? record.bookings_detail : [];
+    bookingsDetail.forEach((b) => {
+      const dateKey = b.date || new Date(b.updatedAt).toISOString().split("T")[0];
+      if (!bookingsByDate[dateKey]) {
+        bookingsByDate[dateKey] = [];
+      }
+      bookingsByDate[dateKey].push(b);
+    });
+
+    // Group products by date
+    const productsByDate = {};
+    const productsDetail = Array.isArray(record.products_detail) ? record.products_detail : [];
+    productsDetail.forEach((p) => {
+      const dateKey = new Date(p.date).toISOString().split("T")[0];
+      if (!productsByDate[dateKey]) {
+        productsByDate[dateKey] = [];
+      }
+      productsByDate[dateKey].push(p);
+    });
+
+    // Get all unique dates and sort them
+    const allDates = new Set([...Object.keys(bookingsByDate), ...Object.keys(productsByDate)]);
+    const sortedDates = Array.from(allDates).sort((a, b) => new Date(a) - new Date(b));
+
+    // Calculate grand totals
+    let grandTotalServices = 0;
+    let grandTotalServiceRevenue = 0;
+    let grandTotalProducts = 0;
+    let grandTotalProductRevenue = 0;
+    let grandTotalServiceCommission = 0;
+    let grandTotalProductCommission = 0;
+    let grandTotalDailySalary = 0;
+
+    // Generate daily cards
+    const dailyCards = sortedDates.map((dateKey) => {
+      const dateBookings = bookingsByDate[dateKey] || [];
+      const dateProducts = productsByDate[dateKey] || [];
+      
+      const dateLabel = new Date(dateKey).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        weekday: "short"
+      });
+
+      // Calculate daily totals for services
+      const dayServiceCount = dateBookings.length;
+      const dayServiceRevenue = dateBookings.reduce((sum, b) => sum + (b.price || 0), 0);
+      
+      // Calculate service commission for the day
+      // Use proportional distribution based on revenue (more accurate than averaging)
+      let dayServiceCommission = 0;
+      const totalServiceCommission = record.gross_commission - (record.product_commission || 0);
+      const totalServiceRevenue = record.total_service_revenue || 0;
+      
+      if (totalServiceRevenue > 0 && dayServiceRevenue > 0) {
+        // Distribute total service commission proportionally based on revenue
+        const dayRevenueRatio = dayServiceRevenue / totalServiceRevenue;
+        dayServiceCommission = totalServiceCommission * dayRevenueRatio;
+      } else if (dayServiceRevenue > 0) {
+        // Fallback: use commission rate if no total data available
+        dayServiceCommission = dayServiceRevenue * (record.commission_rate / 100);
+      }
+
+      // Calculate daily totals for products
+      const dayProductCount = dateProducts.reduce((sum, p) => sum + p.quantity, 0);
+      const dayProductRevenue = dateProducts.reduce((sum, p) => sum + p.total_amount, 0);
+      const dayProductCommission = dateProducts.reduce((sum, p) => sum + p.commission_amount, 0);
+
+      // Calculate daily salary following backend logic:
+      // 1. Service pay = max(service commission, daily rate)
+      // 2. Total pay = service pay + product commission (product is bonus on top)
+      const dailyRate = record.daily_rate || 0;
+      const dayServicePay = Math.max(dayServiceCommission, dailyRate);
+      const dayTotalPay = dayServicePay + dayProductCommission;
+
+      // Update grand totals
+      grandTotalServices += dayServiceCount;
+      grandTotalServiceRevenue += dayServiceRevenue;
+      grandTotalProducts += dayProductCount;
+      grandTotalProductRevenue += dayProductRevenue;
+      grandTotalServiceCommission += dayServiceCommission;
+      grandTotalProductCommission += dayProductCommission;
+      grandTotalDailySalary += dayTotalPay;
+
+      // Generate booking details HTML
+      let bookingsHtml = "";
+      if (dateBookings.length > 0) {
+        const bookingRows = dateBookings
+          .map((b) => {
+            const tm = (b.time || "--:--").slice(0, 5);
+            return `<div class="row"><span><span class="muted">${tm}</span> — ${b.service_name} <span class="muted">• ${b.customer_name} • ${b.booking_code}</span></span><span>${format(b.price)}</span></div>`;
+          })
+          .join("");
+        bookingsHtml = `<hr/><div style="font-weight: 600; margin: 12px 0 8px; color: white;">Service Booking Details</div>${bookingRows}`;
+      }
+
+      // Generate product details HTML
+      let productsHtml = "";
+      if (dateProducts.length > 0) {
+        const productRows = dateProducts
+          .map((p) => {
+            const commissionLabel = p.commission_type === "fixed_amount" 
+              ? `${format(p.commission_rate)}/unit` 
+              : `${p.commission_rate}%`;
+            return `<div class="row"><span>${p.product_name} <span class="muted">• Qty: ${p.quantity} • ${commissionLabel} • ${p.customer_name}</span></span><span>${format(p.total_amount)} <span class="muted">(+${format(p.commission_amount)})</span></span></div>`;
+          })
+          .join("");
+        productsHtml = `<hr/><div style="font-weight: 600; margin: 12px 0 8px; color: white;">Product Transaction Details</div>${productRows}`;
+      }
+
+      // Determine which pay basis was used for clarity
+      const usedDailyRate = dayServiceCommission < dailyRate;
+      const payBasisNote = usedDailyRate 
+        ? `<div class="row"><span class="muted" style="font-size:11px; font-style:italic;">Daily Rate Applied: ${format(dailyRate)}</span><span class="muted" style="font-size:11px;">(Commission < Rate)</span></div>`
+        : dailyRate > 0 
+          ? `<div class="row"><span class="muted" style="font-size:11px; font-style:italic;">Daily Rate: ${format(dailyRate)}</span><span></span></div>`
+          : '';
+      
+      return `
+        <div class="card">
+          <div class="header">
+            <div>
+              <div class="title">${record.barber_name}</div>
+              <div class="muted">${dateLabel}</div>
+            </div>
+            <div class="accent">${format(dayTotalPay)}</div>
+          </div>
+          <hr/>
+          <div class="grid">
+            <div>
+              <div class="row"><span class="muted">Services</span><span>${dayServiceCount}</span></div>
+              <div class="row"><span class="muted">Service Revenue</span><span>${format(dayServiceRevenue)}</span></div>
+              <div class="row"><span class="muted">Products Sold</span><span>${dayProductCount}</span></div>
+              <div class="row"><span class="muted">Product Revenue</span><span>${format(dayProductRevenue)}</span></div>
+            </div>
+            <div>
+              <div class="row"><span class="muted">Service Commission</span><span>${format(dayServiceCommission)}</span></div>
+              ${payBasisNote}
+              <div class="row"><span class="muted">Product Commission</span><span>${format(dayProductCommission)}</span></div>
+              <div class="row"><span class="muted">Final Daily Salary</span><span>${format(dayTotalPay)}</span></div>
+              <hr/>
+              <div class="row" style="font-weight:800"><span>Total</span><span class="accent">${format(dayTotalPay)}</span></div>
+            </div>
+          </div>
+          ${bookingsHtml}
+          ${productsHtml}
+        </div>
+      `;
+    }).join("\n");
+
+    // Generate grand total card using authoritative backend values for accuracy
+    const totalServiceCommissionCalc = record.gross_commission - (record.product_commission || 0);
+    const grandTotalCard = `
+      <div class="card" style="background:#222; border:2px solid #ff8c42;">
+        <div class="header">
+          <div>
+            <div class="title">${record.barber_name} - PERIOD SUMMARY</div>
+            <div class="muted">Payroll Period: ${dateRange}</div>
+          </div>
+          <div class="accent" style="font-size:24px">${format(record.net_pay)}</div>
+        </div>
+        <hr/>
+        <div class="grid">
+          <div>
+            <div class="row"><span class="muted">Total Services</span><span>${record.total_services || 0}</span></div>
+            <div class="row"><span class="muted">Total Service Revenue</span><span>${format(record.total_service_revenue || 0)}</span></div>
+            <div class="row"><span class="muted">Total Products Sold</span><span>${record.total_products || 0}</span></div>
+            <div class="row"><span class="muted">Total Product Revenue</span><span>${format(record.total_product_revenue || 0)}</span></div>
+          </div>
+          <div>
+            <div class="row"><span class="muted">Total Service Commission</span><span>${format(totalServiceCommissionCalc)}</span></div>
+            <div class="row"><span class="muted">Total Product Commission</span><span>${format(record.product_commission || 0)}</span></div>
+            <div class="row"><span class="muted">Total Final Daily Salary</span><span>${format(record.daily_pay || 0)}</span></div>
+            <hr/>
+            <div class="row" style="font-weight:800; font-size:18px"><span>GRAND TOTAL</span><span class="accent">${format(record.net_pay)}</span></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    return dailyCards + "\n" + grandTotalCard;
+  };
+
+  // Keep the original recordSection for backward compatibility (if needed elsewhere)
   const recordSection = (record) => {
     const format = (amt) =>
       new Intl.NumberFormat("en-PH", {
@@ -1026,9 +1225,11 @@ const PayrollManagement = ({ onRefresh, user }) => {
         enriched = record;
       }
     }
+    
+    // Use the new daily breakdown section for printing
     const html = buildDoc(
       `Payroll – ${record.barber_name}`,
-      recordSection(enriched),
+      dailyBreakdownSection(enriched),
     );
     printHtml(html);
   };
@@ -1077,7 +1278,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
         }
       }),
     );
-    const sections = enriched.map((r) => recordSection(r)).join("\n");
+    
+    // Use the new daily breakdown section for each record
+    const sections = enriched.map((r) => dailyBreakdownSection(r)).join("\n");
     const title = selectedPeriod
       ? `Payroll – ${formatDate(selectedPeriod.period_start)} to ${formatDate(selectedPeriod.period_end)}`
       : "Payroll – All";
