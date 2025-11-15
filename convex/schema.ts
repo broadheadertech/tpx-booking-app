@@ -2,7 +2,7 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
-  // Branches table for multi-branch support
+  // Branche table for multi-branch support
   branches: defineTable({
     branch_code: v.string(),
     name: v.string(),
