@@ -43,8 +43,17 @@ function WalletTopUp() {
 
     setLoading(true)
     try {
+      // Get current origin (domain) for redirect URLs
+      const origin = window.location.origin
+      
       if (method === 'gcash' || method === 'paymaya') {
-        const res = await createSource({ amount: value, type: method, description: 'Wallet Top-up', userId: user._id })
+        const res = await createSource({ 
+          amount: value, 
+          type: method, 
+          description: 'Wallet Top-up', 
+          userId: user._id,
+          origin // Pass the current domain
+        })
         if (res?.checkoutUrl) {
           window.location.href = res.checkoutUrl
         } else {
@@ -86,7 +95,12 @@ function WalletTopUp() {
         }
 
         const paymentMethodId = pmData.data.id
-        const result = await attachCard({ amount: value, paymentMethodId, userId: user._id })
+        const result = await attachCard({ 
+          amount: value, 
+          paymentMethodId, 
+          userId: user._id,
+          origin // Pass the current domain
+        })
         if (result?.status === 'succeeded') {
           toast.success('Top-up successful', `₱${value.toLocaleString()} added to wallet`)
           navigate('/customer/wallet')
