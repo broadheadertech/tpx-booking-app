@@ -155,7 +155,7 @@ function Wallet() {
           </button>
         </div>
 
-        {/* Payment Methods - Modern  */}
+        {/* Payment Methods - Modern Cards */}
         <div>
           <div className="flex items-center justify-between mb-4 px-1">
             <h3 className="text-lg font-black text-white">Payment Methods</h3>
