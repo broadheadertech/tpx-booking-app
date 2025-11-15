@@ -22,6 +22,7 @@ import CustomerDashboard from "./pages/customer/Dashboard";
 import CustomerBooking from "./pages/customer/Booking";
 import GuestServiceBooking from "./pages/customer/GuestServiceBooking.jsx";
 import Wallet from "./pages/customer/Wallet.jsx";
+import WalletTopUp from "./pages/customer/WalletTopUp.jsx";
 import BarberDashboard from "./components/barber/BarberDashboard";
 import Kiosk from "./pages/Kiosk";
 import PaymentSuccess from "./pages/booking/payment/success.jsx";
@@ -41,7 +42,7 @@ function App() {
     <AuthProvider>
       <ToastProvider>
         <Router>
-          <div className="min-h-screen bg-gray-light">
+          <div className="min-h-screen bg-[#0A0A0A]">
             <Routes>
               <Route
                 path="/"
@@ -175,6 +176,14 @@ function App() {
                 }
               />
               <Route
+                path="/customer/wallet/topup"
+                element={
+                  <ProtectedRoute>
+                    <WalletTopUp />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/kiosk"
                 element={
                   <ErrorBoundary>
@@ -191,7 +200,7 @@ function App() {
                 element={<PaymentFailure />}
               />
               <Route path="/download-app" element={<DownloadApp />} />
-            </Routes>
+              </Routes>
           </div>
         </Router>
       </ToastProvider>
