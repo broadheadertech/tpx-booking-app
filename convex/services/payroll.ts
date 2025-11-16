@@ -1197,7 +1197,7 @@ export const calculatePayrollForPeriod = mutation({
       }
 
       totalEarnings +=
-        earnings.total_service_revenue + earnings.total_transaction_revenue;
+        earnings.total_service_revenue + earnings.total_transaction_revenue + (earnings.total_product_revenue || 0);
       totalServiceRevenue += earnings.total_service_revenue || 0;
       totalProductRevenue += earnings.total_product_revenue || 0;
       // New rule: commissions total equals the final daily salary total (not commission + daily rate)
