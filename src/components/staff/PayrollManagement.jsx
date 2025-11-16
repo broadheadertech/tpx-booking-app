@@ -2972,6 +2972,21 @@ const PayrollManagement = ({ onRefresh, user }) => {
               <p className="text-lg font-bold text-white">
                 {formatCurrency(selectedPeriod.total_earnings)}
               </p>
+              <div className="mt-2 pt-2 border-t border-[#2A2A2A]/30 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-400">Service</span>
+                  <span className="text-[#FF8C42] font-medium">
+                    {formatCurrency(selectedPeriod.total_service_revenue || 0)}
+                  </span>
+                </div>
+                <span className="text-gray-500">+</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-gray-400">Product</span>
+                  <span className="text-cyan-400 font-medium">
+                    {formatCurrency(selectedPeriod.total_product_revenue || 0)}
+                  </span>
+                </div>
+              </div>
             </div>
             <div className="bg-[#1A1A1A] rounded-lg p-4">
               <div className="flex items-center space-x-2 mb-2">

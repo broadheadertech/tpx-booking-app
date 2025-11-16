@@ -473,6 +473,8 @@ export default defineSchema({
       v.literal("cancelled") // Period cancelled
     ),
     total_earnings: v.number(), // Total earnings for all barbers in this period
+    total_service_revenue: v.optional(v.number()), // Total revenue from services
+    total_product_revenue: v.optional(v.number()), // Total revenue from products
     total_commissions: v.number(), // Total commission payouts
     total_deductions: v.number(), // Total tax/other deductions
     calculated_at: v.optional(v.number()), // When calculations were completed
