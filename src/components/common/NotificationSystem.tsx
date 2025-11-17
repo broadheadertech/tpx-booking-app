@@ -83,7 +83,7 @@ const CompactNotificationItem: React.FC<NotificationProps> = ({ notification, on
       className={`relative p-3 rounded-lg border backdrop-blur-sm transition-all duration-200 cursor-pointer
         ${notification.is_read
           ? 'bg-[#2A2A2A]/50 border-[#444444]/30 hover:bg-[#333333]/70'
-          : 'bg-gradient-to-r from-[#333333] to-[#3A3A3A] border-[#FF8C42]/30 hover:border-[#FF8C42]/50 hover:shadow-lg hover:shadow-[#FF8C42]/10'
+          : 'bg-gradient-to-r from-[#333333] to-[#3A3A3A] border-[var(--color-primary)]/30 hover:border-[var(--color-primary)]/50 hover:shadow-lg hover:shadow-[var(--color-primary)]/10'
         }
         ${typeColor}
       `}
@@ -93,7 +93,7 @@ const CompactNotificationItem: React.FC<NotificationProps> = ({ notification, on
     >
       {/* Unread indicator */}
       {!notification.is_read && (
-        <div className="absolute top-2 right-2 w-2 h-2 bg-[#FF8C42] rounded-full animate-pulse shadow-lg shadow-[#FF8C42]/30" />
+        <div className="absolute top-2 right-2 w-2 h-2 bg-[var(--color-primary)] rounded-full animate-pulse shadow-lg shadow-[var(--color-primary)]/30" />
       )}
 
       <div className="flex items-start space-x-3">
@@ -113,7 +113,7 @@ const CompactNotificationItem: React.FC<NotificationProps> = ({ notification, on
                   {timeAgo(notification.createdAt)}
                 </span>
                 <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                  notification.is_read ? 'bg-gray-500/20 text-gray-400' : 'bg-[#FF8C42]/20 text-[#FF8C42]'
+                  notification.is_read ? 'bg-gray-500/20 text-gray-400' : 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'
                 }`}>
                   {notification.type}
                 </span>
@@ -127,7 +127,7 @@ const CompactNotificationItem: React.FC<NotificationProps> = ({ notification, on
                     e.stopPropagation();
                     onMarkAsRead(notification._id);
                   }}
-                  className="p-1 text-gray-400 hover:text-[#FF8C42] transition-colors rounded hover:bg-[#FF8C42]/10"
+                  className="p-1 text-gray-400 hover:text-[var(--color-primary)] transition-colors rounded hover:bg-[var(--color-primary)]/10"
                   title="Mark as read"
                 >
                   <Check size={12} />
@@ -159,7 +159,7 @@ const CompactNotificationItem: React.FC<NotificationProps> = ({ notification, on
               whileTap={{ scale: 0.98 }}
               onClick={handleAction}
               className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-md
-                bg-[#FF8C42] hover:bg-[#FF8C42]/90 text-white transition-all duration-200 shadow-lg shadow-[#FF8C42]/20"
+                bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white transition-all duration-200 shadow-lg shadow-[var(--color-primary)]/20"
             >
               {notification.action_label}
               <span className="ml-1">→</span>
@@ -210,7 +210,7 @@ const NotificationItem: React.FC<NotificationProps> = ({ notification, onMarkAsR
       className={`relative p-4 rounded-xl border backdrop-blur-sm transition-all duration-200 cursor-pointer
         ${notification.is_read
           ? 'bg-[#2A2A2A]/50 border-[#444444]/30 hover:bg-[#333333]/70'
-          : 'bg-gradient-to-r from-[#333333] to-[#3A3A3A] border-[#FF8C42]/30 hover:border-[#FF8C42]/50 hover:shadow-lg hover:shadow-[#FF8C42]/10'
+          : 'bg-gradient-to-r from-[#333333] to-[#3A3A3A] border-[var(--color-primary)]/30 hover:border-[var(--color-primary)]/50 hover:shadow-lg hover:shadow-[var(--color-primary)]/10'
         }
         ${typeColor}
       `}
@@ -220,7 +220,7 @@ const NotificationItem: React.FC<NotificationProps> = ({ notification, onMarkAsR
     >
       {/* Unread indicator */}
       {!notification.is_read && (
-        <div className="absolute top-3 right-3 w-3 h-3 bg-[#FF8C42] rounded-full animate-pulse shadow-lg shadow-[#FF8C42]/30" />
+        <div className="absolute top-3 right-3 w-3 h-3 bg-[var(--color-primary)] rounded-full animate-pulse shadow-lg shadow-[var(--color-primary)]/30" />
       )}
 
       <div className="flex items-start space-x-4">
@@ -240,7 +240,7 @@ const NotificationItem: React.FC<NotificationProps> = ({ notification, onMarkAsR
                   {timeAgo(notification.createdAt)}
                 </span>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  notification.is_read ? 'bg-gray-500/20 text-gray-400' : 'bg-[#FF8C42]/20 text-[#FF8C42]'
+                  notification.is_read ? 'bg-gray-500/20 text-gray-400' : 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'
                 }`}>
                   {notification.type}
                 </span>
@@ -254,7 +254,7 @@ const NotificationItem: React.FC<NotificationProps> = ({ notification, onMarkAsR
                     e.stopPropagation();
                     onMarkAsRead(notification._id);
                   }}
-                  className="p-1.5 text-gray-400 hover:text-[#FF8C42] transition-colors rounded-lg hover:bg-[#FF8C42]/10"
+                  className="p-1.5 text-gray-400 hover:text-[var(--color-primary)] transition-colors rounded-lg hover:bg-[var(--color-primary)]/10"
                   title="Mark as read"
                 >
                   <Check size={14} />
@@ -286,7 +286,7 @@ const NotificationItem: React.FC<NotificationProps> = ({ notification, onMarkAsR
               whileTap={{ scale: 0.98 }}
               onClick={handleAction}
               className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg
-                bg-[#FF8C42] hover:bg-[#FF8C42]/90 text-white transition-all duration-200 shadow-lg shadow-[#FF8C42]/20"
+                bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white transition-all duration-200 shadow-lg shadow-[var(--color-primary)]/20"
             >
               {notification.action_label}
               <span className="ml-1">→</span>
@@ -321,7 +321,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, clas
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] bg-[#FF8C42] text-white text-[10px] sm:text-xs
+          className="absolute -top-0.5 -right-0.5 sm:-top-1 sm:-right-1 min-w-[16px] h-[16px] sm:min-w-[18px] sm:h-[18px] bg-[var(--color-primary)] text-white text-[10px] sm:text-xs
             font-semibold rounded-full flex items-center justify-center px-0.5 sm:px-1 shadow-lg"
         >
           {stats.unreadCount > 99 ? '99+' : stats.unreadCount}
@@ -451,8 +451,8 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ userId, is
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-[#2A2A2A]">
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-[#FF8C42]/20 rounded-lg border border-[#FF8C42]/50">
-                  <Bell className="text-[#FF8C42]" size={18} />
+                <div className="p-2 bg-[var(--color-primary)]/20 rounded-lg border border-[var(--color-primary)]/50">
+                  <Bell className="text-[var(--color-primary)]" size={18} />
                 </div>
                 <div>
                   <h2 className="text-xl font-black text-white">Notification Center</h2>
@@ -464,7 +464,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ userId, is
                 className="w-8 h-8 rounded-lg bg-[#0A0A0A] hover:bg-[#2A2A2A] flex items-center justify-center transition-colors duration-200 border border-[#2A2A2A]/50"
                 title="Close"
               >
-                <X className="w-4 h-4 text-gray-300 hover:text-[#FF8C42]" />
+                <X className="w-4 h-4 text-gray-300 hover:text-[var(--color-primary)]" />
               </button>
             </div>
 
@@ -474,8 +474,8 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ userId, is
                 <div className="text-base font-bold text-white">{stats?.totalCount || 0}</div>
                 <div className="text-xs text-gray-400">Total</div>
               </div>
-              <div className="bg-[#FF8C42]/20 rounded-lg p-2 border border-[#FF8C42]/50 text-center">
-                <div className="text-base font-bold text-[#FF8C42]">{stats?.unreadCount || 0}</div>
+              <div className="bg-[var(--color-primary)]/20 rounded-lg p-2 border border-[var(--color-primary)]/50 text-center">
+                <div className="text-base font-bold text-[var(--color-primary)]">{stats?.unreadCount || 0}</div>
                 <div className="text-xs text-gray-300">Unread</div>
               </div>
               <div className="bg-blue-500/20 rounded-lg p-2 border border-blue-500/50 text-center">
@@ -496,7 +496,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ userId, is
                   onClick={() => setActiveFilter(option.value)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200
                     ${activeFilter === option.value
-                      ? 'bg-[#FF8C42] text-white shadow-lg shadow-[#FF8C42]/20'
+                      ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20'
                       : 'bg-[#0A0A0A] text-gray-300 hover:bg-[#2A2A2A] hover:text-white border border-[#2A2A2A]/50'
                     }`}
                 >
@@ -505,7 +505,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ userId, is
                     <span className={`ml-1 text-xs px-1.5 py-0.5 rounded-full ${
                       activeFilter === option.value
                         ? 'bg-white/20 text-white'
-                        : 'bg-[#FF8C42]/20 text-[#FF8C42]'
+                        : 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'
                     }`}>
                       {option.count}
                     </span>
@@ -521,7 +521,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ userId, is
                   type="checkbox"
                   checked={unreadOnly}
                   onChange={(e) => setUnreadOnly(e.target.checked)}
-                  className="mr-2 w-3 h-3 accent-[#FF8C42] rounded"
+                  className="mr-2 w-3 h-3 accent-[var(--color-primary)] rounded"
                 />
                 Show unread only
               </label>
@@ -538,7 +538,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ userId, is
                 {stats && stats.unreadCount > 0 && (
                   <button
                     onClick={handleMarkAllAsRead}
-                    className="px-3 py-1.5 text-xs bg-[#FF8C42] hover:bg-[#FF8C42]/90 text-white rounded-md transition-colors font-medium"
+                    className="px-3 py-1.5 text-xs bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white rounded-md transition-colors font-medium"
                   >
                     Mark all as read
                   </button>
@@ -550,7 +550,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ userId, is
             <div className="max-h-[60vh] overflow-y-auto custom-scrollbar">
               {notifications === undefined ? (
                 <div className="flex flex-col items-center justify-center p-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-t-2 border-[#FF8C42]"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-t-2 border-[var(--color-primary)]"></div>
                   <p className="text-gray-400 text-sm mt-3">Loading notifications...</p>
                 </div>
               ) : notifications.length === 0 ? (

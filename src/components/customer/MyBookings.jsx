@@ -377,7 +377,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
             </button>
             <div className="text-right">
               <p className="text-lg font-bold text-white">My Bookings</p>
-              <p className="text-xs text-[#FF8C42]">
+              <p className="text-xs text-[var(--color-primary)]">
                 {bookings?.length || 0} total
               </p>
             </div>
@@ -396,7 +396,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                   onClick={() => setActiveFilter(filter.id)}
                   className={`py-3 px-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
                     activeFilter === filter.id
-                      ? 'bg-[#FF8C42] text-white'
+                      ? 'bg-[var(--color-primary)] text-white'
                       : 'text-gray-400 hover:text-gray-300 hover:bg-[#2A2A2A]'
                   }`}
                 >
@@ -411,8 +411,8 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
         {/* Loading State */}
         {loading && (
           <div className="text-center py-12">
-            <div className="rounded-full w-16 h-16 bg-[#FF8C42]/20 flex items-center justify-center mx-auto mb-4">
-              <Calendar className="w-8 h-8 text-[#FF8C42]" />
+            <div className="rounded-full w-16 h-16 bg-[var(--color-primary)]/20 flex items-center justify-center mx-auto mb-4">
+              <Calendar className="w-8 h-8 text-[var(--color-primary)]" />
             </div>
             <p className="text-sm text-gray-400">
               Loading bookings...
@@ -453,7 +453,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                   </p>
                   <button
                     onClick={onBack}
-                    className="px-6 py-3 text-white font-bold rounded-xl bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-all duration-200 shadow-lg"
+                    className="px-6 py-3 text-white font-bold rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:brightness-110 transition-all duration-200 shadow-lg"
                   >
                     Book Your First Service
                   </button>
@@ -475,7 +475,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                 return (
                   <div
                     key={booking._id}
-                    className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] hover:border-[#FF8C42]/30 transition-all duration-200 p-4"
+                    className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] hover:border-[var(--color-primary)]/30 transition-all duration-200 p-4"
                   >
                     {/* Compact Header */}
                     <div className="flex items-start justify-between mb-3">
@@ -495,7 +495,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                         <div className="flex items-center gap-3 text-xs text-gray-400">
                           <span>#{booking.booking_code}</span>
                           {booking.branch_name && (
-                            <span className="text-[#FF8C42] font-medium flex items-center gap-1">
+                            <span className="text-[var(--color-primary)] font-medium flex items-center gap-1">
                               <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                               </svg>
@@ -509,7 +509,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                     {/* Compact Details Grid */}
                     <div className="grid grid-cols-3 gap-3 mb-3 text-xs">
                       <div className="flex items-center gap-2">
-                        <Calendar className="w-3.5 h-3.5 text-[#FF8C42]" />
+                        <Calendar className="w-3.5 h-3.5 text-[var(--color-primary)]" />
                         <div>
                           <p className="text-gray-400">Date</p>
                           <p className="font-medium text-white">
@@ -518,7 +518,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Clock className="w-3.5 h-3.5 text-[#FF8C42]" />
+                        <Clock className="w-3.5 h-3.5 text-[var(--color-primary)]" />
                         <div>
                           <p className="text-gray-400">Time</p>
                           <p className="font-medium text-white">
@@ -527,7 +527,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <User className="w-3.5 h-3.5 text-[#FF8C42]" />
+                        <User className="w-3.5 h-3.5 text-[var(--color-primary)]" />
                         <div>
                           <p className="text-gray-400">Barber</p>
                           <p className="font-medium text-white">
@@ -542,7 +542,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                           <p className="text-xs text-gray-400">Price</p>
-                          <p className="font-semibold text-[#FF8C42]">
+                          <p className="font-semibold text-[var(--color-primary)]">
                             ₱{service.price ? parseFloat(service.price).toLocaleString() : "--"}
                           </p>
                         </div>
@@ -562,7 +562,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                          {booking.status === "booked" && (
                            <button
                              onClick={() => setShowQRCode({ ...booking, service, barber })}
-                             className="flex-1 py-2 px-3 bg-[#FF8C42] text-white text-xs font-medium rounded-lg hover:bg-[#FF7A2B] transition-colors flex items-center justify-center gap-1"
+                             className="flex-1 py-2 px-3 bg-[var(--color-primary)] text-white text-xs font-medium rounded-lg hover:bg-[var(--color-accent)] transition-colors flex items-center justify-center gap-1"
                            >
                              <QrCode className="w-3 h-3" />
                              <span>Show QR</span>
@@ -578,7 +578,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                              </button>
                              <button
                                onClick={() => setShowQRCode({ ...booking, service, barber })}
-                               className="flex-1 py-2 px-3 bg-[#FF8C42] text-white text-xs font-medium rounded-lg hover:bg-[#FF7A2B] transition-colors flex items-center justify-center gap-1"
+                               className="flex-1 py-2 px-3 bg-[var(--color-primary)] text-white text-xs font-medium rounded-lg hover:bg-[var(--color-accent)] transition-colors flex items-center justify-center gap-1"
                              >
                                <QrCode className="w-3 h-3" />
                                <span>QR Code</span>
@@ -621,7 +621,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
 
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-400">
-              Page <span className="text-[#FF8C42] font-semibold">{currentPage}</span> of <span className="text-white font-semibold">{totalPages}</span>
+              Page <span className="text-[var(--color-primary)] font-semibold">{currentPage}</span> of <span className="text-white font-semibold">{totalPages}</span>
             </span>
             <span className="text-xs text-gray-500">
               ({startIndex + 1}-{Math.min(endIndex, filteredBookings.length)} of {filteredBookings.length})

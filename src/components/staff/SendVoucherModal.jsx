@@ -310,7 +310,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
     >
       <div className="space-y-4">
         {/* Voucher Info Card */}
-        <div className="bg-[#0F0F0F]/50 border border-[#FF8C42]/20 rounded-lg p-3.5">
+        <div className="bg-[#0F0F0F]/50 border border-[var(--color-primary)]/20 rounded-lg p-3.5">
           <div className="flex items-start gap-3">
             {/* QR Code */}
             <div className="flex-shrink-0">
@@ -330,7 +330,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Value:</span>
-                  <span className="text-[#FF8C42] font-bold">₱{parseFloat(voucher.value).toFixed(2)}</span>
+                  <span className="text-[var(--color-primary)] font-bold">₱{parseFloat(voucher.value).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Points:</span>
@@ -353,7 +353,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
         <div className="bg-[#0F0F0F]/50 rounded-lg p-3.5 border border-[#333333]/50">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-xs font-bold text-gray-200 flex items-center">
-              <Users className="w-3.5 h-3.5 text-[#FF8C42] mr-1.5" />
+              <Users className="w-3.5 h-3.5 text-[var(--color-primary)] mr-1.5" />
               Recipients ({selectedUsers.length} selected)
             </h4>
             <div className="flex gap-2">
@@ -380,7 +380,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
               placeholder="Search by username or email..."
               value={customerSearch}
               onChange={(e) => setCustomerSearch(e.target.value)}
-              className="w-full h-8 pl-8 pr-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 transition-all"
+              className="w-full h-8 pl-8 pr-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 transition-all"
             />
           </div>
 
@@ -390,12 +390,12 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
               {selectedUsers.map((user) => (
                 <div
                   key={user._id || user.id}
-                  className="flex items-center gap-1 bg-[#FF8C42]/20 border border-[#FF8C42]/30 rounded px-2 py-1 text-xs"
+                  className="flex items-center gap-1 bg-[var(--color-primary)]/20 border border-[var(--color-primary)]/30 rounded px-2 py-1 text-xs"
                 >
                   <span className="text-gray-300">{user.username}</span>
                   <button
                     onClick={() => toggleUserSelection(user)}
-                    className="text-[#FF8C42] hover:text-[#FF7A2B] ml-0.5"
+                    className="text-[var(--color-primary)] hover:text-[var(--color-accent)] ml-0.5"
                   >
                     <X className="w-2.5 h-2.5" />
                   </button>
@@ -422,7 +422,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
                       onClick={() => toggleUserSelection(client)}
                       className={`flex items-center gap-2 p-2 cursor-pointer transition-colors text-xs ${
                         isSelected
-                          ? "bg-[#FF8C42]/10 hover:bg-[#FF8C42]/20"
+                          ? "bg-[var(--color-primary)]/10 hover:bg-[var(--color-primary)]/20"
                           : "hover:bg-[#2A2A2A]"
                       }`}
                       data-user-item
@@ -430,7 +430,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
                       <div
                         className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
                           isSelected
-                            ? "bg-[#FF8C42] border-[#FF8C42]"
+                            ? "bg-[var(--color-primary)] border-[var(--color-primary)]"
                             : "border-[#444444] bg-[#1A1A1A]"
                         }`}
                       >
@@ -482,7 +482,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
             type="button"
             onClick={sendVoucherEmails}
             disabled={selectedUsers.length === 0 || isSending}
-            className="flex-1 h-9 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg font-medium hover:shadow-lg disabled:opacity-50 transition-all text-sm flex items-center justify-center gap-1.5"
+            className="flex-1 h-9 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg font-medium hover:shadow-lg disabled:opacity-50 transition-all text-sm flex items-center justify-center gap-1.5"
           >
             {isSending ? (
               <>
@@ -525,7 +525,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
         </div>
         <button
           onClick={() => setErrorModal(null)}
-          className="w-full px-4 py-2 bg-[#FF8C42] hover:bg-[#FF7A2B] text-white rounded-lg transition-colors text-sm font-medium"
+          className="w-full px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white rounded-lg transition-colors text-sm font-medium"
         >
           Close
         </button>

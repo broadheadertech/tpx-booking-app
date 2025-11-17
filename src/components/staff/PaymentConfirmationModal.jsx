@@ -61,7 +61,7 @@ const PaymentConfirmationModal = ({ isOpen, onClose, onConfirm, transactionData,
         <div className="bg-gradient-to-br from-[#1A1A1A] to-[#0A0A0A] rounded-lg lg:rounded-xl p-3 lg:p-4 border border-[#2A2A2A]">
           <div className="space-y-2 lg:space-y-3">
             {/* Total Amount - Most Prominent */}
-            <div className="bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-lg p-2.5 lg:p-3 text-center">
+            <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg p-2.5 lg:p-3 text-center">
               <p className="text-[10px] lg:text-xs font-semibold text-white/80 mb-1">Total Amount</p>
               <p className="text-2xl lg:text-3xl font-black text-white">
                 ₱{transactionData.total_amount.toFixed(2)}
@@ -107,8 +107,8 @@ const PaymentConfirmationModal = ({ isOpen, onClose, onConfirm, transactionData,
                   onClick={() => setPaymentMethod(method.value)}
                   className={`p-2 rounded-lg border-2 transition-all duration-200 flex flex-col items-center justify-center space-y-1 text-xs font-semibold ${
                     paymentMethod === method.value
-                      ? 'border-[#FF8C42] bg-[#FF8C42]/20 text-[#FF8C42]'
-                      : 'border-[#555555] bg-[#1A1A1A] text-gray-400 hover:border-[#FF8C42]/50'
+                      ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/20 text-[var(--color-primary)]'
+                      : 'border-[#555555] bg-[#1A1A1A] text-gray-400 hover:border-[var(--color-primary)]/50'
                   }`}
                 >
                   <IconComponent className="w-4 h-4" />
@@ -125,13 +125,13 @@ const PaymentConfirmationModal = ({ isOpen, onClose, onConfirm, transactionData,
             <div>
               <label className="block text-xs font-bold text-gray-300 mb-1.5">Cash Received</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#FF8C42] font-bold">₱</span>
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--color-primary)] font-bold">₱</span>
                 <input
                   type="number"
                   value={cashReceived}
                   onChange={(e) => setCashReceived(e.target.value)}
                   placeholder="0.00"
-                  className="w-full pl-7 pr-3 py-2.5 bg-[#2A2A2A] border border-[#555555] rounded-lg text-white font-bold text-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent placeholder-gray-500"
+                  className="w-full pl-7 pr-3 py-2.5 bg-[#2A2A2A] border border-[#555555] rounded-lg text-white font-bold text-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent placeholder-gray-500"
                   step="0.01"
                   min="0"
                 />
@@ -144,7 +144,7 @@ const PaymentConfirmationModal = ({ isOpen, onClose, onConfirm, transactionData,
                 <button
                   key={amount}
                   onClick={() => setCashReceived(amount.toString())}
-                  className="py-1.5 px-2 bg-[#2A2A2A] hover:bg-[#FF8C42] text-gray-300 hover:text-white rounded text-xs font-semibold transition-all duration-200"
+                  className="py-1.5 px-2 bg-[#2A2A2A] hover:bg-[var(--color-primary)] text-gray-300 hover:text-white rounded text-xs font-semibold transition-all duration-200"
                 >
                   {amount}
                 </button>
@@ -177,7 +177,7 @@ const PaymentConfirmationModal = ({ isOpen, onClose, onConfirm, transactionData,
                     <span className="text-gray-200 font-semibold truncate">{service.service_name}</span>
                     <span className="text-gray-500 ml-1.5">×{service.quantity}</span>
                   </div>
-                  <span className="text-[#FF8C42] font-bold flex-shrink-0">₱{(service.price * service.quantity).toFixed(2)}</span>
+                  <span className="text-[var(--color-primary)] font-bold flex-shrink-0">₱{(service.price * service.quantity).toFixed(2)}</span>
                 </div>
               ))}
               {transactionData.products && transactionData.products.map((product, index) => (
@@ -186,7 +186,7 @@ const PaymentConfirmationModal = ({ isOpen, onClose, onConfirm, transactionData,
                     <span className="text-gray-200 font-semibold truncate">{product.product_name}</span>
                     <span className="text-gray-500 ml-1.5">×{product.quantity}</span>
                   </div>
-                  <span className="text-[#FF8C42] font-bold flex-shrink-0">₱{(product.price * product.quantity).toFixed(2)}</span>
+                  <span className="text-[var(--color-primary)] font-bold flex-shrink-0">₱{(product.price * product.quantity).toFixed(2)}</span>
                 </div>
               ))}
             </div>
@@ -205,7 +205,7 @@ const PaymentConfirmationModal = ({ isOpen, onClose, onConfirm, transactionData,
           <button
             onClick={handleConfirm}
             disabled={isProcessing || (paymentMethod === 'cash' && (!cashReceived || parseFloat(cashReceived) < transactionData.total_amount))}
-            className="flex-1 py-2 lg:py-2.5 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white font-bold rounded-lg hover:from-[#FF7A2B] hover:to-[#E67E37] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1.5 text-xs lg:text-sm"
+            className="flex-1 py-2 lg:py-2.5 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-bold rounded-lg hover:from-[var(--color-accent)] hover:to-[var(--color-accent)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1.5 text-xs lg:text-sm"
           >
             {isProcessing ? (
               <>

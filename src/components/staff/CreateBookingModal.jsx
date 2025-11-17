@@ -465,7 +465,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
         {/* Loading State */}
         {(!services || !barbers || !customers) && (
           <div className="flex items-center justify-center py-6">
-            <RefreshCw className="w-5 h-5 animate-spin text-[#FF8C42] mr-2" />
+            <RefreshCw className="w-5 h-5 animate-spin text-[var(--color-primary)] mr-2" />
             <span className="text-gray-300 text-sm font-medium">Loading...</span>
           </div>
         )}
@@ -473,7 +473,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
         {/* Customer Type Selection */}
         <div className="bg-[#0F0F0F]/50 rounded-lg p-4 border border-[#333333]/50">
           <h3 className="text-sm font-bold text-gray-200 mb-3 flex items-center">
-            <User className="w-4 h-4 text-[#FF8C42] mr-2" />
+            <User className="w-4 h-4 text-[var(--color-primary)] mr-2" />
             Customer
           </h3>
 
@@ -509,7 +509,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
                   type="button"
                   onClick={() => setCustomerDropdownOpen(!customerDropdownOpen)}
                   disabled={!customers}
-                  className="w-full h-10 px-3 border border-[#444444] rounded-lg text-left text-sm flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[#FF8C42] transition-all disabled:opacity-50 bg-[#1A1A1A] text-gray-300 hover:border-[#555555]"
+                  className="w-full h-10 px-3 border border-[#444444] rounded-lg text-left text-sm flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] transition-all disabled:opacity-50 bg-[#1A1A1A] text-gray-300 hover:border-[#555555]"
                 >
                   <div className="flex items-center gap-2">
                     {formData.customer ? (
@@ -517,7 +517,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
                         const selectedCustomer = customers?.find(c => c._id === formData.customer)
                         return selectedCustomer ? (
                           <>
-                            <div className="w-6 h-6 rounded-full bg-[#FF8C42] flex items-center justify-center flex-shrink-0">
+                            <div className="w-6 h-6 rounded-full bg-[var(--color-primary)] flex items-center justify-center flex-shrink-0">
                               <User className="w-3 h-3 text-white" />
                             </div>
                             <div className="text-left min-w-0">
@@ -547,13 +547,13 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
                         }}
                         className="w-full px-3 py-2 flex items-center hover:bg-[#2A2A2A] transition-colors text-left"
                       >
-                        <div className="w-6 h-6 rounded-full bg-[#FF8C42] flex items-center justify-center mr-2 flex-shrink-0">
+                        <div className="w-6 h-6 rounded-full bg-[var(--color-primary)] flex items-center justify-center mr-2 flex-shrink-0">
                           <User className="w-3 h-3 text-white" />
                         </div>
                         <div className="text-xs flex-1 min-w-0">
                           <div className="font-medium text-gray-200">{customer.username}</div>
                         </div>
-                        {formData.customer === customer._id && <Check className="w-4 h-4 text-[#FF8C42] flex-shrink-0" />}
+                        {formData.customer === customer._id && <Check className="w-4 h-4 text-[var(--color-primary)] flex-shrink-0" />}
                       </button>
                     )) || []}
                   </div>
@@ -571,7 +571,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
                   type="text"
                   value={formData.walkinName}
                   onChange={(e) => handleInputChange('walkinName', e.target.value)}
-                  className="w-full h-8 px-2 border border-[#444444] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 text-xs"
+                  className="w-full h-8 px-2 border border-[#444444] rounded-lg focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 text-xs"
                   placeholder="Name"
                 />
                 {fieldErrors.walkinName && <p className="text-red-400 text-xs mt-0.5">{fieldErrors.walkinName}</p>}
@@ -582,7 +582,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
                   type="tel"
                   value={formData.walkinPhone}
                   onChange={(e) => handleInputChange('walkinPhone', e.target.value)}
-                  className="w-full h-8 px-2 border border-[#444444] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 text-xs"
+                  className="w-full h-8 px-2 border border-[#444444] rounded-lg focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 text-xs"
                   placeholder="09..."
                 />
                 {fieldErrors.walkinPhone && <p className="text-red-400 text-xs mt-0.5">{fieldErrors.walkinPhone}</p>}
@@ -593,7 +593,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
                   type="email"
                   value={formData.walkinEmail}
                   onChange={(e) => handleInputChange('walkinEmail', e.target.value)}
-                  className="w-full h-8 px-2 border border-[#444444] rounded-lg focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 text-xs"
+                  className="w-full h-8 px-2 border border-[#444444] rounded-lg focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 text-xs"
                   placeholder="Email"
                 />
               </div>
@@ -606,7 +606,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
           {/* Service Section */}
           <div className="bg-[#0F0F0F]/50 rounded-lg p-3 border border-[#333333]/50">
             <h3 className="text-xs font-bold text-gray-200 mb-2 flex items-center">
-              <Scissors className="w-3.5 h-3.5 text-[#FF8C42] mr-1.5" />
+              <Scissors className="w-3.5 h-3.5 text-[var(--color-primary)] mr-1.5" />
               Service
             </h3>
             <select
@@ -614,7 +614,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
               onChange={(e) => handleInputChange('service', e.target.value)}
               required
               disabled={!services}
-              className="w-full h-9 px-2 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 disabled:opacity-50"
+              className="w-full h-9 px-2 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 disabled:opacity-50"
             >
               <option value="">Select service</option>
               {services?.filter(service => service.is_active).map(service => (
@@ -632,7 +632,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
                   type="button"
                   onClick={() => setBarberDropdownOpen(!barberDropdownOpen)}
                   disabled={!barbers}
-                  className="w-full h-8 px-2 border border-[#444444] rounded-lg text-left text-xs flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 disabled:opacity-50 hover:border-[#555555]"
+                  className="w-full h-8 px-2 border border-[#444444] rounded-lg text-left text-xs flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 disabled:opacity-50 hover:border-[#555555]"
                 >
                   <span className="truncate">
                     {formData.barber ? barbers?.find(b => b._id === formData.barber)?.full_name : 'Any'}
@@ -651,7 +651,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
                       className="w-full px-2 py-1.5 hover:bg-[#2A2A2A] transition-colors text-left text-gray-300"
                     >
                       Any available
-                      {!formData.barber && <Check className="w-3 h-3 text-[#FF8C42] float-right mt-0.5" />}
+                      {!formData.barber && <Check className="w-3 h-3 text-[var(--color-primary)] float-right mt-0.5" />}
                     </button>
                     {barbers?.filter(barber => barber.is_active).map(barber => (
                       <button
@@ -664,7 +664,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
                         className="w-full px-2 py-1.5 hover:bg-[#2A2A2A] transition-colors text-left text-gray-300"
                       >
                         {barber.full_name}
-                        {formData.barber === barber._id && <Check className="w-3 h-3 text-[#FF8C42] float-right mt-0.5" />}
+                        {formData.barber === barber._id && <Check className="w-3 h-3 text-[var(--color-primary)] float-right mt-0.5" />}
                       </button>
                     )) || []}
                   </div>
@@ -676,7 +676,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
           {/* Schedule Section */}
           <div className="bg-[#0F0F0F]/50 rounded-lg p-3 border border-[#333333]/50">
             <h3 className="text-xs font-bold text-gray-200 mb-2 flex items-center">
-              <Calendar className="w-3.5 h-3.5 text-[#FF8C42] mr-1.5" />
+              <Calendar className="w-3.5 h-3.5 text-[var(--color-primary)] mr-1.5" />
               Schedule
             </h3>
             <div>
@@ -685,7 +685,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
                 value={formData.date}
                 onChange={(e) => handleInputChange('date', e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
-                className="w-full h-9 px-2 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300"
+                className="w-full h-9 px-2 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300"
                 required
               />
               {fieldErrors.date && <p className="text-red-400 text-xs mt-1">{fieldErrors.date}</p>}
@@ -695,7 +695,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
               <select
                 value={formData.time}
                 onChange={(e) => handleInputChange('time', e.target.value)}
-                className="w-full h-9 px-2 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300"
+                className="w-full h-9 px-2 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300"
                 required
               >
                 <option value="">Select time</option>
@@ -717,7 +717,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
               <select
                 value={formData.paymentMethod}
                 onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
-                className="w-full h-8 px-2 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300"
+                className="w-full h-8 px-2 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300"
               >
                 <option value="cash">Cash</option>
                 <option value="card">Card</option>
@@ -733,16 +733,16 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
           <textarea
             value={formData.notes}
             onChange={(e) => handleInputChange('notes', e.target.value)}
-            className="w-full h-12 px-2 py-1.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 resize-none"
+            className="w-full h-12 px-2 py-1.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 resize-none"
             placeholder="Special requests..."
           />
         </div>
 
         {/* Booking Summary */}
         {(formData.service && formData.date && formData.time) && (
-          <div className="bg-gradient-to-r from-[#1A1A1A] to-[#222222] rounded-lg p-3 border border-[#FF8C42]/20">
+          <div className="bg-gradient-to-r from-[#1A1A1A] to-[#222222] rounded-lg p-3 border border-[var(--color-primary)]/20">
             <h3 className="text-xs font-bold text-white mb-2 flex items-center">
-              <Check className="w-3.5 h-3.5 text-[#FF8C42] mr-1.5" />
+              <Check className="w-3.5 h-3.5 text-[var(--color-primary)] mr-1.5" />
               Summary
             </h3>
             <div className="grid grid-cols-2 gap-2 text-xs">
@@ -760,7 +760,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
               </div>
               <div>
                 <p className="text-gray-400">Price</p>
-                <p className="text-[#FF8C42] font-bold">₱{services?.find(s => s._id === formData.service)?.price?.toFixed(0)}</p>
+                <p className="text-[var(--color-primary)] font-bold">₱{services?.find(s => s._id === formData.service)?.price?.toFixed(0)}</p>
               </div>
             </div>
           </div>
@@ -782,7 +782,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
           <button
             type="submit"
             disabled={loading || !services || !barbers || !customers}
-            className="flex-1 h-9 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg font-medium hover:shadow-lg disabled:opacity-50 transition-all text-sm flex items-center justify-center gap-1.5"
+            className="flex-1 h-9 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg font-medium hover:shadow-lg disabled:opacity-50 transition-all text-sm flex items-center justify-center gap-1.5"
           >
             {loading ? (
               <>
@@ -820,7 +820,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
 
                 {/* Booking Details */}
                 <div className="text-left space-y-1.5 p-3 rounded-lg bg-[#0F0F0F]/50 border border-[#333333]/50 text-xs">
-                  <div className="flex justify-between"><span className="text-gray-400">Code:</span><span className="font-mono text-[#FF8C42]">#{bookingCreated.bookingCode}</span></div>
+                  <div className="flex justify-between"><span className="text-gray-400">Code:</span><span className="font-mono text-[var(--color-primary)]">#{bookingCreated.bookingCode}</span></div>
                   <div className="flex justify-between"><span className="text-gray-400">Service:</span><span className="text-gray-300">{bookingCreated.service}</span></div>
                   <div className="flex justify-between"><span className="text-gray-400">Date & Time:</span><span className="text-gray-300">{new Date(bookingCreated.date).toLocaleDateString()} {bookingCreated.time}</span></div>
                   <div className="flex justify-between"><span className="text-gray-400">Barber:</span><span className="text-gray-300">{bookingCreated.barber}</span></div>
@@ -842,7 +842,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
                       setBookingCreated(null)
                       onClose()
                     }}
-                    className="flex-1 py-2 px-3 rounded-lg font-medium text-white bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:shadow-lg transition-all text-sm"
+                    className="flex-1 py-2 px-3 rounded-lg font-medium text-white bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:shadow-lg transition-all text-sm"
                   >
                     Done
                   </button>

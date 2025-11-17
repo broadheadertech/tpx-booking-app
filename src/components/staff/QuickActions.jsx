@@ -17,15 +17,15 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
       {/* Primary Action - QR Scanner */}
       <button
         onClick={() => setCurrentModal('scannerSelection')}
-        className="group relative text-center p-3 sm:p-4 bg-[#1A1A1A] border border-[#FF8C42]/50 hover:border-[#FF8C42] rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
+        className="group relative text-center p-3 sm:p-4 bg-[#1A1A1A] border border-[var(--color-primary)]/50 hover:border-[var(--color-primary)] rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
       >
-        <div className="absolute top-0 right-0 w-16 h-16 bg-[#FF8C42]/5 rounded-full -translate-y-8 translate-x-8"></div>
+        <div className="absolute top-0 right-0 w-16 h-16 bg-[var(--color-primary)]/5 rounded-full -translate-y-8 translate-x-8"></div>
         <div className="relative z-10">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg flex items-center justify-center">
             <QrCode className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
           <h3 className="font-semibold text-white mb-1.5 sm:mb-2 text-xs sm:text-sm">QR Scanner</h3>
-          <div className="w-full py-1 sm:py-1.5 px-2 sm:px-3 border border-[#FF8C42]/30 text-[#FF8C42] font-medium rounded-md hover:bg-[#FF8C42]/10 transition-colors text-[10px] sm:text-xs">
+          <div className="w-full py-1 sm:py-1.5 px-2 sm:px-3 border border-[var(--color-primary)]/30 text-[var(--color-primary)] font-medium rounded-md hover:bg-[var(--color-primary)]/10 transition-colors text-[10px] sm:text-xs">
             Open Scanner
           </div>
         </div>
@@ -34,15 +34,15 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
       {/* Add Customer */}
       <button
         onClick={() => setCurrentModal('customer')}
-        className="group relative text-center p-3 sm:p-4 bg-[#1A1A1A] border border-[#2A2A2A]/50 hover:border-[#FF8C42]/30 rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
+        className="group relative text-center p-3 sm:p-4 bg-[#1A1A1A] border border-[#2A2A2A]/50 hover:border-[var(--color-primary)]/30 rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
       >
-        <div className="absolute top-0 right-0 w-16 h-16 bg-[#FF8C42]/5 rounded-full -translate-y-8 translate-x-8"></div>
+        <div className="absolute top-0 right-0 w-16 h-16 bg-[var(--color-primary)]/5 rounded-full -translate-y-8 translate-x-8"></div>
         <div className="relative z-10">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg flex items-center justify-center">
             <UserPlus className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
           <h3 className="font-semibold text-white mb-1.5 sm:mb-2 text-xs sm:text-sm">Add Customer</h3>
-          <div className="w-full py-1 sm:py-1.5 px-2 sm:px-3 border border-[#FF8C42]/30 text-[#FF8C42] font-medium rounded-md hover:bg-[#FF8C42]/10 transition-colors text-[10px] sm:text-xs">
+          <div className="w-full py-1 sm:py-1.5 px-2 sm:px-3 border border-[var(--color-primary)]/30 text-[var(--color-primary)] font-medium rounded-md hover:bg-[var(--color-primary)]/10 transition-colors text-[10px] sm:text-xs">
             New Customer
           </div>
         </div>
@@ -68,15 +68,15 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
       {/* Create Voucher */}
       <button
         onClick={() => setCurrentModal('voucher')}
-        className="group relative text-center p-3 sm:p-4 bg-[#1A1A1A] border border-[#2A2A2A]/50 hover:border-[#FF8C42]/30 rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
+        className="group relative text-center p-3 sm:p-4 bg-[#1A1A1A] border border-[#2A2A2A]/50 hover:border-[var(--color-primary)]/30 rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
       >
-        <div className="absolute top-0 right-0 w-16 h-16 bg-[#FF8C42]/5 rounded-full -translate-y-8 translate-x-8"></div>
+        <div className="absolute top-0 right-0 w-16 h-16 bg-[var(--color-primary)]/5 rounded-full -translate-y-8 translate-x-8"></div>
         <div className="relative z-10">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg flex items-center justify-center">
             <Gift className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
           <h3 className="font-semibold text-white mb-1.5 sm:mb-2 text-xs sm:text-sm">Create Voucher</h3>
-          <div className="w-full py-1 sm:py-1.5 px-2 sm:px-3 border border-[#FF8C42]/30 text-[#FF8C42] font-medium rounded-md hover:bg-[#FF8C42]/10 transition-colors text-[10px] sm:text-xs">
+          <div className="w-full py-1 sm:py-1.5 px-2 sm:px-3 border border-[var(--color-primary)]/30 text-[var(--color-primary)] font-medium rounded-md hover:bg-[var(--color-primary)]/10 transition-colors text-[10px] sm:text-xs">
             New Voucher
           </div>
         </div>
@@ -88,7 +88,7 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
           <div className="bg-[#1A1A1A] rounded-xl p-6 max-w-md w-full shadow-2xl border border-[#2A2A2A]/50">
             <div className="text-center space-y-4">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B]">
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center mx-auto bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)]">
                 <QrCode className="w-5 h-5 text-white" />
               </div>
 
@@ -100,7 +100,7 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
               <div className="space-y-3">
                 <button
                   onClick={() => setCurrentModal('bookingScanner')}
-                  className="w-full p-3 border border-[#2A2A2A] rounded-lg hover:border-[#FF8C42]/50 hover:bg-[#1A1A1A]/50 transition-all group"
+                  className="w-full p-3 border border-[#2A2A2A] rounded-lg hover:border-[var(--color-primary)]/50 hover:bg-[#1A1A1A]/50 transition-all group"
                 >
                   <div className="flex items-center space-x-3">
                     <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -115,10 +115,10 @@ const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVouch
 
                 <button
                   onClick={() => setCurrentModal('voucherScanner')}
-                  className="w-full p-3 border border-[#2A2A2A] rounded-lg hover:border-[#FF8C42]/50 hover:bg-[#1A1A1A]/50 transition-all group"
+                  className="w-full p-3 border border-[#2A2A2A] rounded-lg hover:border-[var(--color-primary)]/50 hover:bg-[#1A1A1A]/50 transition-all group"
                 >
                   <div className="flex items-center space-x-3">
-                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center group-hover:scale-105 transition-transform">
+                    <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center group-hover:scale-105 transition-transform">
                       <Gift className="w-4 h-4 text-white" />
                     </div>
                     <div className="text-left">

@@ -51,7 +51,7 @@ const QuickActions = () => {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="text-2xl font-bold text-white flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg flex items-center justify-center">
               <Plus className="w-4 h-4 text-white" />
             </div>
             <span>Quick Actions</span>
@@ -68,7 +68,7 @@ const QuickActions = () => {
             <button
               key={action.id}
               onClick={action.onClick}
-              className="group bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl p-6 border border-[#444444]/50 hover:border-[#FF8C42]/50 transition-all duration-300 hover:shadow-xl hover:shadow-[#FF8C42]/10 hover:scale-[1.02] active:scale-[0.98]"
+              className="group bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl p-6 border border-[#444444]/50 hover:border-[var(--color-primary)]/50 transition-all duration-300 hover:shadow-xl hover:shadow-[var(--color-primary)]/10 hover:scale-[1.02] active:scale-[0.98]"
             >
               {/* Icon */}
               <div className={`w-12 h-12 bg-gradient-to-r ${action.color} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-200`}>
@@ -77,7 +77,7 @@ const QuickActions = () => {
 
               {/* Content */}
               <div className="text-left">
-                <h3 className="text-white font-semibold text-lg mb-2 group-hover:text-[#FF8C42] transition-colors">
+                <h3 className="text-white font-semibold text-lg mb-2 group-hover:text-[var(--color-primary)] transition-colors">
                   {action.title}
                 </h3>
                 <p className="text-gray-400 text-sm">
@@ -87,7 +87,7 @@ const QuickActions = () => {
 
               {/* Hover indicator */}
               <div className="mt-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                <div className="w-full h-1 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-full"></div>
+                <div className="w-full h-1 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-full"></div>
               </div>
             </button>
           )

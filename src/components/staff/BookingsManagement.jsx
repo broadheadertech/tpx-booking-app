@@ -586,7 +586,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
           width: 200,
           margin: 2,
           color: {
-            dark: '#FF8C42',
+            dark: 'var(--color-primary)',
             light: '#1A1A1A'
           },
           errorCorrectionLevel: 'H'
@@ -607,7 +607,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
             {/* Header */}
             <div className="flex items-center justify-between p-5 border-b border-[#333333]/50">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center">
                   <QrCode className="w-5 h-5 text-white" />
                 </div>
                 <div>
@@ -653,7 +653,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
 
               <button
                 onClick={onClose}
-                className="w-full py-2.5 px-4 rounded-lg font-medium text-white bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-all text-sm"
+                className="w-full py-2.5 px-4 rounded-lg font-medium text-white bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:brightness-110 transition-all text-sm"
               >
                 Close
               </button>
@@ -722,7 +722,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
             {/* Current Booking Info */}
             <div className="bg-[#0F0F0F]/50 rounded-lg p-4 border border-[#333333]/50">
               <h4 className="text-sm font-bold text-gray-200 mb-3 flex items-center">
-                <Eye className="w-4 h-4 text-[#FF8C42] mr-2" />
+                <Eye className="w-4 h-4 text-[var(--color-primary)] mr-2" />
                 Current Booking
               </h4>
               <div className="grid grid-cols-1 gap-3 text-sm">
@@ -762,14 +762,14 @@ const BookingsManagement = ({ onRefresh, user }) => {
             {/* Customer Details Section */}
             <div className="bg-[#0F0F0F]/50 rounded-lg p-4 border border-[#333333]/50">
               <h4 className="text-sm font-bold text-gray-200 mb-3 flex items-center">
-                <User className="w-4 h-4 text-[#FF8C42] mr-2" />
+                <User className="w-4 h-4 text-[var(--color-primary)] mr-2" />
                 Customer Details
               </h4>
 
               {/* Loading state for transactions */}
               {editingBooking && editBookingTransactions === undefined ? (
                 <div className="flex items-center justify-center py-4">
-                  <div className="w-4 h-4 border-2 border-[#FF8C42] border-t-transparent rounded-full animate-spin mr-2"></div>
+                  <div className="w-4 h-4 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin mr-2"></div>
                   <span className="text-xs text-gray-400">Loading customer details...</span>
                 </div>
               ) : (
@@ -783,7 +783,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                         <span className="text-xs text-gray-400 ml-2">(Registered Customer)</span>
                       )}
                       {!editingBooking?.customer && editingBooking?.customer_name && (
-                        <span className="text-xs text-[#FF8C42] ml-2">(Walk-in Customer)</span>
+                        <span className="text-xs text-[var(--color-primary)] ml-2">(Walk-in Customer)</span>
                       )}
                     </div>
                   </div>
@@ -870,7 +870,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
           <div className="space-y-6">
             <div className="bg-[#0F0F0F]/50 rounded-lg p-4 border border-[#333333]/50">
               <h4 className="text-sm font-bold text-gray-200 mb-4 flex items-center">
-                <Edit className="w-4 h-4 text-[#FF8C42] mr-2" />
+                <Edit className="w-4 h-4 text-[var(--color-primary)] mr-2" />
                 Edit Booking Details
               </h4>
 
@@ -883,7 +883,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                   <select
                     value={editFormData.service}
                     onChange={(e) => setEditFormData(prev => ({ ...prev, service: e.target.value }))}
-                    className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] transition-colors"
+                    className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-colors"
                     required
                   >
                     <option value="">Select a service</option>
@@ -906,7 +906,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                   <select
                     value={editFormData.barber}
                     onChange={(e) => setEditFormData(prev => ({ ...prev, barber: e.target.value }))}
-                    className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] transition-colors"
+                    className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-colors"
                   >
                     <option value="">Any available barber</option>
                     {barbers?.map(barber => (
@@ -926,7 +926,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                     type="date"
                     value={editFormData.date}
                     onChange={(e) => setEditFormData(prev => ({ ...prev, date: e.target.value }))}
-                    className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] transition-colors"
+                    className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-colors"
                     required
                   />
                   <p className="text-xs text-amber-400 mt-1 flex items-center">
@@ -944,7 +944,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                     type="time"
                     value={editFormData.time}
                     onChange={(e) => setEditFormData(prev => ({ ...prev, time: e.target.value }))}
-                    className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] transition-colors"
+                    className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-colors"
                     required
                   />
                 </div>
@@ -957,7 +957,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                     onChange={(e) => setEditFormData(prev => ({ ...prev, notes: e.target.value }))}
                     placeholder="Add any additional notes about this booking..."
                     rows={3}
-                    className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] transition-colors resize-none"
+                    className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-colors resize-none"
                   />
                 </div>
               </div>
@@ -975,7 +975,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
               <button
                 onClick={handleSaveEdit}
                 disabled={loading}
-                className="flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
+                className="flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg hover:from-[var(--color-accent)] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
               >
                 {loading ? (
                   <>
@@ -1416,7 +1416,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
             {/* Loading State */}
             {(!bookings || !services) ? (
               <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42]"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
                 <span className="ml-2 text-gray-400">Loading bookings...</span>
               </div>
             ) : (filteredBookings || []).length === 0 ? (
@@ -1560,7 +1560,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
               </div>
             ) : !bookingPayments ? (
               <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#FF8C42]"></div>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--color-primary)]"></div>
                 <span className="ml-2 text-gray-400">Loading payment history...</span>
               </div>
             ) : bookingPayments.length > 0 ? (
@@ -1640,7 +1640,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
               </div>
             ) : !bookingTransactions ? (
               <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#FF8C42]"></div>
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--color-primary)]"></div>
                 <span className="ml-2 text-gray-400">Loading POS transactions...</span>
               </div>
             ) : bookingTransactions.length > 0 ? (
@@ -1720,8 +1720,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
             
             <div className="h-4 w-px bg-[#2A2A2A]"></div>
             
-            <div className="flex items-center gap-2 px-2 py-1 rounded bg-[#FF8C42]/10">
-              <Clock className="h-3.5 w-3.5 text-[#FF8C42]" />
+            <div className="flex items-center gap-2 px-2 py-1 rounded bg-[var(--color-primary)]/10">
+              <Clock className="h-3.5 w-3.5 text-[var(--color-primary)]" />
               <span className="text-xs text-gray-400 font-medium">Today:</span>
               <span className="text-sm font-bold text-white">{stats.today}</span>
             </div>
@@ -1793,7 +1793,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                 placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 pr-3 py-1.5 w-40 bg-[#0A0A0A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-md focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42] text-xs"
+                className="pl-8 pr-3 py-1.5 w-40 bg-[#0A0A0A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-md focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] text-xs"
               />
             </div>
 
@@ -1801,7 +1801,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="bg-[#0A0A0A] border border-[#2A2A2A] text-white text-gray-400 rounded-md px-2 py-1.5 text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42] hover:border-[#FF8C42]/50 transition-colors"
+              className="bg-[#0A0A0A] border border-[#2A2A2A] text-white text-gray-400 rounded-md px-2 py-1.5 text-xs focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] hover:border-[var(--color-primary)]/50 transition-colors"
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
@@ -1815,7 +1815,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-[#0A0A0A] border border-[#2A2A2A] text-white text-gray-400 rounded-md px-2 py-1.5 text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42] hover:border-[#FF8C42]/50 transition-colors"
+              className="bg-[#0A0A0A] border border-[#2A2A2A] text-white text-gray-400 rounded-md px-2 py-1.5 text-xs focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] hover:border-[var(--color-primary)]/50 transition-colors"
             >
               <option value="date">Sort by Date</option>
               <option value="status">Sort by Status</option>
@@ -1828,7 +1828,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="px-2 py-1.5 w-32 bg-[#0A0A0A] border border-[#2A2A2A] text-white text-gray-400 rounded-md text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                className="px-2 py-1.5 w-32 bg-[#0A0A0A] border border-[#2A2A2A] text-white text-gray-400 rounded-md text-xs focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
               />
               <span className="text-gray-500 text-xs">to</span>
               <input
@@ -1836,7 +1836,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 min={startDate || undefined}
-                className="px-2 py-1.5 w-32 bg-[#0A0A0A] border border-[#2A2A2A] text-white text-gray-400 rounded-md text-xs focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                className="px-2 py-1.5 w-32 bg-[#0A0A0A] border border-[#2A2A2A] text-white text-gray-400 rounded-md text-xs focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
               />
               {(startDate || endDate) && (
                 <button
@@ -1864,7 +1864,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
             </button>
             <button
               onClick={handleCreate}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-md hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-all text-xs font-medium shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-md hover:from-[var(--color-accent)] hover:brightness-110 transition-all text-xs font-medium shadow-sm"
             >
               <Plus className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">New Booking</span>
@@ -1884,7 +1884,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
             onClick={() => setActiveTab('bookings')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors text-xs ${
               activeTab === 'bookings'
-                ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-md'
+                ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md'
                 : 'text-gray-400 hover:bg-[#1A1A1A] hover:text-white'
             }`}
           >
@@ -1895,7 +1895,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
             onClick={() => setActiveTab('transaction')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors text-xs ${
               activeTab === 'transaction'
-                ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-md'
+                ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md'
                 : 'text-gray-400 hover:bg-[#1A1A1A] hover:text-white'
             }`}
           >
@@ -2079,7 +2079,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                         {/* Quick Actions - Always visible */}
                         <button
                           onClick={() => setShowQRCode(booking)}
-                          className="p-1.5 text-[#FF8C42] hover:bg-[#FF8C42]/10 rounded-md transition-colors"
+                          className="p-1.5 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 rounded-md transition-colors"
                           title="View QR Code"
                         >
                           <QrCode className="h-4 w-4" />
@@ -2177,7 +2177,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                                       className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
                                       disabled={loading}
                                     >
-                                      <CheckCircle className="h-4 w-4 text-[#FF8C42]" />
+                                      <CheckCircle className="h-4 w-4 text-[var(--color-primary)]" />
                                       <span>Complete</span>
                                     </button>
                                     <button
@@ -2257,7 +2257,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
 
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-400">
-                Page <span className="text-[#FF8C42] font-semibold">{currentPage}</span> of <span className="text-white font-semibold">{totalPages}</span>
+                Page <span className="text-[var(--color-primary)] font-semibold">{currentPage}</span> of <span className="text-white font-semibold">{totalPages}</span>
               </span>
               <span className="text-xs text-gray-500">
                 ({startIndex + 1}-{Math.min(endIndex, filteredBookings.length)} of {filteredBookings.length})

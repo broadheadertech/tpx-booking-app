@@ -22,7 +22,7 @@ const ErrorDisplay = ({
     icon: 'text-red-400',
     message: 'text-red-300',
     details: 'text-red-200',
-    action: 'text-[#FF8C42]',
+    action: 'text-[var(--color-primary)]',
     closeButton: 'text-red-400 hover:text-red-300'
   }
   

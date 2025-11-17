@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import bannerImage from '../../assets/img/banner.jpg'
 import { useAuth } from '../../context/AuthContext'
+import { useBranding } from '../../context/BrandingContext'
 import ErrorDisplay from '../../components/common/ErrorDisplay'
 import { APP_VERSION } from '../../config/version'
 
@@ -16,6 +17,7 @@ function Login() {
   const [errorAction, setErrorAction] = useState('')
   const navigate = useNavigate()
   const { login, loginWithFacebook } = useAuth()
+  const { branding } = useBranding()
   const [fbLoading, setFbLoading] = useState(false)
   const [fbReady, setFbReady] = useState(false)
 
@@ -152,7 +154,7 @@ function Login() {
             {/* Logo */}
             <div className="flex justify-center mb-1">
               <img 
-                src="/img/tipuno_x_logo_white.avif" 
+                src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'} 
                 alt="TipunoX Angeles Barbershop Logo" 
                 className="w-52 h-32 object-contain"
               />
@@ -191,7 +193,7 @@ function Login() {
                       onChange={handleChange}
                       placeholder="Email address"
                       required
-                      className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42] transition-all duration-300 text-base text-white placeholder-gray-400"
+                      className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)] transition-all duration-300 text-base text-white placeholder-gray-400"
                     />
                   </div>
                   
@@ -203,13 +205,13 @@ function Login() {
                       onChange={handleChange}
                       placeholder="Password"
                       required
-                      className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42] transition-all duration-300 text-base text-white placeholder-gray-400"
+                      className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)] transition-all duration-300 text-base text-white placeholder-gray-400"
                     />
                   </div>
                 </div>
                 
                 <div className="flex justify-end pt-2">
-                  <Link to="/auth/forgot-password" className="text-sm font-medium text-[#FF8C42] hover:text-[#FF7A2B] transition-colors active:text-[#FF6B1A]">
+                  <Link to="/auth/forgot-password" className="text-sm font-medium text-[var(--color-primary)] hover:text-[var(--color-accent)] transition-colors active:text-[var(--color-accent)]">
                     Forgot Password?
                   </Link>
                 </div>
@@ -218,7 +220,7 @@ function Login() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full h-14 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] active:from-[#FF6B1A] active:to-[#E8610F] disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 disabled:transform-none text-base"
+                    className="w-full h-14 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:brightness-110 active:from-[var(--color-accent)] active:brightness-75 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 disabled:transform-none text-base"
                   >
                     {loading ? 'Signing In...' : 'Sign In'}
                   </button>
@@ -235,7 +237,7 @@ function Login() {
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5"><path d="M22.675 0h-21.35C.595 0 0 .594 0 1.326v21.348C0 23.406.595 24 1.325 24h11.495v-9.294H9.847v-3.622h2.973V8.413c0-2.943 1.796-4.548 4.418-4.548 1.256 0 2.336.093 2.65.135v3.07l-1.82.001c-1.428 0-1.703.679-1.703 1.675v2.197h3.406l-.444 3.622h-2.962V24h5.809C23.406 24 24 23.406 24 22.674V1.326C24 .594 23.406 0 22.675 0z"/></svg>
                       Continue with Facebook
                     </button>
-                    <span className="absolute -top-2 -right-2 bg-[#FF8C42] text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
+                    <span className="absolute -top-2 -right-2 bg-[var(--color-primary)] text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
                       Coming Soon
                     </span>
                   </div>
@@ -247,7 +249,7 @@ function Login() {
                     type="button"
                     onClick={handleGuestLogin}
                     disabled={loading}
-                    className="w-full h-12 bg-[#2A2A2A] hover:bg-[#3A3A3A] active:bg-[#4A4A4A] text-white font-semibold rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 disabled:cursor-not-allowed text-sm"
+                    className="w-full h-12 bg-[#2A2A2A] hover:bg-[#3A3A3A] active:brightness-95 text-white font-semibold rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 disabled:cursor-not-allowed text-sm"
                   >
                     Book as Guest
                   </button>
@@ -260,7 +262,7 @@ function Login() {
                   <span className="text-sm text-gray-400">Don't have an account? </span>
                   <Link 
                     to="/auth/register" 
-                    className="text-sm font-semibold text-[#FF8C42] hover:text-[#FF7A2B] active:text-[#FF6B1A] transition-colors"
+                    className="text-sm font-semibold text-[var(--color-primary)] hover:text-[var(--color-accent)] active:text-[var(--color-accent)] transition-colors"
                   >
                     Sign up
                   </Link>

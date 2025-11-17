@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { LayoutDashboard, Building, Users, BarChart3, Settings, Crown } from 'lucide-react'
+import { LayoutDashboard, Building, Users, BarChart3, Settings, Crown, Palette } from 'lucide-react'
 
 const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
   const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false)
@@ -25,7 +25,8 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
       branches: Building,
       users: Users,
       reports: BarChart3,
-      settings: Settings
+      settings: Settings,
+      branding: Palette,
     }
     return iconMap[tabId] || LayoutDashboard
   }
@@ -42,8 +43,8 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
         <div className="flex items-center space-x-1 bg-[#333333]/30 rounded-xl p-1">
           {/* Admin Crown Icon */}
           <div className="flex items-center space-x-2 px-4 py-3">
-            <Crown className="w-5 h-5 text-[#FF8C42]" />
-            <span className="text-[#FF8C42] font-semibold text-sm">ADMIN</span>
+            <Crown className="w-5 h-5 text-[var(--color-primary)]" />
+            <span className="text-[var(--color-primary)] font-semibold text-sm">ADMIN</span>
           </div>
 
           {/* Separator */}
@@ -59,7 +60,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
                   onClick={() => handleTabClick(tab.id)}
                   className={`relative flex items-center space-x-3 px-4 py-3 rounded-lg font-semibold text-sm transition-all duration-300 group min-w-0 ${
                     activeTab === tab.id
-                      ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg shadow-[#FF8C42]/25 transform scale-105'
+                      ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg shadow-[var(--color-primary)]/25 transform scale-105'
                       : 'text-gray-300 hover:text-white hover:bg-[#444444]/50 hover:shadow-sm'
                   }`}
                 >
@@ -71,7 +72,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
                   <div className={`flex items-center justify-center w-5 h-5 transition-all duration-200 ${
                     activeTab === tab.id
                       ? 'text-white'
-                      : 'text-gray-400 group-hover:text-[#FF8C42]'
+                      : 'text-gray-400 group-hover:text-[var(--color-primary)]'
                   }`}>
                     <IconComponent className="w-5 h-5" />
                   </div>
@@ -88,9 +89,9 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
         <div className="flex flex-wrap gap-1 p-2 justify-center">
           {/* Admin Badge */}
           <div className="w-full flex justify-center mb-2">
-            <div className="flex items-center space-x-2 bg-gradient-to-r from-[#FF8C42]/20 to-[#FF7A2B]/20 border border-[#FF8C42]/30 rounded-full px-4 py-2">
-              <Crown className="w-4 h-4 text-[#FF8C42]" />
-              <span className="text-[#FF8C42] font-semibold text-xs">ADMIN PANEL</span>
+            <div className="flex items-center space-x-2 bg-gradient-to-r from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 border border-[var(--color-primary)]/30 rounded-full px-4 py-2">
+              <Crown className="w-4 h-4 text-[var(--color-primary)]" />
+              <span className="text-[var(--color-primary)] font-semibold text-xs">ADMIN PANEL</span>
             </div>
           </div>
 
@@ -103,7 +104,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
                   onClick={() => handleTabClick(tab.id)}
                   className={`flex flex-col items-center justify-center px-3 py-3 rounded-lg font-medium text-xs transition-all duration-200 whitespace-nowrap relative flex-shrink-0 ${
                     activeTab === tab.id
-                      ? 'bg-gradient-to-b from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
+                      ? 'bg-gradient-to-b from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg'
                       : 'text-gray-400 hover:text-white hover:bg-[#333333]/50'
                   }`}
                 >
@@ -130,8 +131,8 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
         <div className="flex items-center space-x-2 bg-[#333333]/30 rounded-xl p-1">
           {/* Admin Badge */}
           <div className="flex items-center space-x-2 px-3 py-2">
-            <Crown className="w-4 h-4 text-[#FF8C42]" />
-            <span className="text-[#FF8C42] font-semibold text-xs">ADMIN</span>
+            <Crown className="w-4 h-4 text-[var(--color-primary)]" />
+            <span className="text-[var(--color-primary)] font-semibold text-xs">ADMIN</span>
           </div>
 
           <div className="w-px h-6 bg-[#444444]"></div>
@@ -145,7 +146,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
                   onClick={() => handleTabClick(tab.id)}
                   className={`flex items-center space-x-2 px-3 py-2.5 rounded-lg font-semibold text-sm transition-all duration-300 whitespace-nowrap relative ${
                     activeTab === tab.id
-                      ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
+                      ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg'
                       : 'text-gray-400 hover:text-white hover:bg-[#444444]/50'
                   }`}
                 >

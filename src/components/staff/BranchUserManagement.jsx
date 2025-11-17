@@ -51,7 +51,7 @@ const UserFormModal = React.memo(({ isOpen, onClose, title, onSubmit, formData, 
                     type="text"
                     value={formData.username}
                     onChange={(e) => onInputChange('username', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     placeholder="Enter username"
                     required
                   />
@@ -63,7 +63,7 @@ const UserFormModal = React.memo(({ isOpen, onClose, title, onSubmit, formData, 
                     type="email"
                     value={formData.email}
                     onChange={(e) => onInputChange('email', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     placeholder="Enter email address"
                     required
                   />
@@ -75,7 +75,7 @@ const UserFormModal = React.memo(({ isOpen, onClose, title, onSubmit, formData, 
                     type="password"
                     value={formData.password}
                     onChange={(e) => onInputChange('password', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     placeholder="Enter password"
                     required
                   />
@@ -87,7 +87,7 @@ const UserFormModal = React.memo(({ isOpen, onClose, title, onSubmit, formData, 
                     type="tel"
                     value={formData.mobile_number}
                     onChange={(e) => onInputChange('mobile_number', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     placeholder="Enter mobile number"
                   />
                 </div>
@@ -98,7 +98,7 @@ const UserFormModal = React.memo(({ isOpen, onClose, title, onSubmit, formData, 
                     value={formData.address}
                     onChange={(e) => onInputChange('address', e.target.value)}
                     rows="2"
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     placeholder="Enter address"
                   />
                 </div>
@@ -114,7 +114,7 @@ const UserFormModal = React.memo(({ isOpen, onClose, title, onSubmit, formData, 
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <Save className="h-4 w-4" />
                     <span>{loading ? 'Creating...' : 'Create User'}</span>
@@ -175,7 +175,7 @@ const EditUserModal = React.memo(({ isOpen, onClose, onSubmit, user, formData, o
                     type="text"
                     value={formData.username}
                     onChange={(e) => onInputChange('username', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     placeholder="Enter username"
                     required
                   />
@@ -187,7 +187,7 @@ const EditUserModal = React.memo(({ isOpen, onClose, onSubmit, user, formData, o
                     type="email"
                     value={formData.email}
                     onChange={(e) => onInputChange('email', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     placeholder="Enter email address"
                     required
                   />
@@ -199,7 +199,7 @@ const EditUserModal = React.memo(({ isOpen, onClose, onSubmit, user, formData, o
                     type="password"
                     value={formData.password}
                     onChange={(e) => onInputChange('password', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     placeholder="Leave blank to keep current password"
                   />
                   <p className="text-xs text-gray-500 mt-1">Leave blank to keep current password</p>
@@ -211,7 +211,7 @@ const EditUserModal = React.memo(({ isOpen, onClose, onSubmit, user, formData, o
                     type="tel"
                     value={formData.mobile_number}
                     onChange={(e) => onInputChange('mobile_number', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     placeholder="Enter mobile number"
                   />
                 </div>
@@ -222,7 +222,7 @@ const EditUserModal = React.memo(({ isOpen, onClose, onSubmit, user, formData, o
                     value={formData.address}
                     onChange={(e) => onInputChange('address', e.target.value)}
                     rows="2"
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     placeholder="Enter address"
                   />
                 </div>
@@ -232,7 +232,7 @@ const EditUserModal = React.memo(({ isOpen, onClose, onSubmit, user, formData, o
                   <select
                     value={formData.role}
                     onChange={(e) => onInputChange('role', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                   >
                     <option value="staff">Staff</option>
                     <option value="barber">Barber</option>
@@ -250,7 +250,7 @@ const EditUserModal = React.memo(({ isOpen, onClose, onSubmit, user, formData, o
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <Save className="h-4 w-4" />
                     <span>{loading ? 'Updating...' : 'Update User'}</span>
@@ -555,7 +555,7 @@ export default function BranchUserManagement() {
   if (!currentBranch) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42]"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
         <span className="ml-2 text-gray-400">Loading branch users...</span>
       </div>
     )
@@ -566,7 +566,7 @@ export default function BranchUserManagement() {
       {/* Branch Info Header */}
       <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex items-center space-x-3">
-          <Building className="h-6 w-6 text-[#FF8C42]" />
+          <Building className="h-6 w-6 text-[var(--color-primary)]" />
           <div>
             <h3 className="text-lg font-semibold text-white">{currentBranch.name}</h3>
             <p className="text-sm text-gray-400">Branch Code: {currentBranch.branch_code} • Managing branch staff</p>
@@ -580,9 +580,9 @@ export default function BranchUserManagement() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Total</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.total}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.total}</p>
             </div>
-            <Users className="h-6 w-6 text-[#FF8C42] opacity-30" />
+            <Users className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
 
@@ -590,9 +590,9 @@ export default function BranchUserManagement() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Staff</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.staff}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.staff}</p>
             </div>
-            <User className="h-6 w-6 text-[#FF8C42] opacity-30" />
+            <User className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
 
@@ -600,9 +600,9 @@ export default function BranchUserManagement() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Barbers</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.barbers}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.barbers}</p>
             </div>
-            <User className="h-6 w-6 text-[#FF8C42] opacity-30" />
+            <User className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
       </div>
@@ -618,7 +618,7 @@ export default function BranchUserManagement() {
                 placeholder="Search users..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent text-sm"
+                className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
               />
             </div>
 
@@ -627,7 +627,7 @@ export default function BranchUserManagement() {
               <select
                 value={filterRole}
                 onChange={(e) => setFilterRole(e.target.value)}
-                className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
               >
                 <option value="all">All Roles</option>
                 <option value="staff">Staff</option>
@@ -638,7 +638,7 @@ export default function BranchUserManagement() {
 
           <button
             onClick={handleCreate}
-            className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors text-sm"
+            className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] transition-colors text-sm"
           >
             <UserPlus className="h-4 w-4" />
             <span>Add User</span>
@@ -678,8 +678,8 @@ export default function BranchUserManagement() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
-                            <User className="h-5 w-5 text-[#FF8C42]" />
+                          <div className="h-10 w-10 rounded-lg bg-[var(--color-primary)]/20 flex items-center justify-center">
+                            <User className="h-5 w-5 text-[var(--color-primary)]" />
                           </div>
                         </div>
                         <div className="ml-4">

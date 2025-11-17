@@ -648,7 +648,7 @@ const GuestServiceBooking = ({ onBack }) => {
     if (!branches) {
       return (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42]"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
         </div>
       );
     }
@@ -693,7 +693,7 @@ const GuestServiceBooking = ({ onBack }) => {
               placeholder="Search by name, address, or code..."
               value={branchSearchTerm}
               onChange={(e) => setBranchSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:outline-none focus:border-[#FF8C42] transition-colors text-sm"
+              className="w-full pl-10 pr-10 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:outline-none focus:border-[var(--color-primary)] transition-colors text-sm"
             />
             {branchSearchTerm && (
               <button
@@ -719,16 +719,16 @@ const GuestServiceBooking = ({ onBack }) => {
               <button
                 key={branch._id}
                 onClick={() => handleBranchSelect(branch)}
-                className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[#FF8C42] rounded-lg p-4 text-left transition-all duration-200 group"
+                className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[var(--color-primary)] rounded-lg p-4 text-left transition-all duration-200 group"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
                     {/* Location Pin Icon */}
-                    <MapPin className="w-5 h-5 text-[#FF8C42] flex-shrink-0 mt-0.5" />
+                    <MapPin className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
 
                     <div className="flex-1 min-w-0">
                       {/* Branch Name */}
-                      <h3 className="text-base font-semibold text-white mb-1 group-hover:text-[#FF8C42] transition-colors">
+                      <h3 className="text-base font-semibold text-white mb-1 group-hover:text-[var(--color-primary)] transition-colors">
                         {branch.name}
                       </h3>
 
@@ -747,7 +747,7 @@ const GuestServiceBooking = ({ onBack }) => {
                   </div>
 
                   {/* Arrow Indicator */}
-                  <div className="ml-4 text-gray-500 group-hover:text-[#FF8C42] transition-colors flex-shrink-0">
+                  <div className="ml-4 text-gray-500 group-hover:text-[var(--color-primary)] transition-colors flex-shrink-0">
                     <svg
                       className="w-5 h-5"
                       fill="none"
@@ -775,7 +775,7 @@ const GuestServiceBooking = ({ onBack }) => {
     if (loading || !services) {
       return (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42]"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
         </div>
       );
     }
@@ -786,7 +786,7 @@ const GuestServiceBooking = ({ onBack }) => {
           <p className="text-sm text-red-400 mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors text-sm font-medium"
+            className="px-6 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] transition-colors text-sm font-medium"
           >
             Try Again
           </button>
@@ -819,7 +819,7 @@ const GuestServiceBooking = ({ onBack }) => {
             placeholder="Search services..."
             value={serviceSearchTerm}
             onChange={(e) => setServiceSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-10 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:outline-none focus:border-[#FF8C42] transition-colors text-sm"
+            className="w-full pl-10 pr-10 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:outline-none focus:border-[var(--color-primary)] transition-colors text-sm"
           />
           {serviceSearchTerm && (
             <button
@@ -883,7 +883,7 @@ const GuestServiceBooking = ({ onBack }) => {
                           <button
                             key={service._id}
                             onClick={() => handleServiceSelect(service)}
-                            className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[#FF8C42] rounded-lg p-4 text-left transition-all duration-200 flex justify-between items-start"
+                            className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[var(--color-primary)] rounded-lg p-4 text-left transition-all duration-200 flex justify-between items-start"
                           >
                             <div>
                               <h3 className="text-base font-semibold text-white">
@@ -894,7 +894,7 @@ const GuestServiceBooking = ({ onBack }) => {
                                   {service.description}
                                 </p>
                               )}
-                              <span className="text-[#FF8C42] font-bold mt-1 block">
+                              <span className="text-[var(--color-primary)] font-bold mt-1 block">
                                 ₱
                                 {parseFloat(
                                   service.price || 0
@@ -956,7 +956,7 @@ const GuestServiceBooking = ({ onBack }) => {
               {selectedService?.name}
             </h3>
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-[#FF8C42] font-semibold">
+              <span className="text-[var(--color-primary)] font-semibold">
                 ₱{selectedService?.price.toLocaleString()}
               </span>
               <span className="text-gray-500">•</span>
@@ -982,8 +982,8 @@ const GuestServiceBooking = ({ onBack }) => {
                 }}
                 className={`w-full flex items-center gap-3 p-3 border rounded-lg transition-all duration-200 ${
                   selectedStaff?._id === barber._id
-                    ? "border-[#FF8C42] bg-[#FF8C42]/10"
-                    : "border-[#2A2A2A] hover:border-[#FF8C42]/50"
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
+                    : "border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
                 }`}
               >
                 <BarberAvatar barber={barber} className="w-10 h-10" />
@@ -997,7 +997,7 @@ const GuestServiceBooking = ({ onBack }) => {
                   </div>
                 </div>
                 {selectedStaff?._id === barber._id && (
-                  <CheckCircle className="w-5 h-5 text-[#FF8C42]" />
+                  <CheckCircle className="w-5 h-5 text-[var(--color-primary)]" />
                 )}
               </button>
             ))}
@@ -1005,12 +1005,12 @@ const GuestServiceBooking = ({ onBack }) => {
         ) : (
           <div className="text-center py-6">
             <AlertTriangle className="w-6 h-6 text-amber-500 mx-auto mb-2" />
-            <p className="text-sm text-[#FF8C42] font-medium">
+            <p className="text-sm text-[var(--color-primary)] font-medium">
               No barbers available for "{selectedService?.name}"
             </p>
             <button
               onClick={() => setStep(1)}
-              className="mt-3 px-4 py-2 bg-[#FF8C42] text-white text-xs font-medium rounded-lg hover:bg-[#FF7A2B] transition"
+              className="mt-3 px-4 py-2 bg-[var(--color-primary)] text-white text-xs font-medium rounded-lg hover:bg-[var(--color-accent)] transition"
             >
               Choose Different Service
             </button>
@@ -1037,7 +1037,7 @@ const GuestServiceBooking = ({ onBack }) => {
                 .toISOString()
                 .split("T")[0]
             }
-            className="w-full px-3 py-2.5 rounded-lg bg-[#121212] border border-[#2A2A2A] text-gray-200 text-sm focus:outline-none focus:border-[#FF8C42] transition-colors"
+            className="w-full px-3 py-2.5 rounded-lg bg-[#121212] border border-[#2A2A2A] text-gray-200 text-sm focus:outline-none focus:border-[var(--color-primary)] transition-colors"
           />
         </div>
       )}
@@ -1060,13 +1060,13 @@ const GuestServiceBooking = ({ onBack }) => {
 
           {loadingTimeSlots ? (
             <div className="flex justify-center items-center py-6 space-x-2">
-              <div className="animate-spin w-5 h-5 border-2 border-[#FF8C42] border-t-transparent rounded-full"></div>
+              <div className="animate-spin w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full"></div>
               <span className="text-gray-400 text-sm">Loading times...</span>
             </div>
           ) : timeSlots.length === 0 ? (
             <div className="text-center py-6">
-            <Calendar className="w-6 h-6 text-[#FF8C42] mx-auto mb-2" />
-              <p className="text-sm text-[#FF8C42] font-medium">
+            <Calendar className="w-6 h-6 text-[var(--color-primary)] mx-auto mb-2" />
+              <p className="text-sm text-[var(--color-primary)] font-medium">
                 No available times
               </p>
               <p className="text-xs text-gray-400 mt-1">
@@ -1084,8 +1084,8 @@ const GuestServiceBooking = ({ onBack }) => {
                     className={`p-2 text-sm rounded-lg border transition-all duration-200 ${
                       slot.available
                         ? selectedTime === slot.time
-                          ? "bg-[#FF8C42] text-white border-[#FF8C42]"
-                          : "bg-[#1F1F1F] text-gray-200 border-[#2A2A2A] hover:border-[#FF8C42]/50"
+                          ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                          : "bg-[#1F1F1F] text-gray-200 border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
                         : "bg-[#111111] text-gray-500 border-[#1F1F1F] cursor-not-allowed"
                     }`}
                   >
@@ -1100,7 +1100,7 @@ const GuestServiceBooking = ({ onBack }) => {
                   <span>Available</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-[#FF8C42] rounded"></div>
+                  <div className="w-3 h-3 bg-[var(--color-primary)] rounded"></div>
                   <span>Selected</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -1117,7 +1117,7 @@ const GuestServiceBooking = ({ onBack }) => {
       {selectedStaff && selectedDate && selectedTime && (
         <button
           onClick={() => setStep(4)}
-          className="w-full py-3 bg-[#FF8C42] text-white font-bold rounded-lg hover:bg-[#FF7A2B] transition-all duration-200"
+          className="w-full py-3 bg-[var(--color-primary)] text-white font-bold rounded-lg hover:bg-[var(--color-accent)] transition-all duration-200"
         >
           Continue to Confirmation
         </button>
@@ -1126,8 +1126,8 @@ const GuestServiceBooking = ({ onBack }) => {
       {/* Progress Indicator */}
       {selectedStaff && (
         <div className="text-center">
-          <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-[#FF8C42]/10">
-            <span className="text-xs font-semibold text-[#FF8C42]">
+          <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-[var(--color-primary)]/10">
+            <span className="text-xs font-semibold text-[var(--color-primary)]">
               {selectedStaff && !selectedDate
                 ? "Step 2: Select Date"
                 : selectedStaff && selectedDate && !selectedTime
@@ -1160,8 +1160,8 @@ const GuestServiceBooking = ({ onBack }) => {
             onClick={() => handleStaffSelect(barber)}
             className={`group bg-white rounded-3xl p-6 shadow-xl border-2 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 ${
               selectedStaff?._id === barber._id
-                ? "border-[#FF8C42]"
-                : "border-[#F5F5F5] hover:border-[#FF8C42]"
+                ? "border-[var(--color-primary)]"
+                : "border-[#F5F5F5] hover:border-[var(--color-primary)]"
             }`}
           >
             <div className="text-center">
@@ -1173,12 +1173,12 @@ const GuestServiceBooking = ({ onBack }) => {
                   </div>
                 )}
               </div>
-              <h3 className="text-xl font-black text-[#1A1A1A] mb-2 group-hover:text-[#FF8C42] transition-colors duration-200">
+              <h3 className="text-xl font-black text-[#1A1A1A] mb-2 group-hover:text-[var(--color-primary)] transition-colors duration-200">
                 {barber}
                 {barber.full_name}
               </h3>
               <div className="space-y-2">
-                <div className="px-3 py-1 bg-[#FF8C42]/10 text-[#FF8C42] rounded-full text-sm font-semibold inline-block">
+                <div className="px-3 py-1 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-full text-sm font-semibold inline-block">
                   Professional Barber
                 </div>
                 <p className="text-[#6B6B6B] text-sm font-medium">
@@ -1407,9 +1407,9 @@ const GuestServiceBooking = ({ onBack }) => {
           <p className="text-sm text-gray-400">
             We'll create a temporary guest account for your booking
           </p>
-          <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full bg-[#FF8C42]/10 border border-[#FF8C42]/20">
-            <Lock className="w-3.5 h-3.5 text-[#FF8C42] mr-1" />
-            <span className="text-xs text-[#FF8C42]">Secure & Private</span>
+          <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20">
+            <Lock className="w-3.5 h-3.5 text-[var(--color-primary)] mr-1" />
+            <span className="text-xs text-[var(--color-primary)]">Secure & Private</span>
           </div>
         </div>
 
@@ -1431,10 +1431,10 @@ const GuestServiceBooking = ({ onBack }) => {
                     setFormErrors({ ...formErrors, name: "" });
                   }
                 }}
-                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
+                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
                   formErrors.name
                     ? "border-red-500 focus:border-red-500"
-                    : "border-[#3A3A3A] focus:border-[#FF8C42]"
+                    : "border-[#3A3A3A] focus:border-[var(--color-primary)]"
                 }`}
               />
               {formErrors.name && (
@@ -1457,10 +1457,10 @@ const GuestServiceBooking = ({ onBack }) => {
                     setFormErrors({ ...formErrors, email: "" });
                   }
                 }}
-                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
+                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
                   formErrors.email
                     ? "border-red-500 focus:border-red-500"
-                    : "border-[#3A3A3A] focus:border-[#FF8C42]"
+                    : "border-[#3A3A3A] focus:border-[var(--color-primary)]"
                 }`}
               />
               {formErrors.email && (
@@ -1486,10 +1486,10 @@ const GuestServiceBooking = ({ onBack }) => {
                     setFormErrors({ ...formErrors, number: "" });
                   }
                 }}
-                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
+                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
                   formErrors.number
                     ? "border-red-500 focus:border-red-500"
-                    : "border-[#3A3A3A] focus:border-[#FF8C42]"
+                    : "border-[#3A3A3A] focus:border-[var(--color-primary)]"
                 }`}
               />
               {formErrors.number && (
@@ -1507,7 +1507,7 @@ const GuestServiceBooking = ({ onBack }) => {
                 className={`w-full py-3 rounded-xl font-light transition-all duration-300 text-sm ${
                   loading
                     ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                    : "bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white hover:shadow-lg transform hover:scale-[1.02]"
+                    : "bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white hover:shadow-lg transform hover:scale-[1.02]"
                 }`}
               >
                 {loading ? (
@@ -1717,7 +1717,7 @@ const GuestServiceBooking = ({ onBack }) => {
               className={`w-full py-3 px-4 rounded-lg transition-all duration-200 text-sm flex items-center justify-center gap-2 font-bold ${
                 bookingLoading
                   ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                  : "bg-[#FF8C42] hover:bg-[#FF7A2B] text-white hover:shadow-lg"
+                  : "bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white hover:shadow-lg"
               }`}
             >
               {bookingLoading ? (
@@ -1813,7 +1813,7 @@ const GuestServiceBooking = ({ onBack }) => {
             <div className="text-lg font-light text-white">
               Booking Code:{" "}
               {getBookingById?.booking_code ? (
-                <span className="font-bold text-[#FF8C42]">
+                <span className="font-bold text-[var(--color-primary)]">
                   {getBookingById.booking_code}
                 </span>
               ) : (
@@ -1899,7 +1899,7 @@ const GuestServiceBooking = ({ onBack }) => {
             )}
             <div className="flex justify-between border-t pt-3 border-orange-500/30">
               <span className="font-light text-white">Total:</span>
-              <span className="font-normal text-lg text-[#FF8C42]">
+              <span className="font-normal text-lg text-[var(--color-primary)]">
                 ₱
                 {createdBooking?.total_amount
                   ? parseFloat(createdBooking.total_amount).toLocaleString()
@@ -1917,7 +1917,7 @@ const GuestServiceBooking = ({ onBack }) => {
         <div className="space-y-3">
           <button
             onClick={onBack}
-            className="w-full py-4 bg-[#F68B24] hover:bg-[#E67E22] text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
+            className="w-full py-4 bg-[#F68B24] hover:brightness-90 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
           >
             Back to Home
           </button>
@@ -1952,7 +1952,7 @@ const GuestServiceBooking = ({ onBack }) => {
             {/* Title - Centered */}
             <div className="text-center">
               <p className="text-lg font-light text-white">Book Service</p>
-              <p className="text-xs text-[#FF8C42]">Step {step} of 6</p>
+              <p className="text-xs text-[var(--color-primary)]">Step {step} of 6</p>
             </div>
           </div>
         </div>
@@ -2020,7 +2020,7 @@ const GuestServiceBooking = ({ onBack }) => {
             {/* Action Button */}
             <button
               onClick={closeErrorDialog}
-              className="w-full py-3 bg-[#FF8C42] hover:bg-[#FF7A2B] text-white font-medium rounded-xl transition-all duration-200"
+              className="w-full py-3 bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white font-medium rounded-xl transition-all duration-200"
             >
               OK
             </button>

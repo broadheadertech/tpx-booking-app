@@ -325,7 +325,7 @@ const ReceiptModal = ({
         <div className="grid grid-cols-2 gap-3">
           <button
             onClick={handlePrint}
-            className="py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white font-bold rounded-xl hover:from-[#FF7A2B] hover:to-[#E67E37] transition-all flex items-center justify-center space-x-2"
+            className="py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-bold rounded-xl hover:from-[var(--color-accent)] hover:to-[var(--color-accent)] transition-all flex items-center justify-center space-x-2"
           >
             <Printer className="w-5 h-5" />
             <span>Print Receipt</span>
@@ -333,7 +333,7 @@ const ReceiptModal = ({
           
           <button
             onClick={handleDownload}
-            className="py-3 border-2 border-[#555555] text-gray-300 font-semibold rounded-xl hover:border-[#FF8C42] hover:text-[#FF8C42] hover:bg-[#FF8C42]/10 transition-all flex items-center justify-center space-x-2"
+            className="py-3 border-2 border-[#555555] text-gray-300 font-semibold rounded-xl hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all flex items-center justify-center space-x-2"
           >
             <Download className="w-5 h-5" />
             <span>Download</span>

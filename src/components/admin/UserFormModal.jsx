@@ -213,7 +213,7 @@ const UserFormModal = ({
                     name="username"
                     value={formData.username}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent ${
+                    className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
                       validationErrors.username 
                         ? 'border-red-400 focus:ring-red-400' 
                         : formData.username && !validationErrors.username 
@@ -232,7 +232,7 @@ const UserFormModal = ({
                     name="role"
                     value={formData.role}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     required
                   >
                     <option value="branch_admin">Branch Admin</option>
@@ -256,7 +256,7 @@ const UserFormModal = ({
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent ${
+                  className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
                     validationErrors.email 
                       ? 'border-red-400 focus:ring-red-400' 
                       : formData.email && !validationErrors.email 
@@ -283,7 +283,7 @@ const UserFormModal = ({
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 pr-10 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent ${
+                    className={`w-full px-3 py-2 pr-10 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
                       validationErrors.password 
                         ? 'border-red-400 focus:ring-red-400' 
                         : formData.password && !validationErrors.password 
@@ -322,7 +322,7 @@ const UserFormModal = ({
                   name="mobile_number"
                   value={formData.mobile_number}
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent ${
+                  className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
                     validationErrors.mobile_number 
                       ? 'border-red-400 focus:ring-red-400' 
                       : formData.mobile_number && !validationErrors.mobile_number 
@@ -347,7 +347,7 @@ const UserFormModal = ({
                     name="branch_id"
                     value={formData.branch_id}
                     onChange={handleInputChange}
-                    className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent ${
+                    className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
                       validationErrors.branch_id 
                         ? 'border-red-400 focus:ring-red-400' 
                         : formData.branch_id && !validationErrors.branch_id 
@@ -380,7 +380,7 @@ const UserFormModal = ({
                   value={formData.address}
                   onChange={handleInputChange}
                   rows="2"
-                  className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent ${
+                  className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
                     validationErrors.address 
                       ? 'border-red-400 focus:ring-red-400' 
                       : formData.address && !validationErrors.address 
@@ -406,7 +406,7 @@ const UserFormModal = ({
                 <button
                   type="submit"
                   disabled={loading || isSubmitting || !isFormValid()}
-                  className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {loading || isSubmitting ? (
                     <>

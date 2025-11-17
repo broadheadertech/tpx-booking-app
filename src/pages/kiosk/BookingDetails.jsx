@@ -147,7 +147,7 @@ const BookingDetails = ({ scannedBooking, onDone, onValidateAndConfirm, isProces
           
           <button
             onClick={onDone}
-            className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-[#1A1A1A] border border-[#444444] text-white font-bold rounded-xl transition-all duration-200 hover:bg-[#2A2A2A] hover:border-[#FF8C42]/50 shadow-lg"
+            className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 bg-[#1A1A1A] border border-[#444444] text-white font-bold rounded-xl transition-all duration-200 hover:bg-[#2A2A2A] hover:border-[var(--color-primary)]/50 shadow-lg"
           >
             <XCircle className="w-5 h-5" />
             <span>Done</span>

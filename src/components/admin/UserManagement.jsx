@@ -258,7 +258,7 @@ export default function UserManagement() {
   if (!users) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42]"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
         <span className="ml-2 text-gray-400">Loading users...</span>
       </div>
     )
@@ -280,9 +280,9 @@ export default function UserManagement() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Total</p>
-              <p className="text-xl font-bold text-[#FF8C42]">{stats.total}</p>
+              <p className="text-xl font-bold text-[var(--color-primary)]">{stats.total}</p>
             </div>
-            <Users className="h-6 w-6 text-[#FF8C42] opacity-30" />
+            <Users className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
         
@@ -290,9 +290,9 @@ export default function UserManagement() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Super Admin</p>
-              <p className="text-xl font-bold text-[#FF8C42]">{stats.superAdmins}</p>
+              <p className="text-xl font-bold text-[var(--color-primary)]">{stats.superAdmins}</p>
             </div>
-            <Shield className="h-6 w-6 text-[#FF8C42] opacity-30" />
+            <Shield className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
 
@@ -300,9 +300,9 @@ export default function UserManagement() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Branch Admin</p>
-              <p className="text-xl font-bold text-[#FF8C42]">{stats.branchAdmins}</p>
+              <p className="text-xl font-bold text-[var(--color-primary)]">{stats.branchAdmins}</p>
             </div>
-            <Building className="h-6 w-6 text-[#FF8C42] opacity-30" />
+            <Building className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
 
@@ -310,9 +310,9 @@ export default function UserManagement() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Staff</p>
-              <p className="text-xl font-bold text-[#FF8C42]">{stats.staff}</p>
+              <p className="text-xl font-bold text-[var(--color-primary)]">{stats.staff}</p>
             </div>
-            <User className="h-6 w-6 text-[#FF8C42] opacity-30" />
+            <User className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
 
@@ -330,7 +330,7 @@ export default function UserManagement() {
                 placeholder="Search users..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent text-sm"
+                className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
               />
             </div>
 
@@ -339,7 +339,7 @@ export default function UserManagement() {
               <select
                 value={filterRole}
                 onChange={(e) => setFilterRole(e.target.value)}
-                className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
               >
                 <option value="all">All Roles</option>
                 <option value="super_admin">Super Admin</option>
@@ -351,7 +351,7 @@ export default function UserManagement() {
             <select
               value={filterBranch}
               onChange={(e) => setFilterBranch(e.target.value)}
-              className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+              className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
             >
               <option value="all">All Branches</option>
               {branches.map(branch => (
@@ -364,7 +364,7 @@ export default function UserManagement() {
 
           <button
             onClick={handleCreate}
-            className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors text-sm"
+            className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] transition-colors text-sm"
           >
             <UserPlus className="h-4 w-4" />
             <span>New User</span>
@@ -404,8 +404,8 @@ export default function UserManagement() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
-                            <User className="h-5 w-5 text-[#FF8C42]" />
+                          <div className="h-10 w-10 rounded-lg bg-[var(--color-primary)]/20 flex items-center justify-center">
+                            <User className="h-5 w-5 text-[var(--color-primary)]" />
                           </div>
                         </div>
                         <div className="ml-4">
@@ -547,7 +547,7 @@ export default function UserManagement() {
                   </button>
                   <button
                     onClick={confirmUpdate}
-                    className="px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors"
+                    className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] transition-colors"
                   >
                     Confirm Update
                   </button>

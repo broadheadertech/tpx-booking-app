@@ -9,18 +9,18 @@ const ViewVoucherUsersModal = ({ isOpen, onClose, voucher, assignedUsers = [] })
     <Modal isOpen={isOpen} onClose={onClose} title={`Voucher: ${voucher.code}`} size="md" compact variant="dark">
       <div className="space-y-4">
         {/* Voucher Info Card */}
-        <div className="bg-gradient-to-r from-[#1A1A1A] to-[#222222] border border-[#FF8C42]/20 rounded-lg p-3.5">
+        <div className="bg-gradient-to-r from-[#1A1A1A] to-[#222222] border border-[var(--color-primary)]/20 rounded-lg p-3.5">
           <div className="flex items-start justify-between">
             <div>
               <h3 className="text-xs font-bold text-gray-200 text-uppercase tracking-wider mb-2">Voucher Details</h3>
               <div className="space-y-1 text-xs">
-                <p className="text-gray-400">Code: <span className="text-[#FF8C42] font-bold">{voucher.code}</span></p>
-                <p className="text-gray-400">Value: <span className="text-[#FF8C42] font-bold">₱{parseFloat(voucher.value).toFixed(2)}</span></p>
+                <p className="text-gray-400">Code: <span className="text-[var(--color-primary)] font-bold">{voucher.code}</span></p>
+                <p className="text-gray-400">Value: <span className="text-[var(--color-primary)] font-bold">₱{parseFloat(voucher.value).toFixed(2)}</span></p>
               </div>
             </div>
             <div className="text-right">
               <p className="text-xs text-gray-400">Assigned</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{assignedUsers.length}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{assignedUsers.length}</p>
             </div>
           </div>
         </div>
@@ -32,8 +32,8 @@ const ViewVoucherUsersModal = ({ isOpen, onClose, voucher, assignedUsers = [] })
               <div key={user._id || index} className="p-3 hover:bg-[#1A1A1A]/50 transition-colors">
                 <div className="flex items-start gap-3">
                   {/* Avatar */}
-                  <div className="w-8 h-8 bg-[#FF8C42]/20 rounded-full flex items-center justify-center flex-shrink-0">
-                    <User className="w-4 h-4 text-[#FF8C42]" />
+                  <div className="w-8 h-8 bg-[var(--color-primary)]/20 rounded-full flex items-center justify-center flex-shrink-0">
+                    <User className="w-4 h-4 text-[var(--color-primary)]" />
                   </div>
                   {/* User Info */}
                   <div className="flex-1 min-w-0">

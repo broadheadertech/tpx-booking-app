@@ -385,7 +385,7 @@ function BookingQRGenerator() {
                 step >= stepNumber ? "text-white shadow-md" : "text-gray-500"
               }`}
               style={{
-                backgroundColor: step >= stepNumber ? "#FF8C42" : "#444444",
+                backgroundColor: step >= stepNumber ? "var(--color-primary)" : "#444444",
               }}
             >
               {step > stepNumber ? "✓" : stepNumber}
@@ -394,7 +394,7 @@ function BookingQRGenerator() {
               <div
                 className={`w-8 h-0.5 mx-1 rounded transition-all duration-300`}
                 style={{
-                  backgroundColor: step > stepNumber ? "#FF8C42" : "#444444",
+                  backgroundColor: step > stepNumber ? "var(--color-primary)" : "#444444",
                 }}
               ></div>
             )}
@@ -408,7 +408,7 @@ function BookingQRGenerator() {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#FF8C42] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-lg font-medium text-white">Loading Services...</p>
         </div>
       </div>
@@ -425,7 +425,7 @@ function BookingQRGenerator() {
         <p className="text-red-400 mb-4">{error}</p>
         <button
           onClick={() => window.location.reload()}
-          className="px-6 py-3 text-white font-bold rounded-xl transition-colors duration-200 bg-[#FF8C42] hover:bg-[#E67A1F]"
+          className="px-6 py-3 text-white font-bold rounded-xl transition-colors duration-200 bg-[var(--color-primary)] hover:brightness-90"
         >
           Retry
         </button>
@@ -456,16 +456,16 @@ function BookingQRGenerator() {
                   setSelectedTime(null);
                   setStep(2);
                 }}
-                className="group relative w-full bg-gradient-to-br from-[#1A1A1A]/50 to-[#2A2A2A]/50 rounded-xl p-4 border-2 border-[#444444]/50 hover:border-[#FF8C42]/50 transition-all duration-200 hover:scale-105"
+                className="group relative w-full bg-gradient-to-br from-[#1A1A1A]/50 to-[#2A2A2A]/50 rounded-xl p-4 border-2 border-[#444444]/50 hover:border-[var(--color-primary)]/50 transition-all duration-200 hover:scale-105"
               >
                 <div className="flex items-center space-x-3">
                   <div className="flex-shrink-0">
-                    <div className="rounded-full w-12 h-12 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200">
+                    <div className="rounded-full w-12 h-12 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200">
                       {getServiceIcon(service.name)}
                     </div>
                   </div>
                   <div className="flex-1 text-left">
-                    <h3 className="text-base font-bold text-white group-hover:text-[#FF8C42] transition-colors duration-200">
+                    <h3 className="text-base font-bold text-white group-hover:text-[var(--color-primary)] transition-colors duration-200">
                       {service.name}
                     </h3>
                     <p className="text-sm text-gray-400 mt-1">
@@ -481,8 +481,8 @@ function BookingQRGenerator() {
                     </div>
                   </div>
                   <div className="flex-shrink-0">
-                    <div className="rounded-xl px-3 py-2 bg-[#FF8C42]/20 border border-[#FF8C42]/30">
-                      <div className="text-base font-bold text-[#FF8C42]">
+                    <div className="rounded-xl px-3 py-2 bg-[var(--color-primary)]/20 border border-[var(--color-primary)]/30">
+                      <div className="text-base font-bold text-[var(--color-primary)]">
                         ₱{parseFloat(service.price || 0).toLocaleString()}
                       </div>
                     </div>
@@ -500,13 +500,13 @@ function BookingQRGenerator() {
           {/* Selected Service Summary */}
           <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl p-4 border border-[#444444]/50">
             <div className="flex items-center space-x-3">
-              <div className="rounded-full w-10 h-10 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center">
+              <div className="rounded-full w-10 h-10 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center">
                 {getServiceIcon(selectedService?.name)}
               </div>
               <div className="flex-1">
                 <h3 className="text-base font-bold text-white">{selectedService?.name}</h3>
                 <div className="flex items-center space-x-3 text-sm">
-                  <span className="font-bold text-[#FF8C42]">₱{selectedService?.price.toLocaleString()}</span>
+                  <span className="font-bold text-[var(--color-primary)]">₱{selectedService?.price.toLocaleString()}</span>
                   <span className="font-medium text-gray-400">{selectedService?.duration_minutes} min</span>
                 </div>
               </div>
@@ -527,8 +527,8 @@ function BookingQRGenerator() {
                     }}
                     className={`p-4 rounded-xl border-2 transition-all duration-200 text-left hover:scale-105 ${
                       selectedBarber?._id === barber._id
-                        ? 'border-[#FF8C42] bg-[#FF8C42]/10'
-                        : 'border-[#444444]/50 bg-[#1A1A1A]/50 hover:border-[#FF8C42]/50'
+                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
+                        : 'border-[#444444]/50 bg-[#1A1A1A]/50 hover:border-[var(--color-primary)]/50'
                     }`}
                   >
                     <div className="flex items-center space-x-3">
@@ -543,17 +543,17 @@ function BookingQRGenerator() {
                         </div>
                       </div>
                       {selectedBarber?._id === barber._id && (
-                        <CheckCircle className="w-5 h-5 text-[#FF8C42]" />
+                        <CheckCircle className="w-5 h-5 text-[var(--color-primary)]" />
                       )}
                     </div>
                   </button>
                 ))
               ) : (
                 <div className="col-span-2 text-center py-6">
-                  <p className="text-[#FF8C42] font-medium">No barbers available for this service</p>
+                  <p className="text-[var(--color-primary)] font-medium">No barbers available for this service</p>
                   <button
                     onClick={() => setStep(1)}
-                    className="mt-3 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#E67A1F] transition-colors"
+                    className="mt-3 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:brightness-90 transition-colors"
                   >
                     Choose Different Service
                   </button>
@@ -572,7 +572,7 @@ function BookingQRGenerator() {
               
               {timeSlots.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-[#FF8C42] font-medium">No available times today</p>
+                  <p className="text-[var(--color-primary)] font-medium">No available times today</p>
                   <p className="text-gray-400 text-sm mt-1">Please try again tomorrow</p>
                 </div>
               ) : (
@@ -586,8 +586,8 @@ function BookingQRGenerator() {
                         className={`p-3 rounded-lg font-semibold text-center transition-all duration-200 border text-sm ${
                           slot.available
                             ? selectedTime === slot.time
-                              ? 'bg-[#FF8C42] text-white border-[#FF8C42]'
-                              : 'bg-[#1A1A1A]/50 text-white border-[#444444]/50 hover:border-[#FF8C42]/50'
+                              ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
+                              : 'bg-[#1A1A1A]/50 text-white border-[#444444]/50 hover:border-[var(--color-primary)]/50'
                             : 'bg-gray-600/30 text-gray-500 border-gray-600/30 cursor-not-allowed'
                         }`}
                         title={slot.available ? `Book at ${slot.displayTime}` : `${slot.displayTime} - ${slot.reason === 'past' ? 'Past time' : 'Already booked'}`}
@@ -604,7 +604,7 @@ function BookingQRGenerator() {
                       <span className="text-gray-400">Available</span>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <div className="w-3 h-3 rounded bg-[#FF8C42]"></div>
+                      <div className="w-3 h-3 rounded bg-[var(--color-primary)]"></div>
                       <span className="text-gray-400">Selected</span>
                     </div>
                     <div className="flex items-center space-x-1">
@@ -628,7 +628,7 @@ function BookingQRGenerator() {
             {selectedTime && selectedBarber && (
                <button
                  onClick={() => setStep(3)}
-                 className="flex-1 py-3 px-4 bg-[#FF8C42] text-white font-bold rounded-xl hover:bg-[#E67A1F] transition-all duration-200"
+                 className="flex-1 py-3 px-4 bg-[var(--color-primary)] text-white font-bold rounded-xl hover:brightness-90 transition-all duration-200"
                >
                  Continue to Customer Info
                </button>
@@ -655,7 +655,7 @@ function BookingQRGenerator() {
                  value={customerName}
                  onChange={(e) => setCustomerName(e.target.value)}
                  placeholder="Enter your full name"
-                 className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#444444] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FF8C42] focus:ring-1 focus:ring-[#FF8C42] transition-colors"
+                 className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#444444] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
                  required
                />
              </div>
@@ -669,7 +669,7 @@ function BookingQRGenerator() {
                  value={customerPhone}
                  onChange={(e) => setCustomerPhone(e.target.value)}
                  placeholder="Enter your phone number"
-                 className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#444444] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FF8C42] focus:ring-1 focus:ring-[#FF8C42] transition-colors"
+                 className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#444444] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
                />
              </div>
              
@@ -682,7 +682,7 @@ function BookingQRGenerator() {
                  value={customerEmail}
                  onChange={(e) => setCustomerEmail(e.target.value)}
                  placeholder="Enter your email address"
-                 className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#444444] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[#FF8C42] focus:ring-1 focus:ring-[#FF8C42] transition-colors"
+                 className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#444444] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-colors"
                />
              </div>
            </div>
@@ -697,7 +697,7 @@ function BookingQRGenerator() {
              {customerName.trim() && (
                <button
                  onClick={() => setStep(4)}
-                 className="flex-1 py-3 px-4 bg-[#FF8C42] text-white font-bold rounded-xl hover:bg-[#E67A1F] transition-all duration-200"
+                 className="flex-1 py-3 px-4 bg-[var(--color-primary)] text-white font-bold rounded-xl hover:brightness-90 transition-all duration-200"
                >
                  Continue to Confirmation
                </button>
@@ -749,7 +749,7 @@ function BookingQRGenerator() {
              </div>
              <div className="flex justify-between items-center py-3">
                <span className="text-gray-400">Price:</span>
-               <span className="font-bold text-[#FF8C42] text-xl">₱{selectedService?.price.toLocaleString()}</span>
+               <span className="font-bold text-[var(--color-primary)] text-xl">₱{selectedService?.price.toLocaleString()}</span>
              </div>
            </div>
 
@@ -764,7 +764,7 @@ function BookingQRGenerator() {
               onClick={handleCreateBooking}
               disabled={isGeneratingBooking}
               className={`flex-1 py-3 px-4 text-white font-bold rounded-xl transition-all duration-200 ${
-                isGeneratingBooking ? 'bg-gray-600 cursor-not-allowed' : 'bg-[#FF8C42] hover:bg-[#E67A1F]'
+                isGeneratingBooking ? 'bg-gray-600 cursor-not-allowed' : 'bg-[var(--color-primary)] hover:brightness-90'
               }`}
             >
               {isGeneratingBooking ? (
@@ -799,7 +799,7 @@ function BookingQRGenerator() {
                   {(qrCodeLoading || !getBookingById?.booking_code) && (
                     <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
                       <div className="text-center space-y-3">
-                        <div className="animate-spin w-8 h-8 border-3 border-[#FF8C42] border-t-transparent rounded-full mx-auto"></div>
+                        <div className="animate-spin w-8 h-8 border-3 border-[var(--color-primary)] border-t-transparent rounded-full mx-auto"></div>
                         <p className="text-sm text-[#8B8B8B]">
                           {!getBookingById?.booking_code ? "Loading booking details..." : "Generating QR Code..."}
                         </p>
@@ -819,7 +819,7 @@ function BookingQRGenerator() {
                 Booking Code: {getBookingById?.booking_code ? getBookingById.booking_code : 
                   <span className="inline-flex items-center space-x-2">
                     <span>Generating...</span>
-                    <div className="animate-pulse w-2 h-2 bg-[#FF8C42] rounded-full"></div>
+                    <div className="animate-pulse w-2 h-2 bg-[var(--color-primary)] rounded-full"></div>
                   </span>
                 }
               </div>
@@ -830,7 +830,7 @@ function BookingQRGenerator() {
           </div>
 
           {/* Booking Summary */}
-           <div className="bg-[#FF8C42]/10 border border-[#FF8C42]/30 rounded-xl p-6 mb-6">
+           <div className="bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 rounded-xl p-6 mb-6">
              <div className="space-y-3">
                <div className="flex justify-between">
                  <span className="font-medium text-gray-300">Customer:</span>
@@ -856,9 +856,9 @@ function BookingQRGenerator() {
                    Today, {timeSlots.find(slot => slot.time === selectedTime)?.displayTime}
                  </span>
                </div>
-               <div className="flex justify-between border-t border-[#FF8C42]/30 pt-3">
+               <div className="flex justify-between border-t border-[var(--color-primary)]/30 pt-3">
                  <span className="font-bold text-gray-300">Total:</span>
-                 <span className="font-bold text-[#FF8C42] text-xl">₱{selectedService?.price.toLocaleString()}</span>
+                 <span className="font-bold text-[var(--color-primary)] text-xl">₱{selectedService?.price.toLocaleString()}</span>
                </div>
              </div>
            </div>
@@ -873,7 +873,7 @@ function BookingQRGenerator() {
             </button>
             <button
               onClick={resetBooking}
-              className="flex-1 py-3 px-4 bg-[#FF8C42] text-white font-bold rounded-xl hover:bg-[#E67A1F] transition-all duration-200"
+              className="flex-1 py-3 px-4 bg-[var(--color-primary)] text-white font-bold rounded-xl hover:brightness-90 transition-all duration-200"
             >
               Book Another Service
             </button>

@@ -125,7 +125,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
           {/* Left Column - Voucher Details */}
           <div className="space-y-3">
             <h3 className="text-xs font-bold text-gray-200 uppercase tracking-wider flex items-center">
-              <Gift className="w-3.5 h-3.5 text-[#FF8C42] mr-1.5" />
+              <Gift className="w-3.5 h-3.5 text-[var(--color-primary)] mr-1.5" />
               Details
             </h3>
             
@@ -139,7 +139,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
                   value={formData.code}
                   onChange={(e) => handleInputChange('code', e.target.value.toUpperCase())}
                   required
-                  className="flex-1 h-8 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 font-mono transition-all"
+                  className="flex-1 h-8 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 font-mono transition-all"
                 />
                 <button
                   type="button"
@@ -161,7 +161,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
                 onChange={(e) => handleInputChange('points_required', e.target.value)}
                 required
                 min="0"
-                className="w-full h-8 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 transition-all"
+                className="w-full h-8 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 transition-all"
               />
             </div>
 
@@ -175,7 +175,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
                 onChange={(e) => handleInputChange('max_uses', e.target.value)}
                 required
                 min="1"
-                className="w-full h-8 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 transition-all"
+                className="w-full h-8 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 transition-all"
               />
             </div>
 
@@ -190,7 +190,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
                 required
                 min="0.01"
                 step="0.01"
-                className="w-full h-8 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 transition-all"
+                className="w-full h-8 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 transition-all"
               />
             </div>
 
@@ -202,7 +202,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
                 value={formData.expires_at}
                 onChange={(e) => handleInputChange('expires_at', e.target.value)}
                 required
-                className="w-full h-8 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 transition-all"
+                className="w-full h-8 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 transition-all"
               />
             </div>
           </div>
@@ -210,7 +210,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
           {/* Right Column - Description & Preview */}
           <div className="space-y-3">
             <h3 className="text-xs font-bold text-gray-200 uppercase tracking-wider flex items-center">
-              <User className="w-3.5 h-3.5 text-[#FF8C42] mr-1.5" />
+              <User className="w-3.5 h-3.5 text-[var(--color-primary)] mr-1.5" />
               Info & Preview
             </h3>
 
@@ -222,22 +222,22 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 rows={3}
-                className="w-full px-2.5 py-1.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 resize-none transition-all"
+                className="w-full px-2.5 py-1.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 resize-none transition-all"
               />
             </div>
 
             {/* QR Preview */}
-            <div className="bg-gradient-to-r from-[#1A1A1A] to-[#222222] border border-[#FF8C42]/20 rounded-lg p-2.5">
+            <div className="bg-gradient-to-r from-[#1A1A1A] to-[#222222] border border-[var(--color-primary)]/20 rounded-lg p-2.5">
               <h4 className="text-xs font-bold text-white mb-2 flex items-center">
                 <QrCode className="w-3 h-3 mr-1.5" />
                 Preview
               </h4>
               <div className="bg-[#0F0F0F]/50 rounded-lg p-2.5 border border-[#333333]/50">
                 <div className="text-center space-y-1">
-                  <div className="text-xs font-mono text-[#FF8C42] font-bold">
+                  <div className="text-xs font-mono text-[var(--color-primary)] font-bold">
                     {formData.code || 'CODE'}
                   </div>
-                  <div className="text-sm font-bold text-[#FF8C42]">
+                  <div className="text-sm font-bold text-[var(--color-primary)]">
                     ₱{formData.value || '0'}
                   </div>
                   <div className="text-xs text-gray-400 space-y-0.5">
@@ -269,7 +269,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
           <button
             type="submit"
             disabled={isLoading}
-            className="flex-1 h-9 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:shadow-lg disabled:opacity-50 transition-all text-sm font-medium"
+            className="flex-1 h-9 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg hover:shadow-lg disabled:opacity-50 transition-all text-sm font-medium"
           >
             {isLoading ? 'Creating...' : 'Create Voucher'}
           </button>

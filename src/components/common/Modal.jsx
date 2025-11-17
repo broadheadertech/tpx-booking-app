@@ -27,10 +27,10 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md', variant = 'light
   const titleClasses = isDark ? 'text-lg lg:text-2xl font-black text-white' : 'text-lg lg:text-2xl font-black text-[#1A1A1A]'
   
   const closeBtnClasses = isDark
-    ? 'w-9 h-9 lg:w-10 lg:h-10 rounded-xl lg:rounded-2xl bg-[#2A2A2A] hover:bg-[#FF8C42]/10 flex items-center justify-center transition-colors duration-200 flex-shrink-0'
-    : 'w-9 h-9 lg:w-10 lg:h-10 rounded-xl lg:rounded-2xl bg-[#F5F5F5] hover:bg-[#FF8C42]/10 flex items-center justify-center transition-colors duration-200 flex-shrink-0'
+    ? 'w-9 h-9 lg:w-10 lg:h-10 rounded-xl lg:rounded-2xl bg-[#2A2A2A] hover:bg-[var(--color-primary)]/10 flex items-center justify-center transition-colors duration-200 flex-shrink-0'
+    : 'w-9 h-9 lg:w-10 lg:h-10 rounded-xl lg:rounded-2xl bg-[#F5F5F5] hover:bg-[var(--color-primary)]/10 flex items-center justify-center transition-colors duration-200 flex-shrink-0'
   
-  const closeIconClasses = isDark ? 'w-5 h-5 text-gray-300 hover:text-[#FF8C42]' : 'w-5 h-5 text-[#6B6B6B] hover:text-[#FF8C42]'
+  const closeIconClasses = isDark ? 'w-5 h-5 text-gray-300 hover:text-[var(--color-primary)]' : 'w-5 h-5 text-[#6B6B6B] hover:text-[var(--color-primary)]'
   
   const bodyPadding = compact ? 'p-4 lg:p-5' : 'p-4 lg:p-8'
 

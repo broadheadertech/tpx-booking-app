@@ -5,6 +5,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { BrandingProvider } from "./context/BrandingContext";
 import { ToastProvider } from "./components/common/ToastNotification";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import AuthRedirect from "./components/common/AuthRedirect";
@@ -41,8 +42,9 @@ function App() {
   return (
     <AuthProvider>
       <ToastProvider>
+        <BrandingProvider>
         <Router>
-          <div className="min-h-screen bg-[#0A0A0A]">
+          <div className="min-h-screen bg-[var(--color-bg)]">
             <Routes>
               <Route
                 path="/"
@@ -203,6 +205,7 @@ function App() {
               </Routes>
           </div>
         </Router>
+        </BrandingProvider>
       </ToastProvider>
     </AuthProvider>
   );

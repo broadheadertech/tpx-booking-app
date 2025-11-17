@@ -71,8 +71,8 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
             onClick={() => setSelectedCustomerType('registered')}
             className={`flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center justify-center space-x-2 ${
               selectedCustomerType === 'registered'
-                ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
-                : 'text-gray-400 hover:text-[#FF8C42]'
+                ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg'
+                : 'text-gray-400 hover:text-[var(--color-primary)]'
             }`}
           >
             <User className="w-4 h-4" />
@@ -82,8 +82,8 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
             onClick={() => setSelectedCustomerType('walkin')}
             className={`flex-1 py-3 px-4 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center justify-center space-x-2 ${
               selectedCustomerType === 'walkin'
-                ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
-                : 'text-gray-400 hover:text-[#FF8C42]'
+                ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg'
+                : 'text-gray-400 hover:text-[var(--color-primary)]'
             }`}
           >
             <UserPlus className="w-4 h-4" />
@@ -103,7 +103,7 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
                   placeholder="Search customers by name, email, or phone..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                  className="w-full pl-10 pr-4 py-3 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 />
               </div>
               <button
@@ -136,10 +136,10 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
                   <button
                     key={customer._id}
                     onClick={() => handleCustomerSelect(customer)}
-                    className="w-full p-3 lg:p-4 bg-[#1A1A1A] border border-[#555555]/30 rounded-lg hover:border-[#FF8C42]/50 hover:bg-[#FF8C42]/5 transition-all duration-200 text-left"
+                    className="w-full p-3 lg:p-4 bg-[#1A1A1A] border border-[#555555]/30 rounded-lg hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-primary)]/5 transition-all duration-200 text-left"
                   >
                     <div className="flex items-center space-x-2 lg:space-x-3">
-                      <div className="w-9 h-9 lg:w-10 lg:h-10 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center flex-shrink-0">
+                      <div className="w-9 h-9 lg:w-10 lg:h-10 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg flex items-center justify-center flex-shrink-0">
                         <User className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
                       </div>
                       <div className="flex-1 min-w-0">
@@ -184,7 +184,7 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
                   value={walkInData.name}
                   onChange={(e) => setWalkInData(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Walk-in"
-                  className="w-full px-3 lg:px-4 py-2.5 lg:py-3 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg text-sm lg:text-base focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                  className="w-full px-3 lg:px-4 py-2.5 lg:py-3 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg text-sm lg:text-base focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                   required
                   autoFocus
                 />
@@ -197,7 +197,7 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
                   value={walkInData.phone}
                   onChange={(e) => setWalkInData(prev => ({ ...prev, phone: e.target.value }))}
                   placeholder="Phone Number"
-                  className="w-full px-3 lg:px-4 py-2.5 lg:py-3 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg text-sm lg:text-base focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                  className="w-full px-3 lg:px-4 py-2.5 lg:py-3 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg text-sm lg:text-base focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 />
               </div>
 
@@ -208,7 +208,7 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
                   value={walkInData.email}
                   onChange={(e) => setWalkInData(prev => ({ ...prev, email: e.target.value }))}
                   placeholder="Email Address (for account creation)"
-                  className="w-full px-3 lg:px-4 py-2.5 lg:py-3 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg text-sm lg:text-base focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                  className="w-full px-3 lg:px-4 py-2.5 lg:py-3 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg text-sm lg:text-base focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 />
               </div>
 
@@ -227,7 +227,7 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
             <button
               onClick={handleWalkInSelect}
               disabled={!walkInData.name.trim()}
-              className="w-full py-2.5 lg:py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white font-bold rounded-xl text-sm lg:text-base hover:from-[#FF7A2B] hover:to-[#E67E37] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+              className="w-full py-2.5 lg:py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-bold rounded-xl text-sm lg:text-base hover:from-[var(--color-accent)] hover:to-[var(--color-accent)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
               <UserPlus className="w-4 h-4 lg:w-5 lg:h-5" />
               <span>Select Walk-in Customer</span>

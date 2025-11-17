@@ -148,7 +148,7 @@ const BarberModal = ({
                   <h2 className="text-xl font-bold text-white tracking-tight">{barber.full_name}</h2>
                   <p className="text-xs text-gray-400">{barber.experience || '0 years'} Experience</p>
                   <div className="flex items-center space-x-1 mt-1">
-                    <Star className="h-3.5 w-3.5 text-[#FF8C42] fill-current" />
+                    <Star className="h-3.5 w-3.5 text-[var(--color-primary)] fill-current" />
                     <span className="text-xs font-semibold text-white">{barber.rating || 0}</span>
                     <span className="text-xs text-gray-400">({barber.totalBookings || 0} bookings)</span>
                   </div>
@@ -156,10 +156,10 @@ const BarberModal = ({
               </div>
               <button
                 onClick={handleClose}
-                className="w-8 h-8 rounded-lg bg-[#2A2A2A] border border-[#3A3A3A] hover:border-[#FF8C42]/50 hover:bg-[#FF8C42]/10 flex items-center justify-center transition-colors duration-200"
+                className="w-8 h-8 rounded-lg bg-[#2A2A2A] border border-[#3A3A3A] hover:border-[var(--color-primary)]/50 hover:bg-[var(--color-primary)]/10 flex items-center justify-center transition-colors duration-200"
                 title="Close"
               >
-                <X className="h-4 w-4 text-gray-300 hover:text-[#FF8C42]" />
+                <X className="h-4 w-4 text-gray-300 hover:text-[var(--color-primary)]" />
               </button>
             </div>
           </div>
@@ -172,7 +172,7 @@ const BarberModal = ({
                 onClick={() => setActiveView('details')}
                 className={`py-2 px-2 border-b-2 font-medium text-sm cursor-pointer select-none ${
                   activeView === 'details'
-                    ? 'border-[#FF8C42] text-[#FF8C42]'
+                    ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                     : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500'
                 } transition-colors`}
               >
@@ -183,7 +183,7 @@ const BarberModal = ({
                 onClick={() => setActiveView('bookings')}
                 className={`py-2 px-2 border-b-2 font-medium text-sm cursor-pointer select-none ${
                   activeView === 'bookings'
-                    ? 'border-[#FF8C42] text-[#FF8C42]'
+                    ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                     : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500'
                 } transition-colors`}
               >
@@ -211,7 +211,7 @@ const BarberModal = ({
                         value={formData.full_name}
                         onChange={(e) => handleInputChange('full_name', e.target.value)}
                         placeholder="Enter barber's full name"
-                        className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent placeholder:text-gray-500"
+                        className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent placeholder:text-gray-500"
                         required
                       />
                     </div>
@@ -232,7 +232,7 @@ const BarberModal = ({
                                     : formData.services.filter(id => id !== serviceId)
                                   )
                                 }}
-                                className="h-4 w-4 text-[#FF8C42] focus:ring-[#FF8C42] rounded"
+                                className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] rounded"
                               />
                               <span className="ml-2 text-sm text-gray-300">
                                 {service.name} - ₱{parseFloat(service.price).toFixed(2)}
@@ -254,7 +254,7 @@ const BarberModal = ({
                             name="is_active"
                             checked={formData.is_active === true}
                             onChange={() => handleInputChange('is_active', true)}
-                            className="h-4 w-4 text-[#FF8C42] focus:ring-[#FF8C42]"
+                            className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                           />
                           <span className="ml-2 text-sm text-gray-300">Active</span>
                         </label>
@@ -264,7 +264,7 @@ const BarberModal = ({
                             name="is_active"
                             checked={formData.is_active === false}
                             onChange={() => handleInputChange('is_active', false)}
-                            className="h-4 w-4 text-[#FF8C42] focus:ring-[#FF8C42]"
+                            className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                           />
                           <span className="ml-2 text-sm text-gray-300">Inactive</span>
                         </label>
@@ -292,7 +292,7 @@ const BarberModal = ({
                         <h3 className="font-semibold text-white mb-2">Specialties</h3>
                         <div className="flex flex-wrap gap-2">
                           {barber.specialties?.map((specialty, index) => (
-                            <span key={index} className="px-3 py-1 rounded-full text-sm bg-[#FF8C42]/10 text-[#FF8C42] border border-[#FF8C42]/30">
+                            <span key={index} className="px-3 py-1 rounded-full text-sm bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/30">
                               {specialty}
                             </span>
                           )) || <span className="text-sm text-gray-500">No specialties listed</span>}
@@ -306,7 +306,7 @@ const BarberModal = ({
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                           <div className="rounded-xl p-4 bg-gradient-to-br from-[#1E1E1E] to-[#141414] border border-[#2F2F2F]">
                             <p className="text-xs text-gray-400">Monthly Revenue</p>
-                            <p className="text-xl font-extrabold text-[#FF8C42] mt-1">{formatRevenue(barber.monthlyRevenue)}</p>
+                            <p className="text-xl font-extrabold text-[var(--color-primary)] mt-1">{formatRevenue(barber.monthlyRevenue)}</p>
                           </div>
                           <div className="rounded-xl p-4 bg-gradient-to-br from-[#1E1E1E] to-[#141414] border border-[#2F2F2F]">
                             <p className="text-xs text-gray-400">Total Bookings</p>
@@ -349,7 +349,7 @@ const BarberModal = ({
               <div className="space-y-4">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-2">
-                    <Calendar className="h-5 w-5 text-[#FF8C42]" />
+                    <Calendar className="h-5 w-5 text-[var(--color-primary)]" />
                     <h3 className="text-lg font-semibold text-white">Booking History</h3>
                   </div>
                   {barberBookings && barberBookings.length > 0 && (
@@ -366,7 +366,7 @@ const BarberModal = ({
                 ) : barberBookings && barberBookings.length > 0 ? (
                   <div className="space-y-3 max-h-80 overflow-y-auto">
                     {barberBookings.map((booking) => (
-                      <div key={booking._id} className="bg-[#171717] border border-[#2C2C2C] rounded-xl p-4 hover:border-[#FF8C42]/40 transition-colors">
+                      <div key={booking._id} className="bg-[#171717] border border-[#2C2C2C] rounded-xl p-4 hover:border-[var(--color-primary)]/40 transition-colors">
                         <div className="flex justify-between items-start mb-3">
                           <div className="flex-1">
                             <div className="flex items-center space-x-3 mb-2">
@@ -388,7 +388,7 @@ const BarberModal = ({
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold text-[#FF8C42]">₱{booking.service_price}</p>
+                            <p className="font-semibold text-[var(--color-primary)]">₱{booking.service_price}</p>
                             <p className="text-xs text-gray-400">{booking.booking_code}</p>
                           </div>
                         </div>
@@ -427,7 +427,7 @@ const BarberModal = ({
               {activeView === 'details' && !isEditing && (
                 <button
                   onClick={handleEdit}
-                  className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#ff7a22] transition-colors"
+                  className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[#ff7a22] transition-colors"
                 >
                   <Edit className="h-4 w-4" />
                   <span>Edit</span>
@@ -447,7 +447,7 @@ const BarberModal = ({
                   <button
                     onClick={handleSave}
                     disabled={loading}
-                    className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#ff7a22] disabled:opacity-50 transition-colors"
+                    className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[#ff7a22] disabled:opacity-50 transition-colors"
                   >
                     <Save className="h-4 w-4" />
                     <span>{loading ? 'Saving...' : 'Save'}</span>

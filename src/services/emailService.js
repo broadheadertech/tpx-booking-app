@@ -59,7 +59,7 @@ class EmailService {
               font-size: 24px;
               font-weight: bold;
               margin-bottom: 20px;
-              color: #FF8C42;
+              color: var(--color-primary);
               text-align: center;
             }
             .text {
@@ -69,7 +69,7 @@ class EmailService {
             }
             .reset-button {
               display: inline-block;
-              background: linear-gradient(135deg, #FF8C42 0%, #FF7A2B 100%);
+              background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
               color: white;
               text-decoration: none;
               padding: 16px 32px;
@@ -97,7 +97,7 @@ class EmailService {
               margin-top: 20px;
             }
             .security-info h3 {
-              color: #FF8C42;
+              color: var(--color-primary);
               margin-top: 0;
               margin-bottom: 10px;
             }
@@ -130,7 +130,7 @@ class EmailService {
               
               <p class="text" style="margin-top: 30px; font-size: 14px;">
                 If the button above doesn't work, copy and paste this link into your browser:<br>
-                <span style="word-break: break-all; color: #FF8C42;">${resetUrl}</span>
+                <span style="word-break: break-all; color: var(--color-primary);">${resetUrl}</span>
               </p>
             </div>
             
@@ -212,14 +212,14 @@ class EmailService {
               font-size: 24px;
               font-weight: bold;
               margin-bottom: 20px;
-              color: #FF8C42;
+              color: var(--color-primary);
               text-align: center;
             }
             .voucher-code {
               font-size: 32px;
               font-weight: bold;
               text-align: center;
-              color: #FF8C42;
+              color: var(--color-primary);
               margin: 20px 0;
               font-family: monospace;
             }
@@ -249,7 +249,7 @@ class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="color: #FF8C42; font-size: 32px; margin-bottom: 10px;">TPX Barbershop</h1>
+              <h1 style="color: var(--color-primary); font-size: 32px; margin-bottom: 10px;">TPX Barbershop</h1>
             </div>
             
             <div class="content">
@@ -261,7 +261,7 @@ class EmailService {
               <div class="voucher-code">${voucherData.voucherCode}</div>
               
               <div class="voucher-details">
-                <h3 style="color: #FF8C42; margin-top: 0; margin-bottom: 15px;">Voucher Details</h3>
+                <h3 style="color: var(--color-primary); margin-top: 0; margin-bottom: 15px;">Voucher Details</h3>
                 <p style="margin: 5px 0;"><strong>Value:</strong> ${voucherData.voucherValue}</p>
                 ${voucherData.pointsRequired > 0 ? `<p style="margin: 5px 0;"><strong>Points Required:</strong> ${voucherData.pointsRequired}</p>` : ''}
                 <p style="margin: 5px 0;"><strong>Expires:</strong> ${voucherData.expiresAt}</p>
@@ -347,7 +347,7 @@ class EmailService {
               font-size: 24px;
               font-weight: bold;
               margin-bottom: 20px;
-              color: #FF8C42;
+              color: var(--color-primary);
               text-align: center;
             }
             .credentials {
@@ -363,7 +363,7 @@ class EmailService {
             }
             .login-button {
               display: inline-block;
-              background: linear-gradient(135deg, #FF8C42 0%, #FF7A2B 100%);
+              background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-accent) 100%);
               color: white;
               text-decoration: none;
               padding: 12px 24px;
@@ -388,7 +388,7 @@ class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="color: #FF8C42; font-size: 32px; margin-bottom: 10px;">TPX Barbershop</h1>
+              <h1 style="color: var(--color-primary); font-size: 32px; margin-bottom: 10px;">TPX Barbershop</h1>
             </div>
             
             <div class="content">
@@ -399,7 +399,7 @@ class EmailService {
               </p>
               
               <div class="credentials">
-                <h3 style="color: #FF8C42; margin-top: 0; margin-bottom: 15px;">Your Login Details</h3>
+                <h3 style="color: var(--color-primary); margin-top: 0; margin-bottom: 15px;">Your Login Details</h3>
                 <p style="margin: 5px 0;"><strong>Email:</strong> ${customerData.email}</p>
                 <p style="margin: 5px 0;"><strong>Password:</strong> ${customerData.password}</p>
               </div>

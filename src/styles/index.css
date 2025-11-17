@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Whitelabel theme variables (defaults) */
+:root {
+  --color-primary: #FF8C42;
+  --color-accent: #FF7A2B;
+  --color-bg: #0A0A0A;
+  --color-text: #FFFFFF;
+  --color-muted: #333333;
+}
+
 /* Custom scrollbar utilities */
 .scrollbar-hide {
   -ms-overflow-style: none;

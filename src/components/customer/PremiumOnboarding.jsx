@@ -25,16 +25,16 @@ const PremiumOnboarding = ({ onComplete }) => {
               </p>
             </div>
             <div className="grid grid-cols-3 gap-4 max-w-xl mx-auto pt-2">
-              <div className="bg-[#FF8C42]/10 p-4 rounded-xl border border-[#FF8C42]/30 hover:bg-[#FF8C42]/15 transition-all">
-                <Scissors className="w-8 h-8 text-[#FF8C42] mx-auto mb-2" />
+              <div className="bg-[var(--color-primary)]/10 p-4 rounded-xl border border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/15 transition-all">
+                <Scissors className="w-8 h-8 text-[var(--color-primary)] mx-auto mb-2" />
                 <p className="text-white font-semibold text-sm">Expert</p>
               </div>
-              <div className="bg-[#FF8C42]/10 p-4 rounded-xl border border-[#FF8C42]/30 hover:bg-[#FF8C42]/15 transition-all">
-                <Calendar className="w-8 h-8 text-[#FF8C42] mx-auto mb-2" />
+              <div className="bg-[var(--color-primary)]/10 p-4 rounded-xl border border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/15 transition-all">
+                <Calendar className="w-8 h-8 text-[var(--color-primary)] mx-auto mb-2" />
                 <p className="text-white font-semibold text-sm">Booking</p>
               </div>
-              <div className="bg-[#FF8C42]/10 p-4 rounded-xl border border-[#FF8C42]/30 hover:bg-[#FF8C42]/15 transition-all">
-                <Star className="w-8 h-8 text-[#FF8C42] mx-auto mb-2" />
+              <div className="bg-[var(--color-primary)]/10 p-4 rounded-xl border border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/15 transition-all">
+                <Star className="w-8 h-8 text-[var(--color-primary)] mx-auto mb-2" />
                 <p className="text-white font-semibold text-sm">Rewards</p>
               </div>
             </div>
@@ -58,7 +58,7 @@ const PremiumOnboarding = ({ onComplete }) => {
               Browse available time slots, choose your favorite barber, and confirm your appointment in seconds.
             </p>
             <div className="bg-[#1A1A1A] rounded-lg p-4 border border-[#2A2A2A]">
-              <p className="text-sm text-[#FF8C42] font-semibold">💡 Tip</p>
+              <p className="text-sm text-[var(--color-primary)] font-semibold">💡 Tip</p>
               <p className="text-xs text-gray-400 mt-1">Get reminders before your appointment</p>
             </div>
           </div>
@@ -70,14 +70,14 @@ const PremiumOnboarding = ({ onComplete }) => {
         subtitle: 'Unlock exclusive benefits',
         content: (
           <div className="text-center space-y-8 max-w-lg mx-auto">
-            <div className="bg-[#FF8C42]/10 rounded-3xl p-12 border border-[#FF8C42]/30 flex items-center justify-center h-48">
-              <Star className="w-24 h-24 text-[#FF8C42]" />
+            <div className="bg-[var(--color-primary)]/10 rounded-3xl p-12 border border-[var(--color-primary)]/30 flex items-center justify-center h-48">
+              <Star className="w-24 h-24 text-[var(--color-primary)]" />
             </div>
             <p className="text-gray-300 text-base leading-relaxed">
               Earn points with every visit and redeem them for discounts, free services, and exclusive offers.
             </p>
             <div className="bg-[#1A1A1A] rounded-lg p-4 border border-[#2A2A2A]">
-              <p className="text-sm text-[#FF8C42] font-semibold">✨ Bonus</p>
+              <p className="text-sm text-[var(--color-primary)] font-semibold">✨ Bonus</p>
               <p className="text-xs text-gray-400 mt-1">Limited-time vouchers just for you</p>
             </div>
           </div>
@@ -89,13 +89,13 @@ const PremiumOnboarding = ({ onComplete }) => {
         subtitle: 'Ready to get started',
         content: (
           <div className="text-center space-y-8 max-w-lg mx-auto">
-            <div className="bg-[#FF8C42]/10 rounded-3xl p-12 border border-[#FF8C42]/30 flex items-center justify-center h-48">
-              <CheckCircle className="w-24 h-24 text-[#FF8C42]" />
+            <div className="bg-[var(--color-primary)]/10 rounded-3xl p-12 border border-[var(--color-primary)]/30 flex items-center justify-center h-48">
+              <CheckCircle className="w-24 h-24 text-[var(--color-primary)]" />
             </div>
             <p className="text-gray-300 text-base leading-relaxed">
               Everything is ready. Start booking your appointments and experience premium barbershop service.
             </p>
-            <div className="bg-gradient-to-r from-[#FF8C42]/20 to-[#FF7A2B]/20 rounded-lg p-4 border border-[#FF8C42]/30">
+            <div className="bg-gradient-to-r from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 rounded-lg p-4 border border-[var(--color-primary)]/30">
               <p className="text-xs text-gray-300">Your profile is ready and you're all set to book!</p>
             </div>
           </div>
@@ -139,8 +139,8 @@ const PremiumOnboarding = ({ onComplete }) => {
     <div className="fixed inset-0 bg-[#0A0A0A] z-50 overflow-hidden">
       {/* Minimal background gradient */}
       <div className="absolute inset-0">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#FF8C42]/5 rounded-full blur-3xl opacity-50"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#FF8C42]/5 rounded-full blur-3xl opacity-50"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-[var(--color-primary)]/5 rounded-full blur-3xl opacity-50"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-[var(--color-primary)]/5 rounded-full blur-3xl opacity-50"></div>
       </div>
 
       {/* Content */}
@@ -171,7 +171,7 @@ const PremiumOnboarding = ({ onComplete }) => {
                    key={index}
                    className={`h-1 rounded-full flex-1 transition-all duration-500 ${
                      index <= currentStep 
-                       ? 'bg-[#FF8C42]' 
+                       ? 'bg-[var(--color-primary)]' 
                        : 'bg-[#2A2A2A]'
                    }`}
                  />
@@ -214,7 +214,7 @@ const PremiumOnboarding = ({ onComplete }) => {
             
             <button
               onClick={handleNext}
-              className="flex-1 bg-[#FF8C42] hover:bg-[#FF7A2B] text-white px-6 py-3 rounded-lg font-semibold flex items-center justify-center space-x-2 transition-all duration-200"
+              className="flex-1 bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white px-6 py-3 rounded-lg font-semibold flex items-center justify-center space-x-2 transition-all duration-200"
             >
               <span>{isLastStep ? 'Get Started' : 'Continue'}</span>
               <ArrowRight className="w-4 h-4" />
