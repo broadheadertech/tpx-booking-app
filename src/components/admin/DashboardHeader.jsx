@@ -3,9 +3,11 @@ import { LogOut, Crown, Shield, Building } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { useBranding } from '../../context/BrandingContext'
 
 const DashboardHeader = ({ onLogout }) => {
   const { user } = useAuth()
+  const { branding } = useBranding()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   
   // Get system stats for admin
@@ -30,28 +32,26 @@ const DashboardHeader = ({ onLogout }) => {
         <div className="flex items-center justify-between py-2.5 lg:py-3 gap-2">
           {/* Left section - Logo and Title */}
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-            <div className="w-9 h-9 sm:w-11 sm:h-11 bg-[#0A0A0A] rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg ring-1 ring-[#FF8C42]/20 p-1.5 border border-[#1A1A1A]/50 flex-shrink-0">
-              <img
-                src="/img/tipuno_x_logo_white.avif"
-                alt="TipunoX Angeles Barbershop Logo"
-                className="w-full h-full object-contain"
-              />
-            </div>
+            <img
+              src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'}
+              alt={branding?.display_name || 'Logo'}
+              className="w-9 h-9 sm:w-11 sm:h-11 object-contain flex-shrink-0"
+            />
             <div className="min-w-0 flex-1">
               <div className="flex items-center space-x-1.5 sm:space-x-2">
                 <h1 className="text-xs sm:text-lg font-bold text-white tracking-tight truncate">
                   <span className="hidden sm:inline">TipunoX Angeles Barbershop</span>
                   <span className="sm:hidden">TipunoX Angeles</span>
                 </h1>
-                <div className="bg-[#FF8C42]/15 backdrop-blur-sm rounded-md px-1.5 py-0.5 border border-[#FF8C42]/25 flex-shrink-0">
-                  <span className="text-[10px] font-semibold text-[#FF8C42]">v2.0.0</span>
+                <div className="bg-[var(--color-primary)]/15 backdrop-blur-sm rounded-md px-1.5 py-0.5 border border-[var(--color-primary)]/25 flex-shrink-0">
+                  <span className="text-[10px] font-semibold text-[var(--color-primary)]">v2.0.0</span>
                 </div>
               </div>
               <div className="flex items-center space-x-1 sm:space-x-1.5 mt-0.5">
-                <p className="text-[10px] sm:text-xs font-medium text-[#FF8C42]">Admin Dashboard</p>
+                <p className="text-[10px] sm:text-xs font-medium text-[var(--color-primary)]">Admin Dashboard</p>
                 <span className="text-gray-600 text-xs hidden sm:inline">•</span>
                 <div className="hidden sm:flex items-center space-x-1">
-                  <Crown className="w-2.5 h-2.5 text-[#FF8C42]" />
+                  <Crown className="w-2.5 h-2.5 text-[var(--color-primary)]" />
                   <span className="text-[10px] font-medium text-gray-400">Super Administrator</span>
                 </div>
               </div>
@@ -60,9 +60,9 @@ const DashboardHeader = ({ onLogout }) => {
 
           {/* Center - System Stats */}
           <div className="hidden lg:flex items-center space-x-3">
-            <div className="bg-[#FF8C42]/10 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-[#FF8C42]/20">
+            <div className="bg-[var(--color-primary)]/10 backdrop-blur-sm rounded-lg px-3 py-1.5 border border-[var(--color-primary)]/20">
               <div className="flex items-center space-x-1.5">
-                <Building className="w-3 h-3 text-[#FF8C42]" />
+                <Building className="w-3 h-3 text-[var(--color-primary)]" />
                 <span className="text-xs font-semibold text-white">{activeBranches}</span>
                 <span className="text-xs text-gray-400">Branches</span>
               </div>

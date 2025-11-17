@@ -7,6 +7,7 @@ import { api } from '../../convex/_generated/api'
 import BookingQRGenerator from './kiosk/BookingQRGenerator.jsx'
 import QRScannerCamera from './kiosk/QRScanner.jsx'
 import BookingDetails from './kiosk/BookingDetails.jsx'
+import { BrandingProvider } from '../context/BrandingContext'
 
 function Kiosk() {
   const [mode, setMode] = useState('home') // 'home', 'generate'
@@ -177,6 +178,7 @@ function Kiosk() {
   }
 
   return (
+    <BrandingProvider branchCode={new URLSearchParams(window.location.search).get('branch') || undefined}>
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       {/* Tablet and Mobile Optimized Styles */}
       <style>{`
@@ -236,14 +238,14 @@ function Kiosk() {
       {/* Header */}
       <div className="flex items-center justify-between p-4 md:p-6 bg-gradient-to-r from-[#2A2A2A] to-[#333333] shadow-lg border-b border-[#444444]/50">
         <div className="flex items-center space-x-3 md:space-x-4">
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center bg-gradient-to-r from-[#FF8C42] to-[#FF8C42]/80 shadow-lg">
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary)]/80 shadow-lg">
             <span className="text-white font-bold text-lg md:text-xl">T</span>
           </div>
           <div>
             <div className="flex items-center space-x-3">
               <h1 className="text-xl md:text-2xl font-bold text-white">TipunoX Angeles Barbershop</h1>
-              <div className="bg-[#FF8C42]/20 rounded-full px-2 py-0.5 border border-[#FF8C42]/30">
-                <span className="text-xs font-semibold text-[#FF8C42]">v2.0.0</span>
+              <div className="bg-[var(--color-primary)]/20 rounded-full px-2 py-0.5 border border-[var(--color-primary)]/30">
+                <span className="text-xs font-semibold text-[var(--color-primary)]">v2.0.0</span>
               </div>
             </div>
             <p className="text-xs md:text-sm text-gray-300">Self-Service Kiosk</p>
@@ -252,7 +254,7 @@ function Kiosk() {
         
         <Link 
           to="/login"
-          className="px-3 py-2 md:px-4 md:py-2 text-white rounded-xl transition-all duration-200 flex items-center space-x-2 text-sm md:text-base bg-[#1A1A1A] border border-[#444444] hover:bg-[#2A2A2A] hover:border-[#FF8C42]/50"
+          className="px-3 py-2 md:px-4 md:py-2 text-white rounded-xl transition-all duration-200 flex items-center space-x-2 text-sm md:text-base bg-[#1A1A1A] border border-[#444444] hover:bg-[#2A2A2A] hover:border-[var(--color-primary)]/50"
         >
           <span>Back to Login</span>
         </Link>
@@ -283,7 +285,7 @@ function Kiosk() {
               {isProcessingBooking && (
                 <div className="text-center py-4">
                   <div className="flex items-center justify-center space-x-3">
-                    <RefreshCw className="w-6 h-6 text-[#FF8C42] animate-spin" />
+                    <RefreshCw className="w-6 h-6 text-[var(--color-primary)] animate-spin" />
                     <span className="text-gray-300 font-medium">Processing booking...</span>
                   </div>
                 </div>
@@ -318,7 +320,7 @@ function Kiosk() {
             {/* Action Cards */}
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6 action-cards">
               {/* Scan Your Booking QR Card */}
-              <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl p-6 shadow-xl border border-[#444444]/50 transition-all duration-300 hover:scale-105 hover:border-[#FF8C42]/50">
+              <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl p-6 shadow-xl border border-[#444444]/50 transition-all duration-300 hover:scale-105 hover:border-[var(--color-primary)]/50">
                 <div className="text-center space-y-4">
                   <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto bg-gradient-to-r from-green-500/20 to-green-600/20 border-2 border-green-500/50">
                     <QrCode className="w-8 h-8 text-green-400" />
@@ -358,9 +360,9 @@ function Kiosk() {
               </div>
 
               {/* Download App Card */}
-              <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl p-6 shadow-xl border border-[#444444]/50 transition-all duration-300 hover:scale-105 hover:border-[#FF8C42]/50">
+              <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl p-6 shadow-xl border border-[#444444]/50 transition-all duration-300 hover:scale-105 hover:border-[var(--color-primary)]/50">
                 <div className="text-center">
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-gradient-to-r from-[#FF8C42] to-[#FF8C42]/80 shadow-lg">
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary)]/80 shadow-lg">
                     <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                     </svg>
@@ -387,16 +389,16 @@ function Kiosk() {
               </div>
 
               {/* Book Appointment Card */}
-              <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl p-6 shadow-xl border border-[#444444]/50 transition-all duration-300 hover:scale-105 hover:border-[#FF8C42]/50 md:col-span-2 xl:col-span-1">
+              <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl p-6 shadow-xl border border-[#444444]/50 transition-all duration-300 hover:scale-105 hover:border-[var(--color-primary)]/50 md:col-span-2 xl:col-span-1">
                 <div className="text-center">
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-gradient-to-r from-[#FF8C42] to-[#FF8C42]/80 shadow-lg">
+                  <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary)]/80 shadow-lg">
                     <QrCode className="w-8 h-8 text-white" />
                   </div>
                   <h2 className="text-xl font-bold mb-3 text-white">Book Appointment</h2>
                   <p className="mb-4 text-base text-gray-300">Schedule your service and get a QR confirmation</p>
                   <button
                     onClick={() => changeMode('generate')}
-                    className="w-full py-3 text-white font-bold rounded-xl transition-all duration-200 text-base shadow-lg bg-gradient-to-r from-[#FF8C42] to-[#FF8C42]/80 hover:from-[#FF8C42]/90 hover:to-[#FF8C42]/70 transform hover:scale-105"
+                    className="w-full py-3 text-white font-bold rounded-xl transition-all duration-200 text-base shadow-lg bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary)]/80 hover:from-[var(--color-primary)]/90 hover:to-[var(--color-primary)]/70 transform hover:scale-105"
                   >
                     Book Now
                   </button>
@@ -414,7 +416,7 @@ function Kiosk() {
               <h1 className="text-2xl md:text-3xl font-bold text-white">Book & Generate QR</h1>
               <button 
                 onClick={() => changeMode('home')}
-                className="px-4 py-2 text-white rounded-xl transition-all duration-200 flex items-center space-x-2 bg-[#1A1A1A] border border-[#444444] hover:bg-[#2A2A2A] hover:border-[#FF8C42]/50"
+                className="px-4 py-2 text-white rounded-xl transition-all duration-200 flex items-center space-x-2 bg-[#1A1A1A] border border-[#444444] hover:bg-[#2A2A2A] hover:border-[var(--color-primary)]/50"
               >
                 <span>← Back</span>
               </button>
@@ -425,6 +427,7 @@ function Kiosk() {
         )}
       </div>
     </div>
+    </BrandingProvider>
   )
 }
 

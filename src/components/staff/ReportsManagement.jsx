@@ -584,7 +584,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <div className="animate-spin w-12 h-12 border-4 border-[#FF8C42] border-t-transparent rounded-full mx-auto mb-4"></div>
+          <div className="animate-spin w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full mx-auto mb-4"></div>
           <p className="text-gray-400">Loading analytics...</p>
         </div>
       </div>
@@ -604,7 +604,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+            className="bg-[#1A1A1A] border border-[#2A2A2A] text-white text-sm rounded-lg px-3 py-2 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
           >
             <option value="today">Today</option>
             <option value="week">This Week</option>
@@ -621,7 +621,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
           
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-3 py-2 bg-[#FF8C42] text-white text-sm rounded-lg hover:bg-[#FF7A2B] transition-colors"
+            className="flex items-center gap-2 px-3 py-2 bg-[var(--color-primary)] text-white text-sm rounded-lg hover:bg-[var(--color-accent)] transition-colors"
           >
             <Download className="h-4 w-4" />
             <span className="hidden sm:inline">Export</span>
@@ -636,7 +636,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
             onClick={() => setActiveTab('descriptive')}
             className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${
               activeTab === 'descriptive'
-                ? 'bg-[#FF8C42] text-white shadow-lg'
+                ? 'bg-[var(--color-primary)] text-white shadow-lg'
                 : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
             }`}
           >
@@ -648,7 +648,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
             onClick={() => setActiveTab('diagnostic')}
             className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${
               activeTab === 'diagnostic'
-                ? 'bg-[#FF8C42] text-white shadow-lg'
+                ? 'bg-[var(--color-primary)] text-white shadow-lg'
                 : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
             }`}
           >
@@ -660,7 +660,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
             onClick={() => setActiveTab('predictive')}
             className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${
               activeTab === 'predictive'
-                ? 'bg-[#FF8C42] text-white shadow-lg'
+                ? 'bg-[var(--color-primary)] text-white shadow-lg'
                 : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
             }`}
           >
@@ -672,7 +672,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
             onClick={() => setActiveTab('prescriptive')}
             className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${
               activeTab === 'prescriptive'
-                ? 'bg-[#FF8C42] text-white shadow-lg'
+                ? 'bg-[var(--color-primary)] text-white shadow-lg'
                 : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
             }`}
           >
@@ -726,7 +726,7 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       <MetricCard
         icon={DollarSign}
-        iconColor="text-[#FF8C42]"
+        iconColor="text-[var(--color-primary)]"
         value={formatCurrency(analytics.revenue.total)}
         label="Total Revenue"
         change={analytics.revenue.change}
@@ -760,7 +760,7 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-          <Scissors className="h-4 w-4 text-[#FF8C42] mr-2" />
+          <Scissors className="h-4 w-4 text-[var(--color-primary)] mr-2" />
           Revenue Breakdown
         </h3>
         <div className="space-y-4">
@@ -771,7 +771,7 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
             </div>
             <div className="w-full bg-[#0A0A0A] rounded-full h-2">
               <div 
-                className="bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] h-2 rounded-full transition-all duration-500"
+                className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] h-2 rounded-full transition-all duration-500"
                 style={{ width: `${(analytics.revenue.services / analytics.revenue.total) * 100}%` }}
               />
             </div>
@@ -799,7 +799,7 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
 
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-          <Clock className="h-4 w-4 text-[#FF8C42] mr-2" />
+          <Clock className="h-4 w-4 text-[var(--color-primary)] mr-2" />
           Booking Performance
         </h3>
         <div className="space-y-3">
@@ -830,7 +830,7 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
     {/* Barber Performance */}
     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
       <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-        <Award className="h-4 w-4 text-[#FF8C42] mr-2" />
+        <Award className="h-4 w-4 text-[var(--color-primary)] mr-2" />
         Staff Performance
       </h3>
       <div className="space-y-2">
@@ -841,7 +841,7 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
           >
             <div className="flex items-center gap-3">
               <div className={`flex items-center justify-center w-8 h-8 rounded-lg ${
-                index === 0 ? 'bg-[#FF8C42]/20 text-[#FF8C42]' : 'bg-[#2A2A2A] text-gray-400'
+                index === 0 ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]' : 'bg-[#2A2A2A] text-gray-400'
               }`}>
                 <span className="text-sm font-bold">#{index + 1}</span>
               </div>
@@ -865,7 +865,7 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-          <Scissors className="h-4 w-4 text-[#FF8C42] mr-2" />
+          <Scissors className="h-4 w-4 text-[var(--color-primary)] mr-2" />
           Top Services
         </h3>
         <div className="space-y-3">
@@ -882,7 +882,7 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
                 <div className="flex items-center gap-2">
                   <div className="flex-1 bg-[#0A0A0A] rounded-full h-1.5">
                     <div 
-                      className="bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] h-1.5 rounded-full transition-all"
+                      className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] h-1.5 rounded-full transition-all"
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
@@ -896,7 +896,7 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
 
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-          <Package className="h-4 w-4 text-[#FF8C42] mr-2" />
+          <Package className="h-4 w-4 text-[var(--color-primary)] mr-2" />
           Top Products
         </h3>
         {analytics.products.length > 0 ? (
@@ -933,7 +933,7 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
     {/* Payment Methods */}
     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
       <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-        <CreditCard className="h-4 w-4 text-[#FF8C42] mr-2" />
+        <CreditCard className="h-4 w-4 text-[var(--color-primary)] mr-2" />
         Payment Methods Distribution
       </h3>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -963,7 +963,7 @@ const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime }) => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-          <Clock className="h-4 w-4 text-[#FF8C42] mr-2" />
+          <Clock className="h-4 w-4 text-[var(--color-primary)] mr-2" />
           Peak Transaction Hours
         </h3>
         <div className="space-y-3">
@@ -971,7 +971,7 @@ const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime }) => (
             <div key={hour.hour} className="flex items-center justify-between p-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg">
               <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                  index === 0 ? 'bg-[#FF8C42]/20 text-[#FF8C42]' : 'bg-[#2A2A2A] text-gray-400'
+                  index === 0 ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]' : 'bg-[#2A2A2A] text-gray-400'
                 }`}>
                   <span className="text-sm font-bold">#{index + 1}</span>
                 </div>
@@ -993,7 +993,7 @@ const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime }) => (
 
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-          <Calendar className="h-4 w-4 text-[#FF8C42] mr-2" />
+          <Calendar className="h-4 w-4 text-[var(--color-primary)] mr-2" />
           Busiest Days
         </h3>
         <div className="space-y-3">
@@ -1001,7 +1001,7 @@ const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime }) => (
             <div key={day.day} className="flex items-center justify-between p-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg">
               <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                  index === 0 ? 'bg-[#FF8C42]/20 text-[#FF8C42]' : 'bg-[#2A2A2A] text-gray-400'
+                  index === 0 ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]' : 'bg-[#2A2A2A] text-gray-400'
                 }`}>
                   <span className="text-sm font-bold">#{index + 1}</span>
                 </div>
@@ -1025,7 +1025,7 @@ const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime }) => (
     {/* Customer Retention Analysis */}
     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
       <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-        <UserCheck className="h-4 w-4 text-[#FF8C42] mr-2" />
+        <UserCheck className="h-4 w-4 text-[var(--color-primary)] mr-2" />
         Customer Retention Insights
       </h3>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -1063,7 +1063,7 @@ const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime }) => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-          <XCircle className="h-4 w-4 text-[#FF8C42] mr-2" />
+          <XCircle className="h-4 w-4 text-[var(--color-primary)] mr-2" />
           Booking Cancellation Rate
         </h3>
         <div className="text-center py-4">
@@ -1091,7 +1091,7 @@ const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime }) => (
 
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-          <Activity className="h-4 w-4 text-[#FF8C42] mr-2" />
+          <Activity className="h-4 w-4 text-[var(--color-primary)] mr-2" />
           Daily Performance Pattern
         </h3>
         <div className="space-y-2">
@@ -1107,7 +1107,7 @@ const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime }) => (
                 </div>
                 <div className="w-full bg-[#0A0A0A] rounded-full h-1.5">
                   <div 
-                    className="bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] h-1.5 rounded-full"
+                    className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] h-1.5 rounded-full"
                     style={{ width: `${percentage}%` }}
                   />
                 </div>
@@ -1121,7 +1121,7 @@ const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime }) => (
     {/* Service-Product Correlation */}
     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
       <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-        <ShoppingCart className="h-4 w-4 text-[#FF8C42] mr-2" />
+        <ShoppingCart className="h-4 w-4 text-[var(--color-primary)] mr-2" />
         Service-Product Purchase Correlation
       </h3>
       {Object.keys(analytics.serviceProductCorrelation).length > 0 ? (
@@ -1140,7 +1140,7 @@ const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime }) => (
                     </p>
                   </div>
                   <div className="ml-3">
-                    <span className="px-2 py-1 bg-[#FF8C42]/20 text-[#FF8C42] text-xs rounded-full">
+                    <span className="px-2 py-1 bg-[var(--color-primary)]/20 text-[var(--color-primary)] text-xs rounded-full">
                       {topProduct[1]}x
                     </span>
                   </div>
@@ -1165,7 +1165,7 @@ const PredictiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
     {/* Revenue Forecast */}
     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
       <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-        <TrendingUp className="h-4 w-4 text-[#FF8C42] mr-2" />
+        <TrendingUp className="h-4 w-4 text-[var(--color-primary)] mr-2" />
         Revenue Forecast
       </h3>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1207,7 +1207,7 @@ const PredictiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-          <AlertTriangle className="h-4 w-4 text-[#FF8C42] mr-2" />
+          <AlertTriangle className="h-4 w-4 text-[var(--color-primary)] mr-2" />
           Customer Churn Risk
         </h3>
         <div className="text-center py-4">
@@ -1231,7 +1231,7 @@ const PredictiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
 
       <div className="lg:col-span-2 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
         <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-          <Users className="h-4 w-4 text-[#FF8C42] mr-2" />
+          <Users className="h-4 w-4 text-[var(--color-primary)] mr-2" />
           High-Risk Customers (Not Seen Recently)
         </h3>
         {analytics.churnRisk.customers.length > 0 ? (
@@ -1268,7 +1268,7 @@ const PredictiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
     {/* Product Demand Forecast */}
     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
       <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-        <Package className="h-4 w-4 text-[#FF8C42] mr-2" />
+        <Package className="h-4 w-4 text-[var(--color-primary)] mr-2" />
         Product Demand Forecast
       </h3>
       {Object.keys(analytics.productDemand).length > 0 ? (
@@ -1299,9 +1299,9 @@ const PredictiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
     </div>
 
     {/* Predictive Insights */}
-    <div className="bg-gradient-to-br from-[#FF8C42]/10 to-[#FF7A2B]/5 border border-[#FF8C42]/30 rounded-lg p-4">
+    <div className="bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/5 border border-[var(--color-primary)]/30 rounded-lg p-4">
       <div className="flex items-start gap-3">
-        <Brain className="h-5 w-5 text-[#FF8C42] mt-0.5 flex-shrink-0" />
+        <Brain className="h-5 w-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
         <div className="flex-1">
           <h4 className="text-sm font-semibold text-white mb-2">AI-Powered Predictions</h4>
           <div className="space-y-1.5 text-sm text-gray-300">
@@ -1327,13 +1327,13 @@ const PrescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
     {/* Promotion Suggestions */}
     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
       <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-        <Zap className="h-4 w-4 text-[#FF8C42] mr-2" />
+        <Zap className="h-4 w-4 text-[var(--color-primary)] mr-2" />
         Recommended Promotions
       </h3>
       {analytics.promotionSuggestions.length > 0 ? (
         <div className="space-y-2">
           {analytics.promotionSuggestions.map((promo, index) => (
-            <div key={index} className="p-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg hover:border-[#FF8C42]/30 transition-colors">
+            <div key={index} className="p-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg hover:border-[var(--color-primary)]/30 transition-colors">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
@@ -1362,7 +1362,7 @@ const PrescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
     {/* Restocking Alerts */}
     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
       <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-        <Bell className="h-4 w-4 text-[#FF8C42] mr-2" />
+        <Bell className="h-4 w-4 text-[var(--color-primary)] mr-2" />
         Inventory Restocking Alerts
       </h3>
       {analytics.restockingAlerts.length > 0 ? (
@@ -1389,7 +1389,7 @@ const PrescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
                       Min: <span className="text-white">{alert.minStock}</span>
                     </span>
                     <span className="text-gray-400">
-                      Suggested Order: <span className="text-[#FF8C42] font-semibold">{alert.suggestedOrder} units</span>
+                      Suggested Order: <span className="text-[var(--color-primary)] font-semibold">{alert.suggestedOrder} units</span>
                     </span>
                   </div>
                 </div>
@@ -1405,7 +1405,7 @@ const PrescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
     {/* Staff Scheduling Recommendations */}
     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
       <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
-        <Calendar className="h-4 w-4 text-[#FF8C42] mr-2" />
+        <Calendar className="h-4 w-4 text-[var(--color-primary)] mr-2" />
         Staff Scheduling Recommendations
       </h3>
       {analytics.staffRecommendations.length > 0 ? (
@@ -1438,9 +1438,9 @@ const PrescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
     </div>
 
     {/* Action Summary */}
-    <div className="bg-gradient-to-br from-[#FF8C42]/10 to-[#FF7A2B]/5 border border-[#FF8C42]/30 rounded-lg p-4">
+    <div className="bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/5 border border-[var(--color-primary)]/30 rounded-lg p-4">
       <div className="flex items-start gap-3">
-        <Target className="h-5 w-5 text-[#FF8C42] mt-0.5 flex-shrink-0" />
+        <Target className="h-5 w-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
         <div className="flex-1">
           <h4 className="text-sm font-semibold text-white mb-2">Priority Actions</h4>
           <div className="space-y-1.5 text-sm text-gray-300">

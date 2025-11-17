@@ -204,7 +204,7 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
         {/* Service Details */}
         <div className="bg-[#0F0F0F]/50 rounded-lg p-3.5 border border-[#333333]/50">
           <h3 className="text-xs font-bold text-gray-200 mb-3 flex items-center">
-            <Scissors className="w-3.5 h-3.5 text-[#FF8C42] mr-1.5" />
+            <Scissors className="w-3.5 h-3.5 text-[var(--color-primary)] mr-1.5" />
             Service Details
           </h3>
 
@@ -218,7 +218,7 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
                 onChange={(e) => handleInputChange('name', e.target.value)}
                 placeholder="e.g., Classic Haircut"
                 maxLength="100"
-                className="w-full h-9 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 transition-all"
+                className="w-full h-9 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 transition-all"
               />
               {fieldErrors.name && (
                 <p className="text-red-400 text-xs mt-0.5">{fieldErrors.name}</p>
@@ -234,7 +234,7 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
                 placeholder="Describe the service..."
                 maxLength="500"
                 rows={2}
-                className="w-full px-2.5 py-1.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 resize-none transition-all"
+                className="w-full px-2.5 py-1.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 resize-none transition-all"
               />
               <div className="text-xs text-gray-500 mt-0.5">{formData.description.length}/500</div>
               {fieldErrors.description && (
@@ -248,7 +248,7 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
               <select
                 value={formData.category}
                 onChange={(e) => handleInputChange('category', e.target.value)}
-                className="w-full h-9 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 transition-all"
+                className="w-full h-9 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 transition-all"
               >
                 <option value="General">General</option>
                 <option value="Haircut">Haircut</option>
@@ -267,7 +267,7 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
         {/* Pricing & Duration */}
         <div className="bg-[#0F0F0F]/50 rounded-lg p-3.5 border border-[#333333]/50">
           <h3 className="text-xs font-bold text-gray-200 mb-3 flex items-center">
-            <DollarSign className="w-3.5 h-3.5 text-[#FF8C42] mr-1.5" />
+            <DollarSign className="w-3.5 h-3.5 text-[var(--color-primary)] mr-1.5" />
             Pricing & Duration
           </h3>
 
@@ -283,7 +283,7 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
                 step="0.01"
                 min="0"
                 max="999999.99"
-                className="w-full h-9 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 transition-all"
+                className="w-full h-9 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 transition-all"
               />
               {fieldErrors.price && (
                 <p className="text-red-400 text-xs mt-0.5">{fieldErrors.price}</p>
@@ -300,7 +300,7 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
                 placeholder="30"
                 min="1"
                 max="480"
-                className="w-full h-9 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[#FF8C42] bg-[#1A1A1A] text-gray-300 transition-all"
+                className="w-full h-9 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 transition-all"
               />
               {fieldErrors.duration_minutes && (
                 <p className="text-red-400 text-xs mt-0.5">{fieldErrors.duration_minutes}</p>
@@ -339,12 +339,12 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
           </div>
 
           {/* Service Preview */}
-          <div className="bg-gradient-to-r from-[#1A1A1A] to-[#222222] rounded-lg p-3 border border-[#FF8C42]/20">
+          <div className="bg-gradient-to-r from-[#1A1A1A] to-[#222222] rounded-lg p-3 border border-[var(--color-primary)]/20">
             <h4 className="text-xs font-bold text-white mb-1.5 uppercase tracking-wide">Preview</h4>
             <div className="space-y-1">
               <div className="flex justify-between text-xs">
                 <span className="text-gray-400">Price:</span>
-                <span className="text-[#FF8C42] font-bold">₱{formData.price || '0.00'}</span>
+                <span className="text-[var(--color-primary)] font-bold">₱{formData.price || '0.00'}</span>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-gray-400">Duration:</span>
@@ -373,7 +373,7 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 h-9 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg font-medium hover:shadow-lg disabled:opacity-50 transition-all text-sm"
+            className="flex-1 h-9 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg font-medium hover:shadow-lg disabled:opacity-50 transition-all text-sm"
           >
             {loading ? 'Saving...' : (editingService ? 'Update Service' : 'Create Service')}
           </button>

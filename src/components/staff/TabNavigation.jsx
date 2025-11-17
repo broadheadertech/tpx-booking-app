@@ -69,7 +69,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
                   onClick={() => handleTabClick(tab.id)}
                   className={`relative flex items-center space-x-2 px-3 py-2.5 rounded-md font-medium text-xs transition-all duration-250 group min-w-0 ${
                     activeTab === tab.id
-                      ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-md shadow-[#FF8C42]/20'
+                      ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md shadow-[var(--color-primary)]/20'
                       : 'text-gray-400 hover:text-white hover:bg-[#1A1A1A]/40'
                   }`}
                 >
@@ -81,7 +81,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
                   <div className={`flex items-center justify-center w-4 h-4 transition-all duration-200 ${
                     activeTab === tab.id
                       ? 'text-white'
-                      : 'text-gray-500 group-hover:text-[#FF8C42]'
+                      : 'text-gray-500 group-hover:text-[var(--color-primary)]'
                   }`}>
                     <IconComponent className="w-4 h-4" />
                   </div>
@@ -104,7 +104,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
               onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
               className={`relative flex items-center space-x-1.5 px-3 py-2.5 rounded-md font-medium text-xs transition-all duration-250 group ${
                 activeSecondaryTab
-                  ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-md shadow-[#FF8C42]/20'
+                  ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md shadow-[var(--color-primary)]/20'
                   : 'text-gray-400 hover:text-white hover:bg-[#1A1A1A]/40'
               }`}
             >
@@ -122,11 +122,11 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
                 </>
               ) : (
                 <>
-                  <div className="flex items-center justify-center w-4 h-4 text-gray-500 group-hover:text-[#FF8C42]">
+                  <div className="flex items-center justify-center w-4 h-4 text-gray-500 group-hover:text-[var(--color-primary)]">
                     <MoreHorizontal className="w-4 h-4" />
                   </div>
                   <span className="font-medium whitespace-nowrap text-xs">More</span>
-                  <ChevronDown className={`w-3.5 h-3.5 text-gray-500 group-hover:text-[#FF8C42] transition-transform duration-200 ${
+                  <ChevronDown className={`w-3.5 h-3.5 text-gray-500 group-hover:text-[var(--color-primary)] transition-transform duration-200 ${
                     isMoreDropdownOpen ? 'rotate-180' : ''
                   }`} />
                 </>
@@ -144,7 +144,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
                       onClick={() => handleTabClick(tab.id)}
                       className={`w-full flex items-center space-x-2.5 px-3 py-2 text-left transition-all duration-200 ${
                         activeTab === tab.id
-                          ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white'
+                          ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white'
                           : 'text-gray-400 hover:bg-[#1A1A1A]/40 hover:text-white'
                       }`}
                     >
@@ -176,7 +176,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
                   onClick={() => handleTabClick(tab.id)}
                   className={`flex flex-col items-center justify-center px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-medium text-xs transition-all duration-200 whitespace-nowrap relative flex-shrink-0 min-w-[60px] sm:min-w-[70px] touch-manipulation ${
                     activeTab === tab.id
-                      ? 'bg-gradient-to-b from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg scale-105'
+                      ? 'bg-gradient-to-b from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg scale-105'
                       : 'text-gray-300 hover:text-white hover:bg-[#2A2A2A] active:scale-95'
                   }`}
                 >
@@ -209,7 +209,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
               onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
               className={`flex flex-col items-center justify-center px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-medium text-xs transition-all duration-200 whitespace-nowrap flex-shrink-0 min-w-[60px] sm:min-w-[70px] touch-manipulation ${
                 activeSecondaryTab
-                  ? 'bg-gradient-to-b from-[#FF8C42] to-[#FF7A2B] text-white shadow-md scale-105'
+                  ? 'bg-gradient-to-b from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md scale-105'
                   : 'text-gray-400 hover:text-white hover:bg-[#1A1A1A]/40 active:scale-95'
               }`}
             >
@@ -241,8 +241,8 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
                       onClick={() => handleTabClick(tab.id)}
                       className={`w-full flex items-center space-x-3 px-4 py-2.5 sm:py-3 text-left transition-all duration-200 touch-manipulation active:scale-95 ${
                         activeTab === tab.id
-                          ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white'
-                          : 'text-gray-300 hover:bg-[#333333] hover:text-[#FF8C42]'
+                          ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white'
+                          : 'text-gray-300 hover:bg-[#333333] hover:text-[var(--color-primary)]'
                       }`}
                     >
                       <div className={`flex items-center justify-center w-5 h-5 flex-shrink-0 ${
@@ -273,7 +273,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
                   onClick={() => handleTabClick(tab.id)}
                   className={`flex items-center space-x-2 px-3 py-2.5 rounded-lg font-semibold text-sm transition-all duration-300 whitespace-nowrap relative ${
                     activeTab === tab.id
-                      ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
+                      ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg'
                       : 'text-gray-300 hover:text-white hover:bg-[#333333]/50'
                   }`}
                 >
@@ -297,7 +297,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
               onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
               className={`flex items-center space-x-2 px-3 py-2.5 rounded-lg font-semibold text-sm transition-all duration-300 whitespace-nowrap ${
                 activeSecondaryTab
-                  ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
+                  ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg'
                   : 'text-gray-300 hover:text-white hover:bg-[#333333]/50'
               }`}
             >
@@ -331,8 +331,8 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
                       onClick={() => handleTabClick(tab.id)}
                       className={`w-full flex items-center space-x-3 px-4 py-2.5 text-left transition-all duration-200 ${
                         activeTab === tab.id
-                          ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white'
-                          : 'text-gray-300 hover:bg-[#333333] hover:text-[#FF8C42]'
+                          ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white'
+                          : 'text-gray-300 hover:bg-[#333333] hover:text-[var(--color-primary)]'
                       }`}
                     >
                       <div className={`flex items-center justify-center w-4 h-4 ${

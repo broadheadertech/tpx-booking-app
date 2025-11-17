@@ -126,7 +126,7 @@ const ImportServices = ({ onClose, onSuccess }) => {
         />
         <div className="relative w-full max-w-2xl transform rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] border border-[#444444]/50 shadow-2xl transition-all p-6">
           <div className="text-center space-y-6">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center mx-auto">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center mx-auto">
               <Upload className="w-8 h-8 text-white" />
             </div>
             
@@ -143,7 +143,7 @@ const ImportServices = ({ onClose, onSuccess }) => {
                   <div key={index} className="flex justify-between items-center text-sm">
                     <span className="text-white font-medium">{service.name}</span>
                     <div className="text-right">
-                      <span className="text-[#FF8C42] font-bold">₱{service.price.toFixed(2)}</span>
+                      <span className="text-[var(--color-primary)] font-bold">₱{service.price.toFixed(2)}</span>
                       <span className="text-gray-400 ml-2">({service.duration_minutes}min)</span>
                     </div>
                   </div>
@@ -186,7 +186,7 @@ const ImportServices = ({ onClose, onSuccess }) => {
               <button
                 onClick={handleImport}
                 disabled={isImporting || importResult}
-                className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white font-medium hover:from-[#FF7A2B] hover:to-[#FF6B1A] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
+                className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-medium hover:from-[var(--color-accent)] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center space-x-2"
               >
                 {isImporting ? (
                   <>

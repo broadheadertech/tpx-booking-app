@@ -191,7 +191,7 @@ const BarberProfile = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF8C42] mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)] mx-auto mb-4"></div>
           <p className="text-gray-400">Loading profile...</p>
         </div>
       </div>
@@ -203,7 +203,7 @@ const BarberProfile = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] flex items-center justify-center p-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF8C42] mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)] mx-auto mb-4"></div>
           <p className="text-gray-400">Setting up your profile...</p>
         </div>
       </div>
@@ -230,17 +230,17 @@ const BarberProfile = () => {
         <div className="max-w-md mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center shadow-lg">
                 <User className="w-5 h-5 text-white" />
               </div>
               <div>
                 <div className="flex items-center space-x-2">
                   <h1 className="text-sm font-bold text-white">My Profile</h1>
-                  <div className="bg-[#FF8C42]/20 backdrop-blur-sm rounded-full px-1.5 py-0.5 border border-[#FF8C42]/30">
-                    <span className="text-xs font-semibold text-[#FF8C42]">Barber</span>
+                  <div className="bg-[var(--color-primary)]/20 backdrop-blur-sm rounded-full px-1.5 py-0.5 border border-[var(--color-primary)]/30">
+                    <span className="text-xs font-semibold text-[var(--color-primary)]">Barber</span>
                   </div>
                 </div>
-                <p className="text-xs font-medium text-[#FF8C42]">Professional Dashboard</p>
+                <p className="text-xs font-medium text-[var(--color-primary)]">Professional Dashboard</p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
@@ -300,10 +300,10 @@ const BarberProfile = () => {
                 <img
                   src={editForm.avatar}
                   alt="Profile"
-                  className="w-16 h-16 rounded-xl object-cover border-2 border-[#FF8C42]/50 shadow-lg"
+                  className="w-16 h-16 rounded-xl object-cover border-2 border-[var(--color-primary)]/50 shadow-lg"
                 />
               ) : (
-                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center shadow-lg">
+                <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center shadow-lg">
                   <span className="text-white text-lg font-bold">
                     {getInitials(editForm.full_name || user?.username || 'U')}
                   </span>
@@ -311,7 +311,7 @@ const BarberProfile = () => {
               )}
               
               {isEditing && (
-                <button className="absolute -bottom-1 -right-1 p-1.5 bg-[#FF8C42] text-white rounded-lg hover:bg-[#E67A1A] transition-colors shadow-lg">
+                <button className="absolute -bottom-1 -right-1 p-1.5 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[#E67A1A] transition-colors shadow-lg">
                   <Camera className="w-3 h-3" />
                 </button>
               )}
@@ -324,7 +324,7 @@ const BarberProfile = () => {
                   type="text"
                   value={editForm.full_name}
                   onChange={(e) => handleInputChange('full_name', e.target.value)}
-                  className="text-lg font-bold text-white bg-transparent border-b border-[#FF8C42]/50 focus:outline-none focus:border-[#FF8C42] mb-2 w-full"
+                  className="text-lg font-bold text-white bg-transparent border-b border-[var(--color-primary)]/50 focus:outline-none focus:border-[var(--color-primary)] mb-2 w-full"
                   placeholder="Full Name"
                 />
               ) : (
@@ -337,7 +337,7 @@ const BarberProfile = () => {
                   <span>{currentBarber.rating}/5</span>
                 </div>
                 <div className="flex items-center space-x-1">
-                  <Award className="w-3 h-3 text-[#FF8C42]" />
+                  <Award className="w-3 h-3 text-[var(--color-primary)]" />
                   <span>{currentBarber.totalBookings} bookings</span>
                 </div>
               </div>
@@ -346,7 +346,7 @@ const BarberProfile = () => {
                 <textarea
                   value={editForm.bio}
                   onChange={(e) => handleInputChange('bio', e.target.value)}
-                  className="w-full p-2 bg-[#2A2A2A] border border-[#555555] rounded-lg focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42] resize-none text-white text-sm"
+                  className="w-full p-2 bg-[#2A2A2A] border border-[#555555] rounded-lg focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] resize-none text-white text-sm"
                   rows="2"
                   placeholder="Tell customers about yourself..."
                 />
@@ -360,7 +360,7 @@ const BarberProfile = () => {
         {/* Contact Information */}
         <div className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl p-4 border border-[#555555]/30 shadow-lg mb-4">
           <h3 className="text-base font-bold text-white mb-3 flex items-center">
-            <Mail className="w-4 h-4 mr-2 text-[#FF8C42]" />
+            <Mail className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
             Contact Information
           </h3>
           
@@ -374,7 +374,7 @@ const BarberProfile = () => {
                   type="email"
                   value={editForm.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#555555] rounded-lg focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42] text-white text-sm"
+                  className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#555555] rounded-lg focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] text-white text-sm"
                 />
               ) : (
                 <p className="px-3 py-2 bg-[#2A2A2A]/50 rounded-lg text-white text-sm">{currentBarber.email}</p>
@@ -390,7 +390,7 @@ const BarberProfile = () => {
                   type="tel"
                   value={editForm.phone}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
-                  className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#555555] rounded-lg focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42] text-white text-sm"
+                  className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#555555] rounded-lg focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] text-white text-sm"
                 />
               ) : (
                 <p className="px-3 py-2 bg-[#2A2A2A]/50 rounded-lg text-white text-sm">{currentBarber.phone || 'Not provided'}</p>
@@ -402,7 +402,7 @@ const BarberProfile = () => {
         {/* Professional Information */}
         <div className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl p-4 border border-[#555555]/30 shadow-lg mb-4">
           <h3 className="text-base font-bold text-white mb-3 flex items-center">
-            <Award className="w-4 h-4 mr-2 text-[#FF8C42]" />
+            <Award className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
             Professional Information
           </h3>
           
@@ -416,7 +416,7 @@ const BarberProfile = () => {
                   type="text"
                   value={editForm.experience}
                   onChange={(e) => handleInputChange('experience', e.target.value)}
-                  className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#555555] rounded-lg focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42] text-white text-sm"
+                  className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#555555] rounded-lg focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] text-white text-sm"
                   placeholder="e.g., 5 years"
                 />
               ) : (
@@ -436,13 +436,13 @@ const BarberProfile = () => {
                       type="text"
                       value={newSpecialty}
                       onChange={(e) => setNewSpecialty(e.target.value)}
-                      className="flex-1 px-3 py-2 bg-[#2A2A2A] border border-[#555555] rounded-lg focus:ring-1 focus:ring-[#FF8C42] focus:border-[#FF8C42] text-white text-sm"
+                      className="flex-1 px-3 py-2 bg-[#2A2A2A] border border-[#555555] rounded-lg focus:ring-1 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] text-white text-sm"
                       placeholder="Add a specialty"
                       onKeyPress={(e) => e.key === 'Enter' && addSpecialty()}
                     />
                     <button
                       onClick={addSpecialty}
-                      className="px-3 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#E67A1A] transition-colors text-sm"
+                      className="px-3 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[#E67A1A] transition-colors text-sm"
                     >
                       Add
                     </button>
@@ -452,7 +452,7 @@ const BarberProfile = () => {
                     {editForm.specialties.map((specialty, index) => (
                       <span
                         key={index}
-                        className="inline-flex items-center px-2 py-1 bg-[#FF8C42] text-white rounded-lg text-xs"
+                        className="inline-flex items-center px-2 py-1 bg-[var(--color-primary)] text-white rounded-lg text-xs"
                       >
                         {specialty}
                         <button
@@ -471,7 +471,7 @@ const BarberProfile = () => {
                     currentBarber.specialties.map((specialty, index) => (
                       <span
                         key={index}
-                        className="inline-flex items-center px-2 py-1 bg-[#FF8C42] text-white rounded-lg text-xs"
+                        className="inline-flex items-center px-2 py-1 bg-[var(--color-primary)] text-white rounded-lg text-xs"
                       >
                         {specialty}
                       </span>
@@ -488,7 +488,7 @@ const BarberProfile = () => {
         {/* Performance Stats */}
         <div className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl p-4 border border-[#555555]/30 shadow-lg">
           <h3 className="text-base font-bold text-white mb-3 flex items-center">
-            <Star className="w-4 h-4 mr-2 text-[#FF8C42]" />
+            <Star className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
             Performance Overview
           </h3>
           
@@ -503,8 +503,8 @@ const BarberProfile = () => {
               <div className="text-xs text-gray-400">Bookings</div>
             </div>
             
-            <div className="text-center p-3 bg-gradient-to-br from-[#FF8C42]/20 to-[#FF7A2B]/20 rounded-xl border border-[#FF8C42]/30">
-              <div className="text-lg font-bold text-[#FF8C42] mb-1">
+            <div className="text-center p-3 bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 rounded-xl border border-[var(--color-primary)]/30">
+              <div className="text-lg font-bold text-[var(--color-primary)] mb-1">
                 ₱{currentBarber.monthlyRevenue?.toLocaleString() || 0}
               </div>
               <div className="text-xs text-gray-400">Revenue</div>

@@ -130,7 +130,7 @@ function WalletTopUp() {
               <span className="text-sm font-semibold text-white">Back</span>
             </button>
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center">
                 <WalletIcon className="w-5 h-5 text-white" />
               </div>
               <h1 className="text-lg font-black text-white">Add Funds</h1>
@@ -197,7 +197,7 @@ function WalletTopUp() {
           onClick={handleContinue} 
           disabled={loading} 
           variant="primary" 
-          className="w-full !bg-[#FF8C42] hover:!bg-[#FF7A2B] active:scale-95 transition-all shadow-lg shadow-orange-500/20"
+          className="w-full !bg-[var(--color-primary)] hover:!bg-[var(--color-accent)] active:scale-95 transition-all shadow-lg shadow-orange-500/20"
         >
           {loading ? 'Processing...' : 'Continue'}
         </Button>

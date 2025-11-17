@@ -265,9 +265,9 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Total</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.total}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.total}</p>
             </div>
-            <User className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <User className="h-8 w-8 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
 
@@ -275,9 +275,9 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Active</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.active}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.active}</p>
             </div>
-            <UserCheck className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <UserCheck className="h-8 w-8 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
 
@@ -285,9 +285,9 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Inactive</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.inactive}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.inactive}</p>
             </div>
-            <UserX className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <UserX className="h-8 w-8 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
 
@@ -295,9 +295,9 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Avg Rating</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.avgRating.toFixed(1)}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.avgRating.toFixed(1)}</p>
             </div>
-            <Star className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <Star className="h-8 w-8 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
 
@@ -352,7 +352,7 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
             </button>
             <button
               onClick={handleCreate}
-              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors text-sm"
+              className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg hover:from-[var(--color-accent)] hover:brightness-110 transition-colors text-sm"
             >
               <Plus className="h-4 w-4" />
               <span>Add Barber</span>
@@ -395,7 +395,7 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
                         <div className="relative flex-shrink-0 h-10 w-10">
                           <BarberAvatar
                             barber={barber}
-                            className="h-10 w-10 border-2 border-[#FF8C42]/50"
+                            className="h-10 w-10 border-2 border-[var(--color-primary)]/50"
                           />
                           {/* Image upload overlay */}
                           <div className="absolute inset-0 bg-black/50 rounded-full opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer group">
@@ -445,7 +445,7 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
                       <div className="flex items-center space-x-2">
                         <button
                           onClick={() => handleViewDetails(barber)}
-                          className="text-[#FF8C42] hover:text-[#FF7A2B] p-1 rounded"
+                          className="text-[var(--color-primary)] hover:text-[var(--color-accent)] p-1 rounded"
                           title="View Details"
                         >
                           <Eye className="h-4 w-4" />

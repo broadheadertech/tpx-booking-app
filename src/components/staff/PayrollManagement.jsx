@@ -85,9 +85,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
       <div className="space-y-6">
         <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-8 text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-4 bg-red-500/20 rounded-full">
-              <AlertCircle className="h-8 w-8 text-red-400" />
-            </div>
+            <AlertCircle className="h-8 w-8 text-red-400" />
           </div>
           <h3 className="text-xl font-semibold text-white mb-2">
             Branch Required
@@ -1331,9 +1329,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
               </h2>
               <button
                 onClick={() => setShowPeriodModal(false)}
-                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors duration-200"
+                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center transition-colors duration-200"
               >
-                <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+                <X className="w-4 h-4 text-gray-400 hover:text-[var(--color-primary)]" />
               </button>
             </div>
             <div className="p-6">
@@ -1351,7 +1349,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                         startDate: e.target.value,
                       }))
                     }
-                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                   />
                 </div>
 
@@ -1368,7 +1366,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                         endDate: e.target.value,
                       }))
                     }
-                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                   />
                 </div>
 
@@ -1412,7 +1410,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   disabled={
                     loading || !periodDates.startDate || !periodDates.endDate
                   }
-                  className="flex-1 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? "Creating..." : "Create Period"}
                 </button>
@@ -1441,9 +1439,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
               <h2 className="text-xl font-bold text-white">Payroll Settings</h2>
               <button
                 onClick={() => setShowSettings(false)}
-                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors duration-200"
+                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center transition-colors duration-200"
               >
-                <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+                <X className="w-4 h-4 text-gray-400 hover:text-[var(--color-primary)]" />
               </button>
             </div>
             <div className="p-6">
@@ -1465,7 +1463,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                           parseFloat(e.target.value) || 0,
                       }))
                     }
-                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                   />
                 </div>
 
@@ -1481,7 +1479,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                         payout_frequency: e.target.value,
                       }))
                     }
-                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                   >
                     <option value="weekly">Weekly</option>
                     <option value="bi_weekly">Bi-Weekly</option>
@@ -1510,7 +1508,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                         payout_day: parseInt(e.target.value) || 0,
                       }))
                     }
-                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                   />
                 </div>
 
@@ -1530,7 +1528,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                         tax_rate: parseFloat(e.target.value) || 0,
                       }))
                     }
-                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                   />
                 </div>
               </div>
@@ -1545,7 +1543,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                 <button
                   onClick={handleSaveSettings}
                   disabled={loading}
-                  className="flex-1 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? "Saving..." : "Save Settings"}
                 </button>
@@ -1642,9 +1640,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
               </div>
               <button
                 onClick={() => setShowBookingsModal(false)}
-                className="w-8 h-8 rounded-lg bg-[#3A3A3A]/60 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors"
+                className="w-8 h-8 rounded-lg bg-[#3A3A3A]/60 hover:bg-[var(--color-primary)]/20 flex items-center justify-center transition-colors"
               >
-                <X className="w-4 h-4 text-gray-300 hover:text-[#FF8C42]" />
+                <X className="w-4 h-4 text-gray-300 hover:text-[var(--color-primary)]" />
               </button>
             </div>
 
@@ -1658,7 +1656,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   <div className="text-sm text-gray-400">Total Bookings</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-[#FF8C42]">
+                  <div className="text-2xl font-bold text-[var(--color-primary)]">
                     {formatCurrency(totalRevenue)}
                   </div>
                   <div className="text-sm text-gray-400">Total Revenue</div>
@@ -1693,7 +1691,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                 >
                   <div className="px-5 py-3 bg-[#171717] border-b border-[#2A2A2A] flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-[#FF8C42]" />
+                      <Calendar className="h-4 w-4 text-[var(--color-primary)]" />
                       <span className="text-white font-medium">
                         {new Date(date).toLocaleDateString("en-US", {
                           month: "short",
@@ -1722,7 +1720,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                             <div className="flex items-start gap-4 flex-1">
                               <div className="shrink-0">
                                 <div className="inline-flex items-center justify-center rounded-md bg-[#232323] border border-[#2A2A2A]/50 px-3 py-1.5">
-                                  <span className="font-mono text-sm font-semibold text-[#FF8C42] leading-none">
+                                  <span className="font-mono text-sm font-semibold text-[var(--color-primary)] leading-none">
                                     {prettyTime}
                                   </span>
                                 </div>
@@ -1757,7 +1755,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                               </div>
                             </div>
                             <div className="text-right pl-3 shrink-0">
-                              <div className="text-[#FF8C42] font-semibold text-lg">
+                              <div className="text-[var(--color-primary)] font-semibold text-lg">
                                 {formatCurrency(b.price)}
                               </div>
                               <div className="text-xs text-gray-400">
@@ -1853,9 +1851,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
               </div>
               <button
                 onClick={() => setShowProductsModal(false)}
-                className="w-8 h-8 rounded-lg bg-[#3A3A3A]/60 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors"
+                className="w-8 h-8 rounded-lg bg-[#3A3A3A]/60 hover:bg-[var(--color-primary)]/20 flex items-center justify-center transition-colors"
               >
-                <X className="w-4 h-4 text-gray-300 hover:text-[#FF8C42]" />
+                <X className="w-4 h-4 text-gray-300 hover:text-[var(--color-primary)]" />
               </button>
             </div>
 
@@ -2032,9 +2030,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
               </h2>
               <button
                 onClick={() => setShowServiceRatesModal(false)}
-                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center"
+                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center"
               >
-                <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+                <X className="w-4 h-4 text-gray-400 hover:text-[var(--color-primary)]" />
               </button>
             </div>
             <div className="p-6">
@@ -2076,7 +2074,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                   [svc._id]: e.target.value,
                                 }))
                               }
-                              className="w-28 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent text-right"
+                              className="w-28 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-right"
                             />
                           </td>
                         </tr>
@@ -2098,7 +2096,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                     savingServiceRates ||
                     Object.keys(serviceRateEdits).length === 0
                   }
-                  className="px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 disabled:opacity-50 text-sm"
+                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 disabled:opacity-50 text-sm"
                 >
                   {savingServiceRates ? "Saving…" : "Save All Changes"}
                 </button>
@@ -2185,9 +2183,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
               </div>
               <button
                 onClick={() => setShowProductRatesModal(false)}
-                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center"
+                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center"
               >
-                <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+                <X className="w-4 h-4 text-gray-400 hover:text-[var(--color-primary)]" />
               </button>
             </div>
             <div className="p-6">
@@ -2236,7 +2234,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                   },
                                 }))
                               }
-                              className="w-32 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                              className="w-32 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                             >
                               <option value="percentage">Percentage</option>
                               <option value="fixed_amount">Fixed Amount</option>
@@ -2262,7 +2260,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                   }))
                                 }
                                 placeholder={currentType === "percentage" ? "0-100" : "Amount"}
-                                className="w-24 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent text-right"
+                                className="w-24 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-right"
                               />
                             </div>
                           </td>
@@ -2285,7 +2283,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                     savingProductRates ||
                     Object.keys(productRateEdits).length === 0
                   }
-                  className="px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 disabled:opacity-50 text-sm"
+                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 disabled:opacity-50 text-sm"
                 >
                   {savingProductRates ? "Saving…" : "Save All Changes"}
                 </button>
@@ -2346,9 +2344,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
               </h2>
               <button
                 onClick={() => setShowDailyRatesModal(false)}
-                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center"
+                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center"
               >
-                <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+                <X className="w-4 h-4 text-gray-400 hover:text-[var(--color-primary)]" />
               </button>
             </div>
             <div className="p-6">
@@ -2393,7 +2391,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                   [b._id]: e.target.value,
                                 }))
                               }
-                              className="w-28 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent text-right"
+                              className="w-28 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-right"
                             />
                           </td>
                         </tr>
@@ -2414,7 +2412,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   disabled={
                     savingDailyRates || Object.keys(dailyRateEdits).length === 0
                   }
-                  className="px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 disabled:opacity-50 text-sm"
+                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 disabled:opacity-50 text-sm"
                 >
                   {savingDailyRates ? "Saving…" : "Save All Changes"}
                 </button>
@@ -2473,9 +2471,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   setShowPaymentModal(false);
                   setSelectedRecord(null);
                 }}
-                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors duration-200"
+                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center transition-colors duration-200"
               >
-                <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+                <X className="w-4 h-4 text-gray-400 hover:text-[var(--color-primary)]" />
               </button>
             </div>
             <div className="p-6">
@@ -2489,7 +2487,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-300">Net Pay:</span>
-                    <span className="text-lg font-bold text-[#FF8C42]">
+                    <span className="text-lg font-bold text-[var(--color-primary)]">
                       ₱{selectedRecord?.net_pay?.toLocaleString() || "0"}
                     </span>
                   </div>
@@ -2509,7 +2507,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                         payment_method: e.target.value,
                       }))
                     }
-                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     required
                   >
                     <option value="bank_transfer">Bank Transfer</option>
@@ -2533,7 +2531,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                       }))
                     }
                     placeholder="Transaction ID, check number, etc."
-                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                   />
                 </div>
 
@@ -2551,7 +2549,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                     }
                     placeholder="Additional notes about the payment..."
                     rows={3}
-                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent resize-none"
+                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none"
                   />
                 </div>
 
@@ -2570,7 +2568,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   <button
                     type="submit"
                     disabled={submittingPayment}
-                    className="flex-1 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {submittingPayment ? "Processing..." : "Mark as Paid"}
                   </button>
@@ -2601,9 +2599,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
         <div className="space-y-6">
           <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-8 text-center">
             <div className="flex justify-center mb-4">
-              <div className="p-4 bg-[#FF8C42]/20 rounded-full">
-                <Settings className="h-8 w-8 text-[#FF8C42]" />
-              </div>
+              <Settings className="h-8 w-8 text-[var(--color-primary)]" />
             </div>
             <h3 className="text-xl font-semibold text-white mb-2">
               Payroll Setup Required
@@ -2614,7 +2610,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
             </p>
             <button
               onClick={() => setShowSettings(true)}
-              className="px-6 py-3 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200 font-medium"
+              className="px-6 py-3 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-all duration-200 font-medium"
             >
               Configure Payroll Settings
             </button>
@@ -2627,7 +2623,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
             </h4>
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-[#FF8C42] text-white rounded-full flex items-center justify-center text-sm font-bold">
+                <div className="w-6 h-6 bg-[var(--color-primary)] text-white rounded-full flex items-center justify-center text-sm font-bold">
                   1
                 </div>
                 <span className="text-gray-300">
@@ -2635,7 +2631,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                 </span>
               </div>
               <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-[#FF8C42] text-white rounded-full flex items-center justify-center text-sm font-bold">
+                <div className="w-6 h-6 bg-[var(--color-primary)] text-white rounded-full flex items-center justify-center text-sm font-bold">
                   2
                 </div>
                 <span className="text-gray-300">
@@ -2643,7 +2639,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                 </span>
               </div>
               <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-[#FF8C42] text-white rounded-full flex items-center justify-center text-sm font-bold">
+                <div className="w-6 h-6 bg-[var(--color-primary)] text-white rounded-full flex items-center justify-center text-sm font-bold">
                   3
                 </div>
                 <span className="text-gray-300">
@@ -2684,16 +2680,14 @@ const PayrollManagement = ({ onRefresh, user }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-2 bg-[#FF8C42]/20 rounded-lg">
-                <Users className="h-6 w-6 text-[#FF8C42]" />
-              </div>
+              <Users className="h-6 w-6 text-[var(--color-primary)]" />
               <TrendingUp className="h-4 w-4 text-green-400" />
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium text-gray-300">
                 Active Barbers
               </p>
-              <p className="text-2xl font-bold text-[#FF8C42]">
+              <p className="text-2xl font-bold text-[var(--color-primary)]">
                 {overviewStats.totalBarbers}
               </p>
               <p className="text-xs text-green-400">Ready for payroll</p>
@@ -2702,9 +2696,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
 
           <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-2 bg-green-500/20 rounded-lg">
-                <DollarSign className="h-6 w-6 text-green-400" />
-              </div>
+              <DollarSign className="h-6 w-6 text-green-400" />
               <TrendingUp
                 className={`h-4 w-4 ${overviewStats.payoutTrend === "up" ? "text-green-400" : "text-red-400"}`}
               />
@@ -2713,7 +2705,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
               <p className="text-sm font-medium text-gray-300">
                 Current Period Payout
               </p>
-              <p className="text-2xl font-bold text-[#FF8C42]">
+              <p className="text-2xl font-bold text-[var(--color-primary)]">
                 {formatCurrency(overviewStats.currentPayout)}
               </p>
               <p
@@ -2727,16 +2719,14 @@ const PayrollManagement = ({ onRefresh, user }) => {
 
           <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-2 bg-yellow-500/20 rounded-lg">
-                <Clock className="h-6 w-6 text-yellow-400" />
-              </div>
+              <Clock className="h-6 w-6 text-yellow-400" />
               <AlertCircle className="h-4 w-4 text-yellow-400" />
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium text-gray-300">
                 Pending Payments
               </p>
-              <p className="text-2xl font-bold text-[#FF8C42]">
+              <p className="text-2xl font-bold text-[var(--color-primary)]">
                 {overviewStats.pendingPayments}
               </p>
               <p className="text-xs text-yellow-400">Require processing</p>
@@ -2745,16 +2735,14 @@ const PayrollManagement = ({ onRefresh, user }) => {
 
           <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-2 bg-blue-500/20 rounded-lg">
-                <Calculator className="h-6 w-6 text-blue-400" />
-              </div>
+              <Calculator className="h-6 w-6 text-blue-400" />
               <Check className="h-4 w-4 text-green-400" />
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium text-gray-300">
                 Average Commission
               </p>
-              <p className="text-2xl font-bold text-[#FF8C42]">
+              <p className="text-2xl font-bold text-[var(--color-primary)]">
                 {formatCurrency(overviewStats.averageCommission)}
               </p>
               <p className="text-xs text-gray-400">Per barber</p>
@@ -2777,7 +2765,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
               <button
                 onClick={handleOpenPeriodModal}
                 disabled={loading}
-                className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Plus className="h-4 w-4" />
                 <span>Create New Period</span>
@@ -2850,7 +2838,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                         </span>
                       </td>
                       <td className="py-4 px-4 text-right">
-                        <span className="text-[#FF8C42] font-bold">
+                        <span className="text-[var(--color-primary)] font-bold">
                           {formatCurrency(period.total_commissions)}
                         </span>
                       </td>
@@ -2876,7 +2864,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                               setSelectedPeriod(period);
                               setActiveView("period");
                             }}
-                            className="px-3 py-1 bg-[#FF8C42] text-white rounded text-xs hover:bg-[#FF8C42]/90 transition-colors"
+                            className="px-3 py-1 bg-[var(--color-primary)] text-white rounded text-xs hover:bg-[var(--color-primary)]/90 transition-colors"
                           >
                             View Details
                           </button>
@@ -2933,7 +2921,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                 <button
                   onClick={() => handleCalculatePayroll(selectedPeriod)}
                   disabled={loading}
-                  className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Calculator className="h-4 w-4" />
                   <span>
@@ -2966,7 +2954,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-[#1A1A1A] rounded-lg p-4">
               <div className="flex items-center space-x-2 mb-2">
-                <DollarSign className="h-4 w-4 text-[#FF8C42]" />
+                <DollarSign className="h-4 w-4 text-[var(--color-primary)]" />
                 <span className="text-sm text-gray-300">Total Earnings</span>
               </div>
               <p className="text-lg font-bold text-white">
@@ -2975,7 +2963,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
               <div className="mt-2 pt-2 border-t border-[#2A2A2A]/30 flex items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-1">
                   <span className="text-gray-400">Service</span>
-                  <span className="text-[#FF8C42] font-medium">
+                  <span className="text-[var(--color-primary)] font-medium">
                     {formatCurrency(selectedPeriod.total_service_revenue || 0)}
                   </span>
                 </div>
@@ -3059,7 +3047,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                     </div>
                     <div className="flex items-center space-x-4">
                       <div className="text-right">
-                        <p className="text-lg font-bold text-[#FF8C42]">
+                        <p className="text-lg font-bold text-[var(--color-primary)]">
                           {formatCurrency(record.net_pay)}
                         </p>
                         <p className="text-sm text-gray-400">Net Pay</p>
@@ -3113,7 +3101,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                               });
                               setShowPaymentModal(true);
                             }}
-                            className="px-3 py-1 bg-[#FF8C42] text-white rounded text-xs hover:bg-[#FF8C42]/90 transition-colors"
+                            className="px-3 py-1 bg-[var(--color-primary)] text-white rounded text-xs hover:bg-[var(--color-primary)]/90 transition-colors"
                           >
                             Mark Paid
                           </button>
@@ -3135,7 +3123,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                         {/* Service Earnings Breakdown */}
                         <div className="space-y-4">
                           <h5 className="text-sm font-medium text-gray-300 mb-3 flex items-center">
-                            <DollarSign className="w-4 h-4 mr-2 text-[#FF8C42]" />
+                            <DollarSign className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
                             Service Earnings
                           </h5>
                           <div className="space-y-2 text-sm">
@@ -3159,7 +3147,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                               <span className="text-gray-400">
                                 Service Commission:
                               </span>
-                              <span className="text-[#FF8C42] font-medium">
+                              <span className="text-[var(--color-primary)] font-medium">
                                 {formatCurrency(record.service_commission || (record.total_service_revenue * (record.commission_rate || 0) / 100))}
                               </span>
                             </div>
@@ -3307,7 +3295,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                             </div>
                             <div className="flex justify-between font-medium pt-2 border-t border-[#2A2A2A]/50">
                               <span className="text-white">Net Pay:</span>
-                              <span className="text-[#FF8C42] text-lg">
+                              <span className="text-[var(--color-primary)] text-lg">
                                 {formatCurrency(record.net_pay)}
                               </span>
                             </div>
@@ -3551,7 +3539,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
 
           <button
             onClick={handleExport}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200 text-sm font-medium shadow-lg shadow-[#FF8C42]/20"
+            className="flex items-center gap-1.5 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-all duration-200 text-sm font-medium shadow-lg shadow-[var(--color-primary)]/20"
             title="Export to CSV"
           >
             <Download className="h-4 w-4" />
@@ -3583,7 +3571,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
             onClick={() => setActiveView("overview")}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               activeView === "overview"
-                ? "bg-[#FF8C42] text-white"
+                ? "bg-[var(--color-primary)] text-white"
                 : "text-gray-300 hover:text-white hover:bg-[#1A1A1A]"
             }`}
           >
@@ -3594,7 +3582,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
               onClick={() => setActiveView("period")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                 activeView === "period"
-                  ? "bg-[#FF8C42] text-white"
+                  ? "bg-[var(--color-primary)] text-white"
                   : "text-gray-300 hover:text-white hover:bg-[#1A1A1A]"
               }`}
             >

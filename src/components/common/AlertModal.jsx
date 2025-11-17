@@ -49,9 +49,9 @@ const AlertModal = ({
   }
 
   const accentKey = getAccent()
-  const accentText = accentKey === 'brand' ? 'text-[#FF8C42]' : `text-${accentKey}-400`
-  const accentBorder = accentKey === 'brand' ? 'border-[#FF8C42]/50' : `border-${accentKey}-500/50`
-  const accentBg = accentKey === 'brand' ? 'bg-[#FF8C42]/20 hover:bg-[#FF8C42]/30' : `bg-${accentKey}-500/20 hover:bg-${accentKey}-500/30`
+  const accentText = accentKey === 'brand' ? 'text-[var(--color-primary)]' : `text-${accentKey}-400`
+  const accentBorder = accentKey === 'brand' ? 'border-[var(--color-primary)]/50' : `border-${accentKey}-500/50`
+  const accentBg = accentKey === 'brand' ? 'bg-[var(--color-primary)]/20 hover:bg-[var(--color-primary)]/30' : `bg-${accentKey}-500/20 hover:bg-${accentKey}-500/30`
 
   const getIcon = () => {
     if (icon) return icon
@@ -84,9 +84,9 @@ const AlertModal = ({
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 sm:top-6 sm:right-6 w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-[#2A2A2A] hover:bg-[#FF8C42]/10 flex items-center justify-center transition-colors duration-200"
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-[#2A2A2A] hover:bg-[var(--color-primary)]/10 flex items-center justify-center transition-colors duration-200"
           >
-            <X className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300 hover:text-[#FF8C42]" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300 hover:text-[var(--color-primary)]" />
           </button>
 
           {/* Icon */}
@@ -132,7 +132,7 @@ const AlertModal = ({
             {!isConfirm && (
               <button
                 onClick={onClose}
-                className="flex-1 px-4 py-2 sm:py-3 rounded-lg bg-[#FF8C42]/20 hover:bg-[#FF8C42]/30 text-[#FF8C42] border border-[#FF8C42]/50 font-semibold transition-all duration-200 text-sm sm:text-base"
+                className="flex-1 px-4 py-2 sm:py-3 rounded-lg bg-[var(--color-primary)]/20 hover:bg-[var(--color-primary)]/30 text-[var(--color-primary)] border border-[var(--color-primary)]/50 font-semibold transition-all duration-200 text-sm sm:text-base"
               >
                 OK
               </button>

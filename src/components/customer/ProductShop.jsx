@@ -143,13 +143,13 @@ const ProductShop = ({ onBack }) => {
             </button>
             <div className="text-center">
               <p className="text-lg font-bold text-white">Product Shop</p>
-              <p className="text-xs text-[#FF8C42]">
+              <p className="text-xs text-[var(--color-primary)]">
                 {filteredProducts.length} products
               </p>
             </div>
             <button
               onClick={() => setShowCart(!showCart)}
-              className="relative p-2 text-white rounded-xl bg-[#FF8C42] transition-colors duration-200"
+              className="relative p-2 text-white rounded-xl bg-[var(--color-primary)] transition-colors duration-200"
             >
               <ShoppingCart className="w-5 h-5" />
               {getCartItemCount() > 0 && (
@@ -172,7 +172,7 @@ const ProductShop = ({ onBack }) => {
               placeholder="Search products..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 rounded-xl bg-[#2A2A2A] border border-[#555555] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] transition-colors"
+              className="w-full pl-12 pr-4 py-3 rounded-xl bg-[#2A2A2A] border border-[#555555] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-colors"
             />
           </div>
         </div>
@@ -186,7 +186,7 @@ const ProductShop = ({ onBack }) => {
                 onClick={() => setSelectedCategory(category)}
                 className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200 ${
                   selectedCategory === category
-                    ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
+                    ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg'
                     : 'text-gray-400 bg-[#333333] border border-[#555555] hover:text-gray-300 hover:bg-[#444444]'
                 }`}
               >
@@ -215,7 +215,7 @@ const ProductShop = ({ onBack }) => {
               return (
                 <div
                   key={product._id}
-                  className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-[#555555]/30 cursor-pointer transition-all duration-200 hover:scale-105 hover:border-[#FF8C42]/50"
+                  className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-[#555555]/30 cursor-pointer transition-all duration-200 hover:scale-105 hover:border-[var(--color-primary)]/50"
                   onClick={() => handleProductClick(product)}
                 >
                   <ProductImage 
@@ -232,7 +232,7 @@ const ProductShop = ({ onBack }) => {
                     
                     <div className="flex items-center justify-between mt-2">
                       <div>
-                        <p className="text-lg font-bold text-[#FF8C42]">
+                        <p className="text-lg font-bold text-[var(--color-primary)]">
                           ₱{product.price.toLocaleString()}
                         </p>
                         <p className="text-xs text-gray-500">
@@ -249,7 +249,7 @@ const ProductShop = ({ onBack }) => {
                             e.stopPropagation()
                             addToCart(product)
                           }}
-                          className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white font-medium text-sm transition-colors duration-200 hover:from-[#FF7A2B] hover:to-[#FF6B1A]"
+                          className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-medium text-sm transition-colors duration-200 hover:from-[var(--color-accent)] hover:brightness-110"
                         >
                           Add to Cart
                         </button>
@@ -260,7 +260,7 @@ const ProductShop = ({ onBack }) => {
                               e.stopPropagation()
                               removeFromCart(product._id)
                             }}
-                            className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center text-white"
+                            className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white"
                           >
                             <Minus className="w-4 h-4" />
                           </button>
@@ -271,7 +271,7 @@ const ProductShop = ({ onBack }) => {
                               addToCart(product)
                             }}
                             disabled={quantityInCart >= product.stock}
-                            className="w-8 h-8 rounded-full bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center text-white disabled:opacity-50"
+                            className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white disabled:opacity-50"
                           >
                             <Plus className="w-4 h-4" />
                           </button>
@@ -355,7 +355,7 @@ const ProductShop = ({ onBack }) => {
                       </span>
                     </div>
                     <button
-                      className="w-full py-3 rounded-lg text-white font-bold transition-colors duration-200 bg-[#FF8C42] hover:bg-[#FF7A2B]"
+                      className="w-full py-3 rounded-lg text-white font-bold transition-colors duration-200 bg-[var(--color-primary)] hover:bg-[var(--color-accent)]"
                       onClick={() => {
                         // TODO: Implement checkout functionality
                         alert('Checkout functionality coming soon!')

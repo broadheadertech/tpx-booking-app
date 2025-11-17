@@ -398,9 +398,9 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
             <h2 className="text-lg font-bold text-white">{editingBarber ? 'Edit Barber' : 'Create New Barber'}</h2>
             <button
               onClick={handleClose}
-              className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors duration-200"
+              className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center transition-colors duration-200"
             >
-              <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+              <X className="w-4 h-4 text-gray-400 hover:text-[var(--color-primary)]" />
             </button>
           </div>
           <div className="max-h-[calc(95vh-120px)] overflow-y-auto">
@@ -452,7 +452,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide flex items-center">
-                    <User className="w-4 h-4 mr-2 text-[#FF8C42]" />
+                    <User className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
                     {editingBarber ? 'Personal Info' : 'Account & Personal Info'}
                   </h3>
 
@@ -468,7 +468,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                     onChange={(e) => handleInputChange('username', e.target.value)}
                     placeholder="Enter username for login"
                     required
-                    className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all duration-200"
+                    className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
                   />
                 </div>
 
@@ -482,7 +482,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                     onChange={(e) => handleInputChange('password', e.target.value)}
                     placeholder="Enter password for login"
                     required
-                    className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all duration-200"
+                    className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
                   />
                 </div>
 
@@ -498,7 +498,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                       onChange={(e) => handleInputChange('mobile_number', e.target.value)}
                       placeholder="+63 XXX XXX XXXX"
                       required
-                      className="w-full h-9 pl-9 pr-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all duration-200"
+                      className="w-full h-9 pl-9 pr-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
                     />
                   </div>
                 </div>
@@ -515,7 +515,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                 onChange={(e) => handleInputChange('full_name', e.target.value)}
                 placeholder="Enter barber's full name"
                 required
-                className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all duration-200"
+                className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
               />
             </div>
 
@@ -531,7 +531,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   placeholder="barber@example.com"
                   required
-                  className="w-full h-9 pl-9 pr-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all duration-200"
+                  className="w-full h-9 pl-9 pr-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
                 />
               </div>
             </div>
@@ -548,7 +548,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                     value={formData.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value)}
                     placeholder="+63 XXX XXX XXXX"
-                    className="w-full h-9 pl-9 pr-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all duration-200"
+                    className="w-full h-9 pl-9 pr-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
                   />
                 </div>
               </div>
@@ -564,7 +564,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                   value={formData.newPassword}
                   onChange={(e) => handleInputChange('newPassword', e.target.value)}
                   placeholder="Enter new password (leave empty to keep current)"
-                  className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all duration-200"
+                  className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
                 />
                 <p className="text-xs text-gray-400 mt-1">
                   Leave empty to keep the current password unchanged
@@ -581,7 +581,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                 value={formData.experience}
                 onChange={(e) => handleInputChange('experience', e.target.value)}
                 placeholder="e.g., 5 years"
-                className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all duration-200"
+                className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
               />
             </div>
 
@@ -619,7 +619,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                   )}
                 </div>
                 <div className="flex-1">
-                  <label className="flex items-center justify-center px-3 py-2 border border-[#FF8C42] text-[#FF8C42] rounded-lg hover:bg-[#FF8C42] hover:text-white transition-colors cursor-pointer">
+                  <label className="flex items-center justify-center px-3 py-2 border border-[var(--color-primary)] text-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary)] hover:text-white transition-colors cursor-pointer">
                     <Camera className="w-4 h-4 mr-2" />
                     <span className="text-xs font-medium">
                       {formData.avatarStorageId || formData.avatar ? 'Change Photo' : 'Upload Photo'}
@@ -650,7 +650,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                     name="is_active"
                     checked={formData.is_active === true}
                     onChange={() => handleInputChange('is_active', true)}
-                    className="h-4 w-4 text-[#FF8C42] focus:ring-[#FF8C42] border-gray-300"
+                    className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300"
                   />
                   <span className="ml-2 text-gray-300 font-medium">Active</span>
                 </label>
@@ -660,7 +660,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                     name="is_active"
                     checked={formData.is_active === false}
                     onChange={() => handleInputChange('is_active', false)}
-                    className="h-4 w-4 text-[#FF8C42] focus:ring-[#FF8C42] border-gray-300"
+                    className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300"
                   />
                   <span className="ml-2 text-gray-300 font-medium">Inactive</span>
                 </label>
@@ -670,7 +670,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
 
           <div className="space-y-4">
             <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide flex items-center">
-              <Scissors className="w-4 h-4 mr-2 text-[#FF8C42]" />
+              <Scissors className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
               Services & Skills
             </h3>
 
@@ -696,7 +696,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                               : prev.services.filter(id => id !== serviceId)
                           }))
                         }}
-                        className="h-4 w-4 text-[#FF8C42] focus:ring-[#FF8C42] rounded border-gray-300"
+                        className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] rounded border-gray-300"
                       />
                       <span className="ml-2 text-sm text-gray-300">
                         {service.name} - ₱{parseFloat(service.price).toFixed(2)}
@@ -713,7 +713,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-gray-300 font-medium text-sm flex items-center">
-                  <Clock className="w-4 h-4 mr-2 text-[#FF8C42]" />
+                  <Clock className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
                   Work Schedule
                 </label>
                 <div className="flex items-center space-x-2">
@@ -753,7 +753,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                               type="checkbox"
                               checked={daySchedule.available}
                               onChange={(e) => handleScheduleChange(day, 'available', e.target.checked)}
-                              className="h-4 w-4 text-[#FF8C42] focus:ring-[#FF8C42] rounded"
+                              className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] rounded"
                             />
                             <span className="text-sm capitalize font-medium text-white">
                               {day}
@@ -783,7 +783,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                               <select
                                 value={daySchedule.start}
                                 onChange={(e) => handleScheduleChange(day, 'start', e.target.value)}
-                                className="w-full px-2 py-1 bg-[#1A1A1A] border border-[#444444] text-white rounded text-xs focus:ring-1 focus:ring-[#FF8C42]"
+                                className="w-full px-2 py-1 bg-[#1A1A1A] border border-[#444444] text-white rounded text-xs focus:ring-1 focus:ring-[var(--color-primary)]"
                               >
                                 {timeOptions.map(time => (
                                   <option key={time.value} value={time.value}>{time.label}</option>
@@ -795,7 +795,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                               <select
                                 value={daySchedule.end}
                                 onChange={(e) => handleScheduleChange(day, 'end', e.target.value)}
-                                className="w-full px-2 py-1 bg-[#1A1A1A] border border-[#444444] text-white rounded text-xs focus:ring-1 focus:ring-[#FF8C42]"
+                                className="w-full px-2 py-1 bg-[#1A1A1A] border border-[#444444] text-white rounded text-xs focus:ring-1 focus:ring-[var(--color-primary)]"
                               >
                                 {timeOptions.map(time => (
                                   <option key={time.value} value={time.value}>{time.label}</option>
@@ -828,7 +828,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                   <button
                     type="submit"
                     disabled={loading || !services}
-                    className="flex-1 px-4 py-2.5 bg-[#FF8C42] text-white rounded-lg text-sm font-medium hover:bg-[#FF8C42]/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-2.5 bg-[var(--color-primary)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-primary)]/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Saving...' : (editingBarber ? 'Update Barber' : 'Create Barber')}
                   </button>

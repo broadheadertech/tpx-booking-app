@@ -769,7 +769,7 @@ const POS = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#F5F5F5] to-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF8C42] mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)] mx-auto mb-4"></div>
           <p className="text-gray-600">Loading POS system...</p>
         </div>
       </div>
@@ -791,22 +791,22 @@ const POS = () => {
               </Link>
               
               <div className="flex items-center space-x-2 flex-1 min-w-0">
-                <div className="w-9 h-9 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg flex items-center justify-center flex-shrink-0">
                   <CreditCard className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h1 className="text-sm font-bold text-white truncate">POS System</h1>
-                  <p className="text-[10px] text-[#FF8C42]">Point of Sale</p>
+                  <p className="text-[10px] text-[var(--color-primary)]">Point of Sale</p>
                 </div>
               </div>
 
               <button
                 onClick={() => setShowMobileCart(!showMobileCart)}
-                className="relative w-9 h-9 bg-[#FF8C42]/20 rounded-lg flex items-center justify-center border border-[#FF8C42]/30"
+                className="relative w-9 h-9 bg-[var(--color-primary)]/20 rounded-lg flex items-center justify-center border border-[var(--color-primary)]/30"
               >
-                <Receipt className="w-4 h-4 text-[#FF8C42]" />
+                <Receipt className="w-4 h-4 text-[var(--color-primary)]" />
                 {totalItems > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#FF8C42] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-[var(--color-primary)] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                     {totalItems}
                   </span>
                 )}
@@ -824,7 +824,7 @@ const POS = () => {
               className="w-full px-4 py-3 flex items-center justify-between"
             >
               <div className="flex items-center space-x-3">
-                <Scissors className="w-5 h-5 text-[#FF8C42]" />
+                <Scissors className="w-5 h-5 text-[var(--color-primary)]" />
                 <div className="text-left">
                   <h3 className="text-sm font-bold text-white">
                     {selectedBarber ? selectedBarber.full_name : 'Select Barber'}
@@ -835,7 +835,7 @@ const POS = () => {
                 </div>
               </div>
               {selectedBarber ? (
-                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#FF8C42]/30">
+                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[var(--color-primary)]/30">
                   <BarberAvatar barber={selectedBarber} className="w-10 h-10" />
                 </div>
               ) : (
@@ -854,11 +854,11 @@ const POS = () => {
                     }}
                     className={`p-3 rounded-lg border transition-all ${
                       selectedBarber?._id === barber._id
-                        ? 'border-[#FF8C42] bg-[#FF8C42]/10'
-                        : 'border-[#555555] hover:border-[#FF8C42]/50'
+                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
+                        : 'border-[#555555] hover:border-[var(--color-primary)]/50'
                     }`}
                   >
-                    <div className="w-12 h-12 rounded-full overflow-hidden mx-auto mb-2 border-2 border-[#FF8C42]/30">
+                    <div className="w-12 h-12 rounded-full overflow-hidden mx-auto mb-2 border-2 border-[var(--color-primary)]/30">
                       <BarberAvatar barber={barber} className="w-12 h-12" />
                     </div>
                     <p className="text-[10px] font-semibold text-white text-center truncate">{barber.full_name}</p>
@@ -875,7 +875,7 @@ const POS = () => {
               className="w-full px-4 py-3 flex items-center justify-between"
             >
               <div className="flex items-center space-x-3">
-                <User className="w-5 h-5 text-[#FF8C42]" />
+                <User className="w-5 h-5 text-[var(--color-primary)]" />
                 <div className="text-left">
                   <h3 className="text-sm font-bold text-white">
                     {currentTransaction.customer?.username || currentTransaction.customer_name || 'Select Customer'}
@@ -914,7 +914,7 @@ const POS = () => {
                     setActiveModal('customerSelection')
                     setExpandedSection(null)
                   }}
-                  className="w-full p-3 border-2 border-dashed border-[#555555] rounded-lg hover:border-[#FF8C42] hover:bg-[#FF8C42]/10 flex items-center justify-center space-x-2 text-gray-400"
+                  className="w-full p-3 border-2 border-dashed border-[#555555] rounded-lg hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 flex items-center justify-center space-x-2 text-gray-400"
                 >
                   <User className="w-4 h-4" />
                   <span className="text-sm font-medium">Select Existing</span>
@@ -969,10 +969,10 @@ const POS = () => {
 
           {/* Current Booking Badge */}
           {currentBooking && (
-            <div className="bg-gradient-to-r from-[#FF8C42]/20 to-[#FF7A2B]/20 border border-[#FF8C42]/30 rounded-xl p-3">
+            <div className="bg-gradient-to-r from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 border border-[var(--color-primary)]/30 rounded-xl p-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <Receipt className="w-4 h-4 text-[#FF8C42]" />
+                  <Receipt className="w-4 h-4 text-[var(--color-primary)]" />
                   <div>
                     <p className="text-xs font-bold text-white">Booking #{currentBooking.booking_code}</p>
                     <p className="text-[10px] text-gray-400">Processing payment</p>
@@ -1010,7 +1010,7 @@ const POS = () => {
               }}
               className={`flex-1 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${
                 activeTab === 'services'
-                  ? 'bg-[#FF8C42] text-white'
+                  ? 'bg-[var(--color-primary)] text-white'
                   : 'text-gray-400'
               }`}
             >
@@ -1025,7 +1025,7 @@ const POS = () => {
               }}
               className={`flex-1 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${
                 activeTab === 'products'
-                  ? 'bg-[#FF8C42] text-white'
+                  ? 'bg-[var(--color-primary)] text-white'
                   : 'text-gray-400'
               }`}
             >
@@ -1064,7 +1064,7 @@ const POS = () => {
                           <button
                             key={service._id}
                             onClick={() => addService(service)}
-                            className="w-full p-4 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl border border-[#444444]/50 text-left hover:border-[#FF8C42] transition-all"
+                            className="w-full p-4 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl border border-[#444444]/50 text-left hover:border-[var(--color-primary)] transition-all"
                           >
                             <div className="flex items-start justify-between">
                               <div className="flex-1 min-w-0">
@@ -1073,14 +1073,14 @@ const POS = () => {
                                   <p className="text-xs text-gray-400 line-clamp-1 mb-2">{service.description}</p>
                                 )}
                                 <div className="flex items-center space-x-3">
-                                  <span className="text-base font-bold text-[#FF8C42]">₱{service.price}</span>
+                                  <span className="text-base font-bold text-[var(--color-primary)]">₱{service.price}</span>
                                   {service.duration_minutes && (
                                     <span className="text-xs text-gray-500">{service.duration_minutes} min</span>
                                   )}
                                 </div>
                               </div>
-                              <div className="ml-3 w-10 h-10 bg-[#FF8C42]/20 rounded-full flex items-center justify-center flex-shrink-0">
-                                <Plus className="w-5 h-5 text-[#FF8C42]" />
+                              <div className="ml-3 w-10 h-10 bg-[var(--color-primary)]/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                <Plus className="w-5 h-5 text-[var(--color-primary)]" />
                               </div>
                             </div>
                           </button>
@@ -1100,7 +1100,7 @@ const POS = () => {
                 <button
                   key={product._id}
                   onClick={() => addProduct(product)}
-                  className="w-full p-4 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl border border-[#444444]/50 text-left hover:border-[#FF8C42] transition-all"
+                  className="w-full p-4 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl border border-[#444444]/50 text-left hover:border-[var(--color-primary)] transition-all"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
@@ -1109,7 +1109,7 @@ const POS = () => {
                         <p className="text-xs text-gray-400 line-clamp-1 mb-2">{product.description}</p>
                       )}
                       <div className="flex items-center space-x-3">
-                        <span className="text-base font-bold text-[#FF8C42]">₱{product.price}</span>
+                        <span className="text-base font-bold text-[var(--color-primary)]">₱{product.price}</span>
                         <span className="text-xs text-gray-500">Stock: {product.stock}</span>
                       </div>
                     </div>
@@ -1154,7 +1154,7 @@ const POS = () => {
                       <span className="w-6 text-center font-semibold text-white text-sm">{service.quantity}</span>
                       <button
                         onClick={() => updateQuantity('services', index, 1)}
-                        className="w-7 h-7 bg-[#FF8C42] rounded-full flex items-center justify-center"
+                        className="w-7 h-7 bg-[var(--color-primary)] rounded-full flex items-center justify-center"
                       >
                         <Plus className="w-3.5 h-3.5 text-white" />
                       </button>
@@ -1232,7 +1232,7 @@ const POS = () => {
             <button
               onClick={openPaymentModal}
               disabled={!selectedBarber || totalItems === 0}
-              className="py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white font-bold rounded-xl hover:from-[#FF7A2B] hover:to-[#E67E37] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
+              className="py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-bold rounded-xl hover:from-[var(--color-accent)] hover:to-[var(--color-accent)] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
             >
               <CreditCard className="w-4 h-4" />
               <span>Pay Now</span>
@@ -1430,12 +1430,12 @@ const POS = () => {
             <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
               <Link
                 to="/staff"
-                className="w-8 h-8 sm:w-10 sm:h-10 bg-[#0A0A0A] rounded-lg sm:rounded-xl flex items-center justify-center hover:bg-[#FF8C42]/10 transition-all duration-200 border border-[#1A1A1A]/50 flex-shrink-0 ring-1 ring-[#FF8C42]/20 group"
+                className="w-8 h-8 sm:w-10 sm:h-10 bg-[#0A0A0A] rounded-lg sm:rounded-xl flex items-center justify-center hover:bg-[var(--color-primary)]/10 transition-all duration-200 border border-[#1A1A1A]/50 flex-shrink-0 ring-1 ring-[var(--color-primary)]/20 group"
                 title="Back to Dashboard"
               >
-                <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 group-hover:text-[#FF8C42] transition-colors duration-200" />
+                <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 group-hover:text-[var(--color-primary)] transition-colors duration-200" />
               </Link>
-              <div className="w-8 h-8 sm:w-11 sm:h-11 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg ring-1 ring-[#FF8C42]/20 p-1.5 border border-[#1A1A1A]/50 flex-shrink-0">
+              <div className="w-8 h-8 sm:w-11 sm:h-11 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg ring-1 ring-[var(--color-primary)]/20 p-1.5 border border-[#1A1A1A]/50 flex-shrink-0">
                 <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
               <div className="min-w-0 flex-1">
@@ -1444,12 +1444,12 @@ const POS = () => {
                     <span className="hidden sm:inline">POS System</span>
                     <span className="sm:hidden">POS</span>
                   </h1>
-                  <div className="bg-[#FF8C42]/15 backdrop-blur-sm rounded-md px-1.5 py-0.5 border border-[#FF8C42]/25 flex-shrink-0">
-                    <span className="text-[10px] font-semibold text-[#FF8C42]">v{APP_VERSION}</span>
+                  <div className="bg-[var(--color-primary)]/15 backdrop-blur-sm rounded-md px-1.5 py-0.5 border border-[var(--color-primary)]/25 flex-shrink-0">
+                    <span className="text-[10px] font-semibold text-[var(--color-primary)]">v{APP_VERSION}</span>
                   </div>
                 </div>
                 <div className="flex items-center space-x-1 sm:space-x-1.5 mt-0.5">
-                  <p className="text-[10px] sm:text-xs font-medium text-[#FF8C42]">Point of Sale</p>
+                  <p className="text-[10px] sm:text-xs font-medium text-[var(--color-primary)]">Point of Sale</p>
                   {currentBranch && (
                     <>
                       <span className="text-gray-600 text-xs hidden sm:inline">•</span>
@@ -1513,12 +1513,12 @@ const POS = () => {
                     onClick={() => setSelectedBarber(barber)}
                     className={`p-3 rounded-xl border-2 transition-all duration-200 ${
                       selectedBarber?._id === barber._id
-                        ? 'border-[#FF8C42] bg-[#FF8C42]/10 text-[#FF8C42]'
-                        : 'border-[#555555] hover:border-[#FF8C42]/50 text-gray-300 hover:text-[#FF8C42]'
+                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                        : 'border-[#555555] hover:border-[var(--color-primary)]/50 text-gray-300 hover:text-[var(--color-primary)]'
                     }`}
                   >
                     <div className="text-center">
-                      <div className="w-10 h-10 rounded-full overflow-hidden mx-auto mb-2 border-2 border-[#FF8C42]/30">
+                      <div className="w-10 h-10 rounded-full overflow-hidden mx-auto mb-2 border-2 border-[var(--color-primary)]/30">
                         <BarberAvatar barber={barber} className="w-10 h-10" />
                       </div>
                       <p className="text-sm font-semibold">{barber.full_name}</p>
@@ -1542,8 +1542,8 @@ const POS = () => {
                       }}
                       className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
                         activeTab === 'services'
-                          ? 'bg-[#FF8C42] text-white shadow-lg'
-                          : 'text-gray-400 hover:text-[#FF8C42]'
+                          ? 'bg-[var(--color-primary)] text-white shadow-lg'
+                          : 'text-gray-400 hover:text-[var(--color-primary)]'
                       }`}
                     >
                       <Scissors className="w-4 h-4 inline mr-2" />
@@ -1557,8 +1557,8 @@ const POS = () => {
                       }}
                       className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
                         activeTab === 'products'
-                          ? 'bg-[#FF8C42] text-white shadow-lg'
-                          : 'text-gray-400 hover:text-[#FF8C42]'
+                          ? 'bg-[var(--color-primary)] text-white shadow-lg'
+                          : 'text-gray-400 hover:text-[var(--color-primary)]'
                       }`}
                     >
                       <Package className="w-4 h-4 inline mr-2" />
@@ -1574,8 +1574,8 @@ const POS = () => {
                         onClick={() => setViewMode('card')}
                         className={`p-2 rounded-md transition-all duration-200 ${
                           viewMode === 'card'
-                            ? 'bg-[#FF8C42] text-white'
-                            : 'text-gray-400 hover:text-[#FF8C42]'
+                            ? 'bg-[var(--color-primary)] text-white'
+                            : 'text-gray-400 hover:text-[var(--color-primary)]'
                         }`}
                         title="Card View"
                       >
@@ -1585,8 +1585,8 @@ const POS = () => {
                         onClick={() => setViewMode('table')}
                         className={`p-2 rounded-md transition-all duration-200 ${
                           viewMode === 'table'
-                            ? 'bg-[#FF8C42] text-white'
-                            : 'text-gray-400 hover:text-[#FF8C42]'
+                            ? 'bg-[var(--color-primary)] text-white'
+                            : 'text-gray-400 hover:text-[var(--color-primary)]'
                         }`}
                         title="Table View"
                       >
@@ -1605,7 +1605,7 @@ const POS = () => {
                       placeholder={`Search ${activeTab}...`}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                      className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                     />
                   </div>
 
@@ -1648,17 +1648,17 @@ const POS = () => {
                                   <button
                                     key={service._id}
                                     onClick={() => addService(service)}
-                                    className="p-4 bg-[#1A1A1A] border border-[#555555] rounded-xl hover:border-[#FF8C42] hover:bg-[#FF8C42]/5 transition-all duration-200 text-left group"
+                                    className="p-4 bg-[#1A1A1A] border border-[#555555] rounded-xl hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all duration-200 text-left group"
                                   >
                                     <div className="flex items-center justify-between mb-2">
-                                      <h4 className="font-semibold text-white group-hover:text-[#FF8C42]">{service.name}</h4>
-                                      <Plus className="w-4 h-4 text-gray-400 group-hover:text-[#FF8C42]" />
+                                      <h4 className="font-semibold text-white group-hover:text-[var(--color-primary)]">{service.name}</h4>
+                                      <Plus className="w-4 h-4 text-gray-400 group-hover:text-[var(--color-primary)]" />
                                     </div>
                                     {service.description && (
                                       <p className="text-sm text-gray-400 mb-2">{service.description}</p>
                                     )}
                                     <div className="flex items-center justify-between">
-                                      <span className="text-lg font-bold text-[#FF8C42]">₱{service.price}</span>
+                                      <span className="text-lg font-bold text-[var(--color-primary)]">₱{service.price}</span>
                                       {service.duration_minutes && (
                                         <span className="text-xs text-gray-500">{service.duration_minutes} min</span>
                                       )}
@@ -1686,12 +1686,12 @@ const POS = () => {
                                       >
                                         <td className="px-4 py-3 text-sm font-medium text-white">{service.name}</td>
                                         <td className="px-4 py-3 text-sm text-gray-400 max-w-xs truncate">{service.description || '-'}</td>
-                                        <td className="px-4 py-3 text-sm font-bold text-[#FF8C42]">₱{service.price}</td>
+                                        <td className="px-4 py-3 text-sm font-bold text-[var(--color-primary)]">₱{service.price}</td>
                                         <td className="px-4 py-3 text-sm text-gray-500">{service.duration_minutes || '-'} min</td>
                                         <td className="px-4 py-3 text-center">
                                           <button
                                             onClick={() => addService(service)}
-                                            className="px-3 py-1 bg-[#FF8C42] text-white text-sm rounded-lg hover:bg-[#E67E22] transition-colors flex items-center justify-center space-x-1 mx-auto"
+                                            className="px-3 py-1 bg-[var(--color-primary)] text-white text-sm rounded-lg hover:brightness-90 transition-colors flex items-center justify-center space-x-1 mx-auto"
                                           >
                                             <Plus className="w-3 h-3" />
                                             <span>Add</span>
@@ -1720,17 +1720,17 @@ const POS = () => {
                       <button
                         key={product._id}
                         onClick={() => addProduct(product)}
-                        className="p-4 bg-[#1A1A1A] border border-[#555555] rounded-xl hover:border-[#FF8C42] hover:bg-[#FF8C42]/5 transition-all duration-200 text-left group"
+                        className="p-4 bg-[#1A1A1A] border border-[#555555] rounded-xl hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all duration-200 text-left group"
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold text-white group-hover:text-[#FF8C42]">{product.name}</h4>
-                          <Plus className="w-4 h-4 text-gray-400 group-hover:text-[#FF8C42]" />
+                          <h4 className="font-semibold text-white group-hover:text-[var(--color-primary)]">{product.name}</h4>
+                          <Plus className="w-4 h-4 text-gray-400 group-hover:text-[var(--color-primary)]" />
                         </div>
                         {product.description && (
                           <p className="text-sm text-gray-400 mb-2">{product.description}</p>
                         )}
                         <div className="flex items-center justify-between">
-                          <span className="text-lg font-bold text-[#FF8C42]">₱{product.price}</span>
+                          <span className="text-lg font-bold text-[var(--color-primary)]">₱{product.price}</span>
                           <span className="text-xs text-gray-500">Stock: {product.stock}</span>
                         </div>
                       </button>
@@ -1757,12 +1757,12 @@ const POS = () => {
                           >
                             <td className="px-4 py-3 text-sm font-medium text-white">{item.name}</td>
                             <td className="px-4 py-3 text-sm text-gray-400 max-w-xs truncate">{item.description || '-'}</td>
-                            <td className="px-4 py-3 text-sm font-bold text-[#FF8C42]">₱{item.price}</td>
+                            <td className="px-4 py-3 text-sm font-bold text-[var(--color-primary)]">₱{item.price}</td>
                             <td className="px-4 py-3 text-sm text-gray-500">{item.stock}</td>
                             <td className="px-4 py-3 text-center">
                               <button
                                 onClick={() => addProduct(item)}
-                                className="px-3 py-1 bg-[#FF8C42] text-white text-sm rounded-lg hover:bg-[#E67E22] transition-colors flex items-center justify-center space-x-1 mx-auto"
+                                className="px-3 py-1 bg-[var(--color-primary)] text-white text-sm rounded-lg hover:brightness-90 transition-colors flex items-center justify-center space-x-1 mx-auto"
                               >
                                 <Plus className="w-3 h-3" />
                                 <span>Add</span>
@@ -1810,7 +1810,7 @@ const POS = () => {
                           onClick={() => handlePageChange(pageNum)}
                           className={`px-3 py-2 text-sm rounded-lg transition-colors ${
                             currentPage === pageNum
-                              ? 'bg-[#FF8C42] text-white'
+                              ? 'bg-[var(--color-primary)] text-white'
                               : 'bg-[#1A1A1A] border border-[#555555] text-gray-400 hover:bg-[#333333] hover:text-white'
                           }`}
                         >
@@ -1848,7 +1848,7 @@ const POS = () => {
                   </button>
                   <button
                     onClick={() => setActiveModal('customerSelection')}
-                    className="p-2 bg-[#FF8C42]/20 text-[#FF8C42] rounded-lg hover:bg-[#FF8C42]/30 transition-colors border border-[#FF8C42]/30"
+                    className="p-2 bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary)]/30 transition-colors border border-[var(--color-primary)]/30"
                     title="Select Customer"
                   >
                     <User className="w-4 h-4" />
@@ -1916,7 +1916,7 @@ const POS = () => {
                       placeholder="Enter customer full name"
                       value={currentTransaction.customer_name || ''}
                       onChange={(e) => setCurrentTransaction(prev => ({ ...prev, customer_name: e.target.value }))}
-                      className="px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                      className="px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                       required
                       autoFocus
                     />
@@ -1925,14 +1925,14 @@ const POS = () => {
                       placeholder="Phone Number"
                       value={currentTransaction.customer_phone}
                       onChange={(e) => setCurrentTransaction(prev => ({ ...prev, customer_phone: e.target.value }))}
-                      className="px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                      className="px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                     />
                     <input
                       type="email"
                       placeholder="Email Address (for account creation)"
                       value={currentTransaction.customer_email}
                       onChange={(e) => setCurrentTransaction(prev => ({ ...prev, customer_email: e.target.value }))}
-                      className="px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                      className="px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                     />
                   </div>
                   
@@ -1951,7 +1951,7 @@ const POS = () => {
                 <div className="space-y-3">
                   <button
                     onClick={() => setActiveModal('customerSelection')}
-                    className="w-full p-4 border-2 border-dashed border-[#555555] rounded-lg hover:border-[#FF8C42] hover:bg-[#FF8C42]/10 transition-all duration-200 flex items-center justify-center space-x-2 text-gray-400 hover:text-[#FF8C42]"
+                    className="w-full p-4 border-2 border-dashed border-[#555555] rounded-lg hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all duration-200 flex items-center justify-center space-x-2 text-gray-400 hover:text-[var(--color-primary)]"
                   >
                     <User className="w-5 h-5" />
                     <span className="font-medium">Select Existing Customer</span>
@@ -1974,14 +1974,14 @@ const POS = () => {
             {currentBooking && (
               <div className="mt-4">
                 <h3 className="text-lg font-bold text-white mb-3 flex items-center">
-                  <Receipt className="w-5 h-5 mr-2 text-[#FF8C42]" />
+                  <Receipt className="w-5 h-5 mr-2 text-[var(--color-primary)]" />
                   Booking Information
                 </h3>
                 <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl shadow-lg border border-[#444444]/50 p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-[#FF8C42]/20 to-[#FF7A2B]/20 rounded-lg flex items-center justify-center border-2 border-[#FF8C42]/30">
-                        <Receipt className="w-5 h-5 text-[#FF8C42]" />
+                      <div className="w-12 h-12 bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 rounded-lg flex items-center justify-center border-2 border-[var(--color-primary)]/30">
+                        <Receipt className="w-5 h-5 text-[var(--color-primary)]" />
                       </div>
                       <div>
                         <p className="font-bold text-white text-base">#{currentBooking.booking_code}</p>
@@ -1993,9 +1993,9 @@ const POS = () => {
                       </div>
                     </div>
                     <div className="flex flex-col items-end space-y-2">
-                      <div className="inline-flex items-center px-2 py-1 bg-[#FF8C42]/20 border border-[#FF8C42]/30 rounded-md">
-                        <div className="w-1.5 h-1.5 bg-[#FF8C42] rounded-full animate-pulse mr-1.5"></div>
-                        <span className="text-xs font-medium text-[#FF8C42]">Processing</span>
+                      <div className="inline-flex items-center px-2 py-1 bg-[var(--color-primary)]/20 border border-[var(--color-primary)]/30 rounded-md">
+                        <div className="w-1.5 h-1.5 bg-[var(--color-primary)] rounded-full animate-pulse mr-1.5"></div>
+                        <span className="text-xs font-medium text-[var(--color-primary)]">Processing</span>
                       </div>
                       <button
                         onClick={handleCancelBookingAttachment}
@@ -2044,7 +2044,7 @@ const POS = () => {
                       <span className="w-8 text-center font-semibold text-white">{service.quantity}</span>
                       <button
                         onClick={() => updateQuantity('services', index, 1)}
-                        className="w-6 h-6 bg-[#FF8C42] rounded-full flex items-center justify-center hover:bg-[#FF7A2B] text-white transition-colors"
+                        className="w-6 h-6 bg-[var(--color-primary)] rounded-full flex items-center justify-center hover:bg-[var(--color-accent)] text-white transition-colors"
                       >
                         <Plus className="w-3 h-3" />
                       </button>
@@ -2090,13 +2090,13 @@ const POS = () => {
             {selectedBarber && (
               <div className="mt-4">
                 <h3 className="text-lg font-bold text-white mb-3 flex items-center">
-                  <Scissors className="w-5 h-5 mr-2 text-[#FF8C42]" />
+                  <Scissors className="w-5 h-5 mr-2 text-[var(--color-primary)]" />
                   Selected Barber
                 </h3>
                 <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl shadow-lg border border-[#444444]/50 p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#FF8C42]/30">
+                      <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[var(--color-primary)]/30">
                         <BarberAvatar barber={selectedBarber} className="w-10 h-10" />
                       </div>
                       <div>
@@ -2147,7 +2147,7 @@ const POS = () => {
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+                  className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 >
                   <option value="cash" className="bg-[#1A1A1A] text-white">Cash</option>
                   <option value="card" className="bg-[#1A1A1A] text-white">Card</option>
@@ -2161,7 +2161,7 @@ const POS = () => {
                 <button
                 onClick={openPaymentModal}
                 disabled={!selectedBarber || (currentTransaction.services.length === 0 && currentTransaction.products.length === 0)}
-                className="w-full py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white font-bold rounded-xl hover:from-[#FF7A2B] hover:to-[#E67E37] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
+                className="w-full py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-bold rounded-xl hover:from-[var(--color-accent)] hover:to-[var(--color-accent)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
               >
                 <CreditCard className="w-5 h-5" />
                 <span>Process Payment</span>
@@ -2174,7 +2174,7 @@ const POS = () => {
                     message: 'Receipt printing functionality is coming soon!',
                     type: 'warning'
                   })}
-                  className="w-full py-2 border border-[#555555] text-gray-300 font-semibold rounded-xl hover:bg-[#FF8C42]/10 hover:border-[#FF8C42] hover:text-[#FF8C42] transition-colors flex items-center justify-center space-x-2"
+                  className="w-full py-2 border border-[#555555] text-gray-300 font-semibold rounded-xl hover:bg-[var(--color-primary)]/10 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors flex items-center justify-center space-x-2"
                 >
                   <Receipt className="w-4 h-4" />
                   <span>Print Receipt</span>

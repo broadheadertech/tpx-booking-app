@@ -101,9 +101,9 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-400">Total Services</p>
-              <p className="text-xl font-bold text-[#FF8C42]">{stats.total}</p>
+              <p className="text-xl font-bold text-[var(--color-primary)]">{stats.total}</p>
             </div>
-            <Scissors className="h-6 w-6 text-[#FF8C42] opacity-30" />
+            <Scissors className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
 
@@ -111,9 +111,9 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-400">Avg. Price</p>
-              <p className="text-xl font-bold text-[#FF8C42]">₱{stats.avgPrice.toFixed(0)}</p>
+              <p className="text-xl font-bold text-[var(--color-primary)]">₱{stats.avgPrice.toFixed(0)}</p>
             </div>
-            <DollarSign className="h-6 w-6 text-[#FF8C42] opacity-30" />
+            <DollarSign className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
 
@@ -121,9 +121,9 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-400">Avg. Duration</p>
-              <p className="text-xl font-bold text-[#FF8C42]">{Math.round(stats.avgDuration)}m</p>
+              <p className="text-xl font-bold text-[var(--color-primary)]">{Math.round(stats.avgDuration)}m</p>
             </div>
-            <Clock className="h-6 w-6 text-[#FF8C42] opacity-30" />
+            <Clock className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
 
@@ -131,9 +131,9 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-400">Total Value</p>
-              <p className="text-xl font-bold text-[#FF8C42]">₱{stats.totalRevenue.toFixed(0)}</p>
+              <p className="text-xl font-bold text-[var(--color-primary)]">₱{stats.totalRevenue.toFixed(0)}</p>
             </div>
-            <DollarSign className="h-6 w-6 text-[#FF8C42] opacity-30" />
+            <DollarSign className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
       </div>
@@ -149,14 +149,14 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
                 placeholder="Search services..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 pr-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white placeholder-gray-500 rounded-md focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] text-sm"
+                className="pl-9 pr-3 py-2 bg-[#2A2A2A] border border-[#3A3A3A] text-white placeholder-gray-500 rounded-md focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] text-sm"
               />
             </div>
 
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+              className="bg-[#2A2A2A] border border-[#3A3A3A] text-white rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
             >
               <option value="name">Sort by Name</option>
               <option value="price">Sort by Price</option>
@@ -171,7 +171,7 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
                 onClick={() => setViewMode('card')}
                 className={`p-1.5 rounded-md transition-colors ${
                   viewMode === 'card'
-                    ? 'bg-[#FF8C42] text-white'
+                    ? 'bg-[var(--color-primary)] text-white'
                     : 'text-gray-500 hover:text-white'
                 }`}
               >
@@ -181,7 +181,7 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
                 onClick={() => setViewMode('table')}
                 className={`p-1.5 rounded-md transition-colors ${
                   viewMode === 'table'
-                    ? 'bg-[#FF8C42] text-white'
+                    ? 'bg-[var(--color-primary)] text-white'
                     : 'text-gray-500 hover:text-white'
                 }`}
               >
@@ -198,7 +198,7 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
             </button>
             <button
               onClick={handleCreate}
-              className="flex items-center space-x-1.5 px-3 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-md hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors text-sm"
+              className="flex items-center space-x-1.5 px-3 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-md hover:from-[var(--color-accent)] hover:brightness-110 transition-colors text-sm"
             >
               <Plus className="h-4 w-4" />
               <span>New Service</span>
@@ -223,11 +223,11 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
           {currentServices.map((service) => (
             <div
               key={service._id}
-              className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm hover:shadow-md transition-all duration-200 p-4 hover:border-[#FF8C42]/30"
+              className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm hover:shadow-md transition-all duration-200 p-4 hover:border-[var(--color-primary)]/30"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center space-x-2.5">
-                  <div className="p-1.5 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-md">
+                  <div className="p-1.5 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-md">
                     <Scissors className="h-4 w-4 text-white" />
                   </div>
                   <div>
@@ -238,7 +238,7 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
                 <div className="flex items-center space-x-1">
                   <button
                     onClick={() => handleEdit(service)}
-                    className="p-2 text-gray-400 hover:text-[#FF8C42] hover:bg-[#444444] rounded-lg transition-colors"
+                    className="p-2 text-gray-400 hover:text-[var(--color-primary)] hover:bg-[#444444] rounded-lg transition-colors"
                   >
                     <Edit className="h-4 w-4" />
                   </button>
@@ -256,15 +256,15 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
                 
                 <div className="flex items-center justify-between py-2 px-3 bg-[#1A1A1A] rounded-lg">
                   <div className="flex items-center space-x-2">
-                    <DollarSign className="h-4 w-4 text-[#FF8C42]" />
+                    <DollarSign className="h-4 w-4 text-[var(--color-primary)]" />
                     <span className="text-sm font-medium text-gray-300">Price</span>
                   </div>
-                  <span className="text-lg font-bold text-[#FF8C42]">₱{parseFloat(service.price).toFixed(2)}</span>
+                  <span className="text-lg font-bold text-[var(--color-primary)]">₱{parseFloat(service.price).toFixed(2)}</span>
                 </div>
 
                 <div className="flex items-center justify-between py-2 px-3 bg-[#1A1A1A] rounded-lg">
                   <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-[#FF8C42]" />
+                    <Clock className="h-4 w-4 text-[var(--color-primary)]" />
                     <span className="text-sm font-medium text-gray-300">Duration</span>
                   </div>
                   <span className="text-sm font-medium text-white">{service.duration_minutes} mins</span>
@@ -287,7 +287,7 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
               <div className="mt-4 pt-4 border-t border-[#444444]/30">
                 <button 
                   onClick={() => handleEdit(service)}
-                  className="w-full px-3 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors text-sm font-medium"
+                  className="w-full px-3 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg hover:from-[var(--color-accent)] hover:brightness-110 transition-colors text-sm font-medium"
                 >
                   Edit Service
                 </button>
@@ -327,7 +327,7 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
                   <tr key={service._id} className="hover:bg-[#333333]/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="p-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg mr-3">
+                        <div className="p-2 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg mr-3">
                           <Scissors className="h-4 w-4 text-white" />
                         </div>
                         <div>
@@ -340,7 +340,7 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
                       <div className="text-sm text-gray-300">{service.category}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-[#FF8C42]">₱{parseFloat(service.price).toFixed(2)}</div>
+                      <div className="text-sm font-medium text-[var(--color-primary)]">₱{parseFloat(service.price).toFixed(2)}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-300">{service.duration_minutes} mins</div>
@@ -358,7 +358,7 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
                       <div className="flex items-center justify-end space-x-2">
                         <button
                           onClick={() => handleEdit(service)}
-                          className="p-2 text-gray-400 hover:text-[#FF8C42] hover:bg-[#444444] rounded-lg transition-colors"
+                          className="p-2 text-gray-400 hover:text-[var(--color-primary)] hover:bg-[#444444] rounded-lg transition-colors"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
@@ -392,7 +392,7 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
             <div className="mt-6">
               <button
                 onClick={handleCreate}
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A]"
+                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:brightness-110"
               >
                 <Plus className="-ml-1 mr-2 h-4 w-4" />
                 New Service
@@ -421,7 +421,7 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
 
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-400">
-                Page <span className="text-[#FF8C42] font-semibold">{currentPage}</span> of <span className="text-white font-semibold">{totalPages}</span>
+                Page <span className="text-[var(--color-primary)] font-semibold">{currentPage}</span> of <span className="text-white font-semibold">{totalPages}</span>
               </span>
               <span className="text-xs text-gray-500">
                 ({startIndex + 1}-{Math.min(endIndex, filteredServices.length)} of {filteredServices.length})

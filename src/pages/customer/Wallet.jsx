@@ -67,7 +67,7 @@ function Wallet() {
                 <span className="text-sm font-semibold text-white">Back</span>
               </button>
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center">
                   <WalletIcon className="w-5 h-5 text-white" />
                 </div>
                 <h1 className="text-lg font-black text-white">Wallet</h1>
@@ -161,7 +161,7 @@ function Wallet() {
                 return (
                   <div 
                     key={t._id} 
-                    className="relative overflow-hidden rounded-[20px] bg-[#0A0A0A] border border-[#1A1A1A] p-4 hover:border-[#FF8C42]/20 transition-all group"
+                    className="relative overflow-hidden rounded-[20px] bg-[#0A0A0A] border border-[#1A1A1A] p-4 hover:border-[var(--color-primary)]/20 transition-all group"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">

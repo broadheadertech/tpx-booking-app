@@ -10,7 +10,7 @@ const ManagementSection = ({ activeTab, data }) => {
         <span className={`px-4 py-2 text-sm font-bold rounded-full border-2 ${
           item.status === 'active' 
             ? 'bg-green-400/20 text-green-400 border-green-400/30' 
-            : 'bg-[#FF8C42]/20 text-[#FF8C42] border-[#FF8C42]/30'
+            : 'bg-[var(--color-primary)]/20 text-[var(--color-primary)] border-[var(--color-primary)]/30'
         }`}>
           {item.status}
         </span>
@@ -23,7 +23,7 @@ const ManagementSection = ({ activeTab, data }) => {
         </div>
         <div className="space-y-2">
           <p className="font-black text-white text-base uppercase tracking-wide">Loyalty</p>
-          <p className="text-[#FF8C42] font-black text-xl">{item.points} points</p>
+          <p className="text-[var(--color-primary)] font-black text-xl">{item.points} points</p>
           <p className="text-gray-400 font-medium">{item.visits} total visits</p>
         </div>
         <div className="space-y-2">
@@ -53,7 +53,7 @@ const ManagementSection = ({ activeTab, data }) => {
         </div>
         <div className="space-y-2">
           <p className="font-black text-[#1A1A1A] text-base uppercase tracking-wide">Value</p>
-          <p className="text-[#FF8C42] font-black text-xl">{item.value}</p>
+          <p className="text-[var(--color-primary)] font-black text-xl">{item.value}</p>
         </div>
         <div className="space-y-2">
           <p className="font-black text-[#1A1A1A] text-base uppercase tracking-wide">Expires</p>
@@ -91,7 +91,7 @@ const ManagementSection = ({ activeTab, data }) => {
         </div>
         <div className="space-y-2">
           <p className="font-black text-[#1A1A1A] text-base uppercase tracking-wide">Price</p>
-          <p className="text-[#FF8C42] font-black text-xl">{item.price}</p>
+          <p className="text-[var(--color-primary)] font-black text-xl">{item.price}</p>
         </div>
       </div>
     </div>
@@ -102,7 +102,7 @@ const ManagementSection = ({ activeTab, data }) => {
       <div className="relative">
         {/* Service Header */}
         <div className="flex items-center space-x-4 mb-6">
-          <div className="w-16 h-16 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-2xl flex items-center justify-center shadow-xl">
+          <div className="w-16 h-16 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-2xl flex items-center justify-center shadow-xl">
             <span className="text-white font-black text-2xl">{item.name.charAt(0)}</span>
           </div>
           <div className="flex-1 min-w-0">
@@ -118,8 +118,8 @@ const ManagementSection = ({ activeTab, data }) => {
 
         {/* Enhanced Metrics */}
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="text-center p-4 bg-gradient-to-br from-[#FF8C42]/10 to-[#FF7A2B]/5 rounded-xl border-2 border-[#FF8C42]/20">
-            <div className="text-lg font-black text-[#FF8C42] mb-1 truncate whitespace-nowrap overflow-hidden">{item.price}</div>
+          <div className="text-center p-4 bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-accent)]/5 rounded-xl border-2 border-[var(--color-primary)]/20">
+            <div className="text-lg font-black text-[var(--color-primary)] mb-1 truncate whitespace-nowrap overflow-hidden">{item.price}</div>
             <div className="text-xs text-[#6B6B6B] font-semibold whitespace-nowrap">Price</div>
           </div>
           <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-25 rounded-xl border-2 border-blue-200">
@@ -134,7 +134,7 @@ const ManagementSection = ({ activeTab, data }) => {
 
         {/* Action Buttons */}
         <div className="flex space-x-3">
-          <button className="flex-1 py-3 px-4 text-sm border-2 border-[#FF8C42] text-[#FF8C42] hover:bg-[#FF8C42] hover:text-white font-bold rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl">
+          <button className="flex-1 py-3 px-4 text-sm border-2 border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white font-bold rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl">
             <Edit className="w-4 h-4" />
             <span className="whitespace-nowrap">Edit</span>
           </button>
@@ -168,7 +168,7 @@ const ManagementSection = ({ activeTab, data }) => {
         <h2 className="text-3xl font-black text-white capitalize">
           {activeTab} Management
         </h2>
-        <button className="bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:shadow-lg text-white font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 flex items-center space-x-2 text-sm whitespace-nowrap w-auto inline-flex">
+        <button className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:shadow-lg text-white font-semibold px-4 py-2.5 rounded-xl transition-all duration-200 flex items-center space-x-2 text-sm whitespace-nowrap w-auto inline-flex">
           <Plus className="w-4 h-4" />
           <span>Add New {activeTab.slice(0, -1)}</span>
         </button>
@@ -180,7 +180,7 @@ const ManagementSection = ({ activeTab, data }) => {
           {data?.map((item) => (
             <Card 
               key={item.id} 
-              className="p-8 bg-gradient-to-br from-[#2A2A2A] to-[#333333] border-2 border-[#444444]/50 hover:border-[#FF8C42]/30 hover:shadow-2xl transition-all duration-300 rounded-3xl group hover:-translate-y-2"
+              className="p-8 bg-gradient-to-br from-[#2A2A2A] to-[#333333] border-2 border-[#444444]/50 hover:border-[var(--color-primary)]/30 hover:shadow-2xl transition-all duration-300 rounded-3xl group hover:-translate-y-2"
             >
               {renderCardContent(item)}
             </Card>
@@ -192,14 +192,14 @@ const ManagementSection = ({ activeTab, data }) => {
           {data?.map((item) => (
             <Card 
               key={item.id} 
-              className="p-8 bg-gradient-to-br from-[#2A2A2A] to-[#333333] border-2 border-[#444444]/50 hover:border-[#FF8C42]/30 hover:shadow-2xl transition-all duration-300 rounded-3xl group hover:-translate-y-1"
+              className="p-8 bg-gradient-to-br from-[#2A2A2A] to-[#333333] border-2 border-[#444444]/50 hover:border-[var(--color-primary)]/30 hover:shadow-2xl transition-all duration-300 rounded-3xl group hover:-translate-y-1"
             >
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   {renderCardContent(item)}
                 </div>
                 <div className="flex space-x-4 ml-8">
-                  <button className="px-6 py-3 text-sm border-2 border-[#FF8C42] text-[#FF8C42] hover:bg-[#FF8C42] hover:text-white font-bold transition-all duration-300 rounded-xl flex items-center space-x-2 shadow-lg hover:shadow-xl">
+                  <button className="px-6 py-3 text-sm border-2 border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white font-bold transition-all duration-300 rounded-xl flex items-center space-x-2 shadow-lg hover:shadow-xl">
                     <Edit className="w-4 h-4" />
                     <span>Edit</span>
                   </button>

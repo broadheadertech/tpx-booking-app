@@ -13,6 +13,7 @@ import Carousel from '../../components/customer/Carousel'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
+import { useBranding } from '../../context/BrandingContext'
 import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications'
 import { useBookingNotificationListener } from '../../utils/bookingNotifications'
 import { NotificationBell } from '../../components/common/NotificationSystem'
@@ -20,6 +21,7 @@ import NotificationsPage from '../../components/customer/NotificationsPage'
 
 const Dashboard = () => {
   const { user, isAuthenticated } = useAuth()
+  const { branding } = useBranding()
   const location = useLocation()
   const navigate = useNavigate()
   const [activeSection, setActiveSection] = useState('home')
@@ -181,10 +183,10 @@ const Dashboard = () => {
                   return (
                     <div 
                       key={stat.label} 
-                      className="relative bg-[#0A0A0A] rounded-[24px] p-6 border-2 border-[#FF8C42]/40 hover:border-[#FF8C42] active:scale-[0.98] transition-all duration-200 group"
+                      className="relative bg-[var(--color-bg)] rounded-[24px] p-6 border-2 border-[var(--color-primary)]/40 hover:border-[var(--color-primary)] active:scale-[0.98] transition-all duration-200 group"
                     >
                       {/* Subtle gradient background */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-[#FF8C42]/5 to-transparent rounded-[24px] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)]/5 to-transparent rounded-[24px] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                       
                       {/* Content */}
                       <div className="relative">
@@ -204,20 +206,20 @@ const Dashboard = () => {
                 className="w-full relative rounded-[24px] overflow-hidden group active:scale-[0.98] transition-all duration-300"
               >
                 {/* Dark background with gradient border effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[#FF8C42] via-[#FF7A2B] to-[#FF8C42] bg-[length:200%_100%] animate-gradient p-[2px] rounded-[24px]">
-                  <div className="w-full h-full bg-[#0A0A0A] rounded-[22px]" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-accent)] to-[var(--color-primary)] bg-[length:200%_100%] animate-gradient p-[2px] rounded-[24px]">
+                  <div className="w-full h-full bg-[var(--color-bg)] rounded-[22px]" />
                 </div>
                 
                 {/* Glow effect on hover */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[#FF8C42]/0 via-[#FF8C42]/20 to-[#FF8C42]/0 opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary)]/0 via-[var(--color-primary)]/20 to-[var(--color-primary)]/0 opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-500" />
                 
                 {/* Content */}
                 <div className="relative z-10 p-6 flex items-center justify-between">
                   <div className="flex items-center space-x-4">
                     {/* Icon with gradient background */}
                     <div className="relative">
-                      <div className="absolute inset-0 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-2xl blur-md opacity-60" />
-                      <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center">
+                      <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-2xl blur-md opacity-60" />
+                      <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center">
                         <Calendar className="w-7 h-7 text-white" />
                       </div>
                     </div>
@@ -230,7 +232,7 @@ const Dashboard = () => {
                   </div>
                   
                   {/* Arrow with orange gradient */}
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                     <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                     </svg>
@@ -246,7 +248,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A]">
+    <div className="min-h-screen bg-[var(--color-bg)]">
       {/* Premium Onboarding Modal */}
       {showOnboarding && (
         <PremiumOnboarding onComplete={handleOnboardingComplete} />
@@ -254,21 +256,18 @@ const Dashboard = () => {
       
       {/* Header - Premium Design */}
       {!['booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
-        <div className="sticky top-0 z-40 bg-[#0A0A0A]/98 backdrop-blur-2xl border-b border-[#1A1A1A]">
+        <div className="sticky top-0 z-40 bg-[var(--color-bg)]/98 backdrop-blur-2xl border-b border-[#1A1A1A]">
           <div className="max-w-md mx-auto px-4">
             <div className="flex justify-between items-center py-5">
               <div className="flex items-center space-x-3">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#FF8C42]/20 to-[#FF7A2B]/20 rounded-2xl blur-xl" />
-                  <img 
-                    src="/img/tipuno_x_logo_white.avif" 
-                    alt="TipunoX Angeles Barbershop Logo" 
-                    className="w-14 h-14 object-contain relative z-10"
-                  />
-                </div>
+                <img 
+                  src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'} 
+                  alt={branding?.display_name || 'Logo'} 
+                  className="w-14 h-14 object-contain"
+                />
                 <div>
-                  <h1 className="text-base font-black text-white">TipunoX</h1>
-                  <p className="text-xs font-semibold text-[#FF8C42]">Angeles</p>
+                  <h1 className="text-base font-black text-white">{branding?.display_name || 'TipunoX'}</h1>
+                  <p className="text-xs font-semibold text-[var(--color-primary)]">{branding?.display_name ? 'Branch' : 'Angeles'}</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
@@ -277,8 +276,8 @@ const Dashboard = () => {
                   onClick={() => setActiveSection('profile')}
                   className="relative group"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-full opacity-0 group-hover:opacity-100 blur-md transition-opacity duration-300" />
-                  <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-[#1A1A1A] group-hover:ring-[#FF8C42]/50 transition-all duration-300">
+                  <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-full opacity-0 group-hover:opacity-100 blur-md transition-opacity duration-300" />
+                  <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-[#1A1A1A] group-hover:ring-[var(--color-primary)]/50 transition-all duration-300">
                     <img
                       src={(user && user.avatar) ? user.avatar : '/img/avatar_default.jpg'}
                       alt={user?.username || 'Profile'}
@@ -301,7 +300,7 @@ const Dashboard = () => {
       {!showOnboarding && !['booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
         <div className="fixed bottom-0 left-0 right-0 z-50 pb-safe">
           <div className="max-w-md mx-auto px-4 pb-6">
-            <div className="bg-[#0A0A0A]/95 backdrop-blur-2xl rounded-[28px] border border-[#1A1A1A] shadow-2xl p-2">
+            <div className="bg-[var(--color-bg)]/95 backdrop-blur-2xl rounded-[28px] border border-[#1A1A1A] shadow-2xl p-2">
               <div role="navigation" aria-label="Primary" className="grid grid-cols-5 gap-1">
                 {sections.map((section) => {
                   const IconComponent = section.icon
@@ -318,7 +317,7 @@ const Dashboard = () => {
                       }}
                       className={`flex flex-col items-center justify-center py-3 px-2 rounded-[20px] transition-all duration-300 relative active:scale-95 ${
                         isActive 
-                          ? 'bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B]' 
+                          ? 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)]' 
                           : 'hover:bg-white/5'
                       }`}
                       aria-current={isActive ? 'page' : undefined}

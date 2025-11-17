@@ -133,7 +133,7 @@ const CustomerProfile = ({ onBack, customerData }) => {
       <div className="flex items-center justify-between px-4 mb-6">
         <button
           onClick={onBack}
-          className="flex items-center space-x-2 px-4 py-2 font-medium rounded-xl transition-all duration-200 text-gray-400 bg-[#333333] hover:text-[#FF8C42] hover:bg-[#444444]"
+          className="flex items-center space-x-2 px-4 py-2 font-medium rounded-xl transition-all duration-200 text-gray-400 bg-[#333333] hover:text-[var(--color-primary)] hover:bg-[#444444]"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back</span>
@@ -143,7 +143,7 @@ const CustomerProfile = ({ onBack, customerData }) => {
           {!isEditing ? (
             <button
               onClick={() => setIsEditing(true)}
-              className="flex items-center space-x-2 px-4 py-2 text-white font-medium rounded-xl transition-all duration-200 bg-[#FF8C42] hover:bg-[#FF7A2B]"
+              className="flex items-center space-x-2 px-4 py-2 text-white font-medium rounded-xl transition-all duration-200 bg-[var(--color-primary)] hover:bg-[var(--color-accent)]"
             >
               <Edit3 className="w-4 h-4" />
               <span>Edit</span>
@@ -180,7 +180,7 @@ const CustomerProfile = ({ onBack, customerData }) => {
                 </div>
                 {isEditing && (
                   <button 
-                    className="absolute bottom-0 right-0 w-6 h-6 rounded-full flex items-center justify-center shadow-lg transition-colors duration-200 bg-[#FF8C42] hover:bg-[#FF7A2B]"
+                    className="absolute bottom-0 right-0 w-6 h-6 rounded-full flex items-center justify-center shadow-lg transition-colors duration-200 bg-[var(--color-primary)] hover:bg-[var(--color-accent)]"
                   >
                     <Camera className="w-3 h-3 text-white" />
                   </button>
@@ -192,7 +192,7 @@ const CustomerProfile = ({ onBack, customerData }) => {
                 <h2 className="text-2xl font-black mb-1 text-white">
                   {profileData.firstName} {profileData.lastName}
                 </h2>
-                <p className="text-sm font-medium mb-4 text-[#FF8C42]">Gold Member</p>
+                <p className="text-sm font-medium mb-4 text-[var(--color-primary)]">Gold Member</p>
               
               <div className="grid grid-cols-3 gap-4 text-sm">
                   <div className="text-center">
@@ -217,7 +217,7 @@ const CustomerProfile = ({ onBack, customerData }) => {
         {/* Personal Information */}
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm hover:shadow-lg transition-all duration-200 p-4">
           <h2 className="text-lg font-black mb-4 flex items-center text-white">
-            <User className="w-5 h-5 mr-2 text-[#FF8C42]" />
+            <User className="w-5 h-5 mr-2 text-[var(--color-primary)]" />
             Personal Information
           </h2>
           

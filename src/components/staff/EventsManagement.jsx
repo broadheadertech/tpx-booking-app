@@ -315,9 +315,9 @@ const EventsManagement = ({ onRefresh, user }) => {
               </h2>
               <button
                 onClick={handleCloseModal}
-                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors duration-200"
+                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center transition-colors duration-200"
               >
-                <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+                <X className="w-4 h-4 text-gray-400 hover:text-[var(--color-primary)]" />
               </button>
             </div>
             <div className="p-6">
@@ -345,7 +345,7 @@ const EventsManagement = ({ onRefresh, user }) => {
                           setFormData(prev => ({ ...prev, title: e.target.value }))
                           validateField('title', e.target.value)
                         }}
-                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent ${
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
                           validationErrors.title ? 'border-red-500' : 
                           formData.title && !validationErrors.title ? 'border-green-500' : 'border-[#2A2A2A]'
                         }`}
@@ -378,7 +378,7 @@ const EventsManagement = ({ onRefresh, user }) => {
                           validateField('description', e.target.value)
                         }}
                         rows={3}
-                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent resize-none ${
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none ${
                           validationErrors.description ? 'border-red-500' : 
                           formData.description && !validationErrors.description ? 'border-green-500' : 'border-[#2A2A2A]'
                         }`}
@@ -412,7 +412,7 @@ const EventsManagement = ({ onRefresh, user }) => {
                           validateField('date', e.target.value)
                         }}
                         min={new Date().toISOString().split('T')[0]}
-                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent ${
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
                           validationErrors.date ? 'border-red-500' : 
                           formData.date && !validationErrors.date ? 'border-green-500' : 'border-[#2A2A2A]'
                         }`}
@@ -441,7 +441,7 @@ const EventsManagement = ({ onRefresh, user }) => {
                           setFormData(prev => ({ ...prev, time: e.target.value }))
                           validateField('time', e.target.value)
                         }}
-                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent ${
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
                           validationErrors.time ? 'border-red-500' : 
                           formData.time && !validationErrors.time ? 'border-green-500' : 'border-[#2A2A2A]'
                         }`}
@@ -470,7 +470,7 @@ const EventsManagement = ({ onRefresh, user }) => {
                           setFormData(prev => ({ ...prev, location: e.target.value }))
                           validateField('location', e.target.value)
                         }}
-                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent ${
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
                           validationErrors.location ? 'border-red-500' : 
                           formData.location && !validationErrors.location ? 'border-green-500' : 'border-[#2A2A2A]'
                         }`}
@@ -505,7 +505,7 @@ const EventsManagement = ({ onRefresh, user }) => {
                         }}
                         min="1"
                         max="1000"
-                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent ${
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
                           validationErrors.maxAttendees ? 'border-red-500' : 
                           formData.maxAttendees && !validationErrors.maxAttendees ? 'border-green-500' : 'border-[#2A2A2A]'
                         }`}
@@ -538,7 +538,7 @@ const EventsManagement = ({ onRefresh, user }) => {
                         min="0"
                         max="100000"
                         step="0.01"
-                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent ${
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
                           validationErrors.price ? 'border-red-500' : 
                           formData.price && !validationErrors.price ? 'border-green-500' : 'border-[#2A2A2A]'
                         }`}
@@ -566,7 +566,7 @@ const EventsManagement = ({ onRefresh, user }) => {
                     <select
                       value={formData.category}
                       onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                      className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                      className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     >
                       <option value="workshop">Workshop</option>
                       <option value="celebration">Celebration</option>
@@ -582,7 +582,7 @@ const EventsManagement = ({ onRefresh, user }) => {
                     <select
                       value={formData.status}
                       onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
-                      className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                      className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     >
                       <option value="upcoming">Upcoming</option>
                       <option value="ongoing">Ongoing</option>
@@ -604,7 +604,7 @@ const EventsManagement = ({ onRefresh, user }) => {
                   <button
                     type="submit"
                     disabled={isSubmitting || !isFormValid}
-                    className="flex-1 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (
                       <>
@@ -644,9 +644,9 @@ const EventsManagement = ({ onRefresh, user }) => {
               <h2 className="text-xl font-bold text-white">Delete Event</h2>
               <button
                 onClick={() => setShowDeleteConfirm(null)}
-                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors duration-200"
+                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center transition-colors duration-200"
               >
-                <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+                <X className="w-4 h-4 text-gray-400 hover:text-[var(--color-primary)]" />
               </button>
             </div>
             <div className="p-6">
@@ -777,7 +777,7 @@ const EventsManagement = ({ onRefresh, user }) => {
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors text-sm"
+            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg hover:from-[var(--color-accent)] hover:brightness-110 transition-colors text-sm"
           >
             <Plus className="h-4 w-4" />
             <span>New Event</span>
@@ -810,9 +810,9 @@ const EventsManagement = ({ onRefresh, user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Total Events</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.total}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.total}</p>
             </div>
-            <Calendar className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <Calendar className="h-8 w-8 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
 
@@ -820,7 +820,7 @@ const EventsManagement = ({ onRefresh, user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Upcoming</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.upcoming}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.upcoming}</p>
             </div>
             <Clock className="h-8 w-8 text-blue-400" />
           </div>
@@ -830,9 +830,9 @@ const EventsManagement = ({ onRefresh, user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Completed</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.completed}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.completed}</p>
             </div>
-            <Calendar className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <Calendar className="h-8 w-8 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
 
@@ -840,9 +840,9 @@ const EventsManagement = ({ onRefresh, user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Total Attendees</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.totalAttendees}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.totalAttendees}</p>
             </div>
-            <Users className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <Users className="h-8 w-8 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
       </div>
@@ -953,20 +953,20 @@ const EventsManagement = ({ onRefresh, user }) => {
                   </div>
                   <div className="w-full bg-[#444444] rounded-full h-2">
                     <div 
-                      className="bg-[#FF8C42] h-2 rounded-full transition-all duration-300"
+                      className="bg-[var(--color-primary)] h-2 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(attendancePercentage, 100)}%` }}
                     ></div>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <div className="text-lg font-bold text-[#FF8C42]">
+                  <div className="text-lg font-bold text-[var(--color-primary)]">
                     {event.price === 0 ? 'Free' : `₱${event.price.toLocaleString()}`}
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => handleEdit(event)}
-                      className="p-2 text-gray-400 hover:text-[#FF8C42] hover:bg-[#FF8C42]/20 rounded-lg transition-colors"
+                      className="p-2 text-gray-400 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 rounded-lg transition-colors"
                       title="Edit Event"
                     >
                       <Edit className="h-4 w-4" />

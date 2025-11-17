@@ -142,7 +142,7 @@ const Profile = ({ onBack }) => {
     return (
       <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF8C42] mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)] mx-auto mb-4"></div>
           <p className="text-gray-400">Loading profile...</p>
         </div>
       </div>
@@ -177,7 +177,7 @@ const Profile = ({ onBack }) => {
       <div className="relative z-10 max-w-md mx-auto px-4 py-6 pb-20">
         {/* Profile Header Card */}
         <div className="bg-[#1A1A1A] rounded-2xl shadow-lg border border-[#2A2A2A] mb-6 overflow-hidden">
-          <div className="bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] px-6 py-6">
+          <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] px-6 py-6">
             <div className="text-center">
               <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-3 ring-4 ring-white/30">
                 <img
@@ -229,7 +229,7 @@ const Profile = ({ onBack }) => {
                   type="text"
                   value={profileData.username}
                   onChange={(e) => handleInputChange('username', e.target.value)}
-                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                 />
               ) : (
                 <p className="px-4 py-3 bg-[#0A0A0A] text-white rounded-xl">{profileData.username}</p>
@@ -246,7 +246,7 @@ const Profile = ({ onBack }) => {
                   type="email"
                   value={profileData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                 />
               ) : (
                 <p className="px-4 py-3 bg-[#0A0A0A] text-white rounded-xl">{profileData.email}</p>
@@ -264,7 +264,7 @@ const Profile = ({ onBack }) => {
                   value={profileData.nickname}
                   onChange={(e) => handleInputChange('nickname', e.target.value)}
                   placeholder="Enter your preferred name"
-                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                 />
               ) : (
                 <p className="px-4 py-3 bg-[#0A0A0A] text-gray-300 rounded-xl">{profileData.nickname || 'Not set'}</p>
@@ -281,7 +281,7 @@ const Profile = ({ onBack }) => {
                   type="tel"
                   value={profileData.mobile_number}
                   onChange={(e) => handleInputChange('mobile_number', e.target.value)}
-                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                 />
               ) : (
                 <p className="px-4 py-3 bg-[#0A0A0A] text-gray-300 rounded-xl">{profileData.mobile_number}</p>
@@ -298,7 +298,7 @@ const Profile = ({ onBack }) => {
                   type="date"
                   value={profileData.birthday}
                   onChange={(e) => handleInputChange('birthday', e.target.value)}
-                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                 />
               ) : (
                 <p className="px-4 py-3 bg-[#0A0A0A] text-gray-300 rounded-xl">
@@ -315,7 +315,7 @@ const Profile = ({ onBack }) => {
             <h3 className="text-lg font-semibold text-white">Account Summary</h3>
           </div>
           <div className="p-4 space-y-4">
-            <div className="text-center p-4 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-xl">
+            <div className="text-center p-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-xl">
               <div className="text-white text-sm font-medium">Member since</div>
               <div className="text-white text-lg font-bold">
                 {new Date().toLocaleDateString('en-PH', { month: 'long', year: 'numeric' })}
@@ -334,7 +334,7 @@ const Profile = ({ onBack }) => {
         {!isEditing && (
           <button
             onClick={() => setIsEditing(true)}
-            className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-xl hover:shadow-xl transition-all duration-300 transform hover:scale-105 shadow-lg mb-4"
+            className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-xl hover:shadow-xl transition-all duration-300 transform hover:scale-105 shadow-lg mb-4"
           >
             <Edit2 className="w-4 h-4" />
             <span>Edit Profile</span>
@@ -357,7 +357,7 @@ const Profile = ({ onBack }) => {
             <button
               onClick={handleSave}
               disabled={loading}
-              className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-xl hover:shadow-xl transition-all duration-300 disabled:opacity-50"
+              className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-xl hover:shadow-xl transition-all duration-300 disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
               <span>{loading ? 'Saving...' : 'Save Changes'}</span>

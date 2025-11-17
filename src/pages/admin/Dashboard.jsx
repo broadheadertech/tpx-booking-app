@@ -7,6 +7,7 @@ import BranchManagement from '../../components/admin/BranchManagement'
 import UserManagement from '../../components/admin/UserManagement'
 import SystemReports from '../../components/admin/SystemReports'
 import GlobalSettings from '../../components/admin/GlobalSettings'
+import BrandingManagement from '../../components/admin/BrandingManagement'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
@@ -130,19 +131,34 @@ function AdminDashboard() {
       case 'settings':
         return <GlobalSettings onRefresh={handleRefresh} />
 
+      case 'branding':
+        return user?.role === 'super_admin' ? (
+          <BrandingManagement />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to branding management.</div>
+        )
+
       default:
         return renderOverview()
     }
   }
 
   // Tab configuration for admin
-  const tabs = [
+  const baseTabs = [
     { id: 'overview', label: 'Overview', icon: 'dashboard' },
     { id: 'branches', label: 'Branches', icon: 'building' },
     { id: 'users', label: 'Users', icon: 'users' },
     { id: 'reports', label: 'Reports', icon: 'chart' },
     { id: 'settings', label: 'Settings', icon: 'settings' }
   ]
+
+  const tabs = user?.role === 'super_admin'
+    ? [
+        ...baseTabs.slice(0, 4),
+        { id: 'branding', label: 'Branding', icon: 'palette' },
+        ...baseTabs.slice(4),
+      ]
+    : baseTabs
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0F0F0F] via-[#1A1A1A] to-[#2A2A2A]">

@@ -154,7 +154,7 @@ const BarberBookings = () => {
             </div>
             <div className="text-right">
               <div className="text-xs text-gray-400">{selectedDate === new Date().toISOString().split('T')[0] ? 'Today' : 'Selected'}</div>
-              <div className="text-sm font-semibold text-[#FF8C42]">{filteredBookings.length}</div>
+              <div className="text-sm font-semibold text-[var(--color-primary)]">{filteredBookings.length}</div>
             </div>
           </div>
         </div>
@@ -172,7 +172,7 @@ const BarberBookings = () => {
                   onClick={() => setStatusFilter(status)}
                   className={`px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 active:scale-95 flex-shrink-0 ${
                     statusFilter === status
-                      ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-md'
+                      ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md'
                       : 'bg-[#1A1A1A] border border-[#444444] text-gray-300 hover:bg-[#333333] hover:border-[#555555]'
                   }`}
                 >
@@ -187,21 +187,21 @@ const BarberBookings = () => {
             {/* Date Filter - Compact */}
             <div className="relative">
               <div className="flex items-center space-x-2 mb-2">
-                <Calendar className="w-4 h-4 text-[#FF8C42]" />
+                <Calendar className="w-4 h-4 text-[var(--color-primary)]" />
                 <label className="text-sm font-semibold text-gray-300">Date</label>
               </div>
               <input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] text-sm"
+                className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] text-sm"
               />
             </div>
 
             {/* Search Filter - Compact */}
             <div className="relative">
               <div className="flex items-center space-x-2 mb-2">
-                <Search className="w-4 h-4 text-[#FF8C42]" />
+                <Search className="w-4 h-4 text-[var(--color-primary)]" />
                 <label className="text-sm font-semibold text-gray-300">Search</label>
               </div>
               <input
@@ -209,7 +209,7 @@ const BarberBookings = () => {
                 placeholder="Customer or service..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] text-sm"
+                className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] text-sm"
               />
             </div>
           </div>
@@ -230,7 +230,7 @@ const BarberBookings = () => {
             </div>
           ) : (
             filteredBookings.map((booking) => (
-              <div key={booking._id} className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg shadow-md border border-[#444444]/30 p-3 active:scale-[0.98] transition-all duration-200 hover:border-[#FF8C42]/50">
+              <div key={booking._id} className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg shadow-md border border-[#444444]/30 p-3 active:scale-[0.98] transition-all duration-200 hover:border-[var(--color-primary)]/50">
                 {/* Ultra Compact Layout */}
                 <div className="flex items-center space-x-3">
                   {/* Left Side - Info */}
@@ -253,7 +253,7 @@ const BarberBookings = () => {
                         <User className="w-3 h-3 mr-1 flex-shrink-0" />
                         <span className="truncate">{booking.customer_name}</span>
                       </div>
-                      <span className="font-bold text-[#FF8C42] text-sm ml-2 flex-shrink-0">₱{booking.price}</span>
+                      <span className="font-bold text-[var(--color-primary)] text-sm ml-2 flex-shrink-0">₱{booking.price}</span>
                     </div>
 
                     {/* Phone (if available) */}
@@ -266,7 +266,7 @@ const BarberBookings = () => {
 
                     {/* Notes (compact) */}
                     {booking.notes && (
-                      <div className="mt-2 p-2 bg-[#1A1A1A]/50 rounded-md border-l-2 border-[#FF8C42]/50">
+                      <div className="mt-2 p-2 bg-[#1A1A1A]/50 rounded-md border-l-2 border-[var(--color-primary)]/50">
                         <p className="text-xs text-gray-300 truncate">
                           📝 {booking.notes}
                         </p>
@@ -295,7 +295,7 @@ const BarberBookings = () => {
                     {booking.status === 'confirmed' && (
                       <button
                         onClick={() => handleCompleteBooking(booking)}
-                        className="px-2 py-1.5 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded text-xs font-medium active:scale-95 transition-all hover:from-[#FF7A2B] hover:to-[#FF6B1A] min-w-[60px]"
+                        className="px-2 py-1.5 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded text-xs font-medium active:scale-95 transition-all hover:from-[var(--color-accent)] hover:brightness-110 min-w-[60px]"
                       >
                         ✓ Complete
                       </button>

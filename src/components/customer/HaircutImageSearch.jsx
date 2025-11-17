@@ -69,7 +69,7 @@ const HaircutImageSearch = ({ searchQuery = '', onImageSelect = null }) => {
     <div className="space-y-4">
       {/* Search Header */}
       <div className="flex items-center space-x-2 mb-4">
-        <Image className="w-5 h-5 text-[#FF8C42]" />
+        <Image className="w-5 h-5 text-[var(--color-primary)]" />
         <h3 className="text-white font-medium">Haircut Image Search</h3>
       </div>
 
@@ -84,7 +84,7 @@ const HaircutImageSearch = ({ searchQuery = '', onImageSelect = null }) => {
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
           placeholder="Search for haircut styles..."
-          className="w-full pl-10 pr-4 py-3 bg-gray-800/50 border border-gray-600/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42]/50 transition-colors"
+          className="w-full pl-10 pr-4 py-3 bg-gray-800/50 border border-gray-600/30 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)]/50 transition-colors"
         />
         <button
           onClick={() => handleSearch()}
@@ -94,7 +94,7 @@ const HaircutImageSearch = ({ searchQuery = '', onImageSelect = null }) => {
           <div className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
             isLoading || !searchTerm.trim()
               ? 'bg-gray-700/50 text-gray-500 cursor-not-allowed'
-              : 'bg-[#FF8C42] hover:bg-[#FF7A2B] text-white cursor-pointer'
+              : 'bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white cursor-pointer'
           }`}>
             {isLoading ? 'Searching...' : 'Search'}
           </div>
@@ -105,7 +105,7 @@ const HaircutImageSearch = ({ searchQuery = '', onImageSelect = null }) => {
       {isLoading && (
         <div className="flex items-center justify-center py-8">
           <div className="flex items-center space-x-3">
-            <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#FF8C42] border-t-transparent"></div>
+            <div className="animate-spin rounded-full h-6 w-6 border-2 border-[var(--color-primary)] border-t-transparent"></div>
             <span className="text-gray-300 text-sm">Searching for haircut images...</span>
           </div>
         </div>
@@ -133,7 +133,7 @@ const HaircutImageSearch = ({ searchQuery = '', onImageSelect = null }) => {
             {images.map((image) => (
               <div
                 key={image.id}
-                className="group relative bg-gray-800/30 rounded-xl overflow-hidden border border-gray-600/30 hover:border-[#FF8C42]/50 transition-all duration-200 cursor-pointer"
+                className="group relative bg-gray-800/30 rounded-xl overflow-hidden border border-gray-600/30 hover:border-[var(--color-primary)]/50 transition-all duration-200 cursor-pointer"
                 onClick={() => handleImageClick(image)}
               >
                 <div className="aspect-square relative">

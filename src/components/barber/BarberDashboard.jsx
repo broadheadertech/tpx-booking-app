@@ -137,7 +137,7 @@ const BarberDashboard = () => {
           <>
             {/* Mobile Welcome Section */}
             <div className="px-4 py-3 md:hidden">
-              <div className="bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-xl p-3 text-white shadow-lg">
+              <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-xl p-3 text-white shadow-lg">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-sm font-bold">Welcome back!</h2>
@@ -172,10 +172,10 @@ const BarberDashboard = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-medium text-gray-400 mb-1">Total Bookings</p>
-                      <p className="text-lg font-bold text-[#FF8C42]">{barberBookings.length}</p>
+                      <p className="text-lg font-bold text-[var(--color-primary)]">{barberBookings.length}</p>
                     </div>
-                    <div className="bg-[#FF8C42]/10 p-2 rounded-lg">
-                      <Calendar className="w-4 h-4 text-[#FF8C42]" />
+                    <div className="bg-[var(--color-primary)]/10 p-2 rounded-lg">
+                      <Calendar className="w-4 h-4 text-[var(--color-primary)]" />
                     </div>
                   </div>
                 </div>
@@ -204,8 +204,8 @@ const BarberDashboard = () => {
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-bold text-white">Today's Appointments</h3>
                     <div className="flex items-center space-x-1">
-                      <Calendar className="w-4 h-4 text-[#FF8C42]" />
-                      <span className="text-xs text-[#FF8C42] font-medium">{todayBookings.length}</span>
+                      <Calendar className="w-4 h-4 text-[var(--color-primary)]" />
+                      <span className="text-xs text-[var(--color-primary)] font-medium">{todayBookings.length}</span>
                     </div>
                   </div>
 
@@ -226,7 +226,7 @@ const BarberDashboard = () => {
                             </div>
                             <div className="text-right ml-2">
                               <p className="font-medium text-white text-xs">{booking.time}</p>
-                              <p className="text-xs text-[#FF8C42]">₱{booking.price}</p>
+                              <p className="text-xs text-[var(--color-primary)]">₱{booking.price}</p>
                             </div>
                           </div>
                         ))}
@@ -234,7 +234,7 @@ const BarberDashboard = () => {
                         {todayBookings.length > 3 && (
                           <button
                             onClick={() => setActiveTab('bookings')}
-                            className="w-full mt-3 py-2 bg-[#FF8C42]/10 hover:bg-[#FF8C42]/20 text-[#FF8C42] rounded-lg transition-colors font-medium text-xs active:scale-95"
+                            className="w-full mt-3 py-2 bg-[var(--color-primary)]/10 hover:bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-lg transition-colors font-medium text-xs active:scale-95"
                           >
                             View All {todayBookings.length} Appointments →
                           </button>
@@ -396,7 +396,7 @@ const BarberDashboard = () => {
             </div>
             <div className="text-right">
               <div className="text-xs text-gray-400">Today</div>
-              <div className="text-sm font-semibold text-[#FF8C42]">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+              <div className="text-sm font-semibold text-[var(--color-primary)]">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
             </div>
           </div>
         </div>
@@ -414,7 +414,7 @@ const BarberDashboard = () => {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center space-x-2 px-4 py-3 rounded-xl font-medium text-sm whitespace-nowrap transition-all duration-200 ${
                     activeTab === tab.id
-                      ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg'
+                      ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg'
                       : 'text-gray-400 hover:text-gray-300 hover:bg-white/5'
                   }`}
                 >
@@ -439,7 +439,7 @@ const BarberDashboard = () => {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all duration-200 ${
                   activeTab === tab.id
-                    ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-lg scale-95'
+                    ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg scale-95'
                     : 'text-gray-400 hover:text-gray-300 hover:bg-white/5 active:scale-95'
                 }`}
               >

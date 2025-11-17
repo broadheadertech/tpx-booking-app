@@ -177,8 +177,8 @@ const RecentActivity = ({ activities: propActivities = [] }) => {
         status: 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
       },
       orange: {
-        icon: 'text-[#FF8C42]',
-        status: 'bg-[#FF8C42]/10 text-[#FF8C42] border border-[#FF8C42]/20'
+        icon: 'text-[var(--color-primary)]',
+        status: 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] border border-[var(--color-primary)]/20'
       },
       purple: {
         icon: 'text-purple-500',
@@ -214,10 +214,10 @@ const RecentActivity = ({ activities: propActivities = [] }) => {
             const colorClasses = getColorClasses(activity.type, activity.status)
             
             return (
-              <div key={activity.id} className="flex items-center gap-3 p-3 rounded-lg bg-[#1A1A1A]/50 border border-transparent hover:bg-[#1A1A1A]/80 hover:border-[#FF8C42]/30 transition-all duration-200 group cursor-pointer">
+              <div key={activity.id} className="flex items-center gap-3 p-3 rounded-lg bg-[#1A1A1A]/50 border border-transparent hover:bg-[#1A1A1A]/80 hover:border-[var(--color-primary)]/30 transition-all duration-200 group cursor-pointer">
                 <IconComponent className={`w-5 h-5 flex-shrink-0 ${colorClasses.icon}`} />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white mb-0.5 group-hover:text-[#FF8C42] transition-colors truncate">
+                  <p className="text-sm font-medium text-white mb-0.5 group-hover:text-[var(--color-primary)] transition-colors truncate">
                     {activity.message}
                   </p>
                   <div className="flex items-center gap-1.5">

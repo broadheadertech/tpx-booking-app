@@ -116,7 +116,7 @@ const TemplatePreview = memo(({ selectedTemplate, campaignForm }) => {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42] mb-4"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mb-4"></div>
         <p className="text-gray-500 text-sm">Loading template preview...</p>
       </div>
     )
@@ -169,15 +169,15 @@ const TemplateCard = memo(({ template, isSelected, onSelect }) => (
     onClick={() => onSelect(template)}
     className={`p-4 rounded-xl border-2 transition-all duration-200 text-left group ${
       isSelected
-        ? 'border-[#FF8C42] bg-[#FF8C42]/10 shadow-lg shadow-[#FF8C42]/20'
+        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 shadow-lg shadow-[var(--color-primary)]/20'
         : 'border-[#2A2A2A] bg-[#1A1A1A] hover:border-[#2A2A2A] hover:bg-[#222222]'
     }`}
   >
     <div className="flex items-center space-x-3 mb-2">
-      {(() => { const Icon = template.icon; return <Icon className="w-5 h-5 text-[#FF8C42]" /> })()}
+      {(() => { const Icon = template.icon; return <Icon className="w-5 h-5 text-[var(--color-primary)]" /> })()}
       <span className="text-sm font-semibold text-white">{template.name}</span>
       {isSelected && (
-        <div className="ml-auto w-2 h-2 bg-[#FF8C42] rounded-full"></div>
+        <div className="ml-auto w-2 h-2 bg-[var(--color-primary)] rounded-full"></div>
       )}
     </div>
     <p className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors">{template.description}</p>
@@ -710,7 +710,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-xl">
+          <div className="p-2 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-xl">
             <Mail className="w-6 h-6 text-white" />
           </div>
           <div>
@@ -728,7 +728,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
           </button>
           <button
             onClick={() => setShowCreate(true)}
-            className="px-4 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors flex items-center space-x-2"
+            className="px-4 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg hover:from-[var(--color-accent)] hover:brightness-110 transition-colors flex items-center space-x-2"
           >
             <Plus className="w-4 h-4" />
             <span>New Campaign</span>
@@ -744,8 +744,8 @@ const EmailMarketing = memo(({ onRefresh }) => {
               <p className="text-gray-400 text-sm">Total Campaigns</p>
               <p className="text-2xl font-bold text-white">{campaignStats.total}</p>
             </div>
-            <div className="p-2 bg-[#FF8C42]/20 rounded-lg">
-              <Mail className="w-6 h-6 text-[#FF8C42]" />
+            <div className="p-2 bg-[var(--color-primary)]/20 rounded-lg">
+              <Mail className="w-6 h-6 text-[var(--color-primary)]" />
             </div>
           </div>
         </div>
@@ -778,10 +778,10 @@ const EmailMarketing = memo(({ onRefresh }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-400 text-sm">Audience Size</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{audienceStats.all_customers}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{audienceStats.all_customers}</p>
             </div>
-            <div className="p-2 bg-[#FF8C42]/20 rounded-lg">
-              <Users className="w-6 h-6 text-[#FF8C42]" />
+            <div className="p-2 bg-[var(--color-primary)]/20 rounded-lg">
+              <Users className="w-6 h-6 text-[var(--color-primary)]" />
             </div>
           </div>
         </div>
@@ -793,7 +793,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
           {/* Analytics Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-xl">
+              <div className="p-2 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-xl">
                 <BarChart3 className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -803,7 +803,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
             </div>
             <button
               onClick={() => setActiveTab('campaigns')}
-              className="px-4 py-2 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#FF8C42]/10 hover:border-[#FF8C42] hover:text-[#FF8C42] transition-colors flex items-center space-x-2"
+              className="px-4 py-2 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[var(--color-primary)]/10 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors flex items-center space-x-2"
             >
               <Mail className="w-4 h-4" />
               <span>Back to Campaigns</span>
@@ -874,12 +874,12 @@ const EmailMarketing = memo(({ onRefresh }) => {
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <p className="text-gray-400 text-sm">Avg Revenue</p>
-                  <p className="text-2xl font-bold text-[#FF8C42]">
+                  <p className="text-2xl font-bold text-[var(--color-primary)]">
                     ₱2,450
                   </p>
                 </div>
-                <div className="p-2 bg-[#FF8C42]/20 rounded-lg">
-                  <TrendingUp className="w-5 h-5 text-[#FF8C42]" />
+                <div className="p-2 bg-[var(--color-primary)]/20 rounded-lg">
+                  <TrendingUp className="w-5 h-5 text-[var(--color-primary)]" />
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -895,7 +895,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
             <div className="bg-[#1A1A1A] p-6 rounded-xl border border-[#2A2A2A]/50">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white">Campaign Performance</h3>
-                <BarChart3 className="w-5 h-5 text-[#FF8C42]" />
+                <BarChart3 className="w-5 h-5 text-[var(--color-primary)]" />
               </div>
               <div className="space-y-4">
                 {campaigns?.slice(0, 5).map((campaign, index) => {
@@ -944,7 +944,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
             <div className="bg-[#1A1A1A] p-6 rounded-xl border border-[#2A2A2A]/50">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white">Audience Engagement</h3>
-                <Users className="w-5 h-5 text-[#FF8C42]" />
+                <Users className="w-5 h-5 text-[var(--color-primary)]" />
               </div>
               <div className="space-y-4">
                 {Object.entries(audienceStats).map(([key, count]) => {
@@ -966,8 +966,8 @@ const EmailMarketing = memo(({ onRefresh }) => {
                   return (
                     <div key={key} className="flex items-center justify-between p-3 bg-[#1A1A1A] rounded-lg">
           <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-[#FF8C42]/20 rounded-lg">
-                          <IconComponent className="w-4 h-4 text-[#FF8C42]" />
+                        <div className="p-2 bg-[var(--color-primary)]/20 rounded-lg">
+                          <IconComponent className="w-4 h-4 text-[var(--color-primary)]" />
                         </div>
                         <div>
                           <p className="text-white text-sm font-medium">{labels[key]}</p>
@@ -989,7 +989,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
           <div className="bg-[#1A1A1A] p-6 rounded-xl border border-[#2A2A2A]/50">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-white">Recent Campaigns</h3>
-              <Clock className="w-5 h-5 text-[#FF8C42]" />
+              <Clock className="w-5 h-5 text-[var(--color-primary)]" />
             </div>
             <div className="space-y-4">
               {campaigns?.slice(0, 5).map((campaign, index) => {
@@ -1004,7 +1004,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                 return (
                   <div key={campaign._id} className="flex items-center justify-between p-4 bg-[#1A1A1A] rounded-lg">
                     <div className="flex items-center space-x-4">
-                      <div className="w-2 h-2 bg-[#FF8C42] rounded-full"></div>
+                      <div className="w-2 h-2 bg-[var(--color-primary)] rounded-full"></div>
                       <div>
                         <p className="text-white font-medium">{campaign.name}</p>
                         <p className="text-gray-400 text-sm">{campaign.subject}</p>
@@ -1038,7 +1038,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
           <div className="bg-[#1A1A1A] p-4 rounded-xl border border-[#2A2A2A]/50">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-white">Audience Segments</h3>
-              <Target className="w-5 h-5 text-[#FF8C42]" />
+              <Target className="w-5 h-5 text-[var(--color-primary)]" />
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {Object.entries(audienceStats).map(([key, count]) => {
@@ -1052,7 +1052,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                 return (
                   <div key={key} className="text-center">
                     <div className="p-2 bg-[#1A1A1A] rounded-lg inline-block mb-2">
-                      <IconComponent className="w-4 h-4 text-[#FF8C42]" />
+                      <IconComponent className="w-4 h-4 text-[var(--color-primary)]" />
                     </div>
                     <p className="text-2xl font-bold text-white">{count}</p>
                     <p className="text-xs text-gray-400">{labels[key]}</p>
@@ -1076,7 +1076,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
             <select
               value={audienceFilter}
               onChange={(e) => setAudienceFilter(e.target.value)}
-              className="px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+              className="px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
             >
               <option value="all">All Audiences</option>
               <option value="all_customers">All Customers</option>
@@ -1088,7 +1088,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+              className="px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
             >
               <option value="all">All Status</option>
               <option value="draft">Draft</option>
@@ -1101,7 +1101,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
             <select
               value={templateFilter}
               onChange={(e) => setTemplateFilter(e.target.value)}
-              className="px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+              className="px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
             >
               <option value="all">All Templates</option>
               <option value="marketing">Marketing</option>
@@ -1117,7 +1117,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search campaigns..."
-              className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42]"
+              className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
             />
           </div>
         </div>
@@ -1130,10 +1130,10 @@ const EmailMarketing = memo(({ onRefresh }) => {
           const isSending = sendingCampaign?._id === campaign._id
 
           return (
-            <div key={campaign._id} className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A]/50 p-5 hover:border-[#FF8C42]/50 transition-colors">
+            <div key={campaign._id} className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A]/50 p-5 hover:border-[var(--color-primary)]/50 transition-colors">
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center space-x-2">
-                <div className="p-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg">
+                <div className="p-2 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg">
                   <Mail className="w-4 h-4 text-white" />
                 </div>
                 <div>
@@ -1147,7 +1147,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
               </div>
 
               <div className="flex items-center space-x-2 mb-3">
-                <AudienceIcon className="w-4 h-4 text-[#FF8C42]" />
+                <AudienceIcon className="w-4 h-4 text-[var(--color-primary)]" />
                 <span className="text-xs text-gray-400 capitalize">
                   {campaign.audience.replace('_', ' ')}
                 </span>
@@ -1196,7 +1196,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                   </div>
                   <div className="w-full bg-[#1A1A1A] rounded-full h-2">
                     <div
-                      className="bg-[#FF8C42] h-2 rounded-full transition-all duration-300"
+                      className="bg-[var(--color-primary)] h-2 rounded-full transition-all duration-300"
                       style={{ width: `${sendProgress.total > 0 ? (sendProgress.current / sendProgress.total) * 100 : 0}%` }}
                     />
                   </div>
@@ -1217,7 +1217,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                       setSelectedCampaign(campaign)
                       setShowPreview(true)
                     }}
-                    className="px-3 py-2 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#FF8C42]/10 hover:border-[#FF8C42] hover:text-[#FF8C42] transition-colors"
+                    className="px-3 py-2 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[var(--color-primary)]/10 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors"
                   >
                     <Eye className="w-4 h-4" />
               </button>
@@ -1226,7 +1226,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                       setSelectedCampaign(campaign)
                       setShowTest(true)
                     }}
-                    className="px-3 py-2 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#FF8C42]/10 hover:border-[#FF8C42] hover:text-[#FF8C42] transition-colors"
+                    className="px-3 py-2 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[var(--color-primary)]/10 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors"
                   >
                     <TestTube className="w-4 h-4" />
                   </button>
@@ -1237,7 +1237,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                     <button
                       onClick={() => handleSendCampaign(campaign)}
                       disabled={isSending}
-                className="px-3 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors flex items-center space-x-2 disabled:opacity-50"
+                className="px-3 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] transition-colors flex items-center space-x-2 disabled:opacity-50"
               >
                       {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                       <span>Send</span>
@@ -1247,7 +1247,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                   {campaign.status === 'scheduled' && (
                     <button
                       onClick={() => updateCampaign({ id: campaign._id, status: 'draft' })}
-                      className="px-3 py-2 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#FF8C42]/10 hover:border-[#FF8C42] hover:text-[#FF8C42] transition-colors"
+                      className="px-3 py-2 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[var(--color-primary)]/10 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors"
                     >
                       <Pause className="w-4 h-4" />
               </button>
@@ -1271,7 +1271,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50 bg-[#0A0A0A]">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF6B1A] flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[#FF6B1A] flex items-center justify-center">
                     <Mail className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -1281,9 +1281,9 @@ const EmailMarketing = memo(({ onRefresh }) => {
                 </div>
                 <button
                   onClick={() => setShowCreate(false)}
-                  className="w-10 h-10 rounded-xl bg-[#333333] hover:bg-[#FF8C42]/20 flex items-center justify-center transition-all duration-200 group"
+                  className="w-10 h-10 rounded-xl bg-[#333333] hover:bg-[var(--color-primary)]/20 flex items-center justify-center transition-all duration-200 group"
                 >
-                  <X className="w-5 h-5 text-gray-400 group-hover:text-[#FF8C42] transition-colors" />
+                  <X className="w-5 h-5 text-gray-400 group-hover:text-[var(--color-primary)] transition-colors" />
                 </button>
               </div>
 
@@ -1295,8 +1295,8 @@ const EmailMarketing = memo(({ onRefresh }) => {
                     {/* Campaign Details Section */}
                     <div className="bg-[#222222] rounded-2xl p-6 border border-[#2A2A2A]/50">
                       <div className="flex items-center space-x-2 mb-6">
-                        <div className="w-8 h-8 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
-                          <Settings className="w-4 h-4 text-[#FF8C42]" />
+                        <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)]/20 flex items-center justify-center">
+                          <Settings className="w-4 h-4 text-[var(--color-primary)]" />
                         </div>
                         <h3 className="text-lg font-semibold text-white">Campaign Details</h3>
                       </div>
@@ -1313,7 +1313,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                               value={campaignForm.name}
                               onChange={(e) => setCampaignForm(prev => ({ ...prev, name: e.target.value }))}
                               required
-                              className="w-full h-12 px-4 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all duration-200"
+                              className="w-full h-12 px-4 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
                             />
                           </div>
 
@@ -1327,7 +1327,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                               value={campaignForm.subject}
                               onChange={(e) => setCampaignForm(prev => ({ ...prev, subject: e.target.value }))}
                               required
-                              className="w-full h-12 px-4 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all duration-200"
+                              className="w-full h-12 px-4 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
                             />
                           </div>
                         </div>
@@ -1349,14 +1349,14 @@ const EmailMarketing = memo(({ onRefresh }) => {
                                 setSendingCampaign(null)
                                 setShowRecipientModal(true)
                               }}
-                              className="w-full h-12 px-4 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-xl text-sm text-left hover:border-[#FF8C42] focus:outline-none focus:ring-2 focus:ring-[#FF8C42] transition-all duration-200"
+                              className="w-full h-12 px-4 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-xl text-sm text-left hover:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] transition-all duration-200"
                             >
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-2">
                                   <span>{getAudienceLabel(campaignForm.audience)}</span>
                                   <span className="text-xs text-gray-400">({selectedRecipients.length || getAudienceCount(campaignForm.audience || 'all_customers')})</span>
                                 </div>
-                                <span className="text-[#FF8C42] font-medium">Change</span>
+                                <span className="text-[var(--color-primary)] font-medium">Change</span>
                               </div>
                             </button>
                           </div>
@@ -1370,7 +1370,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                               placeholder="noreply@tpxbarber.com"
                               value={campaignForm.from_email || DEFAULT_FROM_EMAIL}
                               onChange={(e) => setCampaignForm(prev => ({ ...prev, from_email: e.target.value }))}
-                              className="w-full h-12 px-4 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all duration-200"
+                              className="w-full h-12 px-4 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
                               disabled
                             />
                             <p className="text-xs text-gray-400 mt-2">
@@ -1384,8 +1384,8 @@ const EmailMarketing = memo(({ onRefresh }) => {
                     {/* Template Selection Section */}
                     <div className="bg-[#222222] rounded-2xl p-6 border border-[#2A2A2A]/50">
                       <div className="flex items-center space-x-2 mb-6">
-                        <div className="w-8 h-8 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
-                          <FileText className="w-4 h-4 text-[#FF8C42]" />
+                        <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)]/20 flex items-center justify-center">
+                          <FileText className="w-4 h-4 text-[var(--color-primary)]" />
                         </div>
                         <h3 className="text-lg font-semibold text-white">Email Template</h3>
                       </div>
@@ -1405,8 +1405,8 @@ const EmailMarketing = memo(({ onRefresh }) => {
                     {/* Template Content Inputs (no rich text) */}
                     <div className="bg-[#222222] rounded-2xl p-6 border border-[#2A2A2A]/50">
                       <div className="flex items-center space-x-2 mb-6">
-                        <div className="w-8 h-8 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
-                          <Type className="w-4 h-4 text-[#FF8C42]" />
+                        <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)]/20 flex items-center justify-center">
+                          <Type className="w-4 h-4 text-[var(--color-primary)]" />
                         </div>
                         <h3 className="text-lg font-semibold text-white">Template Content</h3>
                       </div>
@@ -1423,7 +1423,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                               rows={4}
                               value={campaignForm.templateData?.mainContent || ''}
                               onChange={(e)=>setCampaignForm(p=>({...p, templateData: { ...p.templateData, mainContent: e.target.value }}))}
-                              className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42]"
+                              className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                               placeholder="We have an amazing offer just for you."
                             />
                           </div>
@@ -1433,7 +1433,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                               type="text"
                               value={campaignForm.templateData?.buttonText || ''}
                               onChange={(e)=>setCampaignForm(p=>({...p, templateData: { ...p.templateData, buttonText: e.target.value }}))}
-                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42]"
+                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                             />
                           </div>
                           <div>
@@ -1442,7 +1442,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                               type="url"
                               value={campaignForm.templateData?.buttonUrl || ''}
                               onChange={(e)=>setCampaignForm(p=>({...p, templateData: { ...p.templateData, buttonUrl: e.target.value }}))}
-                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42]"
+                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                               placeholder="#"
                             />
                           </div>
@@ -1452,7 +1452,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                               type="text"
                               value={campaignForm.templateData?.footerText || ''}
                               onChange={(e)=>setCampaignForm(p=>({...p, templateData: { ...p.templateData, footerText: e.target.value }}))}
-                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42]"
+                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                             />
                           </div>
                         </div>
@@ -1466,7 +1466,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                               type="number"
                               value={campaignForm.templateData?.discountPercentage || ''}
                               onChange={(e)=>setCampaignForm(p=>({...p, templateData: { ...p.templateData, discountPercentage: e.target.value }}))}
-                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42]"
+                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                               min="1"
                               max="90"
                             />
@@ -1477,7 +1477,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                               type="text"
                               value={campaignForm.templateData?.promoCode || ''}
                               onChange={(e)=>setCampaignForm(p=>({...p, templateData: { ...p.templateData, promoCode: e.target.value }}))}
-                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42]"
+                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                             />
                           </div>
                           <div>
@@ -1486,7 +1486,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                               type="date"
                               value={campaignForm.templateData?.validUntil || ''}
                               onChange={(e)=>setCampaignForm(p=>({...p, templateData: { ...p.templateData, validUntil: e.target.value }}))}
-                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42]"
+                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                             />
                           </div>
                           <div>
@@ -1495,7 +1495,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                               type="url"
                               value={campaignForm.templateData?.bookingUrl || ''}
                               onChange={(e)=>setCampaignForm(p=>({...p, templateData: { ...p.templateData, bookingUrl: e.target.value }}))}
-                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42]"
+                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                               placeholder="#"
                             />
                           </div>
@@ -1510,7 +1510,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                               rows={4}
                               value={campaignForm.templateData?.mainContent || ''}
                               onChange={(e)=>setCampaignForm(p=>({...p, templateData: { ...p.templateData, mainContent: e.target.value }}))}
-                              className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42]"
+                              className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                               placeholder="Welcome to our latest updates and news!"
                             />
                           </div>
@@ -1520,7 +1520,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                               type="text"
                               value={campaignForm.templateData?.buttonText || ''}
                               onChange={(e)=>setCampaignForm(p=>({...p, templateData: { ...p.templateData, buttonText: e.target.value }}))}
-                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42]"
+                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                             />
                           </div>
                           <div>
@@ -1529,7 +1529,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                               type="url"
                               value={campaignForm.templateData?.buttonUrl || ''}
                               onChange={(e)=>setCampaignForm(p=>({...p, templateData: { ...p.templateData, buttonUrl: e.target.value }}))}
-                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42]"
+                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                             />
                           </div>
                           <div className="md:col-span-2">
@@ -1538,7 +1538,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                               type="text"
                               value={campaignForm.templateData?.footerText || ''}
                               onChange={(e)=>setCampaignForm(p=>({...p, templateData: { ...p.templateData, footerText: e.target.value }}))}
-                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42]"
+                              className="w-full h-10 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                             />
                           </div>
                         </div>
@@ -1548,8 +1548,8 @@ const EmailMarketing = memo(({ onRefresh }) => {
                     {/* Scheduling Section */}
                     <div className="bg-[#222222] rounded-2xl p-6 border border-[#2A2A2A]/50">
                       <div className="flex items-center space-x-2 mb-6">
-                        <div className="w-8 h-8 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
-                          <Clock className="w-4 h-4 text-[#FF8C42]" />
+                        <div className="w-8 h-8 rounded-lg bg-[var(--color-primary)]/20 flex items-center justify-center">
+                          <Clock className="w-4 h-4 text-[var(--color-primary)]" />
                         </div>
                         <h3 className="text-lg font-semibold text-white">Schedule Campaign</h3>
                       </div>
@@ -1560,7 +1560,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                           onClick={() => setCampaignForm(prev => ({ ...prev, scheduled_at: null }))}
                           className={`px-6 py-3 rounded-xl text-sm font-medium transition-all ${
                             !campaignForm.scheduled_at
-                              ? 'bg-[#FF8C42] text-white shadow-lg shadow-[#FF8C42]/20'
+                              ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20'
                               : 'bg-[#333333] text-gray-300 hover:bg-[#444444]'
                           }`}
                         >
@@ -1572,7 +1572,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                           onClick={() => setCampaignForm(prev => ({ ...prev, scheduled_at: Date.now() + 3600000 }))}
                           className={`px-6 py-3 rounded-xl text-sm font-medium transition-all ${
                             campaignForm.scheduled_at
-                              ? 'bg-[#FF8C42] text-white shadow-lg shadow-[#FF8C42]/20'
+                              ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20'
                               : 'bg-[#333333] text-gray-300 hover:bg-[#444444]'
                           }`}
                         >
@@ -1587,7 +1587,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                             type="datetime-local"
                             value={new Date(campaignForm.scheduled_at).toISOString().slice(0, 16)}
                             onChange={(e) => setCampaignForm(prev => ({ ...prev, scheduled_at: new Date(e.target.value).getTime() }))}
-                            className="w-full h-12 px-4 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all duration-200"
+                            className="w-full h-12 px-4 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
                           />
                         </div>
                       )}
@@ -1607,7 +1607,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                         <button
                           type="button"
                           onClick={() => setShowDraftPreview(true)}
-                          className="px-6 py-3 border border-[#2A2A2A] hover:border-[#FF8C42] hover:bg-[#FF8C42]/10 text-gray-200 rounded-xl text-sm font-medium transition-all duration-200"
+                          className="px-6 py-3 border border-[#2A2A2A] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 text-gray-200 rounded-xl text-sm font-medium transition-all duration-200"
                         >
                           Preview Email
                         </button>
@@ -1620,7 +1620,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                         </button>
                         <button
                           type="submit"
-                          className="px-8 py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF6B1A] hover:from-[#FF6B1A] hover:to-[#FF8C42] text-white rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg shadow-[#FF8C42]/20 flex items-center"
+                          className="px-8 py-3 bg-gradient-to-r from-[var(--color-primary)] to-[#FF6B1A] hover:from-[#FF6B1A] hover:to-[var(--color-primary)] text-white rounded-xl text-sm font-semibold transition-all duration-200 shadow-lg shadow-[var(--color-primary)]/20 flex items-center"
                         >
                           <Send className="w-4 h-4 mr-2" />
                           Create Campaign
@@ -1649,9 +1649,9 @@ const EmailMarketing = memo(({ onRefresh }) => {
                 <h2 className="text-lg font-bold text-white">Email Preview</h2>
                 <button
                   onClick={() => setShowDraftPreview(false)}
-                  className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors duration-200"
+                  className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center transition-colors duration-200"
                 >
-                  <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+                  <X className="w-4 h-4 text-gray-400 hover:text-[var(--color-primary)]" />
                 </button>
               </div>
               <div className="p-4">
@@ -1677,7 +1677,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
               {/* Header */}
               <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50 bg-[#0A0A0A]">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#FF8C42] to-[#FF6B1A] flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[#FF6B1A] flex items-center justify-center">
                     <FileText className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -1687,9 +1687,9 @@ const EmailMarketing = memo(({ onRefresh }) => {
                 </div>
                 <button
                   onClick={() => setShowTemplate(false)}
-                  className="w-10 h-10 rounded-xl bg-[#333333] hover:bg-[#FF8C42]/20 flex items-center justify-center transition-all duration-200 group"
+                  className="w-10 h-10 rounded-xl bg-[#333333] hover:bg-[var(--color-primary)]/20 flex items-center justify-center transition-all duration-200 group"
                 >
-                  <X className="w-5 h-5 text-gray-400 group-hover:text-[#FF8C42] transition-colors" />
+                  <X className="w-5 h-5 text-gray-400 group-hover:text-[var(--color-primary)] transition-colors" />
                 </button>
               </div>
 
@@ -1705,22 +1705,22 @@ const EmailMarketing = memo(({ onRefresh }) => {
                         onClick={() => handleTemplateSelect(template)}
                         className={`p-6 bg-[#222222] border-2 rounded-2xl transition-all duration-200 text-left group ${
                           isSelected 
-                            ? 'border-[#FF8C42] bg-[#FF8C42]/5' 
-                            : 'border-[#2A2A2A] hover:border-[#FF8C42] hover:bg-[#FF8C42]/5'
+                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5' 
+                            : 'border-[#2A2A2A] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5'
                         }`}
                       >
                         <div className="flex items-center space-x-4 mb-4">
                           <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
-                            isSelected ? 'bg-[#FF8C42]/30' : 'bg-[#FF8C42]/20 group-hover:bg-[#FF8C42]/30'
+                            isSelected ? 'bg-[var(--color-primary)]/30' : 'bg-[var(--color-primary)]/20 group-hover:bg-[var(--color-primary)]/30'
                           }`}>
-                            <IconComponent className="w-6 h-6 text-[#FF8C42]" />
+                            <IconComponent className="w-6 h-6 text-[var(--color-primary)]" />
                           </div>
                           <div className="flex-1">
                             <h3 className="text-white font-semibold text-lg">{template.name}</h3>
                             <p className="text-gray-400 text-sm">Pre-designed template</p>
                           </div>
                           {isSelected && (
-                            <div className="w-6 h-6 bg-[#FF8C42] rounded-full flex items-center justify-center">
+                            <div className="w-6 h-6 bg-[var(--color-primary)] rounded-full flex items-center justify-center">
                               <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
@@ -1730,7 +1730,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                         <p className="text-gray-300 text-sm leading-relaxed">
                           {template.description}
                         </p>
-                        <div className="mt-4 flex items-center text-[#FF8C42] text-sm font-medium">
+                        <div className="mt-4 flex items-center text-[var(--color-primary)] text-sm font-medium">
                           <span>{isSelected ? 'Selected' : 'Select Template'}</span>
                           <svg className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -1755,8 +1755,8 @@ const EmailMarketing = memo(({ onRefresh }) => {
             <div className="relative w-full max-w-3xl transform rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl z-[10051]">
               <div className="flex items-center justify-between p-4 border-b border-[#2A2A2A]/50">
                 <h2 className="text-lg font-bold text-white">Select Recipients</h2>
-                <button onClick={closeRecipientModal} className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center">
-                  <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+                <button onClick={closeRecipientModal} className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center">
+                  <X className="w-4 h-4 text-gray-400 hover:text-[var(--color-primary)]" />
                 </button>
               </div>
               <div className="p-4 space-y-4">
@@ -1778,20 +1778,20 @@ const EmailMarketing = memo(({ onRefresh }) => {
                           const pre = filterCustomers(customers, f.id, recipientSearch)
                           setSelectedRecipients(pre)
                         }}
-                        className={`px-3 py-1.5 text-xs rounded-lg border ${recipientFilter===f.id? 'border-[#FF8C42] text-[#FF8C42] bg-[#FF8C42]/10':'border-[#2A2A2A] text-gray-300 hover:bg-[#444444]/50'}`}
+                        className={`px-3 py-1.5 text-xs rounded-lg border ${recipientFilter===f.id? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary)]/10':'border-[#2A2A2A] text-gray-300 hover:bg-[#444444]/50'}`}
                       >
                         {f.label}
                       </button>
                     ))}
                   </div>
                   <div className="space-x-2">
-                    <button onClick={()=>{ const list = filterCustomers(customers, recipientFilter, recipientSearch); setSelectedRecipients(list) }} className="text-xs px-3 py-1.5 border border-[#FF8C42] text-[#FF8C42] rounded-lg hover:bg-[#FF8C42]/10">Select All</button>
+                    <button onClick={()=>{ const list = filterCustomers(customers, recipientFilter, recipientSearch); setSelectedRecipients(list) }} className="text-xs px-3 py-1.5 border border-[var(--color-primary)] text-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary)]/10">Select All</button>
                     <button onClick={()=>setSelectedRecipients([])} className="text-xs px-3 py-1.5 border border-[#6B6B6B] text-[#6B6B6B] rounded-lg hover:bg-[#6B6B6B]/10">Clear</button>
                   </div>
                 </div>
                 {/* Search */}
                 <div className="relative">
-                  <input value={recipientSearch} onChange={(e)=>{setRecipientSearch(e.target.value)}} placeholder="Search customers..." className="w-full h-10 px-4 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42] pr-10" />
+                  <input value={recipientSearch} onChange={(e)=>{setRecipientSearch(e.target.value)}} placeholder="Search customers..." className="w-full h-10 px-4 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] pr-10" />
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 </div>
                 {/* Selected chips */}
@@ -1799,9 +1799,9 @@ const EmailMarketing = memo(({ onRefresh }) => {
                   <div className="border border-[#2A2A2A] rounded-xl p-2">
                     <div className="flex flex-wrap gap-2">
                       {selectedRecipients.map(u => (
-                        <div key={u._id || u.id} className="flex items-center space-x-1 bg-[#FF8C42]/10 border border-[#FF8C42]/20 rounded-lg px-2 py-1 text-xs">
+                        <div key={u._id || u.id} className="flex items-center space-x-1 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20 rounded-lg px-2 py-1 text-xs">
                           <span className="text-white">{u.username || u.email}</span>
-                          <button onClick={()=> setSelectedRecipients(prev => prev.filter(p => (p._id||p.id)!==(u._id||u.id)))} className="text-[#FF8C42] hover:text-[#FF7A2B]"><X className="w-3 h-3" /></button>
+                          <button onClick={()=> setSelectedRecipients(prev => prev.filter(p => (p._id||p.id)!==(u._id||u.id)))} className="text-[var(--color-primary)] hover:text-[var(--color-accent)]"><X className="w-3 h-3" /></button>
                         </div>
                       ))}
                     </div>
@@ -1815,8 +1815,8 @@ const EmailMarketing = memo(({ onRefresh }) => {
                     return (
                       <button key={id} onClick={()=>{
                         setSelectedRecipients(prev => isSel ? prev.filter(u => (u._id||u.id)!==id) : [...prev, c])
-                      }} className={`w-full flex items-center text-left space-x-3 p-2 rounded-lg ${isSel? 'bg-[#FF8C42]/10 border border-[#FF8C42]/20':'hover:bg-[#222222]'} `}>
-                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${isSel? 'bg-[#FF8C42] border-[#FF8C42]':'border-[#2A2A2A]'}`}>{isSel && <CheckCircle className="w-3 h-3 text-white" />}</div>
+                      }} className={`w-full flex items-center text-left space-x-3 p-2 rounded-lg ${isSel? 'bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20':'hover:bg-[#222222]'} `}>
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${isSel? 'bg-[var(--color-primary)] border-[var(--color-primary)]':'border-[#2A2A2A]'}`}>{isSel && <CheckCircle className="w-3 h-3 text-white" />}</div>
                         <div className="flex-1">
                           <div className="text-sm text-white">{c.username || c.email}</div>
                           <div className="text-xs text-gray-400">{c.email}</div>
@@ -1842,7 +1842,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                       }
                     }}
                     disabled={!selectedRecipients.length}
-                    className="flex-1 px-3 py-2 bg-[#FF8C42] text-white rounded-lg text-sm hover:bg-[#FF8C42]/90 disabled:opacity-50"
+                    className="flex-1 px-3 py-2 bg-[var(--color-primary)] text-white rounded-lg text-sm hover:bg-[var(--color-primary)]/90 disabled:opacity-50"
                   >
                     {isSendContext ? `Send to ${selectedRecipients.length}` : 'Done'}
                   </button>
@@ -1868,9 +1868,9 @@ const EmailMarketing = memo(({ onRefresh }) => {
                 <h2 className="text-lg font-bold text-white">Campaign Preview</h2>
                 <button
                   onClick={() => setShowPreview(false)}
-                  className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors duration-200"
+                  className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center transition-colors duration-200"
                 >
-                  <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+                  <X className="w-4 h-4 text-gray-400 hover:text-[var(--color-primary)]" />
                 </button>
               </div>
 
@@ -1880,7 +1880,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
                       <h3 className="text-white font-semibold mb-3 flex items-center">
-                        <Mail className="w-4 h-4 mr-2 text-[#FF8C42]" />
+                        <Mail className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
                         Campaign Details
                       </h3>
                       <div className="space-y-2 text-sm">
@@ -1911,7 +1911,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
 
                     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
                       <h3 className="text-white font-semibold mb-3 flex items-center">
-                        <BarChart3 className="w-4 h-4 mr-2 text-[#FF8C42]" />
+                        <BarChart3 className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
                         Performance
                       </h3>
                       <div className="space-y-2 text-sm">
@@ -1941,7 +1941,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
 
                   <div>
                     <h3 className="text-white font-semibold mb-3 flex items-center">
-                      <Eye className="w-4 h-4 mr-2 text-[#FF8C42]" />
+                      <Eye className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
                       Email Preview
                     </h3>
                     <div className="bg-white border border-[#2A2A2A] rounded-lg p-4 max-h-96 overflow-auto">
@@ -1984,9 +1984,9 @@ const EmailMarketing = memo(({ onRefresh }) => {
                 <h2 className="text-lg font-bold text-white">Send Test Email</h2>
                 <button
                   onClick={() => setShowTest(false)}
-                  className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors duration-200"
+                  className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center transition-colors duration-200"
                 >
-                  <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+                  <X className="w-4 h-4 text-gray-400 hover:text-[var(--color-primary)]" />
                 </button>
               </div>
 
@@ -2002,14 +2002,14 @@ const EmailMarketing = memo(({ onRefresh }) => {
                       placeholder="test@example.com"
                       value={testEmail}
                       onChange={(e) => setTestEmail(e.target.value)}
-                      className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all duration-200"
+                      className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
                       required
                     />
                   </div>
 
                   <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
                     <h4 className="text-white font-semibold mb-2 flex items-center">
-                      <TestTube className="w-4 h-4 mr-2 text-[#FF8C42]" />
+                      <TestTube className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
                       Campaign: {selectedCampaign.name}
                     </h4>
                     <p className="text-gray-400 text-sm">Subject: {selectedCampaign.subject}</p>
@@ -2029,7 +2029,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
                       type="button"
                       onClick={handleSendTest}
                       disabled={!testEmail}
-                      className="flex-1 px-3 py-2 bg-[#FF8C42] text-white rounded-lg text-sm hover:bg-[#FF8C42]/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 px-3 py-2 bg-[var(--color-primary)] text-white rounded-lg text-sm hover:bg-[var(--color-primary)]/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Send Test
                     </button>

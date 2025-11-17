@@ -359,7 +359,7 @@ const ProductsManagement = ({ onRefresh }) => {
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors text-sm"
+            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg hover:from-[var(--color-accent)] hover:brightness-110 transition-colors text-sm"
           >
             <Plus className="h-4 w-4" />
             <span>New Product</span>
@@ -423,9 +423,9 @@ const ProductsManagement = ({ onRefresh }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-400">Sold This Month</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.totalSold}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.totalSold}</p>
             </div>
-            <ShoppingCart className="h-8 w-8 text-[#FF8C42]" />
+            <ShoppingCart className="h-8 w-8 text-[var(--color-primary)]" />
           </div>
         </div>
       </div>
@@ -566,7 +566,7 @@ const ProductsManagement = ({ onRefresh }) => {
 
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <div className="text-lg font-bold text-[#FF8C42]">₱{product.price.toLocaleString()}</div>
+                      <div className="text-lg font-bold text-[var(--color-primary)]">₱{product.price.toLocaleString()}</div>
                       <div className="text-xs text-gray-500">Cost: ₱{product.cost.toLocaleString()}</div>
                       <div className="text-xs text-green-400">+{profitMargin}% margin</div>
                     </div>
@@ -577,7 +577,7 @@ const ProductsManagement = ({ onRefresh }) => {
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => handleEdit(product)}
-                        className="p-2 text-gray-400 hover:text-[#FF8C42] hover:bg-[#FF8C42]/20 rounded-lg transition-colors"
+                        className="p-2 text-gray-400 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 rounded-lg transition-colors"
                         title="Edit Product"
                       >
                         <Edit className="h-4 w-4" />

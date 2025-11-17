@@ -20,6 +20,71 @@ export default defineSchema({
     .index("by_active", ["is_active"])
     .index("by_created_at", ["createdAt"]),
 
+  // Branding / Whitelabel settings per branch
+  branding: defineTable({
+    branch_id: v.id("branches"),
+    display_name: v.optional(v.string()),
+    primary_color: v.optional(v.string()),
+    accent_color: v.optional(v.string()),
+    bg_color: v.optional(v.string()),
+    text_color: v.optional(v.string()),
+    muted_color: v.optional(v.string()),
+    logo_light_url: v.optional(v.string()),
+    logo_dark_url: v.optional(v.string()),
+    favicon_url: v.optional(v.string()),
+    banner_url: v.optional(v.string()),
+    feature_toggles: v.optional(v.object({
+      kiosk: v.optional(v.boolean()),
+      wallet: v.optional(v.boolean()),
+      vouchers: v.optional(v.boolean()),
+      referrals: v.optional(v.boolean()),
+    })),
+    updated_by: v.optional(v.id("users")),
+    updated_at: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_branch", ["branch_id"]),
+
+  // Global branding singleton for system-wide theming
+  branding_global: defineTable({
+    display_name: v.optional(v.string()),
+    primary_color: v.optional(v.string()),
+    accent_color: v.optional(v.string()),
+    bg_color: v.optional(v.string()),
+    text_color: v.optional(v.string()),
+    muted_color: v.optional(v.string()),
+    logo_light_url: v.optional(v.string()),
+    logo_dark_url: v.optional(v.string()),
+    favicon_url: v.optional(v.string()),
+    banner_url: v.optional(v.string()),
+    feature_toggles: v.optional(v.object({
+      kiosk: v.optional(v.boolean()),
+      wallet: v.optional(v.boolean()),
+      vouchers: v.optional(v.boolean()),
+      referrals: v.optional(v.boolean()),
+    })),
+    version: v.optional(v.number()),
+    updated_by: v.optional(v.id("users")),
+    updated_at: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_created_at", ["createdAt"]),
+
+  // Branding history for version tracking and rollback
+  branding_history: defineTable({
+    branding_id: v.id("branding_global"),
+    snapshot: v.any(), // Full branding object at this point in time
+    changed_by: v.id("users"),
+    change_notes: v.optional(v.string()),
+    version: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_branding", ["branding_id"])
+    .index("by_version", ["version"])
+    .index("by_created_at", ["createdAt"]),
+
   // Users table for authentication
   users: defineTable({
     username: v.string(),

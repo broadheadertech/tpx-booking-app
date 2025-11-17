@@ -22,8 +22,8 @@ const DashboardFooter = () => {
 
           {/* Center section - Developed by BroadHeader */}
           <div className="flex items-center justify-center space-x-3">
-            <div className="flex items-center space-x-2 px-4 py-2 bg-[#2A2A2A] border border-[#444444]/50 rounded-lg hover:border-[#FF8C42]/30 transition-colors">
-              <Code className="h-4 w-4 text-[#FF8C42]" />
+            <div className="flex items-center space-x-2 px-4 py-2 bg-[#2A2A2A] border border-[#444444]/50 rounded-lg hover:border-[var(--color-primary)]/30 transition-colors">
+              <Code className="h-4 w-4 text-[var(--color-primary)]" />
               <span className="text-gray-300 text-sm font-medium">Developed by</span>
               <img 
                 src="/img/bg-logo.png" 

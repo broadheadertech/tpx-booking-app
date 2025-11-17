@@ -189,7 +189,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
     <div className="space-y-4 text-center">
       {/* Welcome Hero */}
       <div className="space-y-3">
-        <div className="mx-auto w-16 h-16 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-2xl flex items-center justify-center shadow-xl">
+        <div className="mx-auto w-16 h-16 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-2xl flex items-center justify-center shadow-xl">
           <Bot className="w-8 h-8 text-white" />
         </div>
         <div>
@@ -204,7 +204,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
       <div className="grid grid-cols-1 gap-3 px-4">
         <div className="bg-gradient-to-br from-gray-800/40 to-gray-700/40 rounded-lg p-3 border border-gray-600/30">
           <div className="flex items-center space-x-2 mb-2">
-            <Sparkles className="w-4 h-4 text-[#FF8C42]" />
+            <Sparkles className="w-4 h-4 text-[var(--color-primary)]" />
             <h3 className="text-white font-medium text-sm">AI Analysis</h3>
           </div>
           <p className="text-gray-400 text-xs">
@@ -214,7 +214,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
 
         <div className="bg-gradient-to-br from-gray-800/40 to-gray-700/40 rounded-lg p-3 border border-gray-600/30">
           <div className="flex items-center space-x-2 mb-2">
-            <Image className="w-4 h-4 text-[#FF8C42]" />
+            <Image className="w-4 h-4 text-[var(--color-primary)]" />
             <h3 className="text-white font-medium text-sm">Style Gallery</h3>
           </div>
           <p className="text-gray-400 text-xs">
@@ -227,7 +227,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
       <div className="px-4 pt-2">
         <button
           onClick={() => setCurrentStep(1)}
-          className="w-full bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg shadow-[#FF8C42]/20 flex items-center justify-center space-x-3"
+          className="w-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:brightness-110 text-white px-6 py-3 rounded-xl font-medium transition-all duration-200 shadow-lg shadow-[var(--color-primary)]/20 flex items-center justify-center space-x-3"
         >
           <Sparkles className="w-4 h-4" />
           <span className="text-sm font-semibold">Get Started</span>
@@ -239,15 +239,15 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
       <div className="bg-gray-800/30 rounded-lg p-3 border border-gray-600/30 mx-4">
         <div className="grid grid-cols-3 gap-3 text-center">
           <div>
-            <div className="text-[#FF8C42] font-bold text-sm">AI</div>
+            <div className="text-[var(--color-primary)] font-bold text-sm">AI</div>
             <div className="text-gray-400 text-xs">Powered</div>
           </div>
           <div>
-            <div className="text-[#FF8C42] font-bold text-sm">5</div>
+            <div className="text-[var(--color-primary)] font-bold text-sm">5</div>
             <div className="text-gray-400 text-xs">Steps</div>
           </div>
           <div>
-            <div className="text-[#FF8C42] font-bold text-sm">∞</div>
+            <div className="text-[var(--color-primary)] font-bold text-sm">∞</div>
             <div className="text-gray-400 text-xs">Styles</div>
           </div>
         </div>
@@ -316,7 +316,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
           <div className={`px-6 py-3 rounded-xl font-medium flex items-center justify-center space-x-2 transition-all duration-200 shadow-lg ${
             isValidatingImage 
               ? 'bg-gray-600 cursor-not-allowed text-gray-300'
-              : 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] text-white cursor-pointer'
+              : 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:brightness-110 text-white cursor-pointer'
           }`}>
             {isValidatingImage ? (
               <>
@@ -336,19 +336,19 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
           <h4 className="text-white font-medium text-sm mb-3">Photo Tips:</h4>
           <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
             <div className="flex items-center space-x-1">
-              <div className="w-1 h-1 bg-[#FF8C42] rounded-full"></div>
+              <div className="w-1 h-1 bg-[var(--color-primary)] rounded-full"></div>
               <span>Good lighting</span>
             </div>
             <div className="flex items-center space-x-1">
-              <div className="w-1 h-1 bg-[#FF8C42] rounded-full"></div>
+              <div className="w-1 h-1 bg-[var(--color-primary)] rounded-full"></div>
               <span>Face camera directly</span>
             </div>
             <div className="flex items-center space-x-1">
-              <div className="w-1 h-1 bg-[#FF8C42] rounded-full"></div>
+              <div className="w-1 h-1 bg-[var(--color-primary)] rounded-full"></div>
               <span>Remove accessories</span>
             </div>
             <div className="flex items-center space-x-1">
-              <div className="w-1 h-1 bg-[#FF8C42] rounded-full"></div>
+              <div className="w-1 h-1 bg-[var(--color-primary)] rounded-full"></div>
               <span>Clear view of face</span>
             </div>
           </div>
@@ -374,7 +374,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
             disabled={!canProceed() || currentStep === 5 || (currentStep === 2 && isGeneratingRecommendations)}
             className={`flex items-center justify-center space-x-2 px-6 py-2.5 rounded-xl font-medium transition-all duration-200 text-sm min-w-[140px] ${
               canProceed() && currentStep < 5 && !(currentStep === 2 && isGeneratingRecommendations)
-                ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] text-white shadow-lg shadow-[#FF8C42]/20'
+                ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:brightness-110 text-white shadow-lg shadow-[var(--color-primary)]/20'
                 : 'bg-gray-700/30 text-gray-500 cursor-not-allowed'
             }`}
           >
@@ -411,7 +411,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
               onClick={() => setUserPreferences(prev => ({ ...prev, hairType: type.id }))}
               className={`p-3 rounded-xl border transition-all duration-200 text-left ${
                 userPreferences.hairType === type.id
-                  ? 'bg-gradient-to-r from-[#FF8C42]/20 to-[#FF7A2B]/20 border-[#FF8C42]/60 text-white shadow-lg'
+                  ? 'bg-gradient-to-r from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 border-[var(--color-primary)]/60 text-white shadow-lg'
                   : 'bg-gradient-to-br from-gray-800/40 to-gray-700/40 border-gray-600/30 text-gray-300 hover:border-gray-500/50'
               }`}
             >
@@ -431,7 +431,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
               onClick={() => setUserPreferences(prev => ({ ...prev, lifestyle: lifestyle.id }))}
               className={`p-3 rounded-xl border transition-all duration-200 text-left ${
                 userPreferences.lifestyle === lifestyle.id
-                  ? 'bg-gradient-to-r from-[#FF8C42]/20 to-[#FF7A2B]/20 border-[#FF8C42]/60 text-white shadow-lg'
+                  ? 'bg-gradient-to-r from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 border-[var(--color-primary)]/60 text-white shadow-lg'
                   : 'bg-gradient-to-br from-gray-800/40 to-gray-700/40 border-gray-600/30 text-gray-300 hover:border-gray-500/50'
               }`}
             >
@@ -451,7 +451,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
               onClick={() => setUserPreferences(prev => ({ ...prev, maintenance: level.id }))}
               className={`p-3 rounded-xl border transition-all duration-200 text-center ${
                 userPreferences.maintenance === level.id
-                  ? 'bg-gradient-to-r from-[#FF8C42]/20 to-[#FF7A2B]/20 border-[#FF8C42]/60 text-white shadow-lg'
+                  ? 'bg-gradient-to-r from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 border-[var(--color-primary)]/60 text-white shadow-lg'
                   : 'bg-gradient-to-br from-gray-800/40 to-gray-700/40 border-gray-600/30 text-gray-300 hover:border-gray-500/50'
               }`}
             >
@@ -482,7 +482,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
           disabled={!canProceed() || currentStep === 5 || (currentStep === 2 && isGeneratingRecommendations)}
           className={`flex items-center justify-center space-x-2 px-6 py-2.5 rounded-xl font-medium transition-all duration-200 text-sm min-w-[140px] ${
             canProceed() && currentStep < 5 && !(currentStep === 2 && isGeneratingRecommendations)
-              ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] text-white shadow-lg shadow-[#FF8C42]/20'
+              ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:brightness-110 text-white shadow-lg shadow-[var(--color-primary)]/20'
               : 'bg-gray-700/30 text-gray-500 cursor-not-allowed'
           }`}
         >
@@ -506,9 +506,9 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
     <div className="space-y-4">
       <div className="text-center mb-4">
         <div className="flex items-center justify-center space-x-2 mb-2">
-          <Bot className="w-4 h-4 text-[#FF8C42]" />
+          <Bot className="w-4 h-4 text-[var(--color-primary)]" />
           <h3 className="text-white font-medium text-base">AI Recommendations</h3>
-          <Sparkles className="w-4 h-4 text-[#FF8C42]" />
+          <Sparkles className="w-4 h-4 text-[var(--color-primary)]" />
         </div>
         <p className="text-gray-400 text-sm">Personalized suggestions based on your preferences</p>
         {aiError && (
@@ -521,7 +521,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
       {isGeneratingRecommendations ? (
         <div className="flex items-center justify-center py-8">
           <div className="flex items-center space-x-3">
-            <div className="animate-spin rounded-full h-6 w-6 border-2 border-[#FF8C42] border-t-transparent"></div>
+            <div className="animate-spin rounded-full h-6 w-6 border-2 border-[var(--color-primary)] border-t-transparent"></div>
             <span className="text-gray-300 text-sm">AI analyzing your preferences...</span>
           </div>
         </div>
@@ -532,7 +532,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
               key={rec.id}
               className={`p-4 rounded-xl border transition-all duration-200 cursor-pointer ${
                 selectedRecommendation?.id === rec.id
-                  ? 'bg-gradient-to-r from-[#FF8C42]/20 to-[#FF7A2B]/20 border-[#FF8C42]/60 shadow-lg'
+                  ? 'bg-gradient-to-r from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 border-[var(--color-primary)]/60 shadow-lg'
                   : 'bg-gradient-to-br from-gray-800/40 to-gray-700/40 border-gray-600/30 hover:border-gray-500/50'
               }`}
               onClick={() => setSelectedRecommendation(rec)}
@@ -543,14 +543,14 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
                   <div className="flex items-center space-x-2">
                     <h4 className="text-white font-medium text-sm">{rec.name}</h4>
                     {!aiError && (
-                      <div className="bg-[#FF8C42]/20 px-1.5 py-0.5 rounded-full">
-                        <span className="text-[#FF8C42] text-xs font-medium">AI</span>
+                      <div className="bg-[var(--color-primary)]/20 px-1.5 py-0.5 rounded-full">
+                        <span className="text-[var(--color-primary)] text-xs font-medium">AI</span>
                       </div>
                     )}
                   </div>
                   <div className="flex items-center space-x-1">
-                    <Star className="w-3 h-3 text-[#FF8C42] fill-current" />
-                    <span className="text-[#FF8C42] font-medium text-xs">{rec.suitability}%</span>
+                    <Star className="w-3 h-3 text-[var(--color-primary)] fill-current" />
+                    <span className="text-[var(--color-primary)] font-medium text-xs">{rec.suitability}%</span>
                   </div>
                 </div>
 
@@ -612,7 +612,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
             disabled={!canProceed() || currentStep === 5 || isGeneratingRecommendations}
             className={`flex items-center justify-center space-x-2 px-6 py-2.5 rounded-xl font-medium transition-all duration-200 text-sm min-w-[100px] ${
               canProceed() && currentStep < 5 && !isGeneratingRecommendations
-                ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] text-white shadow-lg shadow-[#FF8C42]/20'
+                ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:brightness-110 text-white shadow-lg shadow-[var(--color-primary)]/20'
                 : 'bg-gray-700/30 text-gray-500 cursor-not-allowed'
             }`}
           >
@@ -629,7 +629,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
     return (
       <div className="space-y-4">
         {selectedRecommendation && (
-          <div className="bg-gradient-to-r from-[#FF8C42]/10 to-[#FF7A2B]/10 p-4 rounded-xl border border-[#FF8C42]/30">
+          <div className="bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 p-4 rounded-xl border border-[var(--color-primary)]/30">
             <h3 className="text-white font-medium text-sm mb-1">Exploring: {selectedRecommendation.name}</h3>
             <p className="text-gray-400 text-xs">Browse similar styles and get inspired</p>
           </div>
@@ -663,7 +663,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
             disabled={currentStep === 5}
             className={`flex items-center justify-center space-x-2 px-6 py-2.5 rounded-xl font-medium transition-all duration-200 text-sm min-w-[100px] ${
               currentStep < 5
-                ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] text-white shadow-lg shadow-[#FF8C42]/20'
+                ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:brightness-110 text-white shadow-lg shadow-[var(--color-primary)]/20'
                 : 'bg-gray-700/30 text-gray-500 cursor-not-allowed'
             }`}
           >
@@ -697,7 +697,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
     return (
       <div className="space-y-4">
         {selectedRecommendation && (
-          <div className="bg-gradient-to-r from-[#FF8C42]/10 to-[#FF7A2B]/10 p-4 rounded-xl border border-[#FF8C42]/30">
+          <div className="bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-accent)]/10 p-4 rounded-xl border border-[var(--color-primary)]/30">
             <h3 className="text-white font-medium text-sm mb-1">Perfect Choice: {selectedRecommendation.name}</h3>
             <p className="text-gray-400 text-xs">{selectedRecommendation.description}</p>
           </div>
@@ -717,7 +717,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
         <div className="space-y-3">
           <button
             onClick={handleBookNow}
-            className="w-full bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] text-white px-6 py-4 rounded-xl font-medium transition-all duration-200 shadow-lg shadow-[#FF8C42]/20 flex items-center justify-center space-x-3"
+            className="w-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:brightness-110 text-white px-6 py-4 rounded-xl font-medium transition-all duration-200 shadow-lg shadow-[var(--color-primary)]/20 flex items-center justify-center space-x-3"
           >
             <Calendar className="w-5 h-5" />
             <span className="text-base font-semibold">Book Appointment Now</span>
@@ -738,15 +738,15 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
           <h4 className="text-white font-medium text-sm mb-3">Why This Style Works for You:</h4>
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-[#FF8C42] rounded-full"></div>
+              <div className="w-2 h-2 bg-[var(--color-primary)] rounded-full"></div>
               <span className="text-gray-300 text-xs">Matches your {userPreferences.hairType} hair type</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-[#FF8C42] rounded-full"></div>
+              <div className="w-2 h-2 bg-[var(--color-primary)] rounded-full"></div>
               <span className="text-gray-300 text-xs">Suits your {userPreferences.lifestyle} lifestyle</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-[#FF8C42] rounded-full"></div>
+              <div className="w-2 h-2 bg-[var(--color-primary)] rounded-full"></div>
               <span className="text-gray-300 text-xs">{userPreferences.maintenance} maintenance required</span>
             </div>
             {selectedRecommendation.suitability && (
@@ -831,13 +831,13 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
         <div className="sticky top-0 z-40 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30">
           <div className="px-4 py-3">
             <div className="flex items-center justify-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-xl flex items-center justify-center shadow-lg">
+              <div className="w-8 h-8 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-xl flex items-center justify-center shadow-lg">
                 <Scissors className="w-4 h-4 text-white" />
               </div>
               <div className="text-center">
                 <div className="flex items-center justify-center space-x-2">
                   <h1 className="text-white font-bold text-base">AI Style Assistant</h1>
-                  <Bot className="w-4 h-4 text-[#FF8C42]" />
+                  <Bot className="w-4 h-4 text-[var(--color-primary)]" />
                 </div>
                 <p className="text-gray-400 text-xs">Personalized recommendations powered by AI</p>
               </div>
@@ -855,7 +855,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
                     <div
                       className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-300 ${
                         currentStep >= step.id
-                          ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white shadow-md'
+                          ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md'
                           : 'bg-[#2A2A2A] border border-[#444444] text-gray-500'
                       }`}
                     >
@@ -870,7 +870,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
                     <div className="w-6 mx-1">
                       <div
                         className={`h-0.5 rounded-full transition-all duration-500 ${
-                          currentStep > step.id ? 'bg-[#FF8C42]' : 'bg-[#444444]'
+                          currentStep > step.id ? 'bg-[var(--color-primary)]' : 'bg-[#444444]'
                         }`}
                       />
                     </div>

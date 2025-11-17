@@ -86,7 +86,7 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
     >
       {/* Unread indicator */}
       {!notification.is_read && (
-        <div className="absolute top-3 right-3 w-3 h-3 bg-[#FF8C42] rounded-full animate-pulse shadow-lg shadow-[#FF8C42]/30" />
+        <div className="absolute top-3 right-3 w-3 h-3 bg-[var(--color-primary)] rounded-full animate-pulse shadow-lg shadow-[var(--color-primary)]/30" />
       )}
 
       <div className="flex items-start space-x-4">
@@ -106,7 +106,7 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
                   {timeAgo(notification.createdAt)}
                 </span>
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  notification.is_read ? 'bg-gray-500/20 text-gray-400' : 'bg-[#FF8C42]/20 text-[#FF8C42]'
+                  notification.is_read ? 'bg-gray-500/20 text-gray-400' : 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'
                 }`}>
                   {notification.type}
                 </span>
@@ -120,7 +120,7 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
                     e.stopPropagation();
                     onMarkAsRead(notification._id);
                   }}
-                  className="p-1.5 text-gray-400 hover:text-[#FF8C42] transition-colors rounded-lg hover:bg-[#FF8C42]/10"
+                  className="p-1.5 text-gray-400 hover:text-[var(--color-primary)] transition-colors rounded-lg hover:bg-[var(--color-primary)]/10"
                   title="Mark as read"
                 >
                   <Check size={14} />
@@ -150,7 +150,7 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
             <button
               onClick={handleAction}
               className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg
-                bg-[#FF8C42] hover:bg-[#FF8C42]/90 text-white transition-all duration-200 shadow-lg shadow-[#FF8C42]/20"
+                bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white transition-all duration-200 shadow-lg shadow-[var(--color-primary)]/20"
             >
               {notification.action_label}
               <span className="ml-1">→</span>
@@ -238,12 +238,12 @@ const NotificationsPage = ({ onBack }) => {
               <span className="text-sm">Back</span>
             </button>
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-[#FF8C42]/20 rounded-lg border border-[#FF8C42]/50">
-                <Bell className="text-[#FF8C42] w-5 h-5" />
+              <div className="p-2 bg-[var(--color-primary)]/20 rounded-lg border border-[var(--color-primary)]/50">
+                <Bell className="text-[var(--color-primary)] w-5 h-5" />
               </div>
               <div className="text-right">
                 <p className="text-lg font-bold text-white">Notifications</p>
-                <p className="text-xs text-[#FF8C42]">
+                <p className="text-xs text-[var(--color-primary)]">
                   {stats?.unreadCount || 0} unread
                 </p>
               </div>
@@ -259,8 +259,8 @@ const NotificationsPage = ({ onBack }) => {
             <div className="text-lg font-bold text-white">{stats?.totalCount || 0}</div>
             <div className="text-xs text-gray-400">Total</div>
           </div>
-          <div className="bg-[#1A1A1A] rounded-xl p-3 border border-[#FF8C42]/50 text-center">
-            <div className="text-lg font-bold text-[#FF8C42]">{stats?.unreadCount || 0}</div>
+          <div className="bg-[#1A1A1A] rounded-xl p-3 border border-[var(--color-primary)]/50 text-center">
+            <div className="text-lg font-bold text-[var(--color-primary)]">{stats?.unreadCount || 0}</div>
             <div className="text-xs text-gray-400">Unread</div>
           </div>
           <div className="bg-[#1A1A1A] rounded-xl p-3 border border-blue-500/50 text-center">
@@ -283,7 +283,7 @@ const NotificationsPage = ({ onBack }) => {
                   onClick={() => setActiveFilter(option.value)}
                   className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 flex-1
                     ${activeFilter === option.value
-                      ? 'bg-[#FF8C42] text-white'
+                      ? 'bg-[var(--color-primary)] text-white'
                       : 'bg-[#0A0A0A] text-gray-400 hover:bg-[#2A2A2A] hover:text-white'
                     }`}
                 >
@@ -292,7 +292,7 @@ const NotificationsPage = ({ onBack }) => {
                     <div className={`text-xs mt-0.5 ${
                       activeFilter === option.value
                         ? 'text-white/80'
-                        : 'text-[#FF8C42]'
+                        : 'text-[var(--color-primary)]'
                     }`}>
                       ({option.count})
                     </div>
@@ -310,7 +310,7 @@ const NotificationsPage = ({ onBack }) => {
               type="checkbox"
               checked={unreadOnly}
               onChange={(e) => setUnreadOnly(e.target.checked)}
-              className="mr-3 w-4 h-4 accent-[#FF8C42] rounded"
+              className="mr-3 w-4 h-4 accent-[var(--color-primary)] rounded"
             />
             Show unread only
           </label>
@@ -318,7 +318,7 @@ const NotificationsPage = ({ onBack }) => {
           {stats && stats.unreadCount > 0 && (
             <button
               onClick={handleMarkAllAsRead}
-              className="flex items-center space-x-2 px-4 py-2 text-sm bg-[#FF8C42] hover:bg-[#FF8C42]/90 text-white rounded-lg transition-colors font-medium"
+              className="flex items-center space-x-2 px-4 py-2 text-sm bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white rounded-lg transition-colors font-medium"
             >
               <CheckCircle size={14} />
               <span>Mark all read</span>
@@ -330,7 +330,7 @@ const NotificationsPage = ({ onBack }) => {
         <div className="space-y-3">
           {notifications === undefined ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-t-2 border-[#FF8C42] mb-4"></div>
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-t-2 border-[var(--color-primary)] mb-4"></div>
               <p className="text-gray-400 text-sm">Loading notifications...</p>
             </div>
           ) : notifications.length === 0 ? (

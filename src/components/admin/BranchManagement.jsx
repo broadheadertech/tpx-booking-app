@@ -184,7 +184,7 @@ export default function BranchManagement() {
   if (!branches) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42]"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
         <span className="ml-2 text-gray-400">Loading branches...</span>
       </div>
     )
@@ -198,9 +198,9 @@ export default function BranchManagement() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Total Branches</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.total}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.total}</p>
             </div>
-            <Building className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <Building className="h-8 w-8 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
         
@@ -228,9 +228,9 @@ export default function BranchManagement() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Recent</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.recent}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.recent}</p>
             </div>
-            <Calendar className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <Calendar className="h-8 w-8 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
       </div>
@@ -246,7 +246,7 @@ export default function BranchManagement() {
                 placeholder="Search branches..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent text-sm"
+                className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
               />
             </div>
 
@@ -255,7 +255,7 @@ export default function BranchManagement() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -266,7 +266,7 @@ export default function BranchManagement() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+              className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
             >
               <option value="name">Sort by Name</option>
               <option value="code">Sort by Code</option>
@@ -285,7 +285,7 @@ export default function BranchManagement() {
             </button>
             <button
               onClick={handleCreate}
-              className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors text-sm"
+              className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] transition-colors text-sm"
             >
               <Plus className="h-4 w-4" />
               <span>New Branch</span>
@@ -327,8 +327,8 @@ export default function BranchManagement() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-lg bg-[#FF8C42]/20 flex items-center justify-center">
-                            <Building className="h-5 w-5 text-[#FF8C42]" />
+                          <div className="h-10 w-10 rounded-lg bg-[var(--color-primary)]/20 flex items-center justify-center">
+                            <Building className="h-5 w-5 text-[var(--color-primary)]" />
                           </div>
                         </div>
                         <div className="ml-4">
@@ -411,7 +411,7 @@ export default function BranchManagement() {
               <div className="mt-6">
                 <button
                   onClick={handleCreate}
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A]"
+                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:brightness-110"
                 >
                   <Plus className="-ml-1 mr-2 h-4 w-4" />
                   New Branch

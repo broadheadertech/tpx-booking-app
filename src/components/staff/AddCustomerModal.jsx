@@ -133,7 +133,7 @@ const AddCustomerModal = ({ isOpen, onClose, onSubmit, onCustomerAdded }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <h3 className="text-lg font-black text-[#1A1A1A] uppercase tracking-wide flex items-center">
-              <User className="w-5 h-5 text-[#FF8C42] mr-2" />
+              <User className="w-5 h-5 text-[var(--color-primary)] mr-2" />
               Account Information
             </h3>
             
@@ -143,7 +143,7 @@ const AddCustomerModal = ({ isOpen, onClose, onSubmit, onCustomerAdded }) => {
               value={formData.username}
               onChange={(e) => handleInputChange('username', e.target.value)}
               required
-              className="border-[#F5F5F5] focus:border-[#FF8C42]"
+              className="border-[#F5F5F5] focus:border-[var(--color-primary)]"
               error={fieldErrors.username?.[0]}
             />
             
@@ -154,7 +154,7 @@ const AddCustomerModal = ({ isOpen, onClose, onSubmit, onCustomerAdded }) => {
               value={formData.password}
               onChange={(e) => handleInputChange('password', e.target.value)}
               required
-              className="border-[#F5F5F5] focus:border-[#FF8C42]"
+              className="border-[#F5F5F5] focus:border-[var(--color-primary)]"
               error={fieldErrors.password?.[0]}
             />
             
@@ -165,7 +165,7 @@ const AddCustomerModal = ({ isOpen, onClose, onSubmit, onCustomerAdded }) => {
               value={formData.email}
               onChange={(e) => handleInputChange('email', e.target.value)}
               required
-              className="border-[#F5F5F5] focus:border-[#FF8C42]"
+              className="border-[#F5F5F5] focus:border-[var(--color-primary)]"
               error={fieldErrors.email?.[0]}
             />
             
@@ -176,14 +176,14 @@ const AddCustomerModal = ({ isOpen, onClose, onSubmit, onCustomerAdded }) => {
               value={formData.mobile_number}
               onChange={(e) => handleInputChange('mobile_number', e.target.value)}
               required
-              className="border-[#F5F5F5] focus:border-[#FF8C42]"
+              className="border-[#F5F5F5] focus:border-[var(--color-primary)]"
               error={fieldErrors.mobile_number?.[0]}
             />
           </div>
           
           <div className="space-y-4">
             <h3 className="text-lg font-black text-[#1A1A1A] uppercase tracking-wide flex items-center">
-              <Calendar className="w-5 h-5 text-[#FF8C42] mr-2" />
+              <Calendar className="w-5 h-5 text-[var(--color-primary)] mr-2" />
               Personal Details
             </h3>
             
@@ -192,7 +192,7 @@ const AddCustomerModal = ({ isOpen, onClose, onSubmit, onCustomerAdded }) => {
               placeholder="Preferred name or alias"
               value={formData.nickname}
               onChange={(e) => handleInputChange('nickname', e.target.value)}
-              className="border-[#F5F5F5] focus:border-[#FF8C42]"
+              className="border-[#F5F5F5] focus:border-[var(--color-primary)]"
               error={fieldErrors.nickname?.[0]}
             />
             
@@ -201,7 +201,7 @@ const AddCustomerModal = ({ isOpen, onClose, onSubmit, onCustomerAdded }) => {
               type="date"
               value={formData.birthday}
               onChange={(e) => handleInputChange('birthday', e.target.value)}
-              className="border-[#F5F5F5] focus:border-[#FF8C42]"
+              className="border-[#F5F5F5] focus:border-[var(--color-primary)]"
               error={fieldErrors.birthday?.[0]}
             />
 
@@ -244,7 +244,7 @@ const AddCustomerModal = ({ isOpen, onClose, onSubmit, onCustomerAdded }) => {
           <Button
             type="submit"
             disabled={loading}
-            className="flex-1 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white hover:shadow-lg disabled:opacity-50"
+            className="flex-1 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white hover:shadow-lg disabled:opacity-50"
           >
             {loading ? 'Creating...' : 'Create Customer'}
           </Button>

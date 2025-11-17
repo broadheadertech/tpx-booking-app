@@ -297,8 +297,8 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
               {/* Scanning Overlay */}
               {isScanning && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-32 h-32 lg:w-40 lg:h-40 border-2 border-[#FF8C42] rounded-xl lg:rounded-2xl animate-pulse">
-                    <div className="absolute inset-2 lg:inset-3 border border-[#FF8C42] rounded-lg lg:rounded-xl opacity-50"></div>
+                  <div className="w-32 h-32 lg:w-40 lg:h-40 border-2 border-[var(--color-primary)] rounded-xl lg:rounded-2xl animate-pulse">
+                    <div className="absolute inset-2 lg:inset-3 border border-[var(--color-primary)] rounded-lg lg:rounded-xl opacity-50"></div>
                   </div>
                 </div>
               )}
@@ -308,7 +308,7 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
                 <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
                   <div className="bg-white rounded-lg p-4 shadow-lg">
                     <div className="flex items-center space-x-3">
-                      <RefreshCw className="w-5 h-5 text-[#FF8C42] animate-spin" />
+                      <RefreshCw className="w-5 h-5 text-[var(--color-primary)] animate-spin" />
                       <span className="font-medium text-sm">Processing...</span>
                     </div>
                   </div>
@@ -348,7 +348,7 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
                       onClick={() => switchCamera(camera)}
                       className={`w-full p-2 rounded text-left text-sm transition-colors ${
                         selectedCamera?.id === camera.id
-                          ? 'bg-[#FF8C42] text-white'
+                          ? 'bg-[var(--color-primary)] text-white'
                           : 'hover:bg-gray-100'
                       }`}
                     >
@@ -366,7 +366,7 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
                 <Button
                   onClick={startScanning}
                   disabled={!selectedCamera}
-                  className="bg-[#FF8C42] hover:bg-[#FF7A2B] text-white px-4 lg:px-6 py-2.5 text-sm lg:text-base"
+                  className="bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white px-4 lg:px-6 py-2.5 text-sm lg:text-base"
                 >
                   <Camera className="w-4 h-4 mr-2" />
                   Start Scanning
@@ -453,7 +453,7 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
                       <DollarSign className="w-3 h-3 lg:w-4 lg:h-4 text-gray-500" />
                       <span className="text-[10px] lg:text-xs font-medium text-gray-500 uppercase tracking-wide">Price</span>
                     </div>
-                    <p className="font-bold text-[#FF8C42] text-base lg:text-lg">₱{scanResult.price}</p>
+                    <p className="font-bold text-[var(--color-primary)] text-base lg:text-lg">₱{scanResult.price}</p>
                   </div>
                   
                   <div className="bg-[#1A1A1A] rounded-lg p-2.5 lg:p-3 border border-[#444444]">
@@ -462,7 +462,7 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
                       <span className="text-[10px] lg:text-xs font-medium text-gray-500 uppercase tracking-wide">Date & Time</span>
                     </div>
                     <p className="font-semibold text-white text-xs lg:text-sm truncate">{scanResult.date}</p>
-                    <p className="text-[#FF8C42] font-medium text-xs lg:text-sm">{scanResult.time}</p>
+                    <p className="text-[var(--color-primary)] font-medium text-xs lg:text-sm">{scanResult.time}</p>
                   </div>
                   
                   <div className="bg-[#1A1A1A] rounded-lg p-2.5 lg:p-3 border border-[#444444]">
@@ -489,7 +489,7 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
                       <DollarSign className="w-3 h-3 lg:w-4 lg:h-4 text-gray-500" />
                       <span className="text-[10px] lg:text-xs font-medium text-gray-500 uppercase tracking-wide">Value</span>
                     </div>
-                    <p className="font-bold text-[#FF8C42] text-base lg:text-lg">{scanResult.value}</p>
+                    <p className="font-bold text-[var(--color-primary)] text-base lg:text-lg">{scanResult.value}</p>
                   </div>
                   
                   <div className="bg-[#1A1A1A] rounded-lg p-2.5 lg:p-3 border border-[#444444] col-span-2">
@@ -550,7 +550,7 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
                className={`flex items-center justify-center text-white px-4 lg:px-6 py-2.5 lg:py-3 font-semibold rounded-lg text-sm lg:text-base transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
                  scanResult.type === 'booking'
                    ? 'bg-green-600 hover:bg-green-700'
-                   : 'bg-[#FF8C42] hover:bg-[#E67A1A]'
+                   : 'bg-[var(--color-primary)] hover:bg-[#E67A1A]'
                }`}
              >
                {isProcessing ? (
@@ -574,7 +574,7 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
                variant="outline"
                onClick={handleScanAgain}
                disabled={isProcessing}
-               className="flex items-center justify-center px-4 lg:px-5 py-2.5 lg:py-3 border-2 border-[#555555] text-gray-300 font-medium rounded-lg text-sm lg:text-base hover:border-[#FF8C42] hover:text-[#FF8C42] hover:bg-[#FF8C42]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+               className="flex items-center justify-center px-4 lg:px-5 py-2.5 lg:py-3 border-2 border-[#555555] text-gray-300 font-medium rounded-lg text-sm lg:text-base hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
              >
                <Camera className="w-4 h-4 mr-2" />
                <span className="hidden lg:inline">Scan Again</span>
