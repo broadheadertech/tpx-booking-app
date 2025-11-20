@@ -1504,39 +1504,27 @@ const GuestServiceBooking = ({ onBack }) => {
   const renderConfirmation = () => (
     <div className="space-y-3 px-4">
       <div className="text-center mb-3">
-        <h2 className="text-xl font-bold mb-1" style={{ color: "#36454F" }}>
+        <h2 className="text-xl font-bold mb-1 text-white">
           Confirm Your Booking
         </h2>
-        <p className="text-sm font-medium" style={{ color: "#8B8B8B" }}>
+        <p className="text-sm font-medium text-gray-400">
           Please review your appointment details
         </p>
       </div>
 
-      <div
-        className="bg-white rounded-xl p-4 border shadow-lg"
-        style={{ borderColor: "#E0E0E0" }}
-      >
+      <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A] shadow-lg">
         <div className="space-y-4">
           {/* Service Details */}
-          <div
-            className="text-center border-b pb-3"
-            style={{ borderColor: "#E0E0E0" }}
-          >
+          <div className="text-center border-b pb-3 border-[#2A2A2A]">
             <div className="text-2xl mb-2">{selectedService?.image}</div>
-            <h3 className="text-lg font-bold mb-1" style={{ color: "#36454F" }}>
+            <h3 className="text-lg font-bold mb-1 text-white">
               {selectedService?.name}
             </h3>
             <div className="flex justify-center items-center space-x-3">
-              <span
-                className="font-bold text-base"
-                style={{ color: "#F68B24" }}
-              >
+              <span className="font-bold text-base text-[var(--color-primary)]">
                 ₱{selectedService?.price.toLocaleString()}
               </span>
-              <span
-                className="font-medium text-sm"
-                style={{ color: "#8B8B8B" }}
-              >
+              <span className="font-medium text-sm text-gray-400">
                 {selectedService?.duration}
               </span>
             </div>
@@ -1546,29 +1534,23 @@ const GuestServiceBooking = ({ onBack }) => {
           <div className="space-y-2">
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center space-x-2">
-                <Building className="w-4 h-4" style={{ color: "#F68B24" }} />
-                <span
-                  className="font-semibold text-sm"
-                  style={{ color: "#36454F" }}
-                >
+                <Building className="w-4 h-4 text-[var(--color-primary)]" />
+                <span className="font-semibold text-sm text-gray-400">
                   Branch
                 </span>
               </div>
-              <span className="font-bold text-sm" style={{ color: "#36454F" }}>
+              <span className="font-bold text-sm text-white">
                 {selectedBranch?.name}
               </span>
             </div>
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center space-x-2">
-                <Calendar className="w-4 h-4" style={{ color: "#F68B24" }} />
-                <span
-                  className="font-semibold text-sm"
-                  style={{ color: "#36454F" }}
-                >
+                <Calendar className="w-4 h-4 text-[var(--color-primary)]" />
+                <span className="font-semibold text-sm text-gray-400">
                   Date & Time
                 </span>
               </div>
-              <span className="font-bold text-sm" style={{ color: "#36454F" }}>
+              <span className="font-bold text-sm text-white">
                 {selectedDate ? new Date(selectedDate).toLocaleDateString("en-PH", {
                   weekday: "short",
                   month: "short",
@@ -1578,15 +1560,12 @@ const GuestServiceBooking = ({ onBack }) => {
             </div>
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center space-x-2">
-                <User className="w-4 h-4" style={{ color: "#F68B24" }} />
-                <span
-                  className="font-semibold text-sm"
-                  style={{ color: "#36454F" }}
-                >
+                <User className="w-4 h-4 text-[var(--color-primary)]" />
+                <span className="font-semibold text-sm text-gray-400">
                   Your Barber
                 </span>
               </div>
-              <span className="font-bold text-sm" style={{ color: "#36454F" }}>
+              <span className="font-bold text-sm text-white">
                 {selectedStaff?.full_name ||
                   selectedStaff?.name ||
                   "Any Barber"}
@@ -1595,12 +1574,9 @@ const GuestServiceBooking = ({ onBack }) => {
           </div>
 
           {/* Voucher Selection */}
-          <div className="border-t pt-3" style={{ borderColor: "#E0E0E0" }}>
-            <h4
-              className="text-sm font-bold mb-3 flex items-center"
-              style={{ color: "#36454F" }}
-            >
-              <Gift className="w-4 h-4 mr-2" style={{ color: "#F68B24" }} />
+          <div className="border-t pt-3 border-[#2A2A2A]">
+            <h4 className="text-sm font-bold mb-3 flex items-center text-white">
+              <Gift className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
               Apply Voucher (Optional)
             </h4>
 
@@ -1615,38 +1591,26 @@ const GuestServiceBooking = ({ onBack }) => {
                           selectedVoucher?._id === voucher._id ? null : voucher
                         )
                       }
-                      className="w-full p-2 rounded-lg border-2 transition-all duration-200 text-left"
-                      style={{
-                        borderColor:
-                          selectedVoucher?._id === voucher._id
-                            ? "#F68B24"
-                            : "#E0E0E0",
-                        backgroundColor:
-                          selectedVoucher?._id === voucher._id
-                            ? "rgba(246, 139, 36, 0.1)"
-                            : "white",
-                      }}
+                      className={`w-full p-2 rounded-lg border-2 transition-all duration-200 text-left ${
+                        selectedVoucher?._id === voucher._id
+                          ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
+                          : "border-[#2A2A2A] bg-[#0F0F0F] hover:border-[var(--color-primary)]/50"
+                      }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <Gift className="w-4 h-4" style={{ color: "#F68B24" }} />
+                          <Gift className="w-4 h-4 text-[var(--color-primary)]" />
                           <div>
-                            <p
-                              className="text-xs font-bold"
-                              style={{ color: "#36454F" }}
-                            >
+                            <p className="text-xs font-bold text-white">
                               {voucher.code}
                             </p>
-                            <p className="text-xs" style={{ color: "#F68B24" }}>
+                            <p className="text-xs text-[var(--color-primary)]">
                               ₱{parseFloat(voucher.value || 0).toFixed(2)}
                             </p>
                           </div>
                         </div>
                         {selectedVoucher?._id === voucher._id && (
-                          <div
-                            className="w-4 h-4 rounded-full flex items-center justify-center"
-                            style={{ backgroundColor: "#F68B24" }}
-                          >
+                          <div className="w-4 h-4 rounded-full flex items-center justify-center bg-[var(--color-primary)]">
                             <span className="text-white text-xs">✓</span>
                           </div>
                         )}
@@ -1655,7 +1619,7 @@ const GuestServiceBooking = ({ onBack }) => {
                   ))}
                 </div>
                 {selectedVoucher && (
-                  <div className="text-xs text-center p-2 rounded flex items-center justify-center gap-2" style={{ backgroundColor: "#F0F8FF", color: "#36454F" }}>
+                  <div className="text-xs text-center p-2 rounded flex items-center justify-center gap-2 bg-blue-900/30 text-blue-300">
                     <Banknote className="w-4 h-4" />
                     <span>You'll save ₱{parseFloat(selectedVoucher.value || 0).toFixed(2)} with this voucher</span>
                   </div>
@@ -1663,7 +1627,7 @@ const GuestServiceBooking = ({ onBack }) => {
               </div>
             ) : (
               <div className="text-center py-3">
-                <p className="text-xs" style={{ color: "#8B8B8B" }}>
+                <p className="text-xs text-gray-400">
                   No vouchers available
                 </p>
               </div>
@@ -1671,8 +1635,8 @@ const GuestServiceBooking = ({ onBack }) => {
           </div>
 
           {/* Payment Options - Pay Later Only */}
-          <div className="border-t pt-3" style={{ borderColor: "#E0E0E0" }}>
-            <h4 className="text-sm font-bold mb-3" style={{ color: "#36454F" }}>
+          <div className="border-t pt-3 border-[#2A2A2A]">
+            <h4 className="text-sm font-bold mb-3 text-white">
               Complete Your Booking
             </h4>
 
@@ -1698,10 +1662,7 @@ const GuestServiceBooking = ({ onBack }) => {
               )}
             </button>
 
-            <p
-              className="text-xs text-center mt-3"
-              style={{ color: "#8B8B8B" }}
-            >
+            <p className="text-xs text-center mt-3 text-gray-400">
               Complete your booking now and pay when you arrive at the shop
             </p>
           </div>
@@ -1709,8 +1670,8 @@ const GuestServiceBooking = ({ onBack }) => {
           {/* Go Back Button */}
           <div className="pt-2">
             <button
-              onClick={() => setStep(3)}
-              className="w-full py-2 px-3 border border-[#2A2A2A] text-gray-400 hover:bg-[#1A1A1A] hover:text-white font-bold rounded-lg transition-all duration-200 text-sm"
+              onClick={() => setStep(4)}
+              className="w-full py-2 px-3 border border-[#2A2A2A] text-gray-400 hover:bg-[#222222] hover:text-white font-bold rounded-lg transition-all duration-200 text-sm"
             >
               ← Go Back to Edit Details
             </button>
