@@ -32,7 +32,8 @@ import {
   MoreVertical,
   X,
   CalendarDays,
-  LayoutGrid
+  LayoutGrid,
+  AlertCircle
 } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
@@ -73,6 +74,7 @@ const CalendarManagement = ({ user }) => {
   const [view, setView] = useState('day') // 'day' or 'month'
   const [selectedBooking, setSelectedBooking] = useState(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
+  const [actionError, setActionError] = useState(null)
 
   // Configuration
   const START_HOUR = 8
@@ -168,6 +170,101 @@ const CalendarManagement = ({ user }) => {
     e.stopPropagation()
     setSelectedBooking(booking)
     setShowDetailModal(true)
+    setActionError(null)
+  }
+  
+  const formatTime = (timeStr) => {
+    if (!timeStr) return ''
+    try {
+      // Handle HH:mm:ss format
+      const [hours, minutes] = timeStr.split(':')
+      const date = new Date()
+      date.setHours(parseInt(hours), parseInt(minutes))
+      return format(date, 'h:mm a')
+    } catch (e) {
+      return timeStr
+    }
+  }
+
+  // Helper to calculate layout for overlapping bookings
+  const calculateBookingLayout = (bookings) => {
+    // Sort bookings by start time, then by duration (descending)
+    const sortedBookings = [...bookings].sort((a, b) => {
+      const aStart = parseInt(a.time.split(':')[0]) * 60 + parseInt(a.time.split(':')[1])
+      const bStart = parseInt(b.time.split(':')[0]) * 60 + parseInt(b.time.split(':')[1])
+      if (aStart !== bStart) return aStart - bStart
+      
+      // Secondary sort: longer duration first (helps with nesting)
+      const aService = services.find(s => s._id === a.service)
+      const bService = services.find(s => s._id === b.service)
+      return (bService?.duration_minutes || 0) - (aService?.duration_minutes || 0)
+    })
+
+    const columns = []
+    const layout = {}
+
+    sortedBookings.forEach(booking => {
+      const startHours = parseInt(booking.time.split(':')[0])
+      const startMinutes = parseInt(booking.time.split(':')[1])
+      const startTime = startHours * 60 + startMinutes
+      
+      const service = services.find(s => s._id === booking.service)
+      const duration = service ? service.duration_minutes : 60
+      const endTime = startTime + duration
+
+      // Find the first column where this booking fits
+      let columnIndex = 0
+      let placed = false
+
+      while (!placed) {
+        if (!columns[columnIndex]) {
+          columns[columnIndex] = []
+        }
+
+        // Check if overlapping with any booking in this column
+        const hasOverlap = columns[columnIndex].some(b => {
+          const bStartH = parseInt(b.time.split(':')[0])
+          const bStartM = parseInt(b.time.split(':')[1])
+          const bStart = bStartH * 60 + bStartM
+          
+          const bService = services.find(s => s._id === b.service)
+          const bDur = bService ? bService.duration_minutes : 60
+          const bEnd = bStart + bDur
+
+          return (startTime < bEnd && endTime > bStart)
+        })
+
+        if (!hasOverlap) {
+          columns[columnIndex].push(booking)
+          layout[booking._id] = { columnIndex }
+          placed = true
+        } else {
+          columnIndex++
+        }
+      }
+    })
+
+    // Calculate widths and positions
+    const totalColumns = columns.length
+    sortedBookings.forEach(booking => {
+      const { columnIndex } = layout[booking._id]
+      // Width is 100% divided by number of overlapping groups... 
+      // A simpler approach for visual clarity:
+      // If totalColumns > 1, we share width. 
+      // Width = (100 - margin) / totalColumns
+      // Left = columnIndex * Width
+      
+      const widthPercent = 95 / totalColumns
+      const leftPercent = (columnIndex * widthPercent) + 2.5
+      
+      layout[booking._id] = {
+        width: `${widthPercent}%`,
+        left: `${leftPercent}%`,
+        zIndex: columnIndex + 10
+      }
+    })
+
+    return layout
   }
 
   // -- Renderers --
@@ -215,6 +312,8 @@ const CalendarManagement = ({ user }) => {
 
               {barbers.map(barber => {
                 const daysBookings = getBookingsForDay(currentDate, barber._id)
+                // Calculate layout for this barber's column
+                const layoutMap = calculateBookingLayout(daysBookings)
                 
                 return (
                   <div key={barber._id} className="flex-1 min-w-[200px] border-r border-[#2A2A2A] relative z-1">
@@ -224,17 +323,38 @@ const CalendarManagement = ({ user }) => {
                       const serviceName = service ? service.name : 'Unknown Service'
                       const statusColor = getStatusColor(booking.status)
                       
+                      // Get layout properties
+                      const layout = layoutMap[booking._id] || { width: '95%', left: '2.5%', zIndex: 10 }
+                      
+                      // Calculate vertical position
+                      const [hours, minutes] = booking.time.split(':').map(Number)
+                      const startMinutes = (hours - START_HOUR) * 60 + minutes
+                      const duration = service ? service.duration_minutes : 60
+                      const top = (startMinutes / 60) * HOUR_HEIGHT
+                      const height = (duration / 60) * HOUR_HEIGHT
+                      
                       return (
                         <div
                           key={booking._id}
-                          style={getBookingStyle(booking)}
+                          style={{
+                            top: `${top}px`,
+                            height: `${height}px`,
+                            position: 'absolute',
+                            width: layout.width,
+                            left: layout.left,
+                            zIndex: layout.zIndex
+                          }}
                           onClick={(e) => handleBookingClick(booking, e)}
-                          className={`rounded-lg border-l-4 p-2 text-xs cursor-pointer hover:brightness-110 transition-all shadow-lg overflow-hidden flex flex-col z-10 ${statusColor}`}
+                          className={`rounded-lg border-l-4 p-1.5 text-xs cursor-pointer hover:brightness-110 transition-all shadow-lg overflow-hidden flex flex-col ${statusColor}`}
                         >
-                          <div className="font-bold truncate">{booking.customer_name || 'Walk-in Customer'}</div>
-                          <div className="truncate opacity-80">{serviceName}</div>
+                          <div className="font-bold truncate text-white leading-tight mb-0.5">
+                            {booking.customer_name || 'Walk-in'}
+                          </div>
+                          <div className="truncate opacity-80 leading-tight mb-0.5">{serviceName}</div>
                           <div className="mt-auto flex items-center justify-between">
-                             <span className="font-mono opacity-75">{booking.time}</span>
+                             <span className="font-mono opacity-90 font-medium text-[10px]">
+                               {formatTime(booking.time)}
+                             </span>
                           </div>
                         </div>
                       )
@@ -341,8 +461,16 @@ const CalendarManagement = ({ user }) => {
         onClose={() => setShowDetailModal(false)}
         title="Booking Details"
         maxWidth="max-w-md"
+        variant="dark"
       >
         <div className="space-y-6">
+          {actionError && (
+            <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-2 rounded-lg flex items-center text-sm">
+              <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
+              {actionError}
+            </div>
+          )}
+        
           {/* Header Info */}
           <div className="flex items-center space-x-4 pb-4 border-b border-[#2A2A2A]">
              <div className="w-12 h-12 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center">
@@ -351,6 +479,7 @@ const CalendarManagement = ({ user }) => {
              <div>
                <h3 className="text-xl font-bold text-white">{selectedBooking.customer_name || 'Walk-in Customer'}</h3>
                <p className="text-gray-400 text-sm">{selectedBooking.customer_phone || 'No phone number'}</p>
+               <p className="text-gray-500 text-xs mt-1 font-mono">#{selectedBooking.booking_code}</p>
              </div>
           </div>
 
@@ -368,7 +497,7 @@ const CalendarManagement = ({ user }) => {
                 <Clock className="w-4 h-4" />
                 <span className="text-xs font-bold uppercase">Time</span>
               </div>
-              <p className="text-white font-medium">{selectedBooking.time}</p>
+              <p className="text-white font-medium">{formatTime(selectedBooking.time)}</p>
             </div>
              <div className="bg-[#1A1A1A] p-3 rounded-xl border border-[#2A2A2A]">
               <div className="flex items-center space-x-2 text-gray-400 mb-1">
