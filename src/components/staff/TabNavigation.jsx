@@ -31,6 +31,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
       barbers: UserCheck,
       users: Users,
       events: CalendarDays,
+      calendar: CalendarDays,
       products: Package,
       notifications: Bell,
       branches: Building,
@@ -41,7 +42,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
   }
 
   // Define primary tabs (most frequently used)  
-  const primaryTabIds = ['overview', 'bookings', 'barbers', 'users', 'services', 'vouchers', 'payroll']
+  const primaryTabIds = ['overview', 'bookings', 'calendar', 'barbers', 'users', 'services', 'vouchers', 'payroll']
   const secondaryTabIds = ['customers', 'reports', 'events', 'products', 'notifications', 'email_marketing']
   
   const primaryTabs = tabs.filter(tab => primaryTabIds.includes(tab.id))
