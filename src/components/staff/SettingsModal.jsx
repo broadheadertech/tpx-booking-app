@@ -183,14 +183,14 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
         <div className="relative w-full max-w-4xl transform rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl transition-all z-[10000]">
           <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Settings className="w-5 h-5 text-[#FF8C42]" />
+              <Settings className="w-5 h-5 text-[var(--color-primary)]" />
               Settings
             </h2>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors duration-200"
+              className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center transition-colors duration-200"
             >
-              <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+              <X className="w-4 h-4 text-gray-400 hover:text-[var(--color-primary)]" />
             </button>
           </div>
 
@@ -204,7 +204,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
                     activeTab === tab.id
-                      ? 'border-[#FF8C42] text-[#FF8C42]'
+                      ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                       : 'border-transparent text-gray-400 hover:text-gray-300'
                   }`}
                 >
@@ -233,7 +233,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
               <div className="space-y-4">
                 <div className="space-y-3">
                   <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
-                    <Building className="w-4 h-4 text-[#FF8C42]" />
+                    <Building className="w-4 h-4 text-[var(--color-primary)]" />
                     Branch Booking Hours
                   </h3>
                   <div className="bg-[#232323] rounded-lg p-4 space-y-3">
@@ -246,7 +246,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
                         <select
                           value={settings.bookingStartHour}
                           onChange={(e) => handleInputChange('bookingStartHour', parseInt(e.target.value))}
-                          className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                          className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                         >
                           {Array.from({ length: 24 }, (_, i) => (
                             <option key={i} value={i}>
@@ -260,7 +260,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
                         <select
                           value={settings.bookingEndHour}
                           onChange={(e) => handleInputChange('bookingEndHour', parseInt(e.target.value))}
-                          className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                          className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                         >
                           {Array.from({ length: 24 }, (_, i) => (
                             <option key={i} value={i}>
@@ -282,7 +282,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
             {activeTab === 'notifications' && (
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
-                  <Bell className="w-4 h-4 text-[#FF8C42]" />
+                  <Bell className="w-4 h-4 text-[var(--color-primary)]" />
                   Notifications
                 </h3>
                 <div className="space-y-2">
@@ -292,7 +292,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
                       type="checkbox"
                       checked={settings.emailNotifications}
                       onChange={(e) => handleCheckboxChange('emailNotifications', e.target.checked)}
-                      className="w-4 h-4 text-[#FF8C42] rounded cursor-pointer"
+                      className="w-4 h-4 text-[var(--color-primary)] rounded cursor-pointer"
                     />
                   </label>
                   <label className="flex items-center justify-between p-3 rounded-lg hover:bg-[#232323] cursor-pointer transition-colors">
@@ -301,7 +301,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
                       type="checkbox"
                       checked={settings.smsNotifications}
                       onChange={(e) => handleCheckboxChange('smsNotifications', e.target.checked)}
-                      className="w-4 h-4 text-[#FF8C42] rounded cursor-pointer"
+                      className="w-4 h-4 text-[var(--color-primary)] rounded cursor-pointer"
                     />
                   </label>
                   <label className="flex items-center justify-between p-3 rounded-lg hover:bg-[#232323] cursor-pointer transition-colors">
@@ -310,7 +310,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
                       type="checkbox"
                       checked={settings.bookingReminders}
                       onChange={(e) => handleCheckboxChange('bookingReminders', e.target.checked)}
-                      className="w-4 h-4 text-[#FF8C42] rounded cursor-pointer"
+                      className="w-4 h-4 text-[var(--color-primary)] rounded cursor-pointer"
                     />
                   </label>
                   <label className="flex items-center justify-between p-3 rounded-lg hover:bg-[#232323] cursor-pointer transition-colors">
@@ -319,7 +319,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
                       type="checkbox"
                       checked={settings.paymentNotifications}
                       onChange={(e) => handleCheckboxChange('paymentNotifications', e.target.checked)}
-                      className="w-4 h-4 text-[#FF8C42] rounded cursor-pointer"
+                      className="w-4 h-4 text-[var(--color-primary)] rounded cursor-pointer"
                     />
                   </label>
                 </div>
@@ -330,7 +330,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
             {activeTab === 'display' && (
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
-                  <Palette className="w-4 h-4 text-[#FF8C42]" />
+                  <Palette className="w-4 h-4 text-[var(--color-primary)]" />
                   Display
                 </h3>
                 <div className="space-y-2">
@@ -340,7 +340,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
                       type="checkbox"
                       checked={settings.compactView}
                       onChange={(e) => handleCheckboxChange('compactView', e.target.checked)}
-                      className="w-4 h-4 text-[#FF8C42] rounded cursor-pointer"
+                      className="w-4 h-4 text-[var(--color-primary)] rounded cursor-pointer"
                     />
                   </label>
                   <label className="flex items-center justify-between p-3 rounded-lg hover:bg-[#232323] cursor-pointer transition-colors">
@@ -349,7 +349,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
                       type="checkbox"
                       checked={settings.showTutorials}
                       onChange={(e) => handleCheckboxChange('showTutorials', e.target.checked)}
-                      className="w-4 h-4 text-[#FF8C42] rounded cursor-pointer"
+                      className="w-4 h-4 text-[var(--color-primary)] rounded cursor-pointer"
                     />
                   </label>
                 </div>
@@ -360,7 +360,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
             {activeTab === 'carousel' && (
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
-                  <ImageIcon className="w-4 h-4 text-[#FF8C42]" />
+                  <ImageIcon className="w-4 h-4 text-[var(--color-primary)]" />
                   Carousel Banner Settings
                 </h3>
                 <p className="text-xs text-gray-400 mb-4">
@@ -396,7 +396,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
                     <input
                       type="text"
                       placeholder="https://example.com/image.jpg"
-                      className="flex-1 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                      className="flex-1 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                       onKeyPress={(e) => {
                         if (e.key === 'Enter') {
                           handleImageUrlAdd(e.target.value)
@@ -412,7 +412,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
                           input.value = ''
                         }
                       }}
-                      className="px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-colors"
+                      className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-colors"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
@@ -456,7 +456,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
           <div className="flex items-center justify-between p-6 border-t border-[#2A2A2A]/50">
             <button
               onClick={resetToDefaults}
-              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-[#FF8C42] transition-colors duration-200"
+              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-[var(--color-primary)] transition-colors duration-200"
             >
               <RefreshCw className="w-4 h-4" />
               Reset
@@ -472,7 +472,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
               <button
                 onClick={handleSave}
                 disabled={loading}
-                className="flex items-center gap-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm font-medium"
+                className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm font-medium"
               >
                 {loading ? (
                   <>

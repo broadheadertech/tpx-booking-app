@@ -5,6 +5,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { BrandingProvider } from "./context/BrandingContext";
 import { ToastProvider } from "./components/common/ToastNotification";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import AuthRedirect from "./components/common/AuthRedirect";
@@ -22,6 +23,7 @@ import CustomerDashboard from "./pages/customer/Dashboard";
 import CustomerBooking from "./pages/customer/Booking";
 import GuestServiceBooking from "./pages/customer/GuestServiceBooking.jsx";
 import Wallet from "./pages/customer/Wallet.jsx";
+import WalletTopUp from "./pages/customer/WalletTopUp.jsx";
 import BarberDashboard from "./components/barber/BarberDashboard";
 import Kiosk from "./pages/Kiosk";
 import PaymentSuccess from "./pages/booking/payment/success.jsx";
@@ -40,8 +42,9 @@ function App() {
   return (
     <AuthProvider>
       <ToastProvider>
+        <BrandingProvider>
         <Router>
-          <div className="min-h-screen bg-[#0A0A0A]">
+          <div className="min-h-screen bg-[var(--color-bg)]">
             <Routes>
               <Route
                 path="/"
@@ -175,6 +178,14 @@ function App() {
                 }
               />
               <Route
+                path="/customer/wallet/topup"
+                element={
+                  <ProtectedRoute>
+                    <WalletTopUp />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/kiosk"
                 element={
                   <ErrorBoundary>
@@ -194,6 +205,7 @@ function App() {
               </Routes>
           </div>
         </Router>
+        </BrandingProvider>
       </ToastProvider>
     </AuthProvider>
   );

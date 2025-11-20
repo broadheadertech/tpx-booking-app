@@ -171,14 +171,14 @@ const GuestServiceBooking = ({ onBack }) => {
 
   // Reset QR code loading state when step changes
   useEffect(() => {
-    if (step === 6) {
+    if (step === 7) {
       setQrCodeLoading(true);
     }
   }, [step]);
 
-  // Generate QR code when we reach step 5 and have actual booking data
+  // Generate QR code when we reach step 7 and have actual booking data
   useEffect(() => {
-    if (step === 6 && createdBooking?._id && getBookingById?.booking_code) {
+    if (step === 7 && createdBooking?._id && getBookingById?.booking_code) {
       console.log(
         "Step 5 reached with booking ID:",
         createdBooking._id,
@@ -444,7 +444,7 @@ const GuestServiceBooking = ({ onBack }) => {
           // Don't fail the booking creation if status update fails
         }
       } else {
-        setStep(6); // Success step for pay later
+        setStep(7); // Success step for pay later
       }
 
       // Redeem voucher if one was selected (skip for guests since vouchers require user account)
@@ -535,7 +535,7 @@ const GuestServiceBooking = ({ onBack }) => {
         return true;
       } else {
         // If no redirect URL, show success
-        setStep(6);
+        setStep(7);
         return true;
       }
     } catch (error) {
@@ -558,14 +558,12 @@ const GuestServiceBooking = ({ onBack }) => {
 
   const handleServiceSelect = (service) => {
     setSelectedService(service);
-    // Reset selected staff when changing service to avoid validation errors
-    setSelectedStaff(null);
-    setStep(3);
+    setStep(4);
   };
 
   const handleTimeSelect = (time) => {
     setSelectedTime(time);
-    setStep(4);
+    setStep(5);
   };
 
   const handleStaffSelect = (barber) => {
@@ -574,6 +572,7 @@ const GuestServiceBooking = ({ onBack }) => {
     sessionStorage.setItem("barberId", barber._id);
 
     setSelectedStaff(barber); // keep full object
+    setStep(3);
   };
 
   const handleConfirmBooking = async (
@@ -601,14 +600,16 @@ const GuestServiceBooking = ({ onBack }) => {
       case 1:
         return "Select Branch";
       case 2:
-        return "Choose Service";
+        return "Choose Barber";
       case 3:
-        return "Select Date, Time & Barber";
+        return "Choose Service";
       case 4:
-        return "Your Information";
+        return "Select Date & Time";
       case 5:
-        return "Confirm Booking";
+        return "Your Information";
       case 6:
+        return "Confirm Booking";
+      case 7:
         return "Booking Confirmed";
       default:
         return "Book Service";
@@ -618,7 +619,7 @@ const GuestServiceBooking = ({ onBack }) => {
   const renderStepIndicator = () => (
     <div className="flex justify-center mb-4 px-4 py-2">
       <div className="flex items-center space-x-2">
-        {[1, 2, 3, 4, 5, 6].map((stepNumber) => (
+        {[1, 2, 3, 4, 5, 6, 7].map((stepNumber) => (
           <div key={stepNumber} className="flex items-center">
             <div
               className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
@@ -630,7 +631,7 @@ const GuestServiceBooking = ({ onBack }) => {
             >
               {step > stepNumber ? "✓" : stepNumber}
             </div>
-            {stepNumber < 6 && (
+            {stepNumber < 7 && (
               <div
                 className={`w-4 h-0.5 mx-1 rounded transition-all duration-300`}
                 style={{
@@ -648,7 +649,7 @@ const GuestServiceBooking = ({ onBack }) => {
     if (!branches) {
       return (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42]"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
         </div>
       );
     }
@@ -693,7 +694,7 @@ const GuestServiceBooking = ({ onBack }) => {
               placeholder="Search by name, address, or code..."
               value={branchSearchTerm}
               onChange={(e) => setBranchSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:outline-none focus:border-[#FF8C42] transition-colors text-sm"
+              className="w-full pl-10 pr-10 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:outline-none focus:border-[var(--color-primary)] transition-colors text-sm"
             />
             {branchSearchTerm && (
               <button
@@ -719,16 +720,16 @@ const GuestServiceBooking = ({ onBack }) => {
               <button
                 key={branch._id}
                 onClick={() => handleBranchSelect(branch)}
-                className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[#FF8C42] rounded-lg p-4 text-left transition-all duration-200 group"
+                className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[var(--color-primary)] rounded-lg p-4 text-left transition-all duration-200 group"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3 flex-1 min-w-0">
                     {/* Location Pin Icon */}
-                    <MapPin className="w-5 h-5 text-[#FF8C42] flex-shrink-0 mt-0.5" />
+                    <MapPin className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
 
                     <div className="flex-1 min-w-0">
                       {/* Branch Name */}
-                      <h3 className="text-base font-semibold text-white mb-1 group-hover:text-[#FF8C42] transition-colors">
+                      <h3 className="text-base font-semibold text-white mb-1 group-hover:text-[var(--color-primary)] transition-colors">
                         {branch.name}
                       </h3>
 
@@ -747,7 +748,7 @@ const GuestServiceBooking = ({ onBack }) => {
                   </div>
 
                   {/* Arrow Indicator */}
-                  <div className="ml-4 text-gray-500 group-hover:text-[#FF8C42] transition-colors flex-shrink-0">
+                  <div className="ml-4 text-gray-500 group-hover:text-[var(--color-primary)] transition-colors flex-shrink-0">
                     <svg
                       className="w-5 h-5"
                       fill="none"
@@ -775,7 +776,7 @@ const GuestServiceBooking = ({ onBack }) => {
     if (loading || !services) {
       return (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42]"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]"></div>
         </div>
       );
     }
@@ -786,7 +787,7 @@ const GuestServiceBooking = ({ onBack }) => {
           <p className="text-sm text-red-400 mb-4">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors text-sm font-medium"
+            className="px-6 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] transition-colors text-sm font-medium"
           >
             Try Again
           </button>
@@ -794,9 +795,29 @@ const GuestServiceBooking = ({ onBack }) => {
       );
     }
 
+    // Map service categories to standard categories (same as POS)
+    const mapServiceCategory = (category) => {
+      if (!category) return 'Other Services';
+      const catLower = category.toLowerCase();
+      if (catLower.includes('haircut') || catLower.includes('hair')) {
+        return 'Haircut';
+      }
+      if (catLower.includes('package')) {
+        return 'Package';
+      }
+      return 'Other Services';
+    };
+
     // Group services by category
-    const categories = services.reduce((acc, service) => {
-      const category = service.category || "Uncategorized"; // default to match ServiceBooking
+    const servicesToDisplay = selectedStaff 
+      ? services.filter(service => 
+          selectedStaff.services && 
+          selectedStaff.services.includes(service._id)
+        )
+      : services;
+
+    const categories = servicesToDisplay.reduce((acc, service) => {
+      const category = mapServiceCategory(service.category);
       if (!acc[category]) acc[category] = [];
       acc[category].push(service);
       return acc;
@@ -807,7 +828,7 @@ const GuestServiceBooking = ({ onBack }) => {
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-white mb-1">Choose Service</h2>
           <p className="text-sm text-gray-400">
-            Select the service you'd like to book at {selectedBranch?.name}
+            Select the service you'd like to book {selectedStaff ? `with ${selectedStaff.full_name || selectedStaff.name}` : `at ${selectedBranch?.name}`}
           </p>
         </div>
 
@@ -819,7 +840,7 @@ const GuestServiceBooking = ({ onBack }) => {
             placeholder="Search services..."
             value={serviceSearchTerm}
             onChange={(e) => setServiceSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-10 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:outline-none focus:border-[#FF8C42] transition-colors text-sm"
+            className="w-full pl-10 pr-10 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:outline-none focus:border-[var(--color-primary)] transition-colors text-sm"
           />
           {serviceSearchTerm && (
             <button
@@ -833,8 +854,9 @@ const GuestServiceBooking = ({ onBack }) => {
 
         {/* Category Dropdowns */}
         <div className="space-y-3">
-          {Object.entries(categories).map(
-            ([categoryName, categoryServices]) => {
+          {['Haircut', 'Package', 'Other Services'].map((categoryName) => {
+              const categoryServices = categories[categoryName] || [];
+              
               // Filter services within this category based on search term
               const filteredServices = categoryServices.filter((service) => {
                 const searchLower = serviceSearchTerm.toLowerCase();
@@ -883,7 +905,7 @@ const GuestServiceBooking = ({ onBack }) => {
                           <button
                             key={service._id}
                             onClick={() => handleServiceSelect(service)}
-                            className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[#FF8C42] rounded-lg p-4 text-left transition-all duration-200 flex justify-between items-start"
+                            className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[var(--color-primary)] rounded-lg p-4 text-left transition-all duration-200 flex justify-between items-start"
                           >
                             <div>
                               <h3 className="text-base font-semibold text-white">
@@ -894,7 +916,7 @@ const GuestServiceBooking = ({ onBack }) => {
                                   {service.description}
                                 </p>
                               )}
-                              <span className="text-[#FF8C42] font-bold mt-1 block">
+                              <span className="text-[var(--color-primary)] font-bold mt-1 block">
                                 ₱
                                 {parseFloat(
                                   service.price || 0
@@ -935,15 +957,15 @@ const GuestServiceBooking = ({ onBack }) => {
     );
   };
 
-  const renderTimeAndStaffSelection = () => (
+  const renderTimeSelection = () => (
     <div className="px-4 pb-6 max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="mb-2 text-center">
         <h2 className="text-2xl font-bold text-white mb-1">
-          Select Barber & Time
+          Select Date & Time
         </h2>
         <p className="text-sm text-gray-400">
-          Choose your preferred barber, then pick a schedule
+          Choose a schedule for your appointment
         </p>
       </div>
 
@@ -956,7 +978,7 @@ const GuestServiceBooking = ({ onBack }) => {
               {selectedService?.name}
             </h3>
             <div className="flex items-center gap-2 text-sm">
-              <span className="text-[#FF8C42] font-semibold">
+              <span className="text-[var(--color-primary)] font-semibold">
                 ₱{selectedService?.price.toLocaleString()}
               </span>
               <span className="text-gray-500">•</span>
@@ -966,88 +988,34 @@ const GuestServiceBooking = ({ onBack }) => {
         </div>
       </div>
 
-      {/* Step 1: Barber Selection */}
+      {/* Date Selection */}
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
         <h3 className="text-lg font-bold text-white mb-3">
-          Step 1: Choose Your Barber
+          Select Date
         </h3>
-        {getAvailableBarbers().length > 0 ? (
-          <div className="grid grid-cols-1 gap-3">
-            {getAvailableBarbers().map((barber) => (
-              <button
-                key={barber._id}
-                onClick={() => {
-                  handleStaffSelect(barber);
-                  setSelectedTime(null);
-                }}
-                className={`w-full flex items-center gap-3 p-3 border rounded-lg transition-all duration-200 ${
-                  selectedStaff?._id === barber._id
-                    ? "border-[#FF8C42] bg-[#FF8C42]/10"
-                    : "border-[#2A2A2A] hover:border-[#FF8C42]/50"
-                }`}
-              >
-                <BarberAvatar barber={barber} className="w-10 h-10" />
-                <div className="flex-1 text-left">
-                  <h4 className="text-sm font-semibold text-white">
-                    {barber.full_name || barber.name || "Professional Barber"}
-                  </h4>
-                  <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
-                    <span className="text-yellow-400">★★★★★</span>
-                    <span>5.0 • Professional</span>
-                  </div>
-                </div>
-                {selectedStaff?._id === barber._id && (
-                  <CheckCircle className="w-5 h-5 text-[#FF8C42]" />
-                )}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-6">
-            <AlertTriangle className="w-6 h-6 text-amber-500 mx-auto mb-2" />
-            <p className="text-sm text-[#FF8C42] font-medium">
-              No barbers available for "{selectedService?.name}"
-            </p>
-            <button
-              onClick={() => setStep(1)}
-              className="mt-3 px-4 py-2 bg-[#FF8C42] text-white text-xs font-medium rounded-lg hover:bg-[#FF7A2B] transition"
-            >
-              Choose Different Service
-            </button>
-          </div>
-        )}
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(e) => {
+            setSelectedDate(e.target.value);
+            setSelectedTime(null);
+          }}
+          min={new Date().toISOString().split("T")[0]}
+          max={
+            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+              .toISOString()
+              .split("T")[0]
+          }
+          className="w-full px-3 py-2.5 rounded-lg bg-[#121212] border border-[#2A2A2A] text-gray-200 text-sm focus:outline-none focus:border-[var(--color-primary)] transition-colors"
+        />
       </div>
 
-      {/* Step 2: Date Selection */}
-      {selectedStaff && (
-        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
-          <h3 className="text-lg font-bold text-white mb-3">
-            Step 2: Select Date
-          </h3>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => {
-              setSelectedDate(e.target.value);
-              setSelectedTime(null);
-            }}
-            min={new Date().toISOString().split("T")[0]}
-            max={
-              new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-                .toISOString()
-                .split("T")[0]
-            }
-            className="w-full px-3 py-2.5 rounded-lg bg-[#121212] border border-[#2A2A2A] text-gray-200 text-sm focus:outline-none focus:border-[#FF8C42] transition-colors"
-          />
-        </div>
-      )}
-
-      {/* Step 3: Time Slots */}
-      {selectedStaff && selectedDate && (
+      {/* Time Slots */}
+      {selectedDate && (
         <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-lg font-bold text-white">
-              Step 3: Available Times
+              Available Times
             </h3>
             <span className="text-xs text-gray-400">
               {new Date(selectedDate).toLocaleDateString("en-PH", {
@@ -1060,13 +1028,13 @@ const GuestServiceBooking = ({ onBack }) => {
 
           {loadingTimeSlots ? (
             <div className="flex justify-center items-center py-6 space-x-2">
-              <div className="animate-spin w-5 h-5 border-2 border-[#FF8C42] border-t-transparent rounded-full"></div>
+              <div className="animate-spin w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full"></div>
               <span className="text-gray-400 text-sm">Loading times...</span>
             </div>
           ) : timeSlots.length === 0 ? (
             <div className="text-center py-6">
-            <Calendar className="w-6 h-6 text-[#FF8C42] mx-auto mb-2" />
-              <p className="text-sm text-[#FF8C42] font-medium">
+              <Calendar className="w-6 h-6 text-[var(--color-primary)] mx-auto mb-2" />
+              <p className="text-sm text-[var(--color-primary)] font-medium">
                 No available times
               </p>
               <p className="text-xs text-gray-400 mt-1">
@@ -1084,8 +1052,8 @@ const GuestServiceBooking = ({ onBack }) => {
                     className={`p-2 text-sm rounded-lg border transition-all duration-200 ${
                       slot.available
                         ? selectedTime === slot.time
-                          ? "bg-[#FF8C42] text-white border-[#FF8C42]"
-                          : "bg-[#1F1F1F] text-gray-200 border-[#2A2A2A] hover:border-[#FF8C42]/50"
+                          ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                          : "bg-[#1F1F1F] text-gray-200 border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
                         : "bg-[#111111] text-gray-500 border-[#1F1F1F] cursor-not-allowed"
                     }`}
                   >
@@ -1100,7 +1068,7 @@ const GuestServiceBooking = ({ onBack }) => {
                   <span>Available</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-[#FF8C42] rounded"></div>
+                  <div className="w-3 h-3 bg-[var(--color-primary)] rounded"></div>
                   <span>Selected</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -1114,87 +1082,84 @@ const GuestServiceBooking = ({ onBack }) => {
       )}
 
       {/* Continue Button */}
-      {selectedStaff && selectedDate && selectedTime && (
+      {selectedDate && selectedTime && (
         <button
-          onClick={() => setStep(4)}
-          className="w-full py-3 bg-[#FF8C42] text-white font-bold rounded-lg hover:bg-[#FF7A2B] transition-all duration-200"
+          onClick={() => setStep(5)}
+          className="w-full py-3 bg-[var(--color-primary)] text-white font-bold rounded-lg hover:bg-[var(--color-accent)] transition-all duration-200"
         >
-          Continue to Confirmation
+          Continue to Your Information
         </button>
-      )}
-
-      {/* Progress Indicator */}
-      {selectedStaff && (
-        <div className="text-center">
-          <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-[#FF8C42]/10">
-            <span className="text-xs font-semibold text-[#FF8C42]">
-              {selectedStaff && !selectedDate
-                ? "Step 2: Select Date"
-                : selectedStaff && selectedDate && !selectedTime
-                  ? "Step 3: Select Time"
-                  : selectedStaff && selectedDate && selectedTime
-                    ? "Ready to Continue!"
-                    : "Step 1: Choose Barber"}
-            </span>
-          </div>
-        </div>
       )}
     </div>
   );
 
   const renderStaffSelection = () => (
-    <div className="space-y-6 px-4">
-      <div className="text-center">
-        <h2 className="text-3xl font-black text-[#1A1A1A] mb-2">
+    <div className="pb-6 px-4">
+      {/* Header */}
+      <div className="text-center mb-6">
+        <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
           Choose Your Barber
         </h2>
-        <p className="text-lg text-[#6B6B6B] font-medium">
+        <p className="text-sm md:text-base text-gray-400">
           Select your preferred professional
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {getAvailableBarbers().map((barber) => (
+      {/* Barber Grid - Responsive */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        {(barbers || []).map((barber) => (
           <button
             key={barber._id}
             onClick={() => handleStaffSelect(barber)}
-            className={`group bg-white rounded-3xl p-6 shadow-xl border-2 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 ${
+            className={`group rounded-2xl p-4 sm:p-5 transition-all duration-300 border-2 hover:shadow-lg flex flex-col items-center text-center ${
               selectedStaff?._id === barber._id
-                ? "border-[#FF8C42]"
-                : "border-[#F5F5F5] hover:border-[#FF8C42]"
+                ? "bg-[var(--color-primary)]/15 border-[var(--color-primary)]"
+                : "bg-[#1A1A1A] border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
             }`}
           >
-            <div className="text-center">
-              <div className="relative w-16 h-16 rounded-full mx-auto mb-4">
-                <BarberAvatar barber={barber} className="w-16 h-16" />
-                {selectedStaff?._id === barber._id && (
-                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white">
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  </div>
-                )}
+            {/* Avatar Container */}
+            <div className="relative mb-3">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden ring-2 ring-[#2A2A2A] group-hover:ring-[var(--color-primary)]/50 transition-all duration-300">
+                <BarberAvatar barber={barber} className="w-full h-full" />
               </div>
-              <h3 className="text-xl font-black text-[#1A1A1A] mb-2 group-hover:text-[#FF8C42] transition-colors duration-200">
-                {barber}
-                {barber.full_name}
-              </h3>
-              <div className="space-y-2">
-                <div className="px-3 py-1 bg-[#FF8C42]/10 text-[#FF8C42] rounded-full text-sm font-semibold inline-block">
-                  Professional Barber
+              {selectedStaff?._id === barber._id && (
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-[#1A1A1A] shadow-lg">
+                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                 </div>
-                <p className="text-[#6B6B6B] text-sm font-medium">
-                  Experienced professional
-                </p>
-                <div className="flex items-center justify-center space-x-1">
-                  <div className="flex text-yellow-400">{"★".repeat(5)}</div>
-                  <span className="text-sm font-bold text-[#6B6B6B] ml-1">
-                    5.0
-                  </span>
-                </div>
-              </div>
+              )}
+            </div>
+
+            {/* Barber Name */}
+            <h3 className="text-base sm:text-lg font-bold text-white mb-1 line-clamp-2 group-hover:text-[var(--color-primary)] transition-colors duration-200">
+              {barber.full_name || barber.name}
+            </h3>
+
+            {/* Title Badge */}
+            <div className="px-2 py-0.5 bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-full text-xs font-semibold mb-2 inline-block">
+              Professional
+            </div>
+
+            {/* Experience */}
+            <p className="text-xs text-gray-400 mb-2 line-clamp-1">
+              Experienced professional
+            </p>
+
+            {/* Rating */}
+            <div className="flex items-center justify-center gap-1">
+              <div className="flex text-yellow-400 text-sm">★★★★★</div>
+              <span className="text-xs font-semibold text-gray-300">5.0</span>
             </div>
           </button>
         ))}
       </div>
+
+      {/* Empty State */}
+      {(!barbers || barbers.length === 0) && (
+        <div className="text-center py-12">
+          <User className="w-12 h-12 text-gray-500 mx-auto mb-3 opacity-50" />
+          <p className="text-gray-400">No barbers available at this branch</p>
+        </div>
+      )}
     </div>
   );
 
@@ -1353,7 +1318,7 @@ const GuestServiceBooking = ({ onBack }) => {
         );
       }
 
-      setStep(5);
+      setStep(6);
       setIsSignedIn(true);
     } catch (error) {
       console.error("❌ Guest sign-in failed:", error);
@@ -1407,9 +1372,9 @@ const GuestServiceBooking = ({ onBack }) => {
           <p className="text-sm text-gray-400">
             We'll create a temporary guest account for your booking
           </p>
-          <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full bg-[#FF8C42]/10 border border-[#FF8C42]/20">
-            <Lock className="w-3.5 h-3.5 text-[#FF8C42] mr-1" />
-            <span className="text-xs text-[#FF8C42]">Secure & Private</span>
+          <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20">
+            <Lock className="w-3.5 h-3.5 text-[var(--color-primary)] mr-1" />
+            <span className="text-xs text-[var(--color-primary)]">Secure & Private</span>
           </div>
         </div>
 
@@ -1431,10 +1396,10 @@ const GuestServiceBooking = ({ onBack }) => {
                     setFormErrors({ ...formErrors, name: "" });
                   }
                 }}
-                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
+                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
                   formErrors.name
                     ? "border-red-500 focus:border-red-500"
-                    : "border-[#3A3A3A] focus:border-[#FF8C42]"
+                    : "border-[#3A3A3A] focus:border-[var(--color-primary)]"
                 }`}
               />
               {formErrors.name && (
@@ -1457,10 +1422,10 @@ const GuestServiceBooking = ({ onBack }) => {
                     setFormErrors({ ...formErrors, email: "" });
                   }
                 }}
-                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
+                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
                   formErrors.email
                     ? "border-red-500 focus:border-red-500"
-                    : "border-[#3A3A3A] focus:border-[#FF8C42]"
+                    : "border-[#3A3A3A] focus:border-[var(--color-primary)]"
                 }`}
               />
               {formErrors.email && (
@@ -1486,10 +1451,10 @@ const GuestServiceBooking = ({ onBack }) => {
                     setFormErrors({ ...formErrors, number: "" });
                   }
                 }}
-                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
+                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
                   formErrors.number
                     ? "border-red-500 focus:border-red-500"
-                    : "border-[#3A3A3A] focus:border-[#FF8C42]"
+                    : "border-[#3A3A3A] focus:border-[var(--color-primary)]"
                 }`}
               />
               {formErrors.number && (
@@ -1507,7 +1472,7 @@ const GuestServiceBooking = ({ onBack }) => {
                 className={`w-full py-3 rounded-xl font-light transition-all duration-300 text-sm ${
                   loading
                     ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                    : "bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white hover:shadow-lg transform hover:scale-[1.02]"
+                    : "bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white hover:shadow-lg transform hover:scale-[1.02]"
                 }`}
               >
                 {loading ? (
@@ -1539,39 +1504,27 @@ const GuestServiceBooking = ({ onBack }) => {
   const renderConfirmation = () => (
     <div className="space-y-3 px-4">
       <div className="text-center mb-3">
-        <h2 className="text-xl font-bold mb-1" style={{ color: "#36454F" }}>
+        <h2 className="text-xl font-bold mb-1 text-white">
           Confirm Your Booking
         </h2>
-        <p className="text-sm font-medium" style={{ color: "#8B8B8B" }}>
+        <p className="text-sm font-medium text-gray-400">
           Please review your appointment details
         </p>
       </div>
 
-      <div
-        className="bg-white rounded-xl p-4 border shadow-lg"
-        style={{ borderColor: "#E0E0E0" }}
-      >
+      <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A] shadow-lg">
         <div className="space-y-4">
           {/* Service Details */}
-          <div
-            className="text-center border-b pb-3"
-            style={{ borderColor: "#E0E0E0" }}
-          >
+          <div className="text-center border-b pb-3 border-[#2A2A2A]">
             <div className="text-2xl mb-2">{selectedService?.image}</div>
-            <h3 className="text-lg font-bold mb-1" style={{ color: "#36454F" }}>
+            <h3 className="text-lg font-bold mb-1 text-white">
               {selectedService?.name}
             </h3>
             <div className="flex justify-center items-center space-x-3">
-              <span
-                className="font-bold text-base"
-                style={{ color: "#F68B24" }}
-              >
+              <span className="font-bold text-base text-[var(--color-primary)]">
                 ₱{selectedService?.price.toLocaleString()}
               </span>
-              <span
-                className="font-medium text-sm"
-                style={{ color: "#8B8B8B" }}
-              >
+              <span className="font-medium text-sm text-gray-400">
                 {selectedService?.duration}
               </span>
             </div>
@@ -1581,29 +1534,23 @@ const GuestServiceBooking = ({ onBack }) => {
           <div className="space-y-2">
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center space-x-2">
-                <Building className="w-4 h-4" style={{ color: "#F68B24" }} />
-                <span
-                  className="font-semibold text-sm"
-                  style={{ color: "#36454F" }}
-                >
+                <Building className="w-4 h-4 text-[var(--color-primary)]" />
+                <span className="font-semibold text-sm text-gray-400">
                   Branch
                 </span>
               </div>
-              <span className="font-bold text-sm" style={{ color: "#36454F" }}>
+              <span className="font-bold text-sm text-white">
                 {selectedBranch?.name}
               </span>
             </div>
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center space-x-2">
-                <Calendar className="w-4 h-4" style={{ color: "#F68B24" }} />
-                <span
-                  className="font-semibold text-sm"
-                  style={{ color: "#36454F" }}
-                >
+                <Calendar className="w-4 h-4 text-[var(--color-primary)]" />
+                <span className="font-semibold text-sm text-gray-400">
                   Date & Time
                 </span>
               </div>
-              <span className="font-bold text-sm" style={{ color: "#36454F" }}>
+              <span className="font-bold text-sm text-white">
                 {selectedDate ? new Date(selectedDate).toLocaleDateString("en-PH", {
                   weekday: "short",
                   month: "short",
@@ -1613,15 +1560,12 @@ const GuestServiceBooking = ({ onBack }) => {
             </div>
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center space-x-2">
-                <User className="w-4 h-4" style={{ color: "#F68B24" }} />
-                <span
-                  className="font-semibold text-sm"
-                  style={{ color: "#36454F" }}
-                >
+                <User className="w-4 h-4 text-[var(--color-primary)]" />
+                <span className="font-semibold text-sm text-gray-400">
                   Your Barber
                 </span>
               </div>
-              <span className="font-bold text-sm" style={{ color: "#36454F" }}>
+              <span className="font-bold text-sm text-white">
                 {selectedStaff?.full_name ||
                   selectedStaff?.name ||
                   "Any Barber"}
@@ -1630,12 +1574,9 @@ const GuestServiceBooking = ({ onBack }) => {
           </div>
 
           {/* Voucher Selection */}
-          <div className="border-t pt-3" style={{ borderColor: "#E0E0E0" }}>
-            <h4
-              className="text-sm font-bold mb-3 flex items-center"
-              style={{ color: "#36454F" }}
-            >
-              <Gift className="w-4 h-4 mr-2" style={{ color: "#F68B24" }} />
+          <div className="border-t pt-3 border-[#2A2A2A]">
+            <h4 className="text-sm font-bold mb-3 flex items-center text-white">
+              <Gift className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
               Apply Voucher (Optional)
             </h4>
 
@@ -1650,38 +1591,26 @@ const GuestServiceBooking = ({ onBack }) => {
                           selectedVoucher?._id === voucher._id ? null : voucher
                         )
                       }
-                      className="w-full p-2 rounded-lg border-2 transition-all duration-200 text-left"
-                      style={{
-                        borderColor:
-                          selectedVoucher?._id === voucher._id
-                            ? "#F68B24"
-                            : "#E0E0E0",
-                        backgroundColor:
-                          selectedVoucher?._id === voucher._id
-                            ? "rgba(246, 139, 36, 0.1)"
-                            : "white",
-                      }}
+                      className={`w-full p-2 rounded-lg border-2 transition-all duration-200 text-left ${
+                        selectedVoucher?._id === voucher._id
+                          ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
+                          : "border-[#2A2A2A] bg-[#0F0F0F] hover:border-[var(--color-primary)]/50"
+                      }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <Gift className="w-4 h-4" style={{ color: "#F68B24" }} />
+                          <Gift className="w-4 h-4 text-[var(--color-primary)]" />
                           <div>
-                            <p
-                              className="text-xs font-bold"
-                              style={{ color: "#36454F" }}
-                            >
+                            <p className="text-xs font-bold text-white">
                               {voucher.code}
                             </p>
-                            <p className="text-xs" style={{ color: "#F68B24" }}>
+                            <p className="text-xs text-[var(--color-primary)]">
                               ₱{parseFloat(voucher.value || 0).toFixed(2)}
                             </p>
                           </div>
                         </div>
                         {selectedVoucher?._id === voucher._id && (
-                          <div
-                            className="w-4 h-4 rounded-full flex items-center justify-center"
-                            style={{ backgroundColor: "#F68B24" }}
-                          >
+                          <div className="w-4 h-4 rounded-full flex items-center justify-center bg-[var(--color-primary)]">
                             <span className="text-white text-xs">✓</span>
                           </div>
                         )}
@@ -1690,7 +1619,7 @@ const GuestServiceBooking = ({ onBack }) => {
                   ))}
                 </div>
                 {selectedVoucher && (
-                  <div className="text-xs text-center p-2 rounded flex items-center justify-center gap-2" style={{ backgroundColor: "#F0F8FF", color: "#36454F" }}>
+                  <div className="text-xs text-center p-2 rounded flex items-center justify-center gap-2 bg-blue-900/30 text-blue-300">
                     <Banknote className="w-4 h-4" />
                     <span>You'll save ₱{parseFloat(selectedVoucher.value || 0).toFixed(2)} with this voucher</span>
                   </div>
@@ -1698,7 +1627,7 @@ const GuestServiceBooking = ({ onBack }) => {
               </div>
             ) : (
               <div className="text-center py-3">
-                <p className="text-xs" style={{ color: "#8B8B8B" }}>
+                <p className="text-xs text-gray-400">
                   No vouchers available
                 </p>
               </div>
@@ -1706,8 +1635,8 @@ const GuestServiceBooking = ({ onBack }) => {
           </div>
 
           {/* Payment Options - Pay Later Only */}
-          <div className="border-t pt-3" style={{ borderColor: "#E0E0E0" }}>
-            <h4 className="text-sm font-bold mb-3" style={{ color: "#36454F" }}>
+          <div className="border-t pt-3 border-[#2A2A2A]">
+            <h4 className="text-sm font-bold mb-3 text-white">
               Complete Your Booking
             </h4>
 
@@ -1717,7 +1646,7 @@ const GuestServiceBooking = ({ onBack }) => {
               className={`w-full py-3 px-4 rounded-lg transition-all duration-200 text-sm flex items-center justify-center gap-2 font-bold ${
                 bookingLoading
                   ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                  : "bg-[#FF8C42] hover:bg-[#FF7A2B] text-white hover:shadow-lg"
+                  : "bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white hover:shadow-lg"
               }`}
             >
               {bookingLoading ? (
@@ -1733,10 +1662,7 @@ const GuestServiceBooking = ({ onBack }) => {
               )}
             </button>
 
-            <p
-              className="text-xs text-center mt-3"
-              style={{ color: "#8B8B8B" }}
-            >
+            <p className="text-xs text-center mt-3 text-gray-400">
               Complete your booking now and pay when you arrive at the shop
             </p>
           </div>
@@ -1744,8 +1670,8 @@ const GuestServiceBooking = ({ onBack }) => {
           {/* Go Back Button */}
           <div className="pt-2">
             <button
-              onClick={() => setStep(3)}
-              className="w-full py-2 px-3 border border-[#2A2A2A] text-gray-400 hover:bg-[#1A1A1A] hover:text-white font-bold rounded-lg transition-all duration-200 text-sm"
+              onClick={() => setStep(4)}
+              className="w-full py-2 px-3 border border-[#2A2A2A] text-gray-400 hover:bg-[#222222] hover:text-white font-bold rounded-lg transition-all duration-200 text-sm"
             >
               ← Go Back to Edit Details
             </button>
@@ -1813,7 +1739,7 @@ const GuestServiceBooking = ({ onBack }) => {
             <div className="text-lg font-light text-white">
               Booking Code:{" "}
               {getBookingById?.booking_code ? (
-                <span className="font-bold text-[#FF8C42]">
+                <span className="font-bold text-[var(--color-primary)]">
                   {getBookingById.booking_code}
                 </span>
               ) : (
@@ -1899,7 +1825,7 @@ const GuestServiceBooking = ({ onBack }) => {
             )}
             <div className="flex justify-between border-t pt-3 border-orange-500/30">
               <span className="font-light text-white">Total:</span>
-              <span className="font-normal text-lg text-[#FF8C42]">
+              <span className="font-normal text-lg text-[var(--color-primary)]">
                 ₱
                 {createdBooking?.total_amount
                   ? parseFloat(createdBooking.total_amount).toLocaleString()
@@ -1917,7 +1843,7 @@ const GuestServiceBooking = ({ onBack }) => {
         <div className="space-y-3">
           <button
             onClick={onBack}
-            className="w-full py-4 bg-[#F68B24] hover:bg-[#E67E22] text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
+            className="w-full py-4 bg-[#F68B24] hover:brightness-90 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
           >
             Back to Home
           </button>
@@ -1952,7 +1878,7 @@ const GuestServiceBooking = ({ onBack }) => {
             {/* Title - Centered */}
             <div className="text-center">
               <p className="text-lg font-light text-white">Book Service</p>
-              <p className="text-xs text-[#FF8C42]">Step {step} of 6</p>
+              <p className="text-xs text-[var(--color-primary)]">Step {step} of 6</p>
             </div>
           </div>
         </div>
@@ -1964,11 +1890,12 @@ const GuestServiceBooking = ({ onBack }) => {
       {/* Content */}
       <div className="relative z-10 pb-8">
         {step === 1 && renderBranchSelection()}
-        {step === 2 && renderServiceSelection()}
-        {step === 3 && renderTimeAndStaffSelection()}
-        {step === 4 && renderGuestSignIn()}
-        {step === 5 && renderConfirmation()}
-        {step === 6 && renderBookingSuccess()}
+        {step === 2 && renderStaffSelection()}
+        {step === 3 && renderServiceSelection()}
+        {step === 4 && renderTimeSelection()}
+        {step === 5 && renderGuestSignIn()}
+        {step === 6 && renderConfirmation()}
+        {step === 7 && renderBookingSuccess()}
       </div>
 
       {/* Error Dialog Modal */}
@@ -2020,7 +1947,7 @@ const GuestServiceBooking = ({ onBack }) => {
             {/* Action Button */}
             <button
               onClick={closeErrorDialog}
-              className="w-full py-3 bg-[#FF8C42] hover:bg-[#FF7A2B] text-white font-medium rounded-xl transition-all duration-200"
+              className="w-full py-3 bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white font-medium rounded-xl transition-all duration-200"
             >
               OK
             </button>

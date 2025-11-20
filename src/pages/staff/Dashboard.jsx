@@ -8,6 +8,7 @@ import ManagementSection from '../../components/staff/ManagementSection'
 import VoucherManagement from '../../components/staff/VoucherManagement'
 import ServicesManagement from '../../components/staff/ServicesManagement'
 import BookingsManagement from '../../components/staff/BookingsManagement'
+import CalendarManagement from '../../components/staff/CalendarManagement'
 import BarbersManagement from '../../components/staff/BarbersManagement'
 import BranchUserManagement from '../../components/staff/BranchUserManagement'
 import CustomersManagement from '../../components/staff/CustomersManagement'
@@ -160,6 +161,9 @@ function StaffDashboard() {
       case 'bookings':
         return <BookingsManagement onRefresh={handleRefresh} user={user} />
 
+      case 'calendar':
+        return <CalendarManagement user={user} />
+
       case 'services':
         return <ServicesManagement services={services || []} onRefresh={handleRefresh} user={user} />
 
@@ -239,6 +243,7 @@ function StaffDashboard() {
   const tabs = [
     { id: 'overview', label: 'Overview', icon: 'dashboard' },
     { id: 'bookings', label: 'Bookings', icon: 'calendar' },
+    { id: 'calendar', label: 'Calendar', icon: 'calendar' },
     { id: 'services', label: 'Services', icon: 'scissors' },
     { id: 'vouchers', label: 'Vouchers', icon: 'gift' },
     { id: 'barbers', label: 'Barbers', icon: 'user' },

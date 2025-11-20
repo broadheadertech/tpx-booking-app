@@ -124,9 +124,9 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Total</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.total}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.total}</p>
             </div>
-            <User className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <User className="h-8 w-8 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
 
@@ -134,9 +134,9 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Active</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.active}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.active}</p>
             </div>
-            <User className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <User className="h-8 w-8 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
 
@@ -144,9 +144,9 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">New</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.new}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.new}</p>
             </div>
-            <User className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <User className="h-8 w-8 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
 
@@ -154,9 +154,9 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Inactive</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">{stats.inactive}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.inactive}</p>
             </div>
-            <User className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <User className="h-8 w-8 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
 
@@ -164,9 +164,9 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Total Spent</p>
-              <p className="text-2xl font-bold text-[#FF8C42]">₱{stats.totalSpent.toFixed(0)}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">₱{stats.totalSpent.toFixed(0)}</p>
             </div>
-            <Calendar className="h-8 w-8 text-[#FF8C42] opacity-30" />
+            <Calendar className="h-8 w-8 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
       </div>
@@ -235,19 +235,19 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
               <tr>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                   <div className="flex items-center space-x-2">
-                    <User className="h-4 w-4 text-[#FF8C42]" />
+                    <User className="h-4 w-4 text-[var(--color-primary)]" />
                     <span>Customer</span>
                   </div>
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                   <div className="flex items-center space-x-2">
-                    <Mail className="h-4 w-4 text-[#FF8C42]" />
+                    <Mail className="h-4 w-4 text-[var(--color-primary)]" />
                     <span>Contact</span>
                   </div>
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-300 uppercase tracking-wider">
                   <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-[#FF8C42]" />
+                    <Calendar className="h-4 w-4 text-[var(--color-primary)]" />
                     <span>Birthday</span>
                   </div>
                 </th>
@@ -268,8 +268,8 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
                     {/* Customer Info */}
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
-                        <div className={`flex-shrink-0 w-10 h-10 rounded-full bg-[#FF8C42]/20 flex items-center justify-center`}>
-                          <User className="h-5 w-5 text-[#FF8C42]" />
+                        <div className={`flex-shrink-0 w-10 h-10 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center`}>
+                          <User className="h-5 w-5 text-[var(--color-primary)]" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="text-sm font-semibold text-white truncate">
@@ -329,7 +329,7 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
                       <div className="flex items-center justify-center space-x-2">
                         <button 
                           onClick={() => handleViewCustomer(customer)}
-                          className="inline-flex items-center px-3 py-1.5 bg-[#FF8C42]/20 text-[#FF8C42] rounded-lg hover:bg-[#FF8C42]/30 transition-colors text-xs font-medium"
+                          className="inline-flex items-center px-3 py-1.5 bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary)]/30 transition-colors text-xs font-medium"
                         >
                           <User className="h-3 w-3 mr-1" />
                           View
@@ -375,8 +375,8 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
           <div className="space-y-6">
             {/* Customer Header */}
             <div className="flex items-center space-x-4 pb-6 border-b border-gray-200">
-              <div className="flex-shrink-0 w-16 h-16 rounded-full bg-[#FF8C42]/20 flex items-center justify-center">
-                <User className="h-8 w-8 text-[#FF8C42]" />
+              <div className="flex-shrink-0 w-16 h-16 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center">
+                <User className="h-8 w-8 text-[var(--color-primary)]" />
               </div>
               <div className="flex-1">
                 <h3 className="text-2xl font-bold text-[#1A1A1A]">
@@ -384,7 +384,7 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
                 </h3>
                 <p className="text-sm text-gray-600">@{viewCustomer.username}</p>
                 {viewCustomer.nickname && (
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FF8C42]/10 text-[#FF8C42] mt-1">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--color-primary)]/10 text-[var(--color-primary)] mt-1">
                     {viewCustomer.nickname}
                   </span>
                 )}
@@ -407,7 +407,7 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
               {/* Contact Information */}
               <div className="space-y-4">
                 <h4 className="text-lg font-semibold text-[#1A1A1A] flex items-center">
-                  <Mail className="h-5 w-5 text-[#FF8C42] mr-2" />
+                  <Mail className="h-5 w-5 text-[var(--color-primary)] mr-2" />
                   Contact Information
                 </h4>
                 <div className="space-y-3 bg-gray-50 rounded-lg p-4">
@@ -446,7 +446,7 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
               {/* Personal Information */}
               <div className="space-y-4">
                 <h4 className="text-lg font-semibold text-[#1A1A1A] flex items-center">
-                  <User className="h-5 w-5 text-[#FF8C42] mr-2" />
+                  <User className="h-5 w-5 text-[var(--color-primary)] mr-2" />
                   Personal Information
                 </h4>
                 <div className="space-y-3 bg-gray-50 rounded-lg p-4">
@@ -513,7 +513,7 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
                   setViewCustomer(null)
                   handleContactCustomer(viewCustomer)
                 }}
-                className="flex-1 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors text-sm font-medium"
+                className="flex-1 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] transition-colors text-sm font-medium"
               >
                 <Mail className="h-4 w-4 inline mr-2" />
                 Contact Customer
@@ -541,8 +541,8 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
             {/* Customer Info */}
             <div className="bg-gray-50 rounded-lg p-4">
               <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[#FF8C42]/20 flex items-center justify-center">
-                  <User className="h-6 w-6 text-[#FF8C42]" />
+                <div className="flex-shrink-0 w-12 h-12 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center">
+                  <User className="h-6 w-6 text-[var(--color-primary)]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="text-lg font-semibold text-[#1A1A1A]">
@@ -565,12 +565,12 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
                   onClick={() => setContactMethod('email')}
                   className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all ${
                     contactMethod === 'email'
-                      ? 'border-[#FF8C42] bg-[#FF8C42]/10'
+                      ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <Mail className={`h-6 w-6 mb-2 ${contactMethod === 'email' ? 'text-[#FF8C42]' : 'text-gray-500'}`} />
-                  <span className={`text-xs font-medium ${contactMethod === 'email' ? 'text-[#FF8C42]' : 'text-gray-700'}`}>
+                  <Mail className={`h-6 w-6 mb-2 ${contactMethod === 'email' ? 'text-[var(--color-primary)]' : 'text-gray-500'}`} />
+                  <span className={`text-xs font-medium ${contactMethod === 'email' ? 'text-[var(--color-primary)]' : 'text-gray-700'}`}>
                     Email
                   </span>
                 </button>
@@ -578,12 +578,12 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
                   onClick={() => setContactMethod('sms')}
                   className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all ${
                     contactMethod === 'sms'
-                      ? 'border-[#FF8C42] bg-[#FF8C42]/10'
+                      ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <MessageCircle className={`h-6 w-6 mb-2 ${contactMethod === 'sms' ? 'text-[#FF8C42]' : 'text-gray-500'}`} />
-                  <span className={`text-xs font-medium ${contactMethod === 'sms' ? 'text-[#FF8C42]' : 'text-gray-700'}`}>
+                  <MessageCircle className={`h-6 w-6 mb-2 ${contactMethod === 'sms' ? 'text-[var(--color-primary)]' : 'text-gray-500'}`} />
+                  <span className={`text-xs font-medium ${contactMethod === 'sms' ? 'text-[var(--color-primary)]' : 'text-gray-700'}`}>
                     SMS
                   </span>
                 </button>
@@ -591,12 +591,12 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
                   onClick={() => setContactMethod('whatsapp')}
                   className={`flex flex-col items-center justify-center p-4 rounded-lg border-2 transition-all ${
                     contactMethod === 'whatsapp'
-                      ? 'border-[#FF8C42] bg-[#FF8C42]/10'
+                      ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <Phone className={`h-6 w-6 mb-2 ${contactMethod === 'whatsapp' ? 'text-[#FF8C42]' : 'text-gray-500'}`} />
-                  <span className={`text-xs font-medium ${contactMethod === 'whatsapp' ? 'text-[#FF8C42]' : 'text-gray-700'}`}>
+                  <Phone className={`h-6 w-6 mb-2 ${contactMethod === 'whatsapp' ? 'text-[var(--color-primary)]' : 'text-gray-500'}`} />
+                  <span className={`text-xs font-medium ${contactMethod === 'whatsapp' ? 'text-[var(--color-primary)]' : 'text-gray-700'}`}>
                     WhatsApp
                   </span>
                 </button>
@@ -613,7 +613,7 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
                 onChange={(e) => setContactMessage(e.target.value)}
                 placeholder="Type your message here..."
                 rows={6}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent resize-none text-sm"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none text-sm"
               />
               <p className="mt-2 text-xs text-gray-500">
                 {contactMethod === 'email' && 'This will open your default email client'}
@@ -627,7 +627,7 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
               <button
                 onClick={handleSendContact}
                 disabled={sendingContact || !contactMessage.trim()}
-                className="flex-1 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF7A2B] transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {sendingContact ? 'Sending...' : 'Send Message'}
               </button>

@@ -164,7 +164,7 @@ function CustomerBooking() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF8C42] mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)] mx-auto mb-4"></div>
           <p className="text-gray-400">Loading booking options...</p>
         </div>
       </div>
@@ -208,7 +208,7 @@ function CustomerBooking() {
             <div className="space-y-3">
               <Button 
                 onClick={() => navigate('/customer/dashboard')}
-                className="w-full bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors"
+                className="w-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white hover:from-[var(--color-accent)] hover:brightness-110 transition-colors"
               >
                 Go to Dashboard
               </Button>
@@ -259,7 +259,7 @@ function CustomerBooking() {
               </Button>
               <Button
                 onClick={() => setGuestMode(true)}
-                className="w-full bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white hover:shadow-lg transition-all"
+                className="w-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white hover:shadow-lg transition-all"
               >
                 Continue as Guest
               </Button>
@@ -274,7 +274,7 @@ function CustomerBooking() {
             <div className="space-y-2">
               <button
                 onClick={() => setSelectedBarber(null)}
-                className={`w-full p-4 rounded-lg border-2 text-left transition-colors ${selectedBarber === null ? 'border-[#FF8C42] bg-[#FF8C42]/10' : 'border-[#2A2A2A] bg-[#1A1A1A]'}`}
+                className={`w-full p-4 rounded-lg border-2 text-left transition-colors ${selectedBarber === null ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' : 'border-[#2A2A2A] bg-[#1A1A1A]'}`}
               >
                 <span className="font-medium text-white">No preference</span>
                 <p className="text-sm text-gray-400">Any available barber</p>
@@ -284,7 +284,7 @@ function CustomerBooking() {
                 <button
                   key={barber._id}
                   onClick={() => setSelectedBarber(barber)}
-                  className={`w-full p-4 rounded-lg border-2 text-left transition-colors ${selectedBarber?._id === barber._id ? 'border-[#FF8C42] bg-[#FF8C42]/10' : 'border-[#2A2A2A] bg-[#1A1A1A] hover:border-[#FF8C42]/50'}`}
+                  className={`w-full p-4 rounded-lg border-2 text-left transition-colors ${selectedBarber?._id === barber._id ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' : 'border-[#2A2A2A] bg-[#1A1A1A] hover:border-[var(--color-primary)]/50'}`}
                 >
                   <span className="font-medium text-white">{barber.full_name}</span>
                   <p className="text-sm text-gray-400">Professional barber</p>
@@ -302,7 +302,7 @@ function CustomerBooking() {
               <Button 
                 onClick={handleBooking}
                 disabled={loading}
-                className={`w-full transition-colors ${loading ? 'bg-gray-600 text-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white hover:shadow-lg'}`}
+                className={`w-full transition-colors ${loading ? 'bg-gray-600 text-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white hover:shadow-lg'}`}
               >
                 {loading ? 'Creating Booking...' : 'Confirm Booking'}
               </Button>

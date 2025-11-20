@@ -123,7 +123,7 @@ const PaymentSuccess = () => {
           <div className="space-y-3">
             <button
               onClick={handleViewBookings}
-              className="w-full py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white font-semibold rounded-xl hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-all duration-200 shadow-lg flex items-center justify-center space-x-2"
+              className="w-full py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-semibold rounded-xl hover:from-[var(--color-accent)] hover:brightness-110 transition-all duration-200 shadow-lg flex items-center justify-center space-x-2"
             >
               <Calendar className="w-5 h-5" />
               <span>View My Bookings</span>

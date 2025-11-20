@@ -51,7 +51,7 @@ const EmailTestModal = ({ isOpen, onClose }) => {
         {/* Test Email Section */}
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-6 rounded-xl border border-[#444444]/50">
           <div className="flex items-center space-x-3 mb-4">
-            <div className="p-2 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] rounded-lg">
+            <div className="p-2 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg">
               <Mail className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -70,7 +70,7 @@ const EmailTestModal = ({ isOpen, onClose }) => {
                 value={testEmail}
                 onChange={(e) => setTestEmail(e.target.value)}
                 placeholder="your.email@example.com"
-                className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[#FF8C42] focus:border-[#FF8C42] transition-colors"
+                className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] transition-colors"
                 disabled={isTesting}
               />
             </div>
@@ -78,7 +78,7 @@ const EmailTestModal = ({ isOpen, onClose }) => {
             <button
               onClick={handleTestEmail}
               disabled={isTesting || !testEmail}
-              className="w-full px-4 py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg hover:from-[var(--color-accent)] hover:brightness-110 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isTesting ? (
                 <>

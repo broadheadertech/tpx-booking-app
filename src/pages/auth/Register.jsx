@@ -4,6 +4,7 @@ import { AlertCircle, CheckCircle } from 'lucide-react'
 import bannerImage from '../../assets/img/banner.jpg'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { useBranding } from '../../context/BrandingContext'
 
 function Register() {
   const [formData, setFormData] = useState({
@@ -18,6 +19,7 @@ function Register() {
   const [errors, setErrors] = useState({})
   const [success, setSuccess] = useState('')
   const navigate = useNavigate()
+  const { branding } = useBranding()
 
   // Convex mutation
   const registerUser = useMutation(api.services.auth.registerUser)
@@ -207,7 +209,7 @@ function Register() {
             {/* Logo */}
             <div className="flex justify-center mb-1">
               <img 
-                src="/img/tipuno_x_logo_white.avif" 
+                src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'} 
                 alt="TipunoX Angeles Barbershop Logo" 
                 className="w-52 h-32 object-contain"
               />
@@ -253,7 +255,7 @@ function Register() {
                       className={`w-full h-14 px-5 bg-[#2A2A2A] border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-base text-white placeholder-gray-400 ${
                         hasFieldError('fullName')
                           ? 'border-red-500/50 focus:ring-red-500/50 focus:border-red-500'
-                          : 'border-[#3A3A3A] focus:ring-[#FF8C42]/50 focus:border-[#FF8C42]'
+                          : 'border-[#3A3A3A] focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)]'
                       }`}
                     />
                     {getFieldError('fullName') && (
@@ -275,7 +277,7 @@ function Register() {
                       className={`w-full h-14 px-5 bg-[#2A2A2A] border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-base text-white placeholder-gray-400 ${
                         hasFieldError('email')
                           ? 'border-red-500/50 focus:ring-red-500/50 focus:border-red-500'
-                          : 'border-[#3A3A3A] focus:ring-[#FF8C42]/50 focus:border-[#FF8C42]'
+                          : 'border-[#3A3A3A] focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)]'
                       }`}
                     />
                     {getFieldError('email') && (
@@ -297,7 +299,7 @@ function Register() {
                       className={`w-full h-14 px-5 bg-[#2A2A2A] border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-base text-white placeholder-gray-400 ${
                         hasFieldError('mobile_number')
                           ? 'border-red-500/50 focus:ring-red-500/50 focus:border-red-500'
-                          : 'border-[#3A3A3A] focus:ring-[#FF8C42]/50 focus:border-[#FF8C42]'
+                          : 'border-[#3A3A3A] focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)]'
                       }`}
                     />
                     {getFieldError('mobile_number') && (
@@ -316,7 +318,7 @@ function Register() {
                       name="birthday"
                       value={formData.birthday}
                       onChange={handleChange}
-                      className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42] transition-all duration-300 text-base text-white"
+                      className="w-full h-14 px-5 bg-[#2A2A2A] border border-[#3A3A3A] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)] transition-all duration-300 text-base text-white"
                     />
                   </div>
                   
@@ -331,7 +333,7 @@ function Register() {
                       className={`w-full h-14 px-5 bg-[#2A2A2A] border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-base text-white placeholder-gray-400 ${
                         hasFieldError('password')
                           ? 'border-red-500/50 focus:ring-red-500/50 focus:border-red-500'
-                          : 'border-[#3A3A3A] focus:ring-[#FF8C42]/50 focus:border-[#FF8C42]'
+                          : 'border-[#3A3A3A] focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)]'
                       }`}
                     />
                     {getFieldError('password') && (
@@ -356,7 +358,7 @@ function Register() {
                       className={`w-full h-14 px-5 bg-[#2A2A2A] border rounded-2xl focus:outline-none focus:ring-2 transition-all duration-300 text-base text-white placeholder-gray-400 ${
                         hasFieldError('confirmPassword')
                           ? 'border-red-500/50 focus:ring-red-500/50 focus:border-red-500'
-                          : 'border-[#3A3A3A] focus:ring-[#FF8C42]/50 focus:border-[#FF8C42]'
+                          : 'border-[#3A3A3A] focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)]'
                       }`}
                     />
                     {getFieldError('confirmPassword') && (
@@ -375,7 +377,7 @@ function Register() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full h-14 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] hover:from-[#FF7A2B] hover:to-[#FF6B1A] active:from-[#FF6B1A] active:to-[#E8610F] disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 disabled:transform-none text-base"
+                    className="w-full h-14 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:brightness-110 active:from-[var(--color-accent)] active:brightness-75 disabled:from-gray-600 disabled:to-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95 disabled:transform-none text-base"
                   >
                     {loading ? 'Creating Account...' : 'Create Account'}
                   </button>
@@ -385,7 +387,7 @@ function Register() {
                   <span className="text-sm text-gray-400">Already have an account? </span>
                   <Link 
                     to="/auth/login" 
-                    className="text-sm font-semibold text-[#FF8C42] hover:text-[#FF7A2B] active:text-[#FF6B1A] transition-colors"
+                    className="text-sm font-semibold text-[var(--color-primary)] hover:text-[var(--color-accent)] active:text-[var(--color-accent)] transition-colors"
                   >
                     Sign In
                   </Link>

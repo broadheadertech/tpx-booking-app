@@ -424,7 +424,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
               <p className="text-gray-300">{error}</p>
               <button 
                 onClick={() => { setError(null); onRefresh?.() }}
-                className="mt-4 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200"
+                className="mt-4 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-all duration-200"
               >
                 Retry
               </button>
@@ -438,7 +438,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
       <div className="space-y-6">
         <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
           <div className="text-center">
-            <div className="animate-spin w-8 h-8 border-3 border-[#FF8C42] border-t-transparent rounded-full mx-auto mb-4"></div>
+            <div className="animate-spin w-8 h-8 border-3 border-[var(--color-primary)] border-t-transparent rounded-full mx-auto mb-4"></div>
             <p className="text-gray-300">Loading report data...</p>
           </div>
         </div>
@@ -470,7 +470,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
           <button 
             onClick={handleExport}
             disabled={!reportData}
-            className="flex items-center space-x-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="h-4 w-4" />
             <span>Export</span>
@@ -489,7 +489,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
             <select
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+              className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
             >
               {periods.map(period => (
                 <option key={period.id} value={period.id} className="bg-[#1A1A1A] text-white">{period.label}</option>
@@ -512,16 +512,16 @@ const ReportsManagement = ({ onRefresh, user }) => {
               onClick={() => setSelectedReport(type.id)}
               className={`p-6 rounded-lg border transition-all duration-200 text-left ${
                 isSelected
-                  ? `bg-[#1A1A1A] border-[#FF8C42] shadow-lg transform scale-105`
-                  : 'bg-[#1A1A1A] border-[#2A2A2A]/50 hover:border-[#FF8C42]/50 hover:shadow-lg'
+                  ? `bg-[#1A1A1A] border-[var(--color-primary)] shadow-lg transform scale-105`
+                  : 'bg-[#1A1A1A] border-[#2A2A2A]/50 hover:border-[var(--color-primary)]/50 hover:shadow-lg'
               }`}
             >
                 <div className="flex items-center justify-between mb-4">
                 <div className={`p-2 rounded-lg ${
-                  isSelected ? 'bg-[#FF8C42]/20' : 'bg-[#1A1A1A]'
+                  isSelected ? 'bg-[var(--color-primary)]/20' : 'bg-[#1A1A1A]'
                 }`}>
                   <IconComponent className={`h-6 w-6 ${
-                    isSelected ? 'text-[#FF8C42]' : 'text-[#FF8C42] opacity-70'
+                    isSelected ? 'text-[var(--color-primary)]' : 'text-[var(--color-primary)] opacity-70'
                   }`} />
                 </div>
                 {data.trend === 'up' ? (
@@ -533,7 +533,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
               
               <div className="space-y-1">
                 <p className="text-sm font-medium text-gray-300">{type.label}</p>
-                <p className="text-2xl font-bold text-[#FF8C42]">
+                <p className="text-2xl font-bold text-[var(--color-primary)]">
                   {type.id === 'revenue' ? formatCurrency(data.current) : formatNumber(data.current)}
                 </p>
                 <p className={`text-xs font-medium ${
@@ -570,7 +570,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
                  </div>
                  <div className="flex-1 bg-[#1A1A1A] rounded-full h-6 relative overflow-hidden">
                    <div
-                     className="h-full bg-gradient-to-r from-[#FF8C42] to-[#FF8C42]/80 rounded-full transition-all duration-1000 ease-out"
+                     className="h-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary)]/80 rounded-full transition-all duration-1000 ease-out"
                      style={{ width: `${percentage}%` }}
                    />
                    <div className="absolute inset-0 flex items-center justify-end pr-3">
@@ -625,7 +625,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
                         </div>
                       </td>
                       <td className="py-4 px-4 text-right">
-                        <span className="text-[#FF8C42] font-bold text-lg">
+                        <span className="text-[var(--color-primary)] font-bold text-lg">
                           {(selectedReport === 'revenue' || selectedReport === 'services' || selectedReport === 'products') 
                             ? formatCurrency(item.value) 
                             : formatNumber(item.value)
@@ -666,7 +666,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <div className="w-3 h-3 bg-[#FF8C42] rounded-full"></div>
+              <div className="w-3 h-3 bg-[var(--color-primary)] rounded-full"></div>
               <div>
                 <span className="text-xs text-gray-400">Average</span>
                 <p className="text-sm font-semibold text-white">
@@ -695,12 +695,12 @@ const ReportsManagement = ({ onRefresh, user }) => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-[#FF8C42]/20 rounded-lg">
-                <BarChart3 className="h-5 w-5 text-[#FF8C42]" />
+              <div className="p-2 bg-[var(--color-primary)]/20 rounded-lg">
+                <BarChart3 className="h-5 w-5 text-[var(--color-primary)]" />
               </div>
               <h4 className="font-semibold text-white">Average Daily</h4>
             </div>
-            <p className="text-2xl font-bold text-[#FF8C42]">
+            <p className="text-2xl font-bold text-[var(--color-primary)]">
                {(selectedReport === 'revenue' || selectedReport === 'services' || selectedReport === 'products') 
                  ? formatCurrency(Math.round(currentData.current / 7))
                  : formatNumber(Math.round(currentData.current / 7))
@@ -721,7 +721,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
               </div>
               <h4 className="font-semibold text-white">Best Day</h4>
             </div>
-            <p className="text-2xl font-bold text-[#FF8C42]">
+            <p className="text-2xl font-bold text-[var(--color-primary)]">
                {(() => {
                  const bestDay = currentData.chartData.reduce((max, day) => 
                    day.value > max.value ? day : max
@@ -743,12 +743,12 @@ const ReportsManagement = ({ onRefresh, user }) => {
 
           <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-[#FF8C42]/20 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-[#FF8C42]" />
+              <div className="p-2 bg-[var(--color-primary)]/20 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-[var(--color-primary)]" />
               </div>
               <h4 className="font-semibold text-white">Growth Rate</h4>
             </div>
-            <p className="text-2xl font-bold text-[#FF8C42]">
+            <p className="text-2xl font-bold text-[var(--color-primary)]">
               +{currentData.change}%
             </p>
             <p className="text-sm text-gray-300 mt-1">Compared to last {selectedPeriod}</p>

@@ -337,17 +337,17 @@ const SystemReports = ({ onRefresh }) => {
   const renderBranchAnalytics = () => (
     <div className="space-y-6">
       <h3 className="text-xl font-semibold text-white flex items-center space-x-2">
-        <Building className="w-6 h-6 text-[#FF8C42]" />
+        <Building className="w-6 h-6 text-[var(--color-primary)]" />
         <span>Branch Performance Analysis</span>
       </h3>
 
       <div className="grid grid-cols-1 gap-4">
         {branchPerformance.length > 0 ? (
           branchPerformance.map((bp) => (
-            <div key={bp.branch._id} className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl p-6 border border-[#444444]/50 hover:border-[#FF8C42]/50 transition-all">
+            <div key={bp.branch._id} className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl p-6 border border-[#444444]/50 hover:border-[var(--color-primary)]/50 transition-all">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-lg font-semibold text-white">{bp.branch.name}</h4>
-                <span className="px-3 py-1 bg-[#FF8C42]/20 rounded-full text-sm text-[#FF8C42]">{bp.branch.branch_code}</span>
+                <span className="px-3 py-1 bg-[var(--color-primary)]/20 rounded-full text-sm text-[var(--color-primary)]">{bp.branch.branch_code}</span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -390,7 +390,7 @@ const SystemReports = ({ onRefresh }) => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
           <h2 className="text-2xl font-bold text-white flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg flex items-center justify-center">
               <BarChart3 className="w-4 h-4 text-white" />
             </div>
             <span>System Reports</span>
@@ -403,7 +403,7 @@ const SystemReports = ({ onRefresh }) => {
           <select
             value={selectedBranch}
             onChange={(e) => setSelectedBranch(e.target.value)}
-            className="bg-[#333333] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+            className="bg-[#333333] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
           >
             <option value="all">All Branches</option>
             {branches.map(b => (
@@ -415,7 +415,7 @@ const SystemReports = ({ onRefresh }) => {
           <select
             value={selectedPeriod}
             onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="bg-[#333333] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+            className="bg-[#333333] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
           >
             <option value="week">This Week</option>
             <option value="month">This Month</option>
@@ -426,7 +426,7 @@ const SystemReports = ({ onRefresh }) => {
           {/* Export Button */}
           <button
             onClick={handleExport}
-            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-all duration-200 whitespace-nowrap"
+            className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg hover:from-[var(--color-accent)] hover:brightness-110 transition-all duration-200 whitespace-nowrap"
           >
             <Download className="w-4 h-4" />
             <span>Export</span>
@@ -447,7 +447,7 @@ const SystemReports = ({ onRefresh }) => {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center space-x-2 px-4 py-3 border-b-2 transition-all ${
                 activeTab === tab.id
-                  ? 'border-[#FF8C42] text-[#FF8C42]'
+                  ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                   : 'border-transparent text-gray-400 hover:text-white'
               }`}
             >
@@ -467,7 +467,7 @@ const SystemReports = ({ onRefresh }) => {
 
 // Stat Card Component
 const StatCard = ({ title, value, icon: Icon, color, change, positive }) => (
-  <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl p-6 border border-[#444444]/50 hover:border-[#FF8C42]/50 transition-all duration-300 group">
+  <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl p-6 border border-[#444444]/50 hover:border-[var(--color-primary)]/50 transition-all duration-300 group">
     <div className="flex items-start justify-between mb-4">
       <div className={`w-12 h-12 bg-gradient-to-r ${color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-200`}>
         <Icon className="w-6 h-6 text-white" />

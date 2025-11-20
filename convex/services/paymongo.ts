@@ -2,7 +2,6 @@ import { action } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 
-const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 const PAYMONGO_SECRET_KEY = process.env.PAYMONGO_SECRET_KEY || "";
 
 function base64EncodeAscii(input: string) {
@@ -32,17 +31,22 @@ export const createEwalletSource = action({
     amount: v.number(),
     type: v.union(v.literal("gcash"), v.literal("paymaya")),
     description: v.optional(v.string()),
-    userId: v.id("users")
+    userId: v.id("users"),
+    origin: v.optional(v.string()) // Pass the current origin from frontend
   },
   handler: async (ctx, args) => {
     if (!PAYMONGO_SECRET_KEY) throw new Error("PAYMONGO_SECRET_KEY not configured");
+    
+    // Use the origin passed from frontend, fallback to localhost for development
+    const baseUrl = args.origin || "http://localhost:3000";
+    
     const payload = {
       data: {
         attributes: {
           amount: Math.round(args.amount * 100),
           redirect: {
-            success: `${BASE_URL}/customer/wallet?topup=success`,
-            failed: `${BASE_URL}/customer/wallet?topup=failure`
+            success: `${baseUrl}/customer/wallet?topup=success`,
+            failed: `${baseUrl}/customer/wallet?topup=failure`
           },
           type: args.type,
           currency: "PHP",
@@ -87,11 +91,15 @@ export const createCardPaymentIntentAndAttach = action({
     amount: v.number(),
     paymentMethodId: v.string(),
     returnUrl: v.optional(v.string()),
-    userId: v.id("users")
+    userId: v.id("users"),
+    origin: v.optional(v.string()) // Pass the current origin from frontend
   },
   handler: async (ctx, args) => {
     if (!PAYMONGO_SECRET_KEY) throw new Error("PAYMONGO_SECRET_KEY not configured");
     const amount = Math.round(args.amount * 100);
+    
+    // Use the origin passed from frontend, fallback to localhost for development
+    const baseUrl = args.origin || "http://localhost:3000";
 
     // Create Payment Intent
     const piRes = await fetch("https://api.paymongo.com/v1/payment_intents", {
@@ -130,7 +138,7 @@ export const createCardPaymentIntentAndAttach = action({
         data: {
           attributes: {
             payment_method: args.paymentMethodId,
-            return_url: args.returnUrl || `${BASE_URL}/customer/wallet?topup=success`
+            return_url: args.returnUrl || `${baseUrl}/customer/wallet?topup=success`
           }
         }
       })

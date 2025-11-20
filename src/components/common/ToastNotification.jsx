@@ -105,9 +105,9 @@ export const ToastProvider = ({ children }) => {
       title,
       message,
       icon: Calendar,
-      bgColor: 'bg-[#FF8C42]',
-      borderColor: 'border-[#FF8C42]',
-      iconColor: 'text-[#FF8C42]',
+      bgColor: 'bg-[var(--color-primary)]',
+      borderColor: 'border-[var(--color-primary)]',
+      iconColor: 'text-[var(--color-primary)]',
       ...options,
     });
   }, [addToast]);
@@ -144,9 +144,9 @@ export const ToastProvider = ({ children }) => {
       title,
       message,
       icon: Gift,
-      bgColor: 'bg-[#FF8C42]',
-      borderColor: 'border-[#FF8C42]',
-      iconColor: 'text-[#FF8C42]',
+      bgColor: 'bg-[var(--color-primary)]',
+      borderColor: 'border-[var(--color-primary)]',
+      iconColor: 'text-[var(--color-primary)]',
       ...options,
     });
   }, [addToast]);
@@ -247,7 +247,7 @@ const ToastItem = ({ toast, onRemove }) => {
       {/* Progress bar */}
       {toast.duration > 0 && (
         <div 
-          className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] transition-all duration-50"
+          className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] transition-all duration-50"
           style={{ width: `${progress}%` }} 
         />
       )}
@@ -287,7 +287,7 @@ const ToastItem = ({ toast, onRemove }) => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={toast.action.onClick}
-                className="inline-flex items-center px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="inline-flex items-center px-3 py-1.5 text-xs font-bold rounded-lg bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 {toast.action.label}
                 <svg className="w-3 h-3 ml-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

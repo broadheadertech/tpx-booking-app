@@ -83,7 +83,7 @@ const ProfileModal = ({ isOpen, onClose, user, sessionToken }) => {
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] flex items-center justify-center text-white text-2xl font-bold">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center text-white text-2xl font-bold">
                 {user.username ? user.username.charAt(0).toUpperCase() : 'U'}
               </div>
               <div>
@@ -95,9 +95,9 @@ const ProfileModal = ({ isOpen, onClose, user, sessionToken }) => {
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[#FF8C42]/20 flex items-center justify-center transition-colors duration-200"
+              className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center transition-colors duration-200"
             >
-              <X className="w-4 h-4 text-gray-400 hover:text-[#FF8C42]" />
+              <X className="w-4 h-4 text-gray-400 hover:text-[var(--color-primary)]" />
             </button>
           </div>
 
@@ -140,7 +140,7 @@ const ProfileModal = ({ isOpen, onClose, user, sessionToken }) => {
             {/* Contact Information */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
-                <Mail className="w-4 h-4 text-[#FF8C42]" />
+                <Mail className="w-4 h-4 text-[var(--color-primary)]" />
                 Contact
               </h3>
               <div className="space-y-2">
@@ -156,7 +156,7 @@ const ProfileModal = ({ isOpen, onClose, user, sessionToken }) => {
                       value={editedProfile.mobile_number}
                       onChange={(e) => handleInputChange('mobile_number', e.target.value)}
                       placeholder="09123456789"
-                      className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded px-2 py-1 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                      className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded px-2 py-1 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     />
                   ) : (
                     <p className="text-sm text-gray-300">{user.mobile_number || 'N/A'}</p>
@@ -170,7 +170,7 @@ const ProfileModal = ({ isOpen, onClose, user, sessionToken }) => {
             {/* Personal Information */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
-                <User className="w-4 h-4 text-[#FF8C42]" />
+                <User className="w-4 h-4 text-[var(--color-primary)]" />
                 Personal
               </h3>
               <div className="space-y-2">
@@ -182,7 +182,7 @@ const ProfileModal = ({ isOpen, onClose, user, sessionToken }) => {
                       value={editedProfile.nickname}
                       onChange={(e) => handleInputChange('nickname', e.target.value)}
                       placeholder="Your preferred name"
-                      className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded px-2 py-1 text-sm focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                      className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded px-2 py-1 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                     />
                   ) : (
                     <p className="text-sm text-gray-300">{user.nickname || 'Not set'}</p>
@@ -196,7 +196,7 @@ const ProfileModal = ({ isOpen, onClose, user, sessionToken }) => {
             {/* Account Details */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-[#FF8C42]" />
+                <Briefcase className="w-4 h-4 text-[var(--color-primary)]" />
                 Account
               </h3>
               <div className="grid grid-cols-3 gap-2">
@@ -230,7 +230,7 @@ const ProfileModal = ({ isOpen, onClose, user, sessionToken }) => {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 isEditing 
                   ? 'bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 hover:bg-[#555555]/70 disabled:opacity-50' 
-                  : 'bg-[#FF8C42] text-white hover:bg-[#FF8C42]/90 disabled:opacity-50'
+                  : 'bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary)]/90 disabled:opacity-50'
               }`}
             >
               {isEditing ? (
@@ -250,7 +250,7 @@ const ProfileModal = ({ isOpen, onClose, user, sessionToken }) => {
               <button
                 onClick={handleSave}
                 disabled={loading}
-                className="flex items-center gap-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-all text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <>

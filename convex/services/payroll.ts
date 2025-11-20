@@ -1141,6 +1141,8 @@ export const calculatePayrollForPeriod = mutation({
     );
 
     let totalEarnings = 0;
+    let totalServiceRevenue = 0;
+    let totalProductRevenue = 0;
     let totalCommissions = 0;
     let totalDeductions = 0;
     const timestamp = Date.now();
@@ -1195,7 +1197,9 @@ export const calculatePayrollForPeriod = mutation({
       }
 
       totalEarnings +=
-        earnings.total_service_revenue + earnings.total_transaction_revenue;
+        earnings.total_service_revenue + earnings.total_transaction_revenue + (earnings.total_product_revenue || 0);
+      totalServiceRevenue += earnings.total_service_revenue || 0;
+      totalProductRevenue += earnings.total_product_revenue || 0;
       // New rule: commissions total equals the final daily salary total (not commission + daily rate)
       totalCommissions += earnings.daily_pay || 0;
       totalDeductions += earnings.total_deductions;
@@ -1210,6 +1214,8 @@ export const calculatePayrollForPeriod = mutation({
     await ctx.db.patch(args.payroll_period_id, {
       status: "calculated",
       total_earnings: totalEarnings,
+      total_service_revenue: totalServiceRevenue,
+      total_product_revenue: totalProductRevenue,
       total_commissions: totalCommissions,
       total_deductions: totalDeductions,
       calculated_at: timestamp,

@@ -225,8 +225,8 @@ const NotificationsManagement = ({ onRefresh }) => {
       <div className="bg-[#2A2A2A] border border-[#444444]/50 rounded-xl p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-lg bg-[#FF8C42]/10 border border-[#FF8C42]/30">
-              <Bell className="w-5 h-5 text-[#FF8C42]" />
+            <div className="p-2 rounded-lg bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30">
+              <Bell className="w-5 h-5 text-[var(--color-primary)]" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
@@ -244,7 +244,7 @@ const NotificationsManagement = ({ onRefresh }) => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#FF8C42] text-white text-sm font-medium hover:bg-[#FF8C42]/90 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--color-primary)] text-white text-sm font-medium hover:bg-[var(--color-primary)]/90 transition-colors"
             >
               <Bell className="w-4 h-4" />
               <span className="hidden sm:inline">Compose Alert</span>
@@ -293,7 +293,7 @@ const NotificationsManagement = ({ onRefresh }) => {
             value: stats.unread,
             description: 'REQUIRES ATTENTION',
             icon: <AlertCircle className="w-5 h-5" />,
-            color: 'text-[#FF8C42]',
+            color: 'text-[var(--color-primary)]',
             bg: 'bg-gradient-to-br from-red-900/20 to-red-800/10',
             border: 'border-red-500/30'
           },
@@ -343,7 +343,7 @@ const NotificationsManagement = ({ onRefresh }) => {
               placeholder="Search notifications..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-10 pl-10 pr-4 rounded-lg bg-[#1A1A1A] border border-[#444444] text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[#FF8C42] text-sm"
+              className="w-full h-10 pl-10 pr-4 rounded-lg bg-[#1A1A1A] border border-[#444444] text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] text-sm"
             />
           </div>
 
@@ -366,7 +366,7 @@ const NotificationsManagement = ({ onRefresh }) => {
                   type="button"
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                     isActive
-                      ? 'bg-[#FF8C42] text-white'
+                      ? 'bg-[var(--color-primary)] text-white'
                       : 'bg-[#1A1A1A] text-gray-400 hover:text-gray-200 border border-[#444444]'
                   }`}
                 >
@@ -384,7 +384,7 @@ const NotificationsManagement = ({ onRefresh }) => {
                 type="checkbox"
                 checked={showUnreadOnly}
                 onChange={(e) => setShowUnreadOnly(e.target.checked)}
-                className="w-4 h-4 rounded border-[#444444] bg-[#1A1A1A] text-[#FF8C42] focus:ring-[#FF8C42]"
+                className="w-4 h-4 rounded border-[#444444] bg-[#1A1A1A] text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
               />
               Show unread only
             </label>
@@ -425,11 +425,11 @@ const NotificationsManagement = ({ onRefresh }) => {
                 <div
                   key={notification._id}
                   className={`px-4 py-4 hover:bg-[#333333]/50 transition-colors ${
-                    isUnread ? 'bg-[#2A2A2A] border-l-2 border-l-[#FF8C42]' : ''
+                    isUnread ? 'bg-[#2A2A2A] border-l-2 border-l-[var(--color-primary)]' : ''
                   }`}
                 >
                   {isUnread && (
-                    <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-[#FF8C42]" aria-hidden="true" />
+                    <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-[var(--color-primary)]" aria-hidden="true" />
                   )}
                   <div className="flex items-start gap-3">
                     <div className={`p-2 rounded-lg border ${priority.container}`}>
@@ -466,7 +466,7 @@ const NotificationsManagement = ({ onRefresh }) => {
                       {!notification.is_read && (
                         <button
                           onClick={() => handleMarkAsRead(notification._id)}
-                          className="p-2 rounded-lg bg-[#FF8C42]/20 text-[#FF8C42] hover:bg-[#FF8C42]/30 transition-colors"
+                          className="p-2 rounded-lg bg-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/30 transition-colors"
                           title="Mark read"
                         >
                           <CheckCheck className="w-4 h-4" />
@@ -563,7 +563,7 @@ const NotificationComposerModal = ({ isOpen, onClose, onSubmit, isSubmitting }) 
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Payment processed successfully"
-            className="w-full h-11 rounded-xl bg-[#121212] border border-[#2F2F2F] text-gray-100 placeholder-gray-500 px-4 focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/60"
+            className="w-full h-11 rounded-xl bg-[#121212] border border-[#2F2F2F] text-gray-100 placeholder-gray-500 px-4 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/60"
           />
         </div>
 
@@ -577,7 +577,7 @@ const NotificationComposerModal = ({ isOpen, onClose, onSubmit, isSubmitting }) 
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Write a short message for the recipient"
             rows={4}
-            className="w-full rounded-xl bg-[#121212] border border-[#2F2F2F] text-gray-100 placeholder-gray-500 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#FF8C42]/60 resize-none"
+            className="w-full rounded-xl bg-[#121212] border border-[#2F2F2F] text-gray-100 placeholder-gray-500 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/60 resize-none"
           />
         </div>
 
@@ -603,7 +603,7 @@ const NotificationComposerModal = ({ isOpen, onClose, onSubmit, isSubmitting }) 
                     onClick={() => setType(option.value)}
                     className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold transition-all duration-200 ${
                       isActive
-                        ? 'border-[#FF8C42]/40 bg-[#FF8C42]/15 text-[#FF9F5C]'
+                        ? 'border-[var(--color-primary)]/40 bg-[var(--color-primary)]/15 text-[#FF9F5C]'
                         : 'border-[#2F2F2F] text-gray-400 hover:text-gray-200'
                     }`}
                   >
@@ -634,7 +634,7 @@ const NotificationComposerModal = ({ isOpen, onClose, onSubmit, isSubmitting }) 
                     onClick={() => setPriority(option.value)}
                     className={`px-3 py-2 rounded-lg border text-xs font-semibold transition-all duration-200 ${
                       isActive
-                        ? 'border-[#FF8C42]/40 bg-[#FF8C42]/15 text-[#FF9F5C]'
+                        ? 'border-[var(--color-primary)]/40 bg-[var(--color-primary)]/15 text-[#FF9F5C]'
                         : 'border-[#2F2F2F] text-gray-400 hover:text-gray-200'
                     }`}
                   >
@@ -657,7 +657,7 @@ const NotificationComposerModal = ({ isOpen, onClose, onSubmit, isSubmitting }) 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#FF8C42] text-white text-sm font-semibold shadow-lg shadow-[#FF8C42]/30 hover:shadow-[#FF8C42]/40 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--color-primary)] text-white text-sm font-semibold shadow-lg shadow-[var(--color-primary)]/30 hover:shadow-[var(--color-primary)]/40 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
             Send notification

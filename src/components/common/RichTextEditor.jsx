@@ -207,8 +207,8 @@ const RichTextEditor = ({
           onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
           rows={rows}
-          className={`w-full px-4 py-3 bg-[#1A1A1A] text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all duration-200 resize-none font-mono ${
-            isFocused ? 'ring-2 ring-[#FF8C42]' : ''
+          className={`w-full px-4 py-3 bg-[#1A1A1A] text-white rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200 resize-none font-mono ${
+            isFocused ? 'ring-2 ring-[var(--color-primary)]' : ''
           }`}
         />
         

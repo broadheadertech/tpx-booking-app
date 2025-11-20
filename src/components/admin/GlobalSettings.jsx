@@ -183,7 +183,7 @@ const GlobalSettings = ({ onRefresh }) => {
                 value={profileForm.nickname}
                 onChange={(e) => handleProfileChange('nickname', e.target.value)}
                 placeholder="Your full name"
-                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all"
+                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
               />
             </div>
 
@@ -194,7 +194,7 @@ const GlobalSettings = ({ onRefresh }) => {
                 value={profileForm.email}
                 onChange={(e) => handleProfileChange('email', e.target.value)}
                 placeholder="your.email@example.com"
-                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all"
+                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
               />
             </div>
 
@@ -205,7 +205,7 @@ const GlobalSettings = ({ onRefresh }) => {
                 value={profileForm.mobile_number}
                 onChange={(e) => handleProfileChange('mobile_number', e.target.value)}
                 placeholder="+63 9XX XXXX XXX"
-                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all"
+                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
               />
             </div>
 
@@ -216,7 +216,7 @@ const GlobalSettings = ({ onRefresh }) => {
                 value={profileForm.address}
                 onChange={(e) => handleProfileChange('address', e.target.value)}
                 placeholder="Your address"
-                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all"
+                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all"
               />
             </div>
 
@@ -227,7 +227,7 @@ const GlobalSettings = ({ onRefresh }) => {
                 onChange={(e) => handleProfileChange('bio', e.target.value)}
                 placeholder="Tell us about yourself..."
                 rows="4"
-                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent transition-all resize-none"
+                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all resize-none"
               />
             </div>
           </div>
@@ -237,7 +237,7 @@ const GlobalSettings = ({ onRefresh }) => {
             <button
               onClick={handleSaveProfile}
               disabled={loading}
-              className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg hover:from-[var(--color-accent)] hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="w-4 h-4" />
               <span>{loading ? 'Saving...' : 'Save Profile'}</span>
@@ -287,7 +287,7 @@ const GlobalSettings = ({ onRefresh }) => {
               <select
                 value={systemSettings.timezone}
                 onChange={(e) => handleSettingChange('timezone', e.target.value)}
-                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
               >
                 <option value="Asia/Manila">Asia/Manila (GMT+8)</option>
                 <option value="UTC">UTC (GMT+0)</option>
@@ -316,7 +316,7 @@ const GlobalSettings = ({ onRefresh }) => {
                 onChange={(e) => handleSettingChange('maxLoginAttempts', parseInt(e.target.value))}
                 min="3"
                 max="10"
-                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
               />
             </div>
 
@@ -328,7 +328,7 @@ const GlobalSettings = ({ onRefresh }) => {
                 onChange={(e) => handleSettingChange('sessionTimeout', parseInt(e.target.value))}
                 min="5"
                 max="240"
-                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
               />
             </div>
 
@@ -340,7 +340,7 @@ const GlobalSettings = ({ onRefresh }) => {
                 onChange={(e) => handleSettingChange('bookingReminderHours', parseInt(e.target.value))}
                 min="1"
                 max="168"
-                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
               />
             </div>
 
@@ -353,7 +353,7 @@ const GlobalSettings = ({ onRefresh }) => {
                 min="0.5"
                 max="24"
                 step="0.5"
-                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[#FF8C42] focus:border-transparent"
+                className="w-full px-4 py-3 bg-[#333333] border border-[#444444] rounded-lg text-white focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
               />
             </div>
           </div>
@@ -383,7 +383,7 @@ const GlobalSettings = ({ onRefresh }) => {
                 onClick={() => handleSettingChange(item.key, !systemSettings[item.key])}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   systemSettings[item.key]
-                    ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B]'
+                    ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)]'
                     : 'bg-gray-600'
                 }`}
               >
@@ -422,7 +422,7 @@ const GlobalSettings = ({ onRefresh }) => {
                 onClick={() => handleSettingChange(item.key, !systemSettings[item.key])}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   systemSettings[item.key]
-                    ? 'bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B]'
+                    ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)]'
                     : 'bg-gray-600'
                 }`}
               >
@@ -472,7 +472,7 @@ const GlobalSettings = ({ onRefresh }) => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
           <h2 className="text-2xl font-bold text-white flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg flex items-center justify-center">
               <Settings className="w-4 h-4 text-white" />
             </div>
             <span>Settings</span>
@@ -495,7 +495,7 @@ const GlobalSettings = ({ onRefresh }) => {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center space-x-2 px-4 py-3 border-b-2 transition-all ${
                 activeTab === tab.id
-                  ? 'border-[#FF8C42] text-[#FF8C42]'
+                  ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                   : 'border-transparent text-gray-400 hover:text-white'
               }`}
             >
@@ -534,7 +534,7 @@ const GlobalSettings = ({ onRefresh }) => {
                       className={`w-full px-4 py-2 bg-[#333333] border rounded-lg text-white focus:ring-2 focus:border-transparent ${
                         passwordErrors.currentPassword
                           ? 'border-red-500/50 focus:ring-red-500/50'
-                          : 'border-[#444444] focus:ring-[#FF8C42]/50'
+                          : 'border-[#444444] focus:ring-[var(--color-primary)]/50'
                       }`}
                     />
                     {passwordErrors.currentPassword && (
@@ -555,7 +555,7 @@ const GlobalSettings = ({ onRefresh }) => {
                       className={`w-full px-4 py-2 bg-[#333333] border rounded-lg text-white focus:ring-2 focus:border-transparent ${
                         passwordErrors.newPassword
                           ? 'border-red-500/50 focus:ring-red-500/50'
-                          : 'border-[#444444] focus:ring-[#FF8C42]/50'
+                          : 'border-[#444444] focus:ring-[var(--color-primary)]/50'
                       }`}
                     />
                     {passwordErrors.newPassword && (
@@ -576,7 +576,7 @@ const GlobalSettings = ({ onRefresh }) => {
                       className={`w-full px-4 py-2 bg-[#333333] border rounded-lg text-white focus:ring-2 focus:border-transparent ${
                         passwordErrors.confirmPassword
                           ? 'border-red-500/50 focus:ring-red-500/50'
-                          : 'border-[#444444] focus:ring-[#FF8C42]/50'
+                          : 'border-[#444444] focus:ring-[var(--color-primary)]/50'
                       }`}
                     />
                     {passwordErrors.confirmPassword && (
@@ -595,7 +595,7 @@ const GlobalSettings = ({ onRefresh }) => {
                   <button
                     onClick={handleSavePassword}
                     disabled={loading}
-                    className="px-4 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg hover:from-[var(--color-accent)] hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Changing...' : 'Change Password'}
                   </button>

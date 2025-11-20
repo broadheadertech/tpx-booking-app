@@ -244,8 +244,8 @@ export const NotificationDashboard: React.FC<NotificationDashboardProps> = ({ us
       <div className="bg-gradient-to-br from-[#2A2A2A] via-[#333333] to-[#2A2A2A] rounded-2xl border border-[#444444]/50 p-6 shadow-2xl shadow-black/20">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-4">
-            <div className="p-3 bg-[#FF8C42]/20 rounded-xl border border-[#FF8C42]/30">
-              <BellRing className="text-[#FF8C42]" size={24} />
+            <div className="p-3 bg-[var(--color-primary)]/20 rounded-xl border border-[var(--color-primary)]/30">
+              <BellRing className="text-[var(--color-primary)]" size={24} />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-white mb-1 tracking-tight">Notification Management</h2>
@@ -264,7 +264,7 @@ export const NotificationDashboard: React.FC<NotificationDashboardProps> = ({ us
             {stats?.unreadCount > 0 && (
               <button
                 onClick={() => handleMarkAsRead()}
-                className="px-4 py-2.5 text-sm bg-gradient-to-r from-[#FF8C42] to-[#FF9D5C] hover:from-[#FF8C42]/90 hover:to-[#FF9D5C]/90 text-white rounded-lg transition-all duration-200 shadow-lg shadow-[#FF8C42]/20 font-medium"
+                className="px-4 py-2.5 text-sm bg-gradient-to-r from-[var(--color-primary)] to-[#FF9D5C] hover:from-[var(--color-primary)]/90 hover:to-[var(--color-accent)]/90 text-white rounded-lg transition-all duration-200 shadow-lg shadow-[var(--color-primary)]/20 font-medium"
               >
                 <MailOpen size={16} className="mr-2" />
                 Mark All Read
@@ -288,17 +288,17 @@ export const NotificationDashboard: React.FC<NotificationDashboardProps> = ({ us
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-[#FF8C42]/20 to-[#FF9D5C]/20 rounded-xl p-5 border border-[#FF8C42]/50 hover:border-[#FF8C42]/60 transition-all duration-200 group shadow-lg shadow-[#FF8C42]/10">
+          <div className="bg-gradient-to-br from-[var(--color-primary)]/20 to-[#FF9D5C]/20 rounded-xl p-5 border border-[var(--color-primary)]/50 hover:border-[var(--color-primary)]/60 transition-all duration-200 group shadow-lg shadow-[var(--color-primary)]/10">
             <div className="flex items-center justify-between mb-3">
-              <div className="p-2 bg-[#FF8C42]/30 rounded-lg border border-[#FF8C42]/40">
-                <Mail className="text-[#FF8C42] group-hover:text-[#FF9D5C] transition-colors" size={20} />
+              <div className="p-2 bg-[var(--color-primary)]/30 rounded-lg border border-[var(--color-primary)]/40">
+                <Mail className="text-[var(--color-primary)] group-hover:text-[var(--color-accent)] transition-colors" size={20} />
               </div>
               <span className="text-2xl font-bold text-white tabular-nums">{stats?.unreadCount || 0}</span>
             </div>
-            <p className="text-sm text-[#FF8C42] font-medium">Unread</p>
-            <div className="mt-2 h-1 bg-[#FF8C42]/30 rounded-full overflow-hidden">
+            <p className="text-sm text-[var(--color-primary)] font-medium">Unread</p>
+            <div className="mt-2 h-1 bg-[var(--color-primary)]/30 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-[#FF8C42] to-[#FF9D5C] rounded-full transition-all duration-500"
+                className="h-full bg-gradient-to-r from-[var(--color-primary)] to-[#FF9D5C] rounded-full transition-all duration-500"
                 style={{
                   width: stats?.totalCount ? `${Math.min((stats.unreadCount / stats.totalCount) * 100, 100)}%` : '0%'
                 }}
@@ -358,7 +358,7 @@ export const NotificationDashboard: React.FC<NotificationDashboardProps> = ({ us
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-3 bg-[#1A1A1A] border border-[#444444]/50 rounded-xl
-                text-white placeholder-gray-500 focus:outline-none focus:border-[#FF8C42]/60 focus:ring-2 focus:ring-[#FF8C42]/20 transition-all duration-200 text-sm"
+                text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-primary)]/60 focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all duration-200 text-sm"
             />
             {searchQuery && (
               <button
@@ -376,7 +376,7 @@ export const NotificationDashboard: React.FC<NotificationDashboardProps> = ({ us
               onClick={() => setIsFilterOpen(!isFilterOpen)}
               className={`flex items-center px-4 py-3 rounded-xl transition-all duration-200 font-medium text-sm ${
                 isFilterOpen
-                  ? 'bg-[#FF8C42] text-white shadow-lg shadow-[#FF8C42]/20'
+                  ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20'
                   : 'bg-[#333333] border border-[#444444]/50 text-gray-300 hover:bg-[#444444]/50 hover:border-[#555555]/50'
               }`}
             >
@@ -393,7 +393,7 @@ export const NotificationDashboard: React.FC<NotificationDashboardProps> = ({ us
                 setSortBy(field);
                 setSortOrder(order);
               }}
-              className="px-4 py-3 bg-[#333333] border border-[#444444]/50 rounded-xl text-gray-300 focus:outline-none focus:border-[#FF8C42]/60 focus:ring-2 focus:ring-[#FF8C42]/20 transition-all duration-200 text-sm font-medium"
+              className="px-4 py-3 bg-[#333333] border border-[#444444]/50 rounded-xl text-gray-300 focus:outline-none focus:border-[var(--color-primary)]/60 focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all duration-200 text-sm font-medium"
             >
               <option value="createdAt-desc">🕒 Newest First</option>
               <option value="createdAt-asc">📅 Oldest First</option>
@@ -420,7 +420,7 @@ export const NotificationDashboard: React.FC<NotificationDashboardProps> = ({ us
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#444444]/50 rounded-xl text-gray-300 focus:outline-none focus:border-[#FF8C42]/60 focus:ring-2 focus:ring-[#FF8C42]/20 transition-all duration-200 text-sm"
+                  className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#444444]/50 rounded-xl text-gray-300 focus:outline-none focus:border-[var(--color-primary)]/60 focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all duration-200 text-sm"
                 >
                   <option value="all">🎯 All Types</option>
                   <option value="booking">📅 Bookings</option>
@@ -440,7 +440,7 @@ export const NotificationDashboard: React.FC<NotificationDashboardProps> = ({ us
                 <select
                   value={filterPriority}
                   onChange={(e) => setFilterPriority(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#444444]/50 rounded-xl text-gray-300 focus:outline-none focus:border-[#FF8C42]/60 focus:ring-2 focus:ring-[#FF8C42]/20 transition-all duration-200 text-sm"
+                  className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#444444]/50 rounded-xl text-gray-300 focus:outline-none focus:border-[var(--color-primary)]/60 focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all duration-200 text-sm"
                 >
                   <option value="all">📊 All Priorities</option>
                   <option value="urgent">🚨 Urgent</option>
@@ -458,7 +458,7 @@ export const NotificationDashboard: React.FC<NotificationDashboardProps> = ({ us
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#444444]/50 rounded-xl text-gray-300 focus:outline-none focus:border-[#FF8C42]/60 focus:ring-2 focus:ring-[#FF8C42]/20 transition-all duration-200 text-sm"
+                  className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#444444]/50 rounded-xl text-gray-300 focus:outline-none focus:border-[var(--color-primary)]/60 focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-all duration-200 text-sm"
                 >
                   <option value="all">📱 All Status</option>
                   <option value="unread">📧 Unread Only</option>
@@ -476,21 +476,21 @@ export const NotificationDashboard: React.FC<NotificationDashboardProps> = ({ us
           initial={{ opacity: 0, y: -10, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -10, scale: 0.95 }}
-          className="bg-gradient-to-r from-[#FF8C42]/20 via-[#FF9D5C]/20 to-[#FF8C42]/20 border border-[#FF8C42]/50 rounded-2xl p-6 shadow-lg shadow-[#FF8C42]/10"
+          className="bg-gradient-to-r from-[var(--color-primary)]/20 via-[#FF9D5C]/20 to-[var(--color-primary)]/20 border border-[var(--color-primary)]/50 rounded-2xl p-6 shadow-lg shadow-[var(--color-primary)]/10"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-[#FF8C42]/30 rounded-lg border border-[#FF8C42]/40">
-                <Check size={20} className="text-[#FF8C42]" />
+              <div className="p-2 bg-[var(--color-primary)]/30 rounded-lg border border-[var(--color-primary)]/40">
+                <Check size={20} className="text-[var(--color-primary)]" />
               </div>
-              <span className="text-[#FF8C42] font-bold text-lg">
+              <span className="text-[var(--color-primary)] font-bold text-lg">
                 {selectedNotifications.size} notification{selectedNotifications.size > 1 ? 's' : ''} selected
               </span>
             </div>
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => handleMarkAsRead()}
-                className="px-4 py-2.5 bg-gradient-to-r from-[#FF8C42] to-[#FF9D5C] hover:from-[#FF8C42]/90 hover:to-[#FF9D5C]/90 text-white text-sm rounded-xl transition-all duration-200 shadow-lg shadow-[#FF8C42]/20 font-medium flex items-center"
+                className="px-4 py-2.5 bg-gradient-to-r from-[var(--color-primary)] to-[#FF9D5C] hover:from-[var(--color-primary)]/90 hover:to-[var(--color-accent)]/90 text-white text-sm rounded-xl transition-all duration-200 shadow-lg shadow-[var(--color-primary)]/20 font-medium flex items-center"
               >
                 <Check size={16} className="mr-2" />
                 Mark as Read
@@ -540,7 +540,7 @@ export const NotificationDashboard: React.FC<NotificationDashboardProps> = ({ us
                   setFilterPriority('all');
                   setFilterStatus('all');
                 }}
-                className="mt-6 px-6 py-3 bg-[#FF8C42]/20 hover:bg-[#FF8C42]/30 text-[#FF8C42] rounded-xl transition-all duration-200 font-medium border border-[#FF8C42]/30 hover:border-[#FF8C42]/50"
+                className="mt-6 px-6 py-3 bg-[var(--color-primary)]/20 hover:bg-[var(--color-primary)]/30 text-[var(--color-primary)] rounded-xl transition-all duration-200 font-medium border border-[var(--color-primary)]/30 hover:border-[var(--color-primary)]/50"
               >
                 Clear All Filters
               </button>
@@ -560,8 +560,8 @@ export const NotificationDashboard: React.FC<NotificationDashboardProps> = ({ us
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className={`p-6 hover:bg-[#333333]/50 transition-colors cursor-pointer
-                    ${isSelected ? 'bg-[#FF8C42]/10' : ''}
-                    ${!notification.is_read ? 'border-l-4 border-l-[#FF8C42]' : ''}
+                    ${isSelected ? 'bg-[var(--color-primary)]/10' : ''}
+                    ${!notification.is_read ? 'border-l-4 border-l-[var(--color-primary)]' : ''}
                   `}
                   onClick={() => handleSelectNotification(notification._id)}
                 >
@@ -572,7 +572,7 @@ export const NotificationDashboard: React.FC<NotificationDashboardProps> = ({ us
                       checked={isSelected}
                       onChange={() => handleSelectNotification(notification._id)}
                       onClick={(e) => e.stopPropagation()}
-                      className="mt-1 accent-[#FF8C42]"
+                      className="mt-1 accent-[var(--color-primary)]"
                     />
                     
                     {/* Icon */}
@@ -606,7 +606,7 @@ export const NotificationDashboard: React.FC<NotificationDashboardProps> = ({ us
                                   e.stopPropagation();
                                   handleMarkAsRead(notification._id);
                                 }}
-                                className="p-1 text-gray-400 hover:text-[#FF8C42] transition-colors"
+                                className="p-1 text-gray-400 hover:text-[var(--color-primary)] transition-colors"
                                 title="Mark as read"
                               >
                                 <MailOpen size={14} />
@@ -646,7 +646,7 @@ export const NotificationDashboard: React.FC<NotificationDashboardProps> = ({ us
                               e.stopPropagation();
                               window.location.href = notification.action_url!;
                             }}
-                            className="text-[#FF8C42] hover:text-[#FF8C42]/80 transition-colors"
+                            className="text-[var(--color-primary)] hover:text-[var(--color-primary)]/80 transition-colors"
                           >
                             {notification.action_label} →
                           </button>

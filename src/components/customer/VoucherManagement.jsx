@@ -62,13 +62,13 @@ const VoucherManagement = ({ onBack }) => {
   const getTypeIcon = (type) => {
     switch (type) {
       case 'cash':
-        return <Banknote className="w-4 h-4 text-[#FF8C42]" />
+        return <Banknote className="w-4 h-4 text-[var(--color-primary)]" />
       case 'percentage':
-        return <Percent className="w-4 h-4 text-[#FF8C42]" />
+        return <Percent className="w-4 h-4 text-[var(--color-primary)]" />
       case 'discount':
-        return <Ticket className="w-4 h-4 text-[#FF8C42]" />
+        return <Ticket className="w-4 h-4 text-[var(--color-primary)]" />
       default:
-        return <Gift className="w-4 h-4 text-[#FF8C42]" />
+        return <Gift className="w-4 h-4 text-[var(--color-primary)]" />
     }
   }
 
@@ -478,7 +478,7 @@ const VoucherManagement = ({ onBack }) => {
             </div>
             <button
               onClick={onClose}
-              className="w-full py-3 bg-[#F68B24] hover:bg-[#E67E22] text-white font-bold rounded-xl transition-all duration-200"
+              className="w-full py-3 bg-[#F68B24] hover:brightness-90 text-white font-bold rounded-xl transition-all duration-200"
             >
               OK
             </button>
@@ -503,7 +503,7 @@ const VoucherManagement = ({ onBack }) => {
             </button>
             <div className="text-right">
               <p className="text-xl font-black text-white">Vouchers</p>
-              <p className="text-xs font-bold text-[#FF8C42]">{availableVouchers.length + redeemedVouchers.length} total</p>
+              <p className="text-xs font-bold text-[var(--color-primary)]">{availableVouchers.length + redeemedVouchers.length} total</p>
             </div>
           </div>
         </div>
@@ -511,7 +511,7 @@ const VoucherManagement = ({ onBack }) => {
 
       <div className="relative z-10 max-w-md mx-auto px-4 py-6">
         {/* Hero Section - Mobile Native */}
-        <div className="relative overflow-hidden rounded-[32px] p-6 bg-gradient-to-br from-[#FF8C42] to-[#FF7A2B] shadow-2xl mb-6">
+        <div className="relative overflow-hidden rounded-[32px] p-6 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] shadow-2xl mb-6">
           <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
           <div className="relative z-10 text-center">
             <div className="w-16 h-16 rounded-3xl bg-white/20 backdrop-blur-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
@@ -525,8 +525,8 @@ const VoucherManagement = ({ onBack }) => {
         {/* Loading State */}
         {loading && (
           <div className="text-center py-12">
-            <div className="rounded-full w-16 h-16 bg-[#FF8C42]/20 flex items-center justify-center mx-auto mb-4">
-              <Gift className="w-8 h-8 text-[#FF8C42]" />
+            <div className="rounded-full w-16 h-16 bg-[var(--color-primary)]/20 flex items-center justify-center mx-auto mb-4">
+              <Gift className="w-8 h-8 text-[var(--color-primary)]" />
             </div>
             <p className="text-sm text-gray-400">Loading vouchers...</p>
           </div>
@@ -542,7 +542,7 @@ const VoucherManagement = ({ onBack }) => {
             <div className="space-y-2">
               <button 
                 onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-gradient-to-r from-[#FF8C42] to-[#FF7A2B] text-white rounded-lg font-medium hover:from-[#FF7A2B] hover:to-[#FF6B1A] transition-colors mr-2"
+                className="px-4 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg font-medium hover:from-[var(--color-accent)] hover:brightness-110 transition-colors mr-2"
               >
                 Try Again
               </button>
@@ -574,7 +574,7 @@ const VoucherManagement = ({ onBack }) => {
               {availableVouchers.map((voucher) => (
                 <div
                   key={voucher._id}
-                  className="bg-gradient-to-br from-[#1A1A1A] to-[#141414] rounded-3xl p-5 border border-[#2A2A2A] hover:border-[#FF8C42]/50 active:scale-98 transition-all duration-200 shadow-lg"
+                  className="bg-gradient-to-br from-[#1A1A1A] to-[#141414] rounded-3xl p-5 border border-[#2A2A2A] hover:border-[var(--color-primary)]/50 active:scale-98 transition-all duration-200 shadow-lg"
                 >
                   {/* Voucher Header */}
                   <div className="flex justify-between items-start mb-2">

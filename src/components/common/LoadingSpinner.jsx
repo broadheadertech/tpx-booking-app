@@ -15,7 +15,7 @@ const LoadingSpinner = ({
   }
 
   const colorClasses = {
-    primary: 'border-[#FF8C42]',
+    primary: 'border-[var(--color-primary)]',
     white: 'border-white',
     gray: 'border-gray-400'
   }
