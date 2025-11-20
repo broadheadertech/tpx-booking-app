@@ -147,14 +147,14 @@ const ServiceBooking = ({ onBack }) => {
 
   // Reset QR code loading state when step changes
   useEffect(() => {
-    if (step === 5) {
+    if (step === 6) {
       setQrCodeLoading(true);
     }
   }, [step]);
 
-  // Generate QR code when we reach step 5 and have actual booking data
+  // Generate QR code when we reach step 6 and have actual booking data
   useEffect(() => {
-    if (step === 5 && createdBooking?._id && getBookingById?.booking_code) {
+    if (step === 6 && createdBooking?._id && getBookingById?.booking_code) {
       console.log(
         "Step 4 reached with booking ID:",
         createdBooking._id,
@@ -410,7 +410,7 @@ const ServiceBooking = ({ onBack }) => {
           // Don't fail the booking creation if status update fails
         }
       } else {
-        setStep(5); // Success step for pay later
+        setStep(6); // Success step for pay later
       }
 
       // Redeem voucher if one was selected
@@ -470,7 +470,7 @@ const ServiceBooking = ({ onBack }) => {
 
       if (finalAmount === 0) {
         // If amount is 0 after voucher, no payment needed
-        setStep(5);
+        setStep(6);
         return true;
       }
 
@@ -497,7 +497,7 @@ const ServiceBooking = ({ onBack }) => {
         return true;
       } else {
         // If no redirect URL, show success
-        setStep(5);
+        setStep(6);
         return true;
       }
     } catch (error) {
@@ -520,14 +520,12 @@ const ServiceBooking = ({ onBack }) => {
 
   const handleServiceSelect = (service) => {
     setSelectedService(service);
-    // Reset selected staff when changing service to avoid validation errors
-    setSelectedStaff(null);
-    setStep(3);
+    setStep(4);
   };
 
   const handleTimeSelect = (time) => {
     setSelectedTime(time);
-    setStep(4);
+    setStep(5);
   };
 
   const handleStaffSelect = (barber) => {
@@ -536,6 +534,7 @@ const ServiceBooking = ({ onBack }) => {
     sessionStorage.setItem("barberId", barber._id);
 
     setSelectedStaff(barber); // keep full object
+    setStep(3);
   };
 
   const handleConfirmBooking = async (
@@ -550,12 +549,14 @@ const ServiceBooking = ({ onBack }) => {
       case 1:
         return "Select Branch";
       case 2:
-        return "Choose Service";
+        return "Choose Barber";
       case 3:
-        return "Select Date, Time & Barber";
+        return "Choose Service";
       case 4:
-        return "Confirm Booking";
+        return "Select Date & Time";
       case 5:
+        return "Confirm Booking";
+      case 6:
         return "Booking Confirmed";
       default:
         return "Book Service";
@@ -565,7 +566,7 @@ const ServiceBooking = ({ onBack }) => {
   const renderStepIndicator = () => (
     <div className="flex justify-center mb-4 px-4 py-2">
       <div className="flex items-center space-x-3">
-        {[1, 2, 3, 4].map((stepNumber) => (
+        {[1, 2, 3, 4, 5].map((stepNumber) => (
           <div key={stepNumber} className="flex items-center">
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
@@ -577,7 +578,7 @@ const ServiceBooking = ({ onBack }) => {
             >
               {step > stepNumber ? "✓" : stepNumber}
             </div>
-            {stepNumber < 4 && (
+            {stepNumber < 5 && (
               <div
                 className={`w-8 h-0.5 mx-1 rounded transition-all duration-300`}
                 style={{
@@ -741,9 +742,29 @@ const ServiceBooking = ({ onBack }) => {
       );
     }
 
+    // Map service categories to standard categories (same as POS)
+    const mapServiceCategory = (category) => {
+      if (!category) return 'Other Services';
+      const catLower = category.toLowerCase();
+      if (catLower.includes('haircut') || catLower.includes('hair')) {
+        return 'Haircut';
+      }
+      if (catLower.includes('package')) {
+        return 'Package';
+      }
+      return 'Other Services';
+    };
+
     // Group services by category
-    const categories = services.reduce((acc, service) => {
-      const category = service.category || "Uncategorized";
+    const servicesToDisplay = selectedStaff 
+      ? services.filter(service => 
+          selectedStaff.services && 
+          selectedStaff.services.includes(service._id)
+        )
+      : services;
+
+    const categories = servicesToDisplay.reduce((acc, service) => {
+      const category = mapServiceCategory(service.category);
       if (!acc[category]) acc[category] = [];
       acc[category].push(service);
       return acc;
@@ -754,7 +775,7 @@ const ServiceBooking = ({ onBack }) => {
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-white mb-1">Choose Service</h2>
           <p className="text-sm text-gray-400">
-            Select the service you'd like to book at {selectedBranch?.name}
+            Select the service you'd like to book {selectedStaff ? `with ${selectedStaff.full_name || selectedStaff.name}` : `at ${selectedBranch?.name}`}
           </p>
         </div>
 
@@ -780,8 +801,9 @@ const ServiceBooking = ({ onBack }) => {
 
         {/* Category Dropdowns */}
         <div className="space-y-3">
-          {Object.entries(categories).map(
-            ([categoryName, categoryServices]) => {
+          {['Haircut', 'Package', 'Other Services'].map((categoryName) => {
+              const categoryServices = categories[categoryName] || [];
+              
               // Filter services within this category based on search term
               const filteredServices = categoryServices.filter((service) => {
                 const searchLower = serviceSearchTerm.toLowerCase();
@@ -882,15 +904,15 @@ const ServiceBooking = ({ onBack }) => {
     );
   };
 
-  const renderTimeAndStaffSelection = () => (
+  const renderTimeSelection = () => (
     <div className="px-4 pb-6 max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="mb-2 text-center">
         <h2 className="text-2xl font-bold text-white mb-1">
-          Select Barber & Time
+          Select Date & Time
         </h2>
         <p className="text-sm text-gray-400">
-          Choose your preferred barber, then pick a schedule
+          Choose a schedule for your appointment
         </p>
       </div>
 
@@ -913,88 +935,34 @@ const ServiceBooking = ({ onBack }) => {
         </div>
       </div>
 
-      {/* Step 1: Barber Selection */}
+      {/* Date Selection */}
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
         <h3 className="text-lg font-bold text-white mb-3">
-          Step 1: Choose Your Barber
+          Select Date
         </h3>
-        {getAvailableBarbers().length > 0 ? (
-          <div className="grid grid-cols-1 gap-3">
-            {getAvailableBarbers().map((barber) => (
-              <button
-                key={barber._id}
-                onClick={() => {
-                  handleStaffSelect(barber);
-                  setSelectedTime(null);
-                }}
-                className={`w-full flex items-center gap-3 p-3 border rounded-lg transition-all duration-200 ${
-                  selectedStaff?._id === barber._id
-                    ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
-                    : "border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
-                }`}
-              >
-                <BarberAvatar barber={barber} className="w-10 h-10" />
-                <div className="flex-1 text-left">
-                  <h4 className="text-sm font-semibold text-white">
-                    {barber.full_name || barber.name || "Professional Barber"}
-                  </h4>
-                  <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
-                    <span className="text-yellow-400">★★★★★</span>
-                    <span>5.0 • Professional</span>
-                  </div>
-                </div>
-                {selectedStaff?._id === barber._id && (
-                  <CheckCircle className="w-5 h-5 text-[var(--color-primary)]" />
-                )}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-6">
-            <AlertTriangle className="w-6 h-6 text-amber-500 mx-auto mb-2" />
-            <p className="text-sm text-[var(--color-primary)] font-medium">
-              No barbers available for "{selectedService?.name}"
-            </p>
-            <button
-              onClick={() => setStep(1)}
-              className="mt-3 px-4 py-2 bg-[var(--color-primary)] text-white text-xs font-medium rounded-lg hover:bg-[var(--color-accent)] transition"
-            >
-              Choose Different Service
-            </button>
-          </div>
-        )}
+        <input
+          type="date"
+          value={selectedDate}
+          onChange={(e) => {
+            setSelectedDate(e.target.value);
+            setSelectedTime(null);
+          }}
+          min={new Date().toISOString().split("T")[0]}
+          max={
+            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+              .toISOString()
+              .split("T")[0]
+          }
+          className="w-full px-3 py-2.5 rounded-lg bg-[#121212] border border-[#2A2A2A] text-gray-200 text-sm focus:outline-none focus:border-[var(--color-primary)] transition-colors"
+        />
       </div>
 
-      {/* Step 2: Date Selection */}
-      {selectedStaff && (
-        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
-          <h3 className="text-lg font-bold text-white mb-3">
-            Step 2: Select Date
-          </h3>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => {
-              setSelectedDate(e.target.value);
-              setSelectedTime(null);
-            }}
-            min={new Date().toISOString().split("T")[0]}
-            max={
-              new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-                .toISOString()
-                .split("T")[0]
-            }
-            className="w-full px-3 py-2.5 rounded-lg bg-[#121212] border border-[#2A2A2A] text-gray-200 text-sm focus:outline-none focus:border-[var(--color-primary)] transition-colors"
-          />
-        </div>
-      )}
-
-      {/* Step 3: Time Slots */}
-      {selectedStaff && selectedDate && (
+      {/* Time Slots */}
+      {selectedDate && (
         <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-lg font-bold text-white">
-              Step 3: Available Times
+              Select Time
             </h3>
             <span className="text-xs text-gray-400">
               {new Date(selectedDate).toLocaleDateString("en-PH", {
@@ -1057,87 +1025,84 @@ const ServiceBooking = ({ onBack }) => {
       )}
 
       {/* Continue Button */}
-      {selectedStaff && selectedDate && selectedTime && (
+      {selectedDate && selectedTime && (
         <button
-          onClick={() => setStep(4)}
+          onClick={() => setStep(5)}
           className="w-full py-3 bg-[var(--color-primary)] text-white font-bold rounded-lg hover:bg-[var(--color-accent)] transition-all duration-200"
         >
           Continue to Confirmation
         </button>
       )}
-
-      {/* Progress Indicator */}
-      {selectedStaff && (
-        <div className="text-center">
-          <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-[var(--color-primary)]/10">
-            <span className="text-xs font-semibold text-[var(--color-primary)]">
-              {selectedStaff && !selectedDate
-                ? "Step 2: Select Date"
-                : selectedStaff && selectedDate && !selectedTime
-                  ? "Step 3: Select Time"
-                  : selectedStaff && selectedDate && selectedTime
-                    ? "Ready to Continue!"
-                    : "Step 1: Choose Barber"}
-            </span>
-          </div>
-        </div>
-      )}
     </div>
   );
 
   const renderStaffSelection = () => (
-    <div className="space-y-6 px-4">
-      <div className="text-center">
-        <h2 className="text-3xl font-black text-[#1A1A1A] mb-2">
+    <div className="pb-6 px-4">
+      {/* Header */}
+      <div className="text-center mb-6">
+        <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
           Choose Your Barber
         </h2>
-        <p className="text-lg text-[#6B6B6B] font-medium">
+        <p className="text-sm md:text-base text-gray-400">
           Select your preferred professional
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {getAvailableBarbers().map((barber) => (
+      {/* Barber Grid - Responsive */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        {(barbers || []).map((barber) => (
           <button
             key={barber._id}
             onClick={() => handleStaffSelect(barber)}
-            className={`group bg-white rounded-3xl p-6 shadow-xl border-2 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 ${
+            className={`group rounded-2xl p-4 sm:p-5 transition-all duration-300 border-2 hover:shadow-lg flex flex-col items-center text-center ${
               selectedStaff?._id === barber._id
-                ? "border-[var(--color-primary)]"
-                : "border-[#F5F5F5] hover:border-[var(--color-primary)]"
+                ? "bg-[var(--color-primary)]/15 border-[var(--color-primary)]"
+                : "bg-[#1A1A1A] border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
             }`}
           >
-            <div className="text-center">
-              <div className="relative w-16 h-16 rounded-full mx-auto mb-4">
-                <BarberAvatar barber={barber} className="w-16 h-16" />
-                {selectedStaff?._id === barber._id && (
-                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white">
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  </div>
-                )}
+            {/* Avatar Container */}
+            <div className="relative mb-3">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden ring-2 ring-[#2A2A2A] group-hover:ring-[var(--color-primary)]/50 transition-all duration-300">
+                <BarberAvatar barber={barber} className="w-full h-full" />
               </div>
-              <h3 className="text-xl font-black text-[#1A1A1A] mb-2 group-hover:text-[var(--color-primary)] transition-colors duration-200">
-                {barber}
-                {barber.full_name}
-              </h3>
-              <div className="space-y-2">
-                <div className="px-3 py-1 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-full text-sm font-semibold inline-block">
-                  Professional Barber
+              {selectedStaff?._id === barber._id && (
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-[#1A1A1A] shadow-lg">
+                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                 </div>
-                <p className="text-[#6B6B6B] text-sm font-medium">
-                  Experienced professional
-                </p>
-                <div className="flex items-center justify-center space-x-1">
-                  <div className="flex text-yellow-400">{"★".repeat(5)}</div>
-                  <span className="text-sm font-bold text-[#6B6B6B] ml-1">
-                    5.0
-                  </span>
-                </div>
-              </div>
+              )}
+            </div>
+
+            {/* Barber Name */}
+            <h3 className="text-base sm:text-lg font-bold text-white mb-1 line-clamp-2 group-hover:text-[var(--color-primary)] transition-colors duration-200">
+              {barber.full_name || barber.name}
+            </h3>
+
+            {/* Title Badge */}
+            <div className="px-2 py-0.5 bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-full text-xs font-semibold mb-2 inline-block">
+              Professional
+            </div>
+
+            {/* Experience */}
+            <p className="text-xs text-gray-400 mb-2 line-clamp-1">
+              Experienced professional
+            </p>
+
+            {/* Rating */}
+            <div className="flex items-center justify-center gap-1">
+              <div className="flex text-yellow-400 text-sm">★★★★★</div>
+              <span className="text-xs font-semibold text-gray-300">5.0</span>
             </div>
           </button>
         ))}
       </div>
+
+      {/* Empty State */}
+      {(!barbers || barbers.length === 0) && (
+        <div className="text-center py-12">
+          <User className="w-12 h-12 text-gray-500 mx-auto mb-3 opacity-50" />
+          <p className="text-gray-400">No barbers available at this branch</p>
+        </div>
+      )}
     </div>
   );
 
@@ -1716,10 +1681,11 @@ const ServiceBooking = ({ onBack }) => {
       {/* Content */}
       <div className="relative z-10 pb-8">
         {step === 1 && renderBranchSelection()}
-        {step === 2 && renderServiceSelection()}
-        {step === 3 && renderTimeAndStaffSelection()}
-        {step === 4 && renderConfirmation()}
-        {step === 5 && renderBookingSuccess()}
+        {step === 2 && renderStaffSelection()}
+        {step === 3 && renderServiceSelection()}
+        {step === 4 && renderTimeSelection()}
+        {step === 5 && renderConfirmation()}
+        {step === 6 && renderBookingSuccess()}
       </div>
     </div>
   );
