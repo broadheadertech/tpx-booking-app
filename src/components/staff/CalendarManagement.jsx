@@ -388,19 +388,24 @@ const CalendarManagement = ({ user }) => {
 
     return (
       <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] overflow-hidden flex flex-col h-[calc(100vh-240px)]">
-        {/* Weekday Headers */}
+        {/* Weekday Headers - Responsive */}
         <div className="grid grid-cols-7 border-b border-[#2A2A2A] bg-[#222]">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="p-3 text-center text-sm font-bold text-gray-400 uppercase tracking-wider">
-              {day}
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+            <div key={index} className="p-1 sm:p-3 text-center text-xs sm:text-sm font-bold text-gray-400 uppercase tracking-wider">
+              <span className="hidden sm:inline">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][index]}
+              </span>
+              <span className="sm:hidden">
+                {day}
+              </span>
             </div>
           ))}
         </div>
         
-        {/* Calendar Grid */}
-        <div className="flex-1 grid grid-rows-5 sm:grid-rows-6">
+        {/* Calendar Grid - Responsive */}
+        <div className="flex-1 grid grid-rows-5 sm:grid-rows-6 overflow-hidden">
            {weeks.map((weekRow, i) => (
-             <div key={i} className="grid grid-cols-7 h-full">
+             <div key={i} className="grid grid-cols-7 h-full min-h-0">
                {weekRow.map(day => {
                  const isCurrentMonth = isSameMonth(day, monthStart)
                  const isToday = isSameDay(day, new Date())
@@ -414,30 +419,46 @@ const CalendarManagement = ({ user }) => {
                         setView('day')
                      }}
                      className={`
-                       border-r border-b border-[#2A2A2A] p-2 transition-colors cursor-pointer relative group
+                       border-r border-b border-[#2A2A2A] p-1 sm:p-2 transition-colors cursor-pointer relative group overflow-hidden
                        ${!isCurrentMonth ? 'bg-[#111] text-gray-600' : 'bg-[#1A1A1A] text-white hover:bg-[#222]'}
                        ${isToday ? 'bg-[var(--color-primary)]/10' : ''}
                      `}
                    >
+                     {/* Day Number - Responsive sizing */}
                      <div className={`
-                       w-7 h-7 flex items-center justify-center rounded-full text-sm font-bold mb-1
-                       ${isToday ? 'bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/30' : ''}
+                       flex items-center justify-center rounded-full text-sm sm:text-sm font-bold mb-1
+                       ${isToday ? 'w-6 h-6 sm:w-7 sm:h-7 bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/30' : 'w-6 h-6 sm:w-7 sm:h-7'}
                      `}>
                        {format(day, 'd')}
                      </div>
                      
-                     {/* Booking Indicators */}
-                     <div className="space-y-1 overflow-y-auto max-h-[calc(100%-30px)] custom-scrollbar">
-                       {dayBookings.slice(0, 4).map(booking => (
-                         <div key={booking._id} className="text-[10px] truncate px-1.5 py-0.5 rounded bg-[#2A2A2A] text-gray-300 border border-[#333]">
-                           {booking.time} {booking.customer_name}
-                         </div>
-                       ))}
-                       {dayBookings.length > 4 && (
-                         <div className="text-[10px] text-center text-gray-500 font-medium">
-                           +{dayBookings.length - 4} more
-                         </div>
-                       )}
+                     {/* Booking Indicators - Responsive */}
+                     <div className="space-y-0.5 sm:space-y-1 overflow-hidden">
+                       {/* On mobile, show fewer booking details with different format */}
+                       <div className="sm:hidden">
+                         {dayBookings.length > 0 && (
+                           <div className="text-[8px] text-center bg-[#2A2A2A] rounded px-1 py-0.5 text-[var(--color-primary)] font-medium">
+                             {dayBookings.length} booking{dayBookings.length !== 1 ? 's' : ''}
+                           </div>
+                         )}
+                       </div>
+                       
+                       {/* Desktop view - show booking details */}
+                       <div className="hidden sm:block space-y-1 overflow-y-auto max-h-[calc(100%-35px)] custom-scrollbar">
+                         {dayBookings.slice(0, 3).map(booking => (
+                           <div 
+                             key={booking._id} 
+                             className="text-[10px] truncate px-1.5 py-0.5 rounded bg-[#2A2A2A] text-gray-300 border border-[#333] hover:bg-[#333] transition-colors"
+                           >
+                             <span className="font-medium">{formatTime(booking.time)}</span> {booking.customer_name?.split(' ')[0]}
+                           </div>
+                         ))}
+                         {dayBookings.length > 3 && (
+                           <div className="text-[10px] text-center text-gray-500 font-medium px-1.5 py-0.5">
+                             +{dayBookings.length - 3} more
+                           </div>
+                         )}
+                       </div>
                      </div>
                    </div>
                  )
