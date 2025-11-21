@@ -108,6 +108,29 @@ export const createBarber = mutation({
       throwUserError(ERROR_CODES.BARBER_PROFILE_EXISTS);
     }
 
+    // Validate required checks
+    const user = await ctx.db.get(args.user);
+    if (!user) {
+      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "User not found", "The user you are trying to assign as a barber does not exist.");
+    }
+
+    const branch = await ctx.db.get(args.branch_id);
+    if (!branch) {
+      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Branch not found", "The selected branch does not exist.");
+    }
+
+    if (args.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(args.email)) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid email", "Please provide a valid email address.");
+    }
+
+    // Validate services existence
+    for (const serviceId of args.services) {
+      const service = await ctx.db.get(serviceId);
+      if (!service) {
+        throwUserError(ERROR_CODES.BOOKING_SERVICE_UNAVAILABLE, "Service not found", "One or more selected services do not exist.");
+      }
+    }
+
     const barberId = await ctx.db.insert("barbers", {
       user: args.user,
       branch_id: args.branch_id,
@@ -175,6 +198,24 @@ export const updateBarber = mutation({
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
 
+    const barber = await ctx.db.get(id);
+    if (!barber) {
+      throwUserError(ERROR_CODES.BARBER_NOT_FOUND);
+    }
+
+    if (updates.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(updates.email)) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid email", "Please provide a valid email address.");
+    }
+
+    if (updates.services) {
+      for (const serviceId of updates.services) {
+        const service = await ctx.db.get(serviceId);
+        if (!service) {
+          throwUserError(ERROR_CODES.BOOKING_SERVICE_UNAVAILABLE, "Service not found", "One or more selected services do not exist.");
+        }
+      }
+    }
+
     await ctx.db.patch(id, {
       ...updates,
       updatedAt: Date.now(),
@@ -211,6 +252,10 @@ export const updateBarberPassword = mutation({
 export const deleteBarber = mutation({
   args: { id: v.id("barbers") },
   handler: async (ctx, args) => {
+    const barber = await ctx.db.get(args.id);
+    if (!barber) {
+      throwUserError(ERROR_CODES.BARBER_NOT_FOUND);
+    }
     await ctx.db.delete(args.id);
     return { success: true };
   },
@@ -290,7 +335,7 @@ export const createBarberProfile = mutation({
     // Use branch_id from args or user's branch_id
     const branchId = args.branch_id || user.branch_id;
     if (!branchId) {
-      throw new Error("Branch ID is required for barber profile creation");
+      throwUserError(ERROR_CODES.VALIDATION_ERROR, "Branch ID is required", "The barber must be assigned to a branch.");
     }
 
     // Check if user already has a barber profile

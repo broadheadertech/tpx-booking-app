@@ -1,6 +1,7 @@
 import { mutation, query, action } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
+import { throwUserError, ERROR_CODES } from "../utils/errors";
 
 // Xendit API configuration
 const XENDIT_API_KEY = 'xnd_development_ES0mrBxcK9s2GqcQtp2hZsl3kDHDCkqwctk9Wb3CIlbUKj2pByM42sU6BcI';
@@ -26,7 +27,7 @@ export const createPaymentRequest = action({
 
       const channelCode = channelCodeMap[args.paymentMethod.toLowerCase()];
       if (!channelCode) {
-        throw new Error('Unsupported payment method');
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Unsupported payment method", "The selected payment method is not supported.");
       }
 
       // Create payment request payload
@@ -70,7 +71,11 @@ export const createPaymentRequest = action({
 
       if (!response.ok) {
         console.error('Xendit API Error:', responseData);
-        throw new Error(`Payment creation failed: ${responseData.error_code || 'Unknown error'}`);
+        throwUserError(
+          ERROR_CODES.TRANSACTION_PAYMENT_FAILED, 
+          "Payment creation failed", 
+          responseData.error_code || 'Payment service returned an error'
+        );
       }
 
       // Store payment record in database using internal mutation
@@ -96,7 +101,15 @@ export const createPaymentRequest = action({
 
     } catch (error) {
       console.error('Payment creation error:', error);
-      throw new Error(`Payment processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // If it's already a UserError, rethrow it
+      if (error.message && error.message.includes('"code":')) {
+        throw error;
+      }
+      throwUserError(
+        ERROR_CODES.TRANSACTION_PAYMENT_FAILED, 
+        "Payment processing failed", 
+        error instanceof Error ? error.message : 'An unexpected error occurred during payment processing'
+      );
     }
   }
 });
@@ -141,6 +154,9 @@ export const updatePaymentStatus = mutation({
         .first();
 
       if (!payment) {
+        // This is an internal/webhook function, so we might not want to throwUserError here, 
+        // but for consistency we can log and throw
+        console.error(`Payment record not found for request ID: ${args.payment_request_id}`);
         throw new Error('Payment record not found');
       }
 

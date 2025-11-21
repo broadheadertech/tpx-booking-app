@@ -341,6 +341,16 @@ export const createVoucher = mutation({
     created_by: v.id("users"),
   },
   handler: async (ctx, args) => {
+    if (args.value < 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid value", "Voucher value cannot be negative.");
+    }
+    if (args.max_uses <= 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid max uses", "Max uses must be greater than 0.");
+    }
+    if (args.expires_at <= Date.now()) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid expiration", "Expiration date must be in the future.");
+    }
+
     const code = generateVoucherCode();
 
     const voucherId = await ctx.db.insert("vouchers", {
@@ -373,6 +383,19 @@ export const createVoucherWithCode = mutation({
     created_by: v.id("users"),
   },
   handler: async (ctx, args) => {
+    if (!args.code.trim()) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid code", "Voucher code cannot be empty.");
+    }
+    if (args.value < 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid value", "Voucher value cannot be negative.");
+    }
+    if (args.max_uses <= 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid max uses", "Max uses must be greater than 0.");
+    }
+    if (args.expires_at <= Date.now()) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid expiration", "Expiration date must be in the future.");
+    }
+
     // Check if code already exists
     const existingVoucher = await ctx.db
       .query("vouchers")
@@ -523,6 +546,18 @@ export const updateVoucher = mutation({
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
+    const voucher = await ctx.db.get(id);
+    if (!voucher) {
+      throwUserError(ERROR_CODES.VOUCHER_NOT_FOUND);
+    }
+
+    if (updates.value !== undefined && updates.value < 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid value", "Voucher value cannot be negative.");
+    }
+    if (updates.max_uses !== undefined && updates.max_uses <= 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid max uses", "Max uses must be greater than 0.");
+    }
+    
     await ctx.db.patch(id, {
       ...updates,
       updatedAt: Date.now(),
@@ -534,6 +569,11 @@ export const updateVoucher = mutation({
 export const deleteVoucher = mutation({
   args: { id: v.id("vouchers") },
   handler: async (ctx, args) => {
+    const voucher = await ctx.db.get(args.id);
+    if (!voucher) {
+      throwUserError(ERROR_CODES.VOUCHER_NOT_FOUND);
+    }
+
     // Delete all assignments first
     const assignments = await ctx.db
       .query("user_vouchers")
@@ -593,11 +633,11 @@ export const claimVoucher = mutation({
       .first();
 
     if (!voucher) {
-      throw new Error("Invalid voucher code");
+      throwUserError(ERROR_CODES.VOUCHER_NOT_FOUND, "Invalid voucher code", "The voucher code you entered is invalid.");
     }
 
     if (voucher.expires_at < Date.now()) {
-      throw new Error("Voucher has expired");
+      throwUserError(ERROR_CODES.VOUCHER_EXPIRED);
     }
 
     // Check if voucher is already assigned to this user
@@ -609,7 +649,7 @@ export const claimVoucher = mutation({
       .first();
 
     if (existingAssignment) {
-      throw new Error("Voucher already assigned to this user");
+      throwUserError(ERROR_CODES.VOUCHER_ALREADY_USED, "Voucher already assigned", "You have already claimed this voucher.");
     }
 
     // Check if voucher has reached max uses
@@ -619,7 +659,7 @@ export const claimVoucher = mutation({
       .collect();
 
     if (assignments.length >= voucher.max_uses) {
-      throw new Error("Voucher has reached maximum assignments");
+      throwUserError(ERROR_CODES.VOUCHER_LIMIT_REACHED, "Voucher fully claimed", "This voucher has reached its maximum number of claims.");
     }
 
     // Create assignment (claim the voucher)
@@ -687,11 +727,11 @@ export const assignVoucherByCode = mutation({
       .first();
 
     if (!voucher) {
-      throw new Error("Voucher not found");
+      throwUserError(ERROR_CODES.VOUCHER_NOT_FOUND);
     }
 
     if (voucher.expires_at < Date.now()) {
-      throw new Error("Voucher has expired");
+      throwUserError(ERROR_CODES.VOUCHER_EXPIRED);
     }
 
     // Check if voucher is already assigned to this user
@@ -703,7 +743,7 @@ export const assignVoucherByCode = mutation({
       .first();
 
     if (existingAssignment) {
-      throw new Error("Voucher already assigned to this user");
+      throwUserError(ERROR_CODES.VOUCHER_ALREADY_USED, "Voucher already assigned", "This voucher is already assigned to the user.");
     }
 
     // Check if voucher has reached max uses
@@ -713,7 +753,7 @@ export const assignVoucherByCode = mutation({
       .collect();
 
     if (assignments.length >= voucher.max_uses) {
-      throw new Error("Voucher has reached maximum assignments");
+      throwUserError(ERROR_CODES.VOUCHER_LIMIT_REACHED);
     }
 
     // Create assignment
@@ -742,11 +782,11 @@ export const redeemVoucherByStaff = mutation({
       .first();
 
     if (!voucher) {
-      throw new Error("Voucher not found");
+      throwUserError(ERROR_CODES.VOUCHER_NOT_FOUND);
     }
 
     if (voucher.expires_at < Date.now()) {
-      throw new Error("Voucher has expired");
+      throwUserError(ERROR_CODES.VOUCHER_EXPIRED);
     }
 
     // Find an assigned voucher that hasn't been redeemed yet
@@ -759,7 +799,7 @@ export const redeemVoucherByStaff = mutation({
     const assignedVoucher = assignments.find(a => a.status === "assigned");
     
     if (!assignedVoucher) {
-      throw new Error("No available voucher assignment found to redeem");
+      throwUserError(ERROR_CODES.VOUCHER_NOT_ASSIGNED, "No active assignment", "This voucher is not currently assigned to anyone or has already been redeemed.");
     }
 
     // Update the assignment to redeemed

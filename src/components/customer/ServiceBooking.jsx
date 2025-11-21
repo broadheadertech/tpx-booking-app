@@ -340,11 +340,12 @@ const ServiceBooking = ({ onBack }) => {
 
   // Get available barbers for selected service
   const getAvailableBarbers = () => {
-    if (!selectedService || !barbers) return barbers || [];
+    if (!selectedService || !barbers) return barbers ? barbers.filter(b => b.is_active) : [];
 
     // Filter barbers who provide the specific service
     const serviceBarbers = barbers.filter(
       (barber) =>
+        barber.is_active && // Ensure barber is active
         barber.services &&
         Array.isArray(barber.services) &&
         barber.services.some((serviceId) => serviceId === selectedService._id)
@@ -857,6 +858,7 @@ const ServiceBooking = ({ onBack }) => {
                         const availableBarbers = barbers
                           ? barbers.filter(
                               (barber) =>
+                                barber.is_active &&
                                 barber.services &&
                                 Array.isArray(barber.services) &&
                                 barber.services.some(
@@ -1067,8 +1069,8 @@ const ServiceBooking = ({ onBack }) => {
       </div>
 
       {/* Barber Grid - Responsive */}
-      <div className="grid grid-cols-2 gap-3">
-        {(barbers || []).map((barber) => (
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+        {getAvailableBarbers().map((barber) => (
           <button
             key={barber._id}
             onClick={() => handleStaffSelect(barber)}
@@ -1110,7 +1112,7 @@ const ServiceBooking = ({ onBack }) => {
       </div>
 
       {/* Empty State */}
-      {(!barbers || barbers.length === 0) && (
+      {(!barbers || getAvailableBarbers().length === 0) && (
         <div className="text-center py-12">
           <User className="w-12 h-12 text-gray-500 mx-auto mb-3 opacity-50" />
           <p className="text-gray-400">No barbers available at this branch</p>

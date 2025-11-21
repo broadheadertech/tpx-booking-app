@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query, action } from "../_generated/server";
-import { api } from "../_generated/api";
+// import { api } from "../_generated/api"; // Removed to break circular dependency
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { hashPassword, verifyPassword } from "../utils/password";
 import { Resend } from 'resend';
@@ -261,6 +261,10 @@ export const loginWithFacebook = action({
     const email = profile.email || `fb_${profile.id}@facebook.local`;
     const name = profile.name || "Facebook User";
     const avatar = profile.picture?.data?.url as string | undefined;
+    
+    // Use require to break circular dependency for runtime import
+    const { api } = require("../_generated/api");
+    
     return await ctx.runMutation(api.services.auth.loginWithFacebookInternal, {
       email,
       name,
@@ -1257,14 +1261,18 @@ export const sendVoucherEmailWithQR = action({
       
       if (result.error) {
         console.error('Voucher email service error:', result.error);
-        throw new Error(`Email service error: ${result.error.message || 'Unknown error'}`);
+        throwUserError(ERROR_CODES.OPERATION_FAILED, "Failed to send voucher email", "We encountered an issue sending the email. Please try again later.");
       }
       
       console.log('Voucher email sent successfully:', result);
       return { success: true, messageId: result.data?.id };
     } catch (error) {
       console.error('Failed to send voucher email:', error);
-      throw error;
+      // If it's already a user error, rethrow it
+      if (error.message && error.message.includes('"code":')) {
+        throw error;
+      }
+      throwUserError(ERROR_CODES.OPERATION_FAILED, "Failed to send voucher email", "An unexpected error occurred while sending the email.");
     }
   },
 });

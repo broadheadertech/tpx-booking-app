@@ -113,7 +113,25 @@ export const createTransaction = mutation({
     // Validate walk-in customer has a name
     if (!args.customer && (!args.customer_name || args.customer_name.trim() === '')) {
       console.error('[TRANSACTION] Invalid customer name for walk-in customer');
-      throwUserError(ERROR_CODES.TRANSACTION_INVALID_CUSTOMER_NAME);
+      throwUserError(ERROR_CODES.TRANSACTION_INVALID_CUSTOMER_NAME, "Customer name missing", "Please provide a name for the walk-in customer.");
+    }
+
+    // Validate amounts
+    if (args.subtotal < 0 || args.total_amount < 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid amount", "Transaction amount cannot be negative.");
+    }
+
+    // Validate products stock if applicable
+    if (args.products) {
+      for (const product of args.products) {
+        const productDoc = await ctx.db.get(product.product_id);
+        if (!productDoc) {
+          throwUserError(ERROR_CODES.PRODUCT_NOT_FOUND, `Product not found`, `Product with ID ${product.product_id} not found.`);
+        }
+        if (productDoc.stock < product.quantity) {
+          throwUserError(ERROR_CODES.PRODUCT_OUT_OF_STOCK, `Insufficient stock for ${product.product_name}`, `Only ${productDoc.stock} items available.`);
+        }
+      }
     }
 
     // Generate unique transaction ID and receipt number
@@ -625,6 +643,11 @@ export const updateTransactionStatus = mutation({
     notes: v.optional(v.string())
   },
   handler: async (ctx, args) => {
+    const transaction = await ctx.db.get(args.transactionId);
+    if (!transaction) {
+      throwUserError(ERROR_CODES.TRANSACTION_NOT_FOUND, "Transaction not found", "The transaction you are trying to update does not exist.");
+    }
+
     const timestamp = Date.now();
     
     await ctx.db.patch(args.transactionId, {
@@ -706,6 +729,11 @@ export const refundTransaction = mutation({
 
     if (transaction.payment_status === "refunded") {
       throwUserError(ERROR_CODES.TRANSACTION_ALREADY_REFUNDED);
+    }
+
+    const processedBy = await ctx.db.get(args.processedBy);
+    if (!processedBy) {
+      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Staff not found", "The staff member processing this refund could not be found.");
     }
 
     const timestamp = Date.now();

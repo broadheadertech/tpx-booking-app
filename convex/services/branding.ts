@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
-import { api } from "../_generated/api";
 
 // Helper: get current user by session token
 async function getUserBySession(ctx: any, sessionToken: string) {
