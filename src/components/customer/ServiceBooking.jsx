@@ -882,7 +882,7 @@ const ServiceBooking = ({ onBack }) => {
                               )}
                               <span className="text-[var(--color-primary)] font-bold mt-1 block">
                                 {service.hide_price ? (
-                                  'Ask for Price'
+                                  'Price may vary'
                                 ) : (
                                   `₱${parseFloat(service.price || 0).toLocaleString()}`
                                 )}
@@ -944,7 +944,7 @@ const ServiceBooking = ({ onBack }) => {
             </h3>
             <div className="flex items-center gap-2 text-sm">
               <span className="text-[var(--color-primary)] font-semibold">
-                {selectedService?.hide_price ? 'Ask for Price' : `₱${selectedService?.price.toLocaleString()}`}
+                {selectedService?.hide_price ? 'Price may vary' : `₱${selectedService?.price.toLocaleString()}`}
               </span>
               <span className="text-gray-500">•</span>
               <span className="text-gray-400">{selectedService?.duration}</span>
@@ -1149,7 +1149,7 @@ const ServiceBooking = ({ onBack }) => {
                 className="font-bold text-base"
                 style={{ color: "#F68B24" }}
               >
-                {selectedService?.hide_price ? 'Ask for Price' : `₱${selectedService?.price.toLocaleString()}`}
+                {selectedService?.hide_price ? 'Price may vary' : `₱${selectedService?.price.toLocaleString()}`}
               </span>
               <span
                 className="font-medium text-sm"
