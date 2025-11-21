@@ -10,8 +10,9 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
     description: '',
     duration_minutes: 30,
     price: '',
-    category: 'General',
-    is_active: true
+    category: 'Haircut',
+    is_active: true,
+    hide_price: false
   })
 
   const [loading, setLoading] = useState(false)
@@ -26,8 +27,9 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
         description: editingService.description || '',
         duration_minutes: editingService.duration_minutes || 30,
         price: editingService.price ? parseFloat(editingService.price).toFixed(2) : '',
-        category: editingService.category || 'General',
-        is_active: editingService.is_active ?? true
+        category: editingService.category || 'Haircut',
+        is_active: editingService.is_active ?? true,
+        hide_price: editingService.hide_price ?? false
       })
     } else {
       resetForm()
@@ -98,7 +100,7 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
     }
 
     // Category validation
-    const validCategories = ['General', 'Haircut', 'Beard', 'Styling', 'Treatment', 'Package']
+    const validCategories = ['Haircut', 'Package', 'Other Services']
     if (!validCategories.includes(formData.category)) {
       errors.category = 'Invalid category selected'
     }
@@ -135,6 +137,7 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
         duration_minutes: parseInt(formData.duration_minutes),
         category: formData.category,
         is_active: formData.is_active,
+        hide_price: formData.hide_price,
         branch_id: branchId
       }
 
@@ -171,8 +174,9 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
       description: '',
       duration_minutes: 30,
       price: '',
-      category: 'General',
-      is_active: true
+      category: 'Haircut',
+      is_active: true,
+      hide_price: false
     })
     setError('')
     setFieldErrors({})
@@ -250,12 +254,9 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
                 onChange={(e) => handleInputChange('category', e.target.value)}
                 className="w-full h-9 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 transition-all"
               >
-                <option value="General">General</option>
                 <option value="Haircut">Haircut</option>
-                <option value="Beard">Beard</option>
-                <option value="Styling">Styling</option>
-                <option value="Treatment">Treatment</option>
                 <option value="Package">Package</option>
+                <option value="Other Services">Other Services</option>
               </select>
               {fieldErrors.category && (
                 <p className="text-red-400 text-xs mt-0.5">{fieldErrors.category}</p>
@@ -275,19 +276,54 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
             {/* Price */}
             <div>
               <label className="block text-xs text-gray-400 mb-1">Price (₱) *</label>
-              <input
-                type="number"
-                value={formData.price}
-                onChange={(e) => handleInputChange('price', e.target.value)}
-                placeholder="0.00"
-                step="0.01"
-                min="0"
-                max="999999.99"
-                className="w-full h-9 px-2.5 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 transition-all"
-              />
+              <div className="relative">
+                <input
+                  type="number"
+                  value={formData.price}
+                  onChange={(e) => handleInputChange('price', e.target.value)}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                  max="999999.99"
+                  className="w-full h-9 px-2.5 pr-20 border border-[#444444] rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)] bg-[#1A1A1A] text-gray-300 transition-all"
+                />
+                {/* Radio Toggle beside price input */}
+                <div className="absolute right-1 top-1/2 transform -translate-y-1/2 flex items-center bg-[#2A2A2A] rounded-full p-0.5 border border-[#444444]">
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange('hide_price', false)}
+                    className={`px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
+                      !formData.hide_price
+                        ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                        : 'text-gray-400 hover:text-gray-300'
+                    }`}
+                  >
+                    Show
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInputChange('hide_price', true)}
+                    className={`px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
+                      formData.hide_price
+                        ? 'bg-gradient-to-r from-red-500 to-red-600 text-white shadow-sm'
+                        : 'text-gray-400 hover:text-gray-300'
+                    }`}
+                  >
+                    Hide
+                  </button>
+                </div>
+              </div>
               {fieldErrors.price && (
                 <p className="text-red-400 text-xs mt-0.5">{fieldErrors.price}</p>
               )}
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <div className={`w-2 h-2 rounded-full transition-colors duration-200 ${
+                  formData.hide_price ? 'bg-red-400' : 'bg-green-400'
+                }`} />
+                <span className="text-xs text-gray-400">
+                  {formData.hide_price ? 'Price hidden from customers' : 'Price visible to customers'}
+                </span>
+              </div>
             </div>
 
             {/* Duration */}
@@ -342,9 +378,16 @@ const CreateServiceModal = ({ isOpen, onClose, onSubmit, editingService = null, 
           <div className="bg-gradient-to-r from-[#1A1A1A] to-[#222222] rounded-lg p-3 border border-[var(--color-primary)]/20">
             <h4 className="text-xs font-bold text-white mb-1.5 uppercase tracking-wide">Preview</h4>
             <div className="space-y-1">
-              <div className="flex justify-between text-xs">
+              <div className="flex justify-between items-center text-xs">
                 <span className="text-gray-400">Price:</span>
-                <span className="text-[var(--color-primary)] font-bold">₱{formData.price || '0.00'}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[var(--color-primary)] font-bold">
+                    {formData.hide_price ? 'Discrete' : `₱${formData.price || '0.00'}`}
+                  </span>
+                  <div className={`w-2 h-1.5 rounded-full transition-colors duration-200 ${
+                    formData.hide_price ? 'bg-red-400' : 'bg-green-400'
+                  }`} />
+                </div>
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-gray-400">Duration:</span>

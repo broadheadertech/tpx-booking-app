@@ -619,7 +619,7 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
               <option value="">Select service</option>
               {services?.filter(service => service.is_active).map(service => (
                 <option key={service._id} value={service._id}>
-                  {service.name} - ₱{parseFloat(service.price).toFixed(0)}
+                  {service.name} - {service.hide_price ? 'Ask for Price' : `₱${parseFloat(service.price).toFixed(0)}`}
                 </option>
               )) || []}
             </select>
@@ -760,7 +760,9 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
               </div>
               <div>
                 <p className="text-gray-400">Price</p>
-                <p className="text-[var(--color-primary)] font-bold">₱{services?.find(s => s._id === formData.service)?.price?.toFixed(0)}</p>
+                <p className="text-[var(--color-primary)] font-bold">
+                  {services?.find(s => s._id === formData.service)?.hide_price ? 'Ask for Price' : `₱${services?.find(s => s._id === formData.service)?.price?.toFixed(0)}`}
+                </p>
               </div>
             </div>
           </div>
@@ -824,7 +826,12 @@ const CreateBookingModal = ({ isOpen, onClose, onSubmit, user }) => {
                   <div className="flex justify-between"><span className="text-gray-400">Service:</span><span className="text-gray-300">{bookingCreated.service}</span></div>
                   <div className="flex justify-between"><span className="text-gray-400">Date & Time:</span><span className="text-gray-300">{new Date(bookingCreated.date).toLocaleDateString()} {bookingCreated.time}</span></div>
                   <div className="flex justify-between"><span className="text-gray-400">Barber:</span><span className="text-gray-300">{bookingCreated.barber}</span></div>
-                  <div className="flex justify-between"><span className="text-gray-400">Price:</span><span className="text-green-400 font-bold">₱{bookingCreated.price?.toFixed(2)}</span></div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Price:</span>
+                    <span className="text-green-400 font-bold">
+                      {services?.find(s => s.name === bookingCreated.service)?.hide_price ? 'Ask for Price' : `₱${bookingCreated.price?.toFixed(2)}`}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="flex gap-2 pt-2">

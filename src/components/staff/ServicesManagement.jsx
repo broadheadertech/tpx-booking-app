@@ -259,7 +259,19 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
                     <DollarSign className="h-4 w-4 text-[var(--color-primary)]" />
                     <span className="text-sm font-medium text-gray-300">Price</span>
                   </div>
-                  <span className="text-lg font-bold text-[var(--color-primary)]">₱{parseFloat(service.price).toFixed(2)}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-lg font-bold ${
+                      service.hide_price ? 'text-gray-400' : 'text-[var(--color-primary)]'
+                    }`}>
+                      {service.hide_price ? 'Discrete' : `₱${parseFloat(service.price).toFixed(2)}`}
+                    </span>
+                    {service.hide_price && (
+                      <div className="flex items-center gap-1">
+                        <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                        <span className="text-xs text-red-400">Hidden</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between py-2 px-3 bg-[#1A1A1A] rounded-lg">
@@ -340,7 +352,19 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
                       <div className="text-sm text-gray-300">{service.category}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-[var(--color-primary)]">₱{parseFloat(service.price).toFixed(2)}</div>
+                      <div className="flex items-center gap-2">
+                        <div className={`text-sm font-medium ${
+                          service.hide_price ? 'text-gray-400' : 'text-[var(--color-primary)]'
+                        }`}>
+                          {service.hide_price ? 'Discrete' : `₱${parseFloat(service.price).toFixed(2)}`}
+                        </div>
+                        {service.hide_price && (
+                          <div className="flex items-center gap-1">
+                            <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                            <span className="text-xs text-red-400">Hidden</span>
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-300">{service.duration_minutes} mins</div>

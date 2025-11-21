@@ -88,6 +88,7 @@ export const createService = mutation({
     branch_id: v.id("branches"),
     is_active: v.boolean(),
     image: v.optional(v.string()),
+    hide_price: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const serviceId = await ctx.db.insert("services", {
@@ -99,6 +100,7 @@ export const createService = mutation({
       branch_id: args.branch_id,
       is_active: args.is_active,
       image: args.image || undefined,
+      hide_price: args.hide_price,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -118,6 +120,7 @@ export const updateService = mutation({
     category: v.optional(v.string()),
     is_active: v.optional(v.boolean()),
     image: v.optional(v.string()),
+    hide_price: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;

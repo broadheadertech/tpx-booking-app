@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { User, Mail, Phone, Scissors, Camera, Upload, X, Clock, ChevronDown, ChevronUp } from 'lucide-react'
+import { User, Mail, Phone, Scissors, Camera, Upload, X, Clock, ChevronDown, ChevronUp, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
 import LoadingSpinner from '../common/LoadingSpinner'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, isToday } from 'date-fns'
 
 const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) => {
   const { user } = useAuth()
@@ -21,6 +22,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
     experience: '0 years',
     avatar: '',
     avatarStorageId: undefined,
+    schedule_type: 'weekly',
+    specific_dates: [],
     schedule: {
       monday: { available: true, start: '09:00', end: '22:00' },
       tuesday: { available: true, start: '09:00', end: '22:00' },
@@ -31,6 +34,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
       sunday: { available: false, start: '09:00', end: '22:00' }
     }
   })
+
+  const [currentMonth, setCurrentMonth] = useState(new Date())
 
   // Update form data when editingBarber changes
   useEffect(() => {
@@ -48,6 +53,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
         experience: editingBarber.experience || '0 years',
         avatar: editingBarber.avatar || '',
         avatarStorageId: editingBarber.avatarStorageId || undefined,
+        schedule_type: editingBarber.schedule_type || 'weekly',
+        specific_dates: editingBarber.specific_dates || [],
         schedule: editingBarber.schedule || {
           monday: { available: true, start: '09:00', end: '17:00' },
           tuesday: { available: true, start: '09:00', end: '17:00' },
@@ -72,6 +79,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
         experience: '0 years',
         avatar: '',
         avatarStorageId: undefined,
+        schedule_type: 'weekly',
+        specific_dates: [],
         schedule: {
           monday: { available: true, start: '09:00', end: '17:00' },
           tuesday: { available: true, start: '09:00', end: '17:00' },
@@ -129,17 +138,57 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
     setFormData(prev => ({ ...prev, schedule: newSchedule }))
   }
 
+  const toggleScheduleType = (type) => {
+    setFormData(prev => ({ ...prev, schedule_type: type }))
+  }
+
+  const handleDateClick = (date) => {
+    const dateStr = format(date, 'yyyy-MM-dd')
+    const existingDateIndex = formData.specific_dates.findIndex(d => d.date === dateStr)
+
+    if (existingDateIndex >= 0) {
+      // Remove date
+      setFormData(prev => ({
+        ...prev,
+        specific_dates: prev.specific_dates.filter(d => d.date !== dateStr)
+      }))
+    } else {
+      // Add date with default hours
+      setFormData(prev => ({
+        ...prev,
+        specific_dates: [...prev.specific_dates, {
+          date: dateStr,
+          available: true,
+          start: '09:00',
+          end: '22:00'
+        }]
+      }))
+    }
+  }
+
+  const handleSpecificDateChange = (dateStr, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      specific_dates: prev.specific_dates.map(d =>
+        d.date === dateStr ? { ...d, [field]: value } : d
+      )
+    }))
+  }
+
+  const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
+  const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
+
   const generateTimeOptions = () => {
     const times = []
     for (let hour = 6; hour <= 22; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
         const time24 = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-        
+
         // Convert to 12-hour format
         const period = hour >= 12 ? 'PM' : 'AM'
         const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour
         const time12 = `${hour12}:${minute.toString().padStart(2, '0')} ${period}`
-        
+
         times.push({ value: time24, label: time12 })
       }
     }
@@ -208,7 +257,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     if (editingBarber) {
       // For editing, only validate basic fields
       if (!formData.full_name.trim() || !formData.email.trim()) {
@@ -217,8 +266,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
       }
     } else {
       // For creating new barber, validate all required fields
-      if (!formData.username.trim() || !formData.email.trim() || !formData.password.trim() || 
-          !formData.mobile_number.trim() || !formData.full_name.trim()) {
+      if (!formData.username.trim() || !formData.email.trim() || !formData.password.trim() ||
+        !formData.mobile_number.trim() || !formData.full_name.trim()) {
         setError('Username, email, password, mobile number, and full name are required')
         return
       }
@@ -245,7 +294,9 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
           experience: formData.experience || '0 years',
           avatar: formData.avatar || '',
           avatarStorageId: formData.avatarStorageId || undefined,
-          schedule: formData.schedule
+          schedule: formData.schedule,
+          schedule_type: formData.schedule_type,
+          specific_dates: formData.specific_dates
         }
 
         // Update barber profile
@@ -279,7 +330,9 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
           experience: formData.experience || '0 years',
           avatar: formData.avatar || '',
           avatarStorageId: formData.avatarStorageId || undefined,
-          schedule: formData.schedule
+          schedule: formData.schedule,
+          schedule_type: formData.schedule_type,
+          specific_dates: formData.specific_dates
         }
 
         await createBarberWithAccount(barberData)
@@ -287,12 +340,12 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
 
       // Show success message
       setSuccess(editingBarber ? 'Barber updated successfully!' : 'Barber created successfully!')
-      
+
       // Call parent success handler
       if (onSubmit) {
         onSubmit()
       }
-      
+
       // Close modal after a short delay to show success message
       setTimeout(() => {
         // Reset form and close modal
@@ -324,10 +377,10 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
       }, 1500)
     } catch (err) {
       console.error('Error saving barber:', err)
-      
+
       // Parse Convex error format
       let errorMessage = 'Failed to save barber'
-      
+
       if (err.message) {
         try {
           // Try to parse if it's a JSON string
@@ -348,7 +401,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
           errorMessage = err.message
         }
       }
-      
+
       setError(errorMessage)
     } finally {
       setLoading(false)
@@ -389,7 +442,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
   return createPortal(
     <div className="fixed inset-0 z-[9999] overflow-y-auto">
       <div className="flex min-h-full items-center justify-center p-2 sm:p-4">
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
           onClick={handleClose}
         />
@@ -456,390 +509,550 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                     {editingBarber ? 'Personal Info' : 'Account & Personal Info'}
                   </h3>
 
-            {!editingBarber && (
-              <>
-                <div>
-                  <label className="block text-gray-300 font-medium text-sm mb-2">
-                    Username <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.username}
-                    onChange={(e) => handleInputChange('username', e.target.value)}
-                    placeholder="Enter username for login"
-                    required
-                    className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
-                  />
-                </div>
+                  {!editingBarber && (
+                    <>
+                      <div>
+                        <label className="block text-gray-300 font-medium text-sm mb-2">
+                          Username <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.username}
+                          onChange={(e) => handleInputChange('username', e.target.value)}
+                          placeholder="Enter username for login"
+                          required
+                          className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
+                        />
+                      </div>
 
-                <div>
-                  <label className="block text-gray-300 font-medium text-sm mb-2">
-                    Password <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
-                    placeholder="Enter password for login"
-                    required
-                    className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
-                  />
-                </div>
+                      <div>
+                        <label className="block text-gray-300 font-medium text-sm mb-2">
+                          Password <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="password"
+                          value={formData.password}
+                          onChange={(e) => handleInputChange('password', e.target.value)}
+                          placeholder="Enter password for login"
+                          required
+                          className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
+                        />
+                      </div>
 
-                <div>
-                  <label className="block text-gray-300 font-medium text-sm mb-2">
-                    Mobile Number <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <div>
+                        <label className="block text-gray-300 font-medium text-sm mb-2">
+                          Mobile Number <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <input
+                            type="tel"
+                            value={formData.mobile_number}
+                            onChange={(e) => handleInputChange('mobile_number', e.target.value)}
+                            placeholder="+63 XXX XXX XXXX"
+                            required
+                            className="w-full h-9 pl-9 pr-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  <div>
+                    <label className="block text-gray-300 font-medium text-sm mb-2">
+                      Full Name <span className="text-red-500">*</span>
+                    </label>
                     <input
-                      type="tel"
-                      value={formData.mobile_number}
-                      onChange={(e) => handleInputChange('mobile_number', e.target.value)}
-                      placeholder="+63 XXX XXX XXXX"
+                      type="text"
+                      value={formData.full_name}
+                      onChange={(e) => handleInputChange('full_name', e.target.value)}
+                      placeholder="Enter barber's full name"
                       required
-                      className="w-full h-9 pl-9 pr-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
+                      className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
                     />
                   </div>
-                </div>
-              </>
-            )}
 
-            <div>
-              <label className="block text-gray-300 font-medium text-sm mb-2">
-                Full Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.full_name}
-                onChange={(e) => handleInputChange('full_name', e.target.value)}
-                placeholder="Enter barber's full name"
-                required
-                className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-300 font-medium text-sm mb-2">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  placeholder="barber@example.com"
-                  required
-                  className="w-full h-9 pl-9 pr-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
-                />
-              </div>
-            </div>
-
-            {editingBarber && (
-              <div>
-                <label className="block text-gray-300 font-medium text-sm mb-2">
-                  Phone Number
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
-                    placeholder="+63 XXX XXX XXXX"
-                    className="w-full h-9 pl-9 pr-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
-                  />
-                </div>
-              </div>
-            )}
-
-            {editingBarber && (
-              <div>
-                <label className="block text-gray-300 font-medium text-sm mb-2">
-                  Update Password (Optional)
-                </label>
-                <input
-                  type="password"
-                  value={formData.newPassword}
-                  onChange={(e) => handleInputChange('newPassword', e.target.value)}
-                  placeholder="Enter new password (leave empty to keep current)"
-                  className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
-                />
-                <p className="text-xs text-gray-400 mt-1">
-                  Leave empty to keep the current password unchanged
-                </p>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-gray-300 font-medium text-sm mb-2">
-                Experience
-              </label>
-              <input
-                type="text"
-                value={formData.experience}
-                onChange={(e) => handleInputChange('experience', e.target.value)}
-                placeholder="e.g., 5 years"
-                className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
-              />
-            </div>
-
-            <div>
-              <label className="block text-gray-300 font-medium text-sm mb-2">
-                Profile Picture
-              </label>
-              <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <div className="w-16 h-16 rounded-full border-2 border-[#444444] overflow-hidden bg-[#1A1A1A]">
-                    {avatarUrl ? (
-                      <img
-                        src={avatarUrl}
-                        alt="Barber avatar"
-                        className="w-full h-full object-cover"
+                  <div>
+                    <label className="block text-gray-300 font-medium text-sm mb-2">
+                      Email <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        placeholder="barber@example.com"
+                        required
+                        className="w-full h-9 pl-9 pr-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
                       />
-                    ) : formData.avatar ? (
-                      <img
-                        src={formData.avatar}
-                        alt="Barber avatar"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <img
-                        src="/img/avatar_default.jpg"
-                        alt="Default avatar"
-                        className="w-full h-full object-cover"
-                      />
-                    )}
+                    </div>
                   </div>
-                  {uploadingImage && (
-                    <div className="absolute inset-0 bg-black/70 rounded-full flex items-center justify-center">
-                      <LoadingSpinner size="xs" variant="white" />
+
+                  {editingBarber && (
+                    <div>
+                      <label className="block text-gray-300 font-medium text-sm mb-2">
+                        Phone Number
+                      </label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="tel"
+                          value={formData.phone}
+                          onChange={(e) => handleInputChange('phone', e.target.value)}
+                          placeholder="+63 XXX XXX XXXX"
+                          className="w-full h-9 pl-9 pr-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
+                        />
+                      </div>
                     </div>
                   )}
-                </div>
-                <div className="flex-1">
-                  <label className="flex items-center justify-center px-3 py-2 border border-[var(--color-primary)] text-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary)] hover:text-white transition-colors cursor-pointer">
-                    <Camera className="w-4 h-4 mr-2" />
-                    <span className="text-xs font-medium">
-                      {formData.avatarStorageId || formData.avatar ? 'Change Photo' : 'Upload Photo'}
-                    </span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageSelect}
-                      className="hidden"
-                      disabled={uploadingImage}
-                    />
-                  </label>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Max 5MB. JPG, PNG, or GIF files only.
-                  </p>
-                </div>
-              </div>
-            </div>
 
-            <div>
-              <label className="block text-gray-300 font-medium text-sm mb-2">
-                Status
-              </label>
-              <div className="flex items-center space-x-4">
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="is_active"
-                    checked={formData.is_active === true}
-                    onChange={() => handleInputChange('is_active', true)}
-                    className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300"
-                  />
-                  <span className="ml-2 text-gray-300 font-medium">Active</span>
-                </label>
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="is_active"
-                    checked={formData.is_active === false}
-                    onChange={() => handleInputChange('is_active', false)}
-                    className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300"
-                  />
-                  <span className="ml-2 text-gray-300 font-medium">Inactive</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide flex items-center">
-              <Scissors className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
-              Services & Skills
-            </h3>
-
-            <div>
-              <label className="block text-gray-300 font-medium text-sm mb-2">
-                Services Offered
-              </label>
-              <div className="max-h-32 overflow-y-auto border border-[#444444] rounded-lg p-3 bg-[#1A1A1A]">
-                {!services ? (
-                  <p className="text-sm text-gray-400 p-2">Loading services...</p>
-                ) : services.length > 0 ? (
-                  services.map(service => (
-                    <label key={service._id} className="flex items-center py-1 cursor-pointer">
+                  {editingBarber && (
+                    <div>
+                      <label className="block text-gray-300 font-medium text-sm mb-2">
+                        Update Password (Optional)
+                      </label>
                       <input
-                        type="checkbox"
-                        checked={formData.services.includes(service._id)}
-                        onChange={(e) => {
-                          const serviceId = service._id
-                          setFormData(prev => ({
-                            ...prev,
-                            services: e.target.checked 
-                              ? [...prev.services, serviceId]
-                              : prev.services.filter(id => id !== serviceId)
-                          }))
-                        }}
-                        className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] rounded border-gray-300"
+                        type="password"
+                        value={formData.newPassword}
+                        onChange={(e) => handleInputChange('newPassword', e.target.value)}
+                        placeholder="Enter new password (leave empty to keep current)"
+                        className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
                       />
-                      <span className="ml-2 text-sm text-gray-300">
-                        {service.name} - ₱{parseFloat(service.price).toFixed(2)}
-                      </span>
+                      <p className="text-xs text-gray-400 mt-1">
+                        Leave empty to keep the current password unchanged
+                      </p>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-gray-300 font-medium text-sm mb-2">
+                      Experience
                     </label>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-400 p-2">No services available</p>
-                )}
-              </div>
-            </div>
+                    <input
+                      type="text"
+                      value={formData.experience}
+                      onChange={(e) => handleInputChange('experience', e.target.value)}
+                      placeholder="e.g., 5 years"
+                      className="w-full h-9 px-3 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
+                    />
+                  </div>
 
-            {/* Work Schedule */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-gray-300 font-medium text-sm flex items-center">
-                  <Clock className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
-                  Work Schedule
-                </label>
-                <div className="flex items-center space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => handleSetAllDays(true, '09:00', '22:00')}
-                    className="px-2 py-1 text-xs bg-green-500/20 text-green-400 border border-green-500/30 rounded hover:bg-green-500/30 transition-colors"
-                  >
-                    All On
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSetAllDays(false)}
-                    className="px-2 py-1 text-xs bg-red-500/20 text-red-400 border border-red-500/30 rounded hover:bg-red-500/30 transition-colors"
-                  >
-                    All Off
-                  </button>
-                </div>
-              </div>
-              <div className="max-h-64 overflow-y-auto border border-[#444444] rounded-lg p-2 bg-[#1A1A1A] space-y-2">
-                {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => {
-                  const daySchedule = formData.schedule[day]
-                  const isExpanded = expandedDay === day
-                  const timeOptions = generateTimeOptions()
-
-                  return (
-                    <div
-                      key={day}
-                      className={`bg-[#2A2A2A] border rounded-lg overflow-hidden transition-all ${
-                        daySchedule.available ? 'border-green-500/30' : 'border-[#444444]'
-                      }`}
-                    >
-                      <div className="p-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2 flex-1">
-                            <input
-                              type="checkbox"
-                              checked={daySchedule.available}
-                              onChange={(e) => handleScheduleChange(day, 'available', e.target.checked)}
-                              className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] rounded"
+                  <div>
+                    <label className="block text-gray-300 font-medium text-sm mb-2">
+                      Profile Picture
+                    </label>
+                    <div className="flex items-center space-x-4">
+                      <div className="relative">
+                        <div className="w-16 h-16 rounded-full border-2 border-[#444444] overflow-hidden bg-[#1A1A1A]">
+                          {avatarUrl ? (
+                            <img
+                              src={avatarUrl}
+                              alt="Barber avatar"
+                              className="w-full h-full object-cover"
                             />
-                            <span className="text-sm capitalize font-medium text-white">
-                              {day}
-                            </span>
-                            {!isExpanded && daySchedule.available && (
-                              <span className="text-xs text-gray-400 ml-2">
-                                {formatTimeTo12Hour(daySchedule.start)} – {formatTimeTo12Hour(daySchedule.end)}
-                              </span>
-                            )}
-                          </div>
-                          
-                          {daySchedule.available && (
-                            <button
-                              type="button"
-                              onClick={() => setExpandedDay(isExpanded ? null : day)}
-                              className="p-1 hover:bg-[#333333] rounded transition-colors"
-                            >
-                              {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
-                            </button>
+                          ) : formData.avatar ? (
+                            <img
+                              src={formData.avatar}
+                              alt="Barber avatar"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <img
+                              src="/img/avatar_default.jpg"
+                              alt="Default avatar"
+                              className="w-full h-full object-cover"
+                            />
                           )}
                         </div>
+                        {uploadingImage && (
+                          <div className="absolute inset-0 bg-black/70 rounded-full flex items-center justify-center">
+                            <LoadingSpinner size="xs" variant="white" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <label className="flex items-center justify-center px-3 py-2 border border-[var(--color-primary)] text-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary)] hover:text-white transition-colors cursor-pointer">
+                          <Camera className="w-4 h-4 mr-2" />
+                          <span className="text-xs font-medium">
+                            {formData.avatarStorageId || formData.avatar ? 'Change Photo' : 'Upload Photo'}
+                          </span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageSelect}
+                            className="hidden"
+                            disabled={uploadingImage}
+                          />
+                        </label>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Max 5MB. JPG, PNG, or GIF files only.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-                        {isExpanded && daySchedule.available && (
-                          <div className="mt-2 grid grid-cols-2 gap-2 pt-2 border-t border-[#444444]">
-                            <div>
-                              <label className="block text-xs text-gray-400 mb-1">Start</label>
-                              <select
-                                value={daySchedule.start}
-                                onChange={(e) => handleScheduleChange(day, 'start', e.target.value)}
-                                className="w-full px-2 py-1 bg-[#1A1A1A] border border-[#444444] text-white rounded text-xs focus:ring-1 focus:ring-[var(--color-primary)]"
+                  <div>
+                    <label className="block text-gray-300 font-medium text-sm mb-2">
+                      Status
+                    </label>
+                    <div className="flex items-center space-x-4">
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="radio"
+                          name="is_active"
+                          checked={formData.is_active === true}
+                          onChange={() => handleInputChange('is_active', true)}
+                          className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300"
+                        />
+                        <span className="ml-2 text-gray-300 font-medium">Active</span>
+                      </label>
+                      <label className="flex items-center cursor-pointer">
+                        <input
+                          type="radio"
+                          name="is_active"
+                          checked={formData.is_active === false}
+                          onChange={() => handleInputChange('is_active', false)}
+                          className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300"
+                        />
+                        <span className="ml-2 text-gray-300 font-medium">Inactive</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wide flex items-center">
+                    <Scissors className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+                    Services & Skills
+                  </h3>
+
+                  <div>
+                    <label className="block text-gray-300 font-medium text-sm mb-2">
+                      Services Offered
+                    </label>
+                    <div className="max-h-32 overflow-y-auto border border-[#444444] rounded-lg p-3 bg-[#1A1A1A]">
+                      {!services ? (
+                        <p className="text-sm text-gray-400 p-2">Loading services...</p>
+                      ) : services.length > 0 ? (
+                        services.map(service => (
+                          <label key={service._id} className="flex items-center py-1 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={formData.services.includes(service._id)}
+                              onChange={(e) => {
+                                const serviceId = service._id
+                                setFormData(prev => ({
+                                  ...prev,
+                                  services: e.target.checked
+                                    ? [...prev.services, serviceId]
+                                    : prev.services.filter(id => id !== serviceId)
+                                }))
+                              }}
+                              className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] rounded border-gray-300"
+                            />
+                            <span className="ml-2 text-sm text-gray-300">
+                              {service.name} - ₱{parseFloat(service.price).toFixed(2)}
+                            </span>
+                          </label>
+                        ))
+                      ) : (
+                        <p className="text-sm text-gray-400 p-2">No services available</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Work Schedule */}
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <label className="block text-gray-300 font-medium text-sm flex items-center">
+                        <Clock className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+                        Work Schedule
+                      </label>
+
+                      <div className="flex items-center space-x-2">
+                        {/* Schedule Type Toggle */}
+                        <div className="flex bg-[#1A1A1A] rounded-lg p-1 border border-[#444444] mr-2">
+                          <button
+                            type="button"
+                            onClick={() => toggleScheduleType('weekly')}
+                            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${formData.schedule_type === 'weekly'
+                                ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                                : 'text-gray-400 hover:text-white'
+                              }`}
+                          >
+                            Weekly
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleScheduleType('specific_dates')}
+                            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${formData.schedule_type === 'specific_dates'
+                                ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                                : 'text-gray-400 hover:text-white'
+                              }`}
+                          >
+                            Specific Dates
+                          </button>
+                        </div>
+
+                        {formData.schedule_type === 'weekly' && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleSetAllDays(true, '09:00', '22:00')}
+                              className="px-2 py-1 text-xs bg-green-500/20 text-green-400 border border-green-500/30 rounded hover:bg-green-500/30 transition-colors"
+                            >
+                              All On
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleSetAllDays(false)}
+                              className="px-2 py-1 text-xs bg-red-500/20 text-red-400 border border-red-500/30 rounded hover:bg-red-500/30 transition-colors"
+                            >
+                              All Off
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {formData.schedule_type === 'weekly' ? (
+                      <>
+                        <div className="max-h-64 overflow-y-auto border border-[#444444] rounded-lg p-2 bg-[#1A1A1A] space-y-2">
+                          {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => {
+                            const daySchedule = formData.schedule[day]
+                            const isExpanded = expandedDay === day
+                            const timeOptions = generateTimeOptions()
+
+                            return (
+                              <div
+                                key={day}
+                                className={`bg-[#2A2A2A] border rounded-lg overflow-hidden transition-all ${daySchedule.available ? 'border-green-500/30' : 'border-[#444444]'
+                                  }`}
                               >
-                                {timeOptions.map(time => (
-                                  <option key={time.value} value={time.value}>{time.label}</option>
-                                ))}
-                              </select>
+                                <div className="p-2">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-2 flex-1">
+                                      <input
+                                        type="checkbox"
+                                        checked={daySchedule.available}
+                                        onChange={(e) => handleScheduleChange(day, 'available', e.target.checked)}
+                                        className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] rounded"
+                                      />
+                                      <span className="text-sm capitalize font-medium text-white">
+                                        {day}
+                                      </span>
+                                      {!isExpanded && daySchedule.available && (
+                                        <span className="text-xs text-gray-400 ml-2">
+                                          {formatTimeTo12Hour(daySchedule.start)} – {formatTimeTo12Hour(daySchedule.end)}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {daySchedule.available && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setExpandedDay(isExpanded ? null : day)}
+                                        className="p-1 hover:bg-[#333333] rounded transition-colors"
+                                      >
+                                        {isExpanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {isExpanded && daySchedule.available && (
+                                    <div className="mt-2 grid grid-cols-2 gap-2 pt-2 border-t border-[#444444]">
+                                      <div>
+                                        <label className="block text-xs text-gray-400 mb-1">Start</label>
+                                        <select
+                                          value={daySchedule.start}
+                                          onChange={(e) => handleScheduleChange(day, 'start', e.target.value)}
+                                          className="w-full px-2 py-1 bg-[#1A1A1A] border border-[#444444] text-white rounded text-xs focus:ring-1 focus:ring-[var(--color-primary)]"
+                                        >
+                                          {timeOptions.map(time => (
+                                            <option key={time.value} value={time.value}>{time.label}</option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs text-gray-400 mb-1">End</label>
+                                        <select
+                                          value={daySchedule.end}
+                                          onChange={(e) => handleScheduleChange(day, 'end', e.target.value)}
+                                          className="w-full px-2 py-1 bg-[#1A1A1A] border border-[#444444] text-white rounded text-xs focus:ring-1 focus:ring-[var(--color-primary)]"
+                                        >
+                                          {timeOptions.map(time => (
+                                            <option key={time.value} value={time.value}>{time.label}</option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Set the days and hours when this barber is available for bookings
+                        </p>
+                      </>
+                    ) : (
+                      <div className="space-y-4">
+                        {/* Calendar View */}
+                        <div className="bg-[#1A1A1A] border border-[#444444] rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="text-sm font-medium text-white">
+                              {format(currentMonth, 'MMMM yyyy')}
+                            </h4>
+                            <div className="flex space-x-2">
+                              <button
+                                type="button"
+                                onClick={prevMonth}
+                                className="p-1 hover:bg-[#333333] rounded text-gray-400 hover:text-white"
+                              >
+                                <ChevronLeft className="h-4 w-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={nextMonth}
+                                className="p-1 hover:bg-[#333333] rounded text-gray-400 hover:text-white"
+                              >
+                                <ChevronRight className="h-4 w-4" />
+                              </button>
                             </div>
-                            <div>
-                              <label className="block text-xs text-gray-400 mb-1">End</label>
-                              <select
-                                value={daySchedule.end}
-                                onChange={(e) => handleScheduleChange(day, 'end', e.target.value)}
-                                className="w-full px-2 py-1 bg-[#1A1A1A] border border-[#444444] text-white rounded text-xs focus:ring-1 focus:ring-[var(--color-primary)]"
-                              >
-                                {timeOptions.map(time => (
-                                  <option key={time.value} value={time.value}>{time.label}</option>
-                                ))}
-                              </select>
+                          </div>
+
+                          <div className="grid grid-cols-7 gap-1 mb-2">
+                            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
+                              <div key={day} className="text-center text-xs text-gray-500 font-medium py-1">
+                                {day}
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="grid grid-cols-7 gap-1">
+                            {(() => {
+                              const monthStart = startOfMonth(currentMonth)
+                              const monthEnd = endOfMonth(monthStart)
+                              const startDate = startOfWeek(monthStart)
+                              const endDate = endOfWeek(monthEnd)
+                              const days = eachDayOfInterval({ start: startDate, end: endDate })
+
+                              return days.map(day => {
+                                const dateStr = format(day, 'yyyy-MM-dd')
+                                const isSelected = formData.specific_dates ? formData.specific_dates.some(d => d.date === dateStr) : false
+                                const isCurrentMonth = isSameMonth(day, monthStart)
+                                const isTodayDate = isToday(day)
+
+                                return (
+                                  <button
+                                    key={dateStr}
+                                    type="button"
+                                    onClick={() => handleDateClick(day)}
+                                    className={`
+                                      h-8 rounded-md text-xs flex items-center justify-center transition-all
+                                      ${!isCurrentMonth ? 'text-gray-700' : ''}
+                                      ${isSelected
+                                        ? 'bg-[var(--color-primary)] text-white font-bold shadow-sm'
+                                        : isCurrentMonth ? 'text-gray-300 hover:bg-[#333333]' : 'text-gray-600'}
+                                      ${isTodayDate && !isSelected ? 'border border-[var(--color-primary)] text-[var(--color-primary)]' : ''}
+                                    `}
+                                  >
+                                    {format(day, 'd')}
+                                  </button>
+                                )
+                              })
+                            })()}
+                          </div>
+                        </div>
+
+                        {/* Selected Dates List */}
+                        {formData.specific_dates.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wide">Selected Dates</h4>
+                            <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+                              {formData.specific_dates
+                                .sort((a, b) => new Date(a.date) - new Date(b.date))
+                                .map((dateObj) => {
+                                  const timeOptions = generateTimeOptions()
+                                  return (
+                                    <div key={dateObj.date} className="bg-[#1A1A1A] border border-[#444444] rounded-lg p-3 flex items-center space-x-3">
+                                      <div className="flex-shrink-0 w-12 text-center">
+                                        <div className="text-xs text-red-400 font-bold uppercase">{format(new Date(dateObj.date), 'MMM')}</div>
+                                        <div className="text-lg text-white font-bold">{format(new Date(dateObj.date), 'd')}</div>
+                                      </div>
+
+                                      <div className="flex-1 grid grid-cols-2 gap-2">
+                                        <div>
+                                          <label className="block text-[10px] text-gray-500 mb-0.5">Start</label>
+                                          <select
+                                            value={dateObj.start}
+                                            onChange={(e) => handleSpecificDateChange(dateObj.date, 'start', e.target.value)}
+                                            className="w-full px-2 py-1 bg-[#2A2A2A] border border-[#444444] text-white rounded text-xs focus:ring-1 focus:ring-[var(--color-primary)]"
+                                          >
+                                            {timeOptions.map(time => (
+                                              <option key={time.value} value={time.value}>{time.label}</option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                        <div>
+                                          <label className="block text-[10px] text-gray-500 mb-0.5">End</label>
+                                          <select
+                                            value={dateObj.end}
+                                            onChange={(e) => handleSpecificDateChange(dateObj.date, 'end', e.target.value)}
+                                            className="w-full px-2 py-1 bg-[#2A2A2A] border border-[#444444] text-white rounded text-xs focus:ring-1 focus:ring-[var(--color-primary)]"
+                                          >
+                                            {timeOptions.map(time => (
+                                              <option key={time.value} value={time.value}>{time.label}</option>
+                                            ))}
+                                          </select>
+                                        </div>
+                                      </div>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDateClick(new Date(dateObj.date))}
+                                        className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-[#2A2A2A] rounded transition-colors"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </button>
+                                    </div>
+                                  )
+                                })}
                             </div>
                           </div>
                         )}
                       </div>
-                    </div>
-                  )
-                })}
-              </div>
-              <p className="text-xs text-gray-400 mt-1">
-                Set the days and hours when this barber is available for bookings
-              </p>
-            </div>
-          </div>
-        </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 pt-6 mt-6 border-t border-[#444444]/50">
-                  <button
-                    type="button"
-                    onClick={handleClose}
-                    className="flex-1 px-4 py-2.5 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg text-sm font-medium hover:bg-[#555555]/70 transition-all duration-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading || !services}
-                    className="flex-1 px-4 py-2.5 bg-[var(--color-primary)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-primary)]/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? 'Saving...' : (editingBarber ? 'Update Barber' : 'Create Barber')}
-                  </button>
+                    )}
+                  </div>
                 </div>
-              </form>
-            </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 pt-6 mt-6 border-t border-[#444444]/50">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="flex-1 px-4 py-2.5 bg-[#444444]/50 border border-[#555555] text-gray-300 rounded-lg text-sm font-medium hover:bg-[#555555]/70 transition-all duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading || !services}
+                  className="flex-1 px-4 py-2.5 bg-[var(--color-primary)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-primary)]/90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Saving...' : (editingBarber ? 'Update Barber' : 'Create Barber')}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      </div>,
-      document.body
-    )
+      </div>
+    </div>,
+    document.body
+  )
 }
 
 export default CreateBarberModal
