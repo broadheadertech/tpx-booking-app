@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   Lock,
   Banknote,
+  ChevronRight,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from "convex/react";
@@ -905,43 +906,43 @@ const GuestServiceBooking = ({ onBack }) => {
                           <button
                             key={service._id}
                             onClick={() => handleServiceSelect(service)}
-                            className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[var(--color-primary)] rounded-lg p-4 text-left transition-all duration-200 flex justify-between items-start"
+                            className="w-full bg-[#2A2A2A] hover:bg-[#333333] border border-[#444444] hover:border-[var(--color-primary)]/50 rounded-xl p-4 text-left transition-all duration-200 flex justify-between items-center group"
                           >
-                            <div>
-                              <h3 className="text-base font-semibold text-white">
+                            <div className="flex-1 min-w-0">
+                              {/* Service Name - Bold and prominent */}
+                              <h3 className="text-lg font-bold text-white mb-1 truncate">
                                 {service.name}
                               </h3>
+
+                              {/* Optional subtitle/tag - like the "TEST" in the image */}
                               {service.description && (
-                                <p className="text-xs text-gray-400 line-clamp-2">
+                                <p className="text-sm text-gray-400 mb-2 line-clamp-1">
                                   {service.description}
                                 </p>
                               )}
-                              <span className="text-[var(--color-primary)] font-bold mt-1 block">
-                                ₱
-                                {parseFloat(
-                                  service.price || 0
-                                ).toLocaleString()}
-                              </span>
+
+                              {/* Price - Orange and prominent like in the image */}
+                              <div className="text-[var(--color-primary)] font-bold text-base">
+                                {service.hide_price ? (
+                                  'Price may vary'
+                                ) : (
+                                  `₱${parseFloat(
+                                    service.price || 0
+                                  ).toLocaleString()}`
+                                )}
+                              </div>
+
+                              {/* Availability warning */}
                               {availableBarbers === 0 && (
                                 <p className="text-[10px] text-amber-500 mt-1">
                                   Limited availability
                                 </p>
                               )}
                             </div>
-                            <div className="self-center text-gray-500">
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M9 5l7 7-7 7"
-                                />
-                              </svg>
+
+                            {/* Right Arrow - Clean and modern */}
+                            <div className="self-center text-gray-400 group-hover:text-[var(--color-primary)] transition-colors duration-200 ml-4">
+                              <ChevronRight className="w-6 h-6" />
                             </div>
                           </button>
                         );
@@ -979,7 +980,7 @@ const GuestServiceBooking = ({ onBack }) => {
             </h3>
             <div className="flex items-center gap-2 text-sm">
               <span className="text-[var(--color-primary)] font-semibold">
-                ₱{selectedService?.price.toLocaleString()}
+                {selectedService?.hide_price ? 'Price may vary' : `₱${selectedService?.price.toLocaleString()}`}
               </span>
               <span className="text-gray-500">•</span>
               <span className="text-gray-400">{selectedService?.duration}</span>
@@ -1522,7 +1523,7 @@ const GuestServiceBooking = ({ onBack }) => {
             </h3>
             <div className="flex justify-center items-center space-x-3">
               <span className="font-bold text-base text-[var(--color-primary)]">
-                ₱{selectedService?.price.toLocaleString()}
+                {selectedService?.hide_price ? 'Price may vary' : `₱${selectedService?.price.toLocaleString()}`}
               </span>
               <span className="font-medium text-sm text-gray-400">
                 {selectedService?.duration}
@@ -1809,7 +1810,7 @@ const GuestServiceBooking = ({ onBack }) => {
                   Subtotal:
                 </span>
                 <span className="font-normal line-through text-gray-500 text-sm">
-                  ₱{selectedService?.price.toLocaleString()}
+                  {selectedService?.hide_price ? 'Price may vary' : `₱${selectedService?.price.toLocaleString()}`}
                 </span>
               </div>
             )}
