@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
-import { api } from "../_generated/api";
+// import { api } from "../_generated/api"; // Removed to break circular dependency
 import type { Id } from "../_generated/dataModel";
 
 // Production-ready notification templates for booking events

@@ -1069,7 +1069,7 @@ const ServiceBooking = ({ onBack }) => {
       </div>
 
       {/* Barber Grid - Responsive */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {getAvailableBarbers().map((barber) => (
           <button
             key={barber._id}
@@ -1112,7 +1112,7 @@ const ServiceBooking = ({ onBack }) => {
       </div>
 
       {/* Empty State */}
-      {(!barbers || barbers.length === 0) && (
+      {(!barbers || getAvailableBarbers().length === 0) && (
         <div className="text-center py-12">
           <User className="w-12 h-12 text-gray-500 mx-auto mb-3 opacity-50" />
           <p className="text-gray-400">No barbers available at this branch</p>

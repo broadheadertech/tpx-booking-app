@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
-import { api } from "../_generated/api";
+// import { api } from "../_generated/api"; // Removed to break circular dependency
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import type { Id } from "../_generated/dataModel";
 
@@ -366,6 +366,9 @@ export const createBooking = mutation({
 
     // Send comprehensive booking notifications
     try {
+      // Use require to break circular dependency for runtime import
+      const { api } = require("../_generated/api");
+
       // Send new booking notification to staff (for confirmation/processing)
       await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
         bookingId,
@@ -455,6 +458,9 @@ export const updateBooking = mutation({
     // Send rescheduled notification if date/time changed
     if (isRescheduled) {
       try {
+        // Use require to break circular dependency for runtime import
+        const { api } = require("../_generated/api");
+
         const recipients: Array<{ type: "customer" | "staff" | "barber" | "admin"; userId?: Id<"users">; branchId?: Id<"branches">; }> = [];
         
         // Notify customer if booking has a customer account
@@ -501,6 +507,9 @@ export const updateBooking = mutation({
     // Send notifications if barber was changed
     if (barberChanged) {
       try {
+        // Use require to break circular dependency for runtime import
+        const { api } = require("../_generated/api");
+
         // Notify the new barber about assignment
         if (args.barber) {
           // Get barber record to find user ID
@@ -556,6 +565,9 @@ export const updateBooking = mutation({
     // Create notification if status changed
     if (args.status && args.status !== currentBooking.status) {
       try {
+        // Use require to break circular dependency for runtime import
+        const { api } = require("../_generated/api");
+
         const recipients: Array<{ type: "customer" | "staff" | "barber" | "admin"; userId?: Id<"users">; branchId?: Id<"branches">; }> = [];
         
         // Notify customer if exists
@@ -614,6 +626,9 @@ export const deleteBooking = mutation({
     if (booking) {
       // Send notifications before deletion
       try {
+        // Use require to break circular dependency for runtime import
+        const { api } = require("../_generated/api");
+
         const recipients: Array<{ type: "customer" | "staff" | "barber" | "admin"; userId?: Id<"users">; branchId?: Id<"branches">; }> = [];
         
         // Notify customer if exists
@@ -894,6 +909,9 @@ export const cancelBooking = mutation({
 
     // Send cancellation notifications
     try {
+      // Use require to break circular dependency for runtime import
+      const { api } = require("../_generated/api");
+
       const recipients: Array<{ type: "customer" | "staff" | "barber" | "admin"; userId?: Id<"users">; branchId?: Id<"branches">; }> = [];
       
       // Notify customer if exists
@@ -1094,6 +1112,9 @@ export const createWalkInBooking = mutation({
 
     // Send walk-in booking notifications
     try {
+      // Use require to break circular dependency for runtime import
+      const { api } = require("../_generated/api");
+
       // Notify staff about walk-in booking
       await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
         bookingId,

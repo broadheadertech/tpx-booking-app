@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query, action } from "../_generated/server";
-import { api } from "../_generated/api";
+// import { api } from "../_generated/api"; // Removed to break circular dependency
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { hashPassword, verifyPassword } from "../utils/password";
 import { Resend } from 'resend';
@@ -261,6 +261,10 @@ export const loginWithFacebook = action({
     const email = profile.email || `fb_${profile.id}@facebook.local`;
     const name = profile.name || "Facebook User";
     const avatar = profile.picture?.data?.url as string | undefined;
+    
+    // Use require to break circular dependency for runtime import
+    const { api } = require("../_generated/api");
+    
     return await ctx.runMutation(api.services.auth.loginWithFacebookInternal, {
       email,
       name,
