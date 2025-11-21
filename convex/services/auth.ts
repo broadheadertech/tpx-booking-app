@@ -1257,14 +1257,18 @@ export const sendVoucherEmailWithQR = action({
       
       if (result.error) {
         console.error('Voucher email service error:', result.error);
-        throw new Error(`Email service error: ${result.error.message || 'Unknown error'}`);
+        throwUserError(ERROR_CODES.OPERATION_FAILED, "Failed to send voucher email", "We encountered an issue sending the email. Please try again later.");
       }
       
       console.log('Voucher email sent successfully:', result);
       return { success: true, messageId: result.data?.id };
     } catch (error) {
       console.error('Failed to send voucher email:', error);
-      throw error;
+      // If it's already a user error, rethrow it
+      if (error.message && error.message.includes('"code":')) {
+        throw error;
+      }
+      throwUserError(ERROR_CODES.OPERATION_FAILED, "Failed to send voucher email", "An unexpected error occurred while sending the email.");
     }
   },
 });

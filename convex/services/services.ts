@@ -91,6 +91,16 @@ export const createService = mutation({
     hide_price: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    if (args.price < 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid price", "Price cannot be negative.");
+    }
+    if (args.duration_minutes <= 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid duration", "Duration must be greater than 0 minutes.");
+    }
+    if (!args.name.trim()) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid name", "Service name cannot be empty.");
+    }
+
     const serviceId = await ctx.db.insert("services", {
       name: args.name,
       description: args.description,
@@ -125,6 +135,22 @@ export const updateService = mutation({
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
 
+    const service = await ctx.db.get(id);
+    if (!service) {
+      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Service not found", "The service you are trying to update does not exist.");
+    }
+
+    // Validate updates if provided
+    if (updates.price !== undefined && updates.price < 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid price", "Price cannot be negative.");
+    }
+    if (updates.duration_minutes !== undefined && updates.duration_minutes <= 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid duration", "Duration must be greater than 0 minutes.");
+    }
+    if (updates.name !== undefined && !updates.name.trim()) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid name", "Service name cannot be empty.");
+    }
+
     await ctx.db.patch(id, {
       ...updates,
       updatedAt: Date.now(),
@@ -138,6 +164,10 @@ export const updateService = mutation({
 export const deleteService = mutation({
   args: { id: v.id("services") },
   handler: async (ctx, args) => {
+    const service = await ctx.db.get(args.id);
+    if (!service) {
+      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Service not found", "The service you are trying to delete does not exist.");
+    }
     await ctx.db.delete(args.id);
     return { success: true };
   },

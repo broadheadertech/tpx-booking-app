@@ -92,6 +92,16 @@ export const createProduct = mutation({
     if (args.stock === 0) {
       status = "out-of-stock";
     }
+
+    if (args.price < 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid price", "Price cannot be negative.");
+    }
+    if (args.cost < 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid cost", "Cost cannot be negative.");
+    }
+    if (args.stock < 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid stock", "Stock cannot be negative.");
+    }
     
     const productData: any = {
       name: args.name,
@@ -170,6 +180,16 @@ export const updateProduct = mutation({
         throwUserError(ERROR_CODES.PRODUCT_SKU_EXISTS);
       }
     }
+
+    if (updates.price !== undefined && updates.price < 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid price", "Price cannot be negative.");
+    }
+    if (updates.cost !== undefined && updates.cost < 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid cost", "Cost cannot be negative.");
+    }
+    if (updates.stock !== undefined && updates.stock < 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid stock", "Stock cannot be negative.");
+    }
     
     // Auto-update status based on stock
     if (updates.stock !== undefined) {
@@ -226,7 +246,7 @@ export const updateProductStock = mutation({
     const product = await ctx.db.get(args.id);
     
     if (!product) {
-      throw new Error("Product not found");
+      throwUserError(ERROR_CODES.PRODUCT_NOT_FOUND);
     }
     
     const newStock = Math.max(0, product.stock + args.stockChange);

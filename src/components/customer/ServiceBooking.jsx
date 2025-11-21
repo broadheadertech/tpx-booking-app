@@ -340,11 +340,12 @@ const ServiceBooking = ({ onBack }) => {
 
   // Get available barbers for selected service
   const getAvailableBarbers = () => {
-    if (!selectedService || !barbers) return barbers || [];
+    if (!selectedService || !barbers) return barbers ? barbers.filter(b => b.is_active) : [];
 
     // Filter barbers who provide the specific service
     const serviceBarbers = barbers.filter(
       (barber) =>
+        barber.is_active && // Ensure barber is active
         barber.services &&
         Array.isArray(barber.services) &&
         barber.services.some((serviceId) => serviceId === selectedService._id)
@@ -857,6 +858,7 @@ const ServiceBooking = ({ onBack }) => {
                         const availableBarbers = barbers
                           ? barbers.filter(
                               (barber) =>
+                                barber.is_active &&
                                 barber.services &&
                                 Array.isArray(barber.services) &&
                                 barber.services.some(
@@ -1068,7 +1070,7 @@ const ServiceBooking = ({ onBack }) => {
 
       {/* Barber Grid - Responsive */}
       <div className="grid grid-cols-2 gap-3">
-        {(barbers || []).map((barber) => (
+        {getAvailableBarbers().map((barber) => (
           <button
             key={barber._id}
             onClick={() => handleStaffSelect(barber)}

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { Doc, Id } from "../_generated/dataModel";
+import { throwUserError, ERROR_CODES } from "../utils/errors";
 
 // Generate a unique branch code
 function generateBranchCode(name: string): string {
@@ -105,7 +106,15 @@ export const createBranch = mutation({
       .first();
 
     if (existingBranch) {
-      throw new Error("Branch code already exists. Please try again.");
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Branch code exists", "A branch with this code already exists. Please try again.");
+    }
+
+    if (!args.name.trim()) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid name", "Branch name cannot be empty.");
+    }
+
+    if (args.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(args.email)) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid email", "Please provide a valid email address.");
     }
 
     const branchId = await ctx.db.insert("branches", {
@@ -259,6 +268,15 @@ export const updateBranch = mutation({
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
     
+    const branch = await ctx.db.get(id);
+    if (!branch) {
+      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Branch not found", "The branch you are trying to update does not exist.");
+    }
+
+    if (updates.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(updates.email)) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid email", "Please provide a valid email address.");
+    }
+
     const updateData: Partial<Doc<"branches">> = {
       ...updates,
       updatedAt: Date.now(),
@@ -277,6 +295,11 @@ export const updateBranch = mutation({
 export const deleteBranch = mutation({
   args: { id: v.id("branches") },
   handler: async (ctx, args) => {
+    const branch = await ctx.db.get(args.id);
+    if (!branch) {
+      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Branch not found", "The branch you are trying to delete does not exist.");
+    }
+
     // Check if branch has any associated data
     const [users, barbers, services, bookings, transactions] = await Promise.all([
       ctx.db
@@ -303,7 +326,11 @@ export const deleteBranch = mutation({
 
     if (users.length > 0 || barbers.length > 0 || services.length > 0 || 
         bookings.length > 0 || transactions.length > 0) {
-      throw new Error("Cannot delete branch with associated data. Please transfer or remove all users, barbers, services, bookings, and transactions first.");
+      throwUserError(
+        ERROR_CODES.OPERATION_FAILED, 
+        "Cannot delete branch", 
+        "This branch has associated data (users, barbers, services, bookings, or transactions). Please remove or transfer these records before deleting the branch."
+      );
     }
 
     await ctx.db.delete(args.id);
@@ -316,7 +343,7 @@ export const toggleBranchStatus = mutation({
   handler: async (ctx, args) => {
     const branch = await ctx.db.get(args.id);
     if (!branch) {
-      throw new Error("Branch not found");
+      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Branch not found", "The branch you are trying to update does not exist.");
     }
 
     await ctx.db.patch(args.id, {

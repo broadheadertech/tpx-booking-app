@@ -424,6 +424,21 @@ export const updateBooking = mutation({
       throwUserError(ERROR_CODES.BOOKING_NOT_FOUND);
     }
 
+    // Validate referenced entities if updated
+    if (args.service) {
+      const service = await ctx.db.get(args.service);
+      if (!service) {
+        throwUserError(ERROR_CODES.BOOKING_SERVICE_UNAVAILABLE, "Service not found", "The selected service does not exist.");
+      }
+    }
+
+    if (args.barber) {
+      const barber = await ctx.db.get(args.barber);
+      if (!barber) {
+        throwUserError(ERROR_CODES.BARBER_NOT_FOUND, "Barber not found", "The selected barber does not exist.");
+      }
+    }
+
     // Check if booking was rescheduled
     const isRescheduled = (args.date && args.date !== currentBooking.date) || 
                           (args.time && args.time !== currentBooking.time);
@@ -591,6 +606,10 @@ export const deleteBooking = mutation({
   handler: async (ctx, args) => {
     // Get the booking details before deleting
     const booking = await ctx.db.get(args.id);
+    
+    if (!booking) {
+      throwUserError(ERROR_CODES.BOOKING_NOT_FOUND);
+    }
     
     if (booking) {
       // Send notifications before deletion
