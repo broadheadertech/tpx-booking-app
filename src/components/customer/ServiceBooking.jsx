@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   CreditCard,
   Banknote,
+  Star,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from "convex/react";
@@ -257,20 +258,36 @@ const ServiceBooking = ({ onBack }) => {
     const currentHour = currentDate.getHours();
     const currentMinute = currentDate.getMinutes();
 
-    // Get day of week for schedule check
-    const dayOfWeek = selectedDateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-    
-    // Check barber's schedule for this day
-    const barberSchedule = selectedStaff.schedule?.[dayOfWeek];
-    
-    // If barber doesn't have schedule or is not available this day, return empty
-    if (!barberSchedule || !barberSchedule.available) {
-      return [];
-    }
+    let startHour, startMin, endHour, endMin;
 
-    // Use barber's scheduled hours instead of branch hours
-    const [startHour, startMin] = barberSchedule.start.split(':').map(Number);
-    const [endHour, endMin] = barberSchedule.end.split(':').map(Number);
+    // Check schedule type (specific dates vs weekly)
+    if (selectedStaff.schedule_type === 'specific_dates' && selectedStaff.specific_dates) {
+      const dateStr = selectedDateObj.toISOString().split('T')[0];
+      const specificDate = selectedStaff.specific_dates.find(d => d.date === dateStr);
+
+      if (!specificDate || !specificDate.available) {
+        return [];
+      }
+
+      [startHour, startMin] = specificDate.start.split(':').map(Number);
+      [endHour, endMin] = specificDate.end.split(':').map(Number);
+    } else {
+      // Default to weekly schedule
+      // Get day of week for schedule check
+      const dayOfWeek = selectedDateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+      
+      // Check barber's schedule for this day
+      const barberSchedule = selectedStaff.schedule?.[dayOfWeek];
+      
+      // If barber doesn't have schedule or is not available this day, return empty
+      if (!barberSchedule || !barberSchedule.available) {
+        return [];
+      }
+
+      // Use barber's scheduled hours instead of branch hours
+      [startHour, startMin] = barberSchedule.start.split(':').map(Number);
+      [endHour, endMin] = barberSchedule.end.split(':').map(Number);
+    }
 
     // Get booked times for this barber on this date
     const bookedTimes = existingBookings
@@ -864,10 +881,11 @@ const ServiceBooking = ({ onBack }) => {
                                 </p>
                               )}
                               <span className="text-[var(--color-primary)] font-bold mt-1 block">
-                                ₱
-                                {parseFloat(
-                                  service.price || 0
-                                ).toLocaleString()}
+                                {service.hide_price ? (
+                                  'Ask for Price'
+                                ) : (
+                                  `₱${parseFloat(service.price || 0).toLocaleString()}`
+                                )}
                               </span>
                               {availableBarbers === 0 && (
                                 <p className="text-[10px] text-amber-500 mt-1">
@@ -926,7 +944,7 @@ const ServiceBooking = ({ onBack }) => {
             </h3>
             <div className="flex items-center gap-2 text-sm">
               <span className="text-[var(--color-primary)] font-semibold">
-                ₱{selectedService?.price.toLocaleString()}
+                {selectedService?.hide_price ? 'Ask for Price' : `₱${selectedService?.price.toLocaleString()}`}
               </span>
               <span className="text-gray-500">•</span>
               <span className="text-gray-400">{selectedService?.duration}</span>
@@ -1049,49 +1067,44 @@ const ServiceBooking = ({ onBack }) => {
       </div>
 
       {/* Barber Grid - Responsive */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 gap-3">
         {(barbers || []).map((barber) => (
           <button
             key={barber._id}
             onClick={() => handleStaffSelect(barber)}
-            className={`group rounded-2xl p-4 sm:p-5 transition-all duration-300 border-2 hover:shadow-lg flex flex-col items-center text-center ${
+            className={`group rounded-xl p-3 transition-all duration-300 border hover:shadow-lg flex flex-col items-center text-center relative overflow-hidden ${
               selectedStaff?._id === barber._id
-                ? "bg-[var(--color-primary)]/15 border-[var(--color-primary)]"
+                ? "bg-[var(--color-primary)]/10 border-[var(--color-primary)]"
                 : "bg-[#1A1A1A] border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
             }`}
           >
             {/* Avatar Container */}
-            <div className="relative mb-3">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden ring-2 ring-[#2A2A2A] group-hover:ring-[var(--color-primary)]/50 transition-all duration-300">
+            <div className="relative mb-2">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden ring-2 ring-[#2A2A2A] group-hover:ring-[var(--color-primary)]/50 transition-all duration-300">
                 <BarberAvatar barber={barber} className="w-full h-full" />
               </div>
               {selectedStaff?._id === barber._id && (
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-[#1A1A1A] shadow-lg">
-                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-[#1A1A1A] shadow-lg">
+                  <CheckCircle className="w-3 h-3 text-white" />
                 </div>
               )}
             </div>
 
             {/* Barber Name */}
-            <h3 className="text-base sm:text-lg font-bold text-white mb-1 line-clamp-2 group-hover:text-[var(--color-primary)] transition-colors duration-200">
+            <h3 className="text-sm font-bold text-white mb-0.5 line-clamp-1 w-full group-hover:text-[var(--color-primary)] transition-colors duration-200">
               {barber.full_name || barber.name}
             </h3>
 
-            {/* Title Badge */}
-            <div className="px-2 py-0.5 bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-full text-xs font-semibold mb-2 inline-block">
-              Professional
-            </div>
-
-            {/* Experience */}
-            <p className="text-xs text-gray-400 mb-2 line-clamp-1">
-              Experienced professional
-            </p>
-
             {/* Rating */}
-            <div className="flex items-center justify-center gap-1">
-              <div className="flex text-yellow-400 text-sm">★★★★★</div>
-              <span className="text-xs font-semibold text-gray-300">5.0</span>
+            <div className="flex items-center justify-center gap-1 mb-1">
+              <Star className="w-3 h-3 text-yellow-400 fill-current" />
+              <span className="text-xs font-medium text-gray-300">5.0</span>
             </div>
+
+            {/* Experience - Hidden on smallest screens if needed, but good to keep */}
+            <p className="text-[10px] text-gray-500 line-clamp-1">
+              {barber.experience || 'Professional'}
+            </p>
           </button>
         ))}
       </div>
@@ -1136,7 +1149,7 @@ const ServiceBooking = ({ onBack }) => {
                 className="font-bold text-base"
                 style={{ color: "#F68B24" }}
               >
-                ₱{selectedService?.price.toLocaleString()}
+                {selectedService?.hide_price ? 'Ask for Price' : `₱${selectedService?.price.toLocaleString()}`}
               </span>
               <span
                 className="font-medium text-sm"

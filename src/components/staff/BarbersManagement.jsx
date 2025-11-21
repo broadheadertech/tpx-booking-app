@@ -139,18 +139,18 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
 
   const filteredBarbers = barbers
     .filter(barber => {
-      const matchesSearch = 
+      const matchesSearch =
         barber.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         barber.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         barber.specialties?.some(spec => spec.toLowerCase().includes(searchTerm.toLowerCase()))
-      
+
       let matchesFilter = true
       if (filterStatus === 'active') {
         matchesFilter = barber.is_active === true
       } else if (filterStatus === 'inactive') {
         matchesFilter = barber.is_active === false
       }
-      
+
       return matchesSearch && matchesFilter
     })
     .sort((a, b) => {
@@ -221,7 +221,7 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
 
 
   const DeleteConfirmModal = ({ barber, onClose, onConfirm }) => (
-    <div 
+    <div
       className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-[99997] p-2 sm:p-4 transition-all duration-300 ease-in-out animate-in fade-in-0"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
@@ -386,7 +386,19 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
               {filteredBarbers.map((barber) => {
                 const statusConfig = getStatusConfig(barber.is_active)
                 const StatusIcon = statusConfig.icon
-                const workingDays = getWorkingDays(barber.schedule || {})
+                const scheduleType = barber.schedule_type || 'weekly'
+                let scheduleDisplay = ''
+                let scheduleLabel = ''
+
+                if (scheduleType === 'specific_dates') {
+                  const dateCount = barber.specific_dates?.length || 0
+                  scheduleDisplay = `${dateCount} Dates`
+                  scheduleLabel = 'Scheduled'
+                } else {
+                  const workingDays = getWorkingDays(barber.schedule || {})
+                  scheduleDisplay = `${workingDays}/week`
+                  scheduleLabel = 'Working days'
+                }
 
                 return (
                   <tr key={barber._id} className="hover:bg-[#333333]/50">
@@ -432,8 +444,8 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
                       <div className="text-xs text-gray-500 mt-1">{barber.specialties?.length || 0} specialties</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-white">{workingDays}/week</div>
-                      <div className="text-sm text-gray-400">Working days</div>
+                      <div className="text-sm text-white">{scheduleDisplay}</div>
+                      <div className="text-sm text-gray-400">{scheduleLabel}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.bg} ${statusConfig.text}`}>
@@ -486,7 +498,7 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
           <Scissors className="mx-auto h-12 w-12 text-gray-300" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No barbers found</h3>
           <p className="mt-1 text-sm text-gray-500">
-            {searchTerm || filterStatus !== 'all' 
+            {searchTerm || filterStatus !== 'all'
               ? 'Try adjusting your search or filter criteria.'
               : 'Get started by creating a new barber profile.'
             }

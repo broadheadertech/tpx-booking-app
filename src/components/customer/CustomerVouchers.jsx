@@ -11,7 +11,7 @@ const CustomerVouchers = () => {
   const [qrCodeUrl, setQrCodeUrl] = useState('')
   const [showQRModal, setShowQRModal] = useState(false)
 
-  // Get user's vouchers
+  // Get user's voucher
   const userVouchers = useQuery(
     api.services.vouchers.getVouchersByUser,
     user ? { userId: user.id } : "skip"

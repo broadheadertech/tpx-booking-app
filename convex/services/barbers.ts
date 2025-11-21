@@ -89,6 +89,13 @@ export const createBarber = mutation({
     avatarStorageId: v.optional(v.id("_storage")),
     experience: v.optional(v.string()),
     specialties: v.optional(v.array(v.string())),
+    schedule_type: v.optional(v.union(v.literal("weekly"), v.literal("specific_dates"))),
+    specific_dates: v.optional(v.array(v.object({
+      date: v.string(),
+      available: v.boolean(),
+      start: v.string(),
+      end: v.string()
+    }))),
   },
   handler: async (ctx, args) => {
     // Check if user already has a barber profile
@@ -125,6 +132,8 @@ export const createBarber = mutation({
         saturday: { available: true, start: '09:00', end: '22:00' },
         sunday: { available: false, start: '09:00', end: '22:00' },
       },
+      schedule_type: args.schedule_type || 'weekly',
+      specific_dates: args.specific_dates || [],
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -155,6 +164,13 @@ export const updateBarber = mutation({
       saturday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
       sunday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
     })),
+    schedule_type: v.optional(v.union(v.literal("weekly"), v.literal("specific_dates"))),
+    specific_dates: v.optional(v.array(v.object({
+      date: v.string(),
+      available: v.boolean(),
+      start: v.string(),
+      end: v.string()
+    }))),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
@@ -312,6 +328,8 @@ export const createBarberProfile = mutation({
         saturday: { available: true, start: '09:00', end: '22:00' },
         sunday: { available: false, start: '09:00', end: '22:00' },
       },
+      schedule_type: 'weekly',
+      specific_dates: [],
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -345,6 +363,13 @@ export const createBarberWithAccount = mutation({
       saturday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
       sunday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
     })),
+    schedule_type: v.optional(v.union(v.literal("weekly"), v.literal("specific_dates"))),
+    specific_dates: v.optional(v.array(v.object({
+      date: v.string(),
+      available: v.boolean(),
+      start: v.string(),
+      end: v.string()
+    }))),
   },
   handler: async (ctx, args) => {
     try {
@@ -459,6 +484,8 @@ export const createBarberWithAccount = mutation({
           saturday: { available: true, start: '09:00', end: '22:00' },
           sunday: { available: false, start: '09:00', end: '22:00' },
         },
+        schedule_type: args.schedule_type || 'weekly',
+        specific_dates: args.specific_dates || [],
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });

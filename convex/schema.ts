@@ -139,6 +139,13 @@ export default defineSchema({
       saturday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
       sunday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
     }),
+    schedule_type: v.optional(v.union(v.literal("weekly"), v.literal("specific_dates"))),
+    specific_dates: v.optional(v.array(v.object({
+      date: v.string(), // YYYY-MM-DD
+      available: v.boolean(),
+      start: v.string(),
+      end: v.string()
+    }))),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -155,6 +162,7 @@ export default defineSchema({
     duration_minutes: v.number(),
     category: v.string(),
     is_active: v.boolean(),
+    hide_price: v.optional(v.boolean()),
     image: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -561,7 +569,7 @@ export default defineSchema({
     payroll_period_id: v.id("payroll_periods"),
     barber_id: v.id("barbers"),
     branch_id: v.id("branches"),
-    
+
     // Service earnings breakdown
     total_services: v.number(), // Number of services completed
     total_service_revenue: v.number(), // Total revenue from services
@@ -571,17 +579,17 @@ export default defineSchema({
     daily_rate: v.optional(v.number()), // Daily base rate applied
     days_worked: v.optional(v.number()), // Distinct days with qualifying work
     daily_pay: v.optional(v.number()), // Calculated daily rate pay
-    
+
     // Transaction earnings breakdown (POS)
     total_transactions: v.number(), // Number of POS transactions
     total_transaction_revenue: v.number(), // Revenue from POS transactions
     transaction_commission: v.number(), // Commission from POS transactions
-    
+
     // Product earnings breakdown
     total_products: v.optional(v.number()), // Number of products sold
     total_product_revenue: v.optional(v.number()), // Total revenue from products
     product_commission: v.optional(v.number()), // Commission from product sales
-    
+
     // Booking details snapshot (for reporting/printing)
     bookings_detail: v.optional(v.array(v.object({
       id: v.id("bookings"),
@@ -593,7 +601,7 @@ export default defineSchema({
       customer_name: v.string(),
       updatedAt: v.number(),
     }))),
-    
+
     // Product transaction details snapshot (for reporting/printing)
     products_detail: v.optional(v.array(v.object({
       id: v.id("transactions"),
@@ -608,15 +616,15 @@ export default defineSchema({
       commission_rate: v.number(),
       commission_amount: v.number(),
     }))),
-    
+
     // Deductions
     tax_deduction: v.number(), // Tax deducted
     other_deductions: v.number(), // Other deductions (insurance, etc.)
     total_deductions: v.number(), // Total deductions
-    
+
     // Final amounts
     net_pay: v.number(), // Final amount to be paid
-    
+
     // Payment tracking
     payment_method: v.optional(v.union(
       v.literal("cash"),
@@ -627,7 +635,7 @@ export default defineSchema({
     payment_reference: v.optional(v.string()), // Bank transfer ref, check number, etc.
     paid_at: v.optional(v.number()), // When payment was made
     paid_by: v.optional(v.id("users")), // Who processed the payment
-    
+
     // Status and notes
     status: v.union(
       v.literal("calculated"), // Calculated but not paid
@@ -635,7 +643,7 @@ export default defineSchema({
       v.literal("cancelled") // Record cancelled
     ),
     notes: v.optional(v.string()),
-    
+
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -780,7 +788,7 @@ export default defineSchema({
     error: v.optional(v.string()),
     createdAt: v.number(),
   })
-    .index("by_campaign", ["campaign_id"]) 
+    .index("by_campaign", ["campaign_id"])
     .index("by_status", ["status"]),
 
   // Wallets
@@ -807,9 +815,9 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   })
-    .index("by_user", ["user_id"]) 
-    .index("by_reference", ["reference_id"]) 
-    .index("by_source", ["source_id"]) 
-    .index("by_payment", ["payment_id"]) 
+    .index("by_user", ["user_id"])
+    .index("by_reference", ["reference_id"])
+    .index("by_source", ["source_id"])
+    .index("by_payment", ["payment_id"])
     .index("by_status", ["status"]),
 });
