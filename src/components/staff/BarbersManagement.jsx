@@ -367,6 +367,7 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
         onClose={handleCloseModal}
         onSubmit={handleModalSubmit}
         editingBarber={editingBarber}
+        services={services} // Pass services prop here
       />
 
       {/* Barbers Table */}

@@ -19,6 +19,7 @@ import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuth } from "../../context/AuthContext";
+import { formatTime } from "../../utils/dateUtils";
 
 // Barber Avatar Component
 const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
@@ -326,6 +327,39 @@ const ServiceBooking = ({ onBack }) => {
           reason = "past";
         }
 
+        // Check blocked periods (Time Off)
+        if (selectedStaff.blocked_periods && selectedStaff.blocked_periods.length > 0) {
+          const dateString = selectedDateObj.toISOString().split('T')[0];
+          const blockingPeriod = selectedStaff.blocked_periods.find(p => p.date === dateString);
+
+          if (blockingPeriod) {
+            // If no specific times are set, it blocks the whole day
+            if (!blockingPeriod.start_time && !blockingPeriod.end_time) {
+              available = false;
+              reason = "blocked";
+            } else {
+              // Check specific time overlap
+              const slotTime = timeString; // HH:mm format
+              
+              // Convert times to comparable numbers (minutes from midnight)
+              const getMinutes = (t) => {
+                if (!t) return 0;
+                const [h, m] = t.split(':').map(Number);
+                return h * 60 + m;
+              };
+
+              const slotMinutes = getMinutes(slotTime);
+              const startMinutes = getMinutes(blockingPeriod.start_time);
+              const endMinutes = getMinutes(blockingPeriod.end_time);
+
+              if (slotMinutes >= startMinutes && slotMinutes < endMinutes) {
+                available = false;
+                reason = "blocked";
+              }
+            }
+          }
+        }
+
         slots.push({
           time: timeString,
           displayTime: displayTime,
@@ -340,22 +374,23 @@ const ServiceBooking = ({ onBack }) => {
 
   // Get available barbers for selected service
   const getAvailableBarbers = () => {
-    if (!selectedService || !barbers) return barbers ? barbers.filter(b => b.is_active) : [];
+    if (!barbers) return [];
 
-    // Filter barbers who provide the specific service
-    const serviceBarbers = barbers.filter(
-      (barber) =>
-        barber.is_active && // Ensure barber is active
-        barber.services &&
-        Array.isArray(barber.services) &&
-        barber.services.some((serviceId) => serviceId === selectedService._id)
-    );
+    // First, filter only active employees (is_active = true)
+    // We keep those who are not accepting bookings, but they will be disabled in UI
+    let available = barbers.filter(b => b.is_active);
 
-    // Only return barbers that specifically offer this service
-    console.log(
-      `Found ${serviceBarbers.length} barbers for service ${selectedService.name}`
-    );
-    return serviceBarbers;
+    // If a service is selected, further filter by who can perform that service
+    if (selectedService) {
+      available = available.filter(
+        (barber) =>
+          barber.services &&
+          Array.isArray(barber.services) &&
+          barber.services.some((serviceId) => serviceId === selectedService._id)
+      );
+    }
+
+    return available;
   };
 
   const handleCreateBooking = async (
@@ -1070,24 +1105,37 @@ const ServiceBooking = ({ onBack }) => {
 
       {/* Barber Grid - Responsive */}
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        {getAvailableBarbers().map((barber) => (
+        {getAvailableBarbers().map((barber) => {
+          const isAvailable = barber.is_accepting_bookings !== false; // Default true if undefined
+          
+          return (
           <button
             key={barber._id}
-            onClick={() => handleStaffSelect(barber)}
+            onClick={() => isAvailable && handleStaffSelect(barber)}
+            disabled={!isAvailable}
             className={`group rounded-xl p-3 transition-all duration-300 border hover:shadow-lg flex flex-col items-center text-center relative overflow-hidden ${
               selectedStaff?._id === barber._id
                 ? "bg-[var(--color-primary)]/10 border-[var(--color-primary)]"
-                : "bg-[#1A1A1A] border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
+                : !isAvailable 
+                  ? "bg-[#1A1A1A] border-[#2A2A2A] opacity-60 cursor-not-allowed"
+                  : "bg-[#1A1A1A] border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
             }`}
           >
             {/* Avatar Container */}
             <div className="relative mb-2">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden ring-2 ring-[#2A2A2A] group-hover:ring-[var(--color-primary)]/50 transition-all duration-300">
+              <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden ring-2 ring-[#2A2A2A] ${isAvailable ? 'group-hover:ring-[var(--color-primary)]/50' : 'grayscale'} transition-all duration-300`}>
                 <BarberAvatar barber={barber} className="w-full h-full" />
               </div>
               {selectedStaff?._id === barber._id && (
                 <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-[#1A1A1A] shadow-lg">
                   <CheckCircle className="w-3 h-3 text-white" />
+                </div>
+              )}
+              {!isAvailable && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
+                  <div className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow-sm">
+                    Busy
+                  </div>
                 </div>
               )}
             </div>
@@ -1103,12 +1151,12 @@ const ServiceBooking = ({ onBack }) => {
               <span className="text-xs font-medium text-gray-300">5.0</span>
             </div>
 
-            {/* Experience - Hidden on smallest screens if needed, but good to keep */}
-            <p className="text-[10px] text-gray-500 line-clamp-1">
-              {barber.experience || 'Professional'}
+            {/* Experience or Status */}
+            <p className={`text-[10px] line-clamp-1 ${!isAvailable ? 'text-red-400 font-medium' : 'text-gray-500'}`}>
+              {!isAvailable ? 'Currently Unavailable' : (barber.experience || 'Professional')}
             </p>
           </button>
-        ))}
+        )})}
       </div>
 
       {/* Empty State */}
@@ -1189,7 +1237,7 @@ const ServiceBooking = ({ onBack }) => {
                 </span>
               </div>
               <span className="font-bold text-sm" style={{ color: "#36454F" }}>
-                Today, {selectedTime}
+                Today, {formatTime(selectedTime)}
               </span>
             </div>
             <div className="flex items-center justify-between py-1">
@@ -1583,7 +1631,7 @@ const ServiceBooking = ({ onBack }) => {
                 {createdBooking?.date
                   ? new Date(createdBooking.date).toLocaleDateString()
                   : "Today"}
-                , {createdBooking?.time || selectedTime}
+                , {formatTime(createdBooking?.time || selectedTime)}
               </span>
             </div>
             <div className="flex justify-between items-center">

@@ -6,11 +6,18 @@ import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
 import BarberBookings from './BarberBookings'
 import BarberProfile from './BarberProfile'
+import TimeOffManager from './TimeOffManager'
+
+import LoadingSpinner from '../common/LoadingSpinner'
+import AlertModal from '../common/AlertModal'
+import { formatTime } from '../../utils/dateUtils'
 
 const BarberDashboard = () => {
   const { user } = useAuth()
   const location = useLocation()
   const [activeTab, setActiveTab] = useState('overview')
+  const [isAcceptingBookings, setIsAcceptingBookings] = useState(true)
+  const [alertState, setAlertState] = useState({ isOpen: false, type: 'info', title: '', message: '' })
 
   // Check if we're on the barber dashboard route (main dashboard only)
   const isOnBarberDashboard = location.pathname === '/barber/dashboard'
@@ -24,10 +31,42 @@ const BarberDashboard = () => {
   const barbers = user?.branch_id 
     ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
     : useQuery(api.services.barbers.getAllBarbers)
+  
   const currentBarber = barbers?.find(barber => barber.user === user?._id)
+  
+  const updateBarberMutation = useMutation(api.services.barbers.updateBarber)
   
   // Mutation to create barber profile
   const createBarberProfile = useMutation(api.services.barbers.createBarberProfile)
+  
+  // Initialize acceptance status when barber data loads
+  React.useEffect(() => {
+    if (currentBarber) {
+      setIsAcceptingBookings(currentBarber.is_accepting_bookings !== false)
+    }
+  }, [currentBarber])
+
+  const handleToggleBookings = async (newValue) => {
+    if (!currentBarber?._id) return;
+    
+    setIsAcceptingBookings(newValue);
+    
+    try {
+      await updateBarberMutation({
+        id: currentBarber._id,
+        is_accepting_bookings: newValue
+      });
+    } catch (error) {
+      console.error('Failed to update availability:', error);
+      setIsAcceptingBookings(!newValue); // Revert on error
+      setAlertState({
+        isOpen: true,
+        type: 'error',
+        title: 'Update Failed',
+        message: 'Failed to update availability status. Please try again.'
+      })
+    }
+  };
   
   // Auto-create barber profile if user has barber role but no profile
   React.useEffect(() => {
@@ -135,116 +174,172 @@ const BarberDashboard = () => {
       default:
         return (
           <>
-            {/* Mobile Welcome Section */}
-            <div className="px-4 py-3 md:hidden">
-              <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-xl p-3 text-white shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-sm font-bold">Welcome back!</h2>
-                    <p className="text-xs opacity-90">Ready to make today amazing?</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs opacity-80">Today</div>
-                    <div className="text-sm font-semibold">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Desktop Header - Hidden on Mobile */}
             <div className="hidden md:block relative z-10 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="py-6">
-                  <h1 className="text-2xl font-bold text-white">
-                    Welcome back, {currentBarber?.full_name || user?.username}!
-                  </h1>
-                  <p className="text-gray-400 mt-1">Here's your performance overview</p>
+                <div className="py-6 flex justify-between items-center">
+                  <div>
+                    <h1 className="text-2xl font-bold text-white">
+                      Welcome back, {currentBarber?.full_name || user?.username}!
+                    </h1>
+                    <p className="text-gray-400 mt-1">Here's your performance overview</p>
+                  </div>
+                  {/* Availability Toggle Desktop */}
+                  <div className="bg-[#1A1A1A] border border-[#333333] rounded-xl p-3 flex items-center space-x-3">
+                    <span className={`text-sm font-medium ${isAcceptingBookings ? 'text-green-400' : 'text-gray-400'}`}>
+                      {isAcceptingBookings ? 'Accepting Bookings' : 'Bookings Paused'}
+                    </span>
+                    <label className="flex items-center cursor-pointer">
+                      <div className="relative">
+                        <input 
+                          type="checkbox" 
+                          className="sr-only" 
+                          checked={isAcceptingBookings}
+                          onChange={(e) => handleToggleBookings(e.target.checked)}
+                        />
+                        <div className={`block w-10 h-6 rounded-full transition-colors ${isAcceptingBookings ? 'bg-green-500' : 'bg-gray-600'}`}></div>
+                        <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isAcceptingBookings ? 'transform translate-x-4' : ''}`}></div>
+                      </div>
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="px-4 md:max-w-7xl md:mx-auto md:px-6 lg:px-8 py-4 md:py-6">
               
-              {/* Stats Cards - Compact Design */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                {/* Total Bookings Card */}
-                <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg shadow-md border border-[#444444]/30 p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-gray-400 mb-1">Total Bookings</p>
-                      <p className="text-lg font-bold text-[var(--color-primary)]">{barberBookings.length}</p>
-                    </div>
-                    <div className="bg-[var(--color-primary)]/10 p-2 rounded-lg">
-                      <Calendar className="w-4 h-4 text-[var(--color-primary)]" />
+              {/* Mobile Welcome Section with Toggle */}
+              <div className="md:hidden mb-4 space-y-4">
+                <div className="bg-gradient-to-r from-[#F68B24] to-[#E67E22] rounded-2xl p-5 text-white shadow-lg">
+                  <div className="flex flex-col space-y-1">
+                    <h2 className="text-xl font-bold">Welcome back!</h2>
+                    <p className="text-sm opacity-90">Ready to make today amazing?</p>
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="text-xs opacity-80 font-medium bg-white/20 px-2 py-1 rounded-lg">
+                        Today, {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Average Rating Card */}
-                <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg shadow-md border border-[#444444]/30 p-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-medium text-gray-400 mb-1">Rating</p>
-                      <div className="flex items-center space-x-1">
-                        <p className="text-lg font-bold text-yellow-400">
-                          {ratingAnalytics?.averageRating || currentBarber?.rating || 0}
-                        </p>
-                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                      </div>
+                {/* Availability Toggle Mobile */}
+                <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A] flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-bold text-white">Booking Status</p>
+                    <p className={`text-xs ${isAcceptingBookings ? 'text-green-400' : 'text-gray-400'}`}>
+                      {isAcceptingBookings ? 'You are visible to clients' : 'You appear as busy'}
+                    </p>
+                  </div>
+                  <label className="flex items-center cursor-pointer">
+                    <div className="relative">
+                      <input 
+                        type="checkbox" 
+                        className="sr-only" 
+                        checked={isAcceptingBookings}
+                        onChange={(e) => handleToggleBookings(e.target.checked)}
+                      />
+                      <div className={`block w-12 h-7 rounded-full transition-colors ${isAcceptingBookings ? 'bg-green-500' : 'bg-gray-600'}`}></div>
+                      <div className={`dot absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform shadow-sm ${isAcceptingBookings ? 'transform translate-x-5' : ''}`}></div>
                     </div>
-                    <div className="bg-yellow-400/10 p-2 rounded-lg">
-                      <Star className="w-4 h-4 text-yellow-400" />
-                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Stats Cards - Redesigned */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {/* Total Bookings Card */}
+                <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A] relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <Calendar className="w-12 h-12 text-[var(--color-primary)]" />
+                  </div>
+                  <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Total Bookings</p>
+                  <div className="flex items-baseline space-x-1">
+                    <p className="text-2xl font-bold text-[var(--color-primary)]">{barberBookings.length}</p>
+                    <span className="text-[10px] text-gray-500">lifetime</span>
+                  </div>
+                  <div className="mt-2 flex items-center text-xs text-green-400 bg-green-400/10 w-fit px-1.5 py-0.5 rounded">
+                    <TrendingUp className="w-3 h-3 mr-1" />
+                    <span>+2 this week</span>
+                  </div>
+                </div>
+
+                {/* Rating Card */}
+                <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A] relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <Star className="w-12 h-12 text-yellow-400" />
+                  </div>
+                  <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">Rating</p>
+                  <div className="flex items-baseline space-x-1">
+                    <p className="text-2xl font-bold text-yellow-400">
+                      {ratingAnalytics?.averageRating || currentBarber?.rating || 0}
+                    </p>
+                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                  </div>
+                  <div className="mt-2 text-xs text-gray-500">
+                    Based on {ratingAnalytics?.totalRatings || 0} reviews
                   </div>
                 </div>
               </div>
 
-                              {/* Today's Appointments - Compact Design */}
-                <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg shadow-md border border-[#444444]/30 p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-bold text-white">Today's Appointments</h3>
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="w-4 h-4 text-[var(--color-primary)]" />
-                      <span className="text-xs text-[var(--color-primary)] font-medium">{todayBookings.length}</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    {todayBookings.length === 0 ? (
-                      <div className="text-center py-4">
-                        <Calendar className="w-8 h-8 text-gray-500 mx-auto mb-2" />
-                        <p className="text-gray-400 text-xs">No appointments today</p>
-                        <p className="text-gray-500 text-xs">Enjoy your free time! 🎉</p>
-                      </div>
-                    ) : (
-                      <>
-                        {todayBookings.slice(0, 3).map((booking) => (
-                          <div key={booking._id} className="flex items-center justify-between p-2 bg-[#1A1A1A] rounded-md hover:bg-[#222222] transition-colors">
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-white text-sm truncate">{booking.customer_name}</p>
-                              <p className="text-xs text-gray-400 truncate">{booking.service_name}</p>
-                            </div>
-                            <div className="text-right ml-2">
-                              <p className="font-medium text-white text-xs">{booking.time}</p>
-                              <p className="text-xs text-[var(--color-primary)]">₱{booking.price}</p>
-                            </div>
-                          </div>
-                        ))}
-
-                        {todayBookings.length > 3 && (
-                          <button
-                            onClick={() => setActiveTab('bookings')}
-                            className="w-full mt-3 py-2 bg-[var(--color-primary)]/10 hover:bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-lg transition-colors font-medium text-xs active:scale-95"
-                          >
-                            View All {todayBookings.length} Appointments →
-                          </button>
-                        )}
-                      </>
-                    )}
+              {/* Today's Appointments - Redesigned */}
+              <div className="bg-[#1A1A1A] rounded-xl p-0 border border-[#2A2A2A] overflow-hidden mb-4">
+                <div className="p-4 border-b border-[#2A2A2A] flex justify-between items-center">
+                  <h3 className="text-sm font-bold text-white">Today's Appointments</h3>
+                  <div className="bg-[#2A2A2A] px-2 py-1 rounded text-xs font-medium text-gray-300">
+                    {todayBookings.length} Total
                   </div>
                 </div>
 
-                {/* Rating Analytics - Compact Design */}
+                <div className="p-4">
+                  {todayBookings.length === 0 ? (
+                    <div className="text-center py-8 flex flex-col items-center">
+                      <div className="w-12 h-12 bg-[#2A2A2A] rounded-full flex items-center justify-center mb-3">
+                        <Calendar className="w-6 h-6 text-gray-500" />
+                      </div>
+                      <p className="text-gray-300 text-sm font-medium">No appointments today</p>
+                      <p className="text-gray-500 text-xs mt-1">Enjoy your free time! 🎉</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {todayBookings.slice(0, 3).map((booking) => (
+                        <div key={booking._id} className="flex items-center p-3 bg-[#222222] rounded-xl border border-[#333333]">
+                          <div className="flex-shrink-0 w-12 h-12 bg-[#333333] rounded-lg flex flex-col items-center justify-center border border-[#444444]">
+                            <span className="text-[10px] text-gray-400 font-medium">
+                              {formatTime(booking.time).split(' ')[1]}
+                            </span>
+                            <span className="text-sm font-bold text-white">
+                              {formatTime(booking.time).split(' ')[0]}
+                            </span>
+                          </div>
+                          
+                          <div className="ml-3 flex-1 min-w-0">
+                            <p className="font-bold text-white text-sm truncate">{booking.customer_name}</p>
+                            <p className="text-xs text-[var(--color-primary)] truncate">{booking.service_name}</p>
+                          </div>
+                          
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-white">₱{booking.price}</p>
+                            <div className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded inline-block mt-1">
+                              Confirmed
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
+                      {todayBookings.length > 3 && (
+                        <button
+                          onClick={() => setActiveTab('bookings')}
+                          className="w-full py-3 bg-[#2A2A2A] hover:bg-[#333333] text-gray-300 rounded-xl transition-colors font-medium text-xs"
+                        >
+                          View All {todayBookings.length} Appointments
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Rating Analytics - Redesigned */}
                 {ratingAnalytics && ratingAnalytics.totalRatings > 0 && (
                   <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg shadow-md border border-[#444444]/30 p-4 mt-4">
                     <div className="flex items-center justify-between mb-3">
@@ -346,10 +441,22 @@ const BarberDashboard = () => {
                   </div>
                 )}
 
+              {/* Time Off Manager */}
+              <TimeOffManager barber={currentBarber} />
+
             </div>
           </>
         )
     }
+  }
+
+  // Show loading spinner while data is fetching
+  if (barbers === undefined || user === undefined) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] flex items-center justify-center p-4">
+        <LoadingSpinner size="lg" message="Loading dashboard..." />
+      </div>
+    )
   }
 
   if (!currentBarber) {

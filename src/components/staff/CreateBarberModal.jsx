@@ -5,9 +5,11 @@ import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
 import LoadingSpinner from '../common/LoadingSpinner'
+import ErrorDisplay from '../common/ErrorDisplay'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, isToday } from 'date-fns'
+import { parseError } from '../../utils/errorHandler'
 
-const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) => {
+const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, services = [] }) => {
   const { user } = useAuth()
   const [formData, setFormData] = useState({
     username: '',
@@ -40,6 +42,11 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
   // Update form data when editingBarber changes
   useEffect(() => {
     if (editingBarber) {
+      // Filter services to ensure they exist in the current services list
+      // Use the passed services prop (array) for filtering
+      const availableServiceIds = services?.map(s => s._id) || []
+      const validServices = (editingBarber.services || []).filter(id => availableServiceIds.includes(id))
+
       setFormData({
         username: '', // Don't populate username for editing
         email: editingBarber.email || '',
@@ -49,7 +56,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
         full_name: editingBarber.full_name || '',
         phone: editingBarber.phone || '',
         is_active: editingBarber.is_active ?? true,
-        services: editingBarber.services || [],
+        services: validServices,
         experience: editingBarber.experience || '0 years',
         avatar: editingBarber.avatar || '',
         avatarStorageId: editingBarber.avatarStorageId || undefined,
@@ -101,7 +108,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
   const [expandedDay, setExpandedDay] = useState(null)
 
   // Convex queries and mutations
-  const services = useQuery(api.services.services.getAllServices)
+  // Remove separate services query since it's passed as prop
+  // const services = useQuery(api.services.services.getAllServices)
   const createBarber = useMutation(api.services.barbers.createBarber)
   const createBarberWithAccount = useMutation(api.services.barbers.createBarberWithAccount)
   const updateBarber = useMutation(api.services.barbers.updateBarber)
@@ -376,33 +384,10 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
         onClose()
       }, 1500)
     } catch (err) {
-      console.error('Error saving barber:', err)
-
-      // Parse Convex error format
-      let errorMessage = 'Failed to save barber'
-
-      if (err.message) {
-        try {
-          // Try to parse if it's a JSON string
-          const parsedError = JSON.parse(err.message)
-          if (parsedError.message) {
-            errorMessage = parsedError.message
-            // Add details if available
-            if (parsedError.details) {
-              errorMessage += ` ${parsedError.details}`
-            }
-            // Add suggested action if available
-            if (parsedError.action) {
-              errorMessage += ` ${parsedError.action}`
-            }
-          }
-        } catch {
-          // If not JSON, use the message as-is
-          errorMessage = err.message
-        }
-      }
-
-      setError(errorMessage)
+      // Don't log raw error to avoid confusing stack traces in console
+      // console.error('Error saving barber:', err)
+      const parsedError = parseError(err)
+      setError(parsedError)
     } finally {
       setLoading(false)
     }
@@ -476,24 +461,11 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
 
               {/* Error Message */}
               {error && (
-                <div className="bg-red-500/10 border-l-4 border-red-500 px-4 py-3 rounded-lg">
-                  <div className="flex items-start">
-                    <div className="flex-shrink-0">
-                      <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm text-red-400 font-medium">{error}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setError('')}
-                      className="ml-auto flex-shrink-0 text-red-400 hover:text-red-300"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
+                <div className="mb-4">
+                  <ErrorDisplay 
+                    error={error}
+                    onClose={() => setError('')}
+                  />
                 </div>
               )}
 

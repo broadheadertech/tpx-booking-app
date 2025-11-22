@@ -5,6 +5,8 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterv
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import LoadingSpinner from '../common/LoadingSpinner'
+import ErrorDisplay from '../common/ErrorDisplay'
+import { parseError } from '../../utils/errorHandler'
 
 const BarberModal = ({
   isOpen,
@@ -49,10 +51,15 @@ const BarberModal = ({
   // Initialize form data when barber changes
   const initializeFormData = useCallback(() => {
     if (barber) {
+      // Filter out services that no longer exist in the available services list
+      // This prevents "Service not found" errors if a service was deleted but remained in the barber's profile
+      const availableServiceIds = services?.map(s => s._id) || []
+      const validServices = (barber.services || []).filter(id => availableServiceIds.includes(id))
+
       setFormData({
         full_name: barber.full_name || '',
         is_active: barber.is_active !== undefined ? barber.is_active : true,
-        services: barber.services || [],
+        services: validServices,
         schedule_type: barber.schedule_type || 'weekly',
         specific_dates: barber.specific_dates || [],
         schedule: barber.schedule || {
@@ -66,7 +73,7 @@ const BarberModal = ({
         }
       })
     }
-  }, [barber])
+  }, [barber, services])
 
   // Reset state when modal opens/closes or barber changes
   useEffect(() => {
@@ -140,7 +147,8 @@ const BarberModal = ({
       setExpandedDay(null)
       if (onRefresh) onRefresh()
     } catch (err) {
-      setError(err.message || 'Failed to save barber')
+      const parsedError = parseError(err)
+      setError(parsedError)
     } finally {
       setLoading(false)
     }
@@ -347,8 +355,11 @@ const BarberModal = ({
           {/* Content */}
           <div className="p-4 sm:p-6 lg:p-8 max-h-[calc(95vh-180px)] overflow-y-auto">
             {error && (
-              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-                <p className="text-sm text-red-300">{error}</p>
+              <div className="mb-4">
+                <ErrorDisplay 
+                  error={error}
+                  onClose={() => setError('')}
+                />
               </div>
             )}
 
