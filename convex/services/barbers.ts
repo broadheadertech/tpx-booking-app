@@ -171,8 +171,15 @@ export const updateBarber = mutation({
     id: v.id("barbers"),
     full_name: v.optional(v.string()),
     is_active: v.optional(v.boolean()),
+    is_accepting_bookings: v.optional(v.boolean()),
     services: v.optional(v.array(v.id("services"))),
     email: v.optional(v.string()),
+    blocked_periods: v.optional(v.array(v.object({
+      date: v.string(),
+      start_time: v.optional(v.string()),
+      end_time: v.optional(v.string()),
+      reason: v.optional(v.string())
+    }))),
     phone: v.optional(v.string()),
     avatar: v.optional(v.string()),
     avatarStorageId: v.optional(v.id("_storage")),

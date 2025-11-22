@@ -120,6 +120,7 @@ export default defineSchema({
     branch_id: v.id("branches"),
     full_name: v.string(),
     is_active: v.boolean(),
+    is_accepting_bookings: v.optional(v.boolean()),
     services: v.array(v.id("services")),
     email: v.string(),
     phone: v.optional(v.string()),
@@ -145,6 +146,12 @@ export default defineSchema({
       available: v.boolean(),
       start: v.string(),
       end: v.string()
+    }))),
+    blocked_periods: v.optional(v.array(v.object({
+      date: v.string(), // YYYY-MM-DD
+      start_time: v.optional(v.string()), // HH:mm, if undefined -> whole day
+      end_time: v.optional(v.string()), // HH:mm
+      reason: v.optional(v.string())
     }))),
     createdAt: v.number(),
     updatedAt: v.number(),

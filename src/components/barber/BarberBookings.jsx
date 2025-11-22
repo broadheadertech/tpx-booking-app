@@ -3,6 +3,7 @@ import { Calendar, Clock, User, Phone, Mail, CheckCircle, XCircle, AlertCircle, 
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
+import { formatTime } from '../../utils/dateUtils'
 
 const BarberBookings = () => {
   const { user } = useAuth()
@@ -241,7 +242,7 @@ const BarberBookings = () => {
                         {getStatusIcon(booking.status)}
                         <span className="capitalize text-xs">{booking.status}</span>
                       </div>
-                      <span className="text-gray-400 text-xs font-medium">{booking.time}</span>
+                      <span className="text-gray-400 text-xs font-medium">{formatTime(booking.time)}</span>
                     </div>
 
                     {/* Service Name */}
@@ -364,7 +365,7 @@ const CompleteBookingModal = ({ booking, onConfirm, onClose, loading }) => {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Time:</span>
-                <span className="font-medium text-gray-900">{booking.time}</span>
+                <span className="font-medium text-gray-900">{formatTime(booking.time)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Price:</span>
@@ -439,7 +440,7 @@ const CancelBookingModal = ({ booking, onConfirm, onClose, loading }) => {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Time:</span>
-                <span className="font-medium text-gray-900">{booking.time}</span>
+                <span className="font-medium text-gray-900">{formatTime(booking.time)}</span>
               </div>
             </div>
           </div>
