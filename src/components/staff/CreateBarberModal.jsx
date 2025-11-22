@@ -6,6 +6,7 @@ import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
 import LoadingSpinner from '../common/LoadingSpinner'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, isToday } from 'date-fns'
+import { parseError } from '../../utils/errorHandler'
 
 const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) => {
   const { user } = useAuth()
@@ -377,32 +378,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
       }, 1500)
     } catch (err) {
       console.error('Error saving barber:', err)
-
-      // Parse Convex error format
-      let errorMessage = 'Failed to save barber'
-
-      if (err.message) {
-        try {
-          // Try to parse if it's a JSON string
-          const parsedError = JSON.parse(err.message)
-          if (parsedError.message) {
-            errorMessage = parsedError.message
-            // Add details if available
-            if (parsedError.details) {
-              errorMessage += ` ${parsedError.details}`
-            }
-            // Add suggested action if available
-            if (parsedError.action) {
-              errorMessage += ` ${parsedError.action}`
-            }
-          }
-        } catch {
-          // If not JSON, use the message as-is
-          errorMessage = err.message
-        }
-      }
-
-      setError(errorMessage)
+      const parsedError = parseError(err)
+      setError(parsedError)
     } finally {
       setLoading(false)
     }
@@ -484,7 +461,15 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null }) 
                       </svg>
                     </div>
                     <div className="ml-3">
-                      <p className="text-sm text-red-400 font-medium">{error}</p>
+                      <p className="text-sm text-red-400 font-medium">
+                        {typeof error === 'string' ? error : error.message}
+                      </p>
+                      {typeof error === 'object' && error.details && (
+                        <p className="text-xs text-red-300 mt-1">{error.details}</p>
+                      )}
+                      {typeof error === 'object' && error.action && (
+                        <p className="text-xs text-red-300 mt-1 italic">{error.action}</p>
+                      )}
                     </div>
                     <button
                       type="button"

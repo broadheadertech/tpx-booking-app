@@ -5,6 +5,7 @@ import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterv
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import LoadingSpinner from '../common/LoadingSpinner'
+import { parseError } from '../../utils/errorHandler'
 
 const BarberModal = ({
   isOpen,
@@ -140,7 +141,8 @@ const BarberModal = ({
       setExpandedDay(null)
       if (onRefresh) onRefresh()
     } catch (err) {
-      setError(err.message || 'Failed to save barber')
+      const parsedError = parseError(err)
+      setError(parsedError)
     } finally {
       setLoading(false)
     }
@@ -348,7 +350,15 @@ const BarberModal = ({
           <div className="p-4 sm:p-6 lg:p-8 max-h-[calc(95vh-180px)] overflow-y-auto">
             {error && (
               <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-                <p className="text-sm text-red-300">{error}</p>
+                <p className="text-sm text-red-300 font-medium">
+                  {typeof error === 'string' ? error : error.message}
+                </p>
+                {typeof error === 'object' && error.details && (
+                  <p className="text-xs text-red-400 mt-1">{error.details}</p>
+                )}
+                {typeof error === 'object' && error.action && (
+                  <p className="text-xs text-red-400 mt-1 italic">{error.action}</p>
+                )}
               </div>
             )}
 
