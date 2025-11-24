@@ -721,51 +721,62 @@ export const assignVoucherByCode = mutation({
     assigned_by: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const voucher = await ctx.db
-      .query("vouchers")
-      .withIndex("by_code", (q) => q.eq("code", args.code.toUpperCase()))
-      .first();
+    console.log("assignVoucherByCode called with:", args);
+    try {
+      const voucher = await ctx.db
+        .query("vouchers")
+        .withIndex("by_code", (q) => q.eq("code", args.code.toUpperCase()))
+        .first();
 
-    if (!voucher) {
-      throwUserError(ERROR_CODES.VOUCHER_NOT_FOUND);
+      if (!voucher) {
+        console.error("Voucher not found for code:", args.code);
+        throwUserError(ERROR_CODES.VOUCHER_NOT_FOUND);
+      }
+
+      if (voucher.expires_at < Date.now()) {
+        console.error("Voucher expired:", voucher);
+        throwUserError(ERROR_CODES.VOUCHER_EXPIRED);
+      }
+
+      // Check if voucher is already assigned to this user
+      const existingAssignment = await ctx.db
+        .query("user_vouchers")
+        .withIndex("by_voucher_user", (q) => 
+          q.eq("voucher_id", voucher._id).eq("user_id", args.user_id)
+        )
+        .first();
+
+      if (existingAssignment) {
+        console.error("Voucher already assigned:", existingAssignment);
+        throwUserError(ERROR_CODES.VOUCHER_ALREADY_USED, "Voucher already assigned", "This voucher is already assigned to the user.");
+      }
+
+      // Check if voucher has reached max uses
+      const assignments = await ctx.db
+        .query("user_vouchers")
+        .withIndex("by_voucher", (q) => q.eq("voucher_id", voucher._id))
+        .collect();
+
+      if (assignments.length >= voucher.max_uses) {
+        console.error("Voucher limit reached:", assignments.length, voucher.max_uses);
+        throwUserError(ERROR_CODES.VOUCHER_LIMIT_REACHED);
+      }
+
+      // Create assignment
+      const assignmentId = await ctx.db.insert("user_vouchers", {
+        voucher_id: voucher._id,
+        user_id: args.user_id,
+        status: "assigned",
+        assigned_at: Date.now(),
+        assigned_by: args.assigned_by,
+      });
+
+      console.log("Voucher assigned successfully:", assignmentId);
+      return { voucher, assignmentId };
+    } catch (error) {
+      console.error("Error in assignVoucherByCode:", error);
+      throw error;
     }
-
-    if (voucher.expires_at < Date.now()) {
-      throwUserError(ERROR_CODES.VOUCHER_EXPIRED);
-    }
-
-    // Check if voucher is already assigned to this user
-    const existingAssignment = await ctx.db
-      .query("user_vouchers")
-      .withIndex("by_voucher_user", (q) => 
-        q.eq("voucher_id", voucher._id).eq("user_id", args.user_id)
-      )
-      .first();
-
-    if (existingAssignment) {
-      throwUserError(ERROR_CODES.VOUCHER_ALREADY_USED, "Voucher already assigned", "This voucher is already assigned to the user.");
-    }
-
-    // Check if voucher has reached max uses
-    const assignments = await ctx.db
-      .query("user_vouchers")
-      .withIndex("by_voucher", (q) => q.eq("voucher_id", voucher._id))
-      .collect();
-
-    if (assignments.length >= voucher.max_uses) {
-      throwUserError(ERROR_CODES.VOUCHER_LIMIT_REACHED);
-    }
-
-    // Create assignment
-    const assignmentId = await ctx.db.insert("user_vouchers", {
-      voucher_id: voucher._id,
-      user_id: args.user_id,
-      status: "assigned",
-      assigned_at: Date.now(),
-      assigned_by: args.assigned_by,
-    });
-
-    return { voucher, assignmentId };
   },
 });
 
