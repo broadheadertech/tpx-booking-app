@@ -607,6 +607,8 @@ export default defineSchema({
       service_name: v.string(),
       customer_name: v.string(),
       updatedAt: v.number(),
+      commission: v.optional(v.number()),
+      commission_rate: v.optional(v.number()),
     }))),
 
     // Product transaction details snapshot (for reporting/printing)

@@ -755,18 +755,27 @@ const PayrollManagement = ({ onRefresh, user }) => {
       const dayServiceRevenue = dateBookings.reduce((sum, b) => sum + (b.price || 0), 0);
 
       // Calculate service commission for the day
-      // Use proportional distribution based on revenue (more accurate than averaging)
       let dayServiceCommission = 0;
-      const totalServiceCommission = record.gross_commission - (record.product_commission || 0);
-      const totalServiceRevenue = record.total_service_revenue || 0;
 
-      if (totalServiceRevenue > 0 && dayServiceRevenue > 0) {
-        // Distribute total service commission proportionally based on revenue
-        const dayRevenueRatio = dayServiceRevenue / totalServiceRevenue;
-        dayServiceCommission = totalServiceCommission * dayRevenueRatio;
-      } else if (dayServiceRevenue > 0) {
-        // Fallback: use commission rate if no total data available
-        dayServiceCommission = dayServiceRevenue * (record.commission_rate / 100);
+      // Check if we have per-booking commission data (from newer records)
+      const hasBookingCommission = dateBookings.some(b => b.commission !== undefined);
+
+      if (hasBookingCommission) {
+        // Sum up exact commissions from bookings
+        dayServiceCommission = dateBookings.reduce((sum, b) => sum + (b.commission || 0), 0);
+      } else {
+        // Fallback: Use proportional distribution based on revenue
+        const totalServiceCommission = record.gross_commission - (record.product_commission || 0);
+        const totalServiceRevenue = record.total_service_revenue || 0;
+
+        if (totalServiceRevenue > 0 && dayServiceRevenue > 0) {
+          // Distribute total service commission proportionally based on revenue
+          const dayRevenueRatio = dayServiceRevenue / totalServiceRevenue;
+          dayServiceCommission = totalServiceCommission * dayRevenueRatio;
+        } else if (dayServiceRevenue > 0) {
+          // Fallback: use commission rate if no total data available
+          dayServiceCommission = dayServiceRevenue * (record.commission_rate / 100);
+        }
       }
 
       // Calculate daily totals for products
@@ -796,7 +805,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
         const bookingRows = dateBookings
           .map((b) => {
             const tm = (b.time || "--:--").slice(0, 5);
-            return `<div class="row"><span><span class="muted">${tm}</span> — ${b.service_name} <span class="muted">• ${b.customer_name} • ${b.booking_code}</span></span><span>${format(b.price)}</span></div>`;
+            const commInfo = b.commission !== undefined 
+              ? `<span class="muted" style="font-size: 0.9em">(${b.commission_rate}%: ${format(b.commission)})</span>` 
+              : "";
+            return `<div class="row"><span><span class="muted">${tm}</span> — ${b.service_name} <span class="muted">• ${b.customer_name} • ${b.booking_code}</span></span><span>${format(b.price)} ${commInfo}</span></div>`;
           })
           .join("");
         bookingsHtml = `<hr/><div style="font-weight: 600; margin: 12px 0 8px; color: white;">Service Booking Details</div>${bookingRows}`;
@@ -834,13 +846,21 @@ const PayrollManagement = ({ onRefresh, user }) => {
             <div class="accent">${format(dayTotalPay)}</div>
           </div>
           <hr/>
-          <div>
-            <div class="row"><span class="muted">Service Commission</span><span>${format(dayServiceCommission)}</span></div>
-            ${payBasisNote}
-            <div class="row"><span class="muted">Product Commission</span><span>${format(dayProductCommission)}</span></div>
-            <div class="row"><span class="muted">Final Daily Salary</span><span>${format(dayTotalPay)}</span></div>
-            <hr/>
-            <div class="row" style="font-weight:800"><span>Total</span><span class="accent">${format(dayTotalPay)}</span></div>
+          <div class="grid">
+            <div>
+              <div class="row"><span class="muted">Services</span><span>${dayServiceCount}</span></div>
+              <div class="row"><span class="muted">Service Revenue</span><span>${format(dayServiceRevenue)}</span></div>
+              <div class="row"><span class="muted">Products Sold</span><span>${dayProductCount}</span></div>
+              <div class="row"><span class="muted">Product Revenue</span><span>${format(dayProductRevenue)}</span></div>
+            </div>
+            <div>
+              <div class="row"><span class="muted">Service Commission</span><span>${format(dayServiceCommission)}</span></div>
+              ${payBasisNote}
+              <div class="row"><span class="muted">Product Commission</span><span>${format(dayProductCommission)}</span></div>
+              <div class="row"><span class="muted">Final Daily Salary</span><span>${format(dayTotalPay)}</span></div>
+              <hr/>
+              <div class="row" style="font-weight:800"><span>Total</span><span class="accent">${format(dayTotalPay)}</span></div>
+            </div>
           </div>
           ${bookingsHtml}
           ${productsHtml}
@@ -848,10 +868,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
       `;
     }).join("\n");
 
-    // Generate grand total card using calculated values to match daily breakdown
-    // This ensures that the sum of the daily cards matches the period summary
-    const calculatedNetPay = grandTotalDailySalary - (record.tax_deduction || 0) - (record.other_deductions || 0);
-
+    // Generate grand total card using authoritative backend values for accuracy
+    const totalServiceCommissionCalc = record.gross_commission - (record.product_commission || 0);
     const grandTotalCard = `
       <div class="card" style="background:#222; border:2px solid #ff8c42;">
         <div class="header">
@@ -859,17 +877,23 @@ const PayrollManagement = ({ onRefresh, user }) => {
             <div class="title">${record.barber_name} - PERIOD SUMMARY</div>
             <div class="muted">Payroll Period: ${dateRange}</div>
           </div>
-          <div class="accent" style="font-size:24px">${format(calculatedNetPay)}</div>
+          <div class="accent" style="font-size:24px">${format(record.net_pay)}</div>
         </div>
         <hr/>
-        <div>
-          <div class="row"><span class="muted">Total Service Commission</span><span>${format(grandTotalServiceCommission)}</span></div>
-          <div class="row"><span class="muted">Total Product Commission</span><span>${format(grandTotalProductCommission)}</span></div>
-          <div class="row"><span class="muted">Total Final Daily Salary</span><span>${format(grandTotalDailySalary)}</span></div>
-          ${(record.tax_deduction || 0) > 0 ? `<div class="row"><span class="muted">Tax Deduction</span><span>-${format(record.tax_deduction)}</span></div>` : ''}
-          ${(record.other_deductions || 0) > 0 ? `<div class="row"><span class="muted">Other Deductions</span><span>-${format(record.other_deductions)}</span></div>` : ''}
-          <hr/>
-          <div class="row" style="font-weight:800; font-size:18px"><span>GRAND TOTAL</span><span class="accent">${format(calculatedNetPay)}</span></div>
+        <div class="grid">
+          <div>
+            <div class="row"><span class="muted">Total Services</span><span>${record.total_services || 0}</span></div>
+            <div class="row"><span class="muted">Total Service Revenue</span><span>${format(record.total_service_revenue || 0)}</span></div>
+            <div class="row"><span class="muted">Total Products Sold</span><span>${record.total_products || 0}</span></div>
+            <div class="row"><span class="muted">Total Product Revenue</span><span>${format(record.total_product_revenue || 0)}</span></div>
+          </div>
+          <div>
+            <div class="row"><span class="muted">Total Service Commission</span><span>${format(totalServiceCommissionCalc)}</span></div>
+            <div class="row"><span class="muted">Total Product Commission</span><span>${format(record.product_commission || 0)}</span></div>
+            <div class="row"><span class="muted">Total Final Daily Salary</span><span>${format(record.daily_pay || 0)}</span></div>
+            <hr/>
+            <div class="row" style="font-weight:800; font-size:18px"><span>GRAND TOTAL</span><span class="accent">${format(record.net_pay)}</span></div>
+          </div>
         </div>
       </div>
     `;

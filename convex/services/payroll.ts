@@ -216,47 +216,32 @@ export const calculateBarberEarnings = query({
       return isCompleted && isInPeriod;
     });
 
-    // Load per-service commission rates (active during period) for the barber's branch
+    // Load per-service commission rates (active) for the barber's branch
+    // We fetch ALL active rates regardless of date to allow for retroactive corrections
     const serviceRates = await ctx.db
       .query("service_commission_rates")
       .withIndex("by_branch", (q) => q.eq("branch_id", barber.branch_id))
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("is_active"), true),
-          q.lte(q.field("effective_from"), args.period_end),
-          q.or(
-            q.eq(q.field("effective_until"), undefined),
-            q.gt(q.field("effective_until"), args.period_start),
-          ),
-        ),
-      )
+      .filter((q) => q.eq(q.field("is_active"), true))
       .collect();
 
-    const serviceRateMap = new Map<string, number>();
+    const serviceRateMap = new Map<string, any[]>();
     for (const r of serviceRates) {
-      // later entries can override; assume latest by updatedAt precedence if needed
-      // Convex doesn't let us sort here, but typical dataset small
-      // Use as-is
-      // @ts-ignore
-      serviceRateMap.set(r.service_id as string, r.commission_rate);
+      const rates = serviceRateMap.get(r.service_id as string) || [];
+      rates.push(r);
+      serviceRateMap.set(r.service_id as string, rates);
     }
 
     // Fallback commission rate if a service has no specific rate
-    const barberCommissionRate = await ctx.db
+    // Get latest active barber commission rate
+    const barberCommissionRates = await ctx.db
       .query("barber_commission_rates")
       .withIndex("by_barber_active", (q) =>
         q.eq("barber_id", args.barber_id).eq("is_active", true),
       )
-      .filter((q) =>
-        q.and(
-          q.lte(q.field("effective_from"), args.period_end),
-          q.or(
-            q.eq(q.field("effective_until"), undefined),
-            q.gt(q.field("effective_until"), args.period_start),
-          ),
-        ),
-      )
-      .first();
+      .collect();
+
+    // Sort by effective_from desc
+    const barberCommissionRate = barberCommissionRates.sort((a, b) => b.effective_from - a.effective_from)[0];
 
     const fallbackRate =
       barberCommissionRate?.commission_rate ||
@@ -275,29 +260,18 @@ export const calculateBarberEarnings = query({
     const transactionCommission = 0; // No separate transaction commission
 
     // Load product commission rates for this branch
+    // Fetch ALL active rates regardless of date
     const productRates = await ctx.db
       .query("product_commission_rates")
       .withIndex("by_branch", (q) => q.eq("branch_id", barber.branch_id))
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("is_active"), true),
-          q.lte(q.field("effective_from"), args.period_end),
-          q.or(
-            q.eq(q.field("effective_until"), undefined),
-            q.gt(q.field("effective_until"), args.period_start),
-          ),
-        ),
-      )
+      .filter((q) => q.eq(q.field("is_active"), true))
       .collect();
 
-    const productRateMap = new Map<string, { type: string, rate?: number, amount?: number }>();
+    const productRateMap = new Map<string, any[]>();
     for (const r of productRates) {
-      // @ts-ignore
-      productRateMap.set(r.product_id as string, {
-        type: r.commission_type,
-        rate: r.commission_rate,
-        amount: r.fixed_amount
-      });
+      const rates = productRateMap.get(r.product_id as string) || [];
+      rates.push(r);
+      productRateMap.set(r.product_id as string, rates);
     }
 
     // Calculate product commissions from transactions
@@ -314,21 +288,25 @@ export const calculateBarberEarnings = query({
           totalProductRevenue += productRevenue;
 
           // Calculate commission for this product based on type
-          const productConfig = productRateMap.get(product.product_id);
+          const rates = productRateMap.get(product.product_id) || [];
+          // ALWAYS use the latest active rate to allow retroactive corrections
+          // This assumes the user wants the currently configured rate to apply to the period being calculated
+          const activeRate = rates.sort((a, b) => b.effective_from - a.effective_from)[0];
+
           let productComm = 0;
           let commissionRate = fallbackRate;
           let commissionType = "percentage";
-          
-          if (productConfig) {
-            commissionType = productConfig.type;
-            if (productConfig.type === "fixed_amount" && productConfig.amount !== undefined) {
+
+          if (activeRate) {
+            commissionType = activeRate.commission_type;
+            if (activeRate.commission_type === "fixed_amount" && activeRate.fixed_amount !== undefined) {
               // Fixed amount per unit
-              productComm = productConfig.amount * product.quantity;
-              commissionRate = productConfig.amount; // Store fixed amount in rate field for display
-            } else if (productConfig.type === "percentage" && productConfig.rate !== undefined) {
+              productComm = activeRate.fixed_amount * product.quantity;
+              commissionRate = activeRate.fixed_amount; // Store fixed amount in rate field for display
+            } else if (activeRate.commission_type === "percentage" && activeRate.commission_rate !== undefined) {
               // Percentage of revenue
-              productComm = (productRevenue * productConfig.rate) / 100;
-              commissionRate = productConfig.rate;
+              productComm = (productRevenue * activeRate.commission_rate) / 100;
+              commissionRate = activeRate.commission_rate;
             } else {
               // Fallback to percentage
               productComm = (productRevenue * fallbackRate) / 100;
@@ -337,7 +315,7 @@ export const calculateBarberEarnings = query({
             // No specific rate, use fallback percentage
             productComm = (productRevenue * fallbackRate) / 100;
           }
-          
+
           productCommission += productComm;
 
           // Store product details for reporting
@@ -430,6 +408,16 @@ export const calculateBarberEarnings = query({
             "Customer";
         }
 
+        // Calculate commission for this booking
+        const rates = serviceRateMap.get(String(b.service)) || [];
+        // ALWAYS use the latest active rate to allow retroactive corrections
+        // This assumes the user wants the currently configured rate to apply to the period being calculated
+        const activeRate = rates.sort((a, b) => (b.effective_from || 0) - (a.effective_from || 0))[0];
+
+        const serviceRate = activeRate ? activeRate.commission_rate : fallbackRate;
+        const bookingCommission = ((b.price || 0) * (serviceRate || 0)) / 100;
+        serviceCommission += bookingCommission;
+
         // Store booking details
         const enrichedBooking = {
           id: b._id,
@@ -440,6 +428,8 @@ export const calculateBarberEarnings = query({
           service_name: service?.name || "Service",
           customer_name: customerName,
           updatedAt: b.updatedAt,
+          commission: bookingCommission,
+          commission_rate: serviceRate,
         };
 
         bookingsByDate.get(dateKey)!.push(enrichedBooking);
@@ -448,50 +438,33 @@ export const calculateBarberEarnings = query({
         totalServices += 1;
         totalServiceRevenue += b.price || 0;
 
-        // Calculate commission for this booking
-        const serviceRate =
-          serviceRateMap.get(String(b.service)) ?? fallbackRate;
-        const bookingCommission = ((b.price || 0) * (serviceRate || 0)) / 100;
-        serviceCommission += bookingCommission;
-
         // Track commission per day for correct daily pay calculation
         const currentDayCommission = dailyCommissions.get(dateKey) || 0;
         dailyCommissions.set(dateKey, currentDayCommission + bookingCommission);
       }
     }
 
-    // Get active daily rate for barber (prefer a rate effective within the period; if none, fall back to current active)
-    let barberDailyRate = await ctx.db
+    // Get active daily rates for barber overlapping the period
+    // Fetch ALL active rates to allow retroactive application
+    const barberDailyRates = await ctx.db
       .query("barber_daily_rates")
       .withIndex("by_barber_active", (q) =>
         q.eq("barber_id", args.barber_id).eq("is_active", true),
       )
-      .filter((q) =>
-        q.and(
-          q.lte(q.field("effective_from"), args.period_end),
-          q.or(
-            q.eq(q.field("effective_until"), undefined),
-            q.gt(q.field("effective_until"), args.period_start),
-          ),
-        ),
-      )
-      .first();
+      .collect();
 
-    if (!barberDailyRate) {
-      // No rate within period; use the currently active rate as a sensible fallback
-      barberDailyRate = await ctx.db
-        .query("barber_daily_rates")
-        .withIndex("by_barber_active", (q) =>
-          q.eq("barber_id", args.barber_id).eq("is_active", true),
-        )
-        .first();
-    }
+    // Use the latest rate as the "display" rate for the summary, or 0 if none
+    const latestDailyRate = barberDailyRates
+      .sort((a, b) => b.effective_from - a.effective_from)[0];
+    const displayDailyRate = latestDailyRate?.daily_rate || 0;
 
-    const dailyRate = barberDailyRate?.daily_rate || 0;
     console.log(
-      `Barber ${barber.full_name}: barberDailyRate =`,
-      barberDailyRate,
-      `dailyRate = ${dailyRate}`,
+      `Barber ${barber.full_name}: found ${barberDailyRates.length} daily rates. Display rate = ${displayDailyRate}`,
+    );
+
+    const dailyRate = displayDailyRate;
+    console.log(
+      `Barber ${barber.full_name}: dailyRate = ${dailyRate}`,
     );
 
     // PAYROLL CALCULATION RULES:
@@ -529,15 +502,23 @@ export const calculateBarberEarnings = query({
       console.log(
         `Barber ${barber.full_name}: dailyRate = ${dailyRate}, days worked = ${allWorkDates.size}`,
       );
+      console.log(
+        `Barber ${barber.full_name}: display dailyRate = ${dailyRate}, days worked = ${allWorkDates.size}`,
+      );
       for (const dateKey of allWorkDates) {
+        // Determine daily rate for this specific day
+        // ALWAYS use the latest active daily rate to allow retroactive corrections
+        const activeDailyRate = barberDailyRates.sort((a, b) => b.effective_from - a.effective_from)[0];
+
+        const currentDailyRate = activeDailyRate?.daily_rate || 0;
         const dayServiceCommission = dailyCommissions.get(dateKey) || 0;
         const dayProductCommission = dailyProductCommissions.get(dateKey) || 0;
-        
+
         // NEW LOGIC: Product commission is ADDED on top of daily salary
         // Compare service commission vs daily rate, then add product commission
-        const dayServicePay = Math.max(dayServiceCommission, dailyRate);
+        const dayServicePay = Math.max(dayServiceCommission, currentDailyRate);
         const dayPay = dayServicePay + dayProductCommission;
-        
+
         console.log(
           `Date ${dateKey}: service comm = ${dayServiceCommission}, product comm = ${dayProductCommission}, service pay = ${dayServicePay}, final dayPay (with product bonus) = ${dayPay}`,
         );
@@ -1628,7 +1609,7 @@ export const getProductCommissionSummary = action({
     // Get transactions for the barber in the period
     const allTransactions = await ctx.runQuery(
       api.services.transactions.getTransactionsByBarber,
-      { barber_id: args.barber_id as any },
+      { barberId: args.barber_id },
     );
 
     // Filter transactions by period and completed status
@@ -1666,7 +1647,7 @@ export const getProductCommissionSummary = action({
           let commissionAmount = 0;
           let commissionType = "percentage";
           let commissionValue = fallbackRate;
-          
+
           if (productConfig) {
             commissionType = productConfig.type;
             if (productConfig.type === "fixed_amount" && productConfig.amount !== undefined) {
