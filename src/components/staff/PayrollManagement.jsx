@@ -846,21 +846,13 @@ const PayrollManagement = ({ onRefresh, user }) => {
             <div class="accent">${format(dayTotalPay)}</div>
           </div>
           <hr/>
-          <div class="grid">
-            <div>
-              <div class="row"><span class="muted">Services</span><span>${dayServiceCount}</span></div>
-              <div class="row"><span class="muted">Service Revenue</span><span>${format(dayServiceRevenue)}</span></div>
-              <div class="row"><span class="muted">Products Sold</span><span>${dayProductCount}</span></div>
-              <div class="row"><span class="muted">Product Revenue</span><span>${format(dayProductRevenue)}</span></div>
-            </div>
-            <div>
-              <div class="row"><span class="muted">Service Commission</span><span>${format(dayServiceCommission)}</span></div>
-              ${payBasisNote}
-              <div class="row"><span class="muted">Product Commission</span><span>${format(dayProductCommission)}</span></div>
-              <div class="row"><span class="muted">Final Daily Salary</span><span>${format(dayTotalPay)}</span></div>
-              <hr/>
-              <div class="row" style="font-weight:800"><span>Total</span><span class="accent">${format(dayTotalPay)}</span></div>
-            </div>
+          <div>
+            <div class="row"><span class="muted">Service Commission</span><span>${format(dayServiceCommission)}</span></div>
+            ${payBasisNote}
+            <div class="row"><span class="muted">Product Commission</span><span>${format(dayProductCommission)}</span></div>
+            <div class="row"><span class="muted">Final Daily Salary</span><span>${format(dayTotalPay)}</span></div>
+            <hr/>
+            <div class="row" style="font-weight:800"><span>Total</span><span class="accent">${format(dayTotalPay)}</span></div>
           </div>
           ${bookingsHtml}
           ${productsHtml}
@@ -868,8 +860,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
       `;
     }).join("\n");
 
-    // Generate grand total card using authoritative backend values for accuracy
-    const totalServiceCommissionCalc = record.gross_commission - (record.product_commission || 0);
+    // Generate grand total card using calculated values to match daily breakdown
+    // This ensures that the sum of the daily cards matches the period summary
+    const calculatedNetPay = grandTotalDailySalary - (record.tax_deduction || 0) - (record.other_deductions || 0);
+
     const grandTotalCard = `
       <div class="card" style="background:#222; border:2px solid #ff8c42;">
         <div class="header">
@@ -877,23 +871,17 @@ const PayrollManagement = ({ onRefresh, user }) => {
             <div class="title">${record.barber_name} - PERIOD SUMMARY</div>
             <div class="muted">Payroll Period: ${dateRange}</div>
           </div>
-          <div class="accent" style="font-size:24px">${format(record.net_pay)}</div>
+          <div class="accent" style="font-size:24px">${format(calculatedNetPay)}</div>
         </div>
         <hr/>
-        <div class="grid">
-          <div>
-            <div class="row"><span class="muted">Total Services</span><span>${record.total_services || 0}</span></div>
-            <div class="row"><span class="muted">Total Service Revenue</span><span>${format(record.total_service_revenue || 0)}</span></div>
-            <div class="row"><span class="muted">Total Products Sold</span><span>${record.total_products || 0}</span></div>
-            <div class="row"><span class="muted">Total Product Revenue</span><span>${format(record.total_product_revenue || 0)}</span></div>
-          </div>
-          <div>
-            <div class="row"><span class="muted">Total Service Commission</span><span>${format(totalServiceCommissionCalc)}</span></div>
-            <div class="row"><span class="muted">Total Product Commission</span><span>${format(record.product_commission || 0)}</span></div>
-            <div class="row"><span class="muted">Total Final Daily Salary</span><span>${format(record.daily_pay || 0)}</span></div>
-            <hr/>
-            <div class="row" style="font-weight:800; font-size:18px"><span>GRAND TOTAL</span><span class="accent">${format(record.net_pay)}</span></div>
-          </div>
+        <div>
+          <div class="row"><span class="muted">Total Service Commission</span><span>${format(grandTotalServiceCommission)}</span></div>
+          <div class="row"><span class="muted">Total Product Commission</span><span>${format(grandTotalProductCommission)}</span></div>
+          <div class="row"><span class="muted">Total Final Daily Salary</span><span>${format(grandTotalDailySalary)}</span></div>
+          ${(record.tax_deduction || 0) > 0 ? `<div class="row"><span class="muted">Tax Deduction</span><span>-${format(record.tax_deduction)}</span></div>` : ''}
+          ${(record.other_deductions || 0) > 0 ? `<div class="row"><span class="muted">Other Deductions</span><span>-${format(record.other_deductions)}</span></div>` : ''}
+          <hr/>
+          <div class="row" style="font-weight:800; font-size:18px"><span>GRAND TOTAL</span><span class="accent">${format(calculatedNetPay)}</span></div>
         </div>
       </div>
     `;
