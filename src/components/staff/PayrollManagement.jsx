@@ -175,10 +175,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
     api.services.payroll.getBookingsByBarberAndPeriod,
     showBookingsModal && selectedRecord && selectedPeriod
       ? {
-          barber_id: selectedRecord.barber_id,
-          period_start: selectedPeriod.period_start,
-          period_end: selectedPeriod.period_end,
-        }
+        barber_id: selectedRecord.barber_id,
+        period_start: selectedPeriod.period_start,
+        period_end: selectedPeriod.period_end,
+      }
       : "skip",
   );
 
@@ -742,7 +742,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     const dailyCards = sortedDates.map((dateKey) => {
       const dateBookings = bookingsByDate[dateKey] || [];
       const dateProducts = productsByDate[dateKey] || [];
-      
+
       const dateLabel = new Date(dateKey).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
@@ -753,13 +753,13 @@ const PayrollManagement = ({ onRefresh, user }) => {
       // Calculate daily totals for services
       const dayServiceCount = dateBookings.length;
       const dayServiceRevenue = dateBookings.reduce((sum, b) => sum + (b.price || 0), 0);
-      
+
       // Calculate service commission for the day
       // Use proportional distribution based on revenue (more accurate than averaging)
       let dayServiceCommission = 0;
       const totalServiceCommission = record.gross_commission - (record.product_commission || 0);
       const totalServiceRevenue = record.total_service_revenue || 0;
-      
+
       if (totalServiceRevenue > 0 && dayServiceRevenue > 0) {
         // Distribute total service commission proportionally based on revenue
         const dayRevenueRatio = dayServiceRevenue / totalServiceRevenue;
@@ -807,8 +807,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
       if (dateProducts.length > 0) {
         const productRows = dateProducts
           .map((p) => {
-            const commissionLabel = p.commission_type === "fixed_amount" 
-              ? `${format(p.commission_rate)}/unit` 
+            const commissionLabel = p.commission_type === "fixed_amount"
+              ? `${format(p.commission_rate)}/unit`
               : `${p.commission_rate}%`;
             return `<div class="row"><span>${p.product_name} <span class="muted">• Qty: ${p.quantity} • ${commissionLabel} • ${p.customer_name}</span></span><span>${format(p.total_amount)} <span class="muted">(+${format(p.commission_amount)})</span></span></div>`;
           })
@@ -818,12 +818,12 @@ const PayrollManagement = ({ onRefresh, user }) => {
 
       // Determine which pay basis was used for clarity
       const usedDailyRate = dayServiceCommission < dailyRate;
-      const payBasisNote = usedDailyRate 
+      const payBasisNote = usedDailyRate
         ? `<div class="row"><span class="muted" style="font-size:11px; font-style:italic;">Daily Rate Applied: ${format(dailyRate)}</span><span class="muted" style="font-size:11px;">(Commission < Rate)</span></div>`
-        : dailyRate > 0 
+        : dailyRate > 0
           ? `<div class="row"><span class="muted" style="font-size:11px; font-style:italic;">Daily Rate: ${format(dailyRate)}</span><span></span></div>`
           : '';
-      
+
       return `
         <div class="card">
           <div class="header">
@@ -834,21 +834,13 @@ const PayrollManagement = ({ onRefresh, user }) => {
             <div class="accent">${format(dayTotalPay)}</div>
           </div>
           <hr/>
-          <div class="grid">
-            <div>
-              <div class="row"><span class="muted">Services</span><span>${dayServiceCount}</span></div>
-              <div class="row"><span class="muted">Service Revenue</span><span>${format(dayServiceRevenue)}</span></div>
-              <div class="row"><span class="muted">Products Sold</span><span>${dayProductCount}</span></div>
-              <div class="row"><span class="muted">Product Revenue</span><span>${format(dayProductRevenue)}</span></div>
-            </div>
-            <div>
-              <div class="row"><span class="muted">Service Commission</span><span>${format(dayServiceCommission)}</span></div>
-              ${payBasisNote}
-              <div class="row"><span class="muted">Product Commission</span><span>${format(dayProductCommission)}</span></div>
-              <div class="row"><span class="muted">Final Daily Salary</span><span>${format(dayTotalPay)}</span></div>
-              <hr/>
-              <div class="row" style="font-weight:800"><span>Total</span><span class="accent">${format(dayTotalPay)}</span></div>
-            </div>
+          <div>
+            <div class="row"><span class="muted">Service Commission</span><span>${format(dayServiceCommission)}</span></div>
+            ${payBasisNote}
+            <div class="row"><span class="muted">Product Commission</span><span>${format(dayProductCommission)}</span></div>
+            <div class="row"><span class="muted">Final Daily Salary</span><span>${format(dayTotalPay)}</span></div>
+            <hr/>
+            <div class="row" style="font-weight:800"><span>Total</span><span class="accent">${format(dayTotalPay)}</span></div>
           </div>
           ${bookingsHtml}
           ${productsHtml}
@@ -856,8 +848,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
       `;
     }).join("\n");
 
-    // Generate grand total card using authoritative backend values for accuracy
-    const totalServiceCommissionCalc = record.gross_commission - (record.product_commission || 0);
+    // Generate grand total card using calculated values to match daily breakdown
+    // This ensures that the sum of the daily cards matches the period summary
+    const calculatedNetPay = grandTotalDailySalary - (record.tax_deduction || 0) - (record.other_deductions || 0);
+
     const grandTotalCard = `
       <div class="card" style="background:#222; border:2px solid #ff8c42;">
         <div class="header">
@@ -865,23 +859,17 @@ const PayrollManagement = ({ onRefresh, user }) => {
             <div class="title">${record.barber_name} - PERIOD SUMMARY</div>
             <div class="muted">Payroll Period: ${dateRange}</div>
           </div>
-          <div class="accent" style="font-size:24px">${format(record.net_pay)}</div>
+          <div class="accent" style="font-size:24px">${format(calculatedNetPay)}</div>
         </div>
         <hr/>
-        <div class="grid">
-          <div>
-            <div class="row"><span class="muted">Total Services</span><span>${record.total_services || 0}</span></div>
-            <div class="row"><span class="muted">Total Service Revenue</span><span>${format(record.total_service_revenue || 0)}</span></div>
-            <div class="row"><span class="muted">Total Products Sold</span><span>${record.total_products || 0}</span></div>
-            <div class="row"><span class="muted">Total Product Revenue</span><span>${format(record.total_product_revenue || 0)}</span></div>
-          </div>
-          <div>
-            <div class="row"><span class="muted">Total Service Commission</span><span>${format(totalServiceCommissionCalc)}</span></div>
-            <div class="row"><span class="muted">Total Product Commission</span><span>${format(record.product_commission || 0)}</span></div>
-            <div class="row"><span class="muted">Total Final Daily Salary</span><span>${format(record.daily_pay || 0)}</span></div>
-            <hr/>
-            <div class="row" style="font-weight:800; font-size:18px"><span>GRAND TOTAL</span><span class="accent">${format(record.net_pay)}</span></div>
-          </div>
+        <div>
+          <div class="row"><span class="muted">Total Service Commission</span><span>${format(grandTotalServiceCommission)}</span></div>
+          <div class="row"><span class="muted">Total Product Commission</span><span>${format(grandTotalProductCommission)}</span></div>
+          <div class="row"><span class="muted">Total Final Daily Salary</span><span>${format(grandTotalDailySalary)}</span></div>
+          ${(record.tax_deduction || 0) > 0 ? `<div class="row"><span class="muted">Tax Deduction</span><span>-${format(record.tax_deduction)}</span></div>` : ''}
+          ${(record.other_deductions || 0) > 0 ? `<div class="row"><span class="muted">Other Deductions</span><span>-${format(record.other_deductions)}</span></div>` : ''}
+          <hr/>
+          <div class="row" style="font-weight:800; font-size:18px"><span>GRAND TOTAL</span><span class="accent">${format(calculatedNetPay)}</span></div>
         </div>
       </div>
     `;
@@ -1014,16 +1002,16 @@ const PayrollManagement = ({ onRefresh, user }) => {
           const items = productsByDate[dateKey];
           const dateTotal = items.reduce((sum, p) => sum + p.total_amount, 0);
           const dateCommission = items.reduce((sum, p) => sum + p.commission_amount, 0);
-          
+
           const rows = items
             .map((p) => {
-              const commissionLabel = p.commission_type === "fixed_amount" 
-                ? `${format(p.commission_rate)}/unit` 
+              const commissionLabel = p.commission_type === "fixed_amount"
+                ? `${format(p.commission_rate)}/unit`
                 : `${p.commission_rate}%`;
               return `<div class="row"><span><span class="muted">${dateKey}</span> — ${p.product_name} <span class="muted">• Qty: ${p.quantity} • ${commissionLabel} • ${p.customer_name} • ${p.transaction_id}</span></span><span>${format(p.total_amount)} <span class="muted">(+${format(p.commission_amount)})</span></span></div>`;
             })
             .join("");
-          
+
           const footer = `<div class="row" style="font-weight:600"><span>Total (${dateKey})</span><span>${format(dateTotal)} | Commission: ${format(dateCommission)}</span></div>`;
           return rows + footer + "<hr/>";
         })
@@ -1032,7 +1020,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
       const grandTotal = productsDetail.reduce((sum, p) => sum + p.total_amount, 0);
       const grandCommission = productsDetail.reduce((sum, p) => sum + p.commission_amount, 0);
       const grand = `<div class="row" style="font-weight:800"><span>Product Grand Total</span><span>${format(grandTotal)} | Commission: ${format(grandCommission)}</span></div>`;
-      
+
       productsListHtml = `
         <hr/>
         <div style="font-weight: 600; margin: 12px 0 8px; color: white;">Product Transaction Details</div>
@@ -1077,15 +1065,15 @@ const PayrollManagement = ({ onRefresh, user }) => {
           .map((b) => {
             const dt = b.date
               ? new Date(b.date).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })
               : new Date(b.updatedAt).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                });
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              });
             const tm = (b.time || "--:--").slice(0, 5);
             return `<div class="row"><span><span class="muted">${dt} ${tm}</span> — ${b.service_name} <span class="muted">• ${b.customer_name} • ${b.booking_code}</span></span><span>${format(b.price)}</span></div>`;
           })
@@ -1223,7 +1211,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
         enriched = record;
       }
     }
-    
+
     // Use the new daily breakdown section for printing
     const html = buildDoc(
       `Payroll – ${record.barber_name}`,
@@ -1244,10 +1232,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
             r.bookings_detail && r.bookings_detail.length > 0
               ? Promise.resolve(r.bookings_detail)
               : getBookingsForPrint({
-                  barber_id: r.barber_id,
-                  period_start: selectedPeriod.period_start,
-                  period_end: selectedPeriod.period_end,
-                }),
+                barber_id: r.barber_id,
+                period_start: selectedPeriod.period_start,
+                period_end: selectedPeriod.period_end,
+              }),
             getBookingsSummaryForPrint({
               barber_id: r.barber_id,
               period_start: selectedPeriod.period_start,
@@ -1276,7 +1264,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
         }
       }),
     );
-    
+
     // Use the new daily breakdown section for each record
     const sections = enriched.map((r) => dailyBreakdownSection(r)).join("\n");
     const title = selectedPeriod
@@ -1383,10 +1371,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
                       Duration:{" "}
                       {periodDates.startDate && periodDates.endDate
                         ? Math.ceil(
-                            (new Date(periodDates.endDate) -
-                              new Date(periodDates.startDate)) /
-                              (1000 * 60 * 60 * 24),
-                          ) + 1
+                          (new Date(periodDates.endDate) -
+                            new Date(periodDates.startDate)) /
+                          (1000 * 60 * 60 * 24),
+                        ) + 1
                         : 0}{" "}
                       days
                     </p>
@@ -1934,7 +1922,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                       {p.commission_type === "fixed_amount" ? "Fixed:" : "Rate:"}
                                     </span>
                                     <span className="text-blue-400 font-medium">
-                                      {p.commission_type === "fixed_amount" 
+                                      {p.commission_type === "fixed_amount"
                                         ? `${formatCurrency(p.commission_rate || 0)}/unit`
                                         : `${p.commission_rate || fallbackRate}%`
                                       }
@@ -2204,11 +2192,11 @@ const PayrollManagement = ({ onRefresh, user }) => {
                       const existing = productRateMap.get(prod._id);
                       const editData = productRateEdits[prod._id];
                       const currentType = editData?.type || existing?.commission_type || "percentage";
-                      const currentValue = editData?.value ?? 
-                        (existing ? 
-                          (existing.commission_type === "fixed_amount" ? existing.fixed_amount : existing.commission_rate) 
+                      const currentValue = editData?.value ??
+                        (existing ?
+                          (existing.commission_type === "fixed_amount" ? existing.fixed_amount : existing.commission_rate)
                           : "");
-                      
+
                       return (
                         <tr
                           key={prod._id}
@@ -2217,8 +2205,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
                           <td className="py-2 px-2 text-white">{prod.name}</td>
                           <td className="py-2 px-2 text-center text-gray-300">
                             {existing ? (
-                              existing.commission_type === "fixed_amount" ? 
-                                `₱${existing.fixed_amount}` : 
+                              existing.commission_type === "fixed_amount" ?
+                                `₱${existing.fixed_amount}` :
                                 `${existing.commission_rate}%`
                             ) : "—"}
                           </td>
@@ -2822,13 +2810,12 @@ const PayrollManagement = ({ onRefresh, user }) => {
                       </td>
                       <td className="py-4 px-4">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            period.status === "paid"
-                              ? "bg-green-500/20 text-green-400"
-                              : period.status === "calculated"
-                                ? "bg-yellow-500/20 text-yellow-400"
-                                : "bg-gray-500/20 text-gray-400"
-                          }`}
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${period.status === "paid"
+                            ? "bg-green-500/20 text-green-400"
+                            : period.status === "calculated"
+                              ? "bg-yellow-500/20 text-yellow-400"
+                              : "bg-gray-500/20 text-gray-400"
+                            }`}
                         >
                           {period.status === "paid"
                             ? "Paid"
@@ -3054,11 +3041,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
                       </div>
                       <div className="flex items-center space-x-2">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            record.status === "paid"
-                              ? "bg-green-500/20 text-green-400"
-                              : "bg-yellow-500/20 text-yellow-400"
-                          }`}
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${record.status === "paid"
+                            ? "bg-green-500/20 text-green-400"
+                            : "bg-yellow-500/20 text-yellow-400"
+                            }`}
                         >
                           {record.status === "paid" ? "Paid" : "Pending"}
                         </span>
@@ -3158,9 +3144,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
                               <span className="text-gray-300">
                                 {record.total_services > 0
                                   ? formatCurrency(
-                                      record.total_service_revenue /
-                                        record.total_services,
-                                    )
+                                    record.total_service_revenue /
+                                    record.total_services,
+                                  )
                                   : "₱0"}
                               </span>
                             </div>
@@ -3205,9 +3191,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
                               <span className="text-gray-300">
                                 {record.total_products > 0
                                   ? formatCurrency(
-                                      record.total_product_revenue /
-                                        record.total_products,
-                                    )
+                                    record.total_product_revenue /
+                                    record.total_products,
+                                  )
                                   : "₱0"}
                               </span>
                             </div>
@@ -3319,9 +3305,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                 <span className="text-white">
                                   {record.days_worked > 0
                                     ? (
-                                        record.total_services /
-                                        record.days_worked
-                                      ).toFixed(1)
+                                      record.total_services /
+                                      record.days_worked
+                                    ).toFixed(1)
                                     : "0"}
                                 </span>
                               </div>
@@ -3332,9 +3318,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                 <span className="text-white">
                                   {record.days_worked > 0
                                     ? formatCurrency(
-                                        record.total_service_revenue /
-                                          record.days_worked,
-                                      )
+                                      record.total_service_revenue /
+                                      record.days_worked,
+                                    )
                                     : "₱0"}
                                 </span>
                               </div>
@@ -3345,9 +3331,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                 <span className="text-white">
                                   {record.days_worked > 0
                                     ? formatCurrency(
-                                        record.gross_commission /
-                                          record.days_worked,
-                                      )
+                                      record.gross_commission /
+                                      record.days_worked,
+                                    )
                                     : "₱0"}
                                 </span>
                               </div>
@@ -3569,22 +3555,20 @@ const PayrollManagement = ({ onRefresh, user }) => {
         <div className="flex items-center space-x-4">
           <button
             onClick={() => setActiveView("overview")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-              activeView === "overview"
-                ? "bg-[var(--color-primary)] text-white"
-                : "text-gray-300 hover:text-white hover:bg-[#1A1A1A]"
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeView === "overview"
+              ? "bg-[var(--color-primary)] text-white"
+              : "text-gray-300 hover:text-white hover:bg-[#1A1A1A]"
+              }`}
           >
             Overview
           </button>
           {selectedPeriod && (
             <button
               onClick={() => setActiveView("period")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeView === "period"
-                  ? "bg-[var(--color-primary)] text-white"
-                  : "text-gray-300 hover:text-white hover:bg-[#1A1A1A]"
-              }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeView === "period"
+                ? "bg-[var(--color-primary)] text-white"
+                : "text-gray-300 hover:text-white hover:bg-[#1A1A1A]"
+                }`}
             >
               Period Details
             </button>
