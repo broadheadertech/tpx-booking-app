@@ -1017,10 +1017,23 @@ export const sendVoucherEmailWithQR = action({
     voucherValue: v.string(),
     pointsRequired: v.number(),
     expiresAt: v.string(),
-    qrCodeBase64: v.string(), // Base64 encoded QR code image
     recipientName: v.string(),
+    voucherId: v.optional(v.string()), // Made optional for backward compatibility
   },
   handler: async (ctx, args) => {
+    // Generate a robust QR code URL using a public API
+    // We construct a JSON payload similar to the client app for compatibility
+    const qrPayload = JSON.stringify({
+      voucherId: args.voucherId || "",
+      code: args.voucherCode,
+      value: args.voucherValue,
+      type: "voucher",
+      brand: "TipunoX Angeles Barbershop"
+    });
+    
+    // Public API URL that generates the QR code image on the fly
+    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrPayload)}`;
+
     const emailData = {
       from: 'TPX Barbershop <no-reply@tipunox.broadheader.com>',
       to: args.email,
@@ -1211,7 +1224,7 @@ export const sendVoucherEmailWithQR = action({
               <div class="qr-container">
                 <div class="qr-instruction">📱 Scan at checkout</div>
                 <div class="qr-code">
-                  <img src="${args.qrCodeBase64}" alt="Voucher QR Code" style="max-width: 100%; width: 180px; height: 180px; display: block; margin: 0 auto; border-radius: 4px; image-rendering: pixelated;" />
+                  <img src="${qrImageUrl}" alt="Voucher QR Code" style="max-width: 100%; width: 180px; height: 180px; display: block; margin: 0 auto; border-radius: 4px; image-rendering: pixelated;" />
                   <div style="margin-top: 8px; font-size: 12px; color: #999;">Voucher Code: ${args.voucherCode}</div>
                 </div>
               </div>
@@ -1253,11 +1266,12 @@ export const sendVoucherEmailWithQR = action({
         console.log('  To:', args.email);
         console.log('  Subject:', emailData.subject);
         console.log('  Voucher Code:', args.voucherCode);
+        console.log('  QR URL:', qrImageUrl);
         return { success: true, messageId: 'dev-mock-' + Date.now(), isDev: true };
       }
 
       // Production: Use Resend SDK
-      const result = await resend.emails.send(emailData);
+      const result = await resend.emails.send(emailData as any);
       
       if (result.error) {
         console.error('Voucher email service error:', result.error);

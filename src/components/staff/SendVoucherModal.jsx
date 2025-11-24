@@ -224,10 +224,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
           }
 
           // Step 3: Send email with voucher details using backend action
-          console.log(
-            "Generated QR Code URL length:",
-            personalizedQrUrl.length
-          );
+          console.log("Sending voucher email to:", selectedUser.email);
 
           const voucherEmailData = {
             email: selectedUser.email,
@@ -236,13 +233,10 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
             voucherValue: `₱${parseFloat(voucher.value).toFixed(2)}`,
             pointsRequired: voucher.points_required || 0,
             expiresAt: new Date(voucher.expires_at).toLocaleDateString(),
-            qrCodeBase64: personalizedQrUrl // Send the full base64 string
+            voucherId: voucher._id || voucher.id,
           };
 
-          console.log("Sending voucher email with data:", {
-            ...voucherEmailData,
-            qrCodeBase64: `QR_CODE_DATA_URL (${personalizedQrUrl.length} chars)`,
-          });
+          console.log("Sending voucher email with data:", voucherEmailData);
 
           const emailResult = await sendVoucherEmailAction(voucherEmailData);
           
