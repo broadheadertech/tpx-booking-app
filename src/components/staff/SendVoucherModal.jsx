@@ -162,11 +162,18 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
     try {
       for (const selectedUser of selectedUsers) {
         try {
+          // Ensure we have valid IDs
+          const userId = selectedUser._id || selectedUser.id;
+          const staffId = user._id || user.id;
+
+          if (!userId) throw new Error(`Invalid user ID for ${selectedUser.username}`);
+          if (!staffId) throw new Error("Invalid staff ID (you must be logged in)");
+
           // Step 1: Assign voucher to user via Convex
           const assignData = {
             code: voucher.code,
-            user_id: selectedUser._id || selectedUser.id,
-            assigned_by: user.id, // Staff member assigning the voucher
+            user_id: userId,
+            assigned_by: staffId,
           };
 
           console.log("Assigning voucher to user:", assignData);
@@ -217,10 +224,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
           }
 
           // Step 3: Send email with voucher details using backend action
-          console.log(
-            "Generated QR Code URL length:",
-            personalizedQrUrl.length
-          );
+          console.log("Sending voucher email to:", selectedUser.email);
 
           const voucherEmailData = {
             email: selectedUser.email,
@@ -229,13 +233,10 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
             voucherValue: `₱${parseFloat(voucher.value).toFixed(2)}`,
             pointsRequired: voucher.points_required || 0,
             expiresAt: new Date(voucher.expires_at).toLocaleDateString(),
-            qrCodeBase64: personalizedQrUrl // Send the full base64 string
+            voucherId: voucher._id || voucher.id,
           };
 
-          console.log("Sending voucher email with data:", {
-            ...voucherEmailData,
-            qrCodeBase64: `QR_CODE_DATA_URL (${personalizedQrUrl.length} chars)`,
-          });
+          console.log("Sending voucher email with data:", voucherEmailData);
 
           const emailResult = await sendVoucherEmailAction(voucherEmailData);
           
