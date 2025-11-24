@@ -43,6 +43,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const [showProductsModal, setShowProductsModal] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showPayslipModal, setShowPayslipModal] = useState(false);
+  const [payslipTarget, setPayslipTarget] = useState("all");
+
+  // Check if user is available
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteTargetPeriod, setDeleteTargetPeriod] = useState(null);
   const [showRecalculateConfirm, setShowRecalculateConfirm] = useState(false);
@@ -1278,12 +1282,184 @@ const PayrollManagement = ({ onRefresh, user }) => {
     );
 
     // Use the new daily breakdown section for each record
-    const sections = enriched.map((r) => dailyBreakdownSection(r)).join("\n");
+    const sections = enriched.map((r) => dailyBreakdownSection(r)).join("\n<div style='page-break-after: always;'></div>\n");
     const title = selectedPeriod
       ? `Payroll – ${formatDate(selectedPeriod.period_start)} to ${formatDate(selectedPeriod.period_end)}`
       : "Payroll – All";
     const html = buildDoc(title, sections);
     printHtml(html);
+  };
+
+  const generatePayslipCard = (record) => {
+    const format = (amt) =>
+      new Intl.NumberFormat("en-PH", {
+        style: "currency",
+        currency: "PHP",
+        minimumFractionDigits: 0,
+      }).format(amt || 0);
+    
+    const dateRange = selectedPeriod
+      ? `${formatDate(selectedPeriod.period_start)} – ${formatDate(selectedPeriod.period_end)}`
+      : "";
+
+    // Calculate totals (logic copied from dailyBreakdownSection to ensure consistency)
+    // Group bookings by date
+    const bookingsByDate = {};
+    const bookingsDetail = Array.isArray(record.bookings_detail) ? record.bookings_detail : [];
+    bookingsDetail.forEach((b) => {
+      const dateKey = b.date || new Date(b.updatedAt).toISOString().split("T")[0];
+      if (!bookingsByDate[dateKey]) {
+        bookingsByDate[dateKey] = [];
+      }
+      bookingsByDate[dateKey].push(b);
+    });
+
+    // Group products by date
+    const productsByDate = {};
+    const productsDetail = Array.isArray(record.products_detail) ? record.products_detail : [];
+    productsDetail.forEach((p) => {
+      const dateKey = new Date(p.date).toISOString().split("T")[0];
+      if (!productsByDate[dateKey]) {
+        productsByDate[dateKey] = [];
+      }
+      productsByDate[dateKey].push(p);
+    });
+
+    const allDates = new Set([...Object.keys(bookingsByDate), ...Object.keys(productsByDate)]);
+    
+    let grandTotalServiceCommission = 0;
+    let grandTotalProductCommission = 0;
+    let grandTotalDailySalary = 0;
+
+    allDates.forEach((dateKey) => {
+      const dateBookings = bookingsByDate[dateKey] || [];
+      const dateProducts = productsByDate[dateKey] || [];
+
+      const dayServiceRevenue = dateBookings.reduce((sum, b) => sum + (b.price || 0), 0);
+      let dayServiceCommission = 0;
+
+      const hasBookingCommission = dateBookings.some(b => b.commission !== undefined);
+      if (hasBookingCommission) {
+        dayServiceCommission = dateBookings.reduce((sum, b) => sum + (b.commission || 0), 0);
+      } else {
+        const totalServiceCommission = record.gross_commission - (record.product_commission || 0);
+        const totalServiceRevenue = record.total_service_revenue || 0;
+        if (totalServiceRevenue > 0 && dayServiceRevenue > 0) {
+          const dayRevenueRatio = dayServiceRevenue / totalServiceRevenue;
+          dayServiceCommission = totalServiceCommission * dayRevenueRatio;
+        } else if (dayServiceRevenue > 0) {
+          dayServiceCommission = dayServiceRevenue * (record.commission_rate / 100);
+        }
+      }
+
+      const dayProductCommission = dateProducts.reduce((sum, p) => sum + p.commission_amount, 0);
+      const dailyRate = record.daily_rate || 0;
+      const dayServicePay = Math.max(dayServiceCommission, dailyRate);
+      const dayTotalPay = dayServicePay + dayProductCommission;
+
+      grandTotalServiceCommission += dayServiceCommission;
+      grandTotalProductCommission += dayProductCommission;
+      grandTotalDailySalary += dayTotalPay;
+    });
+
+    const calculatedNetPay = grandTotalDailySalary - (record.tax_deduction || 0) - (record.other_deductions || 0);
+
+    return `
+      <div class="card" style="background:#fff; border:2px solid #ff8c42; color: #000; max-width: 600px; margin: 0 auto;">
+        <div class="header">
+          <div>
+            <div class="title" style="font-size: 16px; font-weight: 800; color: #000;">${record.barber_name} - PERIOD SUMMARY</div>
+            <div style="color: #555; font-size: 12px;">Payroll Period: ${dateRange}</div>
+          </div>
+          <div style="font-size: 20px; font-weight: 800; color: #000;">${format(calculatedNetPay)}</div>
+        </div>
+        <hr style="border-top: 2px solid #000; margin: 10px 0;"/>
+        <div style="font-size: 14px;">
+          <div class="row"><span style="color: #333;">Total Service Commission</span><span style="font-weight: 600;">${format(grandTotalServiceCommission)}</span></div>
+          <div class="row"><span style="color: #333;">Total Product Commission</span><span style="font-weight: 600;">${format(grandTotalProductCommission)}</span></div>
+          <div class="row"><span style="color: #333;">Total Final Daily Salary</span><span style="font-weight: 600;">${format(grandTotalDailySalary)}</span></div>
+          ${(record.tax_deduction || 0) > 0 ? `<div class="row"><span style="color: #333;">Tax Deduction</span><span style="color: #d32f2f;">-${format(record.tax_deduction)}</span></div>` : ''}
+          ${(record.other_deductions || 0) > 0 ? `<div class="row"><span style="color: #333;">Other Deductions</span><span style="color: #d32f2f;">-${format(record.other_deductions)}</span></div>` : ''}
+          <hr style="border-top: 2px solid #000; margin: 10px 0;"/>
+          <div class="row" style="font-weight:800; font-size:16px; margin-top: 4px;"><span>GRAND TOTAL</span><span>${format(calculatedNetPay)}</span></div>
+        </div>
+      </div>
+    `;
+  };
+
+  const handleGeneratePayslip = async () => {
+    const records = Array.isArray(currentPeriodRecords)
+      ? currentPeriodRecords
+      : [];
+    
+    let targetRecords = [];
+    if (payslipTarget === "all") {
+      targetRecords = records;
+    } else {
+      targetRecords = records.filter(r => r.barber_id === payslipTarget);
+    }
+
+    if (targetRecords.length === 0) {
+      setShowPayslipModal(false);
+      return;
+    }
+
+    // Fetch latest details if needed, similar to handlePrintAll
+    const enriched = await Promise.all(
+      targetRecords.map(async (r) => {
+        if (!selectedPeriod) return r;
+        try {
+          // Check if we already have details
+          if (r.bookings_detail && r.bookings_detail.length > 0) return r;
+
+          const items = await getBookingsForPrint({
+            barber_id: r.barber_id,
+            period_start: selectedPeriod.period_start,
+            period_end: selectedPeriod.period_end,
+          });
+          const products = r.products_detail || []; // Assuming products are already there or don't need fetch
+          
+          return {
+            ...r,
+            bookings_detail: items,
+            products_detail: products,
+          };
+        } catch (e) {
+          return r;
+        }
+      })
+    );
+
+    const sections = enriched.map(r => generatePayslipCard(r)).join("\n<div style='page-break-after: always; height: 40px;'></div>\n");
+    const title = `Payslips – ${selectedPeriod ? formatDate(selectedPeriod.period_start) : ''}`;
+    
+    // Override print styles for payslip specific look
+    const customStyles = `
+      ${printStyles}
+      body { background: #fff; color: #000; }
+      .card { background: #fff !important; color: #000 !important; border-color: #ff8c42 !important; box-shadow: none !important; }
+      .muted { color: #555 !important; }
+      .accent { color: #000 !important; }
+      hr { border-color: #000 !important; }
+    `;
+    
+    const html = `<!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>${title}</title>
+        <style>${customStyles}</style>
+      </head>
+      <body>
+        <div style="padding: 40px;">
+          ${sections}
+        </div>
+      </body>
+    </html>`;
+    
+    printHtml(html);
+    setShowPayslipModal(false);
   };
 
   // Format period type
@@ -1309,6 +1485,70 @@ const PayrollManagement = ({ onRefresh, user }) => {
       newExpanded.add(recordId);
     }
     setExpandedRecords(newExpanded);
+  };
+
+  // Render Payslip Modal
+  const renderPayslipModal = () => {
+    if (!showPayslipModal) return null;
+
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+            onClick={() => setShowPayslipModal(false)}
+          />
+          <div className="relative w-full max-w-md transform rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl transition-all z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
+              <h2 className="text-xl font-bold text-white">Print Payslip</h2>
+              <button
+                onClick={() => setShowPayslipModal(false)}
+                className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center transition-colors duration-200"
+              >
+                <X className="w-4 h-4 text-gray-400 hover:text-[var(--color-primary)]" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Select Target
+                  </label>
+                  <select
+                    value={payslipTarget}
+                    onChange={(e) => setPayslipTarget(e.target.value)}
+                    className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                  >
+                    <option value="all">All Barbers</option>
+                    {(Array.isArray(currentPeriodRecords) ? currentPeriodRecords : []).map(record => (
+                        <option key={record.barber_id} value={record.barber_id}>
+                            {record.barber_name}
+                        </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex space-x-3 mt-6">
+                <button
+                  onClick={() => setShowPayslipModal(false)}
+                  className="flex-1 px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleGeneratePayslip}
+                  className="flex-1 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-all duration-200"
+                >
+                  Print
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body
+    );
   };
 
   // Render period creation modal
@@ -2932,13 +3172,22 @@ const PayrollManagement = ({ onRefresh, user }) => {
               )}
               {Array.isArray(currentPeriodRecords) &&
                 currentPeriodRecords.length > 0 && (
-                  <button
-                    onClick={handlePrintAll}
-                    className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/60 border border-[#2A2A2A] text-gray-200 rounded-lg hover:bg-[#2A2A2A] transition-colors text-sm"
-                  >
-                    <Printer className="h-4 w-4" />
-                    <span>Print All</span>
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setShowPayslipModal(true)}
+                      className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/60 border border-[#2A2A2A] text-gray-200 rounded-lg hover:bg-[#2A2A2A] transition-colors text-sm"
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span>Print Payslip</span>
+                    </button>
+                    <button
+                      onClick={handlePrintAll}
+                      className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/60 border border-[#2A2A2A] text-gray-200 rounded-lg hover:bg-[#2A2A2A] transition-colors text-sm"
+                    >
+                      <Printer className="h-4 w-4" />
+                      <span>Print All</span>
+                    </button>
+                  </>
                 )}
               <button
                 onClick={() => setActiveView("overview")}
@@ -3600,6 +3849,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
       {renderDailyRatesModal()}
       {renderBookingsModal()}
       {renderProductsModal()}
+      {renderPayslipModal()}
       {renderDeleteModal()}
 
       {/* Recalculate Confirmation Modal */}
