@@ -755,18 +755,27 @@ const PayrollManagement = ({ onRefresh, user }) => {
       const dayServiceRevenue = dateBookings.reduce((sum, b) => sum + (b.price || 0), 0);
 
       // Calculate service commission for the day
-      // Use proportional distribution based on revenue (more accurate than averaging)
       let dayServiceCommission = 0;
-      const totalServiceCommission = record.gross_commission - (record.product_commission || 0);
-      const totalServiceRevenue = record.total_service_revenue || 0;
 
-      if (totalServiceRevenue > 0 && dayServiceRevenue > 0) {
-        // Distribute total service commission proportionally based on revenue
-        const dayRevenueRatio = dayServiceRevenue / totalServiceRevenue;
-        dayServiceCommission = totalServiceCommission * dayRevenueRatio;
-      } else if (dayServiceRevenue > 0) {
-        // Fallback: use commission rate if no total data available
-        dayServiceCommission = dayServiceRevenue * (record.commission_rate / 100);
+      // Check if we have per-booking commission data (from newer records)
+      const hasBookingCommission = dateBookings.some(b => b.commission !== undefined);
+
+      if (hasBookingCommission) {
+        // Sum up exact commissions from bookings
+        dayServiceCommission = dateBookings.reduce((sum, b) => sum + (b.commission || 0), 0);
+      } else {
+        // Fallback: Use proportional distribution based on revenue
+        const totalServiceCommission = record.gross_commission - (record.product_commission || 0);
+        const totalServiceRevenue = record.total_service_revenue || 0;
+
+        if (totalServiceRevenue > 0 && dayServiceRevenue > 0) {
+          // Distribute total service commission proportionally based on revenue
+          const dayRevenueRatio = dayServiceRevenue / totalServiceRevenue;
+          dayServiceCommission = totalServiceCommission * dayRevenueRatio;
+        } else if (dayServiceRevenue > 0) {
+          // Fallback: use commission rate if no total data available
+          dayServiceCommission = dayServiceRevenue * (record.commission_rate / 100);
+        }
       }
 
       // Calculate daily totals for products
@@ -796,7 +805,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
         const bookingRows = dateBookings
           .map((b) => {
             const tm = (b.time || "--:--").slice(0, 5);
-            return `<div class="row"><span><span class="muted">${tm}</span> — ${b.service_name} <span class="muted">• ${b.customer_name} • ${b.booking_code}</span></span><span>${format(b.price)}</span></div>`;
+            const commInfo = b.commission !== undefined 
+              ? `<span class="muted" style="font-size: 0.9em">(${b.commission_rate}%: ${format(b.commission)})</span>` 
+              : "";
+            return `<div class="row"><span><span class="muted">${tm}</span> — ${b.service_name} <span class="muted">• ${b.customer_name} • ${b.booking_code}</span></span><span>${format(b.price)} ${commInfo}</span></div>`;
           })
           .join("");
         bookingsHtml = `<hr/><div style="font-weight: 600; margin: 12px 0 8px; color: white;">Service Booking Details</div>${bookingRows}`;
