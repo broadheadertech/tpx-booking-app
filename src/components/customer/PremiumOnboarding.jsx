@@ -51,7 +51,7 @@ const PremiumOnboarding = ({ onComplete }) => {
           <div className="text-center space-y-8 max-w-lg mx-auto">
             <div className="flex items-center justify-center h-48">
               <img 
-                src="/img/pnglog.png" 
+                src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'}
                 alt="Tipuno X" 
                 className="w-40 h-40 object-contain drop-shadow-2xl"
               />
