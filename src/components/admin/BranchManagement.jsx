@@ -173,9 +173,12 @@ export default function BranchManagement() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
+    // Convert numeric fields to numbers (HTML inputs return strings)
+    const numericFields = ['booking_start_hour', 'booking_end_hour']
+    const finalValue = numericFields.includes(name) ? Number(value) : value
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: finalValue
     }))
   }
 
