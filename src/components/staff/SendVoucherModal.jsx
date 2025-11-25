@@ -188,7 +188,7 @@ const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
             value: voucher.value,
             expires_at: voucher.expires_at,
             type: "voucher",
-            brand: "TipunoX Angeles Barbershop",
+            brand: "Fvcundo Barbershop",
           };
 
           console.log(

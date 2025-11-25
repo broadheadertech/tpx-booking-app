@@ -1038,7 +1038,7 @@ export const sendVoucherEmailWithQR = action({
       code: args.voucherCode,
       value: args.voucherValue,
       type: "voucher",
-      brand: "TipunoX Angeles Barbershop"
+      brand: "Fvcundo Barbershop"
     });
 
     // Public API URL that generates the QR code image on the fly
