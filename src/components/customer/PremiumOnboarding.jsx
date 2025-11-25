@@ -6,7 +6,7 @@ const PremiumOnboarding = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0)
   const [isVisible, setIsVisible] = useState(true)
   const { branding } = useBranding()
-
+// okay
   const steps = [
     {
         id: 'welcome',
