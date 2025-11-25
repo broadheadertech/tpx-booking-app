@@ -5,21 +5,21 @@ import { api } from '../../convex/_generated/api'
 // Helper function to extract JSON from error message
 function extractJSON(message) {
   if (!message) return null;
-  
+
   // Find JSON object start
   const jsonStart = message.indexOf('{');
   if (jsonStart === -1) return null;
-  
+
   // Find where JSON ends (before " at " or end of string)
   const atIndex = message.indexOf(' at ', jsonStart);
   const endIndex = atIndex !== -1 ? atIndex : message.length;
-  
+
   // Extract JSON string
   let jsonStr = message.substring(jsonStart, endIndex).trim();
-  
+
   // Remove trailing punctuation if present
   jsonStr = jsonStr.replace(/[.,;:]$/, '');
-  
+
   try {
     const parsed = JSON.parse(jsonStr);
     if (parsed && typeof parsed === 'object' && parsed.message) {
@@ -48,28 +48,28 @@ function extractJSON(message) {
       }
     }
   }
-  
+
   return null;
 }
 
 // Helper function to clean Convex metadata from error messages
 function cleanConvexError(message) {
   if (!message) return '';
-  
+
   // First, try to extract JSON error if present
   const jsonData = extractJSON(message);
   if (jsonData && jsonData.message) {
     return jsonData.message;
   }
-  
+
   let cleaned = message;
-  
+
   // Remove Convex metadata patterns: [CONVEX M(...)]
   cleaned = cleaned.replace(/\[CONVEX M\([^\]]+\)\]/g, '');
-  
+
   // Remove Request ID patterns: [Request ID: ...]
   cleaned = cleaned.replace(/\[Request ID: [^\]]+\]/g, '');
-  
+
   // Remove "Server Error Uncaught Error:" prefix (with all variations)
   // Match with flexible spacing
   cleaned = cleaned.replace(/Server\s+Error\s+Uncaught\s+Error:\s*/gi, '');
@@ -80,25 +80,25 @@ function cleanConvexError(message) {
   cleaned = cleaned.replace(/Uncaught\s+Error\s*/gi, '');
   cleaned = cleaned.replace(/Server\s+Error:\s*/gi, '');
   cleaned = cleaned.replace(/Server\s+Error\s*/gi, '');
-  
+
   // Remove stack traces (lines starting with "at")
   cleaned = cleaned.replace(/\s*at\s+[^\n]+/g, '');
-  
+
   // Remove "Called by client" text
   cleaned = cleaned.replace(/\s*Called by client\s*/gi, '');
-  
+
   // Try to extract JSON error again after cleaning (in case it was embedded)
   const jsonDataAfter = extractJSON(cleaned);
   if (jsonDataAfter && jsonDataAfter.message) {
     return jsonDataAfter.message;
   }
-  
+
   // Clean up extra whitespace and newlines
   cleaned = cleaned.trim().replace(/\s+/g, ' ');
-  
+
   // Remove any remaining technical prefixes
   cleaned = cleaned.replace(/^(Error|Exception|Uncaught):\s*/i, '');
-  
+
   return cleaned;
 }
 
@@ -116,10 +116,10 @@ function parseConvexError(error) {
           code: jsonData.code || ''
         }
       }
-      
+
       // Clean Convex metadata
       const cleanedMessage = cleanConvexError(error.message);
-      
+
       // Try to parse JSON error from cleaned message (structured error format)
       try {
         const parsed = JSON.parse(cleanedMessage)
@@ -135,7 +135,7 @@ function parseConvexError(error) {
         // Not JSON, check if it's a human-readable string
         // Map common error patterns to user-friendly messages
         const message = cleanedMessage.toLowerCase()
-        
+
         // Authentication errors
         if (message.includes('email') && message.includes('already exists')) {
           return {
@@ -201,7 +201,7 @@ function parseConvexError(error) {
             code: 'AUTH_INVALID_CREDENTIALS'
           }
         }
-        
+
         // Default fallback for unparseable errors
         return {
           message: cleanedMessage || 'An unexpected error occurred',
@@ -215,7 +215,7 @@ function parseConvexError(error) {
     // Fallback for any parsing errors
     console.error('Error parsing Convex error:', e)
   }
-  
+
   // Return a friendly message for unparseable errors
   const cleanedMessage = error?.message ? cleanConvexError(error.message) : 'An unexpected error occurred';
   return {
@@ -287,7 +287,8 @@ export const AuthProvider = ({ children }) => {
           role: currentUser.role,
           avatar: currentUser.avatar,
           is_staff: currentUser.role === 'staff' || currentUser.role === 'admin' || currentUser.role === 'super_admin' || currentUser.role === 'branch_admin',
-          branch_id: currentUser.branch_id
+          branch_id: currentUser.branch_id,
+          page_access: currentUser.page_access
         })
       } else {
         // Invalid session, clear it
@@ -321,7 +322,8 @@ export const AuthProvider = ({ children }) => {
           role: result.user.role,
           avatar: result.user.avatar,
           is_staff: result.user.role === 'staff' || result.user.role === 'admin' || result.user.role === 'super_admin' || result.user.role === 'branch_admin',
-          branch_id: result.user.branch_id
+          branch_id: result.user.branch_id,
+          page_access: result.user.page_access
         }
         setIsAuthenticated(true)
         setUser(userData)
@@ -339,7 +341,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Login error:', error)
       const parsedError = parseConvexError(error)
-      
+
       return {
         success: false,
         error: parsedError.message,
@@ -375,12 +377,12 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.error('Facebook login error:', err)
       let errorMessage = err.message || 'Facebook login failed'
-      
+
       // Check if it's related to email service configuration
       if (err.message && err.message.includes('development mode')) {
         errorMessage = 'Facebook authentication failed. Email service is in development mode.'
       }
-      
+
       return { success: false, error: errorMessage }
     }
   }
@@ -404,19 +406,19 @@ export const AuthProvider = ({ children }) => {
   const requestPasswordReset = async (email) => {
     try {
       const result = await requestPasswordResetMutation({ email })
-      
+
       if (result.success && result.token && result.email) {
         // Send email with reset link
         const emailResult = await sendPasswordResetEmailAction({
           email: result.email,
           token: result.token
         });
-        
+
         if (!emailResult.success) {
           console.error('Failed to send reset email:', emailResult.error);
         }
       }
-      
+
       return { success: true }
     } catch (error) {
       console.error('Request password reset error:', error)

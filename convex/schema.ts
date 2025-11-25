@@ -100,6 +100,7 @@ export default defineSchema({
     avatar: v.optional(v.string()),
     bio: v.optional(v.string()),
     skills: v.array(v.string()),
+    page_access: v.optional(v.array(v.string())), // Array of page keys the user can access
     isVerified: v.boolean(),
     // Password reset fields
     password_reset_token: v.optional(v.string()),

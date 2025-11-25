@@ -147,6 +147,7 @@ export const loginUser = mutation({
         mobile_number: user.mobile_number,
         role: user.role,
         branch_id: user.branch_id,
+        page_access: user.page_access,
         is_active: user.is_active,
       }
     };
@@ -193,6 +194,7 @@ export const getCurrentUser = query({
       bio: user.bio,
       skills: user.skills,
       isVerified: user.isVerified,
+      page_access: user.page_access,
     };
   },
 });
@@ -261,10 +263,10 @@ export const loginWithFacebook = action({
     const email = profile.email || `fb_${profile.id}@facebook.local`;
     const name = profile.name || "Facebook User";
     const avatar = profile.picture?.data?.url as string | undefined;
-    
+
     // Use require to break circular dependency for runtime import
     const { api } = require("../_generated/api");
-    
+
     return await ctx.runMutation(api.services.auth.loginWithFacebookInternal, {
       email,
       name,
@@ -354,6 +356,7 @@ export const loginWithFacebookInternal = mutation({
         mobile_number: user.mobile_number,
         role: user.role,
         branch_id: user.branch_id,
+        page_access: user.page_access,
         is_active: user.is_active,
         avatar: user.avatar,
       },
@@ -437,6 +440,7 @@ export const updateUserProfile = mutation({
       bio: user?.bio,
       skills: user?.skills,
       is_active: user?.is_active,
+      page_access: user?.page_access,
     };
   },
 });
@@ -452,6 +456,7 @@ export const createUser = mutation({
     address: v.optional(v.string()),
     role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("super_admin"), v.literal("branch_admin")),
     branch_id: v.optional(v.id("branches")),
+    page_access: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     // Check if user already exists
@@ -484,6 +489,7 @@ export const createUser = mutation({
       birthday: undefined,
       role: args.role,
       branch_id: args.branch_id,
+      page_access: args.page_access,
       is_active: true,
       avatar: undefined,
       bio: undefined,
@@ -504,6 +510,7 @@ export const createUser = mutation({
       address: user?.address,
       role: user?.role,
       branch_id: user?.branch_id,
+      page_access: user?.page_access,
       is_active: user?.is_active,
     };
   },
@@ -650,6 +657,7 @@ export const updateUser = mutation({
     address: v.optional(v.string()),
     role: v.optional(v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("super_admin"), v.literal("branch_admin"))),
     branch_id: v.optional(v.id("branches")),
+    page_access: v.optional(v.array(v.string())),
     is_active: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
@@ -697,6 +705,7 @@ export const updateUser = mutation({
     if (updateData.address !== undefined) fieldsToUpdate.address = updateData.address;
     if (updateData.role !== undefined) fieldsToUpdate.role = updateData.role as "staff" | "customer" | "admin" | "barber" | "super_admin" | "branch_admin";
     if (updateData.branch_id !== undefined) fieldsToUpdate.branch_id = updateData.branch_id;
+    if (updateData.page_access !== undefined) fieldsToUpdate.page_access = updateData.page_access;
     if (updateData.is_active !== undefined) fieldsToUpdate.is_active = updateData.is_active;
 
     // Update user
@@ -712,6 +721,7 @@ export const updateUser = mutation({
       address: user?.address,
       role: user?.role,
       branch_id: user?.branch_id,
+      page_access: user?.page_access,
       is_active: user?.is_active,
     };
   },
@@ -734,7 +744,7 @@ export const deleteUser = mutation({
       .query("sessions")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .collect();
-    
+
     for (const session of userSessions) {
       await ctx.db.delete(session._id);
     }
@@ -991,20 +1001,20 @@ export const getUsersByBranch = query({
 
 // Get users by role within a branch
 export const getUsersByRoleAndBranch = query({
-  args: { 
+  args: {
     role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("branch_admin")),
     branch_id: v.optional(v.id("branches"))
   },
   handler: async (ctx, args) => {
     let query = ctx.db.query("users").withIndex("by_role", (q) => q.eq("role", args.role));
-    
+
     const users = await query.collect();
-    
+
     // Filter by branch if specified
     if (args.branch_id) {
       return users.filter(user => user.branch_id === args.branch_id);
     }
-    
+
     return users;
   },
 });
@@ -1030,7 +1040,7 @@ export const sendVoucherEmailWithQR = action({
       type: "voucher",
       brand: "TipunoX Angeles Barbershop"
     });
-    
+
     // Public API URL that generates the QR code image on the fly
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrPayload)}`;
 
@@ -1272,12 +1282,12 @@ export const sendVoucherEmailWithQR = action({
 
       // Production: Use Resend SDK
       const result = await resend.emails.send(emailData as any);
-      
+
       if (result.error) {
         console.error('Voucher email service error:', result.error);
         throwUserError(ERROR_CODES.OPERATION_FAILED, "Failed to send voucher email", "We encountered an issue sending the email. Please try again later.");
       }
-      
+
       console.log('Voucher email sent successfully:', result);
       return { success: true, messageId: result.data?.id };
     } catch (error) {

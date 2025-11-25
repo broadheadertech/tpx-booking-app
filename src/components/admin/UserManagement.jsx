@@ -18,7 +18,8 @@ export default function UserManagement() {
     mobile_number: '',
     address: '',
     role: 'branch_admin',
-    branch_id: ''
+    branch_id: '',
+    page_access: []
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -80,7 +81,8 @@ export default function UserManagement() {
       mobile_number: '',
       address: '',
       role: 'branch_admin',
-      branch_id: ''
+      branch_id: '',
+      page_access: []
     })
     setError('')
     setSuccessMessage('')
@@ -101,7 +103,8 @@ export default function UserManagement() {
       mobile_number: user.mobile_number || '',
       address: user.address || '',
       role: user.role,
-      branch_id: user.branch_id || ''
+      branch_id: user.branch_id || '',
+      page_access: user.page_access || []
     })
     setShowEditModal(true)
   }
@@ -187,7 +190,8 @@ export default function UserManagement() {
       mobile_number: formData.mobile_number?.trim() || '',
       address: formData.address?.trim() || '',
       role: formData.role,
-      branch_id: formData.role === 'super_admin' ? undefined : formData.branch_id
+      branch_id: formData.role === 'super_admin' ? undefined : formData.branch_id,
+      page_access: formData.page_access
     }
 
     // Only include password if it was provided
