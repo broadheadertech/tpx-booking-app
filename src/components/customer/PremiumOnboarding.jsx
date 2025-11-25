@@ -1,20 +1,22 @@
 import React, { useState, useEffect } from 'react'
 import { Scissors, Calendar, Star, ArrowRight, CheckCircle, ChevronLeft } from 'lucide-react'
+import { useBranding } from '../../context/BrandingContext'
 
 const PremiumOnboarding = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0)
   const [isVisible, setIsVisible] = useState(true)
+  const { branding } = useBranding()
 
   const steps = [
     {
         id: 'welcome',
-        title: 'Welcome to Tipuno X',
+        title: 'Welcome to' + branding?.display_name,
         subtitle: 'Premium Barbershop Experience',
         content: (
           <div className="text-center space-y-8">
             <div className="flex justify-center mb-6">
               <img 
-                src="/img/tipuno_x_logo_white.avif" 
+                src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'}
                 alt="Tipuno X Logo" 
                 className="w-40 h-40 object-contain drop-shadow-2xl"
               />
@@ -149,7 +151,7 @@ const PremiumOnboarding = ({ onComplete }) => {
         <div className="flex justify-between items-center px-6 py-4 md:px-8 md:py-6">
           <div>
             <img 
-              src="/img/tipuno_x_logo_white.avif" 
+              src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'}
               alt="TipunoX Logo" 
               className="w-12 h-12 object-contain"
             />
