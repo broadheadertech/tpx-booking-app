@@ -276,7 +276,7 @@ function Login() {
       {/* Version Display */}
       <div className="fixed bottom-4 right-4 text-xs text-gray-500 text-right">
         <p>v{APP_VERSION}</p>
-        <p className="text-gray-600">TPX Barbershop</p>
+        <p className="text-gray-600">Barbershop</p>
       </div>
     </div>
   )

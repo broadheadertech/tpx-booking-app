@@ -66,11 +66,11 @@ const DownloadApp = () => {
             <Link to="/" className="flex items-center space-x-3">
               <img
                 src="/img/tipuno_x_logo_white.avif"
-                alt="TPX Barbershop"
+                alt="Barbershop"
                 className="w-8 h-8 object-contain"
               />
               <span className="text-white font-bold text-lg">
-                TPX Barbershop
+                Barbershop
               </span>
             </Link>
 
@@ -92,7 +92,7 @@ const DownloadApp = () => {
               <div className="flex justify-center items-center gap-8 mb-6">
                 <img
                   src="/img/tipuno_x_logo_white.avif"
-                  alt="TPX Barbershop"
+                  alt="Barbershop"
                   className="w-60 h-24 object-contain"
                 />
               </div>
@@ -102,7 +102,7 @@ const DownloadApp = () => {
               </div>
 
               <h1 className="text-4xl font-bold text-white mb-4">
-                Download TPX Barbershop
+                Download Barbershop
               </h1>
 
               <p className="text-gray-400 text-lg max-w-md mx-auto">

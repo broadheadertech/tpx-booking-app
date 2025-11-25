@@ -822,16 +822,16 @@ export const sendPasswordResetEmail = action({
     const resetUrl = `https://tipunox.broadheader.com/auth/reset-password?token=${args.token}`;
 
     const emailData = {
-      from: 'TPX Barbershop <no-reply@tipunox.broadheader.com>',
+      from: 'Barbershop <no-reply@tipunox.broadheader.com>',
       to: args.email,
-      subject: 'Reset your TPX Barbershop password',
+      subject: 'Reset your Barbershop password',
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Password Reset - TPX Barbershop</title>
+          <title>Password Reset - Barbershop</title>
           <style>
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -908,13 +908,13 @@ export const sendPasswordResetEmail = action({
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="color: #FF8C42; font-size: 32px; margin-bottom: 10px;">TPX Barbershop</h1>
+              <h1 style="color: #FF8C42; font-size: 32px; margin-bottom: 10px;">Barbershop</h1>
             </div>
             
             <div class="content">
               <h1 class="title">Reset Your Password</h1>
               <p class="text">
-                Hi there! We received a request to reset your password for your TPX Barbershop account.
+                Hi there! We received a request to reset your password for your Barbershop account.
                 Click the button below to set a new password.
               </p>
               
@@ -937,7 +937,7 @@ export const sendPasswordResetEmail = action({
             </div>
             
             <div class="footer">
-              <p>© 2024 TPX Barbershop. All rights reserved.</p>
+              <p>© 2024 Barbershop. All rights reserved.</p>
               <p>This is an automated message. Please do not reply to this email.</p>
             </div>
           </div>
@@ -1082,16 +1082,16 @@ export const sendVoucherEmailWithQR = action({
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrPayload)}`;
 
     const emailData = {
-      from: 'TPX Barbershop <no-reply@tipunox.broadheader.com>',
+      from: 'Barbershop <no-reply@tipunox.broadheader.com>',
       to: args.email,
-      subject: `Your Voucher ${args.voucherCode} from TPX Barbershop`,
+      subject: `Your Voucher ${args.voucherCode} from Barbershop`,
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Your Voucher - TPX Barbershop</title>
+          <title>Your Voucher - Barbershop</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
@@ -1259,7 +1259,7 @@ export const sendVoucherEmailWithQR = action({
             <div class="body">
               <div class="greeting">
                 Hey <strong>${args.recipientName}</strong>! 🎉<br>
-                You've received a voucher from <strong>TPX Barbershop</strong>
+                You've received a voucher from <strong>Barbershop</strong>
               </div>
               
               <div class="voucher-card">
@@ -1296,7 +1296,7 @@ export const sendVoucherEmailWithQR = action({
             </div>
             
             <div class="footer">
-              <p><strong>TPX Barbershop</strong></p>
+              <p><strong>Barbershop</strong></p>
               <p>© 2024 All Rights Reserved</p>
               <p>This is an automated message. Please do not reply.</p>
             </div>

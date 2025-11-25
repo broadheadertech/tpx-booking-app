@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# TPX Barbershop APK Update Script
+# Barbershop APK Update Script
 # This script copies the latest APK build to the public directory for web download
 
-echo "🔄 Updating TPX Barbershop APK..."
+echo "🔄 Updating Barbershop APK..."
 
 # Configuration
 ANDROID_BUILD_DIR="android/app/build/outputs/apk/debug"
@@ -98,7 +98,7 @@ if [ $? -eq 0 ]; then
         VERSION_FILE="$PUBLIC_APK_DIR/version.json"
         cat > "$VERSION_FILE" << EOF
 {
-  "appName": "TPX Barbershop",
+  "appName": "Barbershop",
   "version": "1.0",
   "buildDate": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
   "apkSize": "$DEST_SIZE",
@@ -122,7 +122,7 @@ EOF
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TPX Barbershop - APK Download</title>
+    <title>Barbershop - APK Download</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -203,7 +203,7 @@ EOF
 <body>
     <div class="download-card">
         <div class="app-icon">TPX</div>
-        <h1>TPX Barbershop</h1>
+        <h1>Barbershop</h1>
         <div class="version">Version 1.0 • Android App</div>
 
         <a href="tipuo-app.apk" class="download-btn" download>
