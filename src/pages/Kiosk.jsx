@@ -243,7 +243,7 @@ function Kiosk() {
           </div>
           <div>
             <div className="flex items-center space-x-3">
-              <h1 className="text-xl md:text-2xl font-bold text-white">TipunoX Angeles Barbershop</h1>
+              <h1 className="text-xl md:text-2xl font-bold text-white">Fvcundo Barbershop</h1>
               <div className="bg-[var(--color-primary)]/20 rounded-full px-2 py-0.5 border border-[var(--color-primary)]/30">
                 <span className="text-xs font-semibold text-[var(--color-primary)]">v2.0.0</span>
               </div>

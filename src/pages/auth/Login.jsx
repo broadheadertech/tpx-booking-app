@@ -155,7 +155,7 @@ function Login() {
             <div className="flex justify-center mb-1">
               <img 
                 src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'} 
-                alt="TipunoX Angeles Barbershop Logo" 
+                alt="Fvcundo Barbershop Logo" 
                 className="w-52 h-32 object-contain"
               />
             </div>

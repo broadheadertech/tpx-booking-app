@@ -493,7 +493,7 @@ const BarberDashboard = () => {
             <div className="flex items-center space-x-3">
               <img
                 src="/img/tipuno_x_logo_white.avif"
-                alt="TipunoX Angeles Barbershop Logo"
+                alt="Fvcundo Barbershop Logo"
                 className="w-10 h-10 object-contain"
               />
               <div>

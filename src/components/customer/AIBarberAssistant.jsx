@@ -193,7 +193,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
           <Bot className="w-8 h-8 text-white" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-white mb-1">AI TipunoX Angeles Assistant</h1>
+          <h1 className="text-xl font-bold text-white mb-1">AI Fvcundo Assistant</h1>
           <p className="text-gray-400 text-sm px-4">
             Your personal AI-powered style consultant
           </p>

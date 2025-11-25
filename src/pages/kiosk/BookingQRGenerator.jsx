@@ -105,7 +105,7 @@ function BookingQRGenerator() {
             barber: selectedBarber?.full_name || selectedBarber?.name,
             date: today,
             time: formattedTime,
-            barbershop: "TipunoX Angeles Barbershop"
+            barbershop: "Fvcundo Barbershop"
           });
 
           console.log("Generating QR with data:", qrData);
@@ -319,7 +319,7 @@ function BookingQRGenerator() {
     printWindow.document.write(`
       <html>
         <head>
-          <title>TipunoX Angeles Barbershop - Booking QR Code</title>
+          <title>Fvcundo Barbershop - Booking QR Code</title>
           <style>
             body { 
               font-family: Arial, sans-serif; 
@@ -350,7 +350,7 @@ function BookingQRGenerator() {
         </head>
         <body>
           <div class="header">
-            <h1>TipunoX Angeles Barbershop</h1>
+            <h1>Fvcundo Barbershop</h1>
             <h2>Booking Confirmation</h2>
           </div>
           <div class="service-info">
@@ -365,7 +365,7 @@ function BookingQRGenerator() {
           </div>
           <div class="footer">
             <p>Show this QR code at the kiosk to confirm your appointment</p>
-            <p>Thank you for choosing TipunoX Angeles Barbershop!</p>
+            <p>Thank you for choosing Fvcundo Barbershop!</p>
           </div>
         </body>
       </html>
