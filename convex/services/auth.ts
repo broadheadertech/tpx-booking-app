@@ -3,7 +3,9 @@ import { mutation, query, action } from "../_generated/server";
 // import { api } from "../_generated/api"; // Removed to break circular dependency
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { hashPassword, verifyPassword } from "../utils/password";
+
 import { Resend } from 'resend';
+
 
 
 // Generate a simple session token (in production, use proper JWT or similar)
@@ -1073,7 +1075,7 @@ export const sendVoucherEmailWithQR = action({
       code: args.voucherCode,
       value: args.voucherValue,
       type: "voucher",
-      brand: "Fvcundo Barbershop"
+      brand: " Barbershop"
     });
 
     // Public API URL that generates the QR code image on the fly

@@ -1157,7 +1157,7 @@ const QRCodeDisplay = ({ voucher }) => {
     username: getUsername(),
     value: voucher.value,
     expiresAt: voucher.expires_at,
-    barbershop: 'Fvcundo Barbershop'
+    barbershop: ' Barbershop'
   })
 
   useEffect(() => {

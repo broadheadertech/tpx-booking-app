@@ -51,7 +51,7 @@ function ForgotPassword() {
         <div className="w-full max-w-sm mx-auto">
           <div className="text-center mb-6">
             <div className="flex justify-center mb-1">
-              <img src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'} alt="Fvcundo Barbershop Logo" className="w-52 h-32 object-contain" />
+              <img src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'} alt=" Barbershop Logo" className="w-52 h-32 object-contain" />
             </div>
             <p className="text-sm font-light text-gray-400">
               Forgot your password? We'll help you reset it with email instructions.

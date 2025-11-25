@@ -576,7 +576,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
       date: booking.date,
       time: booking.time,
       status: booking.status,
-      barbershop: 'Fvcundo Barbershop'
+      barbershop: ' Barbershop'
     })
 
     useEffect(() => {
@@ -672,7 +672,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
     const qrData = JSON.stringify({
       bookingId: booking._id,
       bookingCode: booking.booking_code,
-      barbershop: 'Fvcundo Barbershop'
+      barbershop: ' Barbershop'
     })
 
     useEffect(() => {

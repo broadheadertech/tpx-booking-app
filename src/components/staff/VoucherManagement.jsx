@@ -117,7 +117,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
       voucherId: voucher.id,
       code: voucher.code,
       type: 'voucher',
-      brand: 'Fvcundo Barbershop'
+      brand: ' Barbershop'
     })
 
     useEffect(() => {
@@ -146,7 +146,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
       user: voucher.user,
       redeemed: !!voucher.redeemed,
       type: 'voucher',
-      brand: 'Fvcundo Barbershop'
+      brand: ' Barbershop'
     })
 
     useEffect(() => {
