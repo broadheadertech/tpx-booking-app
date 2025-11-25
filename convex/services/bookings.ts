@@ -31,7 +31,22 @@ export const getAllBookings = query({
         ]);
 
         return {
-          ...booking,
+          _id: booking._id,
+          booking_code: booking.booking_code,
+          branch_id: booking.branch_id,
+          customer: booking.customer,
+          service: booking.service,
+          barber: booking.barber,
+          date: booking.date,
+          time: booking.time,
+          status: booking.status,
+          payment_status: booking.payment_status,
+          price: booking.price,
+          final_price: booking.final_price,
+          discount_amount: booking.discount_amount,
+          voucher_id: booking.voucher_id,
+          notes: booking.notes,
+          createdAt: booking._creationTime,
           // Prioritize booking.customer_name (for walk-in customers with actual names)
           // Only fall back to customer?.username if booking.customer_name is not set
           customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
@@ -76,7 +91,22 @@ export const getBookingsByBranch = query({
         ]);
 
         return {
-          ...booking,
+          _id: booking._id,
+          booking_code: booking.booking_code,
+          branch_id: booking.branch_id,
+          customer: booking.customer,
+          service: booking.service,
+          barber: booking.barber,
+          date: booking.date,
+          time: booking.time,
+          status: booking.status,
+          payment_status: booking.payment_status,
+          price: booking.price,
+          final_price: booking.final_price,
+          discount_amount: booking.discount_amount,
+          voucher_id: booking.voucher_id,
+          notes: booking.notes,
+          createdAt: booking._creationTime,
           // Prioritize booking.customer_name (for walk-in customers with actual names)
           // Only fall back to customer?.username if booking.customer_name is not set
           customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
@@ -120,7 +150,22 @@ export const getBookingsByCustomer = query({
         ]);
 
         return {
-          ...booking,
+          _id: booking._id,
+          booking_code: booking.booking_code,
+          branch_id: booking.branch_id,
+          customer: booking.customer,
+          service: booking.service,
+          barber: booking.barber,
+          date: booking.date,
+          time: booking.time,
+          status: booking.status,
+          payment_status: booking.payment_status,
+          price: booking.price,
+          final_price: booking.final_price,
+          discount_amount: booking.discount_amount,
+          voucher_id: booking.voucher_id,
+          notes: booking.notes,
+          createdAt: booking._creationTime,
           service_name: service?.name || 'Unknown Service',
           service_price: service?.price || 0,
           service_duration: service?.duration_minutes || 0,
@@ -154,7 +199,22 @@ export const getBookingsByBarber = query({
         ]);
 
         return {
-          ...booking,
+          _id: booking._id,
+          booking_code: booking.booking_code,
+          branch_id: booking.branch_id,
+          customer: booking.customer,
+          service: booking.service,
+          barber: booking.barber,
+          date: booking.date,
+          time: booking.time,
+          status: booking.status,
+          payment_status: booking.payment_status,
+          price: booking.price,
+          final_price: booking.final_price,
+          discount_amount: booking.discount_amount,
+          voucher_id: booking.voucher_id,
+          notes: booking.notes,
+          createdAt: booking._creationTime,
           // Prioritize booking.customer_name (for walk-in customers with actual names)
           // Only fall back to customer?.username if booking.customer_name is not set
           customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
@@ -188,7 +248,22 @@ export const getBookingById = query({
     ]);
 
     return {
-      ...booking,
+      _id: booking._id,
+      booking_code: booking.booking_code,
+      branch_id: booking.branch_id,
+      customer: booking.customer,
+      service: booking.service,
+      barber: booking.barber,
+      date: booking.date,
+      time: booking.time,
+      status: booking.status,
+      payment_status: booking.payment_status,
+      price: booking.price,
+      final_price: booking.final_price,
+      discount_amount: booking.discount_amount,
+      voucher_id: booking.voucher_id,
+      notes: booking.notes,
+      createdAt: booking._creationTime,
       customer_name: customer?.username || booking.customer_name || 'Unknown',
       customer_email: customer?.email || booking.customer_email || '',
       customer_phone: customer?.mobile_number || booking.customer_phone || '',
@@ -264,18 +339,18 @@ export const createBooking = mutation({
     if (!service) {
       throwUserError(ERROR_CODES.BOOKING_SERVICE_UNAVAILABLE);
     }
-    
+
     // Verify customer exists
     const customer = await ctx.db.get(args.customer);
     if (!customer) {
       throwUserError(ERROR_CODES.BOOKING_NOT_FOUND, 'Customer not found for booking. Please ensure the customer exists before creating a booking.');
     }
-    
+
     // Validate booking date is not in the past
     const bookingDate = new Date(args.date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     if (bookingDate < today) {
       throwUserError(ERROR_CODES.BOOKING_PAST_DATE);
     }
@@ -335,7 +410,7 @@ export const createBooking = mutation({
     }
 
     const bookingCode = generateBookingCode();
-    
+
     // Calculate final price with discount
     const originalPrice = service.price;
     const discountAmount = args.discount_amount || 0;
@@ -420,7 +495,7 @@ export const updateBooking = mutation({
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
-    
+
     // Get the current booking to check for status changes
     const currentBooking = await ctx.db.get(id);
     if (!currentBooking) {
@@ -443,9 +518,9 @@ export const updateBooking = mutation({
     }
 
     // Check if booking was rescheduled
-    const isRescheduled = (args.date && args.date !== currentBooking.date) || 
-                          (args.time && args.time !== currentBooking.time);
-    
+    const isRescheduled = (args.date && args.date !== currentBooking.date) ||
+      (args.time && args.time !== currentBooking.time);
+
     // Check if barber was changed
     const barberChanged = args.barber && args.barber !== currentBooking.barber;
     const previousBarber = currentBooking.barber;
@@ -462,15 +537,15 @@ export const updateBooking = mutation({
         const { api } = require("../_generated/api");
 
         const recipients: Array<{ type: "customer" | "staff" | "barber" | "admin"; userId?: Id<"users">; branchId?: Id<"branches">; }> = [];
-        
+
         // Notify customer if booking has a customer account
         if (currentBooking.customer) {
           recipients.push({ type: "customer", userId: currentBooking.customer });
         }
-        
+
         // Notify staff
         recipients.push({ type: "staff", branchId: currentBooking.branch_id });
-        
+
         await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
           bookingId: id,
           notificationType: "CUSTOMER_BOOKING_RESCHEDULED",
@@ -503,7 +578,7 @@ export const updateBooking = mutation({
         console.error("Failed to send reschedule notifications:", error);
       }
     }
-    
+
     // Send notifications if barber was changed
     if (barberChanged) {
       try {
@@ -524,7 +599,7 @@ export const updateBooking = mutation({
             });
           }
         }
-        
+
         // Notify the previous barber about unassignment
         if (previousBarber) {
           await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
@@ -538,7 +613,7 @@ export const updateBooking = mutation({
             }
           });
         }
-        
+
         // Notify customer about barber change
         if (currentBooking.customer) {
           await ctx.runMutation(api.services.notifications.createNotification, {
@@ -569,21 +644,21 @@ export const updateBooking = mutation({
         const { api } = require("../_generated/api");
 
         const recipients: Array<{ type: "customer" | "staff" | "barber" | "admin"; userId?: Id<"users">; branchId?: Id<"branches">; }> = [];
-        
+
         // Notify customer if exists
         if (currentBooking.customer) {
           recipients.push({ type: "customer", userId: currentBooking.customer });
         }
-        
+
         // Notify staff
         recipients.push({ type: "staff", branchId: currentBooking.branch_id });
-        
+
         await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
           bookingId: id,
           notificationType: "CUSTOMER_BOOKING_CONFIRMED",
           recipients
         });
-        
+
         // Notify barber if assigned
         if (currentBooking.barber) {
           await ctx.runMutation(api.services.notifications.createNotification, {
@@ -618,11 +693,11 @@ export const deleteBooking = mutation({
   handler: async (ctx, args) => {
     // Get the booking details before deleting
     const booking = await ctx.db.get(args.id);
-    
+
     if (!booking) {
       throwUserError(ERROR_CODES.BOOKING_NOT_FOUND);
     }
-    
+
     if (booking) {
       // Send notifications before deletion
       try {
@@ -630,15 +705,15 @@ export const deleteBooking = mutation({
         const { api } = require("../_generated/api");
 
         const recipients: Array<{ type: "customer" | "staff" | "barber" | "admin"; userId?: Id<"users">; branchId?: Id<"branches">; }> = [];
-        
+
         // Notify customer if exists
         if (booking.customer) {
           recipients.push({ type: "customer", userId: booking.customer });
         }
-        
+
         // Notify staff
         recipients.push({ type: "staff", branchId: booking.branch_id });
-        
+
         await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
           bookingId: args.id,
           notificationType: "CUSTOMER_BOOKING_CANCELLED",
@@ -647,7 +722,7 @@ export const deleteBooking = mutation({
             reason: "Booking deleted by administrator"
           }
         });
-        
+
         // Notify barber if assigned
         if (booking.barber) {
           await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
@@ -666,7 +741,7 @@ export const deleteBooking = mutation({
         // Continue with deletion even if notifications fail
       }
     }
-    
+
     await ctx.db.delete(args.id);
     return { success: true };
   },
@@ -674,13 +749,15 @@ export const deleteBooking = mutation({
 
 // Get bookings by status
 export const getBookingsByStatus = query({
-  args: { status: v.union(
-    v.literal("pending"),
-    v.literal("booked"),
-    v.literal("confirmed"),
-    v.literal("completed"),
-    v.literal("cancelled")
-  ) },
+  args: {
+    status: v.union(
+      v.literal("pending"),
+      v.literal("booked"),
+      v.literal("confirmed"),
+      v.literal("completed"),
+      v.literal("cancelled")
+    )
+  },
   handler: async (ctx, args) => {
     const bookings = await ctx.db
       .query("bookings")
@@ -755,7 +832,7 @@ export const getTodaysBookings = query({
 
 // Get bookings by barber and date for availability checking
 export const getBookingsByBarberAndDate = query({
-  args: { 
+  args: {
     barberId: v.id("barbers"),
     date: v.string()
   },
@@ -878,7 +955,7 @@ export const cancelBooking = mutation({
   },
   handler: async (ctx, args) => {
     const booking = await ctx.db.get(args.id);
-    
+
     if (!booking) {
       throwUserError(ERROR_CODES.BOOKING_NOT_FOUND);
     }
@@ -913,15 +990,15 @@ export const cancelBooking = mutation({
       const { api } = require("../_generated/api");
 
       const recipients: Array<{ type: "customer" | "staff" | "barber" | "admin"; userId?: Id<"users">; branchId?: Id<"branches">; }> = [];
-      
+
       // Notify customer if exists
       if (booking.customer) {
         recipients.push({ type: "customer", userId: booking.customer });
       }
-      
+
       // Notify staff
       recipients.push({ type: "staff", branchId: booking.branch_id });
-      
+
       await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
         bookingId: args.id,
         notificationType: "CUSTOMER_BOOKING_CANCELLED",
@@ -931,7 +1008,7 @@ export const cancelBooking = mutation({
           previous_status: booking.status,
         }
       });
-      
+
       // Notify barber if assigned
       if (booking.barber) {
         const barberRecord = await ctx.db.get(booking.barber);
@@ -1025,12 +1102,12 @@ export const createWalkInBooking = mutation({
     if (!service) {
       throwUserError(ERROR_CODES.BOOKING_SERVICE_UNAVAILABLE);
     }
-    
+
     // Validate booking date is not in the past
     const bookingDate = new Date(args.date);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     if (bookingDate < today) {
       throwUserError(ERROR_CODES.BOOKING_PAST_DATE);
     }

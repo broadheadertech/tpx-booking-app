@@ -759,7 +759,24 @@ export const deleteUser = mutation({
 export const getAllUsers = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("users").collect();
+    const users = await ctx.db.query("users").collect();
+
+    // Return only necessary fields to reduce bandwidth
+    return users.map(user => ({
+      _id: user._id,
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      nickname: user.nickname,
+      mobile_number: user.mobile_number,
+      birthday: user.birthday,
+      role: user.role,
+      branch_id: user.branch_id,
+      is_active: user.is_active,
+      isVerified: user.isVerified,
+      createdAt: user._creationTime,
+      // Exclude heavy fields like avatar (if base64), bio, skills, password
+    }));
   },
 });
 
@@ -791,7 +808,7 @@ export const requestPasswordReset = mutation({
   },
 });
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || 'missing_key');
 
 // Send password reset email with Resend
 export const sendPasswordResetEmail = action({
@@ -950,7 +967,8 @@ export const sendPasswordResetEmail = action({
     } catch (error) {
       console.error('Failed to send password reset email:', error);
       // Don't throw error to avoid revealing if email exists or not
-      return { success: false, error: error.message };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      return { success: false, error: errorMessage };
     }
   },
 });
@@ -992,10 +1010,27 @@ export const resetPassword = mutation({
 export const getUsersByBranch = query({
   args: { branch_id: v.id("branches") },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const users = await ctx.db
       .query("users")
       .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
       .collect();
+
+    // Return only necessary fields to reduce bandwidth
+    return users.map(user => ({
+      _id: user._id,
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      nickname: user.nickname,
+      mobile_number: user.mobile_number,
+      birthday: user.birthday,
+      role: user.role,
+      branch_id: user.branch_id,
+      is_active: user.is_active,
+      isVerified: user.isVerified,
+      createdAt: user._creationTime,
+      // Exclude heavy fields like avatar (if base64), bio, skills, password
+    }));
   },
 });
 
@@ -1290,7 +1325,7 @@ export const sendVoucherEmailWithQR = action({
 
       console.log('Voucher email sent successfully:', result);
       return { success: true, messageId: result.data?.id };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to send voucher email:', error);
       // If it's already a user error, rethrow it
       if (error.message && error.message.includes('"code":')) {
