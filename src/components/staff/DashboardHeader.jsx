@@ -47,7 +47,9 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
         <div
           className="h-full bg-cover bg-center bg-no-repeat opacity-[0.02]"
           style={{
-            backgroundImage: `url(/img/pnglog.png)`,
+            backgroundImage: branding?.logo_dark_url
+              ? `url(${branding.logo_dark_url})`
+              : 'url(/img/pnglog.png)',
             filter: 'brightness(0.2)'
           }}
         ></div>
