@@ -1,0 +1,25 @@
+# TPX Barbershop AI Service Configuration
+# Copy this file to .env.local and add your actual API keys
+
+# Kimi AI API Key for personalized recommendations
+VITE_KIMI_API_KEY=your_kimi_api_key_here
+
+# Google Images API for haircut visualization
+# Get these from Google Cloud Console: https://console.cloud.google.com/
+# 1. Enable Custom Search API
+# 2. Create a Custom Search Engine: https://cse.google.com/
+VITE_GOOGLE_IMAGES_API_KEY=AIzaSyB_7NiOu4CCbZIFW3V_FAPG3t5Bb4i5jQQ
+VITE_GOOGLE_SEARCH_ENGINE_ID=732e1b0a9174d4473
+
+# EmailJS Configuration for sending emails
+# Get these values from your EmailJS dashboard (https://www.emailjs.com/)
+VITE_EMAILJS_SERVICE_ID=your_service_id
+VITE_EMAILJS_TEMPLATE_ID=your_template_id
+VITE_EMAILJS_PUBLIC_KEY=your_public_key
+
+# Optional: Adjust AI service limits
+# VITE_AI_DAILY_RECOMMENDATION_LIMIT=100
+
+# Facebook Login (Client)
+# Get App ID from https://developers.facebook.com/
+VITE_FACEBOOK_APP_ID=your_facebook_app_id
