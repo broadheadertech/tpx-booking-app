@@ -3,6 +3,7 @@ import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { Building, MapPin, Phone, Mail, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Eye, Users, Calendar } from 'lucide-react'
 import BranchFormModal from './BranchFormModal'
+import { formatErrorForDisplay } from '../../utils/errorHandler'
 
 export default function BranchManagement() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -116,13 +117,15 @@ export default function BranchManagement() {
     }
 
     setLoading(true)
+    setError('')
     try {
       await createBranch(formData)
       setShowCreateModal(false)
       resetForm()
     } catch (error) {
       console.error('Error creating branch:', error)
-      setError(error.message || 'Failed to create branch')
+      const formattedError = formatErrorForDisplay(error)
+      setError(formattedError.details || formattedError.message || 'Failed to create branch')
     } finally {
       setLoading(false)
     }
@@ -136,6 +139,7 @@ export default function BranchManagement() {
     }
 
     setLoading(true)
+    setError('')
     try {
       await updateBranch({
         id: selectedBranch._id,
@@ -146,7 +150,8 @@ export default function BranchManagement() {
       resetForm()
     } catch (error) {
       console.error('Error updating branch:', error)
-      setError(error.message || 'Failed to update branch')
+      const formattedError = formatErrorForDisplay(error)
+      setError(formattedError.details || formattedError.message || 'Failed to update branch')
     } finally {
       setLoading(false)
     }
@@ -154,11 +159,13 @@ export default function BranchManagement() {
 
   const handleToggleStatus = async (branchId) => {
     setLoading(true)
+    setError('')
     try {
       await toggleBranchStatus({ id: branchId })
     } catch (error) {
       console.error('Error toggling branch status:', error)
-      setError(error.message || 'Failed to update branch status')
+      const formattedError = formatErrorForDisplay(error)
+      setError(formattedError.details || formattedError.message || 'Failed to update branch status')
     } finally {
       setLoading(false)
     }

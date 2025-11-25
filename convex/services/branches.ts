@@ -97,159 +97,185 @@ export const createBranch = mutation({
     booking_end_hour: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const branch_code = generateBranchCode(args.name);
-
-    // Check if branch code already exists
-    const existingBranch = await ctx.db
-      .query("branches")
-      .withIndex("by_branch_code", (q) => q.eq("branch_code", branch_code))
-      .first();
-
-    if (existingBranch) {
-      throwUserError(ERROR_CODES.INVALID_INPUT, "Branch code exists", "A branch with this code already exists. Please try again.");
-    }
-
+    // Validate inputs first
     if (!args.name.trim()) {
       throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid name", "Branch name cannot be empty.");
     }
 
-    if (args.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(args.email)) {
-      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid email", "Please provide a valid email address.");
+    if (!args.address.trim()) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid address", "Branch address cannot be empty.");
     }
 
-    const branchId = await ctx.db.insert("branches", {
-      branch_code,
-      name: args.name,
-      address: args.address,
-      phone: args.phone,
-      email: args.email,
-      is_active: true,
-      booking_start_hour: args.booking_start_hour ?? 10, // Default 10am
-      booking_end_hour: args.booking_end_hour ?? 20, // Default 8pm (20:00)
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
+    if (!args.phone.trim()) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid phone", "Branch phone number cannot be empty.");
+    }
 
-    // Automatically insert default services for the new branch
-    const defaultServices = [
-      {
-        name: "Tipuno X Classico",
-        description: "Consultation, Haircut",
-        duration_minutes: 30,
-        price: 150.00
-      },
-      {
-        name: "Tipuno X Signature",
-        description: "Consultation, Haircut, Rinse Hot and Cold Towel Finish",
-        duration_minutes: 60,
-        price: 500.00
-      },
-      {
-        name: "Tipuno X Deluxe",
-        description: "Consultation, Haircut, Hair Spa Treatment, Rinse Hot and Cold Towel Finish",
-        duration_minutes: 90,
-        price: 800.00
-      },
-      {
-        name: "Beard Shave/Shaping/Sculpting",
-        description: "More than a shave. It's a service you'll feel.",
-        duration_minutes: 30,
-        price: 200.00
-      },
-      {
-        name: "FACVNDO ELITE BARBERING SERVICE",
-        description: "If you are looking for wedding haircuts, trust the elite hands that turn grooms into legends.",
-        duration_minutes: 0,
-        price: 10000.00
-      },
-      {
-        name: "Package 1",
-        description: "Consultation, Haircut, Shaving, Styling",
-        duration_minutes: 45,
-        price: 500.00
-      },
-      {
-        name: "Package 2",
-        description: "Consultation, Haircut, Hair Color or With Single Bleach, Rinse, Styling.\nNote: Short hair only, add 250 per length",
-        duration_minutes: 60,
-        price: 850.00
-      },
-      {
-        name: "Package 3",
-        description: "Consultation, Haircut, Hair Color or With Single Bleach, Hair Spa Treatment, Rinse, Styling.\nNote: Short hair only, add 250 per length",
-        duration_minutes: 60,
-        price: 1400.00
-      },
-      {
-        name: "Mustache/Beard Trim",
-        description: "No Description with this product yet.",
-        duration_minutes: 30,
-        price: 170.00
-      },
-      {
-        name: "Hair Spa",
-        description: "No description for this service yet.",
-        duration_minutes: 30,
-        price: 600.00
-      },
-      {
-        name: "Hair and Scalp Treatment",
-        description: "No description for this product yet.",
-        duration_minutes: 60,
-        price: 1500.00
-      },
-      {
-        name: "Hair Color",
-        description: "No description for this product yet.",
-        duration_minutes: 60,
-        price: 800.00
-      },
-      {
-        name: "Perm",
-        description: "No description for this product yet.",
-        duration_minutes: 60,
-        price: 1500.00
-      },
-      {
-        name: "Hair Tattoo",
-        description: "No description for this product yet.",
-        duration_minutes: 60,
-        price: 100.00
-      }
-    ];
+    if (!args.email.trim()) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid email", "Branch email cannot be empty.");
+    }
 
-    // Insert default services for the new branch
-    for (const service of defaultServices) {
-      // Determine category based on service name/description
-      let category = "haircut"; // default category
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(args.email)) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid email format", "Please provide a valid email address.");
+    }
 
-      const serviceName = service.name.toLowerCase();
-      const serviceDesc = service.description.toLowerCase();
+    try {
+      const branch_code = generateBranchCode(args.name);
 
-      if (serviceName.includes("beard") || serviceName.includes("mustache") || serviceDesc.includes("shav")) {
-        category = "beard-care";
-      } else if (serviceName.includes("hair spa") || serviceName.includes("treatment") || serviceName.includes("scalp")) {
-        category = "hair-treatment";
-      } else if (serviceName.includes("color") || serviceName.includes("perm") || serviceName.includes("tattoo")) {
-        category = "hair-styling";
-      } else if (serviceName.includes("package") || serviceName.includes("elite") || serviceName.includes("deluxe")) {
-        category = "premium-package";
+      // Check if branch code already exists
+      const existingBranch = await ctx.db
+        .query("branches")
+        .withIndex("by_branch_code", (q) => q.eq("branch_code", branch_code))
+        .first();
+
+      if (existingBranch) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Branch code exists", "A branch with this code already exists. Please try again.");
       }
 
-      await ctx.db.insert("services", {
-        name: service.name,
-        description: service.description,
-        price: service.price,
-        duration_minutes: service.duration_minutes,
-        category: category,
-        branch_id: branchId,
+      const branchId = await ctx.db.insert("branches", {
+        branch_code,
+        name: args.name.trim(),
+        address: args.address.trim(),
+        phone: args.phone.trim(),
+        email: args.email.trim().toLowerCase(),
         is_active: true,
+        booking_start_hour: args.booking_start_hour ?? 10, // Default 10am
+        booking_end_hour: args.booking_end_hour ?? 20, // Default 8pm (20:00)
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
-    }
 
-    return branchId;
+      // Automatically insert default services for the new branch
+      const defaultServices = [
+        {
+          name: "Tipuno X Classico",
+          description: "Consultation, Haircut",
+          duration_minutes: 30,
+          price: 150.00
+        },
+        {
+          name: "Tipuno X Signature",
+          description: "Consultation, Haircut, Rinse Hot and Cold Towel Finish",
+          duration_minutes: 60,
+          price: 500.00
+        },
+        {
+          name: "Tipuno X Deluxe",
+          description: "Consultation, Haircut, Hair Spa Treatment, Rinse Hot and Cold Towel Finish",
+          duration_minutes: 90,
+          price: 800.00
+        },
+        {
+          name: "Beard Shave/Shaping/Sculpting",
+          description: "More than a shave. It's a service you'll feel.",
+          duration_minutes: 30,
+          price: 200.00
+        },
+        {
+          name: "FACVNDO ELITE BARBERING SERVICE",
+          description: "If you are looking for wedding haircuts, trust the elite hands that turn grooms into legends.",
+          duration_minutes: 0,
+          price: 10000.00
+        },
+        {
+          name: "Package 1",
+          description: "Consultation, Haircut, Shaving, Styling",
+          duration_minutes: 45,
+          price: 500.00
+        },
+        {
+          name: "Package 2",
+          description: "Consultation, Haircut, Hair Color or With Single Bleach, Rinse, Styling.\nNote: Short hair only, add 250 per length",
+          duration_minutes: 60,
+          price: 850.00
+        },
+        {
+          name: "Package 3",
+          description: "Consultation, Haircut, Hair Color or With Single Bleach, Hair Spa Treatment, Rinse, Styling.\nNote: Short hair only, add 250 per length",
+          duration_minutes: 60,
+          price: 1400.00
+        },
+        {
+          name: "Mustache/Beard Trim",
+          description: "No Description with this product yet.",
+          duration_minutes: 30,
+          price: 170.00
+        },
+        {
+          name: "Hair Spa",
+          description: "No description for this service yet.",
+          duration_minutes: 30,
+          price: 600.00
+        },
+        {
+          name: "Hair and Scalp Treatment",
+          description: "No description for this product yet.",
+          duration_minutes: 60,
+          price: 1500.00
+        },
+        {
+          name: "Hair Color",
+          description: "No description for this product yet.",
+          duration_minutes: 60,
+          price: 800.00
+        },
+        {
+          name: "Perm",
+          description: "No description for this product yet.",
+          duration_minutes: 60,
+          price: 1500.00
+        },
+        {
+          name: "Hair Tattoo",
+          description: "No description for this product yet.",
+          duration_minutes: 60,
+          price: 100.00
+        }
+      ];
+
+      // Insert default services for the new branch
+      for (const service of defaultServices) {
+        // Determine category based on service name/description
+        let category = "haircut"; // default category
+
+        const serviceName = service.name.toLowerCase();
+        const serviceDesc = service.description.toLowerCase();
+
+        if (serviceName.includes("beard") || serviceName.includes("mustache") || serviceDesc.includes("shav")) {
+          category = "beard-care";
+        } else if (serviceName.includes("hair spa") || serviceName.includes("treatment") || serviceName.includes("scalp")) {
+          category = "hair-treatment";
+        } else if (serviceName.includes("color") || serviceName.includes("perm") || serviceName.includes("tattoo")) {
+          category = "hair-styling";
+        } else if (serviceName.includes("package") || serviceName.includes("elite") || serviceName.includes("deluxe")) {
+          category = "premium-package";
+        }
+
+        await ctx.db.insert("services", {
+          name: service.name,
+          description: service.description,
+          price: service.price,
+          duration_minutes: service.duration_minutes,
+          category: category,
+          branch_id: branchId,
+          is_active: true,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+      }
+
+      return branchId;
+    } catch (error: any) {
+      // Check if it's already a user error (thrown by throwUserError)
+      if (error.message && error.message.startsWith('{')) {
+        throw error;
+      }
+      // Wrap unexpected errors with user-friendly message
+      throwUserError(
+        ERROR_CODES.OPERATION_FAILED,
+        "Failed to create branch",
+        `An error occurred while creating the branch: ${error.message || 'Unknown error'}. Please try again.`
+      );
+    }
   },
 });
 
