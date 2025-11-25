@@ -36,10 +36,10 @@ function StaffDashboard() {
   })
   const [activeModal, setActiveModal] = useState(null)
   const [showNotifications, setShowNotifications] = useState(false)
-  
+
   // Hook for real-time notifications with toast alerts
   const { unreadCount } = useRealtimeNotifications()
-  
+
   // Hook for booking notification events
   useBookingNotificationListener()
 
@@ -49,24 +49,24 @@ function StaffDashboard() {
   }, [activeTab])
 
   // Convex queries for data - adjust based on user role
-  const bookings = user?.role === 'super_admin' 
+  const bookings = user?.role === 'super_admin'
     ? useQuery(api.services.bookings.getAllBookings)
-    : user?.branch_id 
+    : user?.branch_id
       ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id })
       : undefined
-  
+
   const services = user?.role === 'super_admin'
     ? useQuery(api.services.services.getAllServices)
     : user?.branch_id
       ? useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id })
       : undefined
-  
+
   const barbers = user?.role === 'super_admin'
     ? useQuery(api.services.barbers.getAllBarbers)
     : user?.branch_id
       ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
       : undefined
-  
+
   const vouchers = user?.role === 'super_admin'
     ? useQuery(api.services.vouchers.getAllVouchers)
     : user?.branch_id
@@ -82,10 +82,10 @@ function StaffDashboard() {
     : user?.branch_id
       ? useQuery(api.services.auth.getUsersByBranch, { branch_id: user.branch_id })
       : undefined
-  
+
 
   // Calculate incomplete bookings count (pending, booked, confirmed - not completed or cancelled)
-  const incompleteBookingsCount = bookings ? bookings.filter(booking => 
+  const incompleteBookingsCount = bookings ? bookings.filter(booking =>
     booking.status !== 'completed' && booking.status !== 'cancelled'
   ).length : 0
 
@@ -154,6 +154,14 @@ function StaffDashboard() {
 
   // Render different tab content based on Convex data
   const renderTabContent = () => {
+    // Basic security check: if user doesn't have access to the tab, fall back to overview
+    // Super admins bypass this check
+    if (user?.role !== 'super_admin' && activeTab !== 'overview') {
+      if (user?.page_access && user.page_access.length > 0 && !user.page_access.includes(activeTab)) {
+        return renderOverview()
+      }
+    }
+
     switch (activeTab) {
       case 'overview':
         return renderOverview()
@@ -240,7 +248,7 @@ function StaffDashboard() {
   }
 
   // Tab configuration for staff
-  const tabs = [
+  const baseTabs = [
     { id: 'overview', label: 'Overview', icon: 'dashboard' },
     { id: 'bookings', label: 'Bookings', icon: 'calendar' },
     { id: 'calendar', label: 'Calendar', icon: 'calendar' },
@@ -254,8 +262,24 @@ function StaffDashboard() {
     { id: 'payroll', label: 'Payroll', icon: 'dollar-sign' },
     { id: 'products', label: 'Products', icon: 'package' },
     { id: 'notifications', label: 'Notifications', icon: 'bell' },
-    { id: 'email_marketing', label: 'Email Marketing', icon: 'mail' }
+    { id: 'email_marketing', label: 'Email Marketing', icon: 'mail' },
+    { id: 'pos', label: 'POS', icon: 'credit-card' }
   ]
+
+  // Filter tabs based on user page_access permissions
+  const tabs = user?.role === 'super_admin'
+    ? baseTabs
+    : user?.page_access
+      ? baseTabs.filter(t => user.page_access.includes(t.id) || t.id === 'overview') // Always include overview
+      : baseTabs
+
+  // Redirect if current active tab is not allowed (unless it's overview)
+  useEffect(() => {
+    const allowedTabIds = tabs.map(t => t.id)
+    if (!allowedTabIds.includes(activeTab) && activeTab !== 'overview') {
+      setActiveTab('overview')
+    }
+  }, [tabs, activeTab])
 
   console.log('StaffDashboard - User:', user)
 
@@ -266,11 +290,11 @@ function StaffDashboard() {
         user={user}
         onOpenNotifications={() => setShowNotifications(true)}
       />
-      
+
       <div className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8 lg:py-12">
           <div className="space-y-4 sm:space-y-6 md:space-y-8 lg:space-y-12">
-            <QuickActions 
+            <QuickActions
               onAddCustomer={handleAddCustomer}
               onCreateBooking={handleCreateBooking}
               onCreateVoucher={handleCreateVoucher}
@@ -279,10 +303,16 @@ function StaffDashboard() {
               activeModal={activeModal}
               setActiveModal={setActiveModal}
             />
-            <TabNavigation 
-              tabs={tabs} 
-              activeTab={activeTab} 
-              onTabChange={setActiveTab}
+            <TabNavigation
+              tabs={tabs}
+              activeTab={activeTab}
+              onTabChange={(tabId) => {
+                if (tabId === 'pos') {
+                  navigate('/staff/pos')
+                } else {
+                  setActiveTab(tabId)
+                }
+              }}
               incompleteBookingsCount={incompleteBookingsCount}
             />
             <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl border border-[#2A2A2A]/50 p-3 sm:p-4 md:p-6 lg:p-8 xl:p-10 backdrop-blur-sm overflow-hidden">

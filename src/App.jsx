@@ -128,7 +128,7 @@ function App() {
               <Route
                 path="/staff/pos"
                 element={
-                  <ProtectedRoute requireStaff={true}>
+                  <ProtectedRoute requireStaff={true} requirePageAccess="pos">
                     <POS />
                   </ProtectedRoute>
                 }

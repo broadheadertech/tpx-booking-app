@@ -1,20 +1,50 @@
 import React, { useState } from 'react'
-import { QrCode, UserPlus, Calendar, Gift } from 'lucide-react'
+import { QrCode, UserPlus, Calendar, Gift, CreditCard } from 'lucide-react'
 import QRScannerModal from './QRScannerModal'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 
 import AddCustomerModal from './AddCustomerModal'
 import CreateBookingModal from './CreateBookingModal'
 import CreateVoucherModal from './CreateVoucherModal'
 
 const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVoucherScanned, onBookingScanned, activeModal, setActiveModal }) => {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  
+  // Check permissions
+  const canAccessPos = user?.role === 'super_admin' || 
+                       user?.role === 'admin' || 
+                       !user?.page_access || 
+                       user?.page_access.includes('pos')
+
   // Use external modal state if provided, otherwise use internal state
   const [internalModal, setInternalModal] = useState(null)
   const currentModal = activeModal !== undefined ? activeModal : internalModal
   const setCurrentModal = setActiveModal || setInternalModal
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-      {/* Primary Action - QR Scanner */}
+    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+      {/* Primary Action - POS */}
+      {canAccessPos && (
+        <button
+          onClick={() => navigate('/staff/pos')}
+          className="group relative text-center p-3 sm:p-4 bg-[#1A1A1A] border border-[var(--color-primary)]/50 hover:border-[var(--color-primary)] rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 w-16 h-16 bg-[var(--color-primary)]/5 rounded-full -translate-y-8 translate-x-8"></div>
+          <div className="relative z-10">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg flex items-center justify-center">
+              <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            </div>
+            <h3 className="font-semibold text-white mb-1.5 sm:mb-2 text-xs sm:text-sm">POS System</h3>
+            <div className="w-full py-1 sm:py-1.5 px-2 sm:px-3 border border-[var(--color-primary)]/30 text-[var(--color-primary)] font-medium rounded-md hover:bg-[var(--color-primary)]/10 transition-colors text-[10px] sm:text-xs">
+              Open POS
+            </div>
+          </div>
+        </button>
+      )}
+
+      {/* QR Scanner */}
       <button
         onClick={() => setCurrentModal('scannerSelection')}
         className="group relative text-center p-3 sm:p-4 bg-[#1A1A1A] border border-[var(--color-primary)]/50 hover:border-[var(--color-primary)] rounded-lg hover:shadow-lg transition-all duration-200 overflow-hidden"

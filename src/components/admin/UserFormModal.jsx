@@ -14,11 +14,34 @@ const UserFormModal = ({
   error, 
   loading,
   branches,
-  isEditMode = false
+  isEditMode = false,
+  availableRoles = [
+    { value: 'branch_admin', label: 'Branch Admin' },
+    { value: 'staff', label: 'Staff' },
+    { value: 'super_admin', label: 'Super Admin' }
+  ]
 }) => {
   const [showPassword, setShowPassword] = useState(false)
   const [validationErrors, setValidationErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const AVAILABLE_PAGES = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'bookings', label: 'Bookings' },
+    { id: 'calendar', label: 'Calendar' },
+    { id: 'services', label: 'Services' },
+    { id: 'vouchers', label: 'Vouchers' },
+    { id: 'barbers', label: 'Barbers' },
+    { id: 'users', label: 'User Management' },
+    { id: 'customers', label: 'Customers' },
+    { id: 'events', label: 'Events' },
+    { id: 'reports', label: 'Reports' },
+    { id: 'payroll', label: 'Payroll' },
+    { id: 'products', label: 'Products' },
+    { id: 'notifications', label: 'Notifications' },
+    { id: 'email_marketing', label: 'Email Marketing' },
+    { id: 'pos', label: 'POS' }
+  ]
 
   // Reset validation errors when modal opens/closes
   useEffect(() => {
@@ -120,6 +143,24 @@ const UserFormModal = ({
     setValidationErrors(errors)
   }
 
+  const handlePageAccessChange = (pageId) => {
+    const currentAccess = formData.page_access || []
+    let newAccess
+    if (currentAccess.includes(pageId)) {
+      newAccess = currentAccess.filter(id => id !== pageId)
+    } else {
+      newAccess = [...currentAccess, pageId]
+    }
+    
+    // Simulate event for onInputChange
+    onInputChange({
+      target: {
+        name: 'page_access',
+        value: newAccess
+      }
+    })
+  }
+
   const handleInputChange = (e) => {
     const { name, value } = e.target
     onInputChange(e)
@@ -176,7 +217,7 @@ const UserFormModal = ({
           className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
           onClick={onClose}
         />
-        <div className="relative w-full max-w-md transform rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] shadow-2xl transition-all z-[10000] border border-[#444444]/50">
+        <div className="relative w-full max-w-4xl transform rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] shadow-2xl transition-all z-[10000] border border-[#444444]/50">
           {/* Modal Header */}
           <div className="flex items-center justify-between p-6 border-b border-[#444444]/30">
             <h3 className="text-xl font-bold text-white">{title}</h3>
@@ -197,175 +238,184 @@ const UserFormModal = ({
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Username *
-                    {validationErrors.username ? (
-                      <span className="text-red-400 ml-2 text-xs">({validationErrors.username})</span>
-                    ) : formData.username && !validationErrors.username ? (
-                      <CheckCircle className="inline h-4 w-4 text-green-400 ml-2" />
-                    ) : null}
-                  </label>
-                  <input
-                    type="text"
-                    name="username"
-                    value={formData.username}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
-                      validationErrors.username 
-                        ? 'border-red-400 focus:ring-red-400' 
-                        : formData.username && !validationErrors.username 
-                        ? 'border-green-400' 
-                        : 'border-[#444444]'
-                    }`}
-                    placeholder="Enter username"
-                    required
-                    autoFocus
-                  />
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Username *
+                      {validationErrors.username ? (
+                        <span className="text-red-400 ml-2 text-xs">({validationErrors.username})</span>
+                      ) : formData.username && !validationErrors.username ? (
+                        <CheckCircle className="inline h-4 w-4 text-green-400 ml-2" />
+                      ) : null}
+                    </label>
+                    <input
+                      type="text"
+                      name="username"
+                      value={formData.username}
+                      onChange={handleInputChange}
+                      className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
+                        validationErrors.username 
+                          ? 'border-red-400 focus:ring-red-400' 
+                          : formData.username && !validationErrors.username 
+                          ? 'border-green-400' 
+                          : 'border-[#444444]'
+                      }`}
+                      placeholder="Enter username"
+                      required
+                      autoFocus
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Email *
+                      {validationErrors.email ? (
+                        <span className="text-red-400 ml-2 text-xs">({validationErrors.email})</span>
+                      ) : formData.email && !validationErrors.email ? (
+                        <CheckCircle className="inline h-4 w-4 text-green-400 ml-2" />
+                      ) : null}
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
+                        validationErrors.email 
+                          ? 'border-red-400 focus:ring-red-400' 
+                          : formData.email && !validationErrors.email 
+                          ? 'border-green-400' 
+                          : 'border-[#444444]'
+                      }`}
+                      placeholder="Enter email address"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Password {isEditMode ? '(leave blank to keep current)' : '*'}
+                      {validationErrors.password ? (
+                        <span className="text-red-400 ml-2 text-xs">({validationErrors.password})</span>
+                      ) : formData.password && !validationErrors.password ? (
+                        <CheckCircle className="inline h-4 w-4 text-green-400 ml-2" />
+                      ) : null}
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 pr-10 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
+                          validationErrors.password 
+                            ? 'border-red-400 focus:ring-red-400' 
+                            : formData.password && !validationErrors.password 
+                            ? 'border-green-400' 
+                            : 'border-[#444444]'
+                        }`}
+                        placeholder={isEditMode ? "Enter new password (optional)" : "Enter password"}
+                        required={!isEditMode}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    {!isEditMode && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        Must contain at least 6 characters with uppercase, lowercase, and number
+                      </p>
+                    )}
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Role *</label>
-                  <select
-                    name="role"
-                    value={formData.role}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                    required
-                  >
-                    <option value="branch_admin">Branch Admin</option>
-                    <option value="staff">Staff</option>
-                    <option value="super_admin">Super Admin</option>
-                  </select>
+                {/* Right Column */}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Role *</label>
+                    <select
+                      name="role"
+                      value={formData.role}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                      required
+                    >
+                      {availableRoles.map(role => (
+                        <option key={role.value} value={role.value}>
+                          {role.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Mobile Number
+                      {validationErrors.mobile_number ? (
+                        <span className="text-red-400 ml-2 text-xs">({validationErrors.mobile_number})</span>
+                      ) : formData.mobile_number && !validationErrors.mobile_number ? (
+                        <CheckCircle className="inline h-4 w-4 text-green-400 ml-2" />
+                      ) : null}
+                    </label>
+                    <input
+                      type="tel"
+                      name="mobile_number"
+                      value={formData.mobile_number}
+                      onChange={handleInputChange}
+                      className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
+                        validationErrors.mobile_number 
+                          ? 'border-red-400 focus:ring-red-400' 
+                          : formData.mobile_number && !validationErrors.mobile_number 
+                          ? 'border-green-400' 
+                          : 'border-[#444444]'
+                      }`}
+                      placeholder="Enter mobile number (e.g., +1234567890)"
+                    />
+                  </div>
+
+                  {formData.role !== 'super_admin' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">
+                        Branch *
+                        {validationErrors.branch_id ? (
+                          <span className="text-red-400 ml-2 text-xs">({validationErrors.branch_id})</span>
+                        ) : formData.branch_id && !validationErrors.branch_id ? (
+                          <CheckCircle className="inline h-4 w-4 text-green-400 ml-2" />
+                        ) : null}
+                      </label>
+                      <select
+                        name="branch_id"
+                        value={formData.branch_id}
+                        onChange={handleInputChange}
+                        className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
+                          validationErrors.branch_id 
+                            ? 'border-red-400 focus:ring-red-400' 
+                            : formData.branch_id && !validationErrors.branch_id 
+                            ? 'border-green-400' 
+                            : 'border-[#444444]'
+                        }`}
+                        required
+                      >
+                        <option value="">Select Branch</option>
+                        {branches?.map(branch => (
+                          <option key={branch._id} value={branch._id}>
+                            {branch.name} ({branch.branch_code})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Email *
-                  {validationErrors.email ? (
-                    <span className="text-red-400 ml-2 text-xs">({validationErrors.email})</span>
-                  ) : formData.email && !validationErrors.email ? (
-                    <CheckCircle className="inline h-4 w-4 text-green-400 ml-2" />
-                  ) : null}
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
-                    validationErrors.email 
-                      ? 'border-red-400 focus:ring-red-400' 
-                      : formData.email && !validationErrors.email 
-                      ? 'border-green-400' 
-                      : 'border-[#444444]'
-                  }`}
-                  placeholder="Enter email address"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Password {isEditMode ? '(leave blank to keep current)' : '*'}
-                  {validationErrors.password ? (
-                    <span className="text-red-400 ml-2 text-xs">({validationErrors.password})</span>
-                  ) : formData.password && !validationErrors.password ? (
-                    <CheckCircle className="inline h-4 w-4 text-green-400 ml-2" />
-                  ) : null}
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-2 pr-10 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
-                      validationErrors.password 
-                        ? 'border-red-400 focus:ring-red-400' 
-                        : formData.password && !validationErrors.password 
-                        ? 'border-green-400' 
-                        : 'border-[#444444]'
-                    }`}
-                    placeholder={isEditMode ? "Enter new password (optional)" : "Enter password"}
-                    required={!isEditMode}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {!isEditMode && (
-                  <p className="text-xs text-gray-400 mt-1">
-                    Must contain at least 6 characters with uppercase, lowercase, and number
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Mobile Number
-                  {validationErrors.mobile_number ? (
-                    <span className="text-red-400 ml-2 text-xs">({validationErrors.mobile_number})</span>
-                  ) : formData.mobile_number && !validationErrors.mobile_number ? (
-                    <CheckCircle className="inline h-4 w-4 text-green-400 ml-2" />
-                  ) : null}
-                </label>
-                <input
-                  type="tel"
-                  name="mobile_number"
-                  value={formData.mobile_number}
-                  onChange={handleInputChange}
-                  className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
-                    validationErrors.mobile_number 
-                      ? 'border-red-400 focus:ring-red-400' 
-                      : formData.mobile_number && !validationErrors.mobile_number 
-                      ? 'border-green-400' 
-                      : 'border-[#444444]'
-                  }`}
-                  placeholder="Enter mobile number (e.g., +1234567890)"
-                />
-              </div>
-
-              {formData.role !== 'super_admin' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Branch *
-                    {validationErrors.branch_id ? (
-                      <span className="text-red-400 ml-2 text-xs">({validationErrors.branch_id})</span>
-                    ) : formData.branch_id && !validationErrors.branch_id ? (
-                      <CheckCircle className="inline h-4 w-4 text-green-400 ml-2" />
-                    ) : null}
-                  </label>
-                  <select
-                    name="branch_id"
-                    value={formData.branch_id}
-                    onChange={handleInputChange}
-                    className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
-                      validationErrors.branch_id 
-                        ? 'border-red-400 focus:ring-red-400' 
-                        : formData.branch_id && !validationErrors.branch_id 
-                        ? 'border-green-400' 
-                        : 'border-[#444444]'
-                    }`}
-                    required
-                  >
-                    <option value="">Select Branch</option>
-                    {branches?.map(branch => (
-                      <option key={branch._id} value={branch._id}>
-                        {branch.name} ({branch.branch_code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
+              {/* Full Width Fields */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Address
@@ -394,7 +444,57 @@ const UserFormModal = ({
                 </p>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4">
+              {/* Page Access Control - Only for staff/branch_admin */}
+              {(formData.role === 'staff' || formData.role === 'branch_admin') && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Page Access Permissions
+                    <span className="text-xs text-gray-500 ml-2 block sm:inline">
+                      (Select which pages this user can access)
+                    </span>
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-4 bg-[#1A1A1A] border border-[#444444] rounded-lg">
+                    {AVAILABLE_PAGES.map(page => (
+                      <label key={page.id} className="flex items-center space-x-2 cursor-pointer group">
+                        <div className="relative flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={(formData.page_access || []).includes(page.id)}
+                            onChange={() => handlePageAccessChange(page.id)}
+                            className="peer h-4 w-4 rounded border-gray-500 bg-[#2A2A2A] text-[var(--color-primary)] focus:ring-[var(--color-primary)] focus:ring-offset-[#1A1A1A] transition-all duration-200 ease-in-out cursor-pointer"
+                          />
+                        </div>
+                        <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
+                          {page.label}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="mt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allPages = AVAILABLE_PAGES.map(p => p.id)
+                        onInputChange({ target: { name: 'page_access', value: allPages } })
+                      }}
+                      className="text-xs text-[var(--color-primary)] hover:underline mr-3"
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onInputChange({ target: { name: 'page_access', value: [] } })
+                      }}
+                      className="text-xs text-gray-400 hover:text-white hover:underline"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end space-x-3 pt-4 border-t border-[#444444]/30">
                 <button
                   type="button"
                   onClick={onClose}

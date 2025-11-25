@@ -1,269 +1,10 @@
 import React, { useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
-import { User, UserPlus, Edit, Trash2, Building, Users, Search, Filter, X, Save, AlertCircle } from 'lucide-react'
-
-// User Form Modal Component (moved outside to prevent re-renders)
-const UserFormModal = React.memo(({ isOpen, onClose, title, onSubmit, formData, onInputChange, loading, error }) => {
-    if (!isOpen) return null
-
-    return createPortal(
-      <div className="fixed inset-0 z-[9999] overflow-y-auto">
-        <div className="flex min-h-full items-center justify-center p-4">
-          <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
-            onClick={onClose}
-          />
-          <div className="relative w-full max-w-md transform rounded-2xl bg-[#1A1A1A] shadow-2xl transition-all z-[10000] border border-[#2A2A2A]/50">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-[#444444]/30">
-              <h3 className="text-xl font-bold text-white">{title}</h3>
-              <button
-                onClick={onClose}
-                className="p-2 text-gray-400 hover:text-white hover:bg-[#333333] rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6">
-              {error && (
-                <div className="mb-4 p-3 bg-red-400/20 border border-red-400/30 rounded-lg flex items-center space-x-2">
-                  <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
-                  <p className="text-sm text-red-400">{error}</p>
-                </div>
-              )}
-
-              <form onSubmit={onSubmit} className="space-y-4">
-                {/* Info Note */}
-                <div className="p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                  <p className="text-sm text-blue-400">
-                    <strong>Note:</strong> This form creates staff accounts only. To create barber accounts, use the Barber Management section.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Username *</label>
-                  <input
-                    type="text"
-                    value={formData.username}
-                    onChange={(e) => onInputChange('username', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                    placeholder="Enter username"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Email *</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => onInputChange('email', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                    placeholder="Enter email address"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Password *</label>
-                  <input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => onInputChange('password', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                    placeholder="Enter password"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Mobile Number</label>
-                  <input
-                    type="tel"
-                    value={formData.mobile_number}
-                    onChange={(e) => onInputChange('mobile_number', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                    placeholder="Enter mobile number"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Address</label>
-                  <textarea
-                    value={formData.address}
-                    onChange={(e) => onInputChange('address', e.target.value)}
-                    rows="2"
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                    placeholder="Enter address"
-                  />
-                </div>
-
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="px-4 py-2 border border-gray-500 text-gray-300 rounded-lg hover:bg-gray-500/20 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Save className="h-4 w-4" />
-                    <span>{loading ? 'Creating...' : 'Create User'}</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>,
-      document.body
-    )
-})
-
-// Edit User Modal Component
-const EditUserModal = React.memo(({ isOpen, onClose, onSubmit, user, formData, onInputChange, loading, error }) => {
-    if (!isOpen) return null
-
-    return createPortal(
-      <div className="fixed inset-0 z-[9999] overflow-y-auto">
-        <div className="flex min-h-full items-center justify-center p-4">
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
-            onClick={onClose}
-          />
-          <div className="relative w-full max-w-md transform rounded-2xl bg-[#1A1A1A] shadow-2xl transition-all z-[10000] border border-[#2A2A2A]/50">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-[#444444]/30">
-              <h3 className="text-xl font-bold text-white">Edit User</h3>
-              <button
-                onClick={onClose}
-                className="p-2 text-gray-400 hover:text-white hover:bg-[#333333] rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6">
-              {error && (
-                <div className="mb-4 p-3 bg-red-400/20 border border-red-400/30 rounded-lg flex items-center space-x-2">
-                  <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
-                  <p className="text-sm text-red-400">{error}</p>
-                </div>
-              )}
-
-              <form onSubmit={onSubmit} className="space-y-4">
-                {/* User Info Display */}
-                <div className="p-3 bg-gray-500/10 border border-gray-500/30 rounded-lg">
-                  <p className="text-sm text-gray-400">
-                    <strong>Editing:</strong> {user?.username} ({user?.email})
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Username *</label>
-                  <input
-                    type="text"
-                    value={formData.username}
-                    onChange={(e) => onInputChange('username', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                    placeholder="Enter username"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Email *</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => onInputChange('email', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                    placeholder="Enter email address"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">New Password</label>
-                  <input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => onInputChange('password', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                    placeholder="Leave blank to keep current password"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">Leave blank to keep current password</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Mobile Number</label>
-                  <input
-                    type="tel"
-                    value={formData.mobile_number}
-                    onChange={(e) => onInputChange('mobile_number', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                    placeholder="Enter mobile number"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Address</label>
-                  <textarea
-                    value={formData.address}
-                    onChange={(e) => onInputChange('address', e.target.value)}
-                    rows="2"
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                    placeholder="Enter address"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Role</label>
-                  <select
-                    value={formData.role}
-                    onChange={(e) => onInputChange('role', e.target.value)}
-                    className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                  >
-                    <option value="staff">Staff</option>
-                    <option value="barber">Barber</option>
-                  </select>
-                </div>
-
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="px-4 py-2 border border-gray-500 text-gray-300 rounded-lg hover:bg-gray-500/20 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <Save className="h-4 w-4" />
-                    <span>{loading ? 'Updating...' : 'Update User'}</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>,
-      document.body
-    )
-})
+import { User, UserPlus, Edit, Trash2, Building, Users, Search, Filter, X, AlertCircle } from 'lucide-react'
+import UserFormModal from '../admin/UserFormModal'
+import { createPortal } from 'react-dom'
 
 // Delete User Modal Component
 const DeleteUserModal = React.memo(({ isOpen, onClose, onConfirm, user, loading, error }) => {
@@ -369,7 +110,9 @@ export default function BranchUserManagement() {
     password: '',
     mobile_number: '',
     address: '',
-    role: 'staff'
+    role: 'staff',
+    page_access: [],
+    branch_id: user?.branch_id || ''
   }
   
   const [formData, setFormData] = useState(initialFormData)
@@ -389,8 +132,8 @@ export default function BranchUserManagement() {
   const updateUser = useMutation(api.services.auth.updateUser)
   const deleteUser = useMutation(api.services.auth.deleteUser)
 
-  // Filter to only show staff and barbers (not customers or admins)
-  const staffAndBarbers = branchUsers.filter(u => u.role === 'staff' || u.role === 'barber')
+  // Filter to only show staff (not customers, admins, or barbers)
+  const staffOnly = branchUsers.filter(u => u.role === 'staff')
 
   const getRoleColor = (role) => {
     switch (role) {
@@ -403,7 +146,7 @@ export default function BranchUserManagement() {
     }
   }
 
-  const filteredUsers = staffAndBarbers
+  const filteredUsers = staffOnly
     .filter(user => {
       const matchesSearch = 
         user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -414,9 +157,9 @@ export default function BranchUserManagement() {
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
   const stats = {
-    total: staffAndBarbers.length,
-    staff: staffAndBarbers.filter(u => u.role === 'staff').length,
-    barbers: staffAndBarbers.filter(u => u.role === 'barber').length
+    total: staffOnly.length,
+    staff: staffOnly.filter(u => u.role === 'staff').length,
+    barbers: 0 // Barbers are hidden
   }
 
   const resetForm = () => {
@@ -457,7 +200,8 @@ export default function BranchUserManagement() {
     }
   }
 
-  const handleInputChange = (name, value) => {
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -472,7 +216,9 @@ export default function BranchUserManagement() {
       password: '', // Don't pre-fill password for security
       mobile_number: user.mobile_number || '',
       address: user.address || '',
-      role: user.role
+      role: user.role,
+      page_access: user.page_access || [],
+      branch_id: user.branch_id || ''
     })
     setError('')
     setShowEditModal(true)
@@ -503,7 +249,8 @@ export default function BranchUserManagement() {
         email: formData.email,
         mobile_number: formData.mobile_number,
         address: formData.address,
-        role: formData.role
+        role: formData.role,
+        page_access: formData.page_access
       }
 
       // Only include password if it's provided
@@ -575,11 +322,11 @@ export default function BranchUserManagement() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 gap-4">
         <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Total</p>
+              <p className="text-sm font-medium text-gray-300">Total Staff</p>
               <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.total}</p>
             </div>
             <Users className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
@@ -589,18 +336,8 @@ export default function BranchUserManagement() {
         <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Staff</p>
+              <p className="text-sm font-medium text-gray-300">Active</p>
               <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.staff}</p>
-            </div>
-            <User className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
-          </div>
-        </div>
-
-        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-300">Barbers</p>
-              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.barbers}</p>
             </div>
             <User className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
@@ -631,7 +368,6 @@ export default function BranchUserManagement() {
               >
                 <option value="all">All Roles</option>
                 <option value="staff">Staff</option>
-                <option value="barber">Barber</option>
               </select>
             </div>
           </div>
@@ -764,22 +500,34 @@ export default function BranchUserManagement() {
         onInputChange={handleInputChange}
         loading={loading}
         error={error}
+        branches={[currentBranch]}
+        availableRoles={[
+          { value: 'staff', label: 'Staff' }
+        ]}
+        isEditMode={false}
       />
 
       {/* Edit User Modal */}
-      <EditUserModal
+      <UserFormModal
         isOpen={showEditModal}
         onClose={() => {
           setShowEditModal(false)
           resetForm()
           setSelectedUser(null)
         }}
+        title="Edit User"
+        buttonText="Update User"
+        loadingText="Updating..."
         onSubmit={handleSubmitEdit}
-        user={selectedUser}
         formData={formData}
         onInputChange={handleInputChange}
         loading={loading}
         error={error}
+        branches={[currentBranch]}
+        availableRoles={[
+          { value: 'staff', label: 'Staff' }
+        ]}
+        isEditMode={true}
       />
 
       {/* Delete User Modal */}
