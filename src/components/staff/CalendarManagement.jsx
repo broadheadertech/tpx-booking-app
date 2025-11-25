@@ -186,6 +186,28 @@ const CalendarManagement = ({ user }) => {
     }
   }
 
+  // Format customer name - extract readable name from guest IDs
+  const formatCustomerName = (name) => {
+    if (!name) return 'Walk-in'
+
+    // Check if it's a guest format: guest_firstname_lastname_timestamp_id
+    if (name.startsWith('guest_')) {
+      const parts = name.split('_')
+      // Extract name parts (skip 'guest' and numeric/id parts at the end)
+      const nameParts = parts.slice(1).filter(part =>
+        isNaN(part) && part.length > 4 // Filter out numbers and short IDs
+      )
+      if (nameParts.length > 0) {
+        // Capitalize each word
+        return nameParts
+          .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+          .join(' ')
+      }
+    }
+
+    return name
+  }
+
   // Helper to calculate layout for overlapping bookings
   const calculateBookingLayout = (bookings) => {
     // Sort bookings by start time, then by duration (descending)
@@ -333,6 +355,9 @@ const CalendarManagement = ({ user }) => {
                       const top = (startMinutes / 60) * HOUR_HEIGHT
                       const height = (duration / 60) * HOUR_HEIGHT
                       
+                      // Determine if this is a short booking (less than 45 minutes)
+                      const isShortBooking = duration < 45
+
                       return (
                         <div
                           key={booking._id}
@@ -345,17 +370,47 @@ const CalendarManagement = ({ user }) => {
                             zIndex: layout.zIndex
                           }}
                           onClick={(e) => handleBookingClick(booking, e)}
-                          className={`rounded-lg border-l-4 p-1.5 text-xs cursor-pointer hover:brightness-110 transition-all shadow-lg overflow-hidden flex flex-col ${statusColor}`}
+                          className={`rounded-lg border-l-4 p-2 cursor-pointer hover:brightness-110 transition-all shadow-lg overflow-hidden ${statusColor}`}
                         >
-                          <div className="font-bold truncate text-white leading-tight mb-0.5">
-                            {booking.customer_name || 'Walk-in'}
-                          </div>
-                          <div className="truncate opacity-80 leading-tight mb-0.5">{serviceName}</div>
-                          <div className="mt-auto flex items-center justify-between">
-                             <span className="font-mono opacity-90 font-medium text-[10px]">
-                               {formatTime(booking.time)}
-                             </span>
-                          </div>
+                          {isShortBooking ? (
+                            // Compact layout for short bookings - two rows
+                            <div className="flex flex-col h-full justify-center gap-0.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-bold text-white text-xs truncate">
+                                  {formatCustomerName(booking.customer_name)}
+                                </span>
+                                <span className="text-[10px] font-medium opacity-90 whitespace-nowrap">
+                                  {formatTime(booking.time)}
+                                </span>
+                              </div>
+                              <div className="text-[10px] opacity-80 truncate">
+                                {serviceName}
+                              </div>
+                            </div>
+                          ) : (
+                            // Full layout for longer bookings
+                            <div className="flex flex-col h-full">
+                              <div className="font-bold text-white text-sm leading-tight mb-0.5 line-clamp-1">
+                                {formatCustomerName(booking.customer_name)}
+                              </div>
+                              <div className="text-xs opacity-90 leading-tight line-clamp-1">
+                                {serviceName}
+                              </div>
+                              <div className="mt-auto flex items-center justify-between gap-2">
+                                <span className="font-mono text-xs font-semibold opacity-95">
+                                  {formatTime(booking.time)}
+                                </span>
+                                <span className="text-[10px] opacity-80">
+                                  {duration} min
+                                </span>
+                              </div>
+                              {booking.price && (
+                                <div className="text-[10px] font-semibold text-white/90 mt-0.5">
+                                  ${booking.price}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )
                     })}
