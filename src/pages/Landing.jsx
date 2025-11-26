@@ -258,12 +258,12 @@ const Landing = () => {
             >
               Sign In
             </button>
-            <button
+            {/* <button
               onClick={() => openModal("Book Now")}
               className="w-full py-3 rounded-xl bg-[var(--color-primary)] text-white font-bold"
             >
               Book Now
-            </button>
+            </button> */}
           </div>
         )}
       </nav>
@@ -333,13 +333,13 @@ const Landing = () => {
                   Book a Demo
                 </button>
 
-                <button
+                {/* <button
                   onClick={() => openModal("Book Now")}
                   className="px-8 py-4 rounded-full bg-green-600 text-white font-bold text-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2"
                 >
                   <Calendar className="w-5 h-5" />
                   Book Now
-                </button>
+                </button> */}
               </div>
             </div>
 
