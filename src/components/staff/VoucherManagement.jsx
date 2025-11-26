@@ -494,7 +494,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                 onClick={() => setViewMode("card")}
                 className={`p-2 rounded-md transition-colors ${
                   viewMode === "card"
-                    ? "bg-orange-500 text-white"
+                    ? "bg-[var(--color-primary)] text-white"
                     : "text-gray-400 hover:text-gray-300"
                 }`}
               >
@@ -504,7 +504,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                 onClick={() => setViewMode("table")}
                 className={`p-2 rounded-md transition-colors ${
                   viewMode === "table"
-                    ? "bg-orange-500 text-white"
+                    ? "bg-[var(--color-primary)] text-white"
                     : "text-gray-400 hover:text-gray-300"
                 }`}
               >
@@ -521,7 +521,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
             </button>
             <button
               onClick={onCreateVoucher}
-              className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
+              className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] transition-colors text-sm"
             >
               <Plus className="h-4 w-4" />
               <span>New Voucher</span>
