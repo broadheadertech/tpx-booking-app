@@ -148,7 +148,7 @@ const Landing = () => {
                   {branding?.display_name || "TipunoX"}
                 </h1>
                 <p className="text-[10px] font-medium tracking-[0.2em] uppercase text-[var(--color-primary)]">
-                  Premium Grooming
+                  Simplify Management. Amplify Results.
                 </p>
               </div>
             </div>
@@ -310,7 +310,7 @@ const Landing = () => {
                 </button> */}
               </div>
 
-              <div className="flex items-center gap-8 pt-8 border-t border-white/5">
+              {/* <div className="flex items-center gap-8 pt-8 border-t border-white/5">
                 <div>
                   <p className="text-3xl font-bold text-[var(--color-text)]">
                     4.9
@@ -332,7 +332,7 @@ const Landing = () => {
                     Clients
                   </p>
                 </div>
-              </div>
+              </div> */}
             </div>
 
             <div className="hidden lg:block relative">
@@ -675,7 +675,7 @@ const Landing = () => {
                 </span>
               </div>
               <p className="text-[var(--color-muted)] text-sm leading-relaxed">
-                Premium grooming experiences for the modern gentleman. Elevating
+                Simplify Management. Amplify Results. experiences for the modern gentleman. Elevating
                 style, one cut at a time.
               </p>
             </div>
