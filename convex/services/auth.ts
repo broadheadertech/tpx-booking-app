@@ -928,14 +928,14 @@ export const sendPasswordResetEmail = action({
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="color: #FF8C42; font-size: 32px; margin-bottom: 10px;">Barbershop</h1>
+              <h1 style="color: #FF8C42; font-size: 32px; margin-bottom: 10px;">${brandName}</h1>
               <h1 style="color: ${primaryColor}; font-size: 32px; margin-bottom: 10px;">${brandName}</h1>
             </div>
             
             <div class="content">
               <h1 class="title">Reset Your Password</h1>
               <p class="text">
-                Hi there! We received a request to reset your password for your Barbershop account.
+                Hi there! We received a request to reset your password for your ${brandName} account.
                 Click the button below to set a new password.
               </p>
               <h1 class="title">${heading}</h1>
@@ -957,7 +957,7 @@ export const sendPasswordResetEmail = action({
             </div>
             
             <div class="footer">
-              <p>© 2024 Barbershop. All rights reserved.</p>
+              <p>© 2024 ${brandName}. All rights reserved.</p>
               <p>© 2024 ${brandName}. All rights reserved.</p>
               <p>This is an automated message. Please do not reply to this email.</p>
             </div>
@@ -1356,7 +1356,7 @@ export const sendVoucherEmailWithQR = action({
             <div class="body">
               <div class="greeting">
                 Hey <strong>${args.recipientName}</strong>! 🎉<br>
-                You've received a voucher from <strong>Barbershop</strong>
+                You've received a voucher from <strong>${brandName}</strong>
               </div>
               <div class="greeting">${bodyText}</div>
               
@@ -1392,7 +1392,7 @@ export const sendVoucherEmailWithQR = action({
             </div>
             
             <div class="footer">
-              <p><strong>Barbershop</strong></p>
+              <p><strong>${brandName}</strong></p>
               <p><strong>${brandName}</strong></p>
               <p>© 2024 All Rights Reserved</p>
               <p>This is an automated message. Please do not reply.</p>
