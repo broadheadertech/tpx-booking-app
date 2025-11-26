@@ -4,8 +4,8 @@
  * Do not manually edit the version number
  */
 
-export const APP_VERSION = '1.0.26';
-export const LAST_DEPLOY = '2025-11-21';
+export const APP_VERSION = '1.0.27';
+export const LAST_DEPLOY = '2025-11-26';
 export const VERSION_INFO = {
   version: APP_VERSION,
   lastDeploy: LAST_DEPLOY,
