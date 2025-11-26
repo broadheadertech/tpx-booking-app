@@ -233,20 +233,20 @@ const Landing = () => {
               </div>
 
               <h1 className="text-5xl sm:text-7xl font-bold tracking-tight leading-[1.1]">
-                Refine Your <br />
+                Bright Ideas <br />
                 <span
                   className="text-transparent bg-clip-text"
                   style={{
                     backgroundImage: `linear-gradient(to right, var(--color-primary), var(--color-accent))`
                   }}
                 >
-                  Signature Look
+                  Inspire Change
                 </span>
               </h1>
 
               <p className="text-lg text-[var(--color-muted)] max-w-lg leading-relaxed">
-                Experience the pinnacle of grooming at {branding?.display_name || 'TipunoX'}.
-                Where traditional barbering meets modern luxury.
+               Here at{branding?.display_name || 'TipunoX'}, 
+                We Simplify Management and Amplify Results.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
