@@ -819,12 +819,34 @@ export const sendPasswordResetEmail = action({
     token: v.string(),
   },
   handler: async (ctx, args) => {
+    const { api } = require("../_generated/api");
+    
+    // Fetch branding and email template
+    const branding = await ctx.runQuery(api.services.branding.getGlobalBranding, {});
+    const template = await ctx.runQuery(api.services.emailTemplates.getTemplateByType, { template_type: "password_reset" });
+    
+    // Extract branding colors (fallback to defaults)
+    const primaryColor = branding?.primary_color || '#FF8C42';
+    const accentColor = branding?.accent_color || '#FF7A2B';
+    const bgColor = branding?.bg_color || '#0A0A0A';
+    const brandName = branding?.display_name || 'TipunoX';
+    
+    // Email template content
+    const subject = (template?.subject || 'Reset your {{brand_name}} password').replace(/\{\{brand_name\}\}/g, brandName);
+    const heading = (template?.heading || 'Reset Your Password').replace(/\{\{brand_name\}\}/g, brandName);
+    const bodyText = (template?.body_text || 'Hi there! We received a request to reset your password for your {{brand_name}} account. Click the button below to set a new password.')
+      .replace(/\{\{brand_name\}\}/g, brandName);
+    const ctaText = template?.cta_text || 'Reset Password';
+    const footerText = template?.footer_text || 'This link will expire in 15 minutes for your security. If you didn\'t request a password reset, you can safely ignore this email.';
+    
     const resetUrl = `https://tipunox.broadheader.com/auth/reset-password?token=${args.token}`;
 
     const emailData = {
       from: 'Barbershop <no-reply@tipunox.broadheader.com>',
+      from: `${brandName} <no-reply@tipunox.broadheader.com>`,
       to: args.email,
       subject: 'Reset your Barbershop password',
+      subject: subject,
       html: `
         <!DOCTYPE html>
         <html>
@@ -832,10 +854,11 @@ export const sendPasswordResetEmail = action({
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Password Reset - Barbershop</title>
+          <title>Password Reset - ${brandName}</title>
           <style>
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-              background-color: #0A0A0A;
+              background-color: ${bgColor};
               color: #ffffff;
               margin: 0;
               padding: 0;
@@ -861,7 +884,7 @@ export const sendPasswordResetEmail = action({
               font-size: 24px;
               font-weight: bold;
               margin-bottom: 20px;
-              color: #FF8C42;
+              color: ${primaryColor};
               text-align: center;
             }
             .text {
@@ -871,7 +894,7 @@ export const sendPasswordResetEmail = action({
             }
             .reset-button {
               display: inline-block;
-              background: linear-gradient(135deg, #FF8C42 0%, #FF7A2B 100%);
+              background: linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%);
               color: white;
               text-decoration: none;
               padding: 16px 32px;
@@ -892,14 +915,14 @@ export const sendPasswordResetEmail = action({
               font-size: 14px;
             }
             .security-info {
-              background: rgba(255, 140, 66, 0.1);
-              border: 1px solid rgba(255, 140, 66, 0.3);
+              background: ${primaryColor}1a;
+              border: 1px solid ${primaryColor}4d;
               border-radius: 8px;
               padding: 20px;
               margin-top: 20px;
             }
             .security-info h3 {
-              color: #FF8C42;
+              color: ${primaryColor};
               margin-top: 0;
               margin-bottom: 10px;
             }
@@ -909,6 +932,7 @@ export const sendPasswordResetEmail = action({
           <div class="container">
             <div class="header">
               <h1 style="color: #FF8C42; font-size: 32px; margin-bottom: 10px;">Barbershop</h1>
+              <h1 style="color: ${primaryColor}; font-size: 32px; margin-bottom: 10px;">${brandName}</h1>
             </div>
             
             <div class="content">
@@ -917,27 +941,27 @@ export const sendPasswordResetEmail = action({
                 Hi there! We received a request to reset your password for your Barbershop account.
                 Click the button below to set a new password.
               </p>
+              <h1 class="title">${heading}</h1>
+              <p class="text">${bodyText}</p>
               
               <div style="text-align: center;">
-                <a href="${resetUrl}" class="reset-button">Reset Password</a>
+                <a href="${resetUrl}" class="reset-button">${ctaText}</a>
               </div>
               
               <div class="security-info">
                 <h3>🔐 Security Information</h3>
-                <p style="margin: 0; font-size: 14px; color: #bbb;">
-                  This link will expire in 15 minutes for your security. If you didn't request a password reset, 
-                  you can safely ignore this email.
-                </p>
+                <p style="margin: 0; font-size: 14px; color: #bbb;">${footerText}</p>
               </div>
               
               <p class="text" style="margin-top: 30px; font-size: 14px;">
                 If the button above doesn't work, copy and paste this link into your browser:<br>
-                <span style="word-break: break-all; color: #FF8C42;">${resetUrl}</span>
+                <span style="word-break: break-all; color: ${primaryColor};">${resetUrl}</span>
               </p>
             </div>
             
             <div class="footer">
               <p>© 2024 Barbershop. All rights reserved.</p>
+              <p>© 2024 ${brandName}. All rights reserved.</p>
               <p>This is an automated message. Please do not reply to this email.</p>
             </div>
           </div>
@@ -982,29 +1006,76 @@ export const resetPassword = mutation({
     new_password: v.string(),
   },
   handler: async (ctx, args) => {
-    // Scan for a user with this token; Convex doesn't support cross-table search by arbitrary field with index,
-    // so collect and filter. For small user counts in dev this is fine. For prod, add an index if needed.
-    const candidates = await ctx.db.query("users").collect();
-    const user = candidates.find(
-      (u: any) => u.password_reset_token === args.token && typeof u.password_reset_expires === 'number'
-    );
-
-    if (!user) {
-      throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
+    // Validate password
+    if (!args.new_password || args.new_password.length < 6) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Password too short",
+        "Password must be at least 6 characters long."
+      );
     }
 
-    if ((user.password_reset_expires as number) < Date.now()) {
-      throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS, "Reset token expired", "Your password reset link has expired. Please request a new one.");
+    if (!args.token || args.token.trim() === '') {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Invalid token",
+        "Password reset token is missing or invalid."
+      );
     }
 
-    await ctx.db.patch(user._id, {
-      password: hashPassword(args.new_password), // Hash password for security
-      password_reset_token: undefined,
-      password_reset_expires: undefined,
-      updatedAt: Date.now(),
-    });
+    try {
+      // Scan for a user with this token; Convex doesn't support cross-table search by arbitrary field with index,
+      // so collect and filter. For small user counts in dev this is fine. For prod, add an index if needed.
+      const candidates = await ctx.db.query("users").collect();
+      const user = candidates.find(
+        (u: any) =>
+          u.password_reset_token === args.token &&
+          u.password_reset_token !== "" && // Exclude already-used tokens
+          typeof u.password_reset_expires === 'number' &&
+          u.password_reset_expires > 0 // Exclude invalidated tokens
+      );
 
-    return { success: true };
+      if (!user) {
+        throwUserError(
+          ERROR_CODES.AUTH_INVALID_CREDENTIALS,
+          "Invalid or expired token",
+          "This password reset link is invalid or has already been used. Please request a new password reset."
+        );
+      }
+
+      const expiresAt = user.password_reset_expires as number;
+      if (expiresAt < Date.now()) {
+        throwUserError(
+          ERROR_CODES.AUTH_INVALID_CREDENTIALS,
+          "Reset token expired",
+          "Your password reset link has expired. Please request a new one."
+        );
+      }
+
+      // Update password and invalidate the reset token by setting expiry to past
+      // Note: We set token to empty string and expiry to 0 instead of undefined
+      // because Convex patches don't handle undefined well for clearing fields
+      await ctx.db.patch(user._id, {
+        password: hashPassword(args.new_password),
+        password_reset_token: "", // Clear the token
+        password_reset_expires: 0, // Set to past time to invalidate
+        updatedAt: Date.now(),
+      });
+
+      return { success: true };
+    } catch (error: any) {
+      // Check if it's already a user error (thrown by throwUserError)
+      if (error.message && error.message.startsWith('{')) {
+        throw error;
+      }
+      // Wrap unexpected errors with user-friendly message
+      console.error('Reset password error:', error);
+      throwUserError(
+        ERROR_CODES.OPERATION_FAILED,
+        "Failed to reset password",
+        "An error occurred while resetting your password. Please try again or request a new reset link."
+      );
+    }
   },
 });
 
@@ -1065,26 +1136,58 @@ export const sendVoucherEmailWithQR = action({
     pointsRequired: v.number(),
     expiresAt: v.string(),
     recipientName: v.string(),
-    voucherId: v.optional(v.string()), // Made optional for backward compatibility
+    voucherId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Generate a robust QR code URL using a public API
-    // We construct a JSON payload similar to the client app for compatibility
+    const { api } = require("../_generated/api");
+    
+    // Fetch branding and email template
+    const branding = await ctx.runQuery(api.services.branding.getGlobalBranding, {});
+    const template = await ctx.runQuery(api.services.emailTemplates.getTemplateByType, { template_type: "voucher" });
+    
+    // Extract branding colors (fallback to defaults)
+    const primaryColor = branding?.primary_color || '#FF8C42';
+    const accentColor = branding?.accent_color || '#FF7A2B';
+    const brandName = branding?.display_name || 'TipunoX';
+    
+    // Lighter versions of primary color for backgrounds
+    const primaryLight = `${primaryColor}1a`;
+    const primaryBorder = `${primaryColor}40`;
+    
+    // Email template content with variable replacements
+    const subject = (template?.subject || 'Your Voucher {{voucher_code}} from {{brand_name}}')
+      .replace(/\{\{brand_name\}\}/g, brandName)
+      .replace(/\{\{voucher_code\}\}/g, args.voucherCode);
+    const heading = (template?.heading || '🎉 Your Voucher Is Ready!')
+      .replace(/\{\{brand_name\}\}/g, brandName);
+    const bodyText = (template?.body_text || 'Hey {{recipient_name}}! 🎁\n\nYou\'ve received a special voucher from {{brand_name}}!\n\n💰 Voucher Value: {{voucher_value}}\n🎫 Voucher Code: {{voucher_code}}\n⭐ Points Used: {{points_required}}\n📅 Valid Until: {{expires_at}}\n\nThank you for being a valued customer!')
+      .replace(/\{\{brand_name\}\}/g, brandName)
+      .replace(/\{\{recipient_name\}\}/g, args.recipientName)
+      .replace(/\{\{voucher_code\}\}/g, args.voucherCode)
+      .replace(/\{\{voucher_value\}\}/g, args.voucherValue)
+      .replace(/\{\{points_required\}\}/g, String(args.pointsRequired))
+      .replace(/\{\{expires_at\}\}/g, args.expiresAt)
+      .replace(/\n/g, '<br>');
+    const footerText = (template?.footer_text || '✓ Present this email or scan the QR code at checkout\n✓ Our staff will apply your discount\n✓ One voucher per visit')
+      .replace(/\n/g, '<br>');
+    
+    // Generate QR code
     const qrPayload = JSON.stringify({
       voucherId: args.voucherId || "",
       code: args.voucherCode,
       value: args.voucherValue,
       type: "voucher",
       brand: " Barbershop"
+      brand: brandName
     });
-
-    // Public API URL that generates the QR code image on the fly
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrPayload)}`;
 
     const emailData = {
       from: 'Barbershop <no-reply@tipunox.broadheader.com>',
+      from: `${brandName} <no-reply@tipunox.broadheader.com>`,
       to: args.email,
       subject: `Your Voucher ${args.voucherCode} from Barbershop`,
+      subject: subject,
       html: `
         <!DOCTYPE html>
         <html>
@@ -1092,6 +1195,7 @@ export const sendVoucherEmailWithQR = action({
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Your Voucher - Barbershop</title>
+          <title>Your Voucher - ${brandName}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
@@ -1109,7 +1213,7 @@ export const sendVoucherEmailWithQR = action({
               box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             }
             .header {
-              background: linear-gradient(135deg, #FF8C42 0%, #FF7A2B 100%);
+              background: linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%);
               padding: 24px;
               text-align: center;
               color: white;
@@ -1134,8 +1238,8 @@ export const sendVoucherEmailWithQR = action({
               font-weight: 600;
             }
             .voucher-card {
-              background: linear-gradient(135deg, #FFF8F4 0%, #FFF5F0 100%);
-              border: 2px solid #FFD6C5;
+              background: ${primaryLight};
+              border: 2px solid ${primaryBorder};
               border-radius: 10px;
               padding: 20px;
               margin-bottom: 24px;
@@ -1144,7 +1248,7 @@ export const sendVoucherEmailWithQR = action({
             .voucher-code {
               font-size: 28px;
               font-weight: 800;
-              color: #FF8C42;
+              color: ${primaryColor};
               font-family: 'Courier New', monospace;
               letter-spacing: 2px;
               margin-bottom: 8px;
@@ -1153,7 +1257,7 @@ export const sendVoucherEmailWithQR = action({
             .voucher-value {
               font-size: 32px;
               font-weight: 800;
-              color: #FF8C42;
+              color: ${primaryColor};
               margin-bottom: 8px;
             }
             .voucher-label {
@@ -1219,8 +1323,8 @@ export const sendVoucherEmailWithQR = action({
               font-weight: 700;
             }
             .cta-section {
-              background: #FFF8F4;
-              border-left: 4px solid #FF8C42;
+              background: ${primaryLight};
+              border-left: 4px solid ${primaryColor};
               border-radius: 4px;
               padding: 16px;
               margin-bottom: 24px;
@@ -1253,7 +1357,7 @@ export const sendVoucherEmailWithQR = action({
         <body>
           <div class="container">
             <div class="header">
-              <h1>✨ Your Voucher Is Ready</h1>
+              <h1>✨ ${heading}</h1>
             </div>
             
             <div class="body">
@@ -1261,6 +1365,7 @@ export const sendVoucherEmailWithQR = action({
                 Hey <strong>${args.recipientName}</strong>! 🎉<br>
                 You've received a voucher from <strong>Barbershop</strong>
               </div>
+              <div class="greeting">${bodyText}</div>
               
               <div class="voucher-card">
                 <div class="voucher-label">Your Code</div>
@@ -1289,14 +1394,13 @@ export const sendVoucherEmailWithQR = action({
 
               <div class="cta-section">
                 <strong>How to Use</strong>
-                <p>✓ Present this email or scan the QR code</p>
-                <p>✓ Our staff will apply your discount</p>
-                <p>✓ One voucher per visit</p>
+                <p>${footerText}</p>
               </div>
             </div>
             
             <div class="footer">
               <p><strong>Barbershop</strong></p>
+              <p><strong>${brandName}</strong></p>
               <p>© 2024 All Rights Reserved</p>
               <p>This is an automated message. Please do not reply.</p>
             </div>
@@ -1334,6 +1438,318 @@ export const sendVoucherEmailWithQR = action({
         throw error;
       }
       throwUserError(ERROR_CODES.OPERATION_FAILED, "Failed to send voucher email", "An unexpected error occurred while sending the email.");
+    }
+  },
+});
+
+// Send booking confirmation email with QR code
+export const sendBookingConfirmationEmail = action({
+  args: {
+    email: v.string(),
+    customerName: v.string(),
+    bookingCode: v.string(),
+    serviceName: v.string(),
+    servicePrice: v.number(),
+    barberName: v.string(),
+    branchName: v.string(),
+    branchAddress: v.optional(v.string()),
+    date: v.string(),
+    time: v.string(),
+    bookingId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { api } = require("../_generated/api");
+    
+    // Fetch branding and email template
+    const branding = await ctx.runQuery(api.services.branding.getGlobalBranding, {});
+    const template = await ctx.runQuery(api.services.emailTemplates.getTemplateByType, { template_type: "booking_confirmation" });
+    
+    // Extract branding colors (fallback to defaults)
+    const primaryColor = branding?.primary_color || '#FF8C42';
+    const accentColor = branding?.accent_color || '#FF7A2B';
+    const bgColor = branding?.bg_color || '#0A0A0A';
+    const brandName = branding?.display_name || 'TipunoX';
+    
+    // Lighter versions of primary color for backgrounds
+    const primaryLight = `${primaryColor}1a`;
+    const primaryBorder = `${primaryColor}40`;
+    
+    // Format date for display
+    const formattedDate = new Date(args.date).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    // Email template content with variable replacements
+    const subject = (template?.subject || 'Booking Confirmed - {{brand_name}}')
+      .replace(/\{\{brand_name\}\}/g, brandName);
+    const heading = (template?.heading || 'Booking Confirmed!')
+      .replace(/\{\{brand_name\}\}/g, brandName);
+    const bodyText = (template?.body_text || 'Your appointment has been confirmed. We look forward to seeing you!')
+      .replace(/\{\{brand_name\}\}/g, brandName)
+      .replace(/\{\{customer_name\}\}/g, args.customerName)
+      .replace(/\{\{service_name\}\}/g, args.serviceName)
+      .replace(/\{\{date\}\}/g, formattedDate)
+      .replace(/\{\{time\}\}/g, args.time)
+      .replace(/\{\{barber_name\}\}/g, args.barberName)
+      .replace(/\n/g, '<br>');
+    const ctaText = template?.cta_text || 'View Booking';
+    const footerText = (template?.footer_text || 'If you need to reschedule or cancel, please contact us at least 24 hours in advance.')
+      .replace(/\n/g, '<br>');
+    
+    // Generate QR code for booking
+    const qrPayload = JSON.stringify({
+      bookingId: args.bookingId || "",
+      code: args.bookingCode,
+      type: "booking",
+      brand: brandName
+    });
+    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrPayload)}`;
+
+    const emailData = {
+      from: `${brandName} <no-reply@tipunox.broadheader.com>`,
+      to: args.email,
+      subject: subject,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Booking Confirmation - ${brandName}</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+              background-color: #f5f5f5;
+              color: #333;
+              line-height: 1.6;
+            }
+            .container {
+              max-width: 500px;
+              margin: 0 auto;
+              background: #ffffff;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+            .header {
+              background: linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%);
+              padding: 24px;
+              text-align: center;
+              color: white;
+            }
+            .header h1 {
+              font-size: 24px;
+              font-weight: 700;
+              margin: 0;
+              letter-spacing: -0.5px;
+            }
+            .body {
+              padding: 28px 24px;
+            }
+            .greeting {
+              font-size: 15px;
+              color: #555;
+              margin-bottom: 24px;
+              line-height: 1.5;
+              text-align: center;
+            }
+            .booking-card {
+              background: ${primaryLight};
+              border: 2px solid ${primaryBorder};
+              border-radius: 10px;
+              padding: 20px;
+              margin-bottom: 24px;
+            }
+            .booking-code {
+              font-size: 24px;
+              font-weight: 800;
+              color: ${primaryColor};
+              font-family: 'Courier New', monospace;
+              letter-spacing: 2px;
+              margin-bottom: 8px;
+              text-align: center;
+              word-break: break-all;
+            }
+            .booking-label {
+              font-size: 12px;
+              color: #999;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              font-weight: 600;
+              text-align: center;
+              margin-bottom: 16px;
+            }
+            .booking-details {
+              border-top: 1px solid ${primaryBorder};
+              padding-top: 16px;
+            }
+            .detail-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 8px 0;
+              border-bottom: 1px solid #f0f0f0;
+            }
+            .detail-row:last-child {
+              border-bottom: none;
+            }
+            .detail-label {
+              font-size: 13px;
+              color: #666;
+              font-weight: 500;
+            }
+            .detail-value {
+              font-size: 13px;
+              color: #333;
+              font-weight: 600;
+              text-align: right;
+            }
+            .qr-container {
+              background: white;
+              border: 1px solid #e5e5e5;
+              border-radius: 8px;
+              padding: 20px;
+              margin-bottom: 24px;
+              text-align: center;
+            }
+            .qr-instruction {
+              font-size: 13px;
+              color: #666;
+              margin-bottom: 12px;
+              font-weight: 500;
+            }
+            .qr-code img {
+              width: 150px;
+              height: 150px;
+              display: block;
+              border-radius: 4px;
+              margin: 0 auto;
+            }
+            .cta-section {
+              background: ${primaryLight};
+              border-left: 4px solid ${primaryColor};
+              border-radius: 4px;
+              padding: 16px;
+              margin-bottom: 24px;
+              font-size: 13px;
+              color: #555;
+              line-height: 1.6;
+            }
+            .footer {
+              background: #f9f9f9;
+              border-top: 1px solid #efefef;
+              padding: 16px 24px;
+              text-align: center;
+              font-size: 11px;
+              color: #999;
+            }
+            .footer p {
+              margin: 2px 0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>✅ ${heading}</h1>
+            </div>
+            
+            <div class="body">
+              <div class="greeting">
+                Hi <strong>${args.customerName}</strong>! ${bodyText}
+              </div>
+              
+              <div class="booking-card">
+                <div class="booking-label">Booking Code</div>
+                <div class="booking-code">${args.bookingCode}</div>
+                
+                <div class="booking-details">
+                  <div class="detail-row">
+                    <span class="detail-label">📅 Date</span>
+                    <span class="detail-value">${formattedDate}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">🕐 Time</span>
+                    <span class="detail-value">${args.time}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">✂️ Service</span>
+                    <span class="detail-value">${args.serviceName}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">💰 Price</span>
+                    <span class="detail-value">₱${args.servicePrice.toLocaleString()}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">💇 Barber</span>
+                    <span class="detail-value">${args.barberName}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">📍 Branch</span>
+                    <span class="detail-value">${args.branchName}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="qr-container">
+                <div class="qr-instruction">📱 Show this QR code at the shop</div>
+                <div class="qr-code">
+                  <img src="${qrImageUrl}" alt="Booking QR Code" />
+                </div>
+              </div>
+
+              <div class="cta-section">
+                <strong style="display:block;margin-bottom:8px;color:#333;">Important Information</strong>
+                ${footerText}
+              </div>
+            </div>
+            
+            <div class="footer">
+              <p><strong>${brandName}</strong></p>
+              ${args.branchAddress ? `<p>${args.branchAddress}</p>` : ''}
+              <p>© 2024 All Rights Reserved</p>
+              <p>This is an automated message. Please do not reply.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    try {
+      console.log('📧 Attempting to send booking confirmation email:', {
+        to: args.email,
+        bookingCode: args.bookingCode,
+        service: args.serviceName,
+        environment: process.env.NODE_ENV,
+        hasResendKey: !!process.env.RESEND_API_KEY,
+      });
+
+      // Always try to send in production - booking emails are critical
+      const result = await resend.emails.send(emailData as any);
+
+      if (result.error) {
+        console.error('📧 Booking confirmation email service error:', result.error);
+        return { success: false, error: result.error.message };
+      }
+
+      console.log('📧 Booking confirmation email sent successfully:', {
+        messageId: result.data?.id,
+        to: args.email,
+        bookingCode: args.bookingCode,
+      });
+      return { success: true, messageId: result.data?.id };
+    } catch (error: any) {
+      console.error('📧 Failed to send booking confirmation email:', {
+        error: error.message,
+        to: args.email,
+        bookingCode: args.bookingCode,
+      });
+      // Don't throw error - email failure shouldn't block booking
+      return { success: false, error: error.message };
     }
   },
 });

@@ -19,7 +19,24 @@ import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuth } from "../../context/AuthContext";
+import { useBranding } from "../../context/BrandingContext";
 import { formatTime } from "../../utils/dateUtils";
+
+// Helper function to convert hex to rgba
+const hexToRgba = (hex, alpha) => {
+  if (!hex) return hex;
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) {
+    r = parseInt(hex[1] + hex[1], 16);
+    g = parseInt(hex[2] + hex[2], 16);
+    b = parseInt(hex[3] + hex[3], 16);
+  } else if (hex.length === 7) {
+    r = parseInt(hex.slice(1, 3), 16);
+    g = parseInt(hex.slice(3, 5), 16);
+    b = parseInt(hex.slice(5, 7), 16);
+  }
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 
 // Barber Avatar Component
 const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
@@ -56,6 +73,7 @@ const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
 };
 
 const GuestServiceBooking = ({ onBack }) => {
+  const { branding } = useBranding();
   const [guestData, setGuestData] = useState({
     name: "",
     email: "",
@@ -428,6 +446,10 @@ const GuestServiceBooking = ({ onBack }) => {
         ? `${selectedTime}:00`
         : selectedTime;
 
+      // Get guest email and name from state or session storage
+      const customerEmail = guestData.email || sessionStorage.getItem("guest_email");
+      const customerName = guestData.name || sessionStorage.getItem("guest_name");
+
       const bookingData = {
         customer: userId,
         service: selectedService._id,
@@ -441,6 +463,8 @@ const GuestServiceBooking = ({ onBack }) => {
           : undefined,
         voucher_id: selectedVoucher?._id || undefined,
         discount_amount: selectedVoucher?.value || undefined,
+        customer_email: customerEmail,
+        customer_name: customerName,
       };
 
       console.log("Creating booking with data:", bookingData);
@@ -663,7 +687,7 @@ const GuestServiceBooking = ({ onBack }) => {
                 step >= stepNumber ? "text-white shadow-md" : "text-gray-500"
               }`}
               style={{
-                backgroundColor: step >= stepNumber ? "#F68B24" : "#E0E0E0",
+                backgroundColor: step >= stepNumber ? (branding?.primary_color || "#F68B24") : (branding?.muted_color || "#E0E0E0"),
               }}
             >
               {step > stepNumber ? "✓" : stepNumber}
@@ -672,7 +696,7 @@ const GuestServiceBooking = ({ onBack }) => {
               <div
                 className={`w-4 h-0.5 mx-1 rounded transition-all duration-300`}
                 style={{
-                  backgroundColor: step > stepNumber ? "#F68B24" : "#E0E0E0",
+                  backgroundColor: step > stepNumber ? (branding?.primary_color || "#F68B24") : (branding?.muted_color || "#E0E0E0"),
                 }}
               ></div>
             )}
@@ -971,7 +995,10 @@ const GuestServiceBooking = ({ onBack }) => {
 
                               {/* Availability warning */}
                               {availableBarbers === 0 && (
-                                <p className="text-[10px] text-amber-500 mt-1">
+                                <p 
+                                  className="text-[10px] mt-1"
+                                  style={{ color: branding?.primary_color || "#f59e0b" }}
+                                >
                                   Limited availability
                                 </p>
                               )}
@@ -1744,7 +1771,7 @@ const GuestServiceBooking = ({ onBack }) => {
         <div className="text-center">
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl"
-            style={{ backgroundColor: "#F68B24" }}
+            style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
           >
             <CheckCircle className="w-10 h-10 text-white" />
           </div>
@@ -1816,8 +1843,8 @@ const GuestServiceBooking = ({ onBack }) => {
         <div
           className="rounded-2xl p-6 border"
           style={{
-            backgroundColor: "rgba(246, 139, 36, 0.05)",
-            borderColor: "rgba(246, 139, 36, 0.2)",
+            backgroundColor: hexToRgba(branding?.primary_color || "#F68B24", 0.05),
+            borderColor: hexToRgba(branding?.primary_color || "#F68B24", 0.2),
           }}
         >
           <h4 className="text-sm font-light text-white mb-4 text-center">
@@ -1900,7 +1927,8 @@ const GuestServiceBooking = ({ onBack }) => {
         <div className="space-y-3">
           <button
             onClick={onBack}
-            className="w-full py-4 bg-[#F68B24] hover:brightness-90 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
+            className="w-full py-4 hover:brightness-90 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
+            style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
           >
             Back to Home
           </button>

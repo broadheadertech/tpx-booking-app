@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { LayoutDashboard, Building, Users, BarChart3, Settings, Crown, Palette } from 'lucide-react'
+import { LayoutDashboard, Building, Users, BarChart3, Settings, Crown, Palette, Mail } from 'lucide-react'
 
 const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
   const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false)
@@ -27,6 +27,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
       reports: BarChart3,
       settings: Settings,
       branding: Palette,
+      emails: Mail,
     }
     return iconMap[tabId] || LayoutDashboard
   }

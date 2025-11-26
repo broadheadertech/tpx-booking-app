@@ -20,6 +20,7 @@ import type * as services_bookings from "../services/bookings.js";
 import type * as services_branches from "../services/branches.js";
 import type * as services_branding from "../services/branding.js";
 import type * as services_emailMarketing from "../services/emailMarketing.js";
+import type * as services_emailTemplates from "../services/emailTemplates.js";
 import type * as services_events from "../services/events.js";
 import type * as services_index from "../services/index.js";
 import type * as services_notificationScheduler from "../services/notificationScheduler.js";
@@ -54,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   "services/branches": typeof services_branches;
   "services/branding": typeof services_branding;
   "services/emailMarketing": typeof services_emailMarketing;
+  "services/emailTemplates": typeof services_emailTemplates;
   "services/events": typeof services_events;
   "services/index": typeof services_index;
   "services/notificationScheduler": typeof services_notificationScheduler;

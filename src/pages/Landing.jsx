@@ -120,10 +120,10 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] selection:bg-[var(--color-primary)]/30">
+    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] selection:bg-[var(--color-primary)]/30">
       {/* Navigation */}
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          isScrolled
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
             ? "bg-[var(--color-bg)]/80 backdrop-blur-xl border-b border-white/5 py-4"
             : "bg-transparent py-6"
         }`}
@@ -144,8 +144,9 @@ const Landing = () => {
               />
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-[var(--color-text)]">
-                  {branding?.display_name || "TipunoX"}
+                  {branding?.display_name || 'TipunoX'}
                 </h1>
+                <p className="text-[10px] font-medium tracking-[0.2em] uppercase text-[var(--color-primary)]">
                 <p className="text-[10px] font-medium tracking-[0.2em] uppercase text-[var(--color-primary)]">
                   Premium Grooming
                 </p>
@@ -154,34 +155,21 @@ const Landing = () => {
 
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center gap-8">
-              <a
-                href="#services"
-                className="text-sm font-medium text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
-              >
-                Services
-              </a>
-              <a
-                href="#about"
-                className="text-sm font-medium text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
-              >
-                About
-              </a>
-              <a
-                href="#reviews"
-                className="text-sm font-medium text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors"
-              >
-                Reviews
-              </a>
+              <a href="#services" className="text-sm font-medium text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors">Services</a>
+              <a href="#about" className="text-sm font-medium text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors">About</a>
+              <a href="#reviews" className="text-sm font-medium text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors">Reviews</a>
 
               <div className="flex items-center gap-4 pl-4 border-l border-white/10">
                 <button
                   onClick={() => navigate("/auth/login")}
+                  className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors"
                   className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors"
                 >
                   Sign In
                 </button>
                 <button
                   onClick={() => navigate("/guest/booking")}
+                  className="px-5 py-2.5 rounded-full bg-[var(--color-text)] text-[var(--color-bg)] text-sm font-bold hover:opacity-90 transition-all transform hover:scale-105 active:scale-95"
                   className="px-5 py-2.5 rounded-full bg-[var(--color-text)] text-[var(--color-bg)] text-sm font-bold hover:opacity-90 transition-all transform hover:scale-105 active:scale-95"
                 >
                   Book Now
@@ -191,6 +179,7 @@ const Landing = () => {
 
             {/* Mobile Menu Button */}
             <button
+              className="md:hidden p-2 text-[var(--color-text)]"
               className="md:hidden p-2 text-[var(--color-text)]"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
@@ -202,37 +191,12 @@ const Landing = () => {
         {/* Mobile Menu Overlay */}
         {mobileMenuOpen && (
           <div className="absolute top-full left-0 right-0 bg-[var(--color-bg)]/95 backdrop-blur-xl border-b border-white/10 p-4 md:hidden flex flex-col gap-4">
-            <a
-              href="#services"
-              className="text-lg font-medium text-[var(--color-muted)] py-2"
-            >
-              Services
-            </a>
-            <a
-              href="#about"
-              className="text-lg font-medium text-[var(--color-muted)] py-2"
-            >
-              About
-            </a>
-            <a
-              href="#reviews"
-              className="text-lg font-medium text-[var(--color-muted)] py-2"
-            >
-              Reviews
-            </a>
+            <a href="#services" className="text-lg font-medium text-[var(--color-muted)] py-2">Services</a>
+            <a href="#about" className="text-lg font-medium text-[var(--color-muted)] py-2">About</a>
+            <a href="#reviews" className="text-lg font-medium text-[var(--color-muted)] py-2">Reviews</a>
             <hr className="border-white/10" />
-            <button
-              onClick={() => navigate("/auth/login")}
-              className="text-left text-lg font-medium text-[var(--color-text)] py-2"
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => navigate("/guest/booking")}
-              className="w-full py-3 rounded-xl bg-[var(--color-primary)] text-white font-bold"
-            >
-              Book Now
-            </button>
+            <button onClick={() => navigate("/auth/login")} className="text-left text-lg font-medium text-[var(--color-text)] py-2">Sign In</button>
+            <button onClick={() => navigate("/guest/booking")} className="w-full py-3 rounded-xl bg-[var(--color-primary)] text-white font-bold">Book Now</button>
           </div>
         )}
       </nav>
@@ -244,13 +208,13 @@ const Landing = () => {
           <div
             className="absolute inset-0"
             style={{
-              background: `radial-gradient(ellipse at top right, color-mix(in srgb, var(--color-primary) 20%, transparent), var(--color-bg), var(--color-bg))`,
+              background: `radial-gradient(ellipse at top right, color-mix(in srgb, var(--color-primary) 20%, transparent), var(--color-bg), var(--color-bg))`
             }}
           ></div>
           <div
             className="absolute top-0 right-0 w-2/3 h-full"
             style={{
-              background: `linear-gradient(to left, color-mix(in srgb, var(--color-primary) 5%, transparent), transparent)`,
+              background: `linear-gradient(to left, color-mix(in srgb, var(--color-primary) 5%, transparent), transparent)`
             }}
           ></div>
         </div>
@@ -263,12 +227,12 @@ const Landing = () => {
                 style={{
                   border: `1px solid color-mix(in srgb, var(--color-primary) 30%, transparent)`,
                   backgroundColor: `color-mix(in srgb, var(--color-primary) 10%, transparent)`,
-                  color: "var(--color-primary)",
+                  color: 'var(--color-primary)'
                 }}
               >
                 <span
                   className="w-2 h-2 rounded-full animate-pulse"
-                  style={{ backgroundColor: "var(--color-primary)" }}
+                  style={{ backgroundColor: 'var(--color-primary)' }}
                 ></span>
                 Now Accepting Bookings
               </div>
@@ -278,7 +242,7 @@ const Landing = () => {
                 <span
                   className="text-transparent bg-clip-text"
                   style={{
-                    backgroundImage: `linear-gradient(to right, var(--color-primary), var(--color-accent))`,
+                    backgroundImage: `linear-gradient(to right, var(--color-primary), var(--color-accent))`
                   }}
                 >
                   Signature Look
@@ -286,9 +250,8 @@ const Landing = () => {
               </h1>
 
               <p className="text-lg text-[var(--color-muted)] max-w-lg leading-relaxed">
-                Experience the pinnacle of grooming at{" "}
-                {branding?.display_name || "TipunoX"}. Where traditional
-                barbering meets modern luxury.
+                Experience the pinnacle of grooming at {branding?.display_name || 'TipunoX'}.
+                Where traditional barbering meets modern luxury.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -296,7 +259,7 @@ const Landing = () => {
                   onClick={() => navigate("/guest/booking")}
                   className="px-8 py-4 rounded-full bg-[var(--color-primary)] text-white font-bold text-lg hover:bg-[var(--color-accent)] transition-all flex items-center justify-center gap-2"
                   style={{
-                    boxShadow: `0 0 30px color-mix(in srgb, var(--color-primary) 30%, transparent)`,
+                    boxShadow: `0 0 30px color-mix(in srgb, var(--color-primary) 30%, transparent)`
                   }}
                 >
                   <Calendar className="w-5 h-5" />
@@ -305,6 +268,7 @@ const Landing = () => {
                 <button
                   onClick={() => navigate("/auth/login")}
                   className="px-8 py-4 rounded-full border border-white/10 bg-white/5 text-[var(--color-text)] font-semibold hover:bg-white/10 transition-all backdrop-blur-sm"
+                  className="px-8 py-4 rounded-full border border-white/10 bg-white/5 text-[var(--color-text)] font-semibold hover:bg-white/10 transition-all backdrop-blur-sm"
                 >
                   Sign In
                 </button>
@@ -312,9 +276,7 @@ const Landing = () => {
 
               <div className="flex items-center gap-8 pt-8 border-t border-white/5">
                 <div>
-                  <p className="text-3xl font-bold text-[var(--color-text)]">
-                    4.9
-                  </p>
+                  <p className="text-3xl font-bold text-[var(--color-text)]">4.9</p>
                   <div className="flex text-[var(--color-primary)] text-xs mt-1">
                     <Star className="w-3 h-3 fill-current" />
                     <Star className="w-3 h-3 fill-current" />
@@ -325,17 +287,14 @@ const Landing = () => {
                 </div>
                 <div className="w-px h-10 bg-white/10"></div>
                 <div>
-                  <p className="text-3xl font-bold text-[var(--color-text)]">
-                    2.5k+
-                  </p>
-                  <p className="text-xs text-[var(--color-muted)] uppercase tracking-wider mt-1">
-                    Clients
-                  </p>
+                  <p className="text-3xl font-bold text-[var(--color-text)]">2.5k+</p>
+                  <p className="text-xs text-[var(--color-muted)] uppercase tracking-wider mt-1">Clients</p>
                 </div>
               </div>
             </div>
 
             <div className="hidden lg:block relative">
+              <div className="relative z-10 rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
               <div className="relative z-10 rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
                 <img
                   src="/landing/1.avif"
@@ -348,7 +307,7 @@ const Landing = () => {
                   <div className="flex items-center gap-3">
                     <div
                       className="w-10 h-10 rounded-full flex items-center justify-center text-white"
-                      style={{ backgroundColor: "var(--color-primary)" }}
+                      style={{ backgroundColor: 'var(--color-primary)' }}
                     >
                       <Scissors className="w-5 h-5" />
                     </div>
@@ -371,15 +330,11 @@ const Landing = () => {
               {/* Decorative elements */}
               <div
                 className="absolute -top-10 -right-10 w-64 h-64 rounded-full blur-3xl -z-10"
-                style={{
-                  backgroundColor: `color-mix(in srgb, var(--color-primary) 20%, transparent)`,
-                }}
+                style={{ backgroundColor: `color-mix(in srgb, var(--color-primary) 20%, transparent)` }}
               ></div>
               <div
                 className="absolute -bottom-10 -left-10 w-64 h-64 rounded-full blur-3xl -z-10"
-                style={{
-                  backgroundColor: `color-mix(in srgb, var(--color-accent) 10%, transparent)`,
-                }}
+                style={{ backgroundColor: `color-mix(in srgb, var(--color-accent) 10%, transparent)` }}
               ></div>
             </div>
           </div>
@@ -387,18 +342,10 @@ const Landing = () => {
       </section>
 
       {/* Services Section */}
-      <section
-        id="services"
-        className="py-24 relative"
-        style={{
-          backgroundColor: "color-mix(in srgb, var(--color-bg) 95%, white)",
-        }}
-      >
+      <section id="services" className="py-24 relative" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg) 95%, white)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-[var(--color-text)]">
-              Premium Services
-            </h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-[var(--color-text)]">Premium Services</h2>
             <p className="text-[var(--color-muted)] max-w-2xl mx-auto">
               Tailored grooming services designed for the modern gentleman.
             </p>
@@ -410,15 +357,14 @@ const Landing = () => {
                 key={index}
                 className="group relative rounded-2xl overflow-hidden border border-white/5 transition-all duration-300 hover:-translate-y-1"
                 style={{
-                  backgroundColor:
-                    "color-mix(in srgb, var(--color-bg) 90%, white)",
+                  backgroundColor: 'color-mix(in srgb, var(--color-bg) 90%, white)',
                 }}
               >
                 <div
                   className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                   style={{
                     border: `1px solid color-mix(in srgb, var(--color-primary) 50%, transparent)`,
-                    borderRadius: "1rem",
+                    borderRadius: '1rem'
                   }}
                 ></div>
                 <div className="aspect-[4/3] overflow-hidden relative">
@@ -429,25 +375,18 @@ const Landing = () => {
                   />
                   <div
                     className="absolute inset-0 opacity-90"
-                    style={{
-                      background: `linear-gradient(to top, color-mix(in srgb, var(--color-bg) 90%, white), transparent)`,
-                    }}
+                    style={{ background: `linear-gradient(to top, color-mix(in srgb, var(--color-bg) 90%, white), transparent)` }}
                   ></div>
                   <div className="absolute bottom-4 left-4">
-                    <p className="text-[var(--color-primary)] font-bold text-lg">
-                      {service.price}
-                    </p>
+                    <p className="text-[var(--color-primary)] font-bold text-lg">{service.price}</p>
                   </div>
                 </div>
                 <div className="p-6 relative">
-                  <h3 className="text-xl font-bold mb-2 text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">
-                    {service.title}
-                  </h3>
-                  <p className="text-[var(--color-muted)] text-sm mb-4 line-clamp-2">
-                    {service.description}
-                  </p>
+                  <h3 className="text-xl font-bold mb-2 text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{service.title}</h3>
+                  <p className="text-[var(--color-muted)] text-sm mb-4 line-clamp-2">{service.description}</p>
                   <button
                     onClick={() => navigate("/guest/booking")}
+                    className="text-sm font-semibold text-[var(--color-text)] flex items-center gap-2 group-hover:gap-3 transition-all"
                     className="text-sm font-semibold text-[var(--color-text)] flex items-center gap-2 group-hover:gap-3 transition-all"
                   >
                     Book Now <ArrowRight className="w-4 h-4" />
@@ -460,16 +399,11 @@ const Landing = () => {
       </section>
 
       {/* Features Section */}
-      <section
-        id="about"
-        className="py-24 bg-[var(--color-bg)] relative overflow-hidden"
-      >
+      <section id="about" className="py-24 bg-[var(--color-bg)] relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl opacity-30 pointer-events-none">
           <div
             className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-[100px]"
-            style={{
-              backgroundColor: `color-mix(in srgb, var(--color-primary) 10%, transparent)`,
-            }}
+            style={{ backgroundColor: `color-mix(in srgb, var(--color-primary) 10%, transparent)` }}
           ></div>
         </div>
 
@@ -477,16 +411,10 @@ const Landing = () => {
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
               <h2 className="text-3xl md:text-4xl font-bold mb-6 text-[var(--color-text)]">
-                Why Choose{" "}
-                <span className="text-[var(--color-primary)]">
-                  {branding?.display_name || "TipunoX"}
-                </span>
-                ?
+                Why Choose <span className="text-[var(--color-primary)]">{branding?.display_name || 'TipunoX'}</span>?
               </h2>
               <p className="text-[var(--color-muted)] text-lg mb-8 leading-relaxed">
-                We don't just cut hair; we cultivate confidence. Our barbershop
-                combines traditional techniques with modern style to give you
-                the best grooming experience in the city.
+                We don't just cut hair; we cultivate confidence. Our barbershop combines traditional techniques with modern style to give you the best grooming experience in the city.
               </p>
 
               <div className="space-y-8">
@@ -495,20 +423,15 @@ const Landing = () => {
                     <div
                       className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{
-                        backgroundColor:
-                          "color-mix(in srgb, var(--color-bg) 90%, white)",
-                        border: "1px solid rgba(255,255,255,0.1)",
+                        backgroundColor: 'color-mix(in srgb, var(--color-bg) 90%, white)',
+                        border: '1px solid rgba(255,255,255,0.1)'
                       }}
                     >
                       <feature.icon className="w-6 h-6 text-[var(--color-primary)]" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold mb-2 text-[var(--color-text)]">
-                        {feature.title}
-                      </h3>
-                      <p className="text-[var(--color-muted)] text-sm leading-relaxed">
-                        {feature.description}
-                      </p>
+                      <h3 className="text-lg font-bold mb-2 text-[var(--color-text)]">{feature.title}</h3>
+                      <p className="text-[var(--color-muted)] text-sm leading-relaxed">{feature.description}</p>
                     </div>
                   </div>
                 ))}
@@ -533,30 +456,21 @@ const Landing = () => {
       </section>
 
       {/* Testimonials */}
-      <section
-        id="reviews"
-        className="py-24"
-        style={{
-          backgroundColor: "color-mix(in srgb, var(--color-bg) 95%, white)",
-        }}
-      >
+      <section id="reviews" className="py-24" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg) 95%, white)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-end mb-12">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-2 text-[var(--color-text)]">
-                Client Stories
-              </h2>
-              <p className="text-[var(--color-muted)]">
-                Don't just take our word for it.
-              </p>
+              <h2 className="text-3xl md:text-4xl font-bold mb-2 text-[var(--color-text)]">Client Stories</h2>
+              <p className="text-[var(--color-muted)]">Don't just take our word for it.</p>
             </div>
             <div className="hidden md:flex gap-2">
+              <button className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors text-[var(--color-text)]">
               <button className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors text-[var(--color-text)]">
                 <ArrowRight className="w-5 h-5 rotate-180" />
               </button>
               <button
                 className="w-10 h-10 rounded-full flex items-center justify-center transition-colors text-white"
-                style={{ backgroundColor: "var(--color-primary)" }}
+                style={{ backgroundColor: 'var(--color-primary)' }}
               >
                 <ArrowRight className="w-5 h-5" />
               </button>
@@ -568,22 +482,14 @@ const Landing = () => {
               <div
                 key={i}
                 className="p-8 rounded-2xl border border-white/5 hover:border-white/10 transition-colors"
-                style={{
-                  backgroundColor:
-                    "color-mix(in srgb, var(--color-bg) 90%, white)",
-                }}
+                style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg) 90%, white)' }}
               >
                 <div className="flex gap-1 mb-6">
                   {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className="w-4 h-4 text-[var(--color-primary)] fill-current"
-                    />
+                    <Star key={i} className="w-4 h-4 text-[var(--color-primary)] fill-current" />
                   ))}
                 </div>
-                <p className="text-[var(--color-muted)] mb-6 leading-relaxed">
-                  "{t.comment}"
-                </p>
+                <p className="text-[var(--color-muted)] mb-6 leading-relaxed">"{t.comment}"</p>
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden">
                     <img
@@ -593,12 +499,8 @@ const Landing = () => {
                     />
                   </div>
                   <div>
-                    <p className="font-bold text-sm text-[var(--color-text)]">
-                      {t.name}
-                    </p>
-                    <p className="text-xs text-[var(--color-muted)]">
-                      {t.role}
-                    </p>
+                    <p className="font-bold text-sm text-[var(--color-text)]">{t.name}</p>
+                    <p className="text-xs text-[var(--color-muted)]">{t.role}</p>
                   </div>
                 </div>
                 <div className="p-6 relative">
@@ -625,17 +527,14 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div
             className="rounded-3xl p-8 md:p-16 relative overflow-hidden"
-            style={{ backgroundColor: "var(--color-primary)" }}
+            style={{ backgroundColor: 'var(--color-primary)' }}
           >
             <div className="absolute top-0 right-0 w-full h-full bg-[url('/noise.png')] opacity-10 mix-blend-overlay"></div>
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div className="text-white space-y-6">
-                <h2 className="text-3xl md:text-5xl font-bold">
-                  Get the TPX App
-                </h2>
+                <h2 className="text-3xl md:text-5xl font-bold">Get the TPX App</h2>
                 <p className="text-white/80 text-lg max-w-md">
-                  Book appointments, track your loyalty points, and get
-                  exclusive offers right from your phone.
+                  Book appointments, track your loyalty points, and get exclusive offers right from your phone.
                 </p>
                 <div className="flex flex-wrap gap-4 pt-4">
                   <button className="flex items-center gap-3 bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-900 transition-colors">
@@ -676,6 +575,7 @@ const Landing = () => {
 
       {/* Footer */}
       <footer className="bg-[var(--color-bg)] border-t border-white/10 pt-20 pb-10">
+      <footer className="bg-[var(--color-bg)] border-t border-white/10 pt-20 pb-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-12 mb-16">
             <div className="space-y-6">
@@ -687,60 +587,25 @@ const Landing = () => {
                   alt="Logo"
                   className="w-8 h-8 object-contain"
                 />
-                <span className="text-xl font-bold text-[var(--color-text)]">
-                  {branding?.display_name || "TipunoX"}
-                </span>
+                <span className="text-xl font-bold text-[var(--color-text)]">{branding?.display_name || 'TipunoX'}</span>
               </div>
               <p className="text-[var(--color-muted)] text-sm leading-relaxed">
-                Premium grooming experiences for the modern gentleman. Elevating
-                style, one cut at a time.
+                Premium grooming experiences for the modern gentleman. Elevating style, one cut at a time.
               </p>
             </div>
 
             <div>
-              <h4 className="font-bold mb-6 text-[var(--color-text)]">
-                Quick Links
-              </h4>
+              <h4 className="font-bold mb-6 text-[var(--color-text)]">Quick Links</h4>
               <ul className="space-y-4 text-sm text-[var(--color-muted)]">
-                <li>
-                  <a
-                    href="#"
-                    className="hover:text-[var(--color-primary)] transition-colors"
-                  >
-                    Home
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#services"
-                    className="hover:text-[var(--color-primary)] transition-colors"
-                  >
-                    Services
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#about"
-                    className="hover:text-[var(--color-primary)] transition-colors"
-                  >
-                    About Us
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#reviews"
-                    className="hover:text-[var(--color-primary)] transition-colors"
-                  >
-                    Reviews
-                  </a>
-                </li>
+                <li><a href="#" className="hover:text-[var(--color-primary)] transition-colors">Home</a></li>
+                <li><a href="#services" className="hover:text-[var(--color-primary)] transition-colors">Services</a></li>
+                <li><a href="#about" className="hover:text-[var(--color-primary)] transition-colors">About Us</a></li>
+                <li><a href="#reviews" className="hover:text-[var(--color-primary)] transition-colors">Reviews</a></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="font-bold mb-6 text-[var(--color-text)]">
-                Contact
-              </h4>
+              <h4 className="font-bold mb-6 text-[var(--color-text)]">Contact</h4>
               <ul className="space-y-4 text-sm text-[var(--color-muted)]">
                 <li className="flex items-center gap-3">
                   <MapPin className="w-4 h-4" />
@@ -758,21 +623,18 @@ const Landing = () => {
             </div>
 
             <div>
-              <h4 className="font-bold mb-6 text-[var(--color-text)]">
-                Newsletter
-              </h4>
-              <p className="text-[var(--color-muted)] text-sm mb-4">
-                Subscribe for updates and exclusive offers.
-              </p>
+              <h4 className="font-bold mb-6 text-[var(--color-text)]">Newsletter</h4>
+              <p className="text-[var(--color-muted)] text-sm mb-4">Subscribe for updates and exclusive offers.</p>
               <div className="flex gap-2">
                 <input
                   type="email"
                   placeholder="Enter your email"
                   className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm w-full focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
+                  className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm w-full focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
                 />
                 <button
                   className="p-2 rounded-lg transition-colors text-white"
-                  style={{ backgroundColor: "var(--color-primary)" }}
+                  style={{ backgroundColor: 'var(--color-primary)' }}
                 >
                   <ArrowRight className="w-4 h-4" />
                 </button>
@@ -781,22 +643,10 @@ const Landing = () => {
           </div>
 
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-[var(--color-muted)] text-sm">
-              © 2024 Barbershop. All rights reserved.
-            </p>
+            <p className="text-[var(--color-muted)] text-sm">© 2024 TPX Barbershop. All rights reserved.</p>
             <div className="flex gap-6 text-sm text-[var(--color-muted)]">
-              <a
-                href="#"
-                className="hover:text-[var(--color-text)] transition-colors"
-              >
-                Privacy Policy
-              </a>
-              <a
-                href="#"
-                className="hover:text-[var(--color-text)] transition-colors"
-              >
-                Terms of Service
-              </a>
+              <a href="#" className="hover:text-[var(--color-text)] transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-[var(--color-text)] transition-colors">Terms of Service</a>
             </div>
           </div>
         </div>

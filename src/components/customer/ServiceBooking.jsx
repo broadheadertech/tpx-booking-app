@@ -19,7 +19,24 @@ import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuth } from "../../context/AuthContext";
+import { useBranding } from "../../context/BrandingContext";
 import { formatTime } from "../../utils/dateUtils";
+
+// Helper function to convert hex to rgba
+const hexToRgba = (hex, alpha) => {
+  if (!hex) return hex;
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) {
+    r = parseInt(hex[1] + hex[1], 16);
+    g = parseInt(hex[2] + hex[2], 16);
+    b = parseInt(hex[3] + hex[3], 16);
+  } else if (hex.length === 7) {
+    r = parseInt(hex.slice(1, 3), 16);
+    g = parseInt(hex.slice(3, 5), 16);
+    b = parseInt(hex.slice(5, 7), 16);
+  }
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 
 // Barber Avatar Component
 const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
@@ -56,6 +73,7 @@ const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
 };
 
 const ServiceBooking = ({ onBack }) => {
+  const { branding } = useBranding();
   const { user, isAuthenticated } = useAuth();
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
@@ -423,6 +441,8 @@ const ServiceBooking = ({ onBack }) => {
           : undefined,
         voucher_id: selectedVoucher?._id || undefined,
         discount_amount: selectedVoucher?.value || undefined,
+        customer_email: user.email,
+        customer_name: user.full_name || user.nickname || user.username,
       };
 
       console.log("Creating booking with data:", bookingData);
@@ -626,7 +646,7 @@ const ServiceBooking = ({ onBack }) => {
                 step >= stepNumber ? "text-white shadow-md" : "text-gray-500"
               }`}
               style={{
-                backgroundColor: step >= stepNumber ? "#F68B24" : "#E0E0E0",
+                backgroundColor: step >= stepNumber ? (branding?.primary_color || "#F68B24") : (branding?.muted_color || "#E0E0E0"),
               }}
             >
               {step > stepNumber ? "✓" : stepNumber}
@@ -635,7 +655,7 @@ const ServiceBooking = ({ onBack }) => {
               <div
                 className={`w-8 h-0.5 mx-1 rounded transition-all duration-300`}
                 style={{
-                  backgroundColor: step > stepNumber ? "#F68B24" : "#E0E0E0",
+                  backgroundColor: step > stepNumber ? (branding?.primary_color || "#F68B24") : (branding?.muted_color || "#E0E0E0"),
                 }}
               ></div>
             )}
@@ -1197,7 +1217,7 @@ const ServiceBooking = ({ onBack }) => {
             <div className="flex justify-center items-center space-x-3">
               <span
                 className="font-bold text-base"
-                style={{ color: "#F68B24" }}
+                style={{ color: branding?.primary_color || "#F68B24" }}
               >
                 {selectedService?.hide_price ? 'Price may vary' : `₱${selectedService?.price.toLocaleString()}`}
               </span>
@@ -1214,7 +1234,7 @@ const ServiceBooking = ({ onBack }) => {
           <div className="space-y-2">
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center space-x-2">
-                <Building className="w-4 h-4" style={{ color: "#F68B24" }} />
+                <Building className="w-4 h-4" style={{ color: branding?.primary_color || "#F68B24" }} />
                 <span
                   className="font-semibold text-sm"
                   style={{ color: "#36454F" }}
@@ -1228,7 +1248,7 @@ const ServiceBooking = ({ onBack }) => {
             </div>
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center space-x-2">
-                <Calendar className="w-4 h-4" style={{ color: "#F68B24" }} />
+                <Calendar className="w-4 h-4" style={{ color: branding?.primary_color || "#F68B24" }} />
                 <span
                   className="font-semibold text-sm"
                   style={{ color: "#36454F" }}
@@ -1242,7 +1262,7 @@ const ServiceBooking = ({ onBack }) => {
             </div>
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center space-x-2">
-                <User className="w-4 h-4" style={{ color: "#F68B24" }} />
+                <User className="w-4 h-4" style={{ color: branding?.primary_color || "#F68B24" }} />
                 <span
                   className="font-semibold text-sm"
                   style={{ color: "#36454F" }}
@@ -1264,7 +1284,7 @@ const ServiceBooking = ({ onBack }) => {
               className="text-sm font-bold mb-3 flex items-center"
               style={{ color: "#36454F" }}
             >
-              <Gift className="w-4 h-4 mr-2" style={{ color: "#F68B24" }} />
+              <Gift className="w-4 h-4 mr-2" style={{ color: branding?.primary_color || "#F68B24" }} />
               Apply Voucher (Optional)
             </h4>
 
@@ -1283,17 +1303,17 @@ const ServiceBooking = ({ onBack }) => {
                       style={{
                         borderColor:
                           selectedVoucher?._id === voucher._id
-                            ? "#F68B24"
+                            ? (branding?.primary_color || "#F68B24")
                             : "#E0E0E0",
                         backgroundColor:
                           selectedVoucher?._id === voucher._id
-                            ? "rgba(246, 139, 36, 0.1)"
+                            ? hexToRgba(branding?.primary_color || "#F68B24", 0.1)
                             : "white",
                       }}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <Gift className="w-4 h-4" style={{ color: "#F68B24" }} />
+                          <Gift className="w-4 h-4" style={{ color: branding?.primary_color || "#F68B24" }} />
                           <div>
                             <p
                               className="text-xs font-bold"
@@ -1301,7 +1321,7 @@ const ServiceBooking = ({ onBack }) => {
                             >
                               {voucher.code}
                             </p>
-                            <p className="text-xs" style={{ color: "#F68B24" }}>
+                            <p className="text-xs" style={{ color: branding?.primary_color || "#F68B24" }}>
                               ₱{parseFloat(voucher.value || 0).toFixed(2)}
                             </p>
                           </div>
@@ -1309,7 +1329,7 @@ const ServiceBooking = ({ onBack }) => {
                         {selectedVoucher?._id === voucher._id && (
                           <div
                             className="w-4 h-4 rounded-full flex items-center justify-center"
-                            style={{ backgroundColor: "#F68B24" }}
+                            style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
                           >
                             <span className="text-white text-xs">✓</span>
                           </div>
@@ -1355,9 +1375,10 @@ const ServiceBooking = ({ onBack }) => {
                 <button
                   onClick={() => handleConfirmBooking("pay_later")}
                   disabled={bookingLoading}
-                  className={`py-3 px-4 border-2 border-[#F68B24] text-[#F68B24] hover:bg-[var(--color-primary)] hover:text-white font-bold rounded-lg transition-all duration-200 text-sm flex items-center justify-center gap-2 ${
+                  className={`py-3 px-4 border-2 hover:bg-[var(--color-primary)] hover:text-white font-bold rounded-lg transition-all duration-200 text-sm flex items-center justify-center gap-2 ${
                     bookingLoading ? "opacity-75 cursor-not-allowed" : ""
                   }`}
+                  style={{ borderColor: branding?.primary_color || "#F68B24", color: branding?.primary_color || "#F68B24" }}
                 >
                   {bookingLoading ? (
                     <div className="flex items-center justify-center gap-2">
@@ -1538,7 +1559,7 @@ const ServiceBooking = ({ onBack }) => {
         <div className="text-center">
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl"
-            style={{ backgroundColor: "#F68B24" }}
+            style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
           >
             <CheckCircle className="w-10 h-10 text-white" />
           </div>
@@ -1608,8 +1629,8 @@ const ServiceBooking = ({ onBack }) => {
         <div
           className="rounded-2xl p-6 border"
           style={{
-            backgroundColor: "rgba(246, 139, 36, 0.05)",
-            borderColor: "rgba(246, 139, 36, 0.2)",
+            backgroundColor: hexToRgba(branding?.primary_color || "#F68B24", 0.05),
+            borderColor: hexToRgba(branding?.primary_color || "#F68B24", 0.2),
           }}
         >
           <div className="space-y-3">
@@ -1665,9 +1686,15 @@ const ServiceBooking = ({ onBack }) => {
                 </span>
               </div>
             )}
-            <div className="flex justify-between border-t pt-3 border-orange-500/30">
+            <div 
+              className="flex justify-between border-t pt-3"
+              style={{ borderColor: hexToRgba(branding?.primary_color || "#F68B24", 0.3) }}
+            >
               <span className="font-bold text-white">Total:</span>
-              <span className="font-black text-lg text-orange-400">
+              <span 
+                className="font-black text-lg"
+                style={{ color: branding?.primary_color || "#F68B24" }}
+              >
                 ₱
                 {createdBooking?.total_amount
                   ? parseFloat(createdBooking.total_amount).toLocaleString()
@@ -1686,9 +1713,9 @@ const ServiceBooking = ({ onBack }) => {
           <button
             onClick={onBack}
             className="w-full py-4 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
-            style={{ backgroundColor: "#F68B24" }}
-            onMouseEnter={(e) => (e.target.style.backgroundColor = "#E67E22")}
-            onMouseLeave={(e) => (e.target.style.backgroundColor = "#F68B24")}
+            style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
+            onMouseEnter={(e) => (e.target.style.backgroundColor = branding?.accent_color || "#E67E22")}
+            onMouseLeave={(e) => (e.target.style.backgroundColor = branding?.primary_color || "#F68B24")}
           >
             Back to Home
           </button>
@@ -1700,14 +1727,14 @@ const ServiceBooking = ({ onBack }) => {
               }
             }}
             className="w-full py-3 border-2 font-bold rounded-2xl transition-all duration-200"
-            style={{ borderColor: "#F68B24", color: "#F68B24" }}
+            style={{ borderColor: branding?.primary_color || "#F68B24", color: branding?.primary_color || "#F68B24" }}
             onMouseEnter={(e) => {
-              e.target.style.backgroundColor = "#F68B24";
+              e.target.style.backgroundColor = branding?.primary_color || "#F68B24";
               e.target.style.color = "white";
             }}
             onMouseLeave={(e) => {
               e.target.style.backgroundColor = "transparent";
-              e.target.style.color = "#F68B24";
+              e.target.style.color = branding?.primary_color || "#F68B24";
             }}
           >
             View My Bookings

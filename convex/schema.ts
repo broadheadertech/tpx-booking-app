@@ -830,4 +830,26 @@ export default defineSchema({
     .index("by_source", ["source_id"])
     .index("by_payment", ["payment_id"])
     .index("by_status", ["status"]),
+
+  // Email templates for customizable email content
+  email_templates: defineTable({
+    template_type: v.union(
+      v.literal("password_reset"),
+      v.literal("voucher"),
+      v.literal("booking_confirmation"),
+      v.literal("booking_reminder"),
+      v.literal("welcome")
+    ),
+    subject: v.string(),
+    heading: v.string(),
+    body_text: v.string(),
+    cta_text: v.optional(v.string()),
+    footer_text: v.optional(v.string()),
+    is_active: v.boolean(),
+    updated_by: v.optional(v.id("users")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_template_type", ["template_type"])
+    .index("by_active", ["is_active"]),
 });
