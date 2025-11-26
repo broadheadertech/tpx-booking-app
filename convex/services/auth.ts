@@ -842,10 +842,8 @@ export const sendPasswordResetEmail = action({
     const resetUrl = `https://tipunox.broadheader.com/auth/reset-password?token=${args.token}`;
 
     const emailData = {
-      from: 'Barbershop <no-reply@tipunox.broadheader.com>',
       from: `${brandName} <no-reply@tipunox.broadheader.com>`,
       to: args.email,
-      subject: 'Reset your Barbershop password',
       subject: subject,
       html: `
         <!DOCTYPE html>
@@ -1177,16 +1175,13 @@ export const sendVoucherEmailWithQR = action({
       code: args.voucherCode,
       value: args.voucherValue,
       type: "voucher",
-      brand: " Barbershop"
-      brand: brandName
+      brand: brandName,
     });
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrPayload)}`;
 
     const emailData = {
-      from: 'Barbershop <no-reply@tipunox.broadheader.com>',
       from: `${brandName} <no-reply@tipunox.broadheader.com>`,
       to: args.email,
-      subject: `Your Voucher ${args.voucherCode} from Barbershop`,
       subject: subject,
       html: `
         <!DOCTYPE html>
