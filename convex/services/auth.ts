@@ -3,8 +3,8 @@ import { mutation, query, action } from "../_generated/server";
 // import { api } from "../_generated/api"; // Removed to break circular dependency
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { hashPassword, verifyPassword } from "../utils/password";
-
 import { Resend } from 'resend';
+import { useBranding } from '../../src/context/BrandingContext'
 
 
 
@@ -822,16 +822,16 @@ export const sendPasswordResetEmail = action({
     const resetUrl = `https://tipunox.broadheader.com/auth/reset-password?token=${args.token}`;
 
     const emailData = {
-      from: 'Barbershop <no-reply@tipunox.broadheader.com>',
+      from:  process.env.BRANDING + ' <no-reply  ' + process.env.EMAIL + '>',
       to: args.email,
-      subject: 'Reset your Barbershop password',
+      subject: 'Reset your password',
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Password Reset - Barbershop</title>
+          <title>Password Reset - ${process.env.BRANDING}</title>
           <style>
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -908,13 +908,13 @@ export const sendPasswordResetEmail = action({
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="color: #FF8C42; font-size: 32px; margin-bottom: 10px;">Barbershop</h1>
+              <h1 style="color: #FF8C42; font-size: 32px; margin-bottom: 10px;">${process.env.BRANDING}</h1>
             </div>
             
             <div class="content">
               <h1 class="title">Reset Your Password</h1>
               <p class="text">
-                Hi there! We received a request to reset your password for your Barbershop account.
+                Hi there! We received a request to reset your password for your account.
                 Click the button below to set a new password.
               </p>
               
@@ -937,7 +937,7 @@ export const sendPasswordResetEmail = action({
             </div>
             
             <div class="footer">
-              <p>© 2024 Barbershop. All rights reserved.</p>
+              <p>© 2024 ${process.env.BRANDING}. All rights reserved.</p>
               <p>This is an automated message. Please do not reply to this email.</p>
             </div>
           </div>
@@ -1070,28 +1070,29 @@ export const sendVoucherEmailWithQR = action({
   handler: async (ctx, args) => {
     // Generate a robust QR code URL using a public API
     // We construct a JSON payload similar to the client app for compatibility
+    const { branding } = useBranding()
     const qrPayload = JSON.stringify({
       voucherId: args.voucherId || "",
       code: args.voucherCode,
       value: args.voucherValue,
       type: "voucher",
-      brand: " Barbershop"
+      brand: process.env.BRANDING
     });
 
     // Public API URL that generates the QR code image on the fly
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrPayload)}`;
-
+    
     const emailData = {
-      from: 'Barbershop <no-reply@tipunox.broadheader.com>',
+      from: process.env.BRANDING + ' <no-reply  ' + process.env.EMAIL + '>',
       to: args.email,
-      subject: `Your Voucher ${args.voucherCode} from Barbershop`,
+      subject: `Your Voucher ${args.voucherCode} from ${process.env.BRANDING}` ,
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Your Voucher - Barbershop</title>
+          <title>Your Voucher has arrived!</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
@@ -1109,7 +1110,7 @@ export const sendVoucherEmailWithQR = action({
               box-shadow: 0 4px 12px rgba(0,0,0,0.1);
             }
             .header {
-              background: linear-gradient(135deg, #FF8C42 0%, #FF7A2B 100%);
+              background: linear-gradient(135deg, --primary-color 0%, --primary-color 100%);
               padding: 24px;
               text-align: center;
               color: white;
@@ -1144,7 +1145,7 @@ export const sendVoucherEmailWithQR = action({
             .voucher-code {
               font-size: 28px;
               font-weight: 800;
-              color: #FF8C42;
+              color: --primary-color;
               font-family: 'Courier New', monospace;
               letter-spacing: 2px;
               margin-bottom: 8px;
@@ -1153,7 +1154,7 @@ export const sendVoucherEmailWithQR = action({
             .voucher-value {
               font-size: 32px;
               font-weight: 800;
-              color: #FF8C42;
+              color: --primary-color;
               margin-bottom: 8px;
             }
             .voucher-label {
@@ -1220,7 +1221,7 @@ export const sendVoucherEmailWithQR = action({
             }
             .cta-section {
               background: #FFF8F4;
-              border-left: 4px solid #FF8C42;
+              border-left: 4px solid --primary-color;
               border-radius: 4px;
               padding: 16px;
               margin-bottom: 24px;
@@ -1259,7 +1260,7 @@ export const sendVoucherEmailWithQR = action({
             <div class="body">
               <div class="greeting">
                 Hey <strong>${args.recipientName}</strong>! 🎉<br>
-                You've received a voucher from <strong>Barbershop</strong>
+                You've received a voucher from <strong>${process.env.BRANDING}</strong>
               </div>
               
               <div class="voucher-card">
@@ -1296,7 +1297,7 @@ export const sendVoucherEmailWithQR = action({
             </div>
             
             <div class="footer">
-              <p><strong>Barbershop</strong></p>
+              <p><strong>${process.env.BRANDING}</strong></p>
               <p>© 2024 All Rights Reserved</p>
               <p>This is an automated message. Please do not reply.</p>
             </div>
