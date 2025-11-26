@@ -120,7 +120,6 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] selection:bg-[var(--color-primary)]/30">
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] selection:bg-[var(--color-primary)]/30">
       {/* Navigation */}
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
@@ -147,7 +146,6 @@ const Landing = () => {
                   {branding?.display_name || 'TipunoX'}
                 </h1>
                 <p className="text-[10px] font-medium tracking-[0.2em] uppercase text-[var(--color-primary)]">
-                <p className="text-[10px] font-medium tracking-[0.2em] uppercase text-[var(--color-primary)]">
                   Premium Grooming
                 </p>
               </div>
@@ -163,13 +161,11 @@ const Landing = () => {
                 <button
                   onClick={() => navigate("/auth/login")}
                   className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors"
-                  className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors"
                 >
                   Sign In
                 </button>
                 <button
                   onClick={() => navigate("/guest/booking")}
-                  className="px-5 py-2.5 rounded-full bg-[var(--color-text)] text-[var(--color-bg)] text-sm font-bold hover:opacity-90 transition-all transform hover:scale-105 active:scale-95"
                   className="px-5 py-2.5 rounded-full bg-[var(--color-text)] text-[var(--color-bg)] text-sm font-bold hover:opacity-90 transition-all transform hover:scale-105 active:scale-95"
                 >
                   Book Now
@@ -179,7 +175,6 @@ const Landing = () => {
 
             {/* Mobile Menu Button */}
             <button
-              className="md:hidden p-2 text-[var(--color-text)]"
               className="md:hidden p-2 text-[var(--color-text)]"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
@@ -268,7 +263,6 @@ const Landing = () => {
                 <button
                   onClick={() => navigate("/auth/login")}
                   className="px-8 py-4 rounded-full border border-white/10 bg-white/5 text-[var(--color-text)] font-semibold hover:bg-white/10 transition-all backdrop-blur-sm"
-                  className="px-8 py-4 rounded-full border border-white/10 bg-white/5 text-[var(--color-text)] font-semibold hover:bg-white/10 transition-all backdrop-blur-sm"
                 >
                   Sign In
                 </button>
@@ -294,7 +288,6 @@ const Landing = () => {
             </div>
 
             <div className="hidden lg:block relative">
-              <div className="relative z-10 rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
               <div className="relative z-10 rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
                 <img
                   src="/landing/1.avif"
@@ -387,7 +380,6 @@ const Landing = () => {
                   <button
                     onClick={() => navigate("/guest/booking")}
                     className="text-sm font-semibold text-[var(--color-text)] flex items-center gap-2 group-hover:gap-3 transition-all"
-                    className="text-sm font-semibold text-[var(--color-text)] flex items-center gap-2 group-hover:gap-3 transition-all"
                   >
                     Book Now <ArrowRight className="w-4 h-4" />
                   </button>
@@ -464,7 +456,6 @@ const Landing = () => {
               <p className="text-[var(--color-muted)]">Don't just take our word for it.</p>
             </div>
             <div className="hidden md:flex gap-2">
-              <button className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors text-[var(--color-text)]">
               <button className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors text-[var(--color-text)]">
                 <ArrowRight className="w-5 h-5 rotate-180" />
               </button>
@@ -575,7 +566,6 @@ const Landing = () => {
 
       {/* Footer */}
       <footer className="bg-[var(--color-bg)] border-t border-white/10 pt-20 pb-10">
-      <footer className="bg-[var(--color-bg)] border-t border-white/10 pt-20 pb-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-12 mb-16">
             <div className="space-y-6">
@@ -629,7 +619,6 @@ const Landing = () => {
                 <input
                   type="email"
                   placeholder="Enter your email"
-                  className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm w-full focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
                   className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm w-full focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
                 />
                 <button
