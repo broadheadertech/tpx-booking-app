@@ -1070,7 +1070,6 @@ export const sendVoucherEmailWithQR = action({
   handler: async (ctx, args) => {
     // Generate a robust QR code URL using a public API
     // We construct a JSON payload similar to the client app for compatibility
-    const { branding } = useBranding()
     const qrPayload = JSON.stringify({
       voucherId: args.voucherId || "",
       code: args.voucherCode,
