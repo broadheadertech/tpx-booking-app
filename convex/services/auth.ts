@@ -1699,30 +1699,34 @@ export const sendBookingConfirmationEmail = action({
     };
 
     try {
-      // In development, mock the email sending
-      if (process.env.NODE_ENV === 'development' || process.env.ENVIRONMENT === 'development') {
-        console.log('📧 [DEV MODE] Booking confirmation email would be sent:');
-        console.log('  To:', args.email);
-        console.log('  Subject:', emailData.subject);
-        console.log('  Booking Code:', args.bookingCode);
-        console.log('  Service:', args.serviceName);
-        console.log('  Date:', formattedDate);
-        console.log('  Time:', args.time);
-        return { success: true, messageId: 'dev-mock-' + Date.now(), isDev: true };
-      }
+      console.log('📧 Attempting to send booking confirmation email:', {
+        to: args.email,
+        bookingCode: args.bookingCode,
+        service: args.serviceName,
+        environment: process.env.NODE_ENV,
+        hasResendKey: !!process.env.RESEND_API_KEY,
+      });
 
-      // Production: Use Resend SDK
+      // Always try to send in production - booking emails are critical
       const result = await resend.emails.send(emailData as any);
 
       if (result.error) {
-        console.error('Booking confirmation email service error:', result.error);
+        console.error('📧 Booking confirmation email service error:', result.error);
         return { success: false, error: result.error.message };
       }
 
-      console.log('Booking confirmation email sent successfully:', result);
+      console.log('📧 Booking confirmation email sent successfully:', {
+        messageId: result.data?.id,
+        to: args.email,
+        bookingCode: args.bookingCode,
+      });
       return { success: true, messageId: result.data?.id };
     } catch (error: any) {
-      console.error('Failed to send booking confirmation email:', error);
+      console.error('📧 Failed to send booking confirmation email:', {
+        error: error.message,
+        to: args.email,
+        bookingCode: args.bookingCode,
+      });
       // Don't throw error - email failure shouldn't block booking
       return { success: false, error: error.message };
     }

@@ -441,6 +441,8 @@ const ServiceBooking = ({ onBack }) => {
           : undefined,
         voucher_id: selectedVoucher?._id || undefined,
         discount_amount: selectedVoucher?.value || undefined,
+        customer_email: user.email,
+        customer_name: user.full_name || user.nickname || user.username,
       };
 
       console.log("Creating booking with data:", bookingData);

@@ -469,12 +469,24 @@ export const createBooking = mutation({
       }
 
       // Send booking confirmation email to customer
+      // Note: Actions must be scheduled from mutations, not called directly
       const customerEmail = args.customer_email?.trim() || customer?.email;
+      console.log("📧 Booking email check:", {
+        hasArgsEmail: !!args.customer_email,
+        argsEmail: args.customer_email,
+        hasCustomerEmail: !!customer?.email,
+        customerEmail: customer?.email,
+        resolvedEmail: customerEmail,
+      });
+      
       if (customerEmail) {
         const branch = await ctx.db.get(args.branch_id);
         const barberData = args.barber ? await ctx.db.get(args.barber) : null;
         
-        await ctx.runAction(api.services.auth.sendBookingConfirmationEmail, {
+        console.log("📧 Scheduling booking confirmation email to:", customerEmail);
+        
+        // Schedule the action to run immediately after this mutation completes
+        await ctx.scheduler.runAfter(0, api.services.auth.sendBookingConfirmationEmail, {
           email: customerEmail,
           customerName: args.customer_name?.trim() || customer?.nickname || customer?.username || 'Valued Customer',
           bookingCode: bookingCode,
@@ -487,6 +499,9 @@ export const createBooking = mutation({
           time: args.time,
           bookingId: bookingId.toString(),
         });
+        console.log("📧 Booking confirmation email scheduled successfully");
+      } else {
+        console.log("📧 No customer email available, skipping email notification");
       }
     } catch (error) {
       console.error("Failed to send booking notifications:", error);
@@ -1238,11 +1253,15 @@ export const createWalkInBooking = mutation({
       }
 
       // Send booking confirmation email to walk-in customer
+      // Note: Actions must be scheduled from mutations, not called directly
       if (args.customer_email) {
         const branch = await ctx.db.get(args.branch_id);
         const barberData = args.barber ? await ctx.db.get(args.barber) : null;
         
-        await ctx.runAction(api.services.auth.sendBookingConfirmationEmail, {
+        console.log("📧 Scheduling walk-in booking confirmation email to:", args.customer_email);
+        
+        // Schedule the action to run immediately after this mutation completes
+        await ctx.scheduler.runAfter(0, api.services.auth.sendBookingConfirmationEmail, {
           email: args.customer_email,
           customerName: args.customer_name,
           bookingCode: bookingCode,
@@ -1255,6 +1274,7 @@ export const createWalkInBooking = mutation({
           time: args.time,
           bookingId: bookingId.toString(),
         });
+        console.log("📧 Walk-in booking confirmation email scheduled successfully");
       }
     } catch (error) {
       console.error("Failed to send walk-in booking notifications:", error);

@@ -446,6 +446,10 @@ const GuestServiceBooking = ({ onBack }) => {
         ? `${selectedTime}:00`
         : selectedTime;
 
+      // Get guest email and name from state or session storage
+      const customerEmail = guestData.email || sessionStorage.getItem("guest_email");
+      const customerName = guestData.name || sessionStorage.getItem("guest_name");
+
       const bookingData = {
         customer: userId,
         service: selectedService._id,
@@ -459,6 +463,8 @@ const GuestServiceBooking = ({ onBack }) => {
           : undefined,
         voucher_id: selectedVoucher?._id || undefined,
         discount_amount: selectedVoucher?.value || undefined,
+        customer_email: customerEmail,
+        customer_name: customerName,
       };
 
       console.log("Creating booking with data:", bookingData);
