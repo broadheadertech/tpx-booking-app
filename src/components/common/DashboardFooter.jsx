@@ -1,10 +1,13 @@
 import React from 'react'
 import { Heart, Code } from 'lucide-react'
 import { APP_VERSION } from '../../config/version'
+import { useBranding } from '../../context/BrandingContext'
+
 
 const DashboardFooter = () => {
   const currentYear = new Date().getFullYear()
-
+    const { branding } = useBranding()
+  
   return (
     <footer className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A] border-t border-[#333333]/50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
@@ -13,7 +16,7 @@ const DashboardFooter = () => {
           {/* Left section - Copyright */}
           <div className="text-center lg:text-left">
             <p className="text-gray-400 text-sm">
-              © {currentYear} TPX Booking System. All rights reserved.
+              © {currentYear} {branding?.display_name}. All rights reserved.
             </p>
             <p className="text-gray-500 text-xs mt-1">
               Professional barbershop management solution

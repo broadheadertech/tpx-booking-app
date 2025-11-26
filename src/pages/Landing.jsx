@@ -523,7 +523,7 @@ const Landing = () => {
             <div className="absolute top-0 right-0 w-full h-full bg-[url('/noise.png')] opacity-10 mix-blend-overlay"></div>
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div className="text-white space-y-6">
-                <h2 className="text-3xl md:text-5xl font-bold">Get the TPX App</h2>
+                <h2 className="text-3xl md:text-5xl font-bold">Get the {branding?.display_name} App</h2>
                 <p className="text-white/80 text-lg max-w-md">
                   Book appointments, track your loyalty points, and get exclusive offers right from your phone.
                 </p>
@@ -632,7 +632,7 @@ const Landing = () => {
           </div>
 
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-[var(--color-muted)] text-sm">© 2024 TPX Barbershop. All rights reserved.</p>
+            <p className="text-[var(--color-muted)] text-sm">© 2024 {branding?.display_name}. All rights reserved.</p>
             <div className="flex gap-6 text-sm text-[var(--color-muted)]">
               <a href="#" className="hover:text-[var(--color-text)] transition-colors">Privacy Policy</a>
               <a href="#" className="hover:text-[var(--color-text)] transition-colors">Terms of Service</a>
