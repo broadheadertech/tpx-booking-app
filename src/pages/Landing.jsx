@@ -589,12 +589,12 @@ const Landing = () => {
                   {/* Or you can include service info if relevant */}
                   {/* <h3 className="text-xl font-bold mb-2 group-hover:text-orange-500 transition-colors">{t.title}</h3>
       <p className="text-gray-400 text-sm mb-4 line-clamp-2">{t.description}</p> */}
-                  <button
+                  {/* <button
                     onClick={() => navigate("/guest/booking")}
                     className="text-sm font-semibold text-white flex items-center gap-2 group-hover:gap-3 transition-all"
                   >
                     Book Now <ArrowRight className="w-4 h-4" />
-                  </button>
+                  </button> */}
                 </div>
               </div>
             ))}
@@ -647,9 +647,10 @@ const Landing = () => {
               </div>
               <div className="relative hidden md:block">
                 <img
-                  src="/screenshots/ss1.png"
+                  src="/landing/download.jpg"
                   alt="App Screenshot"
-                  className="absolute -bottom-32 left-1/2 -translate-x-1/2 w-64 rounded-3xl shadow-2xl rotate-12 hover:rotate-0 transition-transform duration-500"
+                  className="rounded-3xl"
+                  //className="absolute -bottom-32 left-1/2 -translate-x-1/2 w-64 rounded-3xl shadow-2xl hover:rotate-0 transition-transform duration-500"
                 />
               </div>
             </div>
@@ -675,8 +676,7 @@ const Landing = () => {
                 </span>
               </div>
               <p className="text-[var(--color-muted)] text-sm leading-relaxed">
-                Simplify Management. Amplify Results. experiences for the modern gentleman. Elevating
-                style, one cut at a time.
+                Simplify Management. Amplify Results.
               </p>
             </div>
 
@@ -727,7 +727,7 @@ const Landing = () => {
               <ul className="space-y-4 text-sm text-[var(--color-muted)]">
                 <li className="flex items-center gap-3">
                   <MapPin className="w-4 h-4" />
-                  123 Main Street, Quezon City
+                  Angeles, Pampanga
                 </li>
                 <li className="flex items-center gap-3">
                   <Phone className="w-4 h-4" />
