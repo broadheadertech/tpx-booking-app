@@ -19,7 +19,24 @@ import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuth } from "../../context/AuthContext";
+import { useBranding } from "../../context/BrandingContext";
 import { formatTime } from "../../utils/dateUtils";
+
+// Helper function to convert hex to rgba
+const hexToRgba = (hex, alpha) => {
+  if (!hex) return hex;
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) {
+    r = parseInt(hex[1] + hex[1], 16);
+    g = parseInt(hex[2] + hex[2], 16);
+    b = parseInt(hex[3] + hex[3], 16);
+  } else if (hex.length === 7) {
+    r = parseInt(hex.slice(1, 3), 16);
+    g = parseInt(hex.slice(3, 5), 16);
+    b = parseInt(hex.slice(5, 7), 16);
+  }
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 
 // Barber Avatar Component
 const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
@@ -56,6 +73,7 @@ const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
 };
 
 const ServiceBooking = ({ onBack }) => {
+  const { branding } = useBranding();
   const { user, isAuthenticated } = useAuth();
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
@@ -626,7 +644,7 @@ const ServiceBooking = ({ onBack }) => {
                 step >= stepNumber ? "text-white shadow-md" : "text-gray-500"
               }`}
               style={{
-                backgroundColor: step >= stepNumber ? "#F68B24" : "#E0E0E0",
+                backgroundColor: step >= stepNumber ? (branding?.primary_color || "#F68B24") : (branding?.muted_color || "#E0E0E0"),
               }}
             >
               {step > stepNumber ? "✓" : stepNumber}
@@ -635,7 +653,7 @@ const ServiceBooking = ({ onBack }) => {
               <div
                 className={`w-8 h-0.5 mx-1 rounded transition-all duration-300`}
                 style={{
-                  backgroundColor: step > stepNumber ? "#F68B24" : "#E0E0E0",
+                  backgroundColor: step > stepNumber ? (branding?.primary_color || "#F68B24") : (branding?.muted_color || "#E0E0E0"),
                 }}
               ></div>
             )}
@@ -1608,8 +1626,8 @@ const ServiceBooking = ({ onBack }) => {
         <div
           className="rounded-2xl p-6 border"
           style={{
-            backgroundColor: "rgba(246, 139, 36, 0.05)",
-            borderColor: "rgba(246, 139, 36, 0.2)",
+            backgroundColor: hexToRgba(branding?.primary_color || "#F68B24", 0.05),
+            borderColor: hexToRgba(branding?.primary_color || "#F68B24", 0.2),
           }}
         >
           <div className="space-y-3">
@@ -1665,9 +1683,15 @@ const ServiceBooking = ({ onBack }) => {
                 </span>
               </div>
             )}
-            <div className="flex justify-between border-t pt-3 border-orange-500/30">
+            <div 
+              className="flex justify-between border-t pt-3"
+              style={{ borderColor: hexToRgba(branding?.primary_color || "#F68B24", 0.3) }}
+            >
               <span className="font-bold text-white">Total:</span>
-              <span className="font-black text-lg text-orange-400">
+              <span 
+                className="font-black text-lg"
+                style={{ color: branding?.primary_color || "#F68B24" }}
+              >
                 ₱
                 {createdBooking?.total_amount
                   ? parseFloat(createdBooking.total_amount).toLocaleString()
@@ -1686,9 +1710,9 @@ const ServiceBooking = ({ onBack }) => {
           <button
             onClick={onBack}
             className="w-full py-4 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
-            style={{ backgroundColor: "#F68B24" }}
-            onMouseEnter={(e) => (e.target.style.backgroundColor = "#E67E22")}
-            onMouseLeave={(e) => (e.target.style.backgroundColor = "#F68B24")}
+            style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
+            onMouseEnter={(e) => (e.target.style.backgroundColor = branding?.accent_color || "#E67E22")}
+            onMouseLeave={(e) => (e.target.style.backgroundColor = branding?.primary_color || "#F68B24")}
           >
             Back to Home
           </button>
@@ -1700,14 +1724,14 @@ const ServiceBooking = ({ onBack }) => {
               }
             }}
             className="w-full py-3 border-2 font-bold rounded-2xl transition-all duration-200"
-            style={{ borderColor: "#F68B24", color: "#F68B24" }}
+            style={{ borderColor: branding?.primary_color || "#F68B24", color: branding?.primary_color || "#F68B24" }}
             onMouseEnter={(e) => {
-              e.target.style.backgroundColor = "#F68B24";
+              e.target.style.backgroundColor = branding?.primary_color || "#F68B24";
               e.target.style.color = "white";
             }}
             onMouseLeave={(e) => {
               e.target.style.backgroundColor = "transparent";
-              e.target.style.color = "#F68B24";
+              e.target.style.color = branding?.primary_color || "#F68B24";
             }}
           >
             View My Bookings

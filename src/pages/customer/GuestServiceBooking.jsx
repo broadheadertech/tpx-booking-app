@@ -19,7 +19,24 @@ import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useAuth } from "../../context/AuthContext";
+import { useBranding } from "../../context/BrandingContext";
 import { formatTime } from "../../utils/dateUtils";
+
+// Helper function to convert hex to rgba
+const hexToRgba = (hex, alpha) => {
+  if (!hex) return hex;
+  let r = 0, g = 0, b = 0;
+  if (hex.length === 4) {
+    r = parseInt(hex[1] + hex[1], 16);
+    g = parseInt(hex[2] + hex[2], 16);
+    b = parseInt(hex[3] + hex[3], 16);
+  } else if (hex.length === 7) {
+    r = parseInt(hex.slice(1, 3), 16);
+    g = parseInt(hex.slice(3, 5), 16);
+    b = parseInt(hex.slice(5, 7), 16);
+  }
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 
 // Barber Avatar Component
 const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
@@ -56,6 +73,7 @@ const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
 };
 
 const GuestServiceBooking = ({ onBack }) => {
+  const { branding } = useBranding();
   const [guestData, setGuestData] = useState({
     name: "",
     email: "",
@@ -663,7 +681,7 @@ const GuestServiceBooking = ({ onBack }) => {
                 step >= stepNumber ? "text-white shadow-md" : "text-gray-500"
               }`}
               style={{
-                backgroundColor: step >= stepNumber ? "#F68B24" : "#E0E0E0",
+                backgroundColor: step >= stepNumber ? (branding?.primary_color || "#F68B24") : (branding?.muted_color || "#E0E0E0"),
               }}
             >
               {step > stepNumber ? "✓" : stepNumber}
@@ -672,7 +690,7 @@ const GuestServiceBooking = ({ onBack }) => {
               <div
                 className={`w-4 h-0.5 mx-1 rounded transition-all duration-300`}
                 style={{
-                  backgroundColor: step > stepNumber ? "#F68B24" : "#E0E0E0",
+                  backgroundColor: step > stepNumber ? (branding?.primary_color || "#F68B24") : (branding?.muted_color || "#E0E0E0"),
                 }}
               ></div>
             )}
@@ -971,7 +989,10 @@ const GuestServiceBooking = ({ onBack }) => {
 
                               {/* Availability warning */}
                               {availableBarbers === 0 && (
-                                <p className="text-[10px] text-amber-500 mt-1">
+                                <p 
+                                  className="text-[10px] mt-1"
+                                  style={{ color: branding?.primary_color || "#f59e0b" }}
+                                >
                                   Limited availability
                                 </p>
                               )}

@@ -980,29 +980,76 @@ export const resetPassword = mutation({
     new_password: v.string(),
   },
   handler: async (ctx, args) => {
-    // Scan for a user with this token; Convex doesn't support cross-table search by arbitrary field with index,
-    // so collect and filter. For small user counts in dev this is fine. For prod, add an index if needed.
-    const candidates = await ctx.db.query("users").collect();
-    const user = candidates.find(
-      (u: any) => u.password_reset_token === args.token && typeof u.password_reset_expires === 'number'
-    );
-
-    if (!user) {
-      throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
+    // Validate password
+    if (!args.new_password || args.new_password.length < 6) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Password too short",
+        "Password must be at least 6 characters long."
+      );
     }
 
-    if ((user.password_reset_expires as number) < Date.now()) {
-      throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS, "Reset token expired", "Your password reset link has expired. Please request a new one.");
+    if (!args.token || args.token.trim() === '') {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Invalid token",
+        "Password reset token is missing or invalid."
+      );
     }
 
-    await ctx.db.patch(user._id, {
-      password: hashPassword(args.new_password), // Hash password for security
-      password_reset_token: undefined,
-      password_reset_expires: undefined,
-      updatedAt: Date.now(),
-    });
+    try {
+      // Scan for a user with this token; Convex doesn't support cross-table search by arbitrary field with index,
+      // so collect and filter. For small user counts in dev this is fine. For prod, add an index if needed.
+      const candidates = await ctx.db.query("users").collect();
+      const user = candidates.find(
+        (u: any) =>
+          u.password_reset_token === args.token &&
+          u.password_reset_token !== "" && // Exclude already-used tokens
+          typeof u.password_reset_expires === 'number' &&
+          u.password_reset_expires > 0 // Exclude invalidated tokens
+      );
 
-    return { success: true };
+      if (!user) {
+        throwUserError(
+          ERROR_CODES.AUTH_INVALID_CREDENTIALS,
+          "Invalid or expired token",
+          "This password reset link is invalid or has already been used. Please request a new password reset."
+        );
+      }
+
+      const expiresAt = user.password_reset_expires as number;
+      if (expiresAt < Date.now()) {
+        throwUserError(
+          ERROR_CODES.AUTH_INVALID_CREDENTIALS,
+          "Reset token expired",
+          "Your password reset link has expired. Please request a new one."
+        );
+      }
+
+      // Update password and invalidate the reset token by setting expiry to past
+      // Note: We set token to empty string and expiry to 0 instead of undefined
+      // because Convex patches don't handle undefined well for clearing fields
+      await ctx.db.patch(user._id, {
+        password: hashPassword(args.new_password),
+        password_reset_token: "", // Clear the token
+        password_reset_expires: 0, // Set to past time to invalidate
+        updatedAt: Date.now(),
+      });
+
+      return { success: true };
+    } catch (error: any) {
+      // Check if it's already a user error (thrown by throwUserError)
+      if (error.message && error.message.startsWith('{')) {
+        throw error;
+      }
+      // Wrap unexpected errors with user-friendly message
+      console.error('Reset password error:', error);
+      throwUserError(
+        ERROR_CODES.OPERATION_FAILED,
+        "Failed to reset password",
+        "An error occurred while resetting your password. Please try again or request a new reset link."
+      );
+    }
   },
 });
 
@@ -1080,9 +1127,9 @@ export const sendVoucherEmailWithQR = action({
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrPayload)}`;
 
     const emailData = {
-      from: 'TPX Barbershop <no-reply@tipunox.broadheader.com>',
+      from: 'DALE Barbershop <no-reply@tipunox.broadheader.com>',
       to: args.email,
-      subject: `Your Voucher ${args.voucherCode} from TPX Barbershop`,
+      subject: `Your Voucher ${args.voucherCode} from DALE Barbershop`,
       html: `
         <!DOCTYPE html>
         <html>

@@ -464,16 +464,6 @@ const Landing = () => {
                     <p className="text-xs text-[var(--color-muted)]">{t.role}</p>
                   </div>
                 </div>
-                <div className="p-6 relative">
-                  <h3 className="text-xl font-bold mb-2 group-hover:text-orange-500 transition-colors">{service.title}</h3>
-                  <p className="text-gray-400 text-sm mb-4 line-clamp-2">{service.description}</p>
-                  <button
-                    onClick={() => navigate("/guest/booking")}
-                    className="text-sm font-semibold text-white flex items-center gap-2 group-hover:gap-3 transition-all"
-                  >
-                    Book Now <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
               </div>
             ))}
           </div>
