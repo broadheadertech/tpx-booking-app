@@ -467,6 +467,27 @@ export const createBooking = mutation({
           });
         }
       }
+
+      // Send booking confirmation email to customer
+      const customerEmail = args.customer_email?.trim() || customer?.email;
+      if (customerEmail) {
+        const branch = await ctx.db.get(args.branch_id);
+        const barberData = args.barber ? await ctx.db.get(args.barber) : null;
+        
+        await ctx.runAction(api.services.auth.sendBookingConfirmationEmail, {
+          email: customerEmail,
+          customerName: args.customer_name?.trim() || customer?.nickname || customer?.username || 'Valued Customer',
+          bookingCode: bookingCode,
+          serviceName: service.name,
+          servicePrice: finalPrice,
+          barberName: barberData?.full_name || 'Any Available',
+          branchName: branch?.name || 'Our Branch',
+          branchAddress: branch?.address,
+          date: args.date,
+          time: args.time,
+          bookingId: bookingId.toString(),
+        });
+      }
     } catch (error) {
       console.error("Failed to send booking notifications:", error);
       // Don't fail the booking creation if notifications fail
@@ -1214,6 +1235,26 @@ export const createWalkInBooking = mutation({
             ]
           });
         }
+      }
+
+      // Send booking confirmation email to walk-in customer
+      if (args.customer_email) {
+        const branch = await ctx.db.get(args.branch_id);
+        const barberData = args.barber ? await ctx.db.get(args.barber) : null;
+        
+        await ctx.runAction(api.services.auth.sendBookingConfirmationEmail, {
+          email: args.customer_email,
+          customerName: args.customer_name,
+          bookingCode: bookingCode,
+          serviceName: service.name,
+          servicePrice: service.price,
+          barberName: barberData?.full_name || 'Any Available',
+          branchName: branch?.name || 'Our Branch',
+          branchAddress: branch?.address,
+          date: args.date,
+          time: args.time,
+          bookingId: bookingId.toString(),
+        });
       }
     } catch (error) {
       console.error("Failed to send walk-in booking notifications:", error);

@@ -1215,7 +1215,7 @@ const ServiceBooking = ({ onBack }) => {
             <div className="flex justify-center items-center space-x-3">
               <span
                 className="font-bold text-base"
-                style={{ color: "#F68B24" }}
+                style={{ color: branding?.primary_color || "#F68B24" }}
               >
                 {selectedService?.hide_price ? 'Price may vary' : `₱${selectedService?.price.toLocaleString()}`}
               </span>
@@ -1232,7 +1232,7 @@ const ServiceBooking = ({ onBack }) => {
           <div className="space-y-2">
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center space-x-2">
-                <Building className="w-4 h-4" style={{ color: "#F68B24" }} />
+                <Building className="w-4 h-4" style={{ color: branding?.primary_color || "#F68B24" }} />
                 <span
                   className="font-semibold text-sm"
                   style={{ color: "#36454F" }}
@@ -1246,7 +1246,7 @@ const ServiceBooking = ({ onBack }) => {
             </div>
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center space-x-2">
-                <Calendar className="w-4 h-4" style={{ color: "#F68B24" }} />
+                <Calendar className="w-4 h-4" style={{ color: branding?.primary_color || "#F68B24" }} />
                 <span
                   className="font-semibold text-sm"
                   style={{ color: "#36454F" }}
@@ -1260,7 +1260,7 @@ const ServiceBooking = ({ onBack }) => {
             </div>
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center space-x-2">
-                <User className="w-4 h-4" style={{ color: "#F68B24" }} />
+                <User className="w-4 h-4" style={{ color: branding?.primary_color || "#F68B24" }} />
                 <span
                   className="font-semibold text-sm"
                   style={{ color: "#36454F" }}
@@ -1282,7 +1282,7 @@ const ServiceBooking = ({ onBack }) => {
               className="text-sm font-bold mb-3 flex items-center"
               style={{ color: "#36454F" }}
             >
-              <Gift className="w-4 h-4 mr-2" style={{ color: "#F68B24" }} />
+              <Gift className="w-4 h-4 mr-2" style={{ color: branding?.primary_color || "#F68B24" }} />
               Apply Voucher (Optional)
             </h4>
 
@@ -1301,17 +1301,17 @@ const ServiceBooking = ({ onBack }) => {
                       style={{
                         borderColor:
                           selectedVoucher?._id === voucher._id
-                            ? "#F68B24"
+                            ? (branding?.primary_color || "#F68B24")
                             : "#E0E0E0",
                         backgroundColor:
                           selectedVoucher?._id === voucher._id
-                            ? "rgba(246, 139, 36, 0.1)"
+                            ? hexToRgba(branding?.primary_color || "#F68B24", 0.1)
                             : "white",
                       }}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          <Gift className="w-4 h-4" style={{ color: "#F68B24" }} />
+                          <Gift className="w-4 h-4" style={{ color: branding?.primary_color || "#F68B24" }} />
                           <div>
                             <p
                               className="text-xs font-bold"
@@ -1319,7 +1319,7 @@ const ServiceBooking = ({ onBack }) => {
                             >
                               {voucher.code}
                             </p>
-                            <p className="text-xs" style={{ color: "#F68B24" }}>
+                            <p className="text-xs" style={{ color: branding?.primary_color || "#F68B24" }}>
                               ₱{parseFloat(voucher.value || 0).toFixed(2)}
                             </p>
                           </div>
@@ -1327,7 +1327,7 @@ const ServiceBooking = ({ onBack }) => {
                         {selectedVoucher?._id === voucher._id && (
                           <div
                             className="w-4 h-4 rounded-full flex items-center justify-center"
-                            style={{ backgroundColor: "#F68B24" }}
+                            style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
                           >
                             <span className="text-white text-xs">✓</span>
                           </div>
@@ -1373,9 +1373,10 @@ const ServiceBooking = ({ onBack }) => {
                 <button
                   onClick={() => handleConfirmBooking("pay_later")}
                   disabled={bookingLoading}
-                  className={`py-3 px-4 border-2 border-[#F68B24] text-[#F68B24] hover:bg-[var(--color-primary)] hover:text-white font-bold rounded-lg transition-all duration-200 text-sm flex items-center justify-center gap-2 ${
+                  className={`py-3 px-4 border-2 hover:bg-[var(--color-primary)] hover:text-white font-bold rounded-lg transition-all duration-200 text-sm flex items-center justify-center gap-2 ${
                     bookingLoading ? "opacity-75 cursor-not-allowed" : ""
                   }`}
+                  style={{ borderColor: branding?.primary_color || "#F68B24", color: branding?.primary_color || "#F68B24" }}
                 >
                   {bookingLoading ? (
                     <div className="flex items-center justify-center gap-2">
@@ -1556,7 +1557,7 @@ const ServiceBooking = ({ onBack }) => {
         <div className="text-center">
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl"
-            style={{ backgroundColor: "#F68B24" }}
+            style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
           >
             <CheckCircle className="w-10 h-10 text-white" />
           </div>

@@ -1765,7 +1765,7 @@ const GuestServiceBooking = ({ onBack }) => {
         <div className="text-center">
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl"
-            style={{ backgroundColor: "#F68B24" }}
+            style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
           >
             <CheckCircle className="w-10 h-10 text-white" />
           </div>
@@ -1837,8 +1837,8 @@ const GuestServiceBooking = ({ onBack }) => {
         <div
           className="rounded-2xl p-6 border"
           style={{
-            backgroundColor: "rgba(246, 139, 36, 0.05)",
-            borderColor: "rgba(246, 139, 36, 0.2)",
+            backgroundColor: hexToRgba(branding?.primary_color || "#F68B24", 0.05),
+            borderColor: hexToRgba(branding?.primary_color || "#F68B24", 0.2),
           }}
         >
           <h4 className="text-sm font-light text-white mb-4 text-center">
@@ -1921,7 +1921,8 @@ const GuestServiceBooking = ({ onBack }) => {
         <div className="space-y-3">
           <button
             onClick={onBack}
-            className="w-full py-4 bg-[#F68B24] hover:brightness-90 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
+            className="w-full py-4 hover:brightness-90 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
+            style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
           >
             Back to Home
           </button>

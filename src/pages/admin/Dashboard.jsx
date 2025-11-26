@@ -8,6 +8,7 @@ import UserManagement from '../../components/admin/UserManagement'
 import SystemReports from '../../components/admin/SystemReports'
 import GlobalSettings from '../../components/admin/GlobalSettings'
 import BrandingManagement from '../../components/admin/BrandingManagement'
+import EmailNotificationSettings from '../../components/admin/EmailNotificationSettings'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
@@ -138,6 +139,13 @@ function AdminDashboard() {
           <div className="text-center text-gray-400">You do not have access to branding management.</div>
         )
 
+      case 'emails':
+        return user?.role === 'super_admin' ? (
+          <EmailNotificationSettings />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to email notification settings.</div>
+        )
+
       default:
         return renderOverview()
     }
@@ -156,6 +164,7 @@ function AdminDashboard() {
     ? [
         ...baseTabs.slice(0, 4),
         { id: 'branding', label: 'Branding', icon: 'palette' },
+        { id: 'emails', label: 'Emails', icon: 'mail' },
         ...baseTabs.slice(4),
       ]
     : baseTabs
