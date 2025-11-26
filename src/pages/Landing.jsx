@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Check,
   Calendar,
   Scissors,
   Star,
@@ -12,10 +11,14 @@ import {
   Award,
   Shield,
   ArrowRight,
+  Check,
+  TrendingUp,
+  Heart,
+  Sparkles,
+  Menu,
   X,
   Smartphone,
   Download,
-  Menu,
 } from "lucide-react";
 import { useBranding } from "../context/BrandingContext";
 
@@ -25,26 +28,15 @@ const Landing = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Modal state
   const [showModal, setShowModal] = useState(false);
   const [email, setEmail] = useState("");
   const [purpose, setPurpose] = useState("");
-  const [defaultPurpose, setDefaultPurpose] = useState("");
 
-  const openModal = (presetPurpose) => {
-    setDefaultPurpose(presetPurpose);
-    setPurpose(presetPurpose); // prefill purpose field
-    setShowModal(true);
-  };
-
-  const closeModal = () => {
-    setShowModal(false);
-    setEmail("");
-    setPurpose("");
-    setDefaultPurpose("");
-  };
+  const openModal = () => setShowModal(true);
+  const closeModal = () => setShowModal(false);
 
   const [showSuccess, setShowSuccess] = useState(false);
+
   const submitDemoRequest = () => {
     // TODO: API call here
     console.log({ email, purpose });
@@ -57,11 +49,13 @@ const Landing = () => {
     setTimeout(() => {
       setShowSuccess(false);
       closeModal(); // close the modal after showing message
-    }, 1000);
+    }, 3000);
   };
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -106,7 +100,7 @@ const Landing = () => {
       title: "Seamless Inventory",
       description:
         "Easily track stock, manage product variants, and receive low-stock alerts in real-time.",
-      icon: Users,
+      icon: Users, // You can replace this with a more POS-relevant icon if you want
     },
     {
       title: "Smart Analytics",
@@ -212,7 +206,7 @@ const Landing = () => {
                   Sign In
                 </button>
                 <button
-                  onClick={() => openModal("Book Now")}
+                  onClick={() => navigate("/guest/booking")}
                   className="px-5 py-2.5 rounded-full bg-[var(--color-text)] text-[var(--color-bg)] text-sm font-bold hover:opacity-90 transition-all transform hover:scale-105 active:scale-95"
                 >
                   Book Now
@@ -258,12 +252,12 @@ const Landing = () => {
             >
               Sign In
             </button>
-            {/* <button
-              onClick={() => openModal("Book Now")}
+            <button
+              onClick={() => navigate("/guest/booking")}
               className="w-full py-3 rounded-xl bg-[var(--color-primary)] text-white font-bold"
             >
               Book Now
-            </button> */}
+            </button>
           </div>
         )}
       </nav>
@@ -323,7 +317,7 @@ const Landing = () => {
 
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <button
-                  onClick={() => openModal("Book a Demo")}
+                  onClick={openModal}
                   className="px-8 py-4 rounded-full bg-[var(--color-primary)] text-white font-bold text-lg hover:bg-[var(--color-accent)] transition-all flex items-center justify-center gap-2"
                   style={{
                     boxShadow: `0 0 30px color-mix(in srgb, var(--color-primary) 30%, transparent)`,
@@ -333,14 +327,131 @@ const Landing = () => {
                   Book a Demo
                 </button>
 
+                {/* Modal */}
+                {showModal && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                    <div className="relative w-full max-w-md bg-white/10 dark:bg-gray-900/50 rounded-3xl shadow-2xl p-8 text-white">
+                      {/* Success Toast */}
+                      {showSuccess && (
+                        <div className="absolute -top-14 left-1/2 -translate-x-1/2 px-6 py-3 bg-[var(--color-primary)] text-white rounded-full shadow-xl flex items-center gap-3 text-sm font-semibold animate-slideDown">
+                          <Check className="w-5 h-5" />
+                          Successfully submitted!
+                        </div>
+                      )}
+
+                      {/* Header */}
+                      <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-2xl font-extrabold text-[var(--color-primary)]">
+                          Book a Demo
+                        </h2>
+                        <button
+                          onClick={closeModal}
+                          className="text-gray-300 hover:text-white transition text-lg"
+                        >
+                          <X className="w-6 h-6" />
+                        </button>
+                      </div>
+
+                      {/* Catchy Demo Phrase */}
+                      <p className="text-white/70 mb-6 text-sm">
+                        See how AVEX-A can supercharge your business in just 15
+                        minutes!
+                      </p>
+
+                      {/* Form */}
+                      <form
+                        className="space-y-6"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          submitDemoRequest();
+                        }}
+                      >
+                        {/* Email Input */}
+                        <div className="relative w-full">
+                          <input
+                            type="email"
+                            required
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder=" "
+                            className="peer w-full px-4 pt-5 pb-2 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition shadow-md"
+                          />
+                          <label className="absolute left-4 top-2 text-white/70 text-sm transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-white/40 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm peer-focus:text-[var(--color-primary)]">
+                            Your Email
+                          </label>
+                        </div>
+
+                        {/* Purpose Textarea */}
+                        <div className="relative w-full">
+                          <textarea
+                            required
+                            rows={4}
+                            value={purpose}
+                            onChange={(e) => setPurpose(e.target.value)}
+                            placeholder=" "
+                            className="peer w-full px-4 pt-5 pb-2 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition shadow-md resize-none"
+                          />
+                          <label className="absolute left-4 top-2 text-white/70 text-sm transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-white/40 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm peer-focus:text-[var(--color-primary)]">
+                            Purpose of Demo
+                          </label>
+                        </div>
+
+                        {/* Buttons */}
+                        <div className="flex justify-end gap-4">
+                          <button
+                            type="button"
+                            onClick={closeModal}
+                            className="px-6 py-2 rounded-xl bg-white/20 text-white hover:bg-white/30 transition font-semibold"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            className="px-6 py-2 rounded-xl bg-[var(--color-primary)] text-white font-bold shadow-lg hover:opacity-90 transform hover:scale-105 transition-all"
+                          >
+                            Submit
+                          </button>
+                        </div>
+                      </form>
+
+                      {/* Decorative Floating Circles */}
+                      <div className="absolute -top-10 -left-10 w-24 h-24 rounded-full bg-[var(--color-primary)]/20 opacity-30 blur-3xl animate-pulseSlow"></div>
+                      <div className="absolute -bottom-10 -right-10 w-32 h-32 rounded-full bg-[var(--color-primary)]/20 opacity-30 blur-3xl animate-pulseSlow"></div>
+                    </div>
+                  </div>
+                )}
+
                 {/* <button
-                  onClick={() => openModal("Book Now")}
-                  className="px-8 py-4 rounded-full bg-green-600 text-white font-bold text-lg hover:bg-green-700 transition-all flex items-center justify-center gap-2"
+                  onClick={() => navigate("/auth/login")}
+                  className="px-8 py-4 rounded-full border border-white/10 bg-white/5 text-[var(--color-text)] font-semibold hover:bg-white/10 transition-all backdrop-blur-sm"
                 >
-                  <Calendar className="w-5 h-5" />
-                  Book Now
+                  Sign In
                 </button> */}
               </div>
+
+              {/* <div className="flex items-center gap-8 pt-8 border-t border-white/5">
+                <div>
+                  <p className="text-3xl font-bold text-[var(--color-text)]">
+                    4.9
+                  </p>
+                  <div className="flex text-[var(--color-primary)] text-xs mt-1">
+                    <Star className="w-3 h-3 fill-current" />
+                    <Star className="w-3 h-3 fill-current" />
+                    <Star className="w-3 h-3 fill-current" />
+                    <Star className="w-3 h-3 fill-current" />
+                    <Star className="w-3 h-3 fill-current" />
+                  </div>
+                </div>
+                <div className="w-px h-10 bg-white/10"></div>
+                <div>
+                  <p className="text-3xl font-bold text-[var(--color-text)]">
+                    2.5k+
+                  </p>
+                  <p className="text-xs text-[var(--color-muted)] uppercase tracking-wider mt-1">
+                    Clients
+                  </p>
+                </div>
+              </div> */}
             </div>
 
             <div className="hidden lg:block relative">
@@ -352,6 +463,7 @@ const Landing = () => {
                 />
               </div>
 
+              {/* Decorative elements */}
               <div
                 className="absolute -top-10 -right-10 w-64 h-64 rounded-full blur-3xl -z-10"
                 style={{
@@ -369,100 +481,428 @@ const Landing = () => {
         </div>
       </section>
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="relative w-full max-w-md bg-white/10 dark:bg-gray-900/50 rounded-3xl shadow-2xl p-8 text-white">
-            {/* Success Toast */}
-            {showSuccess && (
-              <div className="absolute -top-14 left-1/2 -translate-x-1/2 px-6 py-3 bg-[var(--color-primary)] text-white rounded-full shadow-xl flex items-center gap-3 text-sm font-semibold animate-slideDown">
-                <Check className="w-5 h-5" />
-                Successfully submitted!
-              </div>
-            )}
-
-            {/* Header */}
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-extrabold text-[var(--color-primary)]">
-                Book a Demo
-              </h2>
-              <button
-                onClick={closeModal}
-                className="text-gray-300 hover:text-white transition text-lg"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            {/* Catchy Demo Phrase */}
-            <p className="text-white/70 mb-6 text-sm">
-              See how AVEX-A can supercharge your business in just 15 minutes!
+      {/* Services Section */}
+      <section
+        id="services"
+        className="py-24 relative"
+        style={{
+          backgroundColor: "color-mix(in srgb, var(--color-bg) 95%, white)",
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-[var(--color-text)]">
+              All-In-One POS Services
+            </h2>
+            <p className="text-[var(--color-muted)] max-w-2xl mx-auto">
+              A complete suite of POS tools for managing products, services,
+              payroll, and business operations.
             </p>
+          </div>
 
-            {/* Form */}
-            <form
-              className="space-y-6"
-              onSubmit={(e) => {
-                e.preventDefault();
-                submitDemoRequest();
-              }}
-            >
-              {/* Email Input */}
-              <div className="relative w-full">
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder=" "
-                  className="peer w-full px-4 pt-5 pb-2 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition shadow-md"
-                />
-                <label className="absolute left-4 top-2 text-white/70 text-sm transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-white/40 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm peer-focus:text-[var(--color-primary)]">
-                  Your Email
-                </label>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {services.map((service, index) => (
+              <div
+                key={index}
+                className="group relative rounded-2xl overflow-hidden border border-white/5 transition-all duration-300 hover:-translate-y-1"
+                style={{
+                  backgroundColor:
+                    "color-mix(in srgb, var(--color-bg) 90%, white)",
+                }}
+              >
+                <div
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{
+                    border: `1px solid color-mix(in srgb, var(--color-primary) 50%, transparent)`,
+                    borderRadius: "1rem",
+                  }}
+                ></div>
+
+                <div className="aspect-[4/3] overflow-hidden relative">
+                  <img
+                    src={service.image}
+                    alt={service.title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+
+                  <div
+                    className="absolute inset-0 opacity-90"
+                    style={{
+                      background: `linear-gradient(to top, color-mix(in srgb, var(--color-bg) 90%, white), transparent)`,
+                    }}
+                  ></div>
+
+                  <div className="absolute bottom-4 left-4">
+                    <p className="text-[var(--color-primary)] font-bold text-lg">
+                      {service.price}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="p-6 relative">
+                  <h3 className="text-xl font-bold mb-2 text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">
+                    {service.title}
+                  </h3>
+                  <p className="text-[var(--color-muted)] text-sm mb-4 line-clamp-2">
+                    {service.description}
+                  </p>
+                  <button
+                    onClick={() => navigate("/guest/booking")}
+                    className="text-sm font-semibold text-[var(--color-text)] flex items-center gap-2 group-hover:gap-3 transition-all"
+                  >
+                    Get Service <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-
-              {/* Purpose Textarea */}
-              <div className="relative w-full">
-                <textarea
-                  required
-                  rows={4}
-                  value={purpose}
-                  onChange={(e) => setPurpose(e.target.value)}
-                  placeholder=" "
-                  className="peer w-full px-4 pt-5 pb-2 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-transparent focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition shadow-md resize-none"
-                />
-                <label className="absolute left-4 top-2 text-white/70 text-sm transition-all peer-placeholder-shown:top-5 peer-placeholder-shown:text-white/40 peer-placeholder-shown:text-base peer-focus:top-2 peer-focus:text-sm peer-focus:text-[var(--color-primary)]">
-                  Purpose of Demo
-                </label>
-              </div>
-
-              {/* Buttons */}
-              <div className="flex justify-end gap-4">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="px-6 py-2 rounded-xl bg-white/20 text-white hover:bg-white/30 transition font-semibold"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2 rounded-xl bg-[var(--color-primary)] text-white font-bold shadow-lg hover:opacity-90 transform hover:scale-105 transition-all"
-                >
-                  Submit
-                </button>
-              </div>
-            </form>
-
-            {/* Decorative Floating Circles */}
-            <div className="absolute -top-10 -left-10 w-24 h-24 rounded-full bg-[var(--color-primary)]/20 opacity-30 blur-3xl animate-pulseSlow"></div>
-            <div className="absolute -bottom-10 -right-10 w-32 h-32 rounded-full bg-[var(--color-primary)]/20 opacity-30 blur-3xl animate-pulseSlow"></div>
+            ))}
           </div>
         </div>
-      )}
+      </section>
 
-      {/* ... rest of your sections (Services, Features, Testimonials, App Download, Footer) remain unchanged */}
+      {/* Features Section */}
+      <section
+        id="about"
+        className="py-24 bg-[var(--color-bg)] relative overflow-hidden"
+      >
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl opacity-30 pointer-events-none">
+          <div
+            className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-[100px]"
+            style={{
+              backgroundColor: `color-mix(in srgb, var(--color-primary) 10%, transparent)`,
+            }}
+          ></div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-[var(--color-text)]">
+                Why Choose{" "}
+                <span className="text-[var(--color-primary)]">
+                  {branding?.display_name || "AVEX-A"}
+                </span>
+                ?
+              </h2>
+              <p className="text-[var(--color-muted)] text-lg mb-8 leading-relaxed">
+                We provide a complete All-in-One POS solution that streamlines
+                your business operations. From sales and inventory to payroll
+                and analytics, AVEX-A helps you manage everything efficiently in
+                one platform.
+              </p>
+
+              <div className="space-y-8">
+                {features.map((feature, index) => (
+                  <div key={index} className="flex gap-4">
+                    <div
+                      className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{
+                        backgroundColor:
+                          "color-mix(in srgb, var(--color-bg) 90%, white)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                      }}
+                    >
+                      <feature.icon className="w-6 h-6 text-[var(--color-primary)]" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold mb-2 text-[var(--color-text)]">
+                        {feature.title}
+                      </h3>
+                      <p className="text-[var(--color-muted)] text-sm leading-relaxed">
+                        {feature.description}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="grid grid-cols-2 gap-4">
+                <img
+                  src="/landing/pos-dashboard.jpg"
+                  alt="POS Dashboard"
+                  className="rounded-2xl w-full h-64 object-cover mt-12"
+                />
+                <img
+                  src="/landing/pos-analytics.jpg"
+                  alt="POS Analytics"
+                  className="rounded-2xl w-full h-64 object-cover"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section
+        id="reviews"
+        className="py-24"
+        style={{
+          backgroundColor: "color-mix(in srgb, var(--color-bg) 95%, white)",
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-end mb-12">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-2 text-[var(--color-text)]">
+                Client Stories
+              </h2>
+              <p className="text-[var(--color-muted)]">
+                Don't just take our word for it.
+              </p>
+            </div>
+            <div className="hidden md:flex gap-2">
+              <button className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors text-[var(--color-text)]">
+                <ArrowRight className="w-5 h-5 rotate-180" />
+              </button>
+              <button
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-colors text-white"
+                style={{ backgroundColor: "var(--color-primary)" }}
+              >
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {testimonials.map((t, i) => (
+              <div
+                key={i}
+                className="p-8 rounded-2xl border border-white/5 hover:border-white/10 transition-colors"
+                style={{
+                  backgroundColor:
+                    "color-mix(in srgb, var(--color-bg) 90%, white)",
+                }}
+              >
+                <div className="flex gap-1 mb-6">
+                  {[...Array(5)].map((_, i) => (
+                    <Star
+                      key={i}
+                      className="w-4 h-4 text-[var(--color-primary)] fill-current"
+                    />
+                  ))}
+                </div>
+                <p className="text-[var(--color-muted)] mb-6 leading-relaxed">
+                  "{t.comment}"
+                </p>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden">
+                    <img
+                      src={t.image}
+                      alt={t.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm text-[var(--color-text)]">
+                      {t.name}
+                    </p>
+                    <p className="text-xs text-[var(--color-muted)]">
+                      {t.role}
+                    </p>
+                  </div>
+                </div>
+                <div className="p-6 relative">
+                  {/* Remove these if you don't have service info here */}
+                  {/* Or you can include service info if relevant */}
+                  {/* <h3 className="text-xl font-bold mb-2 group-hover:text-orange-500 transition-colors">{t.title}</h3>
+      <p className="text-gray-400 text-sm mb-4 line-clamp-2">{t.description}</p> */}
+                  {/* <button
+                    onClick={() => navigate("/guest/booking")}
+                    className="text-sm font-semibold text-white flex items-center gap-2 group-hover:gap-3 transition-all"
+                  >
+                    Book Now <ArrowRight className="w-4 h-4" />
+                  </button> */}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* App Download */}
+      <section className="py-24 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div
+            className="rounded-3xl p-8 md:p-16 relative overflow-hidden"
+            style={{ backgroundColor: "var(--color-primary)" }}
+          >
+            <div className="absolute top-0 right-0 w-full h-full bg-[url('/noise.png')] opacity-10 mix-blend-overlay"></div>
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div className="text-white space-y-6">
+                <h2 className="text-3xl md:text-5xl font-bold">
+                  Get the {branding?.display_name} App
+                </h2>
+                <p className="text-white/80 text-lg max-w-md">
+                  Book appointments, track your loyalty points, and get
+                  exclusive offers right from your phone.
+                </p>
+                <div className="flex flex-wrap gap-4 pt-4">
+                  <button className="flex items-center gap-3 bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-900 transition-colors">
+                    <Smartphone className="w-6 h-6" />
+                    <div className="text-left">
+                      <p className="text-[10px] uppercase font-bold text-gray-400">
+                        Download on the
+                      </p>
+                      <p className="text-sm font-bold leading-none">
+                        App Store
+                      </p>
+                    </div>
+                  </button>
+                  <button className="flex items-center gap-3 bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-900 transition-colors">
+                    <Download className="w-6 h-6" />
+                    <div className="text-left">
+                      <p className="text-[10px] uppercase font-bold text-gray-400">
+                        Get it on
+                      </p>
+                      <p className="text-sm font-bold leading-none">
+                        Google Play
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+              <div className="relative hidden md:block">
+                <img
+                  src="/landing/download.jpg"
+                  alt="App Screenshot"
+                  className="rounded-3xl"
+                  //className="absolute -bottom-32 left-1/2 -translate-x-1/2 w-64 rounded-3xl shadow-2xl hover:rotate-0 transition-transform duration-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-[var(--color-bg)] border-t border-white/10 pt-20 pb-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-4 gap-12 mb-16">
+            <div className="space-y-6">
+              <div className="flex items-center gap-2">
+                <img
+                  src={
+                    branding?.logo_light_url || "/img/tipuno_x_logo_white.avif"
+                  }
+                  alt="Logo"
+                  className="w-8 h-8 object-contain"
+                />
+                <span className="text-xl font-bold text-[var(--color-text)]">
+                  {branding?.display_name || "AVEX-A"}
+                </span>
+              </div>
+              <p className="text-[var(--color-muted)] text-sm leading-relaxed">
+                Simplify Management. Amplify Results.
+              </p>
+            </div>
+
+            <div>
+              <h4 className="font-bold mb-6 text-[var(--color-text)]">
+                Quick Links
+              </h4>
+              <ul className="space-y-4 text-sm text-[var(--color-muted)]">
+                <li>
+                  <a
+                    href="#"
+                    className="hover:text-[var(--color-primary)] transition-colors"
+                  >
+                    Home
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#services"
+                    className="hover:text-[var(--color-primary)] transition-colors"
+                  >
+                    Services
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#about"
+                    className="hover:text-[var(--color-primary)] transition-colors"
+                  >
+                    About Us
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#reviews"
+                    className="hover:text-[var(--color-primary)] transition-colors"
+                  >
+                    Reviews
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-bold mb-6 text-[var(--color-text)]">
+                Contact
+              </h4>
+              <ul className="space-y-4 text-sm text-[var(--color-muted)]">
+                <li className="flex items-center gap-3">
+                  <MapPin className="w-4 h-4" />
+                  Angeles, Pampanga
+                </li>
+                <li className="flex items-center gap-3">
+                  <Phone className="w-4 h-4" />
+                  +63 947 544 7628
+                </li>
+                <li className="flex items-center gap-3">
+                  <Clock className="w-4 h-4" />
+                  Mon-Sat: 9am - 9pm
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-bold mb-6 text-[var(--color-text)]">
+                Newsletter
+              </h4>
+              <p className="text-[var(--color-muted)] text-sm mb-4">
+                Subscribe for updates and exclusive offers.
+              </p>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm w-full focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
+                />
+                <button
+                  className="p-2 rounded-lg transition-colors text-white"
+                  style={{ backgroundColor: "var(--color-primary)" }}
+                >
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-[var(--color-muted)] text-sm">
+              © 2025 {branding?.display_name}. All rights reserved.
+            </p>
+            <div className="flex gap-6 text-sm text-[var(--color-muted)]">
+              <a
+                href="#"
+                className="hover:text-[var(--color-text)] transition-colors"
+              >
+                Privacy Policy
+              </a>
+              <a
+                href="#"
+                className="hover:text-[var(--color-text)] transition-colors"
+              >
+                Terms of Service
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
