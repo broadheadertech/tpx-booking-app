@@ -32,10 +32,11 @@ function Wallet() {
     return Send
   }
 
-  const statusColor = (status) => {
-    if (status === 'completed') return 'text-green-400'
-    if (status === 'pending') return 'text-amber-400'
-    return 'text-red-400'
+  // Status colors - using CSS variables for consistency
+  const getStatusStyle = (status) => {
+    if (status === 'completed') return { color: '#22C55E' } // green
+    if (status === 'pending') return { color: primaryColor } // use primary for pending
+    return { color: '#EF4444' } // red for failed
   }
 
   const goToTopUp = () => {
@@ -177,21 +178,33 @@ function Wallet() {
                 return (
                   <div 
                     key={t._id} 
-                    className="relative overflow-hidden rounded-[20px] bg-[#0A0A0A] border border-[#1A1A1A] p-4 hover:border-[var(--color-primary)]/20 transition-all group"
+                    className="relative overflow-hidden rounded-[20px] p-4 transition-all group"
+                    style={{ 
+                      backgroundColor: bgColor, 
+                      border: '1px solid #1A1A1A',
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = `${primaryColor}33`}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
                         <TxIcon className="w-6 h-6 text-white" />
                         <div>
                           <div className="text-sm font-bold text-white">{t.type === 'topup' ? 'Top-up' : t.type}</div>
-                          <div className="text-xs text-gray-500">{new Date(t.createdAt).toLocaleString('en-PH')}</div>
+                          <div className="text-xs" style={{ color: mutedColor }}>{new Date(t.createdAt).toLocaleString('en-PH')}</div>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className={`text-base font-black ${isPositive ? 'text-green-400' : 'text-white'}`}>
+                        <div 
+                          className="text-base font-black"
+                          style={{ color: isPositive ? '#22C55E' : 'white' }}
+                        >
                           {isPositive ? `+₱${t.amount.toLocaleString()}` : `-₱${Math.abs(t.amount).toLocaleString()}`}
                         </div>
-                        <div className={`text-xs font-semibold capitalize ${statusColor(t.status)}`}>
+                        <div 
+                          className="text-xs font-semibold capitalize"
+                          style={getStatusStyle(t.status)}
+                        >
                           {t.status}
                         </div>
                       </div>
