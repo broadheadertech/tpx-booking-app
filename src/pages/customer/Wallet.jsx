@@ -164,12 +164,15 @@ function Wallet() {
           </div>
           <div className="space-y-2">
             {!txs || txs.length === 0 ? (
-              <div className="rounded-[20px] bg-[#0A0A0A] border border-[#1A1A1A] p-12 text-center">
-                <div className="w-16 h-16 rounded-full bg-[#1A1A1A] flex items-center justify-center mx-auto mb-4">
-                  <Clock className="w-8 h-8 text-gray-600" />
+              <div 
+                className="rounded-[20px] border p-12 text-center"
+                style={{ backgroundColor: bgColor, borderColor: '#1A1A1A' }}
+              >
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#1A1A1A' }}>
+                  <Clock className="w-8 h-8" style={{ color: mutedColor }} />
                 </div>
-                <p className="text-sm font-semibold text-gray-500">No transactions yet</p>
-                <p className="text-xs text-gray-600 mt-1">Your transaction history will appear here</p>
+                <p className="text-sm font-semibold" style={{ color: mutedColor }}>No transactions yet</p>
+                <p className="text-xs mt-1" style={{ color: mutedColor }}>Your transaction history will appear here</p>
               </div>
             ) : (
               txs.map((t) => {
@@ -219,7 +222,10 @@ function Wallet() {
         {/* Vouchers Link */}
         <button 
           onClick={() => navigate('/customer/dashboard')} 
-          className="w-full rounded-[20px] bg-[#0A0A0A] border border-[#1A1A1A] p-5 hover:border-white/20 active:scale-[0.98] transition-all group"
+          className="w-full rounded-[20px] p-5 active:scale-[0.98] transition-all group"
+          style={{ backgroundColor: bgColor, border: '1px solid #1A1A1A' }}
+          onMouseEnter={(e) => e.currentTarget.style.borderColor = `${primaryColor}33`}
+          onMouseLeave={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -228,10 +234,10 @@ function Wallet() {
               </div>
               <div className="text-left">
                 <div className="text-sm font-bold text-white">My Vouchers</div>
-                <div className="text-xs text-gray-500">View and manage rewards</div>
+                <div className="text-xs" style={{ color: mutedColor }}>View and manage rewards</div>
               </div>
             </div>
-            <svg className="w-5 h-5 text-gray-400 group-hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5 group-hover:text-white" style={{ color: mutedColor }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
             </svg>
           </div>

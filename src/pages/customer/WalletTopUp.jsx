@@ -4,6 +4,7 @@ import { ArrowLeft, Wallet as WalletIcon, CreditCard, Smartphone } from 'lucide-
 import Button from '../../components/common/Button'
 import { useToast } from '../../components/common/ToastNotification'
 import { useAuth } from '../../context/AuthContext'
+import { useBranding } from '../../context/BrandingContext'
 import { useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 
@@ -11,6 +12,13 @@ function WalletTopUp() {
   const navigate = useNavigate()
   const toast = useToast()
   const { user } = useAuth()
+  const { branding } = useBranding()
+  
+  // Branding colors with fallbacks
+  const primaryColor = branding?.primary_color || '#F68B24'
+  const accentColor = branding?.accent_color || '#E67E22'
+  const bgColor = branding?.bg_color || '#0A0A0A'
+  const mutedColor = branding?.muted_color || '#6B7280'
   const [amount, setAmount] = useState('')
   const [method, setMethod] = useState('gcash')
   const [loading, setLoading] = useState(false)
@@ -117,9 +125,14 @@ function WalletTopUp() {
     }
   }
 
+  // Input focus style helper
+  const inputFocusStyle = {
+    '--tw-ring-color': primaryColor,
+  }
+
   return (
-    <div className="min-h-screen bg-[#0A0A0A]">
-      <div className="sticky top-0 z-40 bg-[#0A0A0A]/98 backdrop-blur-2xl border-b border-[#1A1A1A]">
+    <div className="min-h-screen" style={{ backgroundColor: bgColor }}>
+      <div className="sticky top-0 z-40 backdrop-blur-2xl border-b border-[#1A1A1A]" style={{ backgroundColor: `${bgColor}f8` }}>
         <div className="max-w-md mx-auto px-4">
           <div className="flex justify-between items-center py-5">
             <button 
@@ -130,7 +143,10 @@ function WalletTopUp() {
               <span className="text-sm font-semibold text-white">Back</span>
             </button>
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center">
+              <div 
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: `linear-gradient(to bottom right, ${primaryColor}, ${accentColor})` }}
+              >
                 <WalletIcon className="w-5 h-5 text-white" />
               </div>
               <h1 className="text-lg font-black text-white">Add Funds</h1>
@@ -141,11 +157,11 @@ function WalletTopUp() {
       </div>
 
       <div className="max-w-md mx-auto px-4 py-6 space-y-6">
-        <div className="rounded-[28px] bg-[#0A0A0A] border border-[#1A1A1A] p-6">
+        <div className="rounded-[28px] border border-[#1A1A1A] p-6" style={{ backgroundColor: bgColor }}>
           <div className="mb-3">
             <img src="/wallet/PayMongo_Logo.svg.png" alt="PayMongo" className="h-8 object-contain opacity-90" />
           </div>
-          <div className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-2">Amount</div>
+          <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: mutedColor }}>Amount</div>
           <div className="space-y-3">
             <input
               type="number"
@@ -153,14 +169,20 @@ function WalletTopUp() {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="Enter amount"
-              className="w-full px-4 py-3 bg-[#121212] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-transparent"
+              className="w-full px-4 py-3 bg-[#121212] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:border-transparent"
+              style={{ '--tw-ring-color': primaryColor }}
+              onFocus={(e) => e.target.style.boxShadow = `0 0 0 2px ${primaryColor}`}
+              onBlur={(e) => e.target.style.boxShadow = 'none'}
             />
             <div className="grid grid-cols-4 gap-2">
               {presets.map((p) => (
                 <button
                   key={p}
                   onClick={() => setAmount(String(p))}
-                  className="px-3 py-2 rounded-xl bg-[#121212] border border-[#2A2A2A] text-white text-sm hover:border-white/20 active:scale-95"
+                  className="px-3 py-2 rounded-xl bg-[#121212] border text-white text-sm active:scale-95 transition-all"
+                  style={{ borderColor: amount === String(p) ? primaryColor : '#2A2A2A' }}
+                  onMouseEnter={(e) => e.target.style.borderColor = `${primaryColor}66`}
+                  onMouseLeave={(e) => e.target.style.borderColor = amount === String(p) ? primaryColor : '#2A2A2A'}
                 >
                   ₱{p}
                 </button>
@@ -169,38 +191,105 @@ function WalletTopUp() {
           </div>
         </div>
 
-        <div className="rounded-[28px] bg-[#0A0A0A] border border-[#1A1A1A] p-6">
-          <div className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-3">Payment Method</div>
+        <div className="rounded-[28px] border border-[#1A1A1A] p-6" style={{ backgroundColor: bgColor }}>
+          <div className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: mutedColor }}>Payment Method</div>
           <div className="grid grid-cols-3 gap-2 mb-4">
-            <button onClick={() => setMethod('gcash')} className={`px-3 py-2 rounded-xl border text-sm ${method==='gcash' ? 'border-primary-orange text-white' : 'border-[#2A2A2A] text-gray-300'} bg-[#121212] active:scale-95`}>GCash</button>
-            <button onClick={() => setMethod('paymaya')} className={`px-3 py-2 rounded-xl border text-sm ${method==='paymaya' ? 'border-primary-orange text-white' : 'border-[#2A2A2A] text-gray-300'} bg-[#121212] active:scale-95`}>Maya</button>
-            <button onClick={() => setMethod('card')} className={`px-3 py-2 rounded-xl border text-sm ${method==='card' ? 'border-primary-orange text-white' : 'border-[#2A2A2A] text-gray-300'} bg-[#121212] active:scale-95`}>Card</button>
+            <button 
+              onClick={() => setMethod('gcash')} 
+              className="px-3 py-2 rounded-xl border text-sm bg-[#121212] active:scale-95 transition-all"
+              style={{ 
+                borderColor: method === 'gcash' ? primaryColor : '#2A2A2A',
+                color: method === 'gcash' ? 'white' : '#D1D5DB'
+              }}
+            >
+              GCash
+            </button>
+            <button 
+              onClick={() => setMethod('paymaya')} 
+              className="px-3 py-2 rounded-xl border text-sm bg-[#121212] active:scale-95 transition-all"
+              style={{ 
+                borderColor: method === 'paymaya' ? primaryColor : '#2A2A2A',
+                color: method === 'paymaya' ? 'white' : '#D1D5DB'
+              }}
+            >
+              Maya
+            </button>
+            <button 
+              onClick={() => setMethod('card')} 
+              className="px-3 py-2 rounded-xl border text-sm bg-[#121212] active:scale-95 transition-all"
+              style={{ 
+                borderColor: method === 'card' ? primaryColor : '#2A2A2A',
+                color: method === 'card' ? 'white' : '#D1D5DB'
+              }}
+            >
+              Card
+            </button>
           </div>
 
           {method === 'card' && (
             <div className="space-y-3">
               <div className="grid grid-cols-1 gap-3">
-                <input value={card.name} onChange={(e)=>setCard({...card,name:e.target.value})} placeholder="Name on card" className="px-4 py-3 bg-[#121212] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-orange" />
-                <input value={card.number} onChange={(e)=>setCard({...card,number:e.target.value})} placeholder="Card number" className="px-4 py-3 bg-[#121212] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-orange" />
+                <input 
+                  value={card.name} 
+                  onChange={(e) => setCard({...card, name: e.target.value})} 
+                  placeholder="Name on card" 
+                  className="px-4 py-3 bg-[#121212] border border-[#2A2A2A] text-white rounded-xl focus:outline-none"
+                  onFocus={(e) => e.target.style.boxShadow = `0 0 0 2px ${primaryColor}`}
+                  onBlur={(e) => e.target.style.boxShadow = 'none'}
+                />
+                <input 
+                  value={card.number} 
+                  onChange={(e) => setCard({...card, number: e.target.value})} 
+                  placeholder="Card number" 
+                  className="px-4 py-3 bg-[#121212] border border-[#2A2A2A] text-white rounded-xl focus:outline-none"
+                  onFocus={(e) => e.target.style.boxShadow = `0 0 0 2px ${primaryColor}`}
+                  onBlur={(e) => e.target.style.boxShadow = 'none'}
+                />
                 <div className="grid grid-cols-3 gap-2">
-                  <input value={card.expMonth} onChange={(e)=>setCard({...card,expMonth:e.target.value})} placeholder="MM" className="px-4 py-3 bg-[#121212] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-orange" />
-                  <input value={card.expYear} onChange={(e)=>setCard({...card,expYear:e.target.value})} placeholder="YYYY" className="px-4 py-3 bg-[#121212] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-orange" />
-                  <input value={card.cvc} onChange={(e)=>setCard({...card,cvc:e.target.value})} placeholder="CVC" className="px-4 py-3 bg-[#121212] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-orange" />
+                  <input 
+                    value={card.expMonth} 
+                    onChange={(e) => setCard({...card, expMonth: e.target.value})} 
+                    placeholder="MM" 
+                    className="px-4 py-3 bg-[#121212] border border-[#2A2A2A] text-white rounded-xl focus:outline-none"
+                    onFocus={(e) => e.target.style.boxShadow = `0 0 0 2px ${primaryColor}`}
+                    onBlur={(e) => e.target.style.boxShadow = 'none'}
+                  />
+                  <input 
+                    value={card.expYear} 
+                    onChange={(e) => setCard({...card, expYear: e.target.value})} 
+                    placeholder="YYYY" 
+                    className="px-4 py-3 bg-[#121212] border border-[#2A2A2A] text-white rounded-xl focus:outline-none"
+                    onFocus={(e) => e.target.style.boxShadow = `0 0 0 2px ${primaryColor}`}
+                    onBlur={(e) => e.target.style.boxShadow = 'none'}
+                  />
+                  <input 
+                    value={card.cvc} 
+                    onChange={(e) => setCard({...card, cvc: e.target.value})} 
+                    placeholder="CVC" 
+                    className="px-4 py-3 bg-[#121212] border border-[#2A2A2A] text-white rounded-xl focus:outline-none"
+                    onFocus={(e) => e.target.style.boxShadow = `0 0 0 2px ${primaryColor}`}
+                    onBlur={(e) => e.target.style.boxShadow = 'none'}
+                  />
                 </div>
               </div>
-              <p className="text-xs text-gray-500">Card details are sent securely to PayMongo using your public key.</p>
+              <p className="text-xs" style={{ color: mutedColor }}>Card details are sent securely to PayMongo using your public key.</p>
             </div>
           )}
         </div>
 
-        <Button 
+        <button 
           onClick={handleContinue} 
           disabled={loading} 
-          variant="primary" 
-          className="w-full !bg-[var(--color-primary)] hover:!bg-[var(--color-accent)] active:scale-95 transition-all shadow-lg shadow-orange-500/20"
+          className="w-full py-3 px-4 rounded-xl font-bold text-white active:scale-95 transition-all disabled:opacity-50"
+          style={{ 
+            backgroundColor: primaryColor,
+            boxShadow: `0 10px 25px -5px ${primaryColor}33`
+          }}
+          onMouseEnter={(e) => !loading && (e.target.style.backgroundColor = accentColor)}
+          onMouseLeave={(e) => !loading && (e.target.style.backgroundColor = primaryColor)}
         >
           {loading ? 'Processing...' : 'Continue'}
-        </Button>
+        </button>
       </div>
     </div>
   )
