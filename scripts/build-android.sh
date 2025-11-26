@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Building TPX Barbershop Android APK..."
+echo "Building Barbershop Android APK..."
 
 # Build the React app
 echo "Building React app..."

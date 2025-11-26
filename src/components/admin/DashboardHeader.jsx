@@ -40,8 +40,8 @@ const DashboardHeader = ({ onLogout }) => {
             <div className="min-w-0 flex-1">
               <div className="flex items-center space-x-1.5 sm:space-x-2">
                 <h1 className="text-xs sm:text-lg font-bold text-white tracking-tight truncate">
-                  <span className="hidden sm:inline">TipunoX Angeles Barbershop</span>
-                  <span className="sm:hidden">TipunoX Angeles</span>
+                  <span className="hidden sm:inline"> Barbershop</span>
+                  <span className="sm:hidden"></span>
                 </h1>
                 <div className="bg-[var(--color-primary)]/15 backdrop-blur-sm rounded-md px-1.5 py-0.5 border border-[var(--color-primary)]/25 flex-shrink-0">
                   <span className="text-[10px] font-semibold text-[var(--color-primary)]">v2.0.0</span>

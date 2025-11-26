@@ -5,6 +5,7 @@ import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useNavigate } from 'react-router-dom'
 import { APP_VERSION } from '../../config/version'
+import { useBranding } from '../../context/BrandingContext'
 
 const Profile = ({ onBack }) => {
   const { user, logout, loading: authLoading, sessionToken } = useAuth()
@@ -14,6 +15,7 @@ const Profile = ({ onBack }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+   const { branding } = useBranding()
   const [profileData, setProfileData] = useState({
     username: '',
     email: '',
@@ -327,7 +329,7 @@ const Profile = ({ onBack }) => {
         {/* Version Display */}
         <div className="text-center mb-6">
           <p className="text-xs text-gray-500">v{APP_VERSION}</p>
-          <p className="text-xs text-gray-600">TPX Barbershop</p>
+          <p className="text-xs text-gray-600">{branding?.display_name}</p>
         </div>
 
         {/* Edit Button */}

@@ -148,8 +148,8 @@ const EmailTestModal = ({ isOpen, onClose }) => {
             <div className="flex justify-between">
               <span>API Key:</span>
               <span className="text-gray-300">
-                {import.meta.env.VITE_RESEND_API_KEY ?
-                  `${import.meta.env.VITE_RESEND_API_KEY.substring(0, 8)}...` :
+                {import.meta.env.RESEND_API_KEY ?
+                  `${import.meta.env.RESEND_API_KEY.substring(0, 8)}...` :
                   'Not configured'
                 }
               </span>

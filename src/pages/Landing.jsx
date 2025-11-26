@@ -18,7 +18,7 @@ import {
   Menu,
   X,
   Smartphone,
-  Download
+  Download,
 } from "lucide-react";
 import { useBranding } from "../context/BrandingContext";
 
@@ -39,21 +39,24 @@ const Landing = () => {
   const services = [
     {
       title: "Premium Haircuts",
-      description: "Expert styling with precision and attention to detail. Includes wash and style.",
+      description:
+        "Expert styling with precision and attention to detail. Includes wash and style.",
       price: "₱299",
       image: "/landing/2.webp",
       popular: true,
     },
     {
       title: "Beard Grooming",
-      description: "Professional beard trimming, sculpting, and hot towel service.",
+      description:
+        "Professional beard trimming, sculpting, and hot towel service.",
       price: "₱199",
       image: "/landing/4.webp",
       popular: false,
     },
     {
       title: "Hair Treatments",
-      description: "Revitalizing treatments for scalp health and hair vitality.",
+      description:
+        "Revitalizing treatments for scalp health and hair vitality.",
       price: "₱399",
       image: "/landing/7.jpg",
       popular: false,
@@ -70,17 +73,20 @@ const Landing = () => {
   const features = [
     {
       title: "Master Barbers",
-      description: "Our team consists of award-winning professionals with over 10 years of experience.",
+      description:
+        "Our team consists of award-winning professionals with over 10 years of experience.",
       icon: Users,
     },
     {
       title: "Premium Products",
-      description: "We use only top-tier, imported grooming products for the best results.",
+      description:
+        "We use only top-tier, imported grooming products for the best results.",
       icon: Award,
     },
     {
       title: "Hygienic & Safe",
-      description: "Hospital-grade sterilization protocols for all tools and equipment.",
+      description:
+        "Hospital-grade sterilization protocols for all tools and equipment.",
       icon: Shield,
     },
   ];
@@ -89,21 +95,24 @@ const Landing = () => {
     {
       name: "Miguel Santos",
       role: "Regular Client",
-      comment: "The attention to detail is unmatched. I've never had a barber take this much care with my fade.",
+      comment:
+        "The attention to detail is unmatched. I've never had a barber take this much care with my fade.",
       rating: 5,
       image: "https://i.pravatar.cc/150?u=miguel",
     },
     {
       name: "Carlos Rivera",
       role: "Business Owner",
-      comment: "Perfect for my busy schedule. Booking is seamless and they always run on time.",
+      comment:
+        "Perfect for my busy schedule. Booking is seamless and they always run on time.",
       rating: 5,
       image: "https://i.pravatar.cc/150?u=carlos",
     },
     {
       name: "David Chen",
       role: "Software Engineer",
-      comment: "The ambiance is amazing. It's not just a haircut, it's a relaxing break from my day.",
+      comment:
+        "The ambiance is amazing. It's not just a haircut, it's a relaxing break from my day.",
       rating: 5,
       image: "https://i.pravatar.cc/150?u=david",
     },
@@ -111,19 +120,25 @@ const Landing = () => {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] selection:bg-[var(--color-primary)]/30">
+    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] selection:bg-[var(--color-primary)]/30">
       {/* Navigation */}
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
             ? "bg-[var(--color-bg)]/80 backdrop-blur-xl border-b border-white/5 py-4"
             : "bg-transparent py-6"
-          }`}
+        }`}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center">
             {/* Logo */}
-            <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
+            <div
+              className="flex items-center gap-3 cursor-pointer"
+              onClick={() => navigate("/")}
+            >
               <img
-                src={branding?.logo_light_url || "/img/tipuno_x_logo_white.avif"}
+                src={
+                  branding?.logo_light_url || "/img/tipuno_x_logo_white.avif"
+                }
                 alt="Logo"
                 className="w-10 h-10 object-contain"
               />
@@ -131,6 +146,7 @@ const Landing = () => {
                 <h1 className="text-xl font-bold tracking-tight text-[var(--color-text)]">
                   {branding?.display_name || 'TipunoX'}
                 </h1>
+                <p className="text-[10px] font-medium tracking-[0.2em] uppercase text-[var(--color-primary)]">
                 <p className="text-[10px] font-medium tracking-[0.2em] uppercase text-[var(--color-primary)]">
                   Premium Grooming
                 </p>
@@ -147,11 +163,13 @@ const Landing = () => {
                 <button
                   onClick={() => navigate("/auth/login")}
                   className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors"
+                  className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors"
                 >
                   Sign In
                 </button>
                 <button
                   onClick={() => navigate("/guest/booking")}
+                  className="px-5 py-2.5 rounded-full bg-[var(--color-text)] text-[var(--color-bg)] text-sm font-bold hover:opacity-90 transition-all transform hover:scale-105 active:scale-95"
                   className="px-5 py-2.5 rounded-full bg-[var(--color-text)] text-[var(--color-bg)] text-sm font-bold hover:opacity-90 transition-all transform hover:scale-105 active:scale-95"
                 >
                   Book Now
@@ -161,6 +179,7 @@ const Landing = () => {
 
             {/* Mobile Menu Button */}
             <button
+              className="md:hidden p-2 text-[var(--color-text)]"
               className="md:hidden p-2 text-[var(--color-text)]"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
@@ -249,6 +268,7 @@ const Landing = () => {
                 <button
                   onClick={() => navigate("/auth/login")}
                   className="px-8 py-4 rounded-full border border-white/10 bg-white/5 text-[var(--color-text)] font-semibold hover:bg-white/10 transition-all backdrop-blur-sm"
+                  className="px-8 py-4 rounded-full border border-white/10 bg-white/5 text-[var(--color-text)] font-semibold hover:bg-white/10 transition-all backdrop-blur-sm"
                 >
                   Sign In
                 </button>
@@ -275,6 +295,7 @@ const Landing = () => {
 
             <div className="hidden lg:block relative">
               <div className="relative z-10 rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+              <div className="relative z-10 rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
                 <img
                   src="/landing/1.avif"
                   alt="Barber"
@@ -291,12 +312,16 @@ const Landing = () => {
                       <Scissors className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-white">Master Barber</p>
+                      <p className="text-sm font-bold text-white">
+                        Master Barber
+                      </p>
                       <p className="text-xs text-gray-300">Available Today</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-green-400 font-bold uppercase tracking-wider">Open Now</p>
+                    <p className="text-xs text-green-400 font-bold uppercase tracking-wider">
+                      Open Now
+                    </p>
                     <p className="text-xs text-white/60">Until 9:00 PM</p>
                   </div>
                 </div>
@@ -362,6 +387,7 @@ const Landing = () => {
                   <button
                     onClick={() => navigate("/guest/booking")}
                     className="text-sm font-semibold text-[var(--color-text)] flex items-center gap-2 group-hover:gap-3 transition-all"
+                    className="text-sm font-semibold text-[var(--color-text)] flex items-center gap-2 group-hover:gap-3 transition-all"
                   >
                     Book Now <ArrowRight className="w-4 h-4" />
                   </button>
@@ -413,8 +439,16 @@ const Landing = () => {
             </div>
             <div className="relative">
               <div className="grid grid-cols-2 gap-4">
-                <img src="/landing/4.webp" alt="Barber working" className="rounded-2xl w-full h-64 object-cover mt-12" />
-                <img src="/landing/2.webp" alt="Haircut detail" className="rounded-2xl w-full h-64 object-cover" />
+                <img
+                  src="/landing/4.webp"
+                  alt="Barber working"
+                  className="rounded-2xl w-full h-64 object-cover mt-12"
+                />
+                <img
+                  src="/landing/2.webp"
+                  alt="Haircut detail"
+                  className="rounded-2xl w-full h-64 object-cover"
+                />
               </div>
             </div>
           </div>
@@ -430,6 +464,7 @@ const Landing = () => {
               <p className="text-[var(--color-muted)]">Don't just take our word for it.</p>
             </div>
             <div className="hidden md:flex gap-2">
+              <button className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors text-[var(--color-text)]">
               <button className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors text-[var(--color-text)]">
                 <ArrowRight className="w-5 h-5 rotate-180" />
               </button>
@@ -457,12 +492,28 @@ const Landing = () => {
                 <p className="text-[var(--color-muted)] mb-6 leading-relaxed">"{t.comment}"</p>
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden">
-                    <img src={t.image} alt={t.name} className="w-full h-full object-cover" />
+                    <img
+                      src={t.image}
+                      alt={t.name}
+                      className="w-full h-full object-cover"
+                    />
                   </div>
                   <div>
                     <p className="font-bold text-sm text-[var(--color-text)]">{t.name}</p>
                     <p className="text-xs text-[var(--color-muted)]">{t.role}</p>
                   </div>
+                </div>
+                <div className="p-6 relative">
+                  {/* Remove these if you don't have service info here */}
+                  {/* Or you can include service info if relevant */}
+                  {/* <h3 className="text-xl font-bold mb-2 group-hover:text-orange-500 transition-colors">{t.title}</h3>
+      <p className="text-gray-400 text-sm mb-4 line-clamp-2">{t.description}</p> */}
+                  <button
+                    onClick={() => navigate("/guest/booking")}
+                    className="text-sm font-semibold text-white flex items-center gap-2 group-hover:gap-3 transition-all"
+                  >
+                    Book Now <ArrowRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
             ))}
@@ -489,15 +540,23 @@ const Landing = () => {
                   <button className="flex items-center gap-3 bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-900 transition-colors">
                     <Smartphone className="w-6 h-6" />
                     <div className="text-left">
-                      <p className="text-[10px] uppercase font-bold text-gray-400">Download on the</p>
-                      <p className="text-sm font-bold leading-none">App Store</p>
+                      <p className="text-[10px] uppercase font-bold text-gray-400">
+                        Download on the
+                      </p>
+                      <p className="text-sm font-bold leading-none">
+                        App Store
+                      </p>
                     </div>
                   </button>
                   <button className="flex items-center gap-3 bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-900 transition-colors">
                     <Download className="w-6 h-6" />
                     <div className="text-left">
-                      <p className="text-[10px] uppercase font-bold text-gray-400">Get it on</p>
-                      <p className="text-sm font-bold leading-none">Google Play</p>
+                      <p className="text-[10px] uppercase font-bold text-gray-400">
+                        Get it on
+                      </p>
+                      <p className="text-sm font-bold leading-none">
+                        Google Play
+                      </p>
                     </div>
                   </button>
                 </div>
@@ -516,12 +575,15 @@ const Landing = () => {
 
       {/* Footer */}
       <footer className="bg-[var(--color-bg)] border-t border-white/10 pt-20 pb-10">
+      <footer className="bg-[var(--color-bg)] border-t border-white/10 pt-20 pb-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-12 mb-16">
             <div className="space-y-6">
               <div className="flex items-center gap-2">
                 <img
-                  src={branding?.logo_light_url || "/img/tipuno_x_logo_white.avif"}
+                  src={
+                    branding?.logo_light_url || "/img/tipuno_x_logo_white.avif"
+                  }
                   alt="Logo"
                   className="w-8 h-8 object-contain"
                 />
@@ -567,6 +629,7 @@ const Landing = () => {
                 <input
                   type="email"
                   placeholder="Enter your email"
+                  className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm w-full focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
                   className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm w-full focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
                 />
                 <button

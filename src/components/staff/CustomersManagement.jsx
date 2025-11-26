@@ -96,7 +96,7 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
       
       if (contactMethod === 'email') {
         // Open email client as fallback
-        window.location.href = `mailto:${contactCustomer.email}?subject=Message from TPX Barbershop&body=${encodeURIComponent(contactMessage)}`
+        window.location.href = `mailto:${contactCustomer.email}?subject=Message from Barbershop&body=${encodeURIComponent(contactMessage)}`
       } else if (contactMethod === 'sms') {
         // Open SMS app as fallback
         window.location.href = `sms:${contactCustomer.mobile_number || contactCustomer.phone}?body=${encodeURIComponent(contactMessage)}`
