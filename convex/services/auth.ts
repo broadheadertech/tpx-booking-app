@@ -842,10 +842,8 @@ export const sendPasswordResetEmail = action({
     const resetUrl = `https://tipunox.broadheader.com/auth/reset-password?token=${args.token}`;
 
     const emailData = {
-      from: 'Barbershop <no-reply@tipunox.broadheader.com>',
       from: `${brandName} <no-reply@tipunox.broadheader.com>`,
       to: args.email,
-      subject: 'Reset your Barbershop password',
       subject: subject,
       html: `
         <!DOCTYPE html>
@@ -853,7 +851,6 @@ export const sendPasswordResetEmail = action({
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Password Reset - Barbershop</title>
           <title>Password Reset - ${brandName}</title>
           <style>
             body {
@@ -1177,16 +1174,13 @@ export const sendVoucherEmailWithQR = action({
       code: args.voucherCode,
       value: args.voucherValue,
       type: "voucher",
-      brand: " Barbershop"
       brand: brandName
     });
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrPayload)}`;
 
     const emailData = {
-      from: 'Barbershop <no-reply@tipunox.broadheader.com>',
       from: `${brandName} <no-reply@tipunox.broadheader.com>`,
       to: args.email,
-      subject: `Your Voucher ${args.voucherCode} from Barbershop`,
       subject: subject,
       html: `
         <!DOCTYPE html>
@@ -1194,7 +1188,6 @@ export const sendVoucherEmailWithQR = action({
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Your Voucher - Barbershop</title>
           <title>Your Voucher - ${brandName}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
