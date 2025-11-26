@@ -42,7 +42,7 @@ const Landing = () => {
       description:
         "Track stock levels in real time, automate low-stock alerts, and manage product variants across locations.",
       price: "Included",
-      image: "/landing/pos-inventory.webp",
+      image: "/landing/pos-inventory.jpg",
       popular: true,
     },
     {
@@ -50,7 +50,7 @@ const Landing = () => {
       description:
         "Fast, secure POS checkout with product scanning, discounts, receipts, and multiple payment options.",
       price: "Included",
-      image: "/landing/pos-checkout.webp",
+      image: "/landing/pos-sales.jpg",
       popular: false,
     },
     {
@@ -58,7 +58,7 @@ const Landing = () => {
       description:
         "Manage staff schedules, time logs, and automated payroll calculations — all in one place.",
       price: "Included",
-      image: "/landing/pos-payroll.webp",
+      image: "/landing/pos-payroll.jpg",
       popular: false,
     },
     {
@@ -66,7 +66,7 @@ const Landing = () => {
       description:
         "Get actionable insights with real-time dashboards, sales reports, customer data, and performance trends.",
       price: "Included",
-      image: "/landing/pos-analytics.webp",
+      image: "/landing/pos-analytics-2.jpg",
       popular: false,
     },
   ];
@@ -500,12 +500,12 @@ const Landing = () => {
             <div className="relative">
               <div className="grid grid-cols-2 gap-4">
                 <img
-                  src="/landing/pos-dashboard.webp"
+                  src="/landing/pos-dashboard.jpg"
                   alt="POS Dashboard"
                   className="rounded-2xl w-full h-64 object-cover mt-12"
                 />
                 <img
-                  src="/landing/pos-analytics.webp"
+                  src="/landing/pos-analytics.jpg"
                   alt="POS Analytics"
                   className="rounded-2xl w-full h-64 object-cover"
                 />
