@@ -245,7 +245,7 @@ const Landing = () => {
               </h1>
 
               <p className="text-lg text-[var(--color-muted)] max-w-lg leading-relaxed">
-               Here at{branding?.display_name || 'TipunoX'}, 
+               Here at {branding?.display_name || 'TipunoX'}, 
                 We Simplify Management and Amplify Results.
               </p>
 
@@ -258,14 +258,14 @@ const Landing = () => {
                   }}
                 >
                   <Calendar className="w-5 h-5" />
-                  Book Appointment
+                  Book a Demo
                 </button>
-                <button
+                {/* <button
                   onClick={() => navigate("/auth/login")}
                   className="px-8 py-4 rounded-full border border-white/10 bg-white/5 text-[var(--color-text)] font-semibold hover:bg-white/10 transition-all backdrop-blur-sm"
                 >
                   Sign In
-                </button>
+                </button> */}
               </div>
 
               <div className="flex items-center gap-8 pt-8 border-t border-white/5">
@@ -293,31 +293,7 @@ const Landing = () => {
                   src="/landing/1.avif"
                   alt="Barber"
                   className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-
-                <div className="absolute bottom-6 left-6 right-6 p-4 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-white"
-                      style={{ backgroundColor: 'var(--color-primary)' }}
-                    >
-                      <Scissors className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">
-                        Master Barber
-                      </p>
-                      <p className="text-xs text-gray-300">Available Today</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-green-400 font-bold uppercase tracking-wider">
-                      Open Now
-                    </p>
-                    <p className="text-xs text-white/60">Until 9:00 PM</p>
-                  </div>
-                </div>
+                />                
               </div>
 
               {/* Decorative elements */}
