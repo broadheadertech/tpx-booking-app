@@ -44,7 +44,7 @@ const DashboardHeader = ({ onLogout }) => {
                   <span className="sm:hidden">{branding?.display_name || 'TipunoX'}</span>
                 </h1>
                 <div className="bg-[var(--color-primary)]/15 backdrop-blur-sm rounded-md px-1.5 py-0.5 border border-[var(--color-primary)]/25 flex-shrink-0">
-                  <span className="text-[10px] font-semibold text-[var(--color-primary)]">v2.0.0</span>
+                  <span className="text-[10px] font-semibold text-[var(--color-primary)]">v8.1.2</span>
                 </div>
               </div>
               <div className="flex items-center space-x-1 sm:space-x-1.5 mt-0.5">
