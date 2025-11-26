@@ -290,7 +290,7 @@ const Landing = () => {
             <div className="hidden lg:block relative">
               <div className="relative z-10 rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
                 <img
-                  src="/landing/1.avif"
+                  src="/landing/1.png"
                   alt="Barber"
                   className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
                 />                
