@@ -455,7 +455,7 @@ const GlobalSettings = ({ onRefresh }) => {
           { label: 'Database', value: 'Convex' },
           { label: 'Last Backup', value: 'Hourly' },
           { label: 'Uptime', value: '99.9%' },
-          { label: 'API Version', value: 'v1.0' }
+          { label: 'API Version', value: 'v8.1.2' }
         ].map((info) => (
           <div key={info.label} className="text-center p-4 bg-[#1A1A1A]/50 rounded-lg">
             <div className="text-2xl font-bold text-white mb-1">{info.value}</div>

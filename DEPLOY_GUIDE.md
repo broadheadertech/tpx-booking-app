@@ -64,7 +64,7 @@ node scripts/deploy.js --major      # Major version
 The app version is displayed in the **bottom-right corner** of the login page:
 
 ```
-v1.0.1
+v8.1.2.1
 Barbershop
 ```
 
@@ -134,10 +134,10 @@ $ npm run deploy
 ╚════════════════════════════════════════════════════════════════╝
 
 📖 Reading current version...
-   Current version: v1.0.0
+   Current version: v8.1.2.0
 
 📝 Incrementing patch version...
-   New version: v1.0.1
+   New version: v8.1.2.1
 
 ✏️  Updating version.js...
    ✓ version.js updated
@@ -153,8 +153,8 @@ $ npm run deploy
 ╚════════════════════════════════════════════════════════════════╝
 
 📊 Deployment Summary:
-   • Old Version: v1.0.0
-   • New Version: v1.0.1
+   • Old Version: v8.1.2.0
+   • New Version: v8.1.2.1
    • Deploy Date: 2024-10-18
    • Files Updated: version.js, package.json
    • Backend: Convex ✓
