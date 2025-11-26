@@ -93,31 +93,32 @@ const Landing = () => {
   ];
 
   const testimonials = [
-    {
-      name: "Miguel Santos",
-      role: "Regular Client",
-      comment:
-        "The attention to detail is unmatched. I've never had a barber take this much care with my fade.",
-      rating: 5,
-      image: "https://i.pravatar.cc/150?u=miguel",
-    },
-    {
-      name: "Carlos Rivera",
-      role: "Business Owner",
-      comment:
-        "Perfect for my busy schedule. Booking is seamless and they always run on time.",
-      rating: 5,
-      image: "https://i.pravatar.cc/150?u=carlos",
-    },
-    {
-      name: "David Chen",
-      role: "Software Engineer",
-      comment:
-        "The ambiance is amazing. It's not just a haircut, it's a relaxing break from my day.",
-      rating: 5,
-      image: "https://i.pravatar.cc/150?u=david",
-    },
-  ];
+  {
+    name: "Miguel Santos",
+    role: "Small Business Owner",
+    comment:
+      "AVEX-A completely transformed how I manage my store. Inventory, sales, and payroll are now all in one place. Highly recommend!",
+    rating: 5,
+    image: "https://i.pravatar.cc/150?u=miguel",
+  },
+  {
+    name: "Carlos Rivera",
+    role: "Retail Manager",
+    comment:
+      "Using AVEX-A has made our operations seamless. The analytics dashboard gives us insights we never had before.",
+    rating: 5,
+    image: "https://i.pravatar.cc/150?u=carlos",
+  },
+  {
+    name: "David Chen",
+    role: "Cafe Owner",
+    comment:
+      "From sales tracking to employee management, AVEX-A handles it all. It’s the ultimate all-in-one POS solution.",
+    rating: 5,
+    image: "https://i.pravatar.cc/150?u=david",
+  },
+];
+
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] selection:bg-[var(--color-primary)]/30">
@@ -145,7 +146,7 @@ const Landing = () => {
               />
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-[var(--color-text)]">
-                  {branding?.display_name || "TipunoX"}
+                  {branding?.display_name || "AVEX-A"}
                 </h1>
                 <p className="text-[10px] font-medium tracking-[0.2em] uppercase text-[var(--color-primary)]">
                   Simplify Management. Amplify Results.
@@ -287,7 +288,7 @@ const Landing = () => {
               </h1>
 
               <p className="text-lg text-[var(--color-muted)] max-w-lg leading-relaxed">
-                Here at {branding?.display_name || "TipunoX"}, We Simplify
+                Here at {branding?.display_name || "AVEX-A"}, We Simplify
                 Management and Amplify Results.
               </p>
 
@@ -460,14 +461,14 @@ const Landing = () => {
               <h2 className="text-3xl md:text-4xl font-bold mb-6 text-[var(--color-text)]">
                 Why Choose{" "}
                 <span className="text-[var(--color-primary)]">
-                  {branding?.display_name || "TipunoX"}
+                  {branding?.display_name || "AVEX-A"}
                 </span>
                 ?
               </h2>
               <p className="text-[var(--color-muted)] text-lg mb-8 leading-relaxed">
                 We provide a complete All-in-One POS solution that streamlines
                 your business operations. From sales and inventory to payroll
-                and analytics, TipunoX helps you manage everything efficiently
+                and analytics, AVEX-A helps you manage everything efficiently
                 in one platform.
               </p>
 
@@ -672,7 +673,7 @@ const Landing = () => {
                   className="w-8 h-8 object-contain"
                 />
                 <span className="text-xl font-bold text-[var(--color-text)]">
-                  {branding?.display_name || "TipunoX"}
+                  {branding?.display_name || "AVEX-A"}
                 </span>
               </div>
               <p className="text-[var(--color-muted)] text-sm leading-relaxed">
@@ -731,7 +732,7 @@ const Landing = () => {
                 </li>
                 <li className="flex items-center gap-3">
                   <Phone className="w-4 h-4" />
-                  +63 912 345 6789
+                  +63 947 544 7628
                 </li>
                 <li className="flex items-center gap-3">
                   <Clock className="w-4 h-4" />
@@ -765,7 +766,7 @@ const Landing = () => {
 
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-[var(--color-muted)] text-sm">
-              © 2024 {branding?.display_name}. All rights reserved.
+              © 2025 {branding?.display_name}. All rights reserved.
             </p>
             <div className="flex gap-6 text-sm text-[var(--color-muted)]">
               <a
