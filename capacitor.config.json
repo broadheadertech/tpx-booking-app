@@ -1,6 +1,6 @@
 {
   "appId": "com.tpx.barbershop",
-  "appName": "TPX Barbershop",
+  "appName": "Barbershop",
   "webDir": "dist",
   "server": {
     "androidScheme": "https"

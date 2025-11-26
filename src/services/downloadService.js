@@ -8,7 +8,7 @@ class DownloadService {
   }
 
   /**
-   * Download the TPX Barbershop APK
+   * Download the Barbershop APK
    * @param {Object} options - Download options
    * @returns {Promise<void>}
    */

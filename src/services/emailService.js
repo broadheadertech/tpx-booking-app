@@ -6,7 +6,7 @@ const resend = new Resend(RESEND_API_KEY);
 class EmailService {
   constructor() {
     this.fromEmail = 'no-reply@tipunox.broadheader.com';
-    this.fromName = 'TPX Barbershop';
+    this.fromName = 'Barbershop';
   }
 
   async sendPasswordResetEmail(email, resetToken) {
@@ -17,14 +17,14 @@ class EmailService {
     const emailData = {
       from: `${this.fromName} <${this.fromEmail}>`,
       to: email,
-      subject: 'Reset your TPX Barbershop password',
+      subject: 'Reset your Barbershop password',
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Password Reset - TPX Barbershop</title>
+          <title>Password Reset - Barbershop</title>
           <style>
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -106,13 +106,13 @@ class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <img src="https://your-domain.com/img/tipuno_x_logo_white.avif" alt="TPX Barbershop" class="logo" />
+              <img src="https://your-domain.com/img/tipuno_x_logo_white.avif" alt="Barbershop" class="logo" />
             </div>
             
             <div class="content">
               <h1 class="title">Reset Your Password</h1>
               <p class="text">
-                Hi there! We received a request to reset your password for your TPX Barbershop account.
+                Hi there! We received a request to reset your password for your Barbershop account.
                 Click the button below to set a new password.
               </p>
               
@@ -135,7 +135,7 @@ class EmailService {
             </div>
             
             <div class="footer">
-              <p>© 2024 TPX Barbershop. All rights reserved.</p>
+              <p>© 2024 Barbershop. All rights reserved.</p>
               <p>This is an automated message. Please do not reply to this email.</p>
             </div>
           </div>
@@ -175,14 +175,14 @@ class EmailService {
     const emailData = {
       from: `${this.fromName} <${this.fromEmail}>`,
       to: voucherData.email,
-      subject: `Your Voucher ${voucherData.voucherCode} from TPX Barbershop`,
+      subject: `Your Voucher ${voucherData.voucherCode} from Barbershop`,
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Voucher - TPX Barbershop</title>
+          <title>Voucher - Barbershop</title>
           <style>
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -249,13 +249,13 @@ class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="color: var(--color-primary); font-size: 32px; margin-bottom: 10px;">TPX Barbershop</h1>
+              <h1 style="color: var(--color-primary); font-size: 32px; margin-bottom: 10px;">Barbershop</h1>
             </div>
             
             <div class="content">
               <h1 class="title">🎉 You've Received a Voucher!</h1>
               <p style="text-align: center; color: #ccc; margin-bottom: 30px;">
-                Hi ${voucherData.name}, you've received a special voucher from TPX Barbershop!
+                Hi ${voucherData.name}, you've received a special voucher from Barbershop!
               </p>
               
               <div class="voucher-code">${voucherData.voucherCode}</div>
@@ -275,12 +275,12 @@ class EmailService {
               ` : ''}
               
               <p style="text-align: center; color: #ccc; margin-top: 30px; font-size: 14px;">
-                Show this email or QR code at any TPX Barbershop location to redeem your voucher.
+                Show this email or QR code at any Barbershop location to redeem your voucher.
               </p>
             </div>
             
             <div class="footer">
-              <p>© 2024 TPX Barbershop. All rights reserved.</p>
+              <p>© 2024 Barbershop. All rights reserved.</p>
               <p>This is an automated message. Please do not reply to this email.</p>
             </div>
           </div>
@@ -310,14 +310,14 @@ class EmailService {
     const emailData = {
       from: `${this.fromName} <${this.fromEmail}>`,
       to: customerData.email,
-      subject: 'Welcome to TPX Barbershop!',
+      subject: 'Welcome to Barbershop!',
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Welcome - TPX Barbershop</title>
+          <title>Welcome - Barbershop</title>
           <style>
             body {
               font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -388,13 +388,13 @@ class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <h1 style="color: var(--color-primary); font-size: 32px; margin-bottom: 10px;">TPX Barbershop</h1>
+              <h1 style="color: var(--color-primary); font-size: 32px; margin-bottom: 10px;">Barbershop</h1>
             </div>
             
             <div class="content">
-              <h1 class="title">🎉 Welcome to TPX Barbershop!</h1>
+              <h1 class="title">🎉 Welcome to Barbershop!</h1>
               <p style="text-align: center; color: #ccc; margin-bottom: 30px;">
-                Hi ${customerData.username}, thank you for visiting TPX Barbershop! 
+                Hi ${customerData.username}, thank you for visiting Barbershop! 
                 We've created an account for you to make future bookings even easier.
               </p>
               
@@ -415,7 +415,7 @@ class EmailService {
             </div>
             
             <div class="footer">
-              <p>© 2024 TPX Barbershop. All rights reserved.</p>
+              <p>© 2024 Barbershop. All rights reserved.</p>
               <p>This is an automated message. Please do not reply to this email.</p>
             </div>
           </div>

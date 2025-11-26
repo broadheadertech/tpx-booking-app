@@ -47,7 +47,9 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
         <div
           className="h-full bg-cover bg-center bg-no-repeat opacity-[0.02]"
           style={{
-            backgroundImage: `url(/img/pnglog.png)`,
+            backgroundImage: branding?.logo_dark_url
+              ? `url(${branding.logo_dark_url})`
+              : 'url(/img/pnglog.png)',
             filter: 'brightness(0.2)'
           }}
         ></div>
@@ -65,8 +67,8 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
             <div className="min-w-0 flex-1">
               <div className="flex items-center space-x-1 sm:space-x-1.5 md:space-x-2 flex-wrap">
                 <h1 className="text-[11px] sm:text-sm md:text-base lg:text-lg font-bold text-white tracking-tight truncate">
-                  <span className="hidden md:inline">TipunoX Angeles Barbershop</span>
-                  <span className="hidden sm:inline md:hidden">TipunoX Angeles</span>
+                  <span className="hidden md:inline"> Barbershop</span>
+                  <span className="hidden sm:inline md:hidden"></span>
                   <span className="sm:hidden">TipunoX</span>
                 </h1>
                 <div className="bg-[var(--color-primary)]/15 backdrop-blur-sm rounded-md px-1 sm:px-1.5 py-0.5 border border-[var(--color-primary)]/25 flex-shrink-0 hidden sm:block">

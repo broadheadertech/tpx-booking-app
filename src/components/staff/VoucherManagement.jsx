@@ -1,142 +1,185 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { Gift, Calendar, User, DollarSign, CheckCircle, XCircle, Clock, Search, Filter, Plus, RotateCcw, QrCode, Download, Printer, Copy, Mail, Trash2, Edit, Users, Grid, List, AlertCircle } from 'lucide-react'
-import QRCode from 'qrcode'
-import Modal from '../common/Modal'
-import SendVoucherModal from './SendVoucherModal'
-import ViewVoucherUsersModal from './ViewVoucherUsersModal'
-import { useQuery, useMutation } from 'convex/react'
-import { api } from '../../../convex/_generated/api'
+import React, { useState, useRef, useEffect } from "react";
+import {
+  Gift,
+  Calendar,
+  User,
+  DollarSign,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Search,
+  Filter,
+  Plus,
+  RotateCcw,
+  QrCode,
+  Download,
+  Printer,
+  Copy,
+  Mail,
+  Trash2,
+  Edit,
+  Users,
+  Grid,
+  List,
+  AlertCircle,
+} from "lucide-react";
+import QRCode from "qrcode";
+import Modal from "../common/Modal";
+import SendVoucherModal from "./SendVoucherModal";
+import ViewVoucherUsersModal from "./ViewVoucherUsersModal";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../convex/_generated/api";
+import { useBranding } from "../../context/BrandingContext";
 
 const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [filterStatus, setFilterStatus] = useState('all')
-  const [sortBy, setSortBy] = useState('created_at')
-  const [showQRCode, setShowQRCode] = useState(null)
-  const [showSendModal, setShowSendModal] = useState(null)
-  const [showUsersModal, setShowUsersModal] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [viewMode, setViewMode] = useState('table') // 'card' or 'table' - DEFAULT TABLE
-  
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [sortBy, setSortBy] = useState("created_at");
+  const [showQRCode, setShowQRCode] = useState(null);
+  const [showSendModal, setShowSendModal] = useState(null);
+  const [showUsersModal, setShowUsersModal] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [viewMode, setViewMode] = useState("table"); // 'card' or 'table' - DEFAULT TABLE
+  const { branding } = useBranding();
+
   // Modal states
-  const [confirmModal, setConfirmModal] = useState(null)
-  const [errorModal, setErrorModal] = useState(null)
+  const [confirmModal, setConfirmModal] = useState(null);
+  const [errorModal, setErrorModal] = useState(null);
 
   // Convex queries and mutations
-  const deleteVoucher = useMutation(api.services.vouchers.deleteVoucher)
+  const deleteVoucher = useMutation(api.services.vouchers.deleteVoucher);
   const assignedUsers = useQuery(
     api.services.vouchers.getVoucherAssignedUsers,
     showUsersModal ? { voucherId: showUsersModal._id } : "skip"
-  )
+  );
 
   const getStatusConfig = (voucher) => {
     if (voucher.redeemed) {
       return {
-        status: 'redeemed',
-        label: 'Redeemed',
+        status: "redeemed",
+        label: "Redeemed",
         icon: CheckCircle,
-        bg: 'bg-green-50',
-        text: 'text-green-700',
-        border: 'border-green-200',
-        iconColor: 'text-green-500'
-      }
+        bg: "bg-green-50",
+        text: "text-green-700",
+        border: "border-green-200",
+        iconColor: "text-green-500",
+      };
     }
-    const isExpired = voucher.expires_at < Date.now()
+    const isExpired = voucher.expires_at < Date.now();
     if (isExpired) {
       return {
-        status: 'expired',
-        label: 'Expired',
+        status: "expired",
+        label: "Expired",
         icon: XCircle,
-        bg: 'bg-red-50',
-        text: 'text-red-700',
-        border: 'border-red-200',
-        iconColor: 'text-red-500'
-      }
+        bg: "bg-red-50",
+        text: "text-red-700",
+        border: "border-red-200",
+        iconColor: "text-red-500",
+      };
     }
     return {
-      status: 'active',
-      label: 'Active',
+      status: "active",
+      label: "Active",
       icon: Clock,
-      bg: 'bg-orange-50',
-      text: 'text-orange-700',
-      border: 'border-orange-200',
-      iconColor: 'text-orange-500'
-    }
-  }
+      bg: "bg-orange-50",
+      text: "text-orange-700",
+      border: "border-orange-200",
+      iconColor: "text-orange-500",
+    };
+  };
 
   const handleDelete = async (voucher) => {
     setConfirmModal({
-      title: 'Delete Voucher',
+      title: "Delete Voucher",
       message: `Are you sure you want to delete voucher "${voucher.code}"?`,
-      type: 'delete',
+      type: "delete",
       onConfirm: async () => {
-        setConfirmModal(null)
-        setLoading(true)
+        setConfirmModal(null);
+        setLoading(true);
         try {
-          await deleteVoucher({ id: voucher._id })
-          onRefresh()
+          await deleteVoucher({ id: voucher._id });
+          onRefresh();
         } catch (err) {
-          console.error('Failed to delete voucher:', err)
+          console.error("Failed to delete voucher:", err);
           setErrorModal({
-            title: 'Delete Failed',
-            message: 'Failed to delete voucher. Please try again.'
-          })
+            title: "Delete Failed",
+            message: "Failed to delete voucher. Please try again.",
+          });
         } finally {
-          setLoading(false)
+          setLoading(false);
         }
       },
       onCancel: () => {
-        setConfirmModal(null)
-      }
-    })
-  }
+        setConfirmModal(null);
+      },
+    });
+  };
 
   const filteredVouchers = vouchers
-    .filter(voucher => {
-      const matchesSearch = voucher.code.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesFilter = filterStatus === 'all' || getStatusConfig(voucher).status === filterStatus
-      return matchesSearch && matchesFilter
+    .filter((voucher) => {
+      const matchesSearch = voucher.code
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      const matchesFilter =
+        filterStatus === "all" ||
+        getStatusConfig(voucher).status === filterStatus;
+      return matchesSearch && matchesFilter;
     })
     .sort((a, b) => {
-      if (sortBy === 'value') return parseFloat(b.value) - parseFloat(a.value)
-      if (sortBy === 'expires_at') return new Date(a.expires_at) - new Date(b.expires_at)
-      return new Date(b.created_at) - new Date(a.created_at)
-    })
+      if (sortBy === "value") return parseFloat(b.value) - parseFloat(a.value);
+      if (sortBy === "expires_at")
+        return new Date(a.expires_at) - new Date(b.expires_at);
+      return new Date(b.created_at) - new Date(a.created_at);
+    });
 
   const stats = {
     total: vouchers.length,
-    active: vouchers.filter(v => !v.redeemed && !v.isExpired).length,
-    redeemed: vouchers.filter(v => v.redeemed).length,
-    expired: vouchers.filter(v => v.isExpired && !v.redeemed).length,
-    totalValue: vouchers.reduce((sum, v) => sum + parseFloat(v.value), 0)
-  }
+    active: vouchers.filter((v) => !v.redeemed && !v.isExpired).length,
+    redeemed: vouchers.filter((v) => v.redeemed).length,
+    expired: vouchers.filter((v) => v.isExpired && !v.redeemed).length,
+    totalValue: vouchers.reduce((sum, v) => sum + parseFloat(v.value), 0),
+  };
 
   // Mini QR Code for card thumbnail
   const MiniQRCode = ({ voucher }) => {
-    const qrRef = useRef(null)
+    const qrRef = useRef(null);
     const qrData = JSON.stringify({
       voucherId: voucher.id,
       code: voucher.code,
-      type: 'voucher',
-      brand: 'TipunoX Angeles Barbershop'
-    })
+      type: "voucher",
+      brand: branding?.display_name,
+    });
 
     useEffect(() => {
       if (qrRef.current) {
-        QRCode.toCanvas(qrRef.current, qrData, {
-          width: 32,
-          margin: 0,
-          color: { dark: '#36454F', light: '#ffffff' },
-          errorCorrectionLevel: 'M'
-        }, (err) => { if (err) console.error('Mini QR error:', err) })
+        QRCode.toCanvas(
+          qrRef.current,
+          qrData,
+          {
+            width: 32,
+            margin: 0,
+            color: { dark: "#36454F", light: "#ffffff" },
+            errorCorrectionLevel: "M",
+          },
+          (err) => {
+            if (err) console.error("Mini QR error:", err);
+          }
+        );
       }
-    }, [qrData])
+    }, [qrData]);
 
-    return <canvas ref={qrRef} className="rounded w-8 h-8" style={{ maxWidth: '32px', maxHeight: '32px' }} />
-  }
+    return (
+      <canvas
+        ref={qrRef}
+        className="rounded w-8 h-8"
+        style={{ maxWidth: "32px", maxHeight: "32px" }}
+      />
+    );
+  };
 
   // QR Code Modal for full-size display
   const QRCodeModal = ({ voucher, onClose }) => {
-    const qrCanvasRef = useRef(null)
+    const qrCanvasRef = useRef(null);
 
     const qrPayload = JSON.stringify({
       voucherId: voucher.id,
@@ -145,48 +188,55 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
       expires_at: voucher.expires_at,
       user: voucher.user,
       redeemed: !!voucher.redeemed,
-      type: 'voucher',
-      brand: 'TipunoX Angeles Barbershop'
-    })
+      type: "voucher",
+      brand: branding?.display_name,
+    });
 
     useEffect(() => {
       if (qrCanvasRef.current) {
-        QRCode.toCanvas(qrCanvasRef.current, qrPayload, {
-          width: 220,
-          margin: 2,
-          color: { dark: '#FF8C42', light: '#1A1A1A' },
-          errorCorrectionLevel: 'H'
-        }, (err) => { if (err) console.error('QR generation error:', err) })
+        QRCode.toCanvas(
+          qrCanvasRef.current,
+          qrPayload,
+          {
+            width: 220,
+            margin: 2,
+            color: { dark: "#FF8C42", light: "#1A1A1A" },
+            errorCorrectionLevel: "H",
+          },
+          (err) => {
+            if (err) console.error("QR generation error:", err);
+          }
+        );
       }
-    }, [qrPayload])
+    }, [qrPayload]);
 
     const handleDownload = async () => {
       try {
         const url = await QRCode.toDataURL(qrPayload, {
           width: 600,
           margin: 2,
-          color: { dark: '#FF8C42', light: '#1A1A1A' },
-          errorCorrectionLevel: 'H'
-        })
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `voucher-${voucher.code}.png`
-        link.click()
+          color: { dark: "#FF8C42", light: "#1A1A1A" },
+          errorCorrectionLevel: "H",
+        });
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `voucher-${voucher.code}.png`;
+        link.click();
       } catch (e) {
-        console.error('Failed to download QR:', e)
+        console.error("Failed to download QR:", e);
       }
-    }
+    };
 
     const handlePrint = async () => {
       try {
         const url = await QRCode.toDataURL(qrPayload, {
           width: 600,
           margin: 2,
-          color: { dark: '#FF8C42', light: '#ffffff' },
-          errorCorrectionLevel: 'H'
-        })
-        const printWindow = window.open('', '_blank')
-        if (!printWindow) return
+          color: { dark: "#FF8C42", light: "#ffffff" },
+          errorCorrectionLevel: "H",
+        });
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) return;
         printWindow.document.write(`
           <html>
             <head>
@@ -203,22 +253,22 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
               <script>window.onload = () => { window.print(); window.onafterprint = () => window.close(); };</script>
             </body>
           </html>
-        `)
-        printWindow.document.close()
+        `);
+        printWindow.document.close();
       } catch (e) {
-        console.error('Failed to print QR:', e)
+        console.error("Failed to print QR:", e);
       }
-    }
+    };
 
     const handleCopy = async () => {
       try {
-        await navigator.clipboard.writeText(voucher.code)
+        await navigator.clipboard.writeText(voucher.code);
       } catch (e) {
-        console.error('Failed to copy code:', e)
+        console.error("Failed to copy code:", e);
       }
-    }
+    };
 
-    const status = getStatusConfig(voucher)
+    const status = getStatusConfig(voucher);
 
     return (
       <Modal
@@ -232,8 +282,12 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
         <div className="text-center space-y-4 p-2">
           {/* Title & Code */}
           <div>
-            <p className="text-3xl font-mono font-bold text-[var(--color-primary)] tracking-wider">{voucher.code}</p>
-            <p className="text-sm text-gray-400 mt-1">Scan to validate or redeem</p>
+            <p className="text-3xl font-mono font-bold text-[var(--color-primary)] tracking-wider">
+              {voucher.code}
+            </p>
+            <p className="text-sm text-gray-400 mt-1">
+              Scan to validate or redeem
+            </p>
           </div>
 
           {/* QR Code Container */}
@@ -246,31 +300,53 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
           {/* Details Grid */}
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div className="p-3 rounded-lg bg-[#0F0F0F]/50 border border-[#333333]/50">
-              <div className="text-gray-400 mb-1 uppercase tracking-wider text-[10px]">Value</div>
-              <div className="font-bold text-lg text-[var(--color-primary)]">₱{parseFloat(voucher.value).toFixed(2)}</div>
+              <div className="text-gray-400 mb-1 uppercase tracking-wider text-[10px]">
+                Value
+              </div>
+              <div className="font-bold text-lg text-[var(--color-primary)]">
+                ₱{parseFloat(voucher.value).toFixed(2)}
+              </div>
             </div>
             <div className="p-3 rounded-lg bg-[#0F0F0F]/50 border border-[#333333]/50">
-              <div className="text-gray-400 mb-1 uppercase tracking-wider text-[10px]">Status</div>
+              <div className="text-gray-400 mb-1 uppercase tracking-wider text-[10px]">
+                Status
+              </div>
               <div className="font-bold text-white text-base inline-flex items-center gap-1">
-                <span className={status.label === 'Active' ? 'text-green-400' : status.label === 'Redeemed' ? 'text-blue-400' : 'text-red-400'}>
+                <span
+                  className={
+                    status.label === "Active"
+                      ? "text-green-400"
+                      : status.label === "Redeemed"
+                        ? "text-blue-400"
+                        : "text-red-400"
+                  }
+                >
                   {status.label}
                 </span>
               </div>
             </div>
             <div className="p-3 rounded-lg bg-[#0F0F0F]/50 border border-[#333333]/50">
-              <div className="text-gray-400 mb-1 uppercase tracking-wider text-[10px]">Expires</div>
-              <div className={`font-bold text-sm ${voucher.isExpired ? 'text-red-400' : 'text-gray-300'}`}>
+              <div className="text-gray-400 mb-1 uppercase tracking-wider text-[10px]">
+                Expires
+              </div>
+              <div
+                className={`font-bold text-sm ${voucher.isExpired ? "text-red-400" : "text-gray-300"}`}
+              >
                 {new Date(voucher.expires_at).toLocaleDateString()}
               </div>
             </div>
             <div className="p-3 rounded-lg bg-[#0F0F0F]/50 border border-[#333333]/50">
-              <div className="text-gray-400 mb-1 uppercase tracking-wider text-[10px]">Points</div>
-              <div className="font-bold text-white text-sm">{voucher.points_required}</div>
+              <div className="text-gray-400 mb-1 uppercase tracking-wider text-[10px]">
+                Points
+              </div>
+              <div className="font-bold text-white text-sm">
+                {voucher.points_required}
+              </div>
             </div>
           </div>
 
           {/* Copy Button */}
-          <button 
+          <button
             onClick={handleCopy}
             className="w-full px-4 py-3 bg-[#2A2A2A] text-gray-300 rounded-xl hover:bg-[#333333] transition-colors text-sm font-medium flex items-center justify-center gap-2 border border-[#333333]"
           >
@@ -285,13 +361,13 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
             >
               Close
             </button>
-            <button 
+            <button
               onClick={handleDownload}
               className="flex-1 h-10 bg-[#444444] text-gray-300 rounded-xl hover:bg-[#555555] transition-colors text-sm font-medium flex items-center justify-center gap-2"
             >
               <Download className="w-4 h-4" /> Download
             </button>
-            <button 
+            <button
               onClick={handlePrint}
               className="flex-1 h-10 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-xl hover:shadow-lg transition-all text-sm font-medium flex items-center justify-center gap-2"
             >
@@ -300,8 +376,8 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
           </div>
         </div>
       </Modal>
-    )
-  }
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -311,17 +387,21 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-400">Total</p>
-              <p className="text-xl font-bold text-[var(--color-primary)]">{stats.total}</p>
+              <p className="text-xl font-bold text-[var(--color-primary)]">
+                {stats.total}
+              </p>
             </div>
             <Gift className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
-        
+
         <div className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-400">Active</p>
-              <p className="text-xl font-bold text-[var(--color-primary)]">{stats.active}</p>
+              <p className="text-xl font-bold text-[var(--color-primary)]">
+                {stats.active}
+              </p>
             </div>
             <Clock className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
@@ -331,7 +411,9 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-400">Redeemed</p>
-              <p className="text-xl font-bold text-[var(--color-primary)]">{stats.redeemed}</p>
+              <p className="text-xl font-bold text-[var(--color-primary)]">
+                {stats.redeemed}
+              </p>
             </div>
             <CheckCircle className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
@@ -341,7 +423,9 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-400">Expired</p>
-              <p className="text-xl font-bold text-[var(--color-primary)]">{stats.expired}</p>
+              <p className="text-xl font-bold text-[var(--color-primary)]">
+                {stats.expired}
+              </p>
             </div>
             <XCircle className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
@@ -351,7 +435,9 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-gray-400">Total Value</p>
-              <p className="text-xl font-bold text-[var(--color-primary)]">₱{stats.totalValue.toFixed(0)}</p>
+              <p className="text-xl font-bold text-[var(--color-primary)]">
+                ₱{stats.totalValue.toFixed(0)}
+              </p>
             </div>
             <DollarSign className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
@@ -405,27 +491,27 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
             {/* View Mode Toggle */}
             <div className="flex items-center bg-[#1A1A1A] rounded-lg border border-[#444444] p-1">
               <button
-                onClick={() => setViewMode('card')}
+                onClick={() => setViewMode("card")}
                 className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'card'
-                    ? 'bg-orange-500 text-white'
-                    : 'text-gray-400 hover:text-gray-300'
+                  viewMode === "card"
+                    ? "bg-orange-500 text-white"
+                    : "text-gray-400 hover:text-gray-300"
                 }`}
               >
                 <Grid className="h-4 w-4" />
               </button>
               <button
-                onClick={() => setViewMode('table')}
+                onClick={() => setViewMode("table")}
                 className={`p-2 rounded-md transition-colors ${
-                  viewMode === 'table'
-                    ? 'bg-orange-500 text-white'
-                    : 'text-gray-400 hover:text-gray-300'
+                  viewMode === "table"
+                    ? "bg-orange-500 text-white"
+                    : "text-gray-400 hover:text-gray-300"
                 }`}
               >
                 <List className="h-4 w-4" />
               </button>
             </div>
-            
+
             <button
               onClick={onRefresh}
               className="flex items-center space-x-2 px-4 py-2 bg-[#444444] text-gray-300 rounded-lg hover:bg-[#555555] transition-colors text-sm"
@@ -433,7 +519,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
               <RotateCcw className="h-4 w-4" />
               <span>Refresh</span>
             </button>
-            <button 
+            <button
               onClick={onCreateVoucher}
               className="flex items-center space-x-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors text-sm"
             >
@@ -445,12 +531,12 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
       </div>
 
       {/* Vouchers Display */}
-      {viewMode === 'card' ? (
+      {viewMode === "card" ? (
         /* Card View */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredVouchers.map((voucher) => {
-            const statusConfig = getStatusConfig(voucher)
-            const StatusIcon = statusConfig.icon
+            const statusConfig = getStatusConfig(voucher);
+            const StatusIcon = statusConfig.icon;
 
             return (
               <div
@@ -463,16 +549,24 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                       <MiniQRCode voucher={voucher} />
                     </div>
                     <div>
-                      <p className="font-mono text-sm font-bold text-white">{voucher.code}</p>
-                      <p className="text-xs text-gray-400">Points: {voucher.points_required}</p>
+                      <p className="font-mono text-sm font-bold text-white">
+                        {voucher.code}
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        Points: {voucher.points_required}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <div className={`flex items-center space-x-1 px-2 py-1 rounded-full ${
-                      statusConfig.status === 'active' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                      statusConfig.status === 'redeemed' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                      'bg-red-500/20 text-red-400 border border-red-500/30'
-                    }`}>
+                    <div
+                      className={`flex items-center space-x-1 px-2 py-1 rounded-full ${
+                        statusConfig.status === "active"
+                          ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                          : statusConfig.status === "redeemed"
+                            ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                            : "bg-red-500/20 text-red-400 border border-red-500/30"
+                      }`}
+                    >
                       <StatusIcon className="h-3 w-3" />
                       <span className="text-xs font-medium">
                         {statusConfig.label}
@@ -491,12 +585,18 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-400">Value</span>
-                    <span className="text-lg font-bold text-[var(--color-primary)]">₱{parseFloat(voucher.value).toFixed(2)}</span>
+                    <span className="text-lg font-bold text-[var(--color-primary)]">
+                      ₱{parseFloat(voucher.value).toFixed(2)}
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-400">Points Required</span>
-                    <span className="text-sm font-medium text-white">{voucher.points_required}</span>
+                    <span className="text-sm text-gray-400">
+                      Points Required
+                    </span>
+                    <span className="text-sm font-medium text-white">
+                      {voucher.points_required}
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -504,7 +604,9 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                     <span className="text-sm font-medium text-white">
                       {voucher.assignedCount || 0}/{voucher.max_uses}
                       {voucher.redeemedCount > 0 && (
-                        <span className="text-green-400 ml-1">({voucher.redeemedCount} redeemed)</span>
+                        <span className="text-green-400 ml-1">
+                          ({voucher.redeemedCount} redeemed)
+                        </span>
                       )}
                     </span>
                   </div>
@@ -518,7 +620,9 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
 
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-400">Expires</span>
-                    <span className={`text-sm ${voucher.expires_at < Date.now() ? 'text-red-400' : 'text-gray-300'}`}>
+                    <span
+                      className={`text-sm ${voucher.expires_at < Date.now() ? "text-red-400" : "text-gray-300"}`}
+                    >
                       {new Date(voucher.expires_at).toLocaleDateString()}
                     </span>
                   </div>
@@ -532,7 +636,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                   >
                     <Users className="h-4 w-4 mr-2" /> View Assigned Users
                   </button>
-                  
+
                   {/* Show action buttons only for active vouchers */}
                   {!voucher.redeemed && voucher.expires_at >= Date.now() && (
                     <div className="flex space-x-2">
@@ -552,7 +656,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                   )}
                 </div>
               </div>
-            )
+            );
           })}
         </div>
       ) : (
@@ -587,48 +691,70 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
               </thead>
               <tbody className="divide-y divide-[#444444]/30">
                 {filteredVouchers.map((voucher) => {
-                  const statusConfig = getStatusConfig(voucher)
-                  const StatusIcon = statusConfig.icon
-                  
+                  const statusConfig = getStatusConfig(voucher);
+                  const StatusIcon = statusConfig.icon;
+
                   return (
-                    <tr key={voucher._id} className="hover:bg-[#333333]/50 transition-colors">
+                    <tr
+                      key={voucher._id}
+                      className="hover:bg-[#333333]/50 transition-colors"
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="p-2 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg mr-3">
                             <Gift className="h-4 w-4 text-white" />
                           </div>
                           <div>
-                            <div className="text-sm font-mono font-bold text-white">{voucher.code}</div>
-                            <div className="text-sm text-gray-400">Created: {new Date(voucher.createdAt).toLocaleDateString()}</div>
+                            <div className="text-sm font-mono font-bold text-white">
+                              {voucher.code}
+                            </div>
+                            <div className="text-sm text-gray-400">
+                              Created:{" "}
+                              {new Date(voucher.createdAt).toLocaleDateString()}
+                            </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-bold text-[var(--color-primary)]">₱{parseFloat(voucher.value).toFixed(2)}</div>
+                        <div className="text-sm font-bold text-[var(--color-primary)]">
+                          ₱{parseFloat(voucher.value).toFixed(2)}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-300">{voucher.points_required}</div>
+                        <div className="text-sm text-gray-300">
+                          {voucher.points_required}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-300">
                           {voucher.assignedCount || 0}/{voucher.max_uses}
                           {voucher.redeemedCount > 0 && (
-                            <div className="text-xs text-green-400">({voucher.redeemedCount} redeemed)</div>
+                            <div className="text-xs text-green-400">
+                              ({voucher.redeemedCount} redeemed)
+                            </div>
                           )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className={`flex items-center space-x-1 px-2 py-1 rounded-full w-fit ${
-                          statusConfig.status === 'active' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                          statusConfig.status === 'redeemed' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                          'bg-red-500/20 text-red-400 border border-red-500/30'
-                        }`}>
+                        <div
+                          className={`flex items-center space-x-1 px-2 py-1 rounded-full w-fit ${
+                            statusConfig.status === "active"
+                              ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                              : statusConfig.status === "redeemed"
+                                ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                                : "bg-red-500/20 text-red-400 border border-red-500/30"
+                          }`}
+                        >
                           <StatusIcon className="h-3 w-3" />
-                          <span className="text-xs font-medium">{statusConfig.label}</span>
+                          <span className="text-xs font-medium">
+                            {statusConfig.label}
+                          </span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className={`text-sm ${voucher.expires_at < Date.now() ? 'text-red-400' : 'text-gray-300'}`}>
+                        <div
+                          className={`text-sm ${voucher.expires_at < Date.now() ? "text-red-400" : "text-gray-300"}`}
+                        >
                           {new Date(voucher.expires_at).toLocaleDateString()}
                         </div>
                       </td>
@@ -641,24 +767,25 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                           >
                             <Users className="h-4 w-4" />
                           </button>
-                          {!voucher.redeemed && voucher.expires_at >= Date.now() && (
-                            <>
-                              <button
-                                onClick={() => setShowQRCode(voucher)}
-                                className="p-2 text-gray-400 hover:text-[var(--color-primary)] hover:bg-[#444444] rounded-lg transition-colors"
-                                title="View QR"
-                              >
-                                <QrCode className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => setShowSendModal(voucher)}
-                                className="p-2 text-gray-400 hover:text-[var(--color-primary)] hover:bg-[#444444] rounded-lg transition-colors"
-                                title="Send Email"
-                              >
-                                <Mail className="h-4 w-4" />
-                              </button>
-                            </>
-                          )}
+                          {!voucher.redeemed &&
+                            voucher.expires_at >= Date.now() && (
+                              <>
+                                <button
+                                  onClick={() => setShowQRCode(voucher)}
+                                  className="p-2 text-gray-400 hover:text-[var(--color-primary)] hover:bg-[#444444] rounded-lg transition-colors"
+                                  title="View QR"
+                                >
+                                  <QrCode className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => setShowSendModal(voucher)}
+                                  className="p-2 text-gray-400 hover:text-[var(--color-primary)] hover:bg-[#444444] rounded-lg transition-colors"
+                                  title="Send Email"
+                                >
+                                  <Mail className="h-4 w-4" />
+                                </button>
+                              </>
+                            )}
                           <button
                             onClick={() => handleDelete(voucher)}
                             className="p-2 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded-lg transition-colors"
@@ -669,7 +796,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                         </div>
                       </td>
                     </tr>
-                  )
+                  );
                 })}
               </tbody>
             </table>
@@ -680,12 +807,13 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
       {filteredVouchers.length === 0 && (
         <div className="text-center py-12">
           <Gift className="mx-auto h-12 w-12 text-gray-500" />
-          <h3 className="mt-2 text-sm font-medium text-white">No vouchers found</h3>
+          <h3 className="mt-2 text-sm font-medium text-white">
+            No vouchers found
+          </h3>
           <p className="mt-1 text-sm text-gray-400">
-            {searchTerm || filterStatus !== 'all' 
-              ? 'Try adjusting your search or filter criteria.'
-              : 'Get started by creating a new voucher.'
-            }
+            {searchTerm || filterStatus !== "all"
+              ? "Try adjusting your search or filter criteria."
+              : "Get started by creating a new voucher."}
           </p>
         </div>
       )}
@@ -695,10 +823,10 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
       )}
 
       {showSendModal && (
-        <SendVoucherModal 
-          voucher={showSendModal} 
+        <SendVoucherModal
+          voucher={showSendModal}
           isOpen={!!showSendModal}
-          onClose={() => setShowSendModal(null)} 
+          onClose={() => setShowSendModal(null)}
         />
       )}
 
@@ -712,10 +840,10 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
       )}
 
       {/* Confirmation Modal */}
-      <Modal 
+      <Modal
         isOpen={!!confirmModal}
         onClose={() => setConfirmModal(null)}
-        title={confirmModal?.title || 'Confirm'}
+        title={confirmModal?.title || "Confirm"}
         size="sm"
         variant="dark"
       >
@@ -737,22 +865,22 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
               onClick={confirmModal?.onConfirm}
               disabled={loading}
               className={`flex-1 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
-                confirmModal?.type === 'delete' 
-                  ? 'bg-red-600 hover:bg-red-700 text-white disabled:opacity-50'
-                  : 'bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white disabled:opacity-50'
+                confirmModal?.type === "delete"
+                  ? "bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                  : "bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white disabled:opacity-50"
               }`}
             >
-              {loading ? 'Processing...' : 'Confirm'}
+              {loading ? "Processing..." : "Confirm"}
             </button>
           </div>
         </div>
       </Modal>
 
       {/* Error Modal */}
-      <Modal 
+      <Modal
         isOpen={!!errorModal}
         onClose={() => setErrorModal(null)}
-        title={errorModal?.title || 'Error'}
+        title={errorModal?.title || "Error"}
         size="sm"
         variant="dark"
       >
@@ -772,7 +900,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
         </div>
       </Modal>
     </div>
-  )
-}
+  );
+};
 
-export default VoucherManagement
+export default VoucherManagement;

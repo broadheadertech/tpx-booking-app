@@ -85,7 +85,7 @@ class AIBarberService {
       hasUploadedImage: !!uploadedImage
     });
 
-    const systemPrompt = `You are TipunoX Angeles AI Barber Assistant, an expert hair styling consultant with years of experience in men's grooming and barbering. Your specialty is providing personalized haircut recommendations based on comprehensive head and hair analysis.
+    const systemPrompt = `You are  AI Barber Assistant, an expert hair styling consultant with years of experience in men's grooming and barbering. Your specialty is providing personalized haircut recommendations based on comprehensive head and hair analysis.
 
 CUSTOMER PROFILE:
 - Face Shape: ${userPreferences.faceShape || 'To be determined from image analysis'}

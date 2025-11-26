@@ -1,8 +1,8 @@
-# TPX Barbershop Deployment Guide
+# Barbershop Deployment Guide
 
 ## Overview
 
-This guide explains how to use the new automatic deployment and versioning system for TPX Barbershop.
+This guide explains how to use the new automatic deployment and versioning system for Barbershop.
 
 ## Quick Start
 
@@ -65,7 +65,7 @@ The app version is displayed in the **bottom-right corner** of the login page:
 
 ```
 v1.0.1
-TPX Barbershop
+Barbershop
 ```
 
 This automatically updates after each deployment.
@@ -81,7 +81,7 @@ The script handles all version management automatically.
 
 ## Versioning Scheme
 
-TPX Barbershop uses **Semantic Versioning**:
+Barbershop uses **Semantic Versioning**:
 
 ```
 MAJOR.MINOR.PATCH
@@ -233,7 +233,7 @@ You can integrate the deploy script into CI/CD:
 
 ```yaml
 # Example GitHub Action
-- name: Deploy TPX Barbershop
+- name: Deploy Barbershop
   run: npm run deploy
 ```
 

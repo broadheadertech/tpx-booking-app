@@ -1,4 +1,4 @@
-# TPX Barbershop Booking System - Technical Specification
+# Barbershop Booking System - Technical Specification
 
 ## 📋 Table of Contents
 - [Project Overview](#project-overview)
@@ -16,7 +16,7 @@
 
 ## 🎯 Project Overview
 
-The TPX Barbershop Booking System is a comprehensive multi-branch barbershop management platform built with React and Convex. It provides complete business management capabilities including appointment booking, POS operations, payment processing, staff management, and customer engagement features.
+The Barbershop Booking System is a comprehensive multi-branch barbershop management platform built with React and Convex. It provides complete business management capabilities including appointment booking, POS operations, payment processing, staff management, and customer engagement features.
 
 ### Key Features
 - **Multi-Branch Architecture**: Complete branch isolation with role-based access
@@ -810,4 +810,4 @@ npm run preview
 
 ---
 
-*This specification is maintained automatically and reflects the current state of the TPX Barbershop Booking System. For the latest updates and changes, please refer to the commit history and release notes.*
+*This specification is maintained automatically and reflects the current state of the Barbershop Booking System. For the latest updates and changes, please refer to the commit history and release notes.*

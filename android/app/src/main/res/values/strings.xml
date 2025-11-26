@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">TPX Barbershop</string>
-    <string name="title_activity_main">TPX Barbershop</string>
+    <string name="app_name">Barbershop</string>
+    <string name="title_activity_main">Barbershop</string>
     <string name="package_name">com.tpx.barbershop</string>
     <string name="custom_url_scheme">com.tpx.barbershop</string>
 </resources>
