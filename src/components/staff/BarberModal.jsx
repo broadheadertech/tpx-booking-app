@@ -1097,10 +1097,7 @@ const BarberModal = ({
                   </div>
                 )}
 
-                <div className="mt-4">
-                  <h4 className="text-sm text-gray-400 mb-2">Day Off</h4>
-                  <TimeOffManager barber={barber} />
-                </div>
+                
               </div>
             ) : (
               <div className="space-y-4">
