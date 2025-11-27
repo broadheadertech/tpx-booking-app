@@ -5,6 +5,7 @@ import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import CreateBarberModal from './CreateBarberModal'
 import BarberModal from './BarberModal'
+import TimeOffManager from "./TimeOffManager";
 
 // Separate component to handle barber avatar display
 const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
