@@ -36,7 +36,7 @@ import { api } from "../../../convex/_generated/api";
 import LoadingSpinner from "../common/LoadingSpinner";
 import ErrorDisplay from "../common/ErrorDisplay";
 import { parseError } from "../../utils/errorHandler";
-
+import TimeOffManager from "../barber/TimeOffManager"
 const BarberModal = ({
   isOpen,
   onClose,
