@@ -1066,9 +1066,12 @@ const GuestServiceBooking = ({ onBack }) => {
                 {selectedService?.hide_price
                   ? "Price may vary"
                   : `₱${selectedService?.price.toLocaleString()}`}
+                <p className="text-white whitespace-pre-line w-full">
                   {selectedService?.description}
+                </p>
               </span>
               <span className="text-gray-500">•</span>
+
               <span className="text-gray-400">{selectedService?.duration}</span>
             </div>
           </div>
