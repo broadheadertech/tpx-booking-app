@@ -27,7 +27,7 @@ const DashboardFooter = () => {
             <div className="flex items-center space-x-2 px-4 py-2 bg-[#2A2A2A] border border-[#444444]/50 rounded-lg hover:border-[var(--color-primary)]/30 transition-colors">
               <Code className="h-4 w-4 text-[var(--color-primary)]" />
               <span className="text-gray-300 text-sm font-medium flex items-center gap-1">
-                Developed by AVEXA Systems
+                {branding?.display_name} X AVEXA Systems
                 <span className="heart-beat text-blue-400">💙</span>
               </span>
               {/* <img 
