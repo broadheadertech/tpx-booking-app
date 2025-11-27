@@ -43,7 +43,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
   }
 
   // Define primary tabs (most frequently used)  
-  const primaryTabIds = ['overview', 'bookings', 'calendar', 'barbers', 'users', 'services', 'vouchers', 'payroll']
+  const primaryTabIds = ['overview', 'reports', 'bookings', 'calendar', 'barbers', 'users', 'services', 'vouchers', 'payroll']
 
   // Helper to check if a tab is available in the current filtered tabs
   const isTabAvailable = (tabId) => tabs.some(t => t.id === tabId)
