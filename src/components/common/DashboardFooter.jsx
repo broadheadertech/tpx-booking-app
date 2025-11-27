@@ -1,13 +1,12 @@
-import React from 'react'
-import { Heart, Code } from 'lucide-react'
-import { APP_VERSION } from '../../config/version'
-import { useBranding } from '../../context/BrandingContext'
-
+import React from "react";
+import { Heart, Code } from "lucide-react";
+import { APP_VERSION } from "../../config/version";
+import { useBranding } from "../../context/BrandingContext";
 
 const DashboardFooter = () => {
-  const currentYear = new Date().getFullYear()
-    const { branding } = useBranding()
-  
+  const currentYear = new Date().getFullYear();
+  const { branding } = useBranding();
+
   return (
     <footer className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A] border-t border-[#333333]/50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
@@ -27,7 +26,10 @@ const DashboardFooter = () => {
           <div className="flex items-center justify-center space-x-3">
             <div className="flex items-center space-x-2 px-4 py-2 bg-[#2A2A2A] border border-[#444444]/50 rounded-lg hover:border-[var(--color-primary)]/30 transition-colors">
               <Code className="h-4 w-4 text-[var(--color-primary)]" />
-              <span className="text-gray-300 text-sm font-medium">Developed by AVEXA Systems</span>
+              <span className="text-gray-300 text-sm font-medium flex items-center gap-1">
+                Developed by AVEXA Systems
+                <span className="heart-beat text-blue-400">💙</span>
+              </span>
               {/* <img 
                 src="/img/bg-logo.png" 
                 alt="BroadHeader Logo" 
@@ -37,9 +39,9 @@ const DashboardFooter = () => {
                   e.target.nextSibling.style.display = 'inline'
                 }}
               /> */}
-              <span 
+              <span
                 className="text-white font-bold text-sm hidden"
-                style={{ display: 'none' }}
+                style={{ display: "none" }}
               >
                 BroadHeader
               </span>
@@ -53,13 +55,12 @@ const DashboardFooter = () => {
               <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
               <span className="text-gray-500 text-xs">Multi-Branch System</span>
             </div>
-
           </div>
         </div>
-
       </div>
     </footer>
-  )
-}
+  );
+};
 
-export default DashboardFooter
+export default DashboardFooter;
+
