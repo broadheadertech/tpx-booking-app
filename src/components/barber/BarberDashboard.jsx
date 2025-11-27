@@ -266,7 +266,7 @@ const BarberDashboard = () => {
             <div className="px-4 md:max-w-7xl md:mx-auto md:px-6 lg:px-8 py-4 md:py-6">
               {/* Mobile Welcome Section with Toggle */}
               <div className="md:hidden mb-4 space-y-4">
-                <div className="bg-gradient-to-r from-[#F68B24] to-[#E67E22] rounded-2xl p-5 text-white shadow-lg">
+                <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-2xl p-5 text-white shadow-lg">
                   <div className="flex flex-col space-y-1">
                     <h2 className="text-xl font-bold">Welcome back!</h2>
                     <p className="text-sm opacity-90">
