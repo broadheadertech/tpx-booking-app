@@ -4,7 +4,7 @@ import { User, Star, Clock, Calendar, DollarSign, Search, Filter, UserCheck, Use
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import CreateBarberModal from './CreateBarberModal'
-import BarberModal from './BarberModal'zz
+import BarberModal from './BarberModal'
 
 // Separate component to handle barber avatar display
 const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
