@@ -67,6 +67,13 @@ const BarberModal = ({
     },
   });
 
+  const [alertState, setAlertState] = useState({
+    isOpen: false,
+    type: "info",
+    title: "",
+    message: "",
+  });
+
   const updateBarberMutation = useMutation(api.services.barbers.updateBarber);
 
   const handleToggleBookings = async (newValue) => {
