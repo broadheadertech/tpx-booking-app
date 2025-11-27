@@ -839,10 +839,10 @@ export const sendPasswordResetEmail = action({
     const ctaText = template?.cta_text || 'Reset Password';
     const footerText = template?.footer_text || 'This link will expire in 15 minutes for your security. If you didn\'t request a password reset, you can safely ignore this email.';
     
-    const resetUrl = `https://tipunox.broadheader.com/auth/reset-password?token=${args.token}`;
+    const resetUrl = `https://fcv.broadheader.com/auth/reset-password?token=${args.token}`;
 
     const emailData = {
-      from: `${brandName} <no-reply@tipunox.broadheader.com>`,
+      from: `${brandName} <no-reply@fcv.broadheader.com>`,
       to: args.email,
       subject: subject,
       html: `
@@ -1179,7 +1179,7 @@ export const sendVoucherEmailWithQR = action({
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrPayload)}`;
 
     const emailData = {
-      from: `${brandName} <no-reply@tipunox.broadheader.com>`,
+      from: `${brandName} <no-reply@fcv.broadheader.com>`,
       to: args.email,
       subject: subject,
       html: `
@@ -1502,7 +1502,7 @@ export const sendBookingConfirmationEmail = action({
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrPayload)}`;
 
     const emailData = {
-      from: `${brandName} <no-reply@tipunox.broadheader.com>`,
+      from: `${brandName} <no-reply@fcv.broadheader.com>`,
       to: args.email,
       subject: subject,
       html: `
