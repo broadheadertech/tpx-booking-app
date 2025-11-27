@@ -1963,7 +1963,7 @@ const GuestServiceBooking = ({ onBack }) => {
             {/* Title - Centered */}
             <div className="text-center">
               <p className="text-lg font-light text-white">Book Service</p>
-              <p className="text-xs text-[var(--color-primary)]">Step {step} of 6</p>
+              <p className="text-xs text-[var(--color-primary)]">Step {step} of 7</p>
             </div>
           </div>
         </div>
