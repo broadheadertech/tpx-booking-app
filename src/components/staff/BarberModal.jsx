@@ -67,6 +67,8 @@ const BarberModal = ({
     },
   });
 
+  const updateBarberMutation = useMutation(api.services.barbers.updateBarber);
+
   const handleToggleBookings = async (newValue) => {
     if (!barber?._id) return;
 
