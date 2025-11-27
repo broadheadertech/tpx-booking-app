@@ -370,9 +370,6 @@ const Landing = () => {
                     className="absolute inset-0 opacity-90"
                     style={{ background: `linear-gradient(to top, color-mix(in srgb, var(--color-bg) 90%, white), transparent)` }}
                   ></div>
-                  <div className="absolute bottom-4 left-4">
-                    <p className="text-[var(--color-primary)] font-bold text-lg">{service.price}</p>
-                  </div>
                 </div>
                 <div className="p-6 relative">
                   <h3 className="text-xl font-bold mb-2 text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{service.title}</h3>
