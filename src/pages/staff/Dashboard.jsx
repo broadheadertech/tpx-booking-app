@@ -219,6 +219,9 @@ function StaffDashboard() {
       case "overview":
         return renderOverview();
 
+      case "reports":
+        return <ReportsManagement onRefresh={handleRefresh} user={user} />;
+
       case "bookings":
         return <BookingsManagement onRefresh={handleRefresh} user={user} />;
 
@@ -270,9 +273,6 @@ function StaffDashboard() {
             user={user}
           />
         );
-
-      case "reports":
-        return <ReportsManagement onRefresh={handleRefresh} user={user} />;
 
       case "products":
         return <ProductsManagement onRefresh={handleRefresh} />;

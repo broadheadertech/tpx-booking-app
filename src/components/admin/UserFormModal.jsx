@@ -1,219 +1,228 @@
-import React, { useState, useEffect } from 'react'
-import { createPortal } from 'react-dom'
-import { Save, X, AlertCircle, Eye, EyeOff, CheckCircle } from 'lucide-react'
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { Save, X, AlertCircle, Eye, EyeOff, CheckCircle } from "lucide-react";
 
-const UserFormModal = ({ 
-  isOpen, 
-  onClose, 
-  title, 
-  buttonText = 'Create User',
-  loadingText = 'Creating...',
-  onSubmit, 
-  formData, 
-  onInputChange, 
-  error, 
+const UserFormModal = ({
+  isOpen,
+  onClose,
+  title,
+  buttonText = "Create User",
+  loadingText = "Creating...",
+  onSubmit,
+  formData,
+  onInputChange,
+  error,
   loading,
   branches,
   isEditMode = false,
   availableRoles = [
-    { value: 'branch_admin', label: 'Branch Admin' },
-    { value: 'staff', label: 'Staff' },
-    { value: 'super_admin', label: 'Super Admin' }
-  ]
+    { value: "branch_admin", label: "Branch Admin" },
+    { value: "staff", label: "Staff" },
+    { value: "super_admin", label: "Super Admin" },
+  ],
 }) => {
-  const [showPassword, setShowPassword] = useState(false)
-  const [validationErrors, setValidationErrors] = useState({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const AVAILABLE_PAGES = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'bookings', label: 'Bookings' },
-    { id: 'calendar', label: 'Calendar' },
-    { id: 'services', label: 'Services' },
-    { id: 'vouchers', label: 'Vouchers' },
-    { id: 'barbers', label: 'Barbers' },
-    { id: 'users', label: 'User Management' },
-    { id: 'customers', label: 'Customers' },
-    { id: 'events', label: 'Events' },
-    { id: 'reports', label: 'Reports' },
-    { id: 'payroll', label: 'Payroll' },
-    { id: 'products', label: 'Products' },
-    { id: 'notifications', label: 'Notifications' },
-    { id: 'email_marketing', label: 'Email Marketing' },
-    { id: 'pos', label: 'POS' }
-  ]
+    { id: "overview", label: "Overview" },
+    { id: "reports", label: "Reports" },
+    { id: "bookings", label: "Bookings" },
+    { id: "calendar", label: "Calendar" },
+    { id: "services", label: "Services" },
+    { id: "vouchers", label: "Vouchers" },
+    { id: "barbers", label: "Barbers" },
+    { id: "users", label: "User Management" },
+    { id: "customers", label: "Customers" },
+    { id: "events", label: "Events" },
+
+    { id: "payroll", label: "Payroll" },
+    { id: "products", label: "Products" },
+    { id: "notifications", label: "Notifications" },
+    { id: "email_marketing", label: "Email Marketing" },
+    { id: "pos", label: "POS" },
+  ];
 
   // Reset validation errors when modal opens/closes
   useEffect(() => {
     if (isOpen) {
-      setValidationErrors({})
-      setIsSubmitting(false)
+      setValidationErrors({});
+      setIsSubmitting(false);
     }
-  }, [isOpen])
+  }, [isOpen]);
 
   // Real-time validation
   const validateField = (name, value) => {
-    const errors = { ...validationErrors }
-    
+    const errors = { ...validationErrors };
+
     switch (name) {
-      case 'username':
+      case "username":
         if (!value.trim()) {
-          errors.username = 'Username is required'
+          errors.username = "Username is required";
         } else if (value.length < 3) {
-          errors.username = 'Username must be at least 3 characters'
+          errors.username = "Username must be at least 3 characters";
         } else if (value.length > 50) {
-          errors.username = 'Username must be less than 50 characters'
+          errors.username = "Username must be less than 50 characters";
         } else if (!/^[a-zA-Z0-9_\-\.]+$/.test(value)) {
-          errors.username = 'Username can only contain letters, numbers, hyphens, underscores, and dots'
-        } else if (value.startsWith('.') || value.endsWith('.')) {
-          errors.username = 'Username cannot start or end with a dot'
-        } else if (value.includes('..')) {
-          errors.username = 'Username cannot contain consecutive dots'
+          errors.username =
+            "Username can only contain letters, numbers, hyphens, underscores, and dots";
+        } else if (value.startsWith(".") || value.endsWith(".")) {
+          errors.username = "Username cannot start or end with a dot";
+        } else if (value.includes("..")) {
+          errors.username = "Username cannot contain consecutive dots";
         } else {
-          delete errors.username
+          delete errors.username;
         }
-        break
-        
-      case 'email':
+        break;
+
+      case "email":
         if (!value.trim()) {
-          errors.email = 'Email is required'
+          errors.email = "Email is required";
         } else if (value.length > 254) {
-          errors.email = 'Email must be less than 254 characters'
+          errors.email = "Email must be less than 254 characters";
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-          errors.email = 'Please enter a valid email address'
-        } else if (value.includes('..')) {
-          errors.email = 'Email cannot contain consecutive dots'
+          errors.email = "Please enter a valid email address";
+        } else if (value.includes("..")) {
+          errors.email = "Email cannot contain consecutive dots";
         } else {
-          delete errors.email
+          delete errors.email;
         }
-        break
-        
-      case 'password':
+        break;
+
+      case "password":
         if (!isEditMode && !value.trim()) {
-          errors.password = 'Password is required'
+          errors.password = "Password is required";
         } else if (value.trim() && value.length < 6) {
-          errors.password = 'Password must be at least 6 characters'
+          errors.password = "Password must be at least 6 characters";
         } else if (value.trim() && value.length > 128) {
-          errors.password = 'Password must be less than 128 characters'
-        } else if (value.trim() && !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) {
-          errors.password = 'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+          errors.password = "Password must be less than 128 characters";
+        } else if (
+          value.trim() &&
+          !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)
+        ) {
+          errors.password =
+            "Password must contain at least one uppercase letter, one lowercase letter, and one number";
         } else if (value.trim() && /[<>'"]/.test(value)) {
-          errors.password = 'Password cannot contain <, >, single quotes, or double quotes'
+          errors.password =
+            "Password cannot contain <, >, single quotes, or double quotes";
         } else {
-          delete errors.password
+          delete errors.password;
         }
-        break
-        
-      case 'mobile_number':
+        break;
+
+      case "mobile_number":
         if (value.trim()) {
-          const cleanPhone = value.replace(/[\s\-\(\)]/g, '')
+          const cleanPhone = value.replace(/[\s\-\(\)]/g, "");
           if (cleanPhone.length < 7) {
-            errors.mobile_number = 'Phone number is too short'
+            errors.mobile_number = "Phone number is too short";
           } else if (cleanPhone.length > 20) {
-            errors.mobile_number = 'Phone number is too long'
+            errors.mobile_number = "Phone number is too long";
           } else if (!/^[\+]?[1-9][\d]{6,19}$/.test(cleanPhone)) {
-            errors.mobile_number = 'Please enter a valid phone number'
+            errors.mobile_number = "Please enter a valid phone number";
           } else {
-            delete errors.mobile_number
+            delete errors.mobile_number;
           }
         } else {
-          delete errors.mobile_number
+          delete errors.mobile_number;
         }
-        break
-        
-      case 'address':
+        break;
+
+      case "address":
         if (value.trim() && value.length > 500) {
-          errors.address = 'Address must be less than 500 characters'
+          errors.address = "Address must be less than 500 characters";
         } else if (value.trim() && /[<>]/.test(value)) {
-          errors.address = 'Address cannot contain < or > characters'
+          errors.address = "Address cannot contain < or > characters";
         } else {
-          delete errors.address
+          delete errors.address;
         }
-        break
-        
-      case 'branch_id':
-        if (formData.role !== 'super_admin' && !value) {
-          errors.branch_id = 'Branch is required for this role'
+        break;
+
+      case "branch_id":
+        if (formData.role !== "super_admin" && !value) {
+          errors.branch_id = "Branch is required for this role";
         } else {
-          delete errors.branch_id
+          delete errors.branch_id;
         }
-        break
+        break;
     }
-    
-    setValidationErrors(errors)
-  }
+
+    setValidationErrors(errors);
+  };
 
   const handlePageAccessChange = (pageId) => {
-    const currentAccess = formData.page_access || []
-    let newAccess
+    const currentAccess = formData.page_access || [];
+    let newAccess;
     if (currentAccess.includes(pageId)) {
-      newAccess = currentAccess.filter(id => id !== pageId)
+      newAccess = currentAccess.filter((id) => id !== pageId);
     } else {
-      newAccess = [...currentAccess, pageId]
+      newAccess = [...currentAccess, pageId];
     }
-    
+
     // Simulate event for onInputChange
     onInputChange({
       target: {
-        name: 'page_access',
-        value: newAccess
-      }
-    })
-  }
+        name: "page_access",
+        value: newAccess,
+      },
+    });
+  };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target
-    onInputChange(e)
-    validateField(name, value)
-  }
+    const { name, value } = e.target;
+    onInputChange(e);
+    validateField(name, value);
+  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    
+    e.preventDefault();
+    setIsSubmitting(true);
+
     // Validate all fields
-    const fieldsToValidate = ['username', 'email', 'password', 'mobile_number']
-    if (formData.role !== 'super_admin') {
-      fieldsToValidate.push('branch_id')
+    const fieldsToValidate = ["username", "email", "password", "mobile_number"];
+    if (formData.role !== "super_admin") {
+      fieldsToValidate.push("branch_id");
     }
-    
-    fieldsToValidate.forEach(field => {
-      validateField(field, formData[field])
-    })
-    
+
+    fieldsToValidate.forEach((field) => {
+      validateField(field, formData[field]);
+    });
+
     // Check if there are any validation errors
-    const hasErrors = Object.keys(validationErrors).length > 0
+    const hasErrors = Object.keys(validationErrors).length > 0;
     if (hasErrors) {
-      setIsSubmitting(false)
-      return
+      setIsSubmitting(false);
+      return;
     }
-    
+
     try {
-      await onSubmit(e)
+      await onSubmit(e);
     } catch (error) {
-      console.error('Form submission error:', error)
+      console.error("Form submission error:", error);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const isFormValid = () => {
-    const requiredFields = ['username', 'email']
-    if (!isEditMode) requiredFields.push('password')
-    if (formData.role !== 'super_admin') requiredFields.push('branch_id')
-    
-    return requiredFields.every(field => {
-      const value = formData[field]
-      return value && value.trim() && !validationErrors[field]
-    }) && Object.keys(validationErrors).length === 0
-  }
+    const requiredFields = ["username", "email"];
+    if (!isEditMode) requiredFields.push("password");
+    if (formData.role !== "super_admin") requiredFields.push("branch_id");
 
-  if (!isOpen) return null
+    return (
+      requiredFields.every((field) => {
+        const value = formData[field];
+        return value && value.trim() && !validationErrors[field];
+      }) && Object.keys(validationErrors).length === 0
+    );
+  };
+
+  if (!isOpen) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] overflow-y-auto">
       <div className="flex min-h-full items-center justify-center p-4">
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
           onClick={onClose}
         />
@@ -246,7 +255,9 @@ const UserFormModal = ({
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       Username *
                       {validationErrors.username ? (
-                        <span className="text-red-400 ml-2 text-xs">({validationErrors.username})</span>
+                        <span className="text-red-400 ml-2 text-xs">
+                          ({validationErrors.username})
+                        </span>
                       ) : formData.username && !validationErrors.username ? (
                         <CheckCircle className="inline h-4 w-4 text-green-400 ml-2" />
                       ) : null}
@@ -257,11 +268,11 @@ const UserFormModal = ({
                       value={formData.username}
                       onChange={handleInputChange}
                       className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
-                        validationErrors.username 
-                          ? 'border-red-400 focus:ring-red-400' 
-                          : formData.username && !validationErrors.username 
-                          ? 'border-green-400' 
-                          : 'border-[#444444]'
+                        validationErrors.username
+                          ? "border-red-400 focus:ring-red-400"
+                          : formData.username && !validationErrors.username
+                            ? "border-green-400"
+                            : "border-[#444444]"
                       }`}
                       placeholder="Enter username"
                       required
@@ -273,7 +284,9 @@ const UserFormModal = ({
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       Email *
                       {validationErrors.email ? (
-                        <span className="text-red-400 ml-2 text-xs">({validationErrors.email})</span>
+                        <span className="text-red-400 ml-2 text-xs">
+                          ({validationErrors.email})
+                        </span>
                       ) : formData.email && !validationErrors.email ? (
                         <CheckCircle className="inline h-4 w-4 text-green-400 ml-2" />
                       ) : null}
@@ -284,11 +297,11 @@ const UserFormModal = ({
                       value={formData.email}
                       onChange={handleInputChange}
                       className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
-                        validationErrors.email 
-                          ? 'border-red-400 focus:ring-red-400' 
-                          : formData.email && !validationErrors.email 
-                          ? 'border-green-400' 
-                          : 'border-[#444444]'
+                        validationErrors.email
+                          ? "border-red-400 focus:ring-red-400"
+                          : formData.email && !validationErrors.email
+                            ? "border-green-400"
+                            : "border-[#444444]"
                       }`}
                       placeholder="Enter email address"
                       required
@@ -297,9 +310,12 @@ const UserFormModal = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                      Password {isEditMode ? '(leave blank to keep current)' : '*'}
+                      Password{" "}
+                      {isEditMode ? "(leave blank to keep current)" : "*"}
                       {validationErrors.password ? (
-                        <span className="text-red-400 ml-2 text-xs">({validationErrors.password})</span>
+                        <span className="text-red-400 ml-2 text-xs">
+                          ({validationErrors.password})
+                        </span>
                       ) : formData.password && !validationErrors.password ? (
                         <CheckCircle className="inline h-4 w-4 text-green-400 ml-2" />
                       ) : null}
@@ -311,13 +327,17 @@ const UserFormModal = ({
                         value={formData.password}
                         onChange={handleInputChange}
                         className={`w-full px-3 py-2 pr-10 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
-                          validationErrors.password 
-                            ? 'border-red-400 focus:ring-red-400' 
-                            : formData.password && !validationErrors.password 
-                            ? 'border-green-400' 
-                            : 'border-[#444444]'
+                          validationErrors.password
+                            ? "border-red-400 focus:ring-red-400"
+                            : formData.password && !validationErrors.password
+                              ? "border-green-400"
+                              : "border-[#444444]"
                         }`}
-                        placeholder={isEditMode ? "Enter new password (optional)" : "Enter password"}
+                        placeholder={
+                          isEditMode
+                            ? "Enter new password (optional)"
+                            : "Enter password"
+                        }
                         required={!isEditMode}
                       />
                       <button
@@ -325,12 +345,17 @@ const UserFormModal = ({
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
                       >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                     {!isEditMode && (
                       <p className="text-xs text-gray-400 mt-1">
-                        Must contain at least 6 characters with uppercase, lowercase, and number
+                        Must contain at least 6 characters with uppercase,
+                        lowercase, and number
                       </p>
                     )}
                   </div>
@@ -339,7 +364,9 @@ const UserFormModal = ({
                 {/* Right Column */}
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Role *</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Role *
+                    </label>
                     <select
                       name="role"
                       value={formData.role}
@@ -347,7 +374,7 @@ const UserFormModal = ({
                       className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                       required
                     >
-                      {availableRoles.map(role => (
+                      {availableRoles.map((role) => (
                         <option key={role.value} value={role.value}>
                           {role.label}
                         </option>
@@ -359,8 +386,11 @@ const UserFormModal = ({
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       Mobile Number
                       {validationErrors.mobile_number ? (
-                        <span className="text-red-400 ml-2 text-xs">({validationErrors.mobile_number})</span>
-                      ) : formData.mobile_number && !validationErrors.mobile_number ? (
+                        <span className="text-red-400 ml-2 text-xs">
+                          ({validationErrors.mobile_number})
+                        </span>
+                      ) : formData.mobile_number &&
+                        !validationErrors.mobile_number ? (
                         <CheckCircle className="inline h-4 w-4 text-green-400 ml-2" />
                       ) : null}
                     </label>
@@ -370,23 +400,27 @@ const UserFormModal = ({
                       value={formData.mobile_number}
                       onChange={handleInputChange}
                       className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
-                        validationErrors.mobile_number 
-                          ? 'border-red-400 focus:ring-red-400' 
-                          : formData.mobile_number && !validationErrors.mobile_number 
-                          ? 'border-green-400' 
-                          : 'border-[#444444]'
+                        validationErrors.mobile_number
+                          ? "border-red-400 focus:ring-red-400"
+                          : formData.mobile_number &&
+                              !validationErrors.mobile_number
+                            ? "border-green-400"
+                            : "border-[#444444]"
                       }`}
                       placeholder="Enter mobile number (e.g., +1234567890)"
                     />
                   </div>
 
-                  {formData.role !== 'super_admin' && (
+                  {formData.role !== "super_admin" && (
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
                         Branch *
                         {validationErrors.branch_id ? (
-                          <span className="text-red-400 ml-2 text-xs">({validationErrors.branch_id})</span>
-                        ) : formData.branch_id && !validationErrors.branch_id ? (
+                          <span className="text-red-400 ml-2 text-xs">
+                            ({validationErrors.branch_id})
+                          </span>
+                        ) : formData.branch_id &&
+                          !validationErrors.branch_id ? (
                           <CheckCircle className="inline h-4 w-4 text-green-400 ml-2" />
                         ) : null}
                       </label>
@@ -395,16 +429,16 @@ const UserFormModal = ({
                         value={formData.branch_id}
                         onChange={handleInputChange}
                         className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
-                          validationErrors.branch_id 
-                            ? 'border-red-400 focus:ring-red-400' 
-                            : formData.branch_id && !validationErrors.branch_id 
-                            ? 'border-green-400' 
-                            : 'border-[#444444]'
+                          validationErrors.branch_id
+                            ? "border-red-400 focus:ring-red-400"
+                            : formData.branch_id && !validationErrors.branch_id
+                              ? "border-green-400"
+                              : "border-[#444444]"
                         }`}
                         required
                       >
                         <option value="">Select Branch</option>
-                        {branches?.map(branch => (
+                        {branches?.map((branch) => (
                           <option key={branch._id} value={branch._id}>
                             {branch.name} ({branch.branch_code})
                           </option>
@@ -420,7 +454,9 @@ const UserFormModal = ({
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Address
                   {validationErrors.address ? (
-                    <span className="text-red-400 ml-2 text-xs">({validationErrors.address})</span>
+                    <span className="text-red-400 ml-2 text-xs">
+                      ({validationErrors.address})
+                    </span>
                   ) : formData.address && !validationErrors.address ? (
                     <CheckCircle className="inline h-4 w-4 text-green-400 ml-2" />
                   ) : null}
@@ -431,11 +467,11 @@ const UserFormModal = ({
                   onChange={handleInputChange}
                   rows="2"
                   className={`w-full px-3 py-2 bg-[#1A1A1A] border text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
-                    validationErrors.address 
-                      ? 'border-red-400 focus:ring-red-400' 
-                      : formData.address && !validationErrors.address 
-                      ? 'border-green-400' 
-                      : 'border-[#444444]'
+                    validationErrors.address
+                      ? "border-red-400 focus:ring-red-400"
+                      : formData.address && !validationErrors.address
+                        ? "border-green-400"
+                        : "border-[#444444]"
                   }`}
                   placeholder="Enter address"
                 />
@@ -445,7 +481,8 @@ const UserFormModal = ({
               </div>
 
               {/* Page Access Control - Only for staff/branch_admin */}
-              {(formData.role === 'staff' || formData.role === 'branch_admin') && (
+              {(formData.role === "staff" ||
+                formData.role === "branch_admin") && (
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Page Access Permissions
@@ -454,12 +491,17 @@ const UserFormModal = ({
                     </span>
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-4 bg-[#1A1A1A] border border-[#444444] rounded-lg">
-                    {AVAILABLE_PAGES.map(page => (
-                      <label key={page.id} className="flex items-center space-x-2 cursor-pointer group">
+                    {AVAILABLE_PAGES.map((page) => (
+                      <label
+                        key={page.id}
+                        className="flex items-center space-x-2 cursor-pointer group"
+                      >
                         <div className="relative flex items-center">
                           <input
                             type="checkbox"
-                            checked={(formData.page_access || []).includes(page.id)}
+                            checked={(formData.page_access || []).includes(
+                              page.id
+                            )}
                             onChange={() => handlePageAccessChange(page.id)}
                             className="peer h-4 w-4 rounded border-gray-500 bg-[#2A2A2A] text-[var(--color-primary)] focus:ring-[var(--color-primary)] focus:ring-offset-[#1A1A1A] transition-all duration-200 ease-in-out cursor-pointer"
                           />
@@ -474,8 +516,10 @@ const UserFormModal = ({
                     <button
                       type="button"
                       onClick={() => {
-                        const allPages = AVAILABLE_PAGES.map(p => p.id)
-                        onInputChange({ target: { name: 'page_access', value: allPages } })
+                        const allPages = AVAILABLE_PAGES.map((p) => p.id);
+                        onInputChange({
+                          target: { name: "page_access", value: allPages },
+                        });
                       }}
                       className="text-xs text-[var(--color-primary)] hover:underline mr-3"
                     >
@@ -484,7 +528,9 @@ const UserFormModal = ({
                     <button
                       type="button"
                       onClick={() => {
-                        onInputChange({ target: { name: 'page_access', value: [] } })
+                        onInputChange({
+                          target: { name: "page_access", value: [] },
+                        });
                       }}
                       className="text-xs text-gray-400 hover:text-white hover:underline"
                     >
@@ -527,7 +573,7 @@ const UserFormModal = ({
       </div>
     </div>,
     document.body
-  )
-}
+  );
+};
 
-export default UserFormModal
+export default UserFormModal;
