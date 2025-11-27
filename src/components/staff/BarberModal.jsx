@@ -1112,7 +1112,7 @@ const BarberModal = ({
                   Barber Day Off
                 </h3>
 
-                <TimeOffManager barber={currentBarber} />
+                <TimeOffManager barber={barber} />
               </div>
             ) : (
               <div className="space-y-4">
