@@ -27,8 +27,8 @@ const DashboardFooter = () => {
           <div className="flex items-center justify-center space-x-3">
             <div className="flex items-center space-x-2 px-4 py-2 bg-[#2A2A2A] border border-[#444444]/50 rounded-lg hover:border-[var(--color-primary)]/30 transition-colors">
               <Code className="h-4 w-4 text-[var(--color-primary)]" />
-              <span className="text-gray-300 text-sm font-medium">Developed by</span>
-              <img 
+              <span className="text-gray-300 text-sm font-medium">Developed by AVEXA Systems</span>
+              {/* <img 
                 src="/img/bg-logo.png" 
                 alt="BroadHeader Logo" 
                 className="h-6 w-auto"
@@ -36,7 +36,7 @@ const DashboardFooter = () => {
                   e.target.style.display = 'none'
                   e.target.nextSibling.style.display = 'inline'
                 }}
-              />
+              /> */}
               <span 
                 className="text-white font-bold text-sm hidden"
                 style={{ display: 'none' }}
