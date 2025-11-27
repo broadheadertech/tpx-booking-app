@@ -36,7 +36,7 @@ import { api } from "../../../convex/_generated/api";
 import LoadingSpinner from "../common/LoadingSpinner";
 import ErrorDisplay from "../common/ErrorDisplay";
 import { parseError } from "../../utils/errorHandler";
-import TimeOffManager from "../barber/TimeOffManager"
+import TimeOffManager from "../barber/TimeOffManager";
 const BarberModal = ({
   isOpen,
   onClose,
@@ -49,6 +49,7 @@ const BarberModal = ({
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isAcceptingBookings, setIsAcceptingBookings] = useState(true);
   const [formData, setFormData] = useState({
     full_name: "",
     is_active: true,
@@ -65,6 +66,28 @@ const BarberModal = ({
       sunday: { available: false, start: "09:00", end: "17:00" },
     },
   });
+
+  const handleToggleBookings = async (newValue) => {
+    if (!barber?._id) return;
+
+    setIsAcceptingBookings(newValue);
+
+    try {
+      await updateBarberMutation({
+        id: barber._id,
+        is_accepting_bookings: newValue,
+      });
+    } catch (error) {
+      console.error("Failed to update availability:", error);
+      setIsAcceptingBookings(!newValue); // Revert on error
+      setAlertState({
+        isOpen: true,
+        type: "error",
+        title: "Update Failed",
+        message: "Failed to update availability status. Please try again.",
+      });
+    }
+  };
   const [expandedDay, setExpandedDay] = useState(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -420,8 +443,8 @@ const BarberModal = ({
               <button
                 className={`px-4 py-2 rounded-md transition text-sm ${
                   activeView === "dayoff"
-                    ? "bg-[#E01E37] text-white"
-                    : "text-gray-400 hover:text-white"
+                    ? "border-[var(--color-primary)] text-[var(--color-primary)]"
+                    : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500"
                 }`}
                 onClick={() => setActiveView("dayoff")}
               >
@@ -1111,7 +1134,40 @@ const BarberModal = ({
                 <h3 className="text-xl font-semibold text-white mb-4">
                   Barber Day Off
                 </h3>
-
+                <div className="mt-3">
+                  <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A] flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-white">
+                        Booking Status
+                      </p>
+                      <p
+                        className={`text-xs ${isAcceptingBookings ? "text-green-400" : "text-gray-400"}`}
+                      >
+                        {isAcceptingBookings
+                          ? "You are visible to clients"
+                          : "You appear as busy"}
+                      </p>
+                    </div>
+                    <label className="flex items-center cursor-pointer">
+                      <div className="relative">
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          checked={isAcceptingBookings}
+                          onChange={(e) =>
+                            handleToggleBookings(e.target.checked)
+                          }
+                        />
+                        <div
+                          className={`block w-12 h-7 rounded-full transition-colors ${isAcceptingBookings ? "bg-green-500" : "bg-gray-600"}`}
+                        ></div>
+                        <div
+                          className={`dot absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform shadow-sm ${isAcceptingBookings ? "transform translate-x-5" : ""}`}
+                        ></div>
+                      </div>
+                    </label>
+                  </div>
+                </div>
                 <TimeOffManager barber={barber} />
               </div>
             ) : (

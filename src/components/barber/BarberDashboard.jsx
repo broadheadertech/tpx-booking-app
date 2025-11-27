@@ -232,7 +232,7 @@ const BarberDashboard = () => {
                     </p>
                   </div>
                   {/* Availability Toggle Desktop */}
-                  <div className="bg-[#1A1A1A] border border-[#333333] rounded-xl p-3 flex items-center space-x-3">
+                  {/* <div className="bg-[#1A1A1A] border border-[#333333] rounded-xl p-3 flex items-center space-x-3">
                     <span
                       className={`text-sm font-medium ${isAcceptingBookings ? "text-green-400" : "text-gray-400"}`}
                     >
@@ -258,7 +258,7 @@ const BarberDashboard = () => {
                         ></div>
                       </div>
                     </label>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>
