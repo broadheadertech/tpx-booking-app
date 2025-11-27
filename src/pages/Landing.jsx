@@ -299,14 +299,14 @@ const Landing = () => {
               </div>
 
               <h1 className="text-5xl sm:text-7xl font-bold tracking-tight leading-[1.1]">
-                Bright Ideas <br />
+                Cut Complexity. <br />
                 <span
                   className="text-transparent bg-clip-text"
                   style={{
                     backgroundImage: `linear-gradient(to right, var(--color-primary), var(--color-accent))`,
                   }}
                 >
-                  Inspire Change
+                  Drive Results.
                 </span>
               </h1>
 
