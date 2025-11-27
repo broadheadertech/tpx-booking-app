@@ -145,14 +145,13 @@ function AdminDashboard() {
       case "overview":
         return renderOverview();
 
+      case "reports":
+        return <SystemReports onRefresh={handleRefresh} />;
       case "branches":
         return <BranchManagement onRefresh={handleRefresh} />;
 
       case "users":
         return <UserManagement onRefresh={handleRefresh} />;
-
-      case "reports":
-        return <SystemReports onRefresh={handleRefresh} />;
 
       case "settings":
         return <GlobalSettings onRefresh={handleRefresh} />;
