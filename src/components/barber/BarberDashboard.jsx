@@ -285,7 +285,7 @@ const BarberDashboard = () => {
                 </div>
 
                 {/* Availability Toggle Mobile */}
-                <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A] flex items-center justify-between">
+                {/* <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A] flex items-center justify-between">
                   <div>
                     <p className="text-sm font-bold text-white">
                       Booking Status
@@ -314,7 +314,7 @@ const BarberDashboard = () => {
                       ></div>
                     </div>
                   </label>
-                </div>
+                </div> */}
               </div>
 
               {/* Stats Cards - Redesigned */}
@@ -557,7 +557,7 @@ const BarberDashboard = () => {
               )}
 
               {/* Time Off Manager */}
-              <TimeOffManager barber={currentBarber} />
+              {/* <TimeOffManager barber={currentBarber} /> */}
             </div>
           </>
         );
