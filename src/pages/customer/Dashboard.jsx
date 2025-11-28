@@ -266,7 +266,7 @@ const Dashboard = () => {
                   className="w-14 h-14 object-contain"
                 />
                 <div>
-                  <h1 className="text-base font-black text-[var(--color-primary)]">{branding?.display_name || 'TipunoX'}</h1>
+                  <h1 className="text-base font-black text-[var(--color-primary)]">{branding?.display_name || ''}</h1>
                   <p className="text-xs font-semibold text-[var(--color-primary)]">{branding?.display_name ? 'Branch' : 'Angeles'}</p>
                 </div>
               </div>

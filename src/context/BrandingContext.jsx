@@ -5,9 +5,9 @@ import { api } from '../../convex/_generated/api'
 const CACHE_KEY = 'branding_global_cache'
 const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours
 const FALLBACK_BRANDING = {
-  display_name: 'TipunoX',
-  primary_color: '#FF8C42',
-  accent_color: '#FF7A2B',
+  display_name: '',
+  primary_color: '#000000',
+  accent_color: '#000000',
   bg_color: '#0A0A0A',
   text_color: '#FFFFFF',
   muted_color: '#333333',

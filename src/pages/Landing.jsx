@@ -143,7 +143,7 @@ const Landing = () => {
               />
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-[var(--color-text)]">
-                  {branding?.display_name || 'TipunoX'}
+                  {branding?.display_name || ''}
                 </h1>
                 <p className="text-[10px] font-medium tracking-[0.2em] uppercase text-[var(--color-primary)]">
                   Premium Grooming
@@ -245,7 +245,7 @@ const Landing = () => {
               </h1>
 
               <p className="text-lg text-[var(--color-muted)] max-w-lg leading-relaxed">
-                Experience the pinnacle of grooming at {branding?.display_name || 'TipunoX'}.
+                Experience the pinnacle of grooming at {branding?.display_name || ''}.
                 Where traditional barbering meets modern luxury.
               </p>
 
@@ -400,7 +400,7 @@ const Landing = () => {
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
               <h2 className="text-3xl md:text-4xl font-bold mb-6 text-[var(--color-text)]">
-                Why Choose <span className="text-[var(--color-primary)]">{branding?.display_name || 'TipunoX'}</span>?
+                Why Choose <span className="text-[var(--color-primary)]">{branding?.display_name || ''}</span>?
               </h2>
               <p className="text-[var(--color-muted)] text-lg mb-8 leading-relaxed">
                 We don't just cut hair; we cultivate confidence. Our barbershop combines traditional techniques with modern style to give you the best grooming experience in the city.
@@ -574,7 +574,7 @@ const Landing = () => {
                   alt="Logo"
                   className="w-8 h-8 object-contain"
                 />
-                <span className="text-xl font-bold text-[var(--color-text)]">{branding?.display_name || 'TipunoX'}</span>
+                <span className="text-xl font-bold text-[var(--color-text)]">{branding?.display_name || ''}</span>
               </div>
               <p className="text-[var(--color-muted)] text-sm leading-relaxed">
                 Premium grooming experiences for the modern gentleman. Elevating style, one cut at a time.

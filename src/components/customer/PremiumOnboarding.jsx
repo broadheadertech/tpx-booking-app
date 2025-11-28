@@ -152,7 +152,7 @@ const PremiumOnboarding = ({ onComplete }) => {
           <div>
             <img 
               src={branding?.logo_light_url}
-              alt="TipunoX Logo" 
+              alt="Logo" 
               className="w-12 h-12 object-contain"
             />
           </div>

@@ -67,9 +67,9 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
             <div className="min-w-0 flex-1">
               <div className="flex items-center space-x-1 sm:space-x-1.5 md:space-x-2 flex-wrap">
                 <h1 className="text-[11px] sm:text-sm md:text-base lg:text-lg font-bold text-[var(--color-primary)] tracking-tight truncate">
-                  <span className="hidden md:inline">{branding?.display_name || 'TipunoX'}</span>
-                  <span className="hidden sm:inline md:hidden">{branding?.display_name || 'TipunoX'}</span>
-                  <span className="sm:hidden">{branding?.display_name || 'TipunoX'}</span>
+                  <span className="hidden md:inline">{branding?.display_name || ''}</span>
+                  <span className="hidden sm:inline md:hidden">{branding?.display_name || ''}</span>
+                  <span className="sm:hidden">{branding?.display_name || ''}</span>
                 </h1>
                 <div className="bg-[var(--color-primary)]/15 backdrop-blur-sm rounded-md px-1 sm:px-1.5 py-0.5 border border-[var(--color-primary)]/25 flex-shrink-0 hidden sm:block">
                   <span className="text-[9px] sm:text-[10px] font-semibold text-[var(--color-primary)]">v{APP_VERSION}</span>
@@ -232,7 +232,7 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
                 />
                 <div>
                   <h2 className="text-base font-bold text-white">Menu</h2>
-                  <p className="text-xs text-gray-400">TipunoX Staff Dashboard</p>
+                  <p className="text-xs text-gray-400"> Staff Dashboard</p>
                 </div>
               </div>
               <button

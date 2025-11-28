@@ -375,8 +375,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
     if (sendSms && booking.customer_phone) {
       const service = services.find(s => s._id === booking.service)
       const message = action === 'confirm'
-        ? `Hi ${booking.customer_name || 'Customer'}! Your booking #${booking.booking_code} at TipunoX Barbershop has been confirmed for ${formatDate(booking.date)} at ${formatTime(booking.time)}. Service: ${service?.name}. See you soon!`
-        : `Hi ${booking.customer_name || 'Customer'}! Your booking #${booking.booking_code} at TipunoX Barbershop has been completed. Thank you for choosing us!`
+        ? `Hi ${booking.customer_name || 'Customer'}! Your booking #${booking.booking_code} at  Barbershop has been confirmed for ${formatDate(booking.date)} at ${formatTime(booking.time)}. Service: ${service?.name}. See you soon!`
+        : `Hi ${booking.customer_name || 'Customer'}! Your booking #${booking.booking_code} at  Barbershop has been completed. Thank you for choosing us!`
 
       // Create SMS link that works on both web and mobile
       const smsLink = `sms:${booking.customer_phone}${/iPhone|iPad|iPod/.test(navigator.userAgent) ? '&' : '?'}body=${encodeURIComponent(message)}`
