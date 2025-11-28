@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
-import { 
-  TrendingUp, TrendingDown, DollarSign, Users, Calendar, 
+import {
+  TrendingUp, TrendingDown, DollarSign, Users, Calendar,
   Download, RefreshCw, Scissors, Clock, Award, AlertCircle,
   ChevronRight, Star, Package, CreditCard, ArrowUp, ArrowDown,
   BarChart3, PieChart, LineChart, Target, ShoppingCart, UserCheck,
@@ -15,18 +15,18 @@ const ReportsManagement = ({ onRefresh, user }) => {
   const [loading, setLoading] = useState(false)
 
   // Fetch data
-  const bookings = user?.role === 'super_admin' 
+  const bookings = user?.role === 'super_admin'
     ? useQuery(api.services.bookings.getAllBookings)
-    : user?.branch_id 
+    : user?.branch_id
       ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id })
       : []
-      
+
   const transactions = user?.role === 'super_admin'
     ? useQuery(api.services.transactions.getAllTransactions)
     : user?.branch_id
       ? useQuery(api.services.transactions.getTransactionsByBranch, { branch_id: user.branch_id })
       : []
-      
+
   const barbers = user?.role === 'super_admin'
     ? useQuery(api.services.barbers.getAllBarbers)
     : user?.branch_id
@@ -72,7 +72,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
     const weekStart = now - (7 * 24 * 60 * 60 * 1000)
     const monthStart = now - (30 * 24 * 60 * 60 * 1000)
     const yearStart = now - (365 * 24 * 60 * 60 * 1000)
-    
+
     // Get period data
     let periodStart = todayStart
     if (selectedPeriod === 'week') periodStart = weekStart
@@ -81,19 +81,21 @@ const ReportsManagement = ({ onRefresh, user }) => {
 
     const periodTransactions = transactions.filter(t => t.createdAt >= periodStart && t.payment_status === 'completed')
     const periodBookings = bookings.filter(b => b.createdAt >= periodStart)
+    const validPeriodBookings = periodBookings.filter(b => b.status !== 'cancelled')
     const allCompletedTransactions = transactions.filter(t => t.payment_status === 'completed')
 
     // Previous period for comparison
     const periodLength = now - periodStart
     const prevPeriodStart = periodStart - periodLength
     const prevPeriodEnd = periodStart
-    const prevTransactions = transactions.filter(t => 
+    const prevTransactions = transactions.filter(t =>
       t.createdAt >= prevPeriodStart && t.createdAt < prevPeriodEnd && t.payment_status === 'completed'
     )
     const prevBookings = bookings.filter(b => b.createdAt >= prevPeriodStart && b.createdAt < prevPeriodEnd)
+    const prevValidBookings = prevBookings.filter(b => b.status !== 'cancelled')
 
     // === DESCRIPTIVE ANALYTICS: What happened? ===
-    
+
     // Revenue metrics
     const totalRevenue = periodTransactions.reduce((sum, t) => sum + t.total_amount, 0)
     const prevRevenue = prevTransactions.reduce((sum, t) => sum + t.total_amount, 0)
@@ -115,30 +117,30 @@ const ReportsManagement = ({ onRefresh, user }) => {
     // Transaction metrics
     const transactionCount = periodTransactions.length
     const avgTransaction = transactionCount > 0 ? totalRevenue / transactionCount : 0
-    const prevAvgTransaction = prevTransactions.length > 0 
-      ? prevTransactions.reduce((sum, t) => sum + t.total_amount, 0) / prevTransactions.length 
+    const prevAvgTransaction = prevTransactions.length > 0
+      ? prevTransactions.reduce((sum, t) => sum + t.total_amount, 0) / prevTransactions.length
       : 0
     const avgTransactionChange = prevAvgTransaction > 0 ? ((avgTransaction - prevAvgTransaction) / prevAvgTransaction) * 100 : 0
 
     // Booking completion metrics
-    const completedBookings = periodBookings.filter(b => b.status === 'completed').length
-    const completionRate = periodBookings.length > 0 ? (completedBookings / periodBookings.length) * 100 : 0
-    const prevCompletionRate = prevBookings.length > 0 
-      ? (prevBookings.filter(b => b.status === 'completed').length / prevBookings.length) * 100 
+    const completedBookings = validPeriodBookings.filter(b => b.status === 'completed').length
+    const completionRate = validPeriodBookings.length > 0 ? (completedBookings / validPeriodBookings.length) * 100 : 0
+    const prevCompletionRate = prevValidBookings.length > 0
+      ? (prevValidBookings.filter(b => b.status === 'completed').length / prevValidBookings.length) * 100
       : 0
 
     // Staff performance
     const barberStats = barbers.map(barber => {
       const barberTransactions = periodTransactions.filter(t => t.barber === barber._id)
       const barberRevenue = barberTransactions.reduce((sum, t) => sum + t.total_amount, 0)
-      const barberBookings = periodBookings.filter(b => b.barber === barber._id)
+      const barberBookings = validPeriodBookings.filter(b => b.barber === barber._id)
       const completedBookings = barberBookings.filter(b => b.status === 'completed').length
       const completionRate = barberBookings.length > 0 ? (completedBookings / barberBookings.length) * 100 : 0
-      
+
       const prevBarberTransactions = prevTransactions.filter(t => t.barber === barber._id)
       const prevRevenue = prevBarberTransactions.reduce((sum, t) => sum + t.total_amount, 0)
       const revenueGrowth = prevRevenue > 0 ? ((barberRevenue - prevRevenue) / prevRevenue) * 100 : 0
-      
+
       return {
         id: barber._id,
         name: barber.full_name,
@@ -170,20 +172,20 @@ const ReportsManagement = ({ onRefresh, user }) => {
     const popularServices = Object.values(serviceStats).sort((a, b) => b.revenue - a.revenue).slice(0, 5)
 
     // === DIAGNOSTIC ANALYTICS: Why did it happen? ===
-    
+
     // Peak hours analysis
     const hourStats = Array(24).fill(0).map((_, hour) => ({
       hour,
       transactions: 0,
       revenue: 0
     }))
-    
+
     periodTransactions.forEach(t => {
       const hour = new Date(t.createdAt).getHours()
       hourStats[hour].transactions++
       hourStats[hour].revenue += t.total_amount
     })
-    
+
     const peakHours = [...hourStats].sort((a, b) => b.transactions - a.transactions).slice(0, 3)
     const peakRevenueHours = [...hourStats].sort((a, b) => b.revenue - a.revenue).slice(0, 3)
 
@@ -214,8 +216,8 @@ const ReportsManagement = ({ onRefresh, user }) => {
     const repeatCustomers = Object.values(customerFrequency).filter(freq => freq > 1).length
     const totalCustomersAllTime = Object.keys(customerFrequency).length
     const retentionRate = totalCustomersAllTime > 0 ? (repeatCustomers / totalCustomersAllTime) * 100 : 0
-    const avgVisitsPerCustomer = totalCustomersAllTime > 0 
-      ? Object.values(customerFrequency).reduce((sum, freq) => sum + freq, 0) / totalCustomersAllTime 
+    const avgVisitsPerCustomer = totalCustomersAllTime > 0
+      ? Object.values(customerFrequency).reduce((sum, freq) => sum + freq, 0) / totalCustomersAllTime
       : 0
 
     // Day of week analysis
@@ -224,21 +226,21 @@ const ReportsManagement = ({ onRefresh, user }) => {
       transactions: 0,
       revenue: 0
     }))
-    
+
     periodTransactions.forEach(t => {
       const day = new Date(t.createdAt).getDay()
       dayStats[day].transactions++
       dayStats[day].revenue += t.total_amount
     })
-    
+
     const busiestDays = [...dayStats].sort((a, b) => b.transactions - a.transactions).slice(0, 3)
 
     // Cancellation analysis
     const cancelledBookings = periodBookings.filter(b => b.status === 'cancelled')
     const cancellationRate = periodBookings.length > 0 ? (cancelledBookings.length / periodBookings.length) * 100 : 0
-    
+
     // === PREDICTIVE ANALYTICS: What will happen? ===
-    
+
     // Revenue forecast (simple linear projection)
     const last7DaysRevenue = transactions
       .filter(t => t.createdAt >= now - (7 * 24 * 60 * 60 * 1000) && t.payment_status === 'completed')
@@ -262,7 +264,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
         productDemand[p.product_id].totalSold += p.quantity
       })
     })
-    
+
     Object.keys(productDemand).forEach(key => {
       const weeksInPeriod = (now - monthStart) / (7 * 24 * 60 * 60 * 1000)
       productDemand[key].avgPerWeek = productDemand[key].totalSold / weeksInPeriod
@@ -273,13 +275,13 @@ const ReportsManagement = ({ onRefresh, user }) => {
     // Customer churn prediction
     const customersNotSeenRecently = []
     Object.entries(customerFrequency).forEach(([customerId, frequency]) => {
-      const customerTransactions = allCompletedTransactions.filter(t => 
+      const customerTransactions = allCompletedTransactions.filter(t =>
         (t.customer || t.customer_name) === customerId
       )
       if (customerTransactions.length > 0) {
         const lastVisit = Math.max(...customerTransactions.map(t => t.createdAt))
         const daysSinceLastVisit = (now - lastVisit) / (24 * 60 * 60 * 1000)
-        
+
         if (daysSinceLastVisit > 30 && frequency > 2) {
           customersNotSeenRecently.push({
             id: customerId,
@@ -290,28 +292,28 @@ const ReportsManagement = ({ onRefresh, user }) => {
         }
       }
     })
-    
+
     const churnRisk = customersNotSeenRecently.length
     const churnRate = totalCustomersAllTime > 0 ? (churnRisk / totalCustomersAllTime) * 100 : 0
 
     // Growth trend prediction
     const growthTrend = revenueChange > 5 ? 'Increasing' : revenueChange < -5 ? 'Decreasing' : 'Stable'
-    const predictedMonthlyRevenue = growthTrend === 'Increasing' 
-      ? totalRevenue * 1.1 
-      : growthTrend === 'Decreasing' 
-        ? totalRevenue * 0.9 
+    const predictedMonthlyRevenue = growthTrend === 'Increasing'
+      ? totalRevenue * 1.1
+      : growthTrend === 'Decreasing'
+        ? totalRevenue * 0.9
         : totalRevenue
 
     // === PRESCRIPTIVE ANALYTICS: What should be done? ===
-    
+
     // Promotion suggestions
     const promotionSuggestions = []
-    
+
     // Low performing services
-    const avgServiceRevenue = popularServices.length > 0 
-      ? popularServices.reduce((sum, s) => sum + s.revenue, 0) / popularServices.length 
+    const avgServiceRevenue = popularServices.length > 0
+      ? popularServices.reduce((sum, s) => sum + s.revenue, 0) / popularServices.length
       : 0
-    
+
     Object.values(serviceStats).forEach(service => {
       if (service.revenue < avgServiceRevenue * 0.5 && service.revenue > 0) {
         promotionSuggestions.push({
@@ -363,7 +365,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
 
     // Staff scheduling recommendations
     const staffRecommendations = []
-    
+
     // Peak hours staffing
     if (peakHours.length > 0) {
       const topPeakHour = peakHours[0]
@@ -447,14 +449,15 @@ const ReportsManagement = ({ onRefresh, user }) => {
         change: avgTransactionChange
       },
       bookings: {
-        total: periodBookings.length,
+        total: validPeriodBookings.length,
+        totalAll: periodBookings.length,
         completed: completedBookings,
         completionRate,
         completionChange: completionRate - prevCompletionRate
       },
       barbers: barberStats,
       services: popularServices,
-      
+
       // Diagnostic
       peakHours,
       peakRevenueHours,
@@ -467,7 +470,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
       busiestDays,
       cancellationRate,
       cancelledBookings: cancelledBookings.length,
-      
+
       // Predictive
       forecast: {
         next7Days: next7DaysForecast,
@@ -482,12 +485,12 @@ const ReportsManagement = ({ onRefresh, user }) => {
         rate: churnRate,
         customers: customersNotSeenRecently.slice(0, 10)
       },
-      
+
       // Prescriptive
       promotionSuggestions: promotionSuggestions.slice(0, 5),
       restockingAlerts,
       staffRecommendations,
-      
+
       // Additional
       paymentMethods,
       products: topProducts
@@ -496,12 +499,12 @@ const ReportsManagement = ({ onRefresh, user }) => {
 
   const handleExport = () => {
     if (!analytics) return
-    
+
     const timestamp = new Date().toISOString().split('T')[0]
     let csv = `Business Analytics Report - ${selectedPeriod}\n`
     csv += `Generated: ${new Date().toLocaleString()}\n`
     csv += `Tab: ${activeTab}\n\n`
-    
+
     if (activeTab === 'descriptive') {
       csv += `DESCRIPTIVE ANALYTICS: What Happened?\n\n`
       csv += `Revenue Summary\n`
@@ -509,13 +512,13 @@ const ReportsManagement = ({ onRefresh, user }) => {
       csv += `Services Revenue,${formatCurrency(analytics.revenue.services)}\n`
       csv += `Products Revenue,${formatCurrency(analytics.revenue.products)}\n`
       csv += `Change vs Previous,${analytics.revenue.change.toFixed(1)}%\n\n`
-      
+
       csv += `Top Services\n`
       csv += `Service,Count,Revenue\n`
       analytics.services.forEach(s => {
         csv += `"${s.name}",${s.count},${formatCurrency(s.revenue)}\n`
       })
-      
+
       csv += `\nBarber Performance\n`
       csv += `Barber,Revenue,Transactions,Completion Rate\n`
       analytics.barbers.forEach(b => {
@@ -528,13 +531,13 @@ const ReportsManagement = ({ onRefresh, user }) => {
       analytics.peakHours.forEach(h => {
         csv += `${formatTime(h.hour)},${h.transactions},${formatCurrency(h.revenue)}\n`
       })
-      
+
       csv += `\nBusiest Days\n`
       csv += `Day,Transactions,Revenue\n`
       analytics.busiestDays.forEach(d => {
         csv += `${d.day},${d.transactions},${formatCurrency(d.revenue)}\n`
       })
-      
+
       csv += `\nCustomer Retention\n`
       csv += `Retention Rate,${analytics.retentionRate.toFixed(1)}%\n`
       csv += `Repeat Customers,${analytics.repeatCustomers}\n`
@@ -546,7 +549,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
       csv += `Next 30 Days,${formatCurrency(analytics.forecast.next30Days)}\n`
       csv += `Daily Average,${formatCurrency(analytics.forecast.dailyAverage)}\n`
       csv += `Growth Trend,${analytics.forecast.growthTrend}\n\n`
-      
+
       csv += `Churn Risk\n`
       csv += `At-Risk Customers,${analytics.churnRisk.count}\n`
       csv += `Churn Rate,${analytics.churnRisk.rate.toFixed(1)}%\n`
@@ -557,20 +560,20 @@ const ReportsManagement = ({ onRefresh, user }) => {
       analytics.promotionSuggestions.forEach(p => {
         csv += `"${p.type}","${p.target}","${p.suggestion}",${p.priority}\n`
       })
-      
+
       csv += `\nRestocking Alerts\n`
       csv += `Product,Current Stock,Min Stock,Suggested Order,Urgency\n`
       analytics.restockingAlerts.forEach(r => {
         csv += `"${r.product}",${r.currentStock},${r.minStock},${r.suggestedOrder},${r.urgency}\n`
       })
-      
+
       csv += `\nStaff Recommendations\n`
       csv += `Type,Timeframe,Suggestion,Priority\n`
       analytics.staffRecommendations.forEach(s => {
         csv += `"${s.type}","${s.timeframe}","${s.suggestion}",${s.priority}\n`
       })
     }
-    
+
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -599,7 +602,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
           <h2 className="text-2xl font-bold text-white">Business Analytics</h2>
           <p className="text-sm text-gray-400">Comprehensive performance insights</p>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <select
             value={selectedPeriod}
@@ -611,14 +614,14 @@ const ReportsManagement = ({ onRefresh, user }) => {
             <option value="month">This Month</option>
             <option value="year">This Year</option>
           </select>
-          
+
           <button
             onClick={() => { setLoading(true); onRefresh?.(); setTimeout(() => setLoading(false), 1000) }}
             className="p-2 bg-[#1A1A1A] border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-colors"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          
+
           <button
             onClick={handleExport}
             className="flex items-center gap-2 px-3 py-2 bg-[var(--color-primary)] text-white text-sm rounded-lg hover:bg-[var(--color-accent)] transition-colors"
@@ -634,11 +637,10 @@ const ReportsManagement = ({ onRefresh, user }) => {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-1">
           <button
             onClick={() => setActiveTab('descriptive')}
-            className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${
-              activeTab === 'descriptive'
-                ? 'bg-[var(--color-primary)] text-white shadow-lg'
-                : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
-            }`}
+            className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${activeTab === 'descriptive'
+              ? 'bg-[var(--color-primary)] text-white shadow-lg'
+              : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
+              }`}
           >
             <BarChart3 className="h-4 w-4" />
             <span className="hidden sm:inline">Descriptive</span>
@@ -646,11 +648,10 @@ const ReportsManagement = ({ onRefresh, user }) => {
           </button>
           <button
             onClick={() => setActiveTab('diagnostic')}
-            className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${
-              activeTab === 'diagnostic'
-                ? 'bg-[var(--color-primary)] text-white shadow-lg'
-                : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
-            }`}
+            className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${activeTab === 'diagnostic'
+              ? 'bg-[var(--color-primary)] text-white shadow-lg'
+              : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
+              }`}
           >
             <PieChart className="h-4 w-4" />
             <span className="hidden sm:inline">Diagnostic</span>
@@ -658,11 +659,10 @@ const ReportsManagement = ({ onRefresh, user }) => {
           </button>
           <button
             onClick={() => setActiveTab('predictive')}
-            className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${
-              activeTab === 'predictive'
-                ? 'bg-[var(--color-primary)] text-white shadow-lg'
-                : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
-            }`}
+            className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${activeTab === 'predictive'
+              ? 'bg-[var(--color-primary)] text-white shadow-lg'
+              : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
+              }`}
           >
             <LineChart className="h-4 w-4" />
             <span className="hidden sm:inline">Predictive</span>
@@ -670,11 +670,10 @@ const ReportsManagement = ({ onRefresh, user }) => {
           </button>
           <button
             onClick={() => setActiveTab('prescriptive')}
-            className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${
-              activeTab === 'prescriptive'
-                ? 'bg-[var(--color-primary)] text-white shadow-lg'
-                : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
-            }`}
+            className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg font-medium transition-all text-sm ${activeTab === 'prescriptive'
+              ? 'bg-[var(--color-primary)] text-white shadow-lg'
+              : 'text-gray-400 hover:text-white hover:bg-[#2A2A2A]'
+              }`}
           >
             <Target className="h-4 w-4" />
             <span className="hidden sm:inline">Prescriptive</span>
@@ -685,33 +684,33 @@ const ReportsManagement = ({ onRefresh, user }) => {
 
       {/* Tab Content */}
       {activeTab === 'descriptive' && (
-        <DescriptiveAnalytics 
-          analytics={analytics} 
-          formatCurrency={formatCurrency} 
+        <DescriptiveAnalytics
+          analytics={analytics}
+          formatCurrency={formatCurrency}
           formatTime={formatTime}
         />
       )}
-      
+
       {activeTab === 'diagnostic' && (
-        <DiagnosticAnalytics 
-          analytics={analytics} 
-          formatCurrency={formatCurrency} 
+        <DiagnosticAnalytics
+          analytics={analytics}
+          formatCurrency={formatCurrency}
           formatTime={formatTime}
         />
       )}
-      
+
       {activeTab === 'predictive' && (
-        <PredictiveAnalytics 
-          analytics={analytics} 
-          formatCurrency={formatCurrency} 
+        <PredictiveAnalytics
+          analytics={analytics}
+          formatCurrency={formatCurrency}
           formatTime={formatTime}
         />
       )}
-      
+
       {activeTab === 'prescriptive' && (
-        <PrescriptiveAnalytics 
-          analytics={analytics} 
-          formatCurrency={formatCurrency} 
+        <PrescriptiveAnalytics
+          analytics={analytics}
+          formatCurrency={formatCurrency}
           formatTime={formatTime}
         />
       )}
@@ -770,7 +769,7 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
               <span className="text-white font-semibold">{formatCurrency(analytics.revenue.services)}</span>
             </div>
             <div className="w-full bg-[#0A0A0A] rounded-full h-2">
-              <div 
+              <div
                 className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] h-2 rounded-full transition-all duration-500"
                 style={{ width: `${(analytics.revenue.services / analytics.revenue.total) * 100}%` }}
               />
@@ -785,7 +784,7 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
               <span className="text-white font-semibold">{formatCurrency(analytics.revenue.products)}</span>
             </div>
             <div className="w-full bg-[#0A0A0A] rounded-full h-2">
-              <div 
+              <div
                 className="bg-gray-500 h-2 rounded-full transition-all duration-500"
                 style={{ width: `${(analytics.revenue.products / analytics.revenue.total) * 100}%` }}
               />
@@ -835,14 +834,13 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
       </h3>
       <div className="space-y-2">
         {analytics.barbers.slice(0, 5).map((barber, index) => (
-          <div 
+          <div
             key={barber.id}
             className="flex items-center justify-between p-3 bg-[#0A0A0A] rounded-lg hover:bg-[#1A1A1A] transition-colors border border-[#2A2A2A]"
           >
             <div className="flex items-center gap-3">
-              <div className={`flex items-center justify-center w-8 h-8 rounded-lg ${
-                index === 0 ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]' : 'bg-[#2A2A2A] text-gray-400'
-              }`}>
+              <div className={`flex items-center justify-center w-8 h-8 rounded-lg ${index === 0 ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]' : 'bg-[#2A2A2A] text-gray-400'
+                }`}>
                 <span className="text-sm font-bold">#{index + 1}</span>
               </div>
               <div>
@@ -872,7 +870,7 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
           {analytics.services.slice(0, 5).map((service, index) => {
             const maxRevenue = analytics.services[0]?.revenue || 1
             const percentage = (service.revenue / maxRevenue) * 100
-            
+
             return (
               <div key={service.id}>
                 <div className="flex items-center justify-between text-sm mb-1">
@@ -881,7 +879,7 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 bg-[#0A0A0A] rounded-full h-1.5">
-                    <div 
+                    <div
                       className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] h-1.5 rounded-full transition-all"
                       style={{ width: `${percentage}%` }}
                     />
@@ -904,7 +902,7 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
             {analytics.products.map((product, index) => {
               const maxRevenue = analytics.products[0]?.revenue || 1
               const percentage = (product.revenue / maxRevenue) * 100
-              
+
               return (
                 <div key={index}>
                   <div className="flex items-center justify-between text-sm mb-1">
@@ -913,7 +911,7 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex-1 bg-[#0A0A0A] rounded-full h-1.5">
-                      <div 
+                      <div
                         className="bg-gray-500 h-1.5 rounded-full transition-all"
                         style={{ width: `${percentage}%` }}
                       />
@@ -970,9 +968,8 @@ const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime }) => (
           {analytics.peakHours.map((hour, index) => (
             <div key={hour.hour} className="flex items-center justify-between p-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg">
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                  index === 0 ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]' : 'bg-[#2A2A2A] text-gray-400'
-                }`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${index === 0 ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]' : 'bg-[#2A2A2A] text-gray-400'
+                  }`}>
                   <span className="text-sm font-bold">#{index + 1}</span>
                 </div>
                 <div>
@@ -1000,9 +997,8 @@ const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime }) => (
           {analytics.busiestDays.map((day, index) => (
             <div key={day.day} className="flex items-center justify-between p-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg">
               <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                  index === 0 ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]' : 'bg-[#2A2A2A] text-gray-400'
-                }`}>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${index === 0 ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]' : 'bg-[#2A2A2A] text-gray-400'
+                  }`}>
                   <span className="text-sm font-bold">#{index + 1}</span>
                 </div>
                 <div>
@@ -1069,22 +1065,21 @@ const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime }) => (
         <div className="text-center py-4">
           <p className="text-5xl font-bold text-white mb-2">{analytics.cancellationRate.toFixed(1)}%</p>
           <p className="text-gray-400 text-sm mb-4">
-            {analytics.cancelledBookings} out of {analytics.bookings.total} bookings
+            {analytics.cancelledBookings} out of {analytics.bookings.totalAll} bookings
           </p>
           <div className="w-full bg-[#0A0A0A] rounded-full h-3 mb-2">
-            <div 
-              className={`h-3 rounded-full ${
-                analytics.cancellationRate > 20 ? 'bg-red-500' : 
-                analytics.cancellationRate > 10 ? 'bg-yellow-500' : 
-                'bg-green-500'
-              }`}
+            <div
+              className={`h-3 rounded-full ${analytics.cancellationRate > 20 ? 'bg-red-500' :
+                analytics.cancellationRate > 10 ? 'bg-yellow-500' :
+                  'bg-green-500'
+                }`}
               style={{ width: `${Math.min(analytics.cancellationRate, 100)}%` }}
             />
           </div>
           <p className="text-xs text-gray-500">
             {analytics.cancellationRate > 20 ? '🔴 High cancellation rate - investigate causes' :
-             analytics.cancellationRate > 10 ? '⚠️ Moderate - send reminders' :
-             '✅ Low cancellation rate'}
+              analytics.cancellationRate > 10 ? '⚠️ Moderate - send reminders' :
+                '✅ Low cancellation rate'}
           </p>
         </div>
       </div>
@@ -1098,7 +1093,7 @@ const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime }) => (
           {analytics.dayStats.map((day, index) => {
             const maxTransactions = Math.max(...analytics.dayStats.map(d => d.transactions))
             const percentage = maxTransactions > 0 ? (day.transactions / maxTransactions) * 100 : 0
-            
+
             return (
               <div key={index}>
                 <div className="flex items-center justify-between text-sm mb-1">
@@ -1106,7 +1101,7 @@ const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime }) => (
                   <span className="text-gray-400 text-xs flex-1 text-right mr-2">{day.transactions} txn</span>
                 </div>
                 <div className="w-full bg-[#0A0A0A] rounded-full h-1.5">
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] h-1.5 rounded-full"
                     style={{ width: `${percentage}%` }}
                   />
@@ -1127,9 +1122,9 @@ const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime }) => (
       {Object.keys(analytics.serviceProductCorrelation).length > 0 ? (
         <div className="space-y-3">
           {Object.entries(analytics.serviceProductCorrelation).slice(0, 5).map(([service, products]) => {
-            const topProduct = Object.entries(products).sort(([,a], [,b]) => b - a)[0]
+            const topProduct = Object.entries(products).sort(([, a], [, b]) => b - a)[0]
             if (!topProduct) return null
-            
+
             return (
               <div key={service} className="p-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg">
                 <div className="flex items-center justify-between">
@@ -1190,11 +1185,10 @@ const PredictiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
             ) : (
               <TrendingUpDown className="h-5 w-5 text-gray-400" />
             )}
-            <p className={`text-xl font-bold ${
-              analytics.forecast.growthTrend === 'Increasing' ? 'text-green-400' :
+            <p className={`text-xl font-bold ${analytics.forecast.growthTrend === 'Increasing' ? 'text-green-400' :
               analytics.forecast.growthTrend === 'Decreasing' ? 'text-red-400' :
-              'text-gray-400'
-            }`}>
+                'text-gray-400'
+              }`}>
               {analytics.forecast.growthTrend}
             </p>
           </div>
@@ -1216,15 +1210,14 @@ const PredictiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
           <p className="text-2xl font-bold text-white mb-2">{analytics.churnRisk.rate.toFixed(1)}%</p>
           <p className="text-gray-400 text-xs">Churn Rate</p>
         </div>
-        <div className={`mt-4 p-3 rounded-lg ${
-          analytics.churnRisk.rate > 20 ? 'bg-red-500/10 border border-red-500/30' :
+        <div className={`mt-4 p-3 rounded-lg ${analytics.churnRisk.rate > 20 ? 'bg-red-500/10 border border-red-500/30' :
           analytics.churnRisk.rate > 10 ? 'bg-yellow-500/10 border border-yellow-500/30' :
-          'bg-green-500/10 border border-green-500/30'
-        }`}>
+            'bg-green-500/10 border border-green-500/30'
+          }`}>
           <p className="text-sm text-gray-300">
             {analytics.churnRisk.rate > 20 ? '🔴 High risk - launch win-back campaign' :
-             analytics.churnRisk.rate > 10 ? '⚠️ Moderate risk - engage inactive customers' :
-             '✅ Low churn - maintain current practices'}
+              analytics.churnRisk.rate > 10 ? '⚠️ Moderate risk - engage inactive customers' :
+                '✅ Low churn - maintain current practices'}
           </p>
         </div>
       </div>
@@ -1246,11 +1239,10 @@ const PredictiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
                     {customer.frequency} visits • Last seen {customer.daysSinceLastVisit} days ago
                   </p>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  customer.churnRisk === 'High' 
-                    ? 'bg-red-500/20 text-red-400' 
-                    : 'bg-yellow-500/20 text-yellow-400'
-                }`}>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${customer.churnRisk === 'High'
+                  ? 'bg-red-500/20 text-red-400'
+                  : 'bg-yellow-500/20 text-yellow-400'
+                  }`}>
                   {customer.churnRisk} Risk
                 </span>
               </div>
@@ -1337,11 +1329,10 @@ const PrescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      promo.priority === 'High' ? 'bg-red-500/20 text-red-400' :
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${promo.priority === 'High' ? 'bg-red-500/20 text-red-400' :
                       promo.priority === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                      'bg-gray-500/20 text-gray-400'
-                    }`}>
+                        'bg-gray-500/20 text-gray-400'
+                      }`}>
                       {promo.priority}
                     </span>
                     <p className="text-white font-medium text-sm">{promo.type}</p>
@@ -1372,11 +1363,10 @@ const PrescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
               <div className="flex items-center justify-between gap-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      alert.urgency === 'Critical' ? 'bg-red-500/20 text-red-400' :
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${alert.urgency === 'Critical' ? 'bg-red-500/20 text-red-400' :
                       alert.urgency === 'High' ? 'bg-yellow-500/20 text-yellow-400' :
-                      'bg-gray-500/20 text-gray-400'
-                    }`}>
+                        'bg-gray-500/20 text-gray-400'
+                      }`}>
                       {alert.urgency}
                     </span>
                     <p className="text-white font-medium text-sm">{alert.product}</p>
@@ -1415,11 +1405,10 @@ const PrescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      rec.priority === 'High' ? 'bg-red-500/20 text-red-400' :
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${rec.priority === 'High' ? 'bg-red-500/20 text-red-400' :
                       rec.priority === 'Medium' ? 'bg-yellow-500/20 text-yellow-400' :
-                      'bg-gray-500/20 text-gray-400'
-                    }`}>
+                        'bg-gray-500/20 text-gray-400'
+                      }`}>
                       {rec.priority}
                     </span>
                     <p className="text-white font-medium text-sm">{rec.type}</p>
