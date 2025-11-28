@@ -19,7 +19,7 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
-  
+
   // Get branch information for the current user
   const branches = useQuery(api.services.branches.getAllBranches) || []
   const currentBranch = branches.find(b => b._id === user?.branch_id)
@@ -104,23 +104,27 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
 
             {/* Desktop Action Buttons */}
             <div className="hidden md:flex items-center space-x-1.5">
-              <Link
-                to="/staff/pos"
-                className="bg-green-500/15 backdrop-blur-sm rounded-xl flex items-center justify-start space-x-1 px-3 py-2 hover:bg-green-500/25 active:scale-95 transition-all duration-200 border border-green-500/25 group touch-manipulation min-w-[44px] h-[44px]"
-                title="POS Mode"
-              >
-                <CreditCard className="w-5 h-5 text-green-400 group-hover:text-green-300 transition-colors duration-200 flex-shrink-0" />
-                <span className="text-green-400 group-hover:text-green-300 font-semibold text-xs transition-colors duration-200">POS</span>
-              </Link>
+              {user?.role !== 'branch_owner' && (
+                <>
+                  <Link
+                    to="/staff/pos"
+                    className="bg-green-500/15 backdrop-blur-sm rounded-xl flex items-center justify-start space-x-1 px-3 py-2 hover:bg-green-500/25 active:scale-95 transition-all duration-200 border border-green-500/25 group touch-manipulation min-w-[44px] h-[44px]"
+                    title="POS Mode"
+                  >
+                    <CreditCard className="w-5 h-5 text-green-400 group-hover:text-green-300 transition-colors duration-200 flex-shrink-0" />
+                    <span className="text-green-400 group-hover:text-green-300 font-semibold text-xs transition-colors duration-200">POS</span>
+                  </Link>
 
-              <Link
-                to="/kiosk"
-                className="bg-blue-500/15 backdrop-blur-sm rounded-xl flex items-center justify-start space-x-1 px-3 py-2 hover:bg-blue-500/25 active:scale-95 transition-all duration-200 border border-blue-500/25 group touch-manipulation min-w-[44px] h-[44px]"
-                title="Kiosk Mode"
-              >
-                <Monitor className="w-5 h-5 text-blue-400 group-hover:text-blue-300 transition-colors duration-200 flex-shrink-0" />
-                <span className="text-blue-400 group-hover:text-blue-300 font-semibold text-xs transition-colors duration-200">Kiosk</span>
-              </Link>
+                  <Link
+                    to="/kiosk"
+                    className="bg-blue-500/15 backdrop-blur-sm rounded-xl flex items-center justify-start space-x-1 px-3 py-2 hover:bg-blue-500/25 active:scale-95 transition-all duration-200 border border-blue-500/25 group touch-manipulation min-w-[44px] h-[44px]"
+                    title="Kiosk Mode"
+                  >
+                    <Monitor className="w-5 h-5 text-blue-400 group-hover:text-blue-300 transition-colors duration-200 flex-shrink-0" />
+                    <span className="text-blue-400 group-hover:text-blue-300 font-semibold text-xs transition-colors duration-200">Kiosk</span>
+                  </Link>
+                </>
+              )}
 
               {/* Notification Bell */}
               <div className="flex-shrink-0">
@@ -176,17 +180,17 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
           </div>
         </div>
       </div>
-      
+
       {/* Profile Modal */}
-      <ProfileModal 
+      <ProfileModal
         isOpen={showProfileModal}
         onClose={() => setShowProfileModal(false)}
         user={user}
         sessionToken={sessionToken}
       />
-      
+
       {/* Settings Modal */}
-      <SettingsModal 
+      <SettingsModal
         isOpen={showSettingsModal}
         onClose={() => setShowSettingsModal(false)}
         currentBranch={currentBranch}
@@ -196,9 +200,9 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
           // Refresh or update UI if needed
         }}
       />
-      
+
       {/* Logout Confirmation Modal */}
-      <LogoutConfirmModal 
+      <LogoutConfirmModal
         isOpen={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
         onConfirm={onLogout}
@@ -208,13 +212,13 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
       {showMobileMenu && createPortal(
         <div className="fixed inset-0 z-[9999] overflow-hidden">
           {/* Backdrop */}
-          <div 
+          <div
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => setShowMobileMenu(false)}
           />
-          
+
           {/* Menu Content */}
-          <div 
+          <div
             className="absolute inset-0 bg-gradient-to-br from-[var(--color-bg)] via-[#1A1A1A] to-[#0F0F0F] overflow-y-auto"
             style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
           >
@@ -243,38 +247,41 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
             {/* Menu Items */}
             <div className="px-4 py-6 space-y-2">
               {/* Quick Actions */}
-              <div className="mb-6">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2">Quick Actions</h3>
-                <div className="space-y-2">
-                  <Link
-                    to="/staff/pos"
-                    onClick={() => setShowMobileMenu(false)}
-                    className="w-full flex items-center space-x-4 px-4 py-4 bg-gradient-to-r from-green-500/10 to-green-500/5 rounded-xl border border-green-500/20 hover:border-green-500/40 transition-all duration-200 touch-manipulation active:scale-[0.98]"
-                  >
-                    <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <CreditCard className="w-6 h-6 text-green-400" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-white font-semibold text-base">POS Mode</p>
-                      <p className="text-gray-400 text-xs mt-0.5">Point of Sale system</p>
-                    </div>
-                  </Link>
+              {/* Quick Actions */}
+              {user?.role !== 'branch_owner' && (
+                <div className="mb-6">
+                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 px-2">Quick Actions</h3>
+                  <div className="space-y-2">
+                    <Link
+                      to="/staff/pos"
+                      onClick={() => setShowMobileMenu(false)}
+                      className="w-full flex items-center space-x-4 px-4 py-4 bg-gradient-to-r from-green-500/10 to-green-500/5 rounded-xl border border-green-500/20 hover:border-green-500/40 transition-all duration-200 touch-manipulation active:scale-[0.98]"
+                    >
+                      <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <CreditCard className="w-6 h-6 text-green-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-white font-semibold text-base">POS Mode</p>
+                        <p className="text-gray-400 text-xs mt-0.5">Point of Sale system</p>
+                      </div>
+                    </Link>
 
-                  <Link
-                    to="/kiosk"
-                    onClick={() => setShowMobileMenu(false)}
-                    className="w-full flex items-center space-x-4 px-4 py-4 bg-gradient-to-r from-blue-500/10 to-blue-500/5 rounded-xl border border-blue-500/20 hover:border-blue-500/40 transition-all duration-200 touch-manipulation active:scale-[0.98]"
-                  >
-                    <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Monitor className="w-6 h-6 text-blue-400" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-white font-semibold text-base">Kiosk Mode</p>
-                      <p className="text-gray-400 text-xs mt-0.5">Customer self-service</p>
-                    </div>
-                  </Link>
+                    <Link
+                      to="/kiosk"
+                      onClick={() => setShowMobileMenu(false)}
+                      className="w-full flex items-center space-x-4 px-4 py-4 bg-gradient-to-r from-blue-500/10 to-blue-500/5 rounded-xl border border-blue-500/20 hover:border-blue-500/40 transition-all duration-200 touch-manipulation active:scale-[0.98]"
+                    >
+                      <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Monitor className="w-6 h-6 text-blue-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-white font-semibold text-base">Kiosk Mode</p>
+                        <p className="text-gray-400 text-xs mt-0.5">Customer self-service</p>
+                      </div>
+                    </Link>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Account Section */}
               <div className="mb-6">

@@ -593,11 +593,22 @@ export const updateVoucher = mutation({
 
 // Delete voucher
 export const deleteVoucher = mutation({
-  args: { id: v.id("vouchers") },
+  args: { id: v.id("vouchers"), user_id: v.id("users") },
   handler: async (ctx, args) => {
     const voucher = await ctx.db.get(args.id);
     if (!voucher) {
       throwUserError(ERROR_CODES.VOUCHER_NOT_FOUND);
+    }
+
+    // Check permissions
+    const user = await ctx.db.get(args.user_id);
+    const isAuthorized =
+      user?.role === "branch_admin" ||
+      user?.role === "admin" ||
+      user?.role === "super_admin";
+
+    if (!isAuthorized) {
+      throw new Error("Unauthorized: Only branch admins can delete vouchers.");
     }
 
     // Delete all assignments first
