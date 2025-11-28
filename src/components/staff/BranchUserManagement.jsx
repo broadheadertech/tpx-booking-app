@@ -8,92 +8,92 @@ import { createPortal } from 'react-dom'
 
 // Delete User Modal Component
 const DeleteUserModal = React.memo(({ isOpen, onClose, onConfirm, user, loading, error }) => {
-    if (!isOpen) return null
+  if (!isOpen) return null
 
-    return createPortal(
-      <div className="fixed inset-0 z-[9999] overflow-y-auto">
-        <div className="flex min-h-full items-center justify-center p-4">
-          <div
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
-            onClick={onClose}
-          />
-          <div className="relative w-full max-w-md transform rounded-2xl bg-[#1A1A1A] shadow-2xl transition-all z-[10000] border border-[#2A2A2A]/50">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-[#444444]/30">
-              <h3 className="text-xl font-bold text-white">Delete User</h3>
-              <button
-                onClick={onClose}
-                className="p-2 text-gray-400 hover:text-white hover:bg-[#333333] rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] overflow-y-auto">
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
+          onClick={onClose}
+        />
+        <div className="relative w-full max-w-md transform rounded-2xl bg-[#1A1A1A] shadow-2xl transition-all z-[10000] border border-[#2A2A2A]/50">
+          {/* Modal Header */}
+          <div className="flex items-center justify-between p-6 border-b border-[#444444]/30">
+            <h3 className="text-xl font-bold text-white">Delete User</h3>
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-white hover:bg-[#333333] rounded-lg transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
 
-            {/* Modal Body */}
-            <div className="p-6">
-              {error && (
-                <div className="mb-4 p-3 bg-red-400/20 border border-red-400/30 rounded-lg flex items-center space-x-2">
-                  <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
-                  <p className="text-sm text-red-400">{error}</p>
-                </div>
-              )}
+          {/* Modal Body */}
+          <div className="p-6">
+            {error && (
+              <div className="mb-4 p-3 bg-red-400/20 border border-red-400/30 rounded-lg flex items-center space-x-2">
+                <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
+                <p className="text-sm text-red-400">{error}</p>
+              </div>
+            )}
 
-              <div className="text-center">
-                <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Trash2 className="h-8 w-8 text-red-400" />
-                </div>
-                
-                <h4 className="text-lg font-semibold text-white mb-2">Confirm Deletion</h4>
-                <p className="text-gray-400 mb-4">
-                  Are you sure you want to delete <strong>{user?.username}</strong>?
+            <div className="text-center">
+              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Trash2 className="h-8 w-8 text-red-400" />
+              </div>
+
+              <h4 className="text-lg font-semibold text-white mb-2">Confirm Deletion</h4>
+              <p className="text-gray-400 mb-4">
+                Are you sure you want to delete <strong>{user?.username}</strong>?
+              </p>
+              <p className="text-sm text-gray-500 mb-6">
+                This action cannot be undone. The user will be permanently removed from the system.
+              </p>
+
+              <div className="bg-gray-500/10 border border-gray-500/30 rounded-lg p-3 mb-6 text-left">
+                <p className="text-sm text-gray-400">
+                  <strong>User Details:</strong><br />
+                  Username: {user?.username}<br />
+                  Email: {user?.email}<br />
+                  Role: {user?.role?.replace('_', ' ').toUpperCase()}
                 </p>
-                <p className="text-sm text-gray-500 mb-6">
-                  This action cannot be undone. The user will be permanently removed from the system.
-                </p>
+              </div>
 
-                <div className="bg-gray-500/10 border border-gray-500/30 rounded-lg p-3 mb-6 text-left">
-                  <p className="text-sm text-gray-400">
-                    <strong>User Details:</strong><br />
-                    Username: {user?.username}<br />
-                    Email: {user?.email}<br />
-                    Role: {user?.role?.replace('_', ' ').toUpperCase()}
-                  </p>
-                </div>
-
-                <div className="flex justify-center space-x-3">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="px-6 py-2 border border-gray-500 text-gray-300 rounded-lg hover:bg-gray-500/20 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onConfirm}
-                    disabled={loading}
-                    className="flex items-center space-x-2 px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {loading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span>Deleting...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="h-4 w-4" />
-                        <span>Delete User</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+              <div className="flex justify-center space-x-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-6 py-2 border border-gray-500 text-gray-300 rounded-lg hover:bg-gray-500/20 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={onConfirm}
+                  disabled={loading}
+                  className="flex items-center space-x-2 px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4" />
+                      <span>Delete User</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>
         </div>
-      </div>,
-      document.body
-    )
+      </div>
+    </div>,
+    document.body
+  )
 })
 
 export default function BranchUserManagement() {
@@ -114,19 +114,19 @@ export default function BranchUserManagement() {
     page_access: [],
     branch_id: user?.branch_id || ''
   }
-  
+
   const [formData, setFormData] = useState(initialFormData)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   // Queries - only get users from current branch
-  const branchUsers = user?.branch_id 
+  const branchUsers = user?.branch_id
     ? useQuery(api.services.auth.getUsersByBranch, { branch_id: user.branch_id }) || []
     : []
-  
+
   const branches = useQuery(api.services.branches.getAllBranches) || []
   const currentBranch = branches.find(b => b._id === user?.branch_id)
-  
+
   // Mutations
   const createUser = useMutation(api.services.auth.createUser)
   const updateUser = useMutation(api.services.auth.updateUser)
@@ -148,7 +148,7 @@ export default function BranchUserManagement() {
 
   const filteredUsers = staffOnly
     .filter(user => {
-      const matchesSearch = 
+      const matchesSearch =
         user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesRole = filterRole === 'all' || user.role === filterRole
@@ -297,7 +297,7 @@ export default function BranchUserManagement() {
     })
   }
 
-  
+
 
   if (!currentBranch) {
     return (
@@ -406,11 +406,11 @@ export default function BranchUserManagement() {
               </tr>
             </thead>
             <tbody className="bg-[#1A1A1A] divide-y divide-[#444444]/30">
-              {filteredUsers.map((user) => {
-                const roleConfig = getRoleColor(user.role)
+              {filteredUsers.map((branchUser) => {
+                const roleConfig = getRoleColor(branchUser.role)
 
                 return (
-                  <tr key={user._id} className="hover:bg-[#333333]/50 transition-colors">
+                  <tr key={branchUser._id} className="hover:bg-[#333333]/50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
@@ -420,50 +420,52 @@ export default function BranchUserManagement() {
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-white">
-                            {user.username}
+                            {branchUser.username}
                           </div>
                           <div className="text-sm text-gray-400">
-                            {user.email}
+                            {branchUser.email}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${roleConfig.bg} ${roleConfig.text}`}>
-                        {user.role.replace('_', ' ').toUpperCase()}
+                        {branchUser.role.replace('_', ' ').toUpperCase()}
                       </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-white">
-                        {user.mobile_number || 'N/A'}
+                        {branchUser.mobile_number || 'N/A'}
                       </div>
-                      {user.address && (
+                      {branchUser.address && (
                         <div className="text-sm text-gray-400 truncate max-w-xs">
-                          {user.address}
+                          {branchUser.address}
                         </div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-white">
-                        {formatDate(user.createdAt)}
+                        {formatDate(branchUser.createdAt)}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
                         <button
-                          onClick={() => handleEdit(user)}
+                          onClick={() => handleEdit(branchUser)}
                           className="text-blue-400 hover:text-blue-300 transition-colors"
                           title="Edit user"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
-                        <button
-                          onClick={() => handleDelete(user)}
-                          className="text-red-400 hover:text-red-300 transition-colors"
-                          title="Delete user"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {(user?.role === 'branch_admin' || user?.role === 'super_admin') && (
+                          <button
+                            onClick={() => handleDelete(branchUser)}
+                            className="text-red-400 hover:text-red-300 transition-colors"
+                            title="Delete user"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

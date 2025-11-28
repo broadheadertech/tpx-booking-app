@@ -809,8 +809,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
         const bookingRows = dateBookings
           .map((b) => {
             const tm = (b.time || "--:--").slice(0, 5);
-            const commInfo = b.commission !== undefined 
-              ? `<span class="muted" style="font-size: 0.9em">(${b.commission_rate}%: ${format(b.commission)})</span>` 
+            const commInfo = b.commission !== undefined
+              ? `<span class="muted" style="font-size: 0.9em">(${b.commission_rate}%: ${format(b.commission)})</span>`
               : "";
             return `<div class="row"><span><span class="muted">${tm}</span> — ${b.service_name} <span class="muted">• ${b.customer_name} • ${b.booking_code}</span></span><span>${format(b.price)} ${commInfo}</span></div>`;
           })
@@ -1297,7 +1297,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
         currency: "PHP",
         minimumFractionDigits: 0,
       }).format(amt || 0);
-    
+
     const dateRange = selectedPeriod
       ? `${formatDate(selectedPeriod.period_start)} – ${formatDate(selectedPeriod.period_end)}`
       : "";
@@ -1326,7 +1326,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     });
 
     const allDates = new Set([...Object.keys(bookingsByDate), ...Object.keys(productsByDate)]);
-    
+
     let grandTotalServiceCommission = 0;
     let grandTotalProductCommission = 0;
     let grandTotalDailySalary = 0;
@@ -1391,7 +1391,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     const records = Array.isArray(currentPeriodRecords)
       ? currentPeriodRecords
       : [];
-    
+
     let targetRecords = [];
     if (payslipTarget === "all") {
       targetRecords = records;
@@ -1418,7 +1418,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
             period_end: selectedPeriod.period_end,
           });
           const products = r.products_detail || []; // Assuming products are already there or don't need fetch
-          
+
           return {
             ...r,
             bookings_detail: items,
@@ -1432,7 +1432,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
 
     const sections = enriched.map(r => generatePayslipCard(r)).join("\n<div style='page-break-after: always; height: 40px;'></div>\n");
     const title = `Payslips – ${selectedPeriod ? formatDate(selectedPeriod.period_start) : ''}`;
-    
+
     // Override print styles for payslip specific look
     const customStyles = `
       ${printStyles}
@@ -1442,7 +1442,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
       .accent { color: #000 !important; }
       hr { border-color: #000 !important; }
     `;
-    
+
     const html = `<!doctype html>
     <html>
       <head>
@@ -1457,7 +1457,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
         </div>
       </body>
     </html>`;
-    
+
     printHtml(html);
     setShowPayslipModal(false);
   };
@@ -1521,9 +1521,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   >
                     <option value="all">All Barbers</option>
                     {(Array.isArray(currentPeriodRecords) ? currentPeriodRecords : []).map(record => (
-                        <option key={record.barber_id} value={record.barber_id}>
-                            {record.barber_name}
-                        </option>
+                      <option key={record.barber_id} value={record.barber_id}>
+                        {record.barber_name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -3107,18 +3107,20 @@ const PayrollManagement = ({ onRefresh, user }) => {
                           >
                             View Details
                           </button>
-                          {period.status !== "paid" && (
-                            <button
-                              onClick={() => {
-                                setDeleteTargetPeriod(period);
-                                setDeleteConfirmText("");
-                                setShowDeleteModal(true);
-                              }}
-                              className="px-3 py-1 bg-red-600/90 text-white rounded text-xs hover:bg-red-600 transition-colors"
-                            >
-                              Delete
-                            </button>
-                          )}
+                          {period.status !== "paid" &&
+                            (user?.role === "branch_admin" ||
+                              user?.role === "super_admin") && (
+                              <button
+                                onClick={() => {
+                                  setDeleteTargetPeriod(period);
+                                  setDeleteConfirmText("");
+                                  setShowDeleteModal(true);
+                                }}
+                                className="px-3 py-1 bg-red-600/90 text-white rounded text-xs hover:bg-red-600 transition-colors"
+                              >
+                                Delete
+                              </button>
+                            )}
                         </div>
                       </td>
                     </tr>

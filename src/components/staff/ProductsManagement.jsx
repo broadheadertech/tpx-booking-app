@@ -11,11 +11,11 @@ const ProductImage = ({ imageUrl, imageStorageId, productName, className }) => {
     imageStorageId ? api.services.products.getImageUrl : undefined,
     imageStorageId ? { storageId: imageStorageId } : undefined
   )
-  
+
   const [imageError, setImageError] = useState(false)
-  
+
   const imageSrc = imageUrl || imageUrlFromStorage
-  
+
   if (imageError || !imageSrc) {
     return (
       <div className="flex flex-col items-center justify-center text-gray-400 w-full h-full">
@@ -24,9 +24,9 @@ const ProductImage = ({ imageUrl, imageStorageId, productName, className }) => {
       </div>
     )
   }
-  
+
   return (
-    <img 
+    <img
       src={imageSrc}
       alt={productName}
       className={className}
@@ -36,7 +36,7 @@ const ProductImage = ({ imageUrl, imageStorageId, productName, className }) => {
   )
 }
 
-const ProductsManagement = ({ onRefresh }) => {
+const ProductsManagement = ({ onRefresh, user }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('all')
   const [filterStock, setFilterStock] = useState('all')
@@ -82,15 +82,15 @@ const ProductsManagement = ({ onRefresh }) => {
         setFormErrors(prev => ({ ...prev, image: 'Image size must be less than 5MB' }))
         return
       }
-      
+
       if (!file.type.startsWith('image/')) {
         setFormErrors(prev => ({ ...prev, image: 'Please select a valid image file' }))
         return
       }
-      
+
       setSelectedImage(file)
       setFormErrors(prev => ({ ...prev, image: '' }))
-      
+
       // Create preview
       const reader = new FileReader()
       reader.onload = (e) => {
@@ -112,24 +112,24 @@ const ProductsManagement = ({ onRefresh }) => {
 
   const handleImageUpload = async () => {
     if (!selectedImage) return null
-    
+
     try {
       setUploadingImage(true)
-      
+
       // Get upload URL
       const uploadUrl = await generateUploadUrl()
-      
+
       // Upload file
       const result = await fetch(uploadUrl, {
         method: 'POST',
         headers: { 'Content-Type': selectedImage.type },
         body: selectedImage,
       })
-      
+
       if (!result.ok) {
         throw new Error('Failed to upload image')
       }
-      
+
       const { storageId } = await result.json()
       return storageId
     } catch (error) {
@@ -152,7 +152,7 @@ const ProductsManagement = ({ onRefresh }) => {
 
   const validateForm = () => {
     const errors = {}
-    
+
     if (!formData.name.trim()) errors.name = 'Product name is required'
     if (!formData.description.trim()) errors.description = 'Description is required'
     if (!formData.price || formData.price <= 0) errors.price = 'Valid price is required'
@@ -161,15 +161,15 @@ const ProductsManagement = ({ onRefresh }) => {
     if (!formData.sku.trim()) errors.sku = 'SKU is required'
     if (!formData.stock || formData.stock < 0) errors.stock = 'Valid stock quantity is required'
     if (!formData.minStock || formData.minStock < 0) errors.minStock = 'Valid minimum stock is required'
-    
+
     // Price validation
     if (formData.price && formData.cost && parseFloat(formData.price) <= parseFloat(formData.cost)) {
       errors.price = 'Price must be higher than cost'
     }
-    
+
     // SKU uniqueness check (excluding current product when editing)
-    const existingSku = products.find(p => 
-      p.sku.toLowerCase() === formData.sku.toLowerCase() && 
+    const existingSku = products.find(p =>
+      p.sku.toLowerCase() === formData.sku.toLowerCase() &&
       (!editingProduct || p._id !== editingProduct._id)
     )
     if (existingSku) {
@@ -194,7 +194,7 @@ const ProductsManagement = ({ onRefresh }) => {
           return // Upload failed, error already set
         }
       }
-      
+
       const productData = {
         name: formData.name,
         description: formData.description,
@@ -208,7 +208,7 @@ const ProductsManagement = ({ onRefresh }) => {
         imageStorageId: imageStorageId || undefined,
         status: formData.status
       }
-      
+
       if (editingProduct) {
         // Update existing product
         await updateProductMutation({
@@ -219,7 +219,7 @@ const ProductsManagement = ({ onRefresh }) => {
         // Create new product
         await createProductMutation(productData)
       }
-      
+
       handleCloseModal()
       onRefresh?.()
     } catch (error) {
@@ -244,19 +244,19 @@ const ProductsManagement = ({ onRefresh }) => {
       imageStorageId: product.imageStorageId || '',
       status: product.status
     })
-    
+
     // Set image preview if product has an image URL (for existing products)
     if (product.imageUrl) {
       setImagePreview(product.imageUrl)
     }
-    
+
     setEditingProduct(product)
     setShowCreateModal(true)
   }
 
   const handleDelete = async (productId) => {
     if (!confirm('Are you sure you want to delete this product?')) return
-    
+
     try {
       await deleteProductMutation({ id: productId })
       onRefresh?.()
@@ -282,7 +282,7 @@ const ProductsManagement = ({ onRefresh }) => {
       status: 'active'
     })
     setFormErrors({})
-    
+
     // Reset image state
     setSelectedImage(null)
     setImagePreview('')
@@ -321,13 +321,13 @@ const ProductsManagement = ({ onRefresh }) => {
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.sku.toLowerCase().includes(searchTerm.toLowerCase())
+      product.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.sku.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesCategory = filterCategory === 'all' || product.category === filterCategory
-    const matchesStock = filterStock === 'all' || 
-                        (filterStock === 'in-stock' && product.stock > product.minStock) ||
-                        (filterStock === 'low-stock' && product.stock > 0 && product.stock <= product.minStock) ||
-                        (filterStock === 'out-of-stock' && product.stock === 0)
+    const matchesStock = filterStock === 'all' ||
+      (filterStock === 'in-stock' && product.stock > product.minStock) ||
+      (filterStock === 'low-stock' && product.stock > 0 && product.stock <= product.minStock) ||
+      (filterStock === 'out-of-stock' && product.stock === 0)
     return matchesSearch && matchesCategory && matchesStock
   })
 
@@ -348,7 +348,7 @@ const ProductsManagement = ({ onRefresh }) => {
           <h2 className="text-3xl font-black text-white">Products & Inventory</h2>
           <p className="text-gray-400 mt-1">Manage your barbershop products and track inventory</p>
         </div>
-        
+
         <div className="flex items-center space-x-3">
           <button
             onClick={() => onRefresh?.()}
@@ -494,13 +494,13 @@ const ProductsManagement = ({ onRefresh }) => {
           {filteredProducts.map((product) => {
             const stockStatus = getStockStatus(product)
             const profitMargin = ((product.price - product.cost) / product.price * 100).toFixed(1)
-            
+
             return (
               <div key={product._id} className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
                 {/* Product Image */}
                 <div className="h-48 bg-gray-100 flex items-center justify-center relative">
                   {product.imageUrl || product.imageStorageId ? (
-                    <ProductImage 
+                    <ProductImage
                       imageUrl={product.imageUrl}
                       imageStorageId={product.imageStorageId}
                       productName={product.name}
@@ -534,10 +534,9 @@ const ProductsManagement = ({ onRefresh }) => {
                     </div>
                     <div className="flex justify-between text-xs">
                       <span className="text-gray-500">Stock:</span>
-                      <span className={`font-semibold ${
-                        product.stock === 0 ? 'text-red-400' : 
-                        product.stock <= product.minStock ? 'text-yellow-400' : 'text-green-400'
-                      }`}>
+                      <span className={`font-semibold ${product.stock === 0 ? 'text-red-400' :
+                          product.stock <= product.minStock ? 'text-yellow-400' : 'text-green-400'
+                        }`}>
                         {product.stock} units
                       </span>
                     </div>
@@ -554,11 +553,10 @@ const ProductsManagement = ({ onRefresh }) => {
                       <span>{Math.round((product.stock / (product.minStock * 2)) * 100)}%</span>
                     </div>
                     <div className="w-full bg-[#444444] rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full transition-all duration-300 ${
-                          product.stock === 0 ? 'bg-red-500' :
-                          product.stock <= product.minStock ? 'bg-yellow-500' : 'bg-green-500'
-                        }`}
+                      <div
+                        className={`h-2 rounded-full transition-all duration-300 ${product.stock === 0 ? 'bg-red-500' :
+                            product.stock <= product.minStock ? 'bg-yellow-500' : 'bg-green-500'
+                          }`}
                         style={{ width: `${Math.min((product.stock / (product.minStock * 2)) * 100, 100)}%` }}
                       ></div>
                     </div>
@@ -582,13 +580,16 @@ const ProductsManagement = ({ onRefresh }) => {
                       >
                         <Edit className="h-4 w-4" />
                       </button>
-                      <button
-                        onClick={() => handleDelete(product._id)}
-                        className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/20 rounded-lg transition-colors"
-                        title="Delete Product"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {(user?.role === "branch_admin" ||
+                        user?.role === "super_admin") && (
+                          <button
+                            onClick={() => handleDelete(product._id)}
+                            className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/20 rounded-lg transition-colors"
+                            title="Delete Product"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                     </div>
                   </div>
                 </div>
@@ -623,9 +624,9 @@ const ProductsManagement = ({ onRefresh }) => {
       )}
 
       {/* Create/Edit Product Modal */}
-      <Modal 
-        isOpen={showCreateModal} 
-        onClose={handleCloseModal} 
+      <Modal
+        isOpen={showCreateModal}
+        onClose={handleCloseModal}
         title={editingProduct ? 'Edit Product' : 'Add New Product'}
         size="xl"
       >
@@ -636,40 +637,40 @@ const ProductsManagement = ({ onRefresh }) => {
               <Camera className="w-5 h-5 mr-2 text-orange-600" />
               Product Image
             </h3>
-            
+
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Image Preview */}
               <div className="flex-1">
                 <div className="relative">
                   {imagePreview ? (
-                     <div className="relative group bg-white rounded-xl overflow-hidden">
-                       <img 
-                         src={imagePreview} 
-                         alt="Product preview" 
-                         className="w-full h-48 object-cover border-2 border-orange-200 shadow-lg"
-                         style={{ display: 'block', maxWidth: '100%', height: '192px' }}
-                         onError={(e) => {
-                           console.error('Image failed to load:', imagePreview)
-                           console.error('Image error event:', e)
-                           setImagePreview('')
-                           setFormErrors(prev => ({ ...prev, image: 'Failed to load image. Please try a different image.' }))
-                         }}
-                         onLoad={(e) => {
-                           console.log('Image loaded successfully:', e.target.src.substring(0, 50) + '...')
-                           setFormErrors(prev => ({ ...prev, image: '' }))
-                         }}
-                       />
-                       <div className="absolute inset-0 bg-transparent group-hover:bg-black group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
-                         <button
-                           type="button"
-                           onClick={handleRemoveImage}
-                           className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
-                         >
-                           <X className="w-4 h-4" />
-                         </button>
-                       </div>
-                     </div>
-                   ) : (
+                    <div className="relative group bg-white rounded-xl overflow-hidden">
+                      <img
+                        src={imagePreview}
+                        alt="Product preview"
+                        className="w-full h-48 object-cover border-2 border-orange-200 shadow-lg"
+                        style={{ display: 'block', maxWidth: '100%', height: '192px' }}
+                        onError={(e) => {
+                          console.error('Image failed to load:', imagePreview)
+                          console.error('Image error event:', e)
+                          setImagePreview('')
+                          setFormErrors(prev => ({ ...prev, image: 'Failed to load image. Please try a different image.' }))
+                        }}
+                        onLoad={(e) => {
+                          console.log('Image loaded successfully:', e.target.src.substring(0, 50) + '...')
+                          setFormErrors(prev => ({ ...prev, image: '' }))
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-transparent group-hover:bg-black group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={handleRemoveImage}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
                     <div className="w-full h-48 border-2 border-dashed border-orange-300 rounded-xl flex flex-col items-center justify-center bg-white/50 hover:bg-white/80 transition-colors duration-200">
                       <Upload className="w-12 h-12 text-orange-400 mb-2" />
                       <p className="text-sm text-gray-600 text-center">
@@ -680,44 +681,44 @@ const ProductsManagement = ({ onRefresh }) => {
                   )}
                 </div>
               </div>
-              
+
               {/* Upload Controls */}
-               <div className="flex-1 space-y-4">
-                 <div>
-                   <input
-                     ref={fileInputRef}
-                     type="file"
-                     accept="image/*"
-                     onChange={handleImageSelect}
-                     className="hidden"
-                   />
-                   <button
-                     type="button"
-                     onClick={() => fileInputRef.current?.click()}
-                     disabled={uploadingImage}
-                     className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-4 rounded-xl transition-colors duration-200 flex items-center justify-center space-x-2 disabled:opacity-50"
-                   >
-                     {uploadingImage ? (
-                       <>
-                         <RefreshCw className="w-4 h-4 animate-spin" />
-                         <span>Uploading...</span>
-                       </>
-                     ) : (
-                       <>
-                         <Upload className="w-4 h-4" />
-                         <span>Choose Image</span>
-                       </>
-                     )}
-                   </button>
-                 </div>
-                 
-                 {formErrors.image && (
-                   <p className="text-sm text-red-600 flex items-center">
-                     <AlertCircle className="h-4 w-4 mr-1" />
-                     {formErrors.image}
-                   </p>
-                 )}
-               </div>
+              <div className="flex-1 space-y-4">
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage}
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-4 rounded-xl transition-colors duration-200 flex items-center justify-center space-x-2 disabled:opacity-50"
+                  >
+                    {uploadingImage ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        <span>Choose Image</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {formErrors.image && (
+                  <p className="text-sm text-red-600 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1" />
+                    {formErrors.image}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -733,9 +734,8 @@ const ProductsManagement = ({ onRefresh }) => {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
-                    formErrors.name ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${formErrors.name ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                    }`}
                   placeholder="Enter product name"
                 />
                 {formErrors.name && (
@@ -754,9 +754,8 @@ const ProductsManagement = ({ onRefresh }) => {
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   rows={4}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 resize-none ${
-                    formErrors.description ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 resize-none ${formErrors.description ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                    }`}
                   placeholder="Describe the product features and benefits"
                 />
                 {formErrors.description && (
@@ -793,9 +792,8 @@ const ProductsManagement = ({ onRefresh }) => {
                     type="text"
                     value={formData.brand}
                     onChange={(e) => setFormData(prev => ({ ...prev, brand: e.target.value }))}
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
-                      formErrors.brand ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
-                    }`}
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${formErrors.brand ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                      }`}
                     placeholder="Product brand"
                   />
                   {formErrors.brand && (
@@ -821,9 +819,8 @@ const ProductsManagement = ({ onRefresh }) => {
                     onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
                     min="0"
                     step="0.01"
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
-                      formErrors.price ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
-                    }`}
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${formErrors.price ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                      }`}
                     placeholder="0.00"
                   />
                   {formErrors.price && (
@@ -844,9 +841,8 @@ const ProductsManagement = ({ onRefresh }) => {
                     onChange={(e) => setFormData(prev => ({ ...prev, cost: e.target.value }))}
                     min="0"
                     step="0.01"
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
-                      formErrors.cost ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
-                    }`}
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${formErrors.cost ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                      }`}
                     placeholder="0.00"
                   />
                   {formErrors.cost && (
@@ -866,9 +862,8 @@ const ProductsManagement = ({ onRefresh }) => {
                   type="text"
                   value={formData.sku}
                   onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value.toUpperCase() }))}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono transition-all duration-200 ${
-                    formErrors.sku ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono transition-all duration-200 ${formErrors.sku ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                    }`}
                   placeholder="PROD-001"
                 />
                 {formErrors.sku && (
@@ -889,9 +884,8 @@ const ProductsManagement = ({ onRefresh }) => {
                     value={formData.stock}
                     onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
                     min="0"
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
-                      formErrors.stock ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
-                    }`}
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${formErrors.stock ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                      }`}
                     placeholder="0"
                   />
                   {formErrors.stock && (
@@ -911,9 +905,8 @@ const ProductsManagement = ({ onRefresh }) => {
                     value={formData.minStock}
                     onChange={(e) => setFormData(prev => ({ ...prev, minStock: e.target.value }))}
                     min="0"
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${
-                      formErrors.minStock ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
-                    }`}
+                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${formErrors.minStock ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                      }`}
                     placeholder="0"
                   />
                   {formErrors.minStock && (

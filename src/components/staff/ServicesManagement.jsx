@@ -169,26 +169,24 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
             <div className="flex items-center bg-[#2A2A2A] rounded-md border border-[#3A3A3A] p-0.5">
               <button
                 onClick={() => setViewMode('card')}
-                className={`p-1.5 rounded-md transition-colors ${
-                  viewMode === 'card'
+                className={`p-1.5 rounded-md transition-colors ${viewMode === 'card'
                     ? 'bg-[var(--color-primary)] text-white'
                     : 'text-gray-500 hover:text-white'
-                }`}
+                  }`}
               >
                 <Grid className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setViewMode('table')}
-                className={`p-1.5 rounded-md transition-colors ${
-                  viewMode === 'table'
+                className={`p-1.5 rounded-md transition-colors ${viewMode === 'table'
                     ? 'bg-[var(--color-primary)] text-white'
                     : 'text-gray-500 hover:text-white'
-                }`}
+                  }`}
               >
                 <List className="h-4 w-4" />
               </button>
             </div>
-            
+
             <button
               onClick={onRefresh}
               className="flex items-center space-x-1.5 px-3 py-2 bg-[#2A2A2A] text-gray-300 rounded-md hover:bg-[#333333] transition-colors text-sm border border-[#3A3A3A]"
@@ -242,27 +240,28 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
                   >
                     <Edit className="h-4 w-4" />
                   </button>
-                  <button
-                    onClick={() => handleDelete(service)}
-                    className="p-2 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded-lg transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  {(user?.role === 'branch_admin' || user?.role === 'super_admin') && (
+                    <button
+                      onClick={() => handleDelete(service)}
+                      className="p-2 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded-lg transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
 
               <div className="space-y-3">
                 <p className="text-sm text-gray-300">{service.description}</p>
-                
+
                 <div className="flex items-center justify-between py-2 px-3 bg-[#1A1A1A] rounded-lg">
                   <div className="flex items-center space-x-2">
                     <DollarSign className="h-4 w-4 text-[var(--color-primary)]" />
                     <span className="text-sm font-medium text-gray-300">Price</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`text-lg font-bold ${
-                      service.hide_price ? 'text-gray-400' : 'text-[var(--color-primary)]'
-                    }`}>
+                    <span className={`text-lg font-bold ${service.hide_price ? 'text-gray-400' : 'text-[var(--color-primary)]'
+                      }`}>
                       {service.hide_price ? 'Discrete' : `₱${parseFloat(service.price).toFixed(2)}`}
                     </span>
                     {service.hide_price && (
@@ -286,18 +285,17 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
                   <div className="flex items-center space-x-2">
                     <span className="text-sm font-medium text-gray-300">Status</span>
                   </div>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    service.is_active 
-                      ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${service.is_active
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                       : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                  }`}>
+                    }`}>
                     {service.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </div>
               </div>
 
               <div className="mt-4 pt-4 border-t border-[#444444]/30">
-                <button 
+                <button
                   onClick={() => handleEdit(service)}
                   className="w-full px-3 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg hover:from-[var(--color-accent)] hover:brightness-110 transition-colors text-sm font-medium"
                 >
@@ -353,9 +351,8 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <div className={`text-sm font-medium ${
-                          service.hide_price ? 'text-gray-400' : 'text-[var(--color-primary)]'
-                        }`}>
+                        <div className={`text-sm font-medium ${service.hide_price ? 'text-gray-400' : 'text-[var(--color-primary)]'
+                          }`}>
                           {service.hide_price ? 'Discrete' : `₱${parseFloat(service.price).toFixed(2)}`}
                         </div>
                         {service.hide_price && (
@@ -370,11 +367,10 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
                       <div className="text-sm text-gray-300">{service.duration_minutes} mins</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        service.is_active 
-                          ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${service.is_active
+                          ? 'bg-green-500/20 text-green-400 border border-green-500/30'
                           : 'bg-red-500/20 text-red-400 border border-red-500/30'
-                      }`}>
+                        }`}>
                         {service.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
@@ -386,12 +382,14 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
                         >
                           <Edit className="h-4 w-4" />
                         </button>
-                        <button
-                          onClick={() => handleDelete(service)}
-                          className="p-2 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded-lg transition-colors"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {(user?.role === 'branch_admin' || user?.role === 'super_admin') && (
+                          <button
+                            onClick={() => handleDelete(service)}
+                            className="p-2 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded-lg transition-colors"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -433,11 +431,10 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
             <button
               onClick={handlePreviousPage}
               disabled={currentPage === 1}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                currentPage === 1
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${currentPage === 1
                   ? 'text-gray-500 cursor-not-allowed'
                   : 'text-white hover:bg-[#2A2A2A]'
-              }`}
+                }`}
             >
               <ChevronLeft className="w-4 h-4" />
               <span className="text-sm">Previous</span>
@@ -455,11 +452,10 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
             <button
               onClick={handleNextPage}
               disabled={currentPage === totalPages}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                currentPage === totalPages
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${currentPage === totalPages
                   ? 'text-gray-500 cursor-not-allowed'
                   : 'text-white hover:bg-[#2A2A2A]'
-              }`}
+                }`}
             >
               <span className="text-sm">Next</span>
               <ChevronRight className="w-4 h-4" />

@@ -364,11 +364,10 @@ const NotificationsManagement = ({ onRefresh }) => {
                   key={option.value}
                   onClick={() => setFilterType(option.value)}
                   type="button"
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    isActive
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${isActive
                       ? 'bg-[var(--color-primary)] text-white'
                       : 'bg-[#1A1A1A] text-gray-400 hover:text-gray-200 border border-[#444444]'
-                  }`}
+                    }`}
                 >
                   {option.icon}
                   <span>{option.label}</span>
@@ -424,9 +423,8 @@ const NotificationsManagement = ({ onRefresh }) => {
               return (
                 <div
                   key={notification._id}
-                  className={`px-4 py-4 hover:bg-[#333333]/50 transition-colors ${
-                    isUnread ? 'bg-[#2A2A2A] border-l-2 border-l-[var(--color-primary)]' : ''
-                  }`}
+                  className={`px-4 py-4 hover:bg-[#333333]/50 transition-colors ${isUnread ? 'bg-[#2A2A2A] border-l-2 border-l-[var(--color-primary)]' : ''
+                    }`}
                 >
                   {isUnread && (
                     <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-[var(--color-primary)]" aria-hidden="true" />
@@ -472,13 +470,16 @@ const NotificationsManagement = ({ onRefresh }) => {
                           <CheckCheck className="w-4 h-4" />
                         </button>
                       )}
-                      <button
-                        onClick={() => handleDelete(notification._id)}
-                        className="p-2 rounded-lg border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {(user?.role === "branch_admin" ||
+                        user?.role === "super_admin") && (
+                          <button
+                            onClick={() => handleDelete(notification._id)}
+                            className="p-2 rounded-lg border border-red-500/30 text-red-300 hover:bg-red-500/10 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                     </div>
                   </div>
                 </div>
@@ -601,11 +602,10 @@ const NotificationComposerModal = ({ isOpen, onClose, onSubmit, isSubmitting }) 
                     key={option.value}
                     type="button"
                     onClick={() => setType(option.value)}
-                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold transition-all duration-200 ${
-                      isActive
+                    className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold transition-all duration-200 ${isActive
                         ? 'border-[var(--color-primary)]/40 bg-[var(--color-primary)]/15 text-[#FF9F5C]'
                         : 'border-[#2F2F2F] text-gray-400 hover:text-gray-200'
-                    }`}
+                      }`}
                   >
                     {option.icon}
                     <span>{option.label}</span>
@@ -632,11 +632,10 @@ const NotificationComposerModal = ({ isOpen, onClose, onSubmit, isSubmitting }) 
                     key={option.value}
                     type="button"
                     onClick={() => setPriority(option.value)}
-                    className={`px-3 py-2 rounded-lg border text-xs font-semibold transition-all duration-200 ${
-                      isActive
+                    className={`px-3 py-2 rounded-lg border text-xs font-semibold transition-all duration-200 ${isActive
                         ? 'border-[var(--color-primary)]/40 bg-[var(--color-primary)]/15 text-[#FF9F5C]'
                         : 'border-[#2F2F2F] text-gray-400 hover:text-gray-200'
-                    }`}
+                      }`}
                   >
                     {option.label}
                   </button>

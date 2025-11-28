@@ -30,9 +30,9 @@ const EventsManagement = ({ onRefresh, user }) => {
   const [isFormValid, setIsFormValid] = useState(false)
 
   // Convex queries and mutations - use branch-scoped queries for staff
-  const events = user?.role === 'super_admin' 
+  const events = user?.role === 'super_admin'
     ? useQuery(api.services.events.getAllEvents)
-    : user?.branch_id 
+    : user?.branch_id
       ? useQuery(api.services.events.getEventsByBranch, { branch_id: user.branch_id })
       : []
   const createEvent = useMutation(api.services.events.createEvent)
@@ -44,7 +44,7 @@ const EventsManagement = ({ onRefresh, user }) => {
   // Real-time field validation
   const validateField = (field, value) => {
     const errors = { ...validationErrors }
-    
+
     switch (field) {
       case 'title':
         if (!value.trim()) {
@@ -57,7 +57,7 @@ const EventsManagement = ({ onRefresh, user }) => {
           delete errors.title
         }
         break
-        
+
       case 'description':
         if (!value.trim()) {
           errors.description = 'Description is required'
@@ -69,7 +69,7 @@ const EventsManagement = ({ onRefresh, user }) => {
           delete errors.description
         }
         break
-        
+
       case 'date':
         if (!value) {
           errors.date = 'Date is required'
@@ -84,7 +84,7 @@ const EventsManagement = ({ onRefresh, user }) => {
           }
         }
         break
-        
+
       case 'time':
         if (!value) {
           errors.time = 'Time is required'
@@ -92,7 +92,7 @@ const EventsManagement = ({ onRefresh, user }) => {
           delete errors.time
         }
         break
-        
+
       case 'location':
         if (!value.trim()) {
           errors.location = 'Location is required'
@@ -104,7 +104,7 @@ const EventsManagement = ({ onRefresh, user }) => {
           delete errors.location
         }
         break
-        
+
       case 'maxAttendees':
         const attendees = parseInt(value)
         if (!value || isNaN(attendees)) {
@@ -117,7 +117,7 @@ const EventsManagement = ({ onRefresh, user }) => {
           delete errors.maxAttendees
         }
         break
-        
+
       case 'price':
         const price = parseFloat(value)
         if (value && (isNaN(price) || price < 0)) {
@@ -129,7 +129,7 @@ const EventsManagement = ({ onRefresh, user }) => {
         }
         break
     }
-    
+
     setValidationErrors(errors)
     return Object.keys(errors).length === 0
   }
@@ -145,12 +145,12 @@ const EventsManagement = ({ onRefresh, user }) => {
   // Validate entire form
   const validateForm = () => {
     const errors = {}
-    
+
     // Validate all fields
     Object.keys(formData).forEach(field => {
       validateField(field, formData[field])
     })
-    
+
     // Check final validation state
     const hasErrors = Object.keys(validationErrors).length > 0
     setFormErrors(validationErrors)
@@ -164,7 +164,7 @@ const EventsManagement = ({ onRefresh, user }) => {
     setIsSubmitting(true)
     setError('')
     setSuccessMessage('')
-    
+
     try {
       const eventData = {
         title: formData.title.trim(),
@@ -178,7 +178,7 @@ const EventsManagement = ({ onRefresh, user }) => {
         status: formData.status,
         branch_id: user.branch_id // Add branch_id for branch-scoped events
       }
-      
+
       if (editingEvent) {
         // Update existing event - don't include branch_id for updates
         const { branch_id, ...updateData } = eventData
@@ -192,18 +192,18 @@ const EventsManagement = ({ onRefresh, user }) => {
         await createEvent(eventData)
         setSuccessMessage('Event created successfully!')
       }
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => setSuccessMessage(''), 3000)
-      
+
       handleCloseModal()
       onRefresh?.()
     } catch (error) {
       console.error('Error saving event:', error)
-      
+
       // Handle specific error types
       let errorMessage = 'Failed to save event'
-      
+
       if (error.message?.includes('EVENT_PAST_DATE')) {
         errorMessage = 'Event date cannot be in the past'
       } else if (error.message?.includes('EVENT_NOT_FOUND')) {
@@ -217,7 +217,7 @@ const EventsManagement = ({ onRefresh, user }) => {
       } else if (error.message) {
         errorMessage = error.message
       }
-      
+
       setError(errorMessage)
     } finally {
       setIsSubmitting(false)
@@ -249,7 +249,7 @@ const EventsManagement = ({ onRefresh, user }) => {
 
   const confirmDelete = async () => {
     if (!showDeleteConfirm) return
-    
+
     try {
       await deleteEvent({ id: showDeleteConfirm })
       setSuccessMessage('Event deleted successfully!')
@@ -257,9 +257,9 @@ const EventsManagement = ({ onRefresh, user }) => {
       onRefresh?.()
     } catch (error) {
       console.error('Error deleting event:', error)
-      
+
       let errorMessage = 'Failed to delete event'
-      
+
       if (error.message?.includes('EVENT_NOT_FOUND')) {
         errorMessage = 'Event not found'
       } else if (error.message?.includes('network')) {
@@ -269,7 +269,7 @@ const EventsManagement = ({ onRefresh, user }) => {
       } else if (error.message) {
         errorMessage = error.message
       }
-      
+
       setError(errorMessage)
     } finally {
       setShowDeleteConfirm(null)
@@ -304,7 +304,7 @@ const EventsManagement = ({ onRefresh, user }) => {
     return createPortal(
       <div className="fixed inset-0 z-[9999] overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
-          <div 
+          <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
             onClick={handleCloseModal}
           />
@@ -331,7 +331,7 @@ const EventsManagement = ({ onRefresh, user }) => {
                     </div>
                   </div>
                 )}
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -345,10 +345,9 @@ const EventsManagement = ({ onRefresh, user }) => {
                           setFormData(prev => ({ ...prev, title: e.target.value }))
                           validateField('title', e.target.value)
                         }}
-                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
-                          validationErrors.title ? 'border-red-500' : 
-                          formData.title && !validationErrors.title ? 'border-green-500' : 'border-[#2A2A2A]'
-                        }`}
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${validationErrors.title ? 'border-red-500' :
+                            formData.title && !validationErrors.title ? 'border-green-500' : 'border-[#2A2A2A]'
+                          }`}
                         placeholder="Enter event title"
                       />
                       {formData.title && !validationErrors.title && (
@@ -378,10 +377,9 @@ const EventsManagement = ({ onRefresh, user }) => {
                           validateField('description', e.target.value)
                         }}
                         rows={3}
-                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none ${
-                          validationErrors.description ? 'border-red-500' : 
-                          formData.description && !validationErrors.description ? 'border-green-500' : 'border-[#2A2A2A]'
-                        }`}
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent resize-none ${validationErrors.description ? 'border-red-500' :
+                            formData.description && !validationErrors.description ? 'border-green-500' : 'border-[#2A2A2A]'
+                          }`}
                         placeholder="Describe the event"
                       />
                       {formData.description && !validationErrors.description && (
@@ -412,10 +410,9 @@ const EventsManagement = ({ onRefresh, user }) => {
                           validateField('date', e.target.value)
                         }}
                         min={new Date().toISOString().split('T')[0]}
-                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
-                          validationErrors.date ? 'border-red-500' : 
-                          formData.date && !validationErrors.date ? 'border-green-500' : 'border-[#2A2A2A]'
-                        }`}
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${validationErrors.date ? 'border-red-500' :
+                            formData.date && !validationErrors.date ? 'border-green-500' : 'border-[#2A2A2A]'
+                          }`}
                       />
                       {formData.date && !validationErrors.date && (
                         <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-400" />
@@ -441,10 +438,9 @@ const EventsManagement = ({ onRefresh, user }) => {
                           setFormData(prev => ({ ...prev, time: e.target.value }))
                           validateField('time', e.target.value)
                         }}
-                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
-                          validationErrors.time ? 'border-red-500' : 
-                          formData.time && !validationErrors.time ? 'border-green-500' : 'border-[#2A2A2A]'
-                        }`}
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${validationErrors.time ? 'border-red-500' :
+                            formData.time && !validationErrors.time ? 'border-green-500' : 'border-[#2A2A2A]'
+                          }`}
                       />
                       {formData.time && !validationErrors.time && (
                         <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-green-400" />
@@ -470,10 +466,9 @@ const EventsManagement = ({ onRefresh, user }) => {
                           setFormData(prev => ({ ...prev, location: e.target.value }))
                           validateField('location', e.target.value)
                         }}
-                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
-                          validationErrors.location ? 'border-red-500' : 
-                          formData.location && !validationErrors.location ? 'border-green-500' : 'border-[#2A2A2A]'
-                        }`}
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${validationErrors.location ? 'border-red-500' :
+                            formData.location && !validationErrors.location ? 'border-green-500' : 'border-[#2A2A2A]'
+                          }`}
                         placeholder="Event location"
                       />
                       {formData.location && !validationErrors.location && (
@@ -505,10 +500,9 @@ const EventsManagement = ({ onRefresh, user }) => {
                         }}
                         min="1"
                         max="1000"
-                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
-                          validationErrors.maxAttendees ? 'border-red-500' : 
-                          formData.maxAttendees && !validationErrors.maxAttendees ? 'border-green-500' : 'border-[#2A2A2A]'
-                        }`}
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${validationErrors.maxAttendees ? 'border-red-500' :
+                            formData.maxAttendees && !validationErrors.maxAttendees ? 'border-green-500' : 'border-[#2A2A2A]'
+                          }`}
                         placeholder="Maximum attendees"
                       />
                       {formData.maxAttendees && !validationErrors.maxAttendees && (
@@ -538,10 +532,9 @@ const EventsManagement = ({ onRefresh, user }) => {
                         min="0"
                         max="100000"
                         step="0.01"
-                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${
-                          validationErrors.price ? 'border-red-500' : 
-                          formData.price && !validationErrors.price ? 'border-green-500' : 'border-[#2A2A2A]'
-                        }`}
+                        className={`w-full bg-[#1A1A1A] border text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent ${validationErrors.price ? 'border-red-500' :
+                            formData.price && !validationErrors.price ? 'border-green-500' : 'border-[#2A2A2A]'
+                          }`}
                         placeholder="0.00 (Free event)"
                       />
                       {formData.price && !validationErrors.price && (
@@ -635,7 +628,7 @@ const EventsManagement = ({ onRefresh, user }) => {
     return createPortal(
       <div className="fixed inset-0 z-[9999] overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
-          <div 
+          <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
             onClick={() => setShowDeleteConfirm(null)}
           />
@@ -746,7 +739,7 @@ const EventsManagement = ({ onRefresh, user }) => {
 
   const filteredEvents = events ? events.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         event.description.toLowerCase().includes(searchTerm.toLowerCase())
+      event.description.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesFilter = filterStatus === 'all' || event.status === filterStatus
     return matchesSearch && matchesFilter
   }) : []
@@ -766,7 +759,7 @@ const EventsManagement = ({ onRefresh, user }) => {
           <h2 className="text-3xl font-black text-white">Events Management</h2>
           <p className="text-gray-400 mt-1">Organize and manage barbershop events and workshops</p>
         </div>
-        
+
         <div className="flex items-center space-x-3">
           <button
             onClick={() => onRefresh?.()}
@@ -899,7 +892,7 @@ const EventsManagement = ({ onRefresh, user }) => {
           {filteredEvents.map((event) => {
             const statusConfig = getStatusConfig(event.status)
             const attendancePercentage = (event.currentAttendees / event.maxAttendees) * 100
-            
+
             return (
               <div key={event._id} className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm hover:shadow-md transition-shadow p-6">
                 <div className="flex items-start justify-between mb-4">
@@ -920,11 +913,11 @@ const EventsManagement = ({ onRefresh, user }) => {
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center text-sm text-gray-400">
                     <Calendar className="h-4 w-4 mr-2" />
-                    {new Date(event.date).toLocaleDateString('en-US', { 
-                      weekday: 'short', 
-                      year: 'numeric', 
-                      month: 'short', 
-                      day: 'numeric' 
+                    {new Date(event.date).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
                     })}
                   </div>
                   <div className="flex items-center text-sm text-gray-400">
@@ -952,7 +945,7 @@ const EventsManagement = ({ onRefresh, user }) => {
                     <span>{Math.round(attendancePercentage)}%</span>
                   </div>
                   <div className="w-full bg-[#444444] rounded-full h-2">
-                    <div 
+                    <div
                       className="bg-[var(--color-primary)] h-2 rounded-full transition-all duration-300"
                       style={{ width: `${Math.min(attendancePercentage, 100)}%` }}
                     ></div>
@@ -971,13 +964,16 @@ const EventsManagement = ({ onRefresh, user }) => {
                     >
                       <Edit className="h-4 w-4" />
                     </button>
-                    <button
-                      onClick={() => handleDelete(event._id)}
-                      className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/20 rounded-lg transition-colors"
-                      title="Delete Event"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {(user?.role === "branch_admin" ||
+                      user?.role === "super_admin") && (
+                        <button
+                          onClick={() => handleDelete(event._id)}
+                          className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/20 rounded-lg transition-colors"
+                          title="Delete Event"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
                   </div>
                 </div>
               </div>
@@ -991,7 +987,7 @@ const EventsManagement = ({ onRefresh, user }) => {
           <Calendar className="mx-auto h-12 w-12 text-gray-300" />
           <h3 className="mt-2 text-sm font-medium text-gray-900">No events found</h3>
           <p className="mt-1 text-sm text-gray-500">
-            {searchTerm || filterStatus !== 'all' 
+            {searchTerm || filterStatus !== 'all'
               ? 'Try adjusting your search or filter criteria.'
               : 'Get started by creating your first event.'
             }

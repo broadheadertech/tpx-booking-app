@@ -36,7 +36,7 @@ const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
   )
 }
 
-const BarbersManagement = ({ barbers = [], onRefresh }) => {
+const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('name')
@@ -477,13 +477,15 @@ const BarbersManagement = ({ barbers = [], onRefresh }) => {
                         >
                           <Edit className="h-4 w-4" />
                         </button>
-                        <button
-                          onClick={() => setShowDeleteConfirm(barber)}
-                          className="text-red-400 hover:text-red-300 p-1 rounded"
-                          title="Delete"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {(user?.role === 'branch_admin' || user?.role === 'super_admin') && (
+                          <button
+                            onClick={() => setShowDeleteConfirm(barber)}
+                            className="text-red-400 hover:text-red-300 p-1 rounded"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

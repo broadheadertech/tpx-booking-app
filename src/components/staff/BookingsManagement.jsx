@@ -48,18 +48,18 @@ const BookingsManagement = ({ onRefresh, user }) => {
   }, [])
 
   // Convex queries - use branch-scoped queries for staff, global for super_admin
-  const bookings = user?.role === 'super_admin' 
+  const bookings = user?.role === 'super_admin'
     ? (useQuery(api.services.bookings.getAllBookings) || [])
-    : user?.branch_id 
+    : user?.branch_id
       ? (useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id }) || [])
       : []
-      
+
   const services = user?.role === 'super_admin'
     ? (useQuery(api.services.services.getAllServices) || [])
     : user?.branch_id
       ? (useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id }) || [])
       : []
-      
+
   const barbers = user?.role === 'super_admin'
     ? (useQuery(api.services.barbers.getActiveBarbers) || [])
     : user?.branch_id
@@ -135,26 +135,26 @@ const BookingsManagement = ({ onRefresh, user }) => {
         (booking.booking_code || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (booking.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase())
       const matchesFilter = filterStatus === 'all' || booking.status === filterStatus
-      
+
       // Date filter
       let matchesDate = true
       if (startDate || endDate) {
         const bookingDate = new Date(booking.date)
         bookingDate.setHours(0, 0, 0, 0)
-        
+
         if (startDate) {
           const start = new Date(startDate)
           start.setHours(0, 0, 0, 0)
           if (bookingDate < start) matchesDate = false
         }
-        
+
         if (endDate && matchesDate) {
           const end = new Date(endDate)
           end.setHours(23, 59, 59, 999)
           if (bookingDate > end) matchesDate = false
         }
       }
-      
+
       return matchesSearch && matchesFilter && matchesDate
     })
     .sort((a, b) => {
@@ -351,9 +351,9 @@ const BookingsManagement = ({ onRefresh, user }) => {
 
     setLoading(true)
     try {
-      await cancelBookingMutation({ 
-        id: cancelModal.booking._id, 
-        reason: 'Cancelled by staff' 
+      await cancelBookingMutation({
+        id: cancelModal.booking._id,
+        reason: 'Cancelled by staff'
       })
       setCancelModal({ show: false, booking: null })
       // Convex will automatically update the UI via real-time subscription
@@ -470,7 +470,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
 
   const formatTime = (timeString) => {
     if (!timeString || timeString === 'N/A') return 'N/A'
-    
+
     // Handle time strings that might have seconds or microseconds
     let cleanTime = timeString
     if (timeString.includes('.')) {
@@ -479,7 +479,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
     if (cleanTime.split(':').length > 2) {
       cleanTime = cleanTime.split(':').slice(0, 2).join(':') // Remove seconds
     }
-    
+
     try {
       return new Date(`1970-01-01T${cleanTime}`).toLocaleTimeString('en-US', {
         hour: 'numeric',
@@ -504,9 +504,9 @@ const BookingsManagement = ({ onRefresh, user }) => {
       }
 
       if (diffMins < 10) {
-        return { 
-          text: `${diffMins}m`, 
-          color: 'red', 
+        return {
+          text: `${diffMins}m`,
+          color: 'red',
           show: true,
           bgClass: 'bg-red-500/20',
           textClass: 'text-red-400',
@@ -515,9 +515,9 @@ const BookingsManagement = ({ onRefresh, user }) => {
       }
 
       if (diffMins < 20) {
-        return { 
-          text: `${diffMins}m`, 
-          color: 'yellow', 
+        return {
+          text: `${diffMins}m`,
+          color: 'yellow',
           show: true,
           bgClass: 'bg-yellow-500/20',
           textClass: 'text-yellow-400',
@@ -526,9 +526,9 @@ const BookingsManagement = ({ onRefresh, user }) => {
       }
 
       if (diffMins < 30) {
-        return { 
-          text: `${diffMins}m`, 
-          color: 'green', 
+        return {
+          text: `${diffMins}m`,
+          color: 'green',
           show: true,
           bgClass: 'bg-green-500/20',
           textClass: 'text-green-400',
@@ -537,7 +537,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
       }
 
       if (diffMins < 60) {
-        return { text: `${diffMins}m`, color: 'blue', show: true,
+        return {
+          text: `${diffMins}m`, color: 'blue', show: true,
           bgClass: 'bg-blue-500/20',
           textClass: 'text-blue-400',
           borderClass: 'border-blue-500/30'
@@ -546,7 +547,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
 
       const hours = Math.floor(diffMins / 60)
       if (hours < 24) {
-        return { text: `${hours}h`, color: 'blue', show: true,
+        return {
+          text: `${hours}h`, color: 'blue', show: true,
           bgClass: 'bg-blue-500/20',
           textClass: 'text-blue-400',
           borderClass: 'border-blue-500/30'
@@ -554,7 +556,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
       }
 
       const days = Math.floor(hours / 24)
-      return { text: `${days}d`, color: 'gray', show: true,
+      return {
+        text: `${days}d`, color: 'gray', show: true,
         bgClass: 'bg-gray-500/20',
         textClass: 'text-gray-400',
         borderClass: 'border-gray-500/30'
@@ -599,7 +602,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
     return createPortal(
       <div className="fixed inset-0 z-[9999] overflow-y-auto">
         <div className="flex min-h-full items-center justify-center p-4">
-          <div 
+          <div
             className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
             onClick={onClose}
           />
@@ -668,7 +671,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
   // Mini QR Code Component for table
   const MiniQRCode = ({ booking }) => {
     const miniQrRef = useRef(null)
-    
+
     const qrData = JSON.stringify({
       bookingId: booking._id,
       bookingCode: booking.booking_code,
@@ -1091,11 +1094,10 @@ const BookingsManagement = ({ onRefresh, user }) => {
                               <div className="text-sm font-bold text-green-400">₱{payment.amount?.toFixed(2) || '0.00'}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                payment.status === 'completed' ? 'bg-green-50 text-green-700' :
-                                payment.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
-                                'bg-red-50 text-red-700'
-                              }`}>
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.status === 'completed' ? 'bg-green-50 text-green-700' :
+                                  payment.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
+                                    'bg-red-50 text-red-700'
+                                }`}>
                                 {payment.status}
                               </span>
                             </td>
@@ -1238,13 +1240,13 @@ const BookingsManagement = ({ onRefresh, user }) => {
     const service = services.find(s => s._id === booking.service)
 
     return createPortal(
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{zIndex: 99999}}>
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 99999 }}>
         <div className="bg-[#1A1A1A] rounded-2xl p-6 max-w-md w-full shadow-2xl border border-[#2A2A2A]/50">
           <div className="text-center space-y-4">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto bg-red-500/20">
               <Ban className="w-6 h-6 text-red-400" />
             </div>
-            
+
             <div>
               <h3 className="text-lg font-bold mb-2 text-white">
                 Cancel Confirmed Booking
@@ -1328,13 +1330,13 @@ const BookingsManagement = ({ onRefresh, user }) => {
     const service = services.find(s => s._id === booking.service)
 
     return createPortal(
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{zIndex: 99999}}>
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 99999 }}>
         <div className="bg-[#1A1A1A] rounded-2xl p-6 max-w-md w-full shadow-2xl border border-[#2A2A2A]/50">
           <div className="text-center space-y-4">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto bg-red-500/20">
               <Trash2 className="w-6 h-6 text-red-400" />
             </div>
-            
+
             <div>
               <h3 className="text-lg font-bold mb-2 text-white">
                 Delete Booking
@@ -1429,78 +1431,78 @@ const BookingsManagement = ({ onRefresh, user }) => {
               </div>
             ) : (
               <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-[#444444]/30">
-                <thead className="bg-[#2A2A2A]">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Booking Code
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Service
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Date
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Payment
-                    </th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-[#1A1A1A] divide-y divide-[#2A2A2A]/30">
-                  {(filteredBookings || []).slice(0, 10).map((booking) => {
-                    const statusConfig = getStatusConfig(booking.status)
-                    const paymentStatusConfig = getPaymentStatusConfig(booking.payment_status || 'unpaid')
-                    const StatusIcon = statusConfig.icon
-                    const PaymentStatusIcon = paymentStatusConfig.icon
-                    const service = services.find(s => s._id === booking.service)
+                <table className="min-w-full divide-y divide-[#444444]/30">
+                  <thead className="bg-[#2A2A2A]">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Booking Code
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Service
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Date
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Payment
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Action
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-[#1A1A1A] divide-y divide-[#2A2A2A]/30">
+                    {(filteredBookings || []).slice(0, 10).map((booking) => {
+                      const statusConfig = getStatusConfig(booking.status)
+                      const paymentStatusConfig = getPaymentStatusConfig(booking.payment_status || 'unpaid')
+                      const StatusIcon = statusConfig.icon
+                      const PaymentStatusIcon = paymentStatusConfig.icon
+                      const service = services.find(s => s._id === booking.service)
 
-                    return (
-                      <tr key={booking._id} className="hover:bg-[#333333]/50">
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="text-sm font-mono font-bold text-white">
-                            #{booking.booking_code}
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="text-sm text-white">
-                            {service?.name || 'Unknown'}
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <div className="text-sm text-white">
-                            {formatDate(booking.date)}
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusConfig.bg} ${statusConfig.text}`}>
-                            {statusConfig.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${paymentStatusConfig.bg} ${paymentStatusConfig.text}`}>
-                            {paymentStatusConfig.label}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-right">
-                          <button
-                            onClick={() => setSelectedBooking(booking)}
-                            className="inline-flex items-center px-3 py-1 border border-blue-500/30 text-xs font-medium rounded text-blue-400 bg-blue-400/20 hover:bg-blue-400/30 transition-colors"
-                          >
-                            View Details
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
+                      return (
+                        <tr key={booking._id} className="hover:bg-[#333333]/50">
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="text-sm font-mono font-bold text-white">
+                              #{booking.booking_code}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="text-sm text-white">
+                              {service?.name || 'Unknown'}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="text-sm text-white">
+                              {formatDate(booking.date)}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusConfig.bg} ${statusConfig.text}`}>
+                              {statusConfig.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${paymentStatusConfig.bg} ${paymentStatusConfig.text}`}>
+                              {paymentStatusConfig.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-right">
+                            <button
+                              onClick={() => setSelectedBooking(booking)}
+                              className="inline-flex items-center px-3 py-1 border border-blue-500/30 text-xs font-medium rounded text-blue-400 bg-blue-400/20 hover:bg-blue-400/30 transition-colors"
+                            >
+                              View Details
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
@@ -1597,11 +1599,10 @@ const BookingsManagement = ({ onRefresh, user }) => {
                         <div className="text-sm font-bold text-green-400">₱{payment.amount?.toFixed(2) || '0.00'}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          payment.status === 'completed' ? 'bg-green-50 text-green-700' :
-                          payment.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
-                          'bg-red-50 text-red-700'
-                        }`}>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.status === 'completed' ? 'bg-green-50 text-green-700' :
+                            payment.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
+                              'bg-red-50 text-red-700'
+                          }`}>
                           {payment.status}
                         </span>
                       </td>
@@ -1717,36 +1718,36 @@ const BookingsManagement = ({ onRefresh, user }) => {
               <span className="text-xs text-gray-400 font-medium">Total:</span>
               <span className="text-sm font-bold text-white">{stats.total}</span>
             </div>
-            
+
             <div className="h-4 w-px bg-[#2A2A2A]"></div>
-            
+
             <div className="flex items-center gap-2 px-2 py-1 rounded bg-[var(--color-primary)]/10">
               <Clock className="h-3.5 w-3.5 text-[var(--color-primary)]" />
               <span className="text-xs text-gray-400 font-medium">Today:</span>
               <span className="text-sm font-bold text-white">{stats.today}</span>
             </div>
-            
+
             <div className="h-4 w-px bg-[#2A2A2A]"></div>
-            
+
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5">
                 <AlertCircle className="h-3.5 w-3.5 text-gray-500" />
                 <span className="text-xs text-gray-500">Pending</span>
                 <span className="text-sm font-bold text-white">{stats.pending}</span>
               </div>
-              
+
               <div className="flex items-center gap-1.5">
                 <CheckCircle className="h-3.5 w-3.5 text-gray-500" />
                 <span className="text-xs text-gray-500">Booked</span>
                 <span className="text-sm font-bold text-white">{stats.booked}</span>
               </div>
-              
+
               <div className="flex items-center gap-1.5">
                 <CheckCircle className="h-3.5 w-3.5 text-gray-500" />
                 <span className="text-xs text-gray-500">Confirmed</span>
                 <span className="text-sm font-bold text-white">{stats.confirmed}</span>
               </div>
-              
+
               <div className="flex items-center gap-1.5">
                 <XCircle className="h-3.5 w-3.5 text-gray-500" />
                 <span className="text-xs text-gray-500">Cancelled</span>
@@ -1762,13 +1763,13 @@ const BookingsManagement = ({ onRefresh, user }) => {
               <span className="text-xs text-gray-500">Paid</span>
               <span className="text-sm font-bold text-white">{stats.paid}</span>
             </div>
-            
+
             <div className="flex items-center gap-1.5">
               <CreditCard className="h-3.5 w-3.5 text-gray-500" />
               <span className="text-xs text-gray-500">Unpaid</span>
               <span className="text-sm font-bold text-white">{stats.unpaid}</span>
             </div>
-            
+
             <div className="flex items-center gap-1.5">
               <XCircle className="h-3.5 w-3.5 text-gray-500" />
               <span className="text-xs text-gray-500">Refunded</span>
@@ -1882,22 +1883,20 @@ const BookingsManagement = ({ onRefresh, user }) => {
         <div className="flex space-x-1">
           <button
             onClick={() => setActiveTab('bookings')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors text-xs ${
-              activeTab === 'bookings'
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors text-xs ${activeTab === 'bookings'
                 ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md'
                 : 'text-gray-400 hover:bg-[#1A1A1A] hover:text-white'
-            }`}
+              }`}
           >
             <Calendar className="w-3.5 h-3.5" />
             <span>Bookings</span>
           </button>
           <button
             onClick={() => setActiveTab('transaction')}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors text-xs ${
-              activeTab === 'transaction'
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors text-xs ${activeTab === 'transaction'
                 ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md'
                 : 'text-gray-400 hover:bg-[#1A1A1A] hover:text-white'
-            }`}
+              }`}
           >
             <Receipt className="w-3.5 h-3.5" />
             <span>Transaction</span>
@@ -1910,375 +1909,375 @@ const BookingsManagement = ({ onRefresh, user }) => {
         <>
           {/* Main Content */}
           <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-[#2A2A2A]/30">
-            <thead className="bg-[#0A0A0A]">
-              <tr>
-                <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  Booking
-                </th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  Service
-                </th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  Customer
-                </th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  Date & Time
-                </th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  Barber
-                </th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  Price
-                </th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  Payment Status
-                </th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-[#1A1A1A] divide-y divide-[#2A2A2A]/30">
-              {bookings === undefined ? (
-                // Skeleton loading state
-                Array.from({ length: itemsPerPage }).map((_, index) => (
-                  <BookingSkeleton key={`skeleton-${index}`} />
-                ))
-              ) : currentBookings.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center">
-                    <Calendar className="mx-auto h-12 w-12 text-white mb-3" />
-                    <h3 className="text-sm font-medium text-white mb-1">No bookings found</h3>
-                    <p className="text-sm text-gray-400">
-                      {searchTerm || filterStatus !== 'all' || startDate || endDate
-                        ? 'Try adjusting your search or filter criteria.'
-                        : 'Get started by creating a new booking.'
-                      }
-                    </p>
-                  </td>
-                </tr>
-              ) : (
-                currentBookings.map((booking) => {
-                  const statusConfig = getStatusConfig(booking.status)
-                  const paymentStatusConfig = getPaymentStatusConfig(booking.payment_status || 'unpaid')
-                  const currentPaymentStatus = booking.payment_status || 'unpaid'
-                  const StatusIcon = statusConfig.icon
-                  const PaymentStatusIcon = paymentStatusConfig.icon
-                  const service = services.find(s => s._id === booking.service)
-
-                  return (
-                    <tr key={booking._id} className="hover:bg-[#1A1A1A]/50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-mono font-bold text-white">
-                        #{booking.booking_code}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-white">
-                        {service?.name || 'Unknown Service'}
-                      </div>
-                      <div className="text-sm text-gray-400">
-                        {service?.duration_minutes}min
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-white">
-                          {(() => {
-                            const name = booking.customer_name || 'N/A'
-                            // Clean up guest names like guest_samples_1762847861795_qvbv
-                            if (name.startsWith('guest_')) {
-                              // Extract the base name and show just "Guest (samples)"
-                              const parts = name.split('_')
-                              if (parts.length >= 2) {
-                                const baseName = parts[1].replace(/[_\d]/g, '')
-                                return `Guest${baseName ? ` (${baseName.substring(0, 10)})` : ''}`
-                              }
-                              return 'Guest'
-                            }
-                            // Clean up walk-in names like walkin_1762840519194_e9587qljl
-                            if (name.startsWith('walkin_')) {
-                              return 'Walk-in'
-                            }
-                            return name
-                          })()}
-                        </div>
-                        {booking.customer_phone && (
-                          <div className="text-xs text-gray-400 font-mono mt-0.5">
-                            {booking.customer_phone}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <div>
-                          <div className="text-sm text-white">
-                            {formatDate(booking.date)}
-                          </div>
-                          <div className="text-sm text-gray-400">
-                            {formatTime(booking.time)}
-                          </div>
-                        </div>
-                        {(() => {
-                          const timeRemaining = getTimeRemaining(booking.date, booking.time)
-                          if (timeRemaining.show && booking.status !== 'completed' && booking.status !== 'cancelled') {
-                            return (
-                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border ${timeRemaining.bgClass} ${timeRemaining.textClass} ${timeRemaining.borderClass}`}>
-                                <Clock className="h-3 w-3 mr-1" />
-                                {timeRemaining.text}
-                              </span>
-                            )
-                          }
-                          return null
-                        })()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-white">
-                        {booking.barber_name || 'Not assigned'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.bg} ${statusConfig.text}`}>
-                        <StatusIcon className={`-ml-0.5 mr-1.5 h-3 w-3 ${statusConfig.iconColor}`} />
-                        {statusConfig.label}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-bold text-green-400">
-                        ₱{service ? parseFloat(service.price).toFixed(2) : '0.00'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center space-x-2">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${paymentStatusConfig.bg} ${paymentStatusConfig.text}`}>
-                          <PaymentStatusIcon className={`-ml-0.5 mr-1.5 h-3 w-3 ${paymentStatusConfig.iconColor}`} />
-                          {paymentStatusConfig.label}
-                        </span>
-                        {booking.status === 'confirmed' && currentPaymentStatus === 'unpaid' && (
-                          <button
-                            onClick={() => handlePOSRedirect(booking)}
-                            className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-green-400 bg-green-400/20 hover:bg-green-400/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400"
-                            disabled={loading}
-                            title="Process Payment at POS"
-                          >
-                            <CreditCard className="h-3 w-3 mr-1" />
-                            POS
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end gap-2">
-                        {/* Quick Actions - Always visible */}
-                        <button
-                          onClick={() => setShowQRCode(booking)}
-                          className="p-1.5 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 rounded-md transition-colors"
-                          title="View QR Code"
-                        >
-                          <QrCode className="h-4 w-4" />
-                        </button>
-                        {booking.status === 'completed' && currentPaymentStatus === 'paid' && (
-                          <button
-                            onClick={() => handleViewTransaction(booking)}
-                            className="p-1.5 text-blue-400 hover:bg-blue-400/10 rounded-md transition-colors"
-                            title="View Transaction"
-                          >
-                            <Receipt className="h-4 w-4" />
-                          </button>
-                        )}
-                        
-                        {/* Dropdown Menu */}
-                        <div className="relative">
-                          <button
-                            onClick={() => setOpenDropdown(openDropdown === booking._id ? null : booking._id)}
-                            className="p-1.5 text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded-md transition-colors"
-                            title="More actions"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                          </button>
-                          
-                          {openDropdown === booking._id && (
-                            <>
-                              {/* Backdrop */}
-                              <div 
-                                className="fixed inset-0 z-10" 
-                                onClick={() => setOpenDropdown(null)}
-                              />
-                              
-                              {/* Dropdown Menu */}
-                              <div className="absolute right-0 mt-1 w-48 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg shadow-xl z-20 py-1">
-                                {/* Status Actions */}
-                                {booking.status === 'pending' && (
-                                  <>
-                                    <button
-                                      onClick={() => {
-                                        handleStatusChange(booking, 'booked')
-                                        setOpenDropdown(null)
-                                      }}
-                                      className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
-                                      disabled={loading}
-                                    >
-                                      <Check className="h-4 w-4 text-blue-400" />
-                                      <span>Book</span>
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        handleStatusChange(booking, 'cancelled')
-                                        setOpenDropdown(null)
-                                      }}
-                                      className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
-                                      disabled={loading}
-                                    >
-                                      <Ban className="h-4 w-4 text-red-400" />
-                                      <span>Cancel</span>
-                                    </button>
-                                  </>
-                                )}
-                                {booking.status === 'booked' && (
-                                  <>
-                                    <button
-                                      onClick={() => {
-                                        setConfirmModal({ show: true, booking, action: 'confirm' })
-                                        setOpenDropdown(null)
-                                      }}
-                                      className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
-                                      disabled={loading}
-                                    >
-                                      <CheckCircle className="h-4 w-4 text-green-400" />
-                                      <span>Confirm</span>
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        handleStatusChange(booking, 'cancelled')
-                                        setOpenDropdown(null)
-                                      }}
-                                      className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
-                                      disabled={loading}
-                                    >
-                                      <Ban className="h-4 w-4 text-red-400" />
-                                      <span>Cancel</span>
-                                    </button>
-                                  </>
-                                )}
-                                {booking.status === 'confirmed' && (
-                                  <>
-                                    <button
-                                      onClick={() => {
-                                        setConfirmModal({ show: true, booking, action: 'complete' })
-                                        setOpenDropdown(null)
-                                      }}
-                                      className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
-                                      disabled={loading}
-                                    >
-                                      <CheckCircle className="h-4 w-4 text-[var(--color-primary)]" />
-                                      <span>Complete</span>
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        setCancelModal({ show: true, booking })
-                                        setOpenDropdown(null)
-                                      }}
-                                      className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
-                                      disabled={loading}
-                                    >
-                                      <Ban className="h-4 w-4 text-red-400" />
-                                      <span>Cancel Booking</span>
-                                    </button>
-                                  </>
-                                )}
-                                
-                                {/* Divider */}
-                                {(booking.status === 'pending' || booking.status === 'booked' || booking.status === 'confirmed') && (
-                                  <div className="my-1 border-t border-[#2A2A2A]"></div>
-                                )}
-                                
-                                {/* Edit & Delete */}
-                                <button
-                                  onClick={() => {
-                                    handleEdit(booking)
-                                    setOpenDropdown(null)
-                                  }}
-                                  className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
-                                  disabled={loading}
-                                >
-                                  <Edit className="h-4 w-4 text-blue-400" />
-                                  <span>Edit</span>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    handleDelete(booking)
-                                    setOpenDropdown(null)
-                                  }}
-                                  className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
-                                  disabled={loading}
-                                >
-                                  <Trash2 className="h-4 w-4 text-red-400" />
-                                  <span>Delete</span>
-                                </button>
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-[#2A2A2A]/30">
+                <thead className="bg-[#0A0A0A]">
+                  <tr>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      Booking
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      Service
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      Customer
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      Date & Time
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      Barber
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      Price
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      Payment Status
+                    </th>
+                    <th className="px-4 py-2.5 text-right text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="bg-[#1A1A1A] divide-y divide-[#2A2A2A]/30">
+                  {bookings === undefined ? (
+                    // Skeleton loading state
+                    Array.from({ length: itemsPerPage }).map((_, index) => (
+                      <BookingSkeleton key={`skeleton-${index}`} />
+                    ))
+                  ) : currentBookings.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="px-6 py-12 text-center">
+                        <Calendar className="mx-auto h-12 w-12 text-white mb-3" />
+                        <h3 className="text-sm font-medium text-white mb-1">No bookings found</h3>
+                        <p className="text-sm text-gray-400">
+                          {searchTerm || filterStatus !== 'all' || startDate || endDate
+                            ? 'Try adjusting your search or filter criteria.'
+                            : 'Get started by creating a new booking.'
+                          }
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    currentBookings.map((booking) => {
+                      const statusConfig = getStatusConfig(booking.status)
+                      const paymentStatusConfig = getPaymentStatusConfig(booking.payment_status || 'unpaid')
+                      const currentPaymentStatus = booking.payment_status || 'unpaid'
+                      const StatusIcon = statusConfig.icon
+                      const PaymentStatusIcon = paymentStatusConfig.icon
+                      const service = services.find(s => s._id === booking.service)
 
-      </div>
+                      return (
+                        <tr key={booking._id} className="hover:bg-[#1A1A1A]/50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-mono font-bold text-white">
+                              #{booking.booking_code}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-white">
+                              {service?.name || 'Unknown Service'}
+                            </div>
+                            <div className="text-sm text-gray-400">
+                              {service?.duration_minutes}min
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div>
+                              <div className="text-sm font-medium text-white">
+                                {(() => {
+                                  const name = booking.customer_name || 'N/A'
+                                  // Clean up guest names like guest_samples_1762847861795_qvbv
+                                  if (name.startsWith('guest_')) {
+                                    // Extract the base name and show just "Guest (samples)"
+                                    const parts = name.split('_')
+                                    if (parts.length >= 2) {
+                                      const baseName = parts[1].replace(/[_\d]/g, '')
+                                      return `Guest${baseName ? ` (${baseName.substring(0, 10)})` : ''}`
+                                    }
+                                    return 'Guest'
+                                  }
+                                  // Clean up walk-in names like walkin_1762840519194_e9587qljl
+                                  if (name.startsWith('walkin_')) {
+                                    return 'Walk-in'
+                                  }
+                                  return name
+                                })()}
+                              </div>
+                              {booking.customer_phone && (
+                                <div className="text-xs text-gray-400 font-mono mt-0.5">
+                                  {booking.customer_phone}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <div>
+                                <div className="text-sm text-white">
+                                  {formatDate(booking.date)}
+                                </div>
+                                <div className="text-sm text-gray-400">
+                                  {formatTime(booking.time)}
+                                </div>
+                              </div>
+                              {(() => {
+                                const timeRemaining = getTimeRemaining(booking.date, booking.time)
+                                if (timeRemaining.show && booking.status !== 'completed' && booking.status !== 'cancelled') {
+                                  return (
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border ${timeRemaining.bgClass} ${timeRemaining.textClass} ${timeRemaining.borderClass}`}>
+                                      <Clock className="h-3 w-3 mr-1" />
+                                      {timeRemaining.text}
+                                    </span>
+                                  )
+                                }
+                                return null
+                              })()}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-white">
+                              {booking.barber_name || 'Not assigned'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig.bg} ${statusConfig.text}`}>
+                              <StatusIcon className={`-ml-0.5 mr-1.5 h-3 w-3 ${statusConfig.iconColor}`} />
+                              {statusConfig.label}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-bold text-green-400">
+                              ₱{service ? parseFloat(service.price).toFixed(2) : '0.00'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center space-x-2">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${paymentStatusConfig.bg} ${paymentStatusConfig.text}`}>
+                                <PaymentStatusIcon className={`-ml-0.5 mr-1.5 h-3 w-3 ${paymentStatusConfig.iconColor}`} />
+                                {paymentStatusConfig.label}
+                              </span>
+                              {booking.status === 'confirmed' && currentPaymentStatus === 'unpaid' && (
+                                <button
+                                  onClick={() => handlePOSRedirect(booking)}
+                                  className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-green-400 bg-green-400/20 hover:bg-green-400/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-400"
+                                  disabled={loading}
+                                  title="Process Payment at POS"
+                                >
+                                  <CreditCard className="h-3 w-3 mr-1" />
+                                  POS
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex items-center justify-end gap-2">
+                              {/* Quick Actions - Always visible */}
+                              <button
+                                onClick={() => setShowQRCode(booking)}
+                                className="p-1.5 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 rounded-md transition-colors"
+                                title="View QR Code"
+                              >
+                                <QrCode className="h-4 w-4" />
+                              </button>
+                              {booking.status === 'completed' && currentPaymentStatus === 'paid' && (
+                                <button
+                                  onClick={() => handleViewTransaction(booking)}
+                                  className="p-1.5 text-blue-400 hover:bg-blue-400/10 rounded-md transition-colors"
+                                  title="View Transaction"
+                                >
+                                  <Receipt className="h-4 w-4" />
+                                </button>
+                              )}
 
-      {/* Pagination Controls */}
-      {filteredBookings.length > 0 && totalPages > 1 && (
-        <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-lg p-4">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={handlePreviousPage}
-              disabled={currentPage === 1}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                currentPage === 1
-                  ? 'text-gray-500 cursor-not-allowed'
-                  : 'text-white hover:bg-[#2A2A2A]'
-              }`}
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span className="text-sm">Previous</span>
-            </button>
+                              {/* Dropdown Menu */}
+                              <div className="relative">
+                                <button
+                                  onClick={() => setOpenDropdown(openDropdown === booking._id ? null : booking._id)}
+                                  className="p-1.5 text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded-md transition-colors"
+                                  title="More actions"
+                                >
+                                  <MoreVertical className="h-4 w-4" />
+                                </button>
 
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-400">
-                Page <span className="text-[var(--color-primary)] font-semibold">{currentPage}</span> of <span className="text-white font-semibold">{totalPages}</span>
-              </span>
-              <span className="text-xs text-gray-500">
-                ({startIndex + 1}-{Math.min(endIndex, filteredBookings.length)} of {filteredBookings.length})
-              </span>
+                                {openDropdown === booking._id && (
+                                  <>
+                                    {/* Backdrop */}
+                                    <div
+                                      className="fixed inset-0 z-10"
+                                      onClick={() => setOpenDropdown(null)}
+                                    />
+
+                                    {/* Dropdown Menu */}
+                                    <div className="absolute right-0 mt-1 w-48 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg shadow-xl z-20 py-1">
+                                      {/* Status Actions */}
+                                      {booking.status === 'pending' && (
+                                        <>
+                                          <button
+                                            onClick={() => {
+                                              handleStatusChange(booking, 'booked')
+                                              setOpenDropdown(null)
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                            disabled={loading}
+                                          >
+                                            <Check className="h-4 w-4 text-blue-400" />
+                                            <span>Book</span>
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              handleStatusChange(booking, 'cancelled')
+                                              setOpenDropdown(null)
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                            disabled={loading}
+                                          >
+                                            <Ban className="h-4 w-4 text-red-400" />
+                                            <span>Cancel</span>
+                                          </button>
+                                        </>
+                                      )}
+                                      {booking.status === 'booked' && (
+                                        <>
+                                          <button
+                                            onClick={() => {
+                                              setConfirmModal({ show: true, booking, action: 'confirm' })
+                                              setOpenDropdown(null)
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                            disabled={loading}
+                                          >
+                                            <CheckCircle className="h-4 w-4 text-green-400" />
+                                            <span>Confirm</span>
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              handleStatusChange(booking, 'cancelled')
+                                              setOpenDropdown(null)
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                            disabled={loading}
+                                          >
+                                            <Ban className="h-4 w-4 text-red-400" />
+                                            <span>Cancel</span>
+                                          </button>
+                                        </>
+                                      )}
+                                      {booking.status === 'confirmed' && (
+                                        <>
+                                          <button
+                                            onClick={() => {
+                                              setConfirmModal({ show: true, booking, action: 'complete' })
+                                              setOpenDropdown(null)
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                            disabled={loading}
+                                          >
+                                            <CheckCircle className="h-4 w-4 text-[var(--color-primary)]" />
+                                            <span>Complete</span>
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              setCancelModal({ show: true, booking })
+                                              setOpenDropdown(null)
+                                            }}
+                                            className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                            disabled={loading}
+                                          >
+                                            <Ban className="h-4 w-4 text-red-400" />
+                                            <span>Cancel Booking</span>
+                                          </button>
+                                        </>
+                                      )}
+
+                                      {/* Divider */}
+                                      {(booking.status === 'pending' || booking.status === 'booked' || booking.status === 'confirmed') && (
+                                        <div className="my-1 border-t border-[#2A2A2A]"></div>
+                                      )}
+
+                                      {/* Edit & Delete */}
+                                      <button
+                                        onClick={() => {
+                                          handleEdit(booking)
+                                          setOpenDropdown(null)
+                                        }}
+                                        className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                        disabled={loading}
+                                      >
+                                        <Edit className="h-4 w-4 text-blue-400" />
+                                        <span>Edit</span>
+                                      </button>
+                                      {(user?.role === 'branch_admin' || user?.role === 'super_admin') && (
+                                        <button
+                                          onClick={() => {
+                                            handleDelete(booking)
+                                            setOpenDropdown(null)
+                                          }}
+                                          className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
+                                          disabled={loading}
+                                        >
+                                          <Trash2 className="h-4 w-4 text-red-400" />
+                                          <span>Delete</span>
+                                        </button>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
 
-            <button
-              onClick={handleNextPage}
-              disabled={currentPage === totalPages}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                currentPage === totalPages
-                  ? 'text-gray-500 cursor-not-allowed'
-                  : 'text-white hover:bg-[#2A2A2A]'
-              }`}
-            >
-              <span className="text-sm">Next</span>
-              <ChevronRight className="w-4 h-4" />
-            </button>
           </div>
-        </div>
-      )}
+
+          {/* Pagination Controls */}
+          {filteredBookings.length > 0 && totalPages > 1 && (
+            <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-lg p-4">
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${currentPage === 1
+                      ? 'text-gray-500 cursor-not-allowed'
+                      : 'text-white hover:bg-[#2A2A2A]'
+                    }`}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="text-sm">Previous</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-400">
+                    Page <span className="text-[var(--color-primary)] font-semibold">{currentPage}</span> of <span className="text-white font-semibold">{totalPages}</span>
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    ({startIndex + 1}-{Math.min(endIndex, filteredBookings.length)} of {filteredBookings.length})
+                  </span>
+                </div>
+
+                <button
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${currentPage === totalPages
+                      ? 'text-gray-500 cursor-not-allowed'
+                      : 'text-white hover:bg-[#2A2A2A]'
+                    }`}
+                >
+                  <span className="text-sm">Next</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
 
         </>
       ) : (
@@ -2315,13 +2314,13 @@ const BookingsManagement = ({ onRefresh, user }) => {
 
       {/* Confirmation Modal */}
       {confirmModal.show && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{zIndex: 99999}}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 99999 }}>
           <div className="bg-[#1A1A1A] rounded-2xl p-6 max-w-md w-full shadow-2xl border border-[#2A2A2A]/50">
             <div className="text-center space-y-4">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{backgroundColor: '#F68B24'}}>
-                 <CheckCircle className="w-6 h-6 text-white" />
-               </div>
-              
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto" style={{ backgroundColor: '#F68B24' }}>
+                <CheckCircle className="w-6 h-6 text-white" />
+              </div>
+
               <div>
                 <h3 className="text-lg font-bold mb-2 text-white">
                   {confirmModal.action === 'confirm' ? 'Confirm Booking' : 'Complete Booking'}
@@ -2395,13 +2394,13 @@ const BookingsManagement = ({ onRefresh, user }) => {
                   Cancel
                 </button>
                 <button
-                   onClick={handleConfirmAction}
-                   disabled={loading}
-                   className="flex-1 py-2 px-4 rounded-xl font-medium text-white transition-colors bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                   style={{backgroundColor: loading ? undefined : '#F68B24'}}
-                 >
-                   {loading ? 'Processing...' : (confirmModal.action === 'confirm' ? 'Confirm' : 'Complete')}
-                 </button>
+                  onClick={handleConfirmAction}
+                  disabled={loading}
+                  className="flex-1 py-2 px-4 rounded-xl font-medium text-white transition-colors bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ backgroundColor: loading ? undefined : '#F68B24' }}
+                >
+                  {loading ? 'Processing...' : (confirmModal.action === 'confirm' ? 'Confirm' : 'Complete')}
+                </button>
               </div>
             </div>
           </div>

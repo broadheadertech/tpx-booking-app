@@ -248,6 +248,7 @@ function StaffDashboard() {
           <BarbersManagement
             barbers={barbers || []}
             onRefresh={handleRefresh}
+            user={user}
           />
         );
 
@@ -275,7 +276,7 @@ function StaffDashboard() {
         return <ReportsManagement onRefresh={handleRefresh} user={user} />;
 
       case "products":
-        return <ProductsManagement onRefresh={handleRefresh} />;
+        return <ProductsManagement onRefresh={handleRefresh} user={user} />;
 
       case "notifications":
         return <NotificationsManagement onRefresh={handleRefresh} />;
