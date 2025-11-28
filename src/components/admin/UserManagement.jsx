@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { User, UserPlus, Edit, Trash2, Shield, Building, Users, Search, Filter, CheckCircle, AlertCircle } from 'lucide-react'
@@ -30,7 +31,7 @@ export default function UserManagement() {
   // Queries
   const users = useQuery(api.services.auth.getAllUsers) || []
   const branches = useQuery(api.services.branches.getActiveBranches) || []
-  
+
   // Mutations
   const createUser = useMutation(api.services.auth.createUser)
   const updateUser = useMutation(api.services.auth.updateUser)
@@ -54,10 +55,10 @@ export default function UserManagement() {
 
   // Filter out customers and barbers from users for admin management - only show staff and admin roles
   const adminUsers = users.filter(u => u.role !== 'customer' && u.role !== 'barber')
-  
+
   const filteredUsers = adminUsers
     .filter(user => {
-      const matchesSearch = 
+      const matchesSearch =
         user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesRole = filterRole === 'all' || user.role === filterRole
@@ -209,17 +210,17 @@ export default function UserManagement() {
 
     setLoading(true)
     setShowConfirmDialog(false)
-    
+
     try {
       const result = await updateUser(pendingUpdate)
-      
+
       if (result) {
         // Success - close modal and reset form
         setShowEditModal(false)
         setSelectedUser(null)
         resetForm()
         setSuccessMessage('User updated successfully!')
-        
+
         // Clear success message after 3 seconds
         setTimeout(() => {
           setSuccessMessage('')
@@ -227,7 +228,7 @@ export default function UserManagement() {
       }
     } catch (error) {
       console.error('Error updating user:', error)
-      
+
       // Extract user-friendly error message directly from the error
       const errorMessage = error?.message || 'Failed to update user. Please try again.'
       setError(errorMessage)
@@ -289,7 +290,7 @@ export default function UserManagement() {
             <Users className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
-        
+
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -522,14 +523,14 @@ export default function UserManagement() {
       />
 
       {/* Confirmation Dialog */}
-      {showConfirmDialog && (
-        <div className="fixed inset-0 z-[10000] overflow-y-auto">
+      {showConfirmDialog && createPortal(
+        <div className="fixed inset-0 z-[10001] overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4">
-            <div 
+            <div
               className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
               onClick={() => setShowConfirmDialog(false)}
             />
-            <div className="relative w-full max-w-md transform rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] shadow-2xl transition-all z-[10001] border border-[#444444]/50">
+            <div className="relative w-full max-w-md transform rounded-2xl bg-gradient-to-br from-[#2A2A2A] to-[#333333] shadow-2xl transition-all z-[10002] border border-[#444444]/50">
               <div className="p-6">
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
@@ -537,11 +538,11 @@ export default function UserManagement() {
                   </div>
                   <h3 className="text-lg font-semibold text-white">Confirm User Update</h3>
                 </div>
-                
+
                 <p className="text-gray-300 mb-6">
                   Are you sure you want to update this user? This action will modify the user's information and cannot be undone.
                 </p>
-                
+
                 <div className="flex justify-end space-x-3">
                   <button
                     onClick={() => setShowConfirmDialog(false)}
@@ -559,7 +560,8 @@ export default function UserManagement() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
