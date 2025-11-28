@@ -569,7 +569,7 @@ const Landing = () => {
               <div className="flex items-center gap-2">
                 <img
                   src={
-                    branding?.logo_light_url || "/img/tipuno_x_logo_white.avif"
+                    branding?.logo_light_url || ""
                   }
                   alt="Logo"
                   className="w-8 h-8 object-contain"
