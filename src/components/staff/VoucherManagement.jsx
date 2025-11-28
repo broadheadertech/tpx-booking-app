@@ -30,6 +30,7 @@ import ViewVoucherUsersModal from "./ViewVoucherUsersModal";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useBranding } from "../../context/BrandingContext";
+import { useAuth } from "../../context/AuthContext";
 
 const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -41,6 +42,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState("table"); // 'card' or 'table' - DEFAULT TABLE
   const { branding } = useBranding();
+  const { user } = useAuth();
 
   // Modal states
   const [confirmModal, setConfirmModal] = useState(null);
@@ -119,7 +121,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
         setConfirmModal(null);
         setLoading(true);
         try {
-          await deleteVoucher({ id: voucher._id });
+          await deleteVoucher({ id: voucher._id, user_id: user._id });
           onRefresh();
         } catch (err) {
           console.error("Failed to delete voucher:", err);
@@ -597,13 +599,15 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                         {statusConfig.label}
                       </span>
                     </div>
-                    <button
-                      onClick={() => handleDelete(voucher)}
-                      className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded transition-colors"
-                      title="Delete Voucher"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
+                    {(user?.role === "branch_admin" || user?.role === "admin" || user?.role === "super_admin") && (
+                      <button
+                        onClick={() => handleDelete(voucher)}
+                        className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded transition-colors"
+                        title="Delete Voucher"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -812,8 +816,8 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                             onClick={() => setShowUsersModal(voucher)}
                             disabled={voucher.status !== "active"}
                             className={`p-2 rounded-lg transition-colors ${voucher.status === "active"
-                                ? "text-gray-400 hover:text-blue-400 hover:bg-[#444444]"
-                                : "text-gray-600 cursor-not-allowed"
+                              ? "text-gray-400 hover:text-blue-400 hover:bg-[#444444]"
+                              : "text-gray-600 cursor-not-allowed"
                               }`}
                             title="View Users"
                           >
@@ -838,13 +842,15 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                                 </button>
                               </>
                             )}
-                          <button
-                            onClick={() => handleDelete(voucher)}
-                            className="p-2 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded-lg transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {(user?.role === "branch_admin" || user?.role === "admin" || user?.role === "super_admin") && (
+                            <button
+                              onClick={() => handleDelete(voucher)}
+                              className="p-2 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded-lg transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
