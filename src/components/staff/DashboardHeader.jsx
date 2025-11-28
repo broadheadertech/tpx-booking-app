@@ -60,7 +60,7 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
           {/* Left section - Logo and Title */}
           <div className="flex items-center space-x-1.5 sm:space-x-2 md:space-x-3 min-w-0 flex-1">
             <img
-              src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'}
+              src={branding?.logo_light_url }
               alt={branding?.display_name || 'Logo'}
               className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 lg:w-11 lg:h-11 object-contain flex-shrink-0"
             />
@@ -226,7 +226,7 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
             <div className="sticky top-0 z-10 bg-[var(--color-bg)]/95 backdrop-blur-md border-b border-[#2A2A2A]/50 px-4 py-3 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <img
-                  src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'}
+                  src={branding?.logo_light_url }
                   alt={branding?.display_name || 'Logo'}
                   className="w-10 h-10 object-contain"
                 />

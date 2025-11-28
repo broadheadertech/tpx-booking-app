@@ -16,8 +16,8 @@ const PremiumOnboarding = ({ onComplete }) => {
           <div className="text-center space-y-8">
             <div className="flex justify-center mb-6">
               <img 
-                src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'}
-                alt="Tipuno X Logo" 
+                src={branding?.logo_light_url}
+                alt="Logo" 
                 className="w-40 h-40 object-contain drop-shadow-2xl"
               />
             </div>
@@ -51,8 +51,8 @@ const PremiumOnboarding = ({ onComplete }) => {
           <div className="text-center space-y-8 max-w-lg mx-auto">
             <div className="flex items-center justify-center h-48">
               <img 
-                src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'}
-                alt="Tipuno X" 
+                src={branding?.logo_light_url}
+                alt="Logo" 
                 className="w-40 h-40 object-contain drop-shadow-2xl"
               />
             </div>
@@ -151,7 +151,7 @@ const PremiumOnboarding = ({ onComplete }) => {
         <div className="flex justify-between items-center px-6 py-4 md:px-8 md:py-6">
           <div>
             <img 
-              src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'}
+              src={branding?.logo_light_url}
               alt="TipunoX Logo" 
               className="w-12 h-12 object-contain"
             />

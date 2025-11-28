@@ -33,7 +33,7 @@ const DashboardHeader = ({ onLogout }) => {
           {/* Left section - Logo and Title */}
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
             <img
-              src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'}
+              src={branding?.logo_light_url}
               alt={branding?.display_name || 'Logo'}
               className="w-9 h-9 sm:w-11 sm:h-11 object-contain flex-shrink-0"
             />
