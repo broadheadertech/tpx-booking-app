@@ -118,15 +118,15 @@ export const getGlobalBranding = query({
     const branding = await ctx.db.query("branding_global").first();
     if (branding) return branding;
     return {
-      display_name: "TipunoX",
-      primary_color: "#FF8C42",
-      accent_color: "#FF7A2B",
+      display_name: "",
+      primary_color: "#000000",
+      accent_color: "#000000",
       bg_color: "#0A0A0A",
       text_color: "#FFFFFF",
       muted_color: "#333333",
-      logo_light_url: "/img/tipuno_x_logo_white.avif",
-      logo_dark_url: "/img/tipuno_x_logo_white.avif",
-      favicon_url: "/img/app_logo.png",
+      logo_light_url: "",
+      logo_dark_url: "",
+      favicon_url: "",
       banner_url: "",
       feature_toggles: {
         kiosk: true,

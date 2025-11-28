@@ -600,7 +600,7 @@ const BarberDashboard = () => {
           style={{
             backgroundImage: branding?.logo_dark_url
               ? `url(${branding.logo_dark_url})`
-              : 'url(/img/pnglog.png)',
+              : '',
             filter: 'brightness(0.2)'
           }}
         ></div>
