@@ -316,75 +316,79 @@ const ServiceBooking = ({ onBack }) => {
       : [];
 
     for (let hour = startHour; hour < endHour; hour++) {
-      for (let minute of [0, 30]) {
-        const timeString = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
-        const displayTime =
-          hour === 12
-            ? `12:${minute.toString().padStart(2, "0")} PM`
-            : hour > 12
-              ? `${hour - 12}:${minute.toString().padStart(2, "0")} PM`
-              : `${hour}:${minute.toString().padStart(2, "0")} AM`;
+      const minute = 0; // Only hourly slots
 
-        // Check availability
-        let available = true;
-        let reason = null;
+      const timeString = `${hour.toString().padStart(2, "0")}:${minute
+        .toString()
+        .padStart(2, "0")}`;
 
-        // Check if time slot is already booked
-        if (bookedTimes.includes(timeString)) {
-          available = false;
-          reason = "booked";
-        }
+      const displayTime =
+        hour === 12
+          ? `12:00 PM`
+          : hour > 12
+            ? `${hour - 12}:00 PM`
+            : `${hour}:00 AM`;
 
-        // Check if time slot is in the past (for today only)
-        if (
-          isToday &&
-          (hour < currentHour ||
-            (hour === currentHour && minute <= currentMinute))
-        ) {
-          available = false;
-          reason = "past";
-        }
+      // Check availability
+      let available = true;
+      let reason = null;
 
-        // Check blocked periods (Time Off)
-        if (selectedStaff.blocked_periods && selectedStaff.blocked_periods.length > 0) {
-          const dateString = selectedDateObj.toISOString().split('T')[0];
-          const blockingPeriod = selectedStaff.blocked_periods.find(p => p.date === dateString);
+      // Check if time slot is already booked
+      if (bookedTimes.includes(timeString)) {
+        available = false;
+        reason = "booked";
+      }
 
-          if (blockingPeriod) {
-            // If no specific times are set, it blocks the whole day
-            if (!blockingPeriod.start_time && !blockingPeriod.end_time) {
+      // Check if time slot is in the past (for today only)
+      if (isToday && hour < currentHour) {
+        available = false;
+        reason = "past";
+      }
+
+      // Check blocked periods (Time Off)
+      if (
+        selectedStaff.blocked_periods &&
+        selectedStaff.blocked_periods.length > 0
+      ) {
+        const dateString = selectedDateObj.toISOString().split("T")[0];
+        const blockingPeriod = selectedStaff.blocked_periods.find(
+          (p) => p.date === dateString
+        );
+
+        if (blockingPeriod) {
+          // If no specific times are set, it blocks the whole day
+          if (!blockingPeriod.start_time && !blockingPeriod.end_time) {
+            available = false;
+            reason = "blocked";
+          } else {
+            // Check specific time overlap
+            const slotTime = timeString; // HH:mm format
+
+            // Convert times to comparable numbers (minutes from midnight)
+            const getMinutes = (t) => {
+              if (!t) return 0;
+              const [h, m] = t.split(":").map(Number);
+              return h * 60 + m;
+            };
+
+            const slotMinutes = getMinutes(slotTime);
+            const startMinutes = getMinutes(blockingPeriod.start_time);
+            const endMinutes = getMinutes(blockingPeriod.end_time);
+
+            if (slotMinutes >= startMinutes && slotMinutes < endMinutes) {
               available = false;
               reason = "blocked";
-            } else {
-              // Check specific time overlap
-              const slotTime = timeString; // HH:mm format
-              
-              // Convert times to comparable numbers (minutes from midnight)
-              const getMinutes = (t) => {
-                if (!t) return 0;
-                const [h, m] = t.split(':').map(Number);
-                return h * 60 + m;
-              };
-
-              const slotMinutes = getMinutes(slotTime);
-              const startMinutes = getMinutes(blockingPeriod.start_time);
-              const endMinutes = getMinutes(blockingPeriod.end_time);
-
-              if (slotMinutes >= startMinutes && slotMinutes < endMinutes) {
-                available = false;
-                reason = "blocked";
-              }
             }
           }
         }
-
-        slots.push({
-          time: timeString,
-          displayTime: displayTime,
-          available: available,
-          reason: reason,
-        });
       }
+
+      slots.push({
+        time: timeString,
+        displayTime: displayTime,
+        available: available,
+        reason: reason,
+      });
     }
 
     return slots;
