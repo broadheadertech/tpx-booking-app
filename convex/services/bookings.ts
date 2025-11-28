@@ -778,13 +778,15 @@ export const deleteBooking = mutation({
       }
 
       // Delete associated transaction if it exists
-      // Check for receipt number in notes (format: "POS Transaction - Receipt: RCP-...")
-      if (booking.notes && booking.notes.includes("Receipt: RCP-")) {
+      // The link between Booking and Transaction is the Receipt Number stored in Booking Notes.
+      // Transactions do not directly store the Booking Code, so we rely on this link.
+      if (booking.notes) {
         try {
-          const receiptMatch = booking.notes.match(/Receipt: (RCP-\d+)/);
+          // Match "Receipt: RCP-..." case insensitive, allowing for optional space and more flexible receipt number format
+          const receiptMatch = booking.notes.match(/Receipt:\s*(RCP-[\w\d-]+)/i);
           if (receiptMatch && receiptMatch[1]) {
             const receiptNumber = receiptMatch[1];
-            console.log(`[DELETE BOOKING] Found associated receipt number: ${receiptNumber}`);
+            console.log(`[DELETE BOOKING] Found associated receipt number in notes: ${receiptNumber}`);
 
             const transaction = await ctx.db
               .query("transactions")
@@ -827,7 +829,11 @@ export const deleteBooking = mutation({
               // 3. Delete the transaction record
               await ctx.db.delete(transaction._id);
               console.log(`[DELETE BOOKING] Transaction hard deleted.`);
+            } else {
+              console.log(`[DELETE BOOKING] No transaction found for receipt number: ${receiptNumber}`);
             }
+          } else {
+            console.log(`[DELETE BOOKING] No valid receipt number found in booking notes: ${booking.notes}`);
           }
         } catch (error) {
           console.error("[DELETE BOOKING] Failed to delete associated transaction:", error);
@@ -1054,7 +1060,7 @@ export const cancelBooking = mutation({
       throwUserError(ERROR_CODES.BOOKING_NOT_FOUND);
     }
 
-    // Check if booking is already cancelled or completed
+    // Check if booking is already cancelled
     if (booking.status === 'cancelled') {
       throwUserError(
         ERROR_CODES.BOOKING_ALREADY_CANCELLED,
@@ -1063,13 +1069,14 @@ export const cancelBooking = mutation({
       );
     }
 
-    if (booking.status === 'completed') {
-      throwUserError(
-        ERROR_CODES.BOOKING_ALREADY_COMPLETED,
-        'Cannot cancel completed booking',
-        'This booking has already been completed and cannot be cancelled.'
-      );
-    }
+    // Allow cancelling completed bookings to enable correction/deletion workflows
+    // if (booking.status === 'completed') {
+    //   throwUserError(
+    //     ERROR_CODES.BOOKING_ALREADY_COMPLETED,
+    //     'Cannot cancel completed booking',
+    //     'This booking has already been completed and cannot be cancelled.'
+    //   );
+    // }
 
     // Update booking status to cancelled
     await ctx.db.patch(args.id, {
