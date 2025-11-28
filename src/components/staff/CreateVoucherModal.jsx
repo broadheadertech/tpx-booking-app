@@ -20,7 +20,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
 
   // Convex mutation
   const createVoucherMutation = useMutation(api.services.vouchers.createVoucherWithCode)
-  
+
   const [qrCodeUrl, setQrCodeUrl] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
@@ -42,7 +42,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
         code: code,
         value: formData.value || "0"
       }
-      
+
       const url = await QRCode.toDataURL(JSON.stringify(qrData), {
         width: 200,
         margin: 2,
@@ -66,7 +66,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
-    
+
     try {
       if (!user?.id) {
         alert('You must be logged in to create vouchers')
@@ -90,7 +90,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
       if (onSubmit) {
         onSubmit(response)
       }
-      
+
       // Reset form
       setFormData({
         code: '',
@@ -101,7 +101,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
         description: ''
       })
       setQrCodeUrl('')
-      
+
       // Close modal without page refresh
       onClose()
     } catch (error) {
@@ -128,7 +128,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
               <Gift className="w-3.5 h-3.5 text-[var(--color-primary)] mr-1.5" />
               Details
             </h3>
-            
+
             {/* Code */}
             <div>
               <label className="block text-xs text-gray-400 mb-1">Voucher Code *</label>
@@ -206,7 +206,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
               />
             </div>
           </div>
-          
+
           {/* Right Column - Description & Preview */}
           <div className="space-y-3">
             <h3 className="text-xs font-bold text-gray-200 uppercase tracking-wider flex items-center">

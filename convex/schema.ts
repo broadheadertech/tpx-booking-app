@@ -232,6 +232,15 @@ export default defineSchema({
     description: v.optional(v.string()),
     branch_id: v.id("branches"), // Add branch_id for branch-scoped vouchers
     created_by: v.id("users"),
+    status: v.union(
+      v.literal("active"),
+      v.literal("inactive"),
+      v.literal("pending_approval"),
+      v.literal("rejected")
+    ),
+    approved_by: v.optional(v.id("users")),
+    approved_at: v.optional(v.number()),
+    rejection_reason: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
     // Legacy fields for backward compatibility
@@ -241,7 +250,8 @@ export default defineSchema({
   })
     .index("by_code", ["code"])
     .index("by_created_by", ["created_by"])
-    .index("by_branch", ["branch_id"]),
+    .index("by_branch", ["branch_id"])
+    .index("by_branch_status", ["branch_id", "status"]),
 
   // User vouchers relationship table
   user_vouchers: defineTable({
