@@ -104,11 +104,11 @@ function Wallet() {
               <div className="flex items-center space-x-2">
                 <img
                   src="/img/tipuno_x_logo_white.avif"
-                  alt={branding?.display_name || 'TipunoX'}
+                  alt={branding?.display_name || ''}
                   className="w-10 h-10 object-contain"
                 />
                 <div>
-                  <div className="text-xs font-semibold" style={{ color: mutedColor }}>{branding?.display_name || 'TipunoX'}</div>
+                  <div className="text-xs font-semibold" style={{ color: mutedColor }}>{branding?.display_name || ''}</div>
                   <div className="text-sm text-white font-black">Wallet</div>
                 </div>
               </div>

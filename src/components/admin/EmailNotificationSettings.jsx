@@ -190,10 +190,10 @@ export default function EmailNotificationSettings() {
 
   // Generate preview HTML with branding colors
   const previewHtml = useMemo(() => {
-    const primaryColor = branding?.primary_color || '#FF8C42'
-    const accentColor = branding?.accent_color || '#FF7A2B'
+    const primaryColor = branding?.primary_color || '#000000'
+    const accentColor = branding?.accent_color || '#000000'
     const bgColor = branding?.bg_color || '#0A0A0A'
-    const brandName = branding?.display_name || 'TipunoX'
+    const brandName = branding?.display_name || ''
     
     // Replace variables for preview and convert newlines to <br>
     const subject = form.subject.replace(/\{\{brand_name\}\}/g, brandName)

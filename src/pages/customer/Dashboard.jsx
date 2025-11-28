@@ -261,12 +261,12 @@ const Dashboard = () => {
             <div className="flex justify-between items-center py-5">
               <div className="flex items-center space-x-3">
                 <img
-                  src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'}
+                  src={branding?.logo_light_url }
                   alt={branding?.display_name || 'Logo'}
                   className="w-14 h-14 object-contain"
                 />
                 <div>
-                  <h1 className="text-base font-black text-[var(--color-primary)]">{branding?.display_name || 'TipunoX'}</h1>
+                  <h1 className="text-base font-black text-[var(--color-primary)]">{branding?.display_name || ''}</h1>
                   <p className="text-xs font-semibold text-[var(--color-primary)]">{branding?.display_name ? 'Branch' : 'Angeles'}</p>
                 </div>
               </div>
