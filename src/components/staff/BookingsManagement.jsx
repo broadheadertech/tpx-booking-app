@@ -35,7 +35,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 8
   const [sendSms, setSendSms] = useState(false)
-  const [openDropdown, setOpenDropdown] = useState(null)
+  const [dropdownState, setDropdownState] = useState({ id: null, position: null })
   const [currentTime, setCurrentTime] = useState(Date.now())
 
   // Update time every minute for countdown timers
@@ -1095,8 +1095,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.status === 'completed' ? 'bg-green-50 text-green-700' :
-                                  payment.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
-                                    'bg-red-50 text-red-700'
+                                payment.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
+                                  'bg-red-50 text-red-700'
                                 }`}>
                                 {payment.status}
                               </span>
@@ -1600,8 +1600,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${payment.status === 'completed' ? 'bg-green-50 text-green-700' :
-                            payment.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
-                              'bg-red-50 text-red-700'
+                          payment.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
+                            'bg-red-50 text-red-700'
                           }`}>
                           {payment.status}
                         </span>
@@ -1884,8 +1884,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
           <button
             onClick={() => setActiveTab('bookings')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors text-xs ${activeTab === 'bookings'
-                ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md'
-                : 'text-gray-400 hover:bg-[#1A1A1A] hover:text-white'
+              ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md'
+              : 'text-gray-400 hover:bg-[#1A1A1A] hover:text-white'
               }`}
           >
             <Calendar className="w-3.5 h-3.5" />
@@ -1894,8 +1894,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
           <button
             onClick={() => setActiveTab('transaction')}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors text-xs ${activeTab === 'transaction'
-                ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md'
-                : 'text-gray-400 hover:bg-[#1A1A1A] hover:text-white'
+              ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md'
+              : 'text-gray-400 hover:bg-[#1A1A1A] hover:text-white'
               }`}
           >
             <Receipt className="w-3.5 h-3.5" />
@@ -2096,30 +2096,51 @@ const BookingsManagement = ({ onRefresh, user }) => {
                               {/* Dropdown Menu */}
                               <div className="relative">
                                 <button
-                                  onClick={() => setOpenDropdown(openDropdown === booking._id ? null : booking._id)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    setDropdownState(prev => prev.id === booking._id
+                                      ? { id: null, position: null }
+                                      : {
+                                        id: booking._id,
+                                        position: {
+                                          top: rect.bottom + window.scrollY,
+                                          left: rect.right + window.scrollX
+                                        }
+                                      }
+                                    );
+                                  }}
                                   className="p-1.5 text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded-md transition-colors"
                                   title="More actions"
                                 >
                                   <MoreVertical className="h-4 w-4" />
                                 </button>
 
-                                {openDropdown === booking._id && (
+                                {dropdownState.id === booking._id && createPortal(
                                   <>
-                                    {/* Backdrop */}
                                     <div
-                                      className="fixed inset-0 z-10"
-                                      onClick={() => setOpenDropdown(null)}
+                                      className="fixed inset-0 z-[9999]"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDropdownState({ id: null, position: null });
+                                      }}
                                     />
-
-                                    {/* Dropdown Menu */}
-                                    <div className="absolute right-0 mt-1 w-48 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg shadow-xl z-20 py-1">
+                                    <div
+                                      className="absolute z-[10000] w-48 bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg shadow-xl py-1"
+                                      style={{
+                                        top: dropdownState.position.top + 4,
+                                        left: dropdownState.position.left,
+                                        transform: 'translateX(-100%)'
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
                                       {/* Status Actions */}
                                       {booking.status === 'pending' && (
                                         <>
                                           <button
                                             onClick={() => {
                                               handleStatusChange(booking, 'booked')
-                                              setOpenDropdown(null)
+                                              setDropdownState({ id: null, position: null })
                                             }}
                                             className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
                                             disabled={loading}
@@ -2130,7 +2151,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                                           <button
                                             onClick={() => {
                                               handleStatusChange(booking, 'cancelled')
-                                              setOpenDropdown(null)
+                                              setDropdownState({ id: null, position: null })
                                             }}
                                             className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
                                             disabled={loading}
@@ -2145,7 +2166,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                                           <button
                                             onClick={() => {
                                               setConfirmModal({ show: true, booking, action: 'confirm' })
-                                              setOpenDropdown(null)
+                                              setDropdownState({ id: null, position: null })
                                             }}
                                             className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
                                             disabled={loading}
@@ -2156,7 +2177,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                                           <button
                                             onClick={() => {
                                               handleStatusChange(booking, 'cancelled')
-                                              setOpenDropdown(null)
+                                              setDropdownState({ id: null, position: null })
                                             }}
                                             className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
                                             disabled={loading}
@@ -2171,7 +2192,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                                           <button
                                             onClick={() => {
                                               setConfirmModal({ show: true, booking, action: 'complete' })
-                                              setOpenDropdown(null)
+                                              setDropdownState({ id: null, position: null })
                                             }}
                                             className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
                                             disabled={loading}
@@ -2182,7 +2203,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                                           <button
                                             onClick={() => {
                                               setCancelModal({ show: true, booking })
-                                              setOpenDropdown(null)
+                                              setDropdownState({ id: null, position: null })
                                             }}
                                             className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
                                             disabled={loading}
@@ -2202,7 +2223,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                                       <button
                                         onClick={() => {
                                           handleEdit(booking)
-                                          setOpenDropdown(null)
+                                          setDropdownState({ id: null, position: null })
                                         }}
                                         className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
                                         disabled={loading}
@@ -2214,7 +2235,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                                         <button
                                           onClick={() => {
                                             handleDelete(booking)
-                                            setOpenDropdown(null)
+                                            setDropdownState({ id: null, position: null })
                                           }}
                                           className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
                                           disabled={loading}
@@ -2224,7 +2245,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
                                         </button>
                                       )}
                                     </div>
-                                  </>
+                                  </>,
+                                  document.body
                                 )}
                               </div>
                             </div>
@@ -2247,8 +2269,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
                   onClick={handlePreviousPage}
                   disabled={currentPage === 1}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${currentPage === 1
-                      ? 'text-gray-500 cursor-not-allowed'
-                      : 'text-white hover:bg-[#2A2A2A]'
+                    ? 'text-gray-500 cursor-not-allowed'
+                    : 'text-white hover:bg-[#2A2A2A]'
                     }`}
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -2268,8 +2290,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
                   onClick={handleNextPage}
                   disabled={currentPage === totalPages}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${currentPage === totalPages
-                      ? 'text-gray-500 cursor-not-allowed'
-                      : 'text-white hover:bg-[#2A2A2A]'
+                    ? 'text-gray-500 cursor-not-allowed'
+                    : 'text-white hover:bg-[#2A2A2A]'
                     }`}
                 >
                   <span className="text-sm">Next</span>
