@@ -379,7 +379,7 @@ function StaffDashboard() {
       <div className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8 lg:py-12">
           <div className="space-y-4 sm:space-y-6 md:space-y-8 lg:space-y-12">
-            {user?.role !== "branch_admin" && (
+            {/* {user?.role !== "branch_admin" && (
               <QuickActions
                 onAddCustomer={handleAddCustomer}
                 onCreateBooking={handleCreateBooking}
@@ -389,7 +389,7 @@ function StaffDashboard() {
                 activeModal={activeModal}
                 setActiveModal={setActiveModal}
               />
-            )}
+            )} */}
             <TabNavigation
               tabs={tabs}
               activeTab={activeTab}
