@@ -599,15 +599,16 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                         {statusConfig.label}
                       </span>
                     </div>
-                    {(user?.role === "branch_admin" || user?.role === "admin" || user?.role === "super_admin") && (
-                      <button
-                        onClick={() => handleDelete(voucher)}
-                        className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded transition-colors"
-                        title="Delete Voucher"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
-                    )}
+                    {(user?.role === "branch_admin" ||
+                      user?.role === "super_admin") && (
+                        <button
+                          onClick={() => handleDelete(voucher)}
+                          className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded transition-colors"
+                          title="Delete Voucher"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
                   </div>
                 </div>
 
@@ -842,15 +843,16 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                                 </button>
                               </>
                             )}
-                          {(user?.role === "branch_admin" || user?.role === "admin" || user?.role === "super_admin") && (
-                            <button
-                              onClick={() => handleDelete(voucher)}
-                              className="p-2 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded-lg transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
+                          {(user?.role === "branch_admin" ||
+                            user?.role === "super_admin") && (
+                              <button
+                                onClick={() => handleDelete(voucher)}
+                                className="p-2 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded-lg transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
                         </div>
                       </td>
                     </tr>
