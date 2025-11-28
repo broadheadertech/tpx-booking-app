@@ -76,7 +76,7 @@ export const getBranchStats = query({
     const completedBookings = bookings.filter((b) => b.status === "completed").length;
 
     return {
-      totalBookings: bookings.length,
+      totalBookings: bookings.filter((b) => b.status !== "cancelled").length,
       completedBookings,
       totalRevenue,
       totalBarbers: barbers.length,
@@ -293,7 +293,7 @@ export const updateBranch = mutation({
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
-    
+
     const branch = await ctx.db.get(id);
     if (!branch) {
       throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Branch not found", "The branch you are trying to update does not exist.");
@@ -309,7 +309,7 @@ export const updateBranch = mutation({
     };
 
     // Remove undefined values
-    Object.keys(updateData).forEach(key => 
+    Object.keys(updateData).forEach(key =>
       updateData[key as keyof typeof updateData] === undefined && delete updateData[key as keyof typeof updateData]
     );
 
@@ -350,11 +350,11 @@ export const deleteBranch = mutation({
         .collect(),
     ]);
 
-    if (users.length > 0 || barbers.length > 0 || services.length > 0 || 
-        bookings.length > 0 || transactions.length > 0) {
+    if (users.length > 0 || barbers.length > 0 || services.length > 0 ||
+      bookings.length > 0 || transactions.length > 0) {
       throwUserError(
-        ERROR_CODES.OPERATION_FAILED, 
-        "Cannot delete branch", 
+        ERROR_CODES.OPERATION_FAILED,
+        "Cannot delete branch",
         "This branch has associated data (users, barbers, services, bookings, or transactions). Please remove or transfer these records before deleting the branch."
       );
     }

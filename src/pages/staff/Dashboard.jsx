@@ -57,8 +57,8 @@ function StaffDashboard() {
       ? useQuery(api.services.bookings.getAllBookings)
       : user?.branch_id
         ? useQuery(api.services.bookings.getBookingsByBranch, {
-            branch_id: user.branch_id,
-          })
+          branch_id: user.branch_id,
+        })
         : undefined;
 
   const services =
@@ -66,8 +66,8 @@ function StaffDashboard() {
       ? useQuery(api.services.services.getAllServices)
       : user?.branch_id
         ? useQuery(api.services.services.getServicesByBranch, {
-            branch_id: user.branch_id,
-          })
+          branch_id: user.branch_id,
+        })
         : undefined;
 
   const barbers =
@@ -75,8 +75,8 @@ function StaffDashboard() {
       ? useQuery(api.services.barbers.getAllBarbers)
       : user?.branch_id
         ? useQuery(api.services.barbers.getBarbersByBranch, {
-            branch_id: user.branch_id,
-          })
+          branch_id: user.branch_id,
+        })
         : undefined;
 
   const vouchers =
@@ -84,32 +84,32 @@ function StaffDashboard() {
       ? useQuery(api.services.vouchers.getAllVouchers)
       : user?.branch_id
         ? useQuery(api.services.vouchers.getVouchersByBranch, {
-            branch_id: user.branch_id,
-          })
+          branch_id: user.branch_id,
+        })
         : undefined;
   const events =
     user?.role === "super_admin"
       ? useQuery(api.services.events.getAllEvents)
       : user?.branch_id
         ? useQuery(api.services.events.getEventsByBranch, {
-            branch_id: user.branch_id,
-          })
+          branch_id: user.branch_id,
+        })
         : undefined;
   const customers =
     user?.role === "super_admin"
       ? useQuery(api.services.auth.getAllUsers)
       : user?.branch_id
         ? useQuery(api.services.auth.getUsersByBranch, {
-            branch_id: user.branch_id,
-          })
+          branch_id: user.branch_id,
+        })
         : undefined;
 
   // Calculate incomplete bookings count (pending, booked, confirmed - not completed or cancelled)
   const incompleteBookingsCount = bookings
     ? bookings.filter(
-        (booking) =>
-          booking.status !== "completed" && booking.status !== "cancelled"
-      ).length
+      (booking) =>
+        booking.status !== "completed" && booking.status !== "cancelled"
+    ).length
     : 0;
 
   // Helper functions for refresh actions
@@ -126,7 +126,7 @@ function StaffDashboard() {
     }
 
     return {
-      totalBookings: bookings.length,
+      totalBookings: bookings.filter(b => b.status !== 'cancelled').length,
       totalServices: services.length,
       totalVouchers: vouchers.length,
       totalBarbers: barbers.length,
@@ -353,8 +353,8 @@ function StaffDashboard() {
       ? baseTabs
       : user?.page_access
         ? baseTabs.filter(
-            (t) => user.page_access.includes(t.id) || t.id === "overview"
-          ) // Always include overview
+          (t) => user.page_access.includes(t.id) || t.id === "overview"
+        ) // Always include overview
         : baseTabs;
 
   // Redirect if current active tab is not allowed (unless it's overview)
