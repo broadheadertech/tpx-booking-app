@@ -8,7 +8,7 @@ import ConfirmDialog from '../common/ConfirmDialog'
 import ImageUploadInput from './ImageUploadInput'
 
 const DEFAULT_BRANDING = {
-  display_name: 'TipunoX',
+  display_name: '',
   primary_color: 'var(--color-primary)',
   accent_color: 'var(--color-accent)',
   bg_color: 'var(--color-bg)',

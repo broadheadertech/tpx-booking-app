@@ -826,10 +826,10 @@ export const sendPasswordResetEmail = action({
     const template = await ctx.runQuery(api.services.emailTemplates.getTemplateByType, { template_type: "password_reset" });
     
     // Extract branding colors (fallback to defaults)
-    const primaryColor = branding?.primary_color || '#FF8C42';
-    const accentColor = branding?.accent_color || '#FF7A2B';
+    const primaryColor = branding?.primary_color || '#000000';
+    const accentColor = branding?.accent_color || '#000000';
     const bgColor = branding?.bg_color || '#0A0A0A';
-    const brandName = branding?.display_name || 'TipunoX';
+    const brandName = branding?.display_name || '';
     
     // Email template content
     const subject = (template?.subject || 'Reset your {{brand_name}} password').replace(/\{\{brand_name\}\}/g, brandName);
@@ -1143,9 +1143,9 @@ export const sendVoucherEmailWithQR = action({
     const template = await ctx.runQuery(api.services.emailTemplates.getTemplateByType, { template_type: "voucher" });
     
     // Extract branding colors (fallback to defaults)
-    const primaryColor = branding?.primary_color || '#FF8C42';
-    const accentColor = branding?.accent_color || '#FF7A2B';
-    const brandName = branding?.display_name || 'TipunoX';
+    const primaryColor = branding?.primary_color || '#000000';
+    const accentColor = branding?.accent_color || '#000000';
+    const brandName = branding?.display_name || '';
     
     // Lighter versions of primary color for backgrounds
     const primaryLight = `${primaryColor}1a`;
@@ -1458,10 +1458,10 @@ export const sendBookingConfirmationEmail = action({
     const template = await ctx.runQuery(api.services.emailTemplates.getTemplateByType, { template_type: "booking_confirmation" });
     
     // Extract branding colors (fallback to defaults)
-    const primaryColor = branding?.primary_color || '#FF8C42';
-    const accentColor = branding?.accent_color || '#FF7A2B';
+    const primaryColor = branding?.primary_color || '#000000';
+    const accentColor = branding?.accent_color || '#000000';
     const bgColor = branding?.bg_color || '#0A0A0A';
-    const brandName = branding?.display_name || 'TipunoX';
+    const brandName = branding?.display_name || '';
     
     // Lighter versions of primary color for backgrounds
     const primaryLight = `${primaryColor}1a`;

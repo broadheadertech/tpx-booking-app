@@ -33,15 +33,15 @@ const DashboardHeader = ({ onLogout }) => {
           {/* Left section - Logo and Title */}
           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
             <img
-              src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'}
+              src={branding?.logo_light_url}
               alt={branding?.display_name || 'Logo'}
               className="w-9 h-9 sm:w-11 sm:h-11 object-contain flex-shrink-0"
             />
             <div className="min-w-0 flex-1">
               <div className="flex items-center space-x-1.5 sm:space-x-2">
                 <h1 className="text-xs sm:text-lg font-bold text-[var(--color-primary)] tracking-tight truncate">
-                  <span className="hidden sm:inline">{branding?.display_name || 'TipunoX'}</span>
-                  <span className="sm:hidden">{branding?.display_name || 'TipunoX'}</span>
+                  <span className="hidden sm:inline">{branding?.display_name || ''}</span>
+                  <span className="sm:hidden">{branding?.display_name || ''}</span>
                 </h1>
                 <div className="bg-[var(--color-primary)]/15 backdrop-blur-sm rounded-md px-1.5 py-0.5 border border-[var(--color-primary)]/25 flex-shrink-0">
                   <span className="text-[10px] font-semibold text-[var(--color-primary)]">v8.1.2</span>

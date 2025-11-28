@@ -65,7 +65,7 @@ const DownloadApp = () => {
           <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
             <Link to="/" className="flex items-center space-x-3">
               <img
-                src="/img/tipuno_x_logo_white.avif"
+                src=""
                 alt="Barbershop"
                 className="w-8 h-8 object-contain"
               />
@@ -91,7 +91,7 @@ const DownloadApp = () => {
             <div className="text-center mb-12">
               <div className="flex justify-center items-center gap-8 mb-6">
                 <img
-                  src="/img/tipuno_x_logo_white.avif"
+                  src=""
                   alt="Barbershop"
                   className="w-60 h-24 object-contain"
                 />

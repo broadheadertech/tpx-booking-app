@@ -600,7 +600,7 @@ const BarberDashboard = () => {
           style={{
             backgroundImage: branding?.logo_dark_url
               ? `url(${branding.logo_dark_url})`
-              : 'url(/img/pnglog.png)',
+              : '',
             filter: 'brightness(0.2)'
           }}
         ></div>
@@ -612,7 +612,7 @@ const BarberDashboard = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <img
-                src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'}
+                src={branding?.logo_light_url }
                 alt=" Barbershop Logo"
                 className="w-10 h-10 object-contain"
               />
