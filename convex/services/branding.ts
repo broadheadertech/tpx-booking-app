@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+// Force rebuild
 import { mutation, query } from "../_generated/server";
 
 // Helper: get current user by session token
@@ -176,7 +177,7 @@ export const upsertGlobalBranding = mutation({
 
     const now = Date.now();
     const existing = await ctx.db.query("branding_global").first();
-    
+
     // Create history snapshot BEFORE updating
     if (existing) {
       const currentVersion = existing.version || 0;
@@ -270,13 +271,13 @@ export const rollbackGlobalBranding = mutation({
       .query("branding_history")
       .withIndex("by_version", (q) => q.eq("version", args.version))
       .first();
-    
+
     if (!history) {
       throw new Error(`Version ${args.version} not found in history`);
     }
 
     const now = Date.now();
-    
+
     // Create history of current state before rollback
     const currentVersion = current.version || 0;
     await ctx.db.insert("branding_history", {
@@ -290,7 +291,7 @@ export const rollbackGlobalBranding = mutation({
 
     // Restore snapshot (exclude metadata fields)
     const { _id, _creationTime, createdAt: _, version: __, changed_by, ...snapshotData } = history.snapshot;
-    
+
     await ctx.db.patch(current._id, {
       ...snapshotData,
       version: currentVersion + 1,
@@ -310,7 +311,7 @@ export const exportBranding = query({
     if (!user || user.role !== "super_admin") {
       throw new Error("Permission denied: Only super admins can export");
     }
-    
+
     const branding = await ctx.db.query("branding_global").first();
     return {
       version: 1,
@@ -331,23 +332,23 @@ export const importBranding = mutation({
     if (!user || user.role !== "super_admin") {
       throw new Error("Permission denied: Only super admins can import");
     }
-    
+
     // Validate import format
     if (!args.config.version || !args.config.data) {
       throw new Error("Invalid import format: missing version or data");
     }
-    
+
     const importData = args.config.data;
-    
+
     // Validate imported data
     const validationErrors = validateBrandingPayload(importData);
     if (validationErrors.length > 0) {
       throw new Error(`Import validation failed: ${validationErrors.join(', ')}`);
     }
-    
+
     const current = await ctx.db.query("branding_global").first();
     const now = Date.now();
-    
+
     // Create backup before import
     if (current) {
       await ctx.db.insert("branding_history", {
@@ -359,12 +360,12 @@ export const importBranding = mutation({
         createdAt: now,
       });
     }
-    
+
     const newVersion = (current?.version || 0) + 1;
-    
+
     // Extract only the fields we want to import (exclude metadata)
     const { _id, _creationTime, createdAt: _, updatedAt: __, version: ___, updated_by, updated_at, ...dataToImport } = importData;
-    
+
     if (current) {
       await ctx.db.patch(current._id, {
         ...dataToImport,
@@ -375,7 +376,7 @@ export const importBranding = mutation({
       });
       return current._id;
     }
-    
+
     const id = await ctx.db.insert("branding_global", {
       ...dataToImport,
       version: 1,
@@ -398,7 +399,7 @@ export const generateUploadUrl = mutation({
     if (!user || user.role !== "super_admin") {
       throw new Error("Permission denied: Only super admins can upload");
     }
-    
+
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -414,7 +415,7 @@ export const getImageUrl = mutation({
     if (!user || user.role !== "super_admin") {
       throw new Error("Permission denied");
     }
-    
+
     const url = await ctx.storage.getUrl(args.storageId as any);
     return url;
   },

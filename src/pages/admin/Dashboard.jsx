@@ -9,6 +9,7 @@ import SystemReports from '../../components/admin/SystemReports'
 import GlobalSettings from '../../components/admin/GlobalSettings'
 import BrandingManagement from '../../components/admin/BrandingManagement'
 import EmailNotificationSettings from '../../components/admin/EmailNotificationSettings'
+import AdminVoucherManagement from '../../components/admin/VoucherManagement'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
@@ -146,6 +147,9 @@ function AdminDashboard() {
           <div className="text-center text-gray-400">You do not have access to email notification settings.</div>
         )
 
+      case 'vouchers':
+        return <AdminVoucherManagement />
+
       default:
         return renderOverview()
     }
@@ -163,11 +167,16 @@ function AdminDashboard() {
   const tabs = user?.role === 'super_admin'
     ? [
       ...baseTabs.slice(0, 4),
+      { id: 'vouchers', label: 'Vouchers', icon: 'ticket' }, // Added Vouchers tab
       { id: 'branding', label: 'Branding', icon: 'palette' },
       { id: 'emails', label: 'Emails', icon: 'mail' },
       ...baseTabs.slice(4),
     ]
-    : baseTabs
+    : [
+      ...baseTabs.slice(0, 4),
+      { id: 'vouchers', label: 'Vouchers', icon: 'ticket' }, // Added Vouchers tab for regular admins too?
+      ...baseTabs.slice(4),
+    ]
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0F0F0F] via-[#1A1A1A] to-[#2A2A2A]">
