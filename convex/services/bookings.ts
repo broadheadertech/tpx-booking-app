@@ -792,8 +792,41 @@ export const deleteBooking = mutation({
               .first();
 
             if (transaction) {
-              console.log(`[DELETE BOOKING] Deleting associated transaction: ${transaction._id}`);
+              console.log(`[DELETE BOOKING] Processing hard delete for transaction: ${transaction._id}`);
+
+              // 1. Restore product stock
+              if (transaction.products && transaction.products.length > 0) {
+                for (const product of transaction.products) {
+                  const productDoc = await ctx.db.get(product.product_id);
+                  if (productDoc) {
+                    await ctx.db.patch(product.product_id, {
+                      stock: productDoc.stock + product.quantity,
+                      soldThisMonth: Math.max(0, productDoc.soldThisMonth - product.quantity),
+                    });
+                    console.log(`[DELETE BOOKING] Restored stock for product: ${product.product_name}`);
+                  }
+                }
+              }
+
+              // 2. Restore voucher status
+              if (transaction.voucher_applied && transaction.customer) {
+                const userAssignment = await ctx.db
+                  .query("user_vouchers")
+                  .withIndex("by_voucher_user", (q) => q.eq("voucher_id", transaction.voucher_applied!).eq("user_id", transaction.customer!))
+                  .first();
+
+                if (userAssignment && userAssignment.status === "redeemed") {
+                  await ctx.db.patch(userAssignment._id, {
+                    status: "assigned",
+                    redeemed_at: undefined,
+                  });
+                  console.log(`[DELETE BOOKING] Restored voucher status for: ${transaction.voucher_applied}`);
+                }
+              }
+
+              // 3. Delete the transaction record
               await ctx.db.delete(transaction._id);
+              console.log(`[DELETE BOOKING] Transaction hard deleted.`);
             }
           }
         } catch (error) {
