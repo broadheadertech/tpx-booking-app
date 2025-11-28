@@ -44,7 +44,7 @@ function AdminDashboard() {
     const totalRevenue = transactions
       .filter(t => t.payment_status === 'completed')
       .reduce((sum, t) => sum + t.total_amount, 0)
-    
+
     const todayBookings = bookings.filter(b => {
       const today = new Date().toDateString()
       return new Date(b.date).toDateString() === today
@@ -62,7 +62,7 @@ function AdminDashboard() {
       totalBranches: branches.length,
       activeBranches,
       totalUsers: users.length,
-      totalBookings: bookings.length,
+      totalBookings: bookings.filter(b => b.status !== 'cancelled').length,
       todayBookings,
       totalRevenue,
       thisMonthRevenue,
@@ -162,22 +162,22 @@ function AdminDashboard() {
 
   const tabs = user?.role === 'super_admin'
     ? [
-        ...baseTabs.slice(0, 4),
-        { id: 'branding', label: 'Branding', icon: 'palette' },
-        { id: 'emails', label: 'Emails', icon: 'mail' },
-        ...baseTabs.slice(4),
-      ]
+      ...baseTabs.slice(0, 4),
+      { id: 'branding', label: 'Branding', icon: 'palette' },
+      { id: 'emails', label: 'Emails', icon: 'mail' },
+      ...baseTabs.slice(4),
+    ]
     : baseTabs
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0F0F0F] via-[#1A1A1A] to-[#2A2A2A]">
       <DashboardHeader onLogout={handleLogout} />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="space-y-12">
-          <TabNavigation 
-            tabs={tabs} 
-            activeTab={activeTab} 
+          <TabNavigation
+            tabs={tabs}
+            activeTab={activeTab}
             onTabChange={setActiveTab}
           />
           <div className="bg-gradient-to-br from-[#1E1E1E] to-[#2A2A2A] rounded-3xl shadow-2xl border border-[#333333]/50 p-10 backdrop-blur-sm">

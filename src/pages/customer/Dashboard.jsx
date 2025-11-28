@@ -26,10 +26,10 @@ const Dashboard = () => {
   const navigate = useNavigate()
   const [activeSection, setActiveSection] = useState('home')
   const [showOnboarding, setShowOnboarding] = useState(false)
-  
+
   // Hook for real-time notifications with toast alerts
   const { unreadCount } = useRealtimeNotifications()
-  
+
   // Hook for booking notification events
   useBookingNotificationListener()
 
@@ -77,7 +77,7 @@ const Dashboard = () => {
   const vouchers = user?._id ? useQuery(api.services.vouchers.getVouchersByUser, { userId: user._id }) : undefined
   const branches = useQuery(api.services.branches.getAllBranches)
   const currentBranch = branches?.find(b => b.is_active) || branches?.[0]
-  
+
   // Handle query errors
   useEffect(() => {
     if (services === null) {
@@ -104,13 +104,13 @@ const Dashboard = () => {
 
   // Calculate dashboard stats from Convex data
   const calculateStats = () => {
-    const totalBookings = bookings ? bookings.length : 0
-    
+    const totalBookings = bookings ? bookings.filter(b => b.status !== 'cancelled').length : 0
+
     // Count active vouchers (assigned and not expired)
-    const activeVouchers = vouchers ? vouchers.filter(v => 
+    const activeVouchers = vouchers ? vouchers.filter(v =>
       v.status === 'assigned' && !v.isExpired
     ).length : 0
-    
+
     return {
       totalBookings,
       activeVouchers
@@ -161,13 +161,13 @@ const Dashboard = () => {
             {/* Hero Section - Premium Carousel */}
             <div className="px-4 mb-8">
               <div className="relative overflow-hidden rounded-[28px] shadow-2xl">
-                <Carousel 
-                  images={currentBranch?.carousel_images || []} 
-                  autoPlay={true} 
+                <Carousel
+                  images={currentBranch?.carousel_images || []}
+                  autoPlay={true}
                   interval={5000}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
-                
+
                 {/* Welcome Text Overlay */}
                 <div className="absolute bottom-0 left-0 right-0 p-6 z-10">
                   <h2 className="text-2xl font-black text-white mb-1">Welcome Back</h2>
@@ -181,13 +181,13 @@ const Dashboard = () => {
               <div className="grid grid-cols-2 gap-4">
                 {quickStats.map((stat) => {
                   return (
-                    <div 
-                      key={stat.label} 
+                    <div
+                      key={stat.label}
                       className="relative bg-[var(--color-bg)] rounded-[24px] p-6 border-2 border-[var(--color-primary)]/40 hover:border-[var(--color-primary)] active:scale-[0.98] transition-all duration-200 group"
                     >
                       {/* Subtle gradient background */}
                       <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)]/5 to-transparent rounded-[24px] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      
+
                       {/* Content */}
                       <div className="relative">
                         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{stat.label}</div>
@@ -209,10 +209,10 @@ const Dashboard = () => {
                 <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-accent)] to-[var(--color-primary)] bg-[length:200%_100%] animate-gradient p-[2px] rounded-[24px]">
                   <div className="w-full h-full bg-[var(--color-bg)] rounded-[22px]" />
                 </div>
-                
+
                 {/* Glow effect on hover */}
                 <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary)]/0 via-[var(--color-primary)]/20 to-[var(--color-primary)]/0 opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-500" />
-                
+
                 {/* Content */}
                 <div className="relative z-10 p-6 flex items-center justify-between">
                   <div className="flex items-center space-x-4">
@@ -223,14 +223,14 @@ const Dashboard = () => {
                         <Calendar className="w-7 h-7 text-white" />
                       </div>
                     </div>
-                    
+
                     {/* Text */}
                     <div className="text-left">
                       <div className="text-xl font-black text-white mb-0.5">Book Appointment</div>
                       <div className="text-sm text-gray-400 font-medium">Schedule your next visit</div>
                     </div>
                   </div>
-                  
+
                   {/* Arrow with orange gradient */}
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                     <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -253,16 +253,16 @@ const Dashboard = () => {
       {showOnboarding && (
         <PremiumOnboarding onComplete={handleOnboardingComplete} />
       )}
-      
+
       {/* Header - Premium Design */}
       {!['booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
         <div className="sticky top-0 z-40 bg-[var(--color-bg)]/98 backdrop-blur-2xl border-b border-[#1A1A1A]">
           <div className="max-w-md mx-auto px-4">
             <div className="flex justify-between items-center py-5">
               <div className="flex items-center space-x-3">
-                <img 
-                  src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'} 
-                  alt={branding?.display_name || 'Logo'} 
+                <img
+                  src={branding?.logo_light_url || '/img/tipuno_x_logo_white.avif'}
+                  alt={branding?.display_name || 'Logo'}
                   className="w-14 h-14 object-contain"
                 />
                 <div>
@@ -315,25 +315,22 @@ const Dashboard = () => {
                           setActiveSection(section.id)
                         }
                       }}
-                      className={`flex flex-col items-center justify-center py-3 px-2 rounded-[20px] transition-all duration-300 relative active:scale-95 ${
-                        isActive 
-                          ? 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)]' 
+                      className={`flex flex-col items-center justify-center py-3 px-2 rounded-[20px] transition-all duration-300 relative active:scale-95 ${isActive
+                          ? 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)]'
                           : 'hover:bg-white/5'
-                      }`}
+                        }`}
                       aria-current={isActive ? 'page' : undefined}
                     >
                       {/* Active indicator - minimal line */}
                       {isActive && (
                         <div className="absolute top-1 w-6 h-0.5 rounded-full bg-white/60" />
                       )}
-                      
-                      <IconComponent className={`w-6 h-6 mb-1 transition-all ${
-                        isActive ? 'text-white' : 'text-gray-500'
-                      }`} />
-                      
-                      <span className={`text-[10px] font-semibold transition-all ${
-                        isActive ? 'text-white' : 'text-gray-500'
-                      }`}>
+
+                      <IconComponent className={`w-6 h-6 mb-1 transition-all ${isActive ? 'text-white' : 'text-gray-500'
+                        }`} />
+
+                      <span className={`text-[10px] font-semibold transition-all ${isActive ? 'text-white' : 'text-gray-500'
+                        }`}>
                         {section.label}
                       </span>
                     </button>
