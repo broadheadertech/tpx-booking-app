@@ -8,9 +8,9 @@ export default {
     extend: {
       colors: {
         primary: {
-          orange: '#D9641E',
-          'orange-light': '#ED7D27',
-          'orange-dark': '#C55A1A',
+          orange: '#000000',
+          'orange-light': '#000000',
+          'orange-dark': '#000000',
           black: '#141414',
           'black-light': '#41423A',
         },
@@ -23,7 +23,7 @@ export default {
         accent: {
           cream: '#ECE2D2',
           'cream-light': '#F5F1EA',
-          coral: '#ED7D27',
+          coral: '#000000',
           neutral: '#41423A',
         }
       },
