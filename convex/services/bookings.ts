@@ -783,7 +783,7 @@ export const deleteBooking = mutation({
       if (booking.notes) {
         try {
           // Match "Receipt: RCP-..." case insensitive, allowing for optional space and more flexible receipt number format
-          const receiptMatch = booking.notes.match(/Receipt:\s*(RCP-[\w\d-]+)/i);
+          const receiptMatch = booking?.notes?.match(/(RCP-[\w\d-]+)/i);
           if (receiptMatch && receiptMatch[1]) {
             const receiptNumber = receiptMatch[1];
             console.log(`[DELETE BOOKING] Found associated receipt number in notes: ${receiptNumber}`);

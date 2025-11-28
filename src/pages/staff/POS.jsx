@@ -628,6 +628,7 @@ const POS = () => {
           // Update booking status to completed and payment status to paid
           await updateBookingStatus({
             id: booking._id,
+            notes: result.receipt_number,
             status: 'completed'
           })
           await updateBookingPaymentStatus({

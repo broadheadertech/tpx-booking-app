@@ -33,18 +33,19 @@ export default defineSchema({
     logo_dark_url: v.optional(v.string()),
     favicon_url: v.optional(v.string()),
     banner_url: v.optional(v.string()),
-    feature_toggles: v.optional(v.object({
-      kiosk: v.optional(v.boolean()),
-      wallet: v.optional(v.boolean()),
-      vouchers: v.optional(v.boolean()),
-      referrals: v.optional(v.boolean()),
-    })),
+    feature_toggles: v.optional(
+      v.object({
+        kiosk: v.optional(v.boolean()),
+        wallet: v.optional(v.boolean()),
+        vouchers: v.optional(v.boolean()),
+        referrals: v.optional(v.boolean()),
+      })
+    ),
     updated_by: v.optional(v.id("users")),
     updated_at: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  })
-    .index("by_branch", ["branch_id"]),
+  }).index("by_branch", ["branch_id"]),
 
   // Global branding singleton for system-wide theming
   branding_global: defineTable({
@@ -58,19 +59,20 @@ export default defineSchema({
     logo_dark_url: v.optional(v.string()),
     favicon_url: v.optional(v.string()),
     banner_url: v.optional(v.string()),
-    feature_toggles: v.optional(v.object({
-      kiosk: v.optional(v.boolean()),
-      wallet: v.optional(v.boolean()),
-      vouchers: v.optional(v.boolean()),
-      referrals: v.optional(v.boolean()),
-    })),
+    feature_toggles: v.optional(
+      v.object({
+        kiosk: v.optional(v.boolean()),
+        wallet: v.optional(v.boolean()),
+        vouchers: v.optional(v.boolean()),
+        referrals: v.optional(v.boolean()),
+      })
+    ),
     version: v.optional(v.number()),
     updated_by: v.optional(v.id("users")),
     updated_at: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  })
-    .index("by_created_at", ["createdAt"]),
+  }).index("by_created_at", ["createdAt"]),
 
   // Branding history for version tracking and rollback
   branding_history: defineTable({
@@ -94,7 +96,14 @@ export default defineSchema({
     mobile_number: v.string(),
     address: v.optional(v.string()),
     birthday: v.optional(v.string()),
-    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("super_admin"), v.literal("branch_admin")),
+    role: v.union(
+      v.literal("staff"),
+      v.literal("customer"),
+      v.literal("admin"),
+      v.literal("barber"),
+      v.literal("super_admin"),
+      v.literal("branch_admin")
+    ),
     branch_id: v.optional(v.id("branches")), // Optional for super_admin and customers, required for staff/barber/admin/branch_admin
     is_active: v.boolean(),
     avatar: v.optional(v.string()),
@@ -133,27 +142,65 @@ export default defineSchema({
     monthlyRevenue: v.number(),
     specialties: v.array(v.string()),
     schedule: v.object({
-      monday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
-      tuesday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
-      wednesday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
-      thursday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
-      friday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
-      saturday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
-      sunday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      monday: v.object({
+        available: v.boolean(),
+        start: v.string(),
+        end: v.string(),
+      }),
+      tuesday: v.object({
+        available: v.boolean(),
+        start: v.string(),
+        end: v.string(),
+      }),
+      wednesday: v.object({
+        available: v.boolean(),
+        start: v.string(),
+        end: v.string(),
+      }),
+      thursday: v.object({
+        available: v.boolean(),
+        start: v.string(),
+        end: v.string(),
+      }),
+      friday: v.object({
+        available: v.boolean(),
+        start: v.string(),
+        end: v.string(),
+      }),
+      saturday: v.object({
+        available: v.boolean(),
+        start: v.string(),
+        end: v.string(),
+      }),
+      sunday: v.object({
+        available: v.boolean(),
+        start: v.string(),
+        end: v.string(),
+      }),
     }),
-    schedule_type: v.optional(v.union(v.literal("weekly"), v.literal("specific_dates"))),
-    specific_dates: v.optional(v.array(v.object({
-      date: v.string(), // YYYY-MM-DD
-      available: v.boolean(),
-      start: v.string(),
-      end: v.string()
-    }))),
-    blocked_periods: v.optional(v.array(v.object({
-      date: v.string(), // YYYY-MM-DD
-      start_time: v.optional(v.string()), // HH:mm, if undefined -> whole day
-      end_time: v.optional(v.string()), // HH:mm
-      reason: v.optional(v.string())
-    }))),
+    schedule_type: v.optional(
+      v.union(v.literal("weekly"), v.literal("specific_dates"))
+    ),
+    specific_dates: v.optional(
+      v.array(
+        v.object({
+          date: v.string(), // YYYY-MM-DD
+          available: v.boolean(),
+          start: v.string(),
+          end: v.string(),
+        })
+      )
+    ),
+    blocked_periods: v.optional(
+      v.array(
+        v.object({
+          date: v.string(), // YYYY-MM-DD
+          start_time: v.optional(v.string()), // HH:mm, if undefined -> whole day
+          end_time: v.optional(v.string()), // HH:mm
+          reason: v.optional(v.string()),
+        })
+      )
+    ),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -198,11 +245,9 @@ export default defineSchema({
       v.literal("completed"),
       v.literal("cancelled")
     ),
-    payment_status: v.optional(v.union(
-      v.literal("unpaid"),
-      v.literal("paid"),
-      v.literal("refunded")
-    )),
+    payment_status: v.optional(
+      v.union(v.literal("unpaid"), v.literal("paid"), v.literal("refunded"))
+    ),
     price: v.number(),
     voucher_id: v.optional(v.id("vouchers")), // Link to voucher if used
     discount_amount: v.optional(v.number()), // Discount applied
@@ -232,11 +277,13 @@ export default defineSchema({
     description: v.optional(v.string()),
     branch_id: v.id("branches"), // Add branch_id for branch-scoped vouchers
     created_by: v.id("users"),
-    status: v.union(
-      v.literal("active"),
-      v.literal("inactive"),
-      v.literal("pending_approval"),
-      v.literal("rejected")
+    status: v.optional(
+      v.union(
+        v.literal("active"),
+        v.literal("inactive"),
+        v.literal("pending_approval"),
+        v.literal("rejected")
+      )
     ),
     approved_by: v.optional(v.id("users")),
     approved_at: v.optional(v.number()),
@@ -257,10 +304,7 @@ export default defineSchema({
   user_vouchers: defineTable({
     voucher_id: v.id("vouchers"),
     user_id: v.optional(v.id("users")), // Optional for staff redemptions
-    status: v.union(
-      v.literal("assigned"),
-      v.literal("redeemed")
-    ),
+    status: v.union(v.literal("assigned"), v.literal("redeemed")),
     assigned_at: v.number(),
     redeemed_at: v.optional(v.number()),
     assigned_by: v.optional(v.id("users")), // Optional for staff redemptions
@@ -291,8 +335,18 @@ export default defineSchema({
     maxAttendees: v.number(),
     currentAttendees: v.number(),
     price: v.number(),
-    category: v.union(v.literal("workshop"), v.literal("celebration"), v.literal("training"), v.literal("promotion")),
-    status: v.union(v.literal("upcoming"), v.literal("ongoing"), v.literal("completed"), v.literal("cancelled")),
+    category: v.union(
+      v.literal("workshop"),
+      v.literal("celebration"),
+      v.literal("training"),
+      v.literal("promotion")
+    ),
+    status: v.union(
+      v.literal("upcoming"),
+      v.literal("ongoing"),
+      v.literal("completed"),
+      v.literal("cancelled")
+    ),
     branch_id: v.id("branches"), // Add branch_id for branch-scoped events
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -321,7 +375,12 @@ export default defineSchema({
       v.literal("urgent")
     ),
     recipient_id: v.optional(v.id("users")), // Optional for branch-wide notifications
-    recipient_type: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber")),
+    recipient_type: v.union(
+      v.literal("staff"),
+      v.literal("customer"),
+      v.literal("admin"),
+      v.literal("barber")
+    ),
     sender_id: v.optional(v.id("users")),
     branch_id: v.optional(v.id("branches")), // For branch-scoped notifications
     is_read: v.boolean(),
@@ -388,18 +447,24 @@ export default defineSchema({
     customer_email: v.optional(v.string()), // For walk-in customers
     customer_address: v.optional(v.string()), // For walk-in customers
     barber: v.id("barbers"),
-    services: v.array(v.object({
-      service_id: v.id("services"),
-      service_name: v.string(),
-      price: v.number(),
-      quantity: v.number()
-    })),
-    products: v.optional(v.array(v.object({
-      product_id: v.id("products"),
-      product_name: v.string(),
-      price: v.number(),
-      quantity: v.number()
-    }))),
+    services: v.array(
+      v.object({
+        service_id: v.id("services"),
+        service_name: v.string(),
+        price: v.number(),
+        quantity: v.number(),
+      })
+    ),
+    products: v.optional(
+      v.array(
+        v.object({
+          product_id: v.id("products"),
+          product_name: v.string(),
+          price: v.number(),
+          quantity: v.number(),
+        })
+      )
+    ),
     subtotal: v.number(),
     discount_amount: v.number(),
     voucher_applied: v.optional(v.id("vouchers")),
@@ -444,28 +509,36 @@ export default defineSchema({
       v.literal("paused"),
       v.literal("closed")
     ),
-    current_transaction: v.optional(v.object({
-      customer: v.optional(v.id("users")),
-      customer_name: v.optional(v.string()),
-      customer_phone: v.optional(v.string()),
-      services: v.array(v.object({
-        service_id: v.id("services"),
-        service_name: v.string(),
-        price: v.number(),
-        quantity: v.number()
-      })),
-      products: v.optional(v.array(v.object({
-        product_id: v.id("products"),
-        product_name: v.string(),
-        price: v.number(),
-        quantity: v.number()
-      }))),
-      subtotal: v.number(),
-      discount_amount: v.number(),
-      voucher_applied: v.optional(v.id("vouchers")),
-      tax_amount: v.number(),
-      total_amount: v.number()
-    })),
+    current_transaction: v.optional(
+      v.object({
+        customer: v.optional(v.id("users")),
+        customer_name: v.optional(v.string()),
+        customer_phone: v.optional(v.string()),
+        services: v.array(
+          v.object({
+            service_id: v.id("services"),
+            service_name: v.string(),
+            price: v.number(),
+            quantity: v.number(),
+          })
+        ),
+        products: v.optional(
+          v.array(
+            v.object({
+              product_id: v.id("products"),
+              product_name: v.string(),
+              price: v.number(),
+              quantity: v.number(),
+            })
+          )
+        ),
+        subtotal: v.number(),
+        discount_amount: v.number(),
+        voucher_applied: v.optional(v.id("vouchers")),
+        tax_amount: v.number(),
+        total_amount: v.number(),
+      })
+    ),
     started_at: v.number(),
     last_activity: v.number(),
     closed_at: v.optional(v.number()),
@@ -609,33 +682,41 @@ export default defineSchema({
     product_commission: v.optional(v.number()), // Commission from product sales
 
     // Booking details snapshot (for reporting/printing)
-    bookings_detail: v.optional(v.array(v.object({
-      id: v.id("bookings"),
-      booking_code: v.string(),
-      date: v.string(),
-      time: v.string(),
-      price: v.number(),
-      service_name: v.string(),
-      customer_name: v.string(),
-      updatedAt: v.number(),
-      commission: v.optional(v.number()),
-      commission_rate: v.optional(v.number()),
-    }))),
+    bookings_detail: v.optional(
+      v.array(
+        v.object({
+          id: v.id("bookings"),
+          booking_code: v.string(),
+          date: v.string(),
+          time: v.string(),
+          price: v.number(),
+          service_name: v.string(),
+          customer_name: v.string(),
+          updatedAt: v.number(),
+          commission: v.optional(v.number()),
+          commission_rate: v.optional(v.number()),
+        })
+      )
+    ),
 
     // Product transaction details snapshot (for reporting/printing)
-    products_detail: v.optional(v.array(v.object({
-      id: v.id("transactions"),
-      transaction_id: v.string(),
-      date: v.number(),
-      product_name: v.string(),
-      quantity: v.number(),
-      price: v.number(),
-      total_amount: v.number(),
-      customer_name: v.string(),
-      commission_type: v.string(), // "percentage" or "fixed_amount"
-      commission_rate: v.number(),
-      commission_amount: v.number(),
-    }))),
+    products_detail: v.optional(
+      v.array(
+        v.object({
+          id: v.id("transactions"),
+          transaction_id: v.string(),
+          date: v.number(),
+          product_name: v.string(),
+          quantity: v.number(),
+          price: v.number(),
+          total_amount: v.number(),
+          customer_name: v.string(),
+          commission_type: v.string(), // "percentage" or "fixed_amount"
+          commission_rate: v.number(),
+          commission_amount: v.number(),
+        })
+      )
+    ),
 
     // Deductions
     tax_deduction: v.number(), // Tax deducted
@@ -646,12 +727,14 @@ export default defineSchema({
     net_pay: v.number(), // Final amount to be paid
 
     // Payment tracking
-    payment_method: v.optional(v.union(
-      v.literal("cash"),
-      v.literal("bank_transfer"),
-      v.literal("check"),
-      v.literal("digital_wallet")
-    )),
+    payment_method: v.optional(
+      v.union(
+        v.literal("cash"),
+        v.literal("bank_transfer"),
+        v.literal("check"),
+        v.literal("digital_wallet")
+      )
+    ),
     payment_reference: v.optional(v.string()), // Bank transfer ref, check number, etc.
     paid_at: v.optional(v.number()), // When payment was made
     paid_by: v.optional(v.id("users")), // Who processed the payment
@@ -695,7 +778,10 @@ export default defineSchema({
   product_commission_rates: defineTable({
     branch_id: v.id("branches"),
     product_id: v.id("products"),
-    commission_type: v.union(v.literal("percentage"), v.literal("fixed_amount")), // Type of commission
+    commission_type: v.union(
+      v.literal("percentage"),
+      v.literal("fixed_amount")
+    ), // Type of commission
     commission_rate: v.optional(v.number()), // Percentage for this product (if type is percentage)
     fixed_amount: v.optional(v.number()), // Fixed amount per unit (if type is fixed_amount)
     effective_from: v.number(),
@@ -763,12 +849,14 @@ export default defineSchema({
       v.literal("returning_customers"),
       v.literal("vip_customers")
     ),
-    template_type: v.optional(v.union(
-      v.literal("marketing"),
-      v.literal("promotional"),
-      v.literal("reminder"),
-      v.literal("custom")
-    )),
+    template_type: v.optional(
+      v.union(
+        v.literal("marketing"),
+        v.literal("promotional"),
+        v.literal("reminder"),
+        v.literal("custom")
+      )
+    ),
     from_email: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
     status: v.union(
@@ -801,10 +889,7 @@ export default defineSchema({
     campaign_id: v.id("email_campaigns"),
     recipient_email: v.string(),
     recipient_id: v.optional(v.id("users")),
-    status: v.union(
-      v.literal("sent"),
-      v.literal("failed")
-    ),
+    status: v.union(v.literal("sent"), v.literal("failed")),
     error: v.optional(v.string()),
     createdAt: v.number(),
   })
@@ -818,15 +903,22 @@ export default defineSchema({
     currency: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  })
-    .index("by_user", ["user_id"]),
+  }).index("by_user", ["user_id"]),
 
   // Wallet transactions
   wallet_transactions: defineTable({
     user_id: v.id("users"),
-    type: v.union(v.literal("topup"), v.literal("payment"), v.literal("refund")),
+    type: v.union(
+      v.literal("topup"),
+      v.literal("payment"),
+      v.literal("refund")
+    ),
     amount: v.number(),
-    status: v.union(v.literal("pending"), v.literal("completed"), v.literal("failed")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("completed"),
+      v.literal("failed")
+    ),
     provider: v.optional(v.string()),
     reference_id: v.optional(v.string()),
     source_id: v.optional(v.string()),
