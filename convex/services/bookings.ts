@@ -478,13 +478,13 @@ export const createBooking = mutation({
         customerEmail: customer?.email,
         resolvedEmail: customerEmail,
       });
-      
+
       if (customerEmail) {
         const branch = await ctx.db.get(args.branch_id);
         const barberData = args.barber ? await ctx.db.get(args.barber) : null;
-        
+
         console.log("📧 Scheduling booking confirmation email to:", customerEmail);
-        
+
         // Schedule the action to run immediately after this mutation completes
         await ctx.scheduler.runAfter(0, api.services.auth.sendBookingConfirmationEmail, {
           email: customerEmail,
@@ -775,6 +775,31 @@ export const deleteBooking = mutation({
       } catch (error) {
         console.error("Failed to send booking deletion notifications:", error);
         // Continue with deletion even if notifications fail
+      }
+
+      // Delete associated transaction if it exists
+      // Check for receipt number in notes (format: "POS Transaction - Receipt: RCP-...")
+      if (booking.notes && booking.notes.includes("Receipt: RCP-")) {
+        try {
+          const receiptMatch = booking.notes.match(/Receipt: (RCP-\d+)/);
+          if (receiptMatch && receiptMatch[1]) {
+            const receiptNumber = receiptMatch[1];
+            console.log(`[DELETE BOOKING] Found associated receipt number: ${receiptNumber}`);
+
+            const transaction = await ctx.db
+              .query("transactions")
+              .withIndex("by_receipt_number", (q) => q.eq("receipt_number", receiptNumber))
+              .first();
+
+            if (transaction) {
+              console.log(`[DELETE BOOKING] Deleting associated transaction: ${transaction._id}`);
+              await ctx.db.delete(transaction._id);
+            }
+          }
+        } catch (error) {
+          console.error("[DELETE BOOKING] Failed to delete associated transaction:", error);
+          // Continue with booking deletion even if transaction deletion fails
+        }
       }
     }
 
@@ -1257,9 +1282,9 @@ export const createWalkInBooking = mutation({
       if (args.customer_email) {
         const branch = await ctx.db.get(args.branch_id);
         const barberData = args.barber ? await ctx.db.get(args.barber) : null;
-        
+
         console.log("📧 Scheduling walk-in booking confirmation email to:", args.customer_email);
-        
+
         // Schedule the action to run immediately after this mutation completes
         await ctx.scheduler.runAfter(0, api.services.auth.sendBookingConfirmationEmail, {
           email: args.customer_email,
