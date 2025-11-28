@@ -419,42 +419,38 @@ const BarberModal = ({
               <button
                 type="button"
                 onClick={() => setActiveView("details")}
-                className={`py-2 px-2 border-b-2 font-medium text-sm cursor-pointer select-none ${
-                  activeView === "details"
-                    ? "border-[var(--color-primary)] text-[var(--color-primary)]"
-                    : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500"
-                } transition-colors`}
+                className={`py-2 px-2 border-b-2 font-medium text-sm cursor-pointer select-none ${activeView === "details"
+                  ? "border-[var(--color-primary)] text-[var(--color-primary)]"
+                  : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500"
+                  } transition-colors`}
               >
                 Details
               </button>
               <button
                 type="button"
                 onClick={() => setActiveView("schedule")}
-                className={`py-2 px-2 border-b-2 font-medium text-sm cursor-pointer select-none ${
-                  activeView === "schedule"
-                    ? "border-[var(--color-primary)] text-[var(--color-primary)]"
-                    : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500"
-                } transition-colors`}
+                className={`py-2 px-2 border-b-2 font-medium text-sm cursor-pointer select-none ${activeView === "schedule"
+                  ? "border-[var(--color-primary)] text-[var(--color-primary)]"
+                  : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500"
+                  } transition-colors`}
               >
                 Schedule
               </button>
               <button
                 type="button"
                 onClick={() => setActiveView("bookings")}
-                className={`py-2 px-2 border-b-2 font-medium text-sm cursor-pointer select-none ${
-                  activeView === "bookings"
-                    ? "border-[var(--color-primary)] text-[var(--color-primary)]"
-                    : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500"
-                } transition-colors`}
+                className={`py-2 px-2 border-b-2 font-medium text-sm cursor-pointer select-none ${activeView === "bookings"
+                  ? "border-[var(--color-primary)] text-[var(--color-primary)]"
+                  : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500"
+                  } transition-colors`}
               >
                 Bookings
               </button>
               <button
-                className={`px-4 py-2 rounded-md transition text-sm ${
-                  activeView === "dayoff"
-                    ? "border-[var(--color-primary)] text-[var(--color-primary)]"
-                    : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500"
-                }`}
+                className={`px-4 py-2 rounded-md transition text-sm ${activeView === "dayoff"
+                  ? "border-[var(--color-primary)] text-[var(--color-primary)]"
+                  : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500"
+                  }`}
                 onClick={() => setActiveView("dayoff")}
               >
                 Day Off
@@ -513,8 +509,8 @@ const BarberModal = ({
                                     e.target.checked
                                       ? [...formData.services, serviceId]
                                       : formData.services.filter(
-                                          (id) => id !== serviceId
-                                        )
+                                        (id) => id !== serviceId
+                                      )
                                   );
                                 }}
                                 className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] rounded"
@@ -605,10 +601,10 @@ const BarberModal = ({
                               {specialty}
                             </span>
                           )) || (
-                            <span className="text-sm text-gray-500">
-                              No specialties listed
-                            </span>
-                          )}
+                              <span className="text-sm text-gray-500">
+                                No specialties listed
+                              </span>
+                            )}
                         </div>
                       </div>
                     </div>
@@ -657,7 +653,7 @@ const BarberModal = ({
                                 This barber works on specific dates.
                               </p>
                               <p className="text-xs text-[var(--color-primary)]">
-                                {formData.specific_dates.length} dates scheduled
+                                {formData.specific_dates?.length || 0} dates scheduled
                               </p>
                             </div>
                           ) : (
@@ -709,22 +705,20 @@ const BarberModal = ({
                         <button
                           type="button"
                           onClick={() => toggleScheduleType("weekly")}
-                          className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                            formData.schedule_type === "weekly"
-                              ? "bg-[var(--color-primary)] text-white shadow-sm"
-                              : "text-gray-400 hover:text-white"
-                          }`}
+                          className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${formData.schedule_type === "weekly"
+                            ? "bg-[var(--color-primary)] text-white shadow-sm"
+                            : "text-gray-400 hover:text-white"
+                            }`}
                         >
                           Weekly
                         </button>
                         <button
                           type="button"
                           onClick={() => toggleScheduleType("specific_dates")}
-                          className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                            formData.schedule_type === "specific_dates"
-                              ? "bg-[var(--color-primary)] text-white shadow-sm"
-                              : "text-gray-400 hover:text-white"
-                          }`}
+                          className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${formData.schedule_type === "specific_dates"
+                            ? "bg-[var(--color-primary)] text-white shadow-sm"
+                            : "text-gray-400 hover:text-white"
+                            }`}
                         >
                           Specific Dates
                         </button>
@@ -825,12 +819,11 @@ const BarberModal = ({
                                     className={`
                                       h-8 rounded-md text-xs flex items-center justify-center transition-all
                                       ${!isCurrentMonth ? "text-gray-700" : ""}
-                                      ${
-                                        isSelected
-                                          ? "bg-[var(--color-primary)] text-white font-bold shadow-sm"
-                                          : isCurrentMonth
-                                            ? "text-gray-300 hover:bg-[#333333]"
-                                            : "text-gray-600"
+                                      ${isSelected
+                                        ? "bg-[var(--color-primary)] text-white font-bold shadow-sm"
+                                        : isCurrentMonth
+                                          ? "text-gray-300 hover:bg-[#333333]"
+                                          : "text-gray-600"
                                       }
                                       ${isTodayDate && !isSelected ? "border border-[var(--color-primary)] text-[var(--color-primary)]" : ""}
                                     `}
@@ -844,7 +837,7 @@ const BarberModal = ({
                         </div>
 
                         {/* Selected Dates List */}
-                        {formData.specific_dates.length > 0 && (
+                        {formData.specific_dates?.length > 0 && (
                           <div className="space-y-2">
                             <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wide">
                               Selected Dates
@@ -955,7 +948,7 @@ const BarberModal = ({
                           the calendar view.
                         </p>
                         <div className="flex flex-wrap gap-2 justify-center">
-                          {formData.specific_dates.slice(0, 5).map((d, i) => (
+                          {formData.specific_dates?.slice(0, 5).map((d, i) => (
                             <span
                               key={i}
                               className="px-3 py-1 bg-[#2A2A2A] border border-[#3A3A3A] rounded-full text-xs text-gray-300"
@@ -963,7 +956,7 @@ const BarberModal = ({
                               {d.date}
                             </span>
                           ))}
-                          {formData.specific_dates.length > 5 && (
+                          {(formData.specific_dates?.length || 0) > 5 && (
                             <span className="px-3 py-1 bg-[#2A2A2A] border border-[#3A3A3A] rounded-full text-xs text-gray-300">
                               +{formData.specific_dates.length - 5} more
                             </span>
@@ -976,20 +969,19 @@ const BarberModal = ({
                       const daySchedule = isEditing
                         ? formData.schedule[day]
                         : barber.schedule?.[day] || {
-                            available: false,
-                            start: "09:00",
-                            end: "17:00",
-                          };
+                          available: false,
+                          start: "09:00",
+                          end: "17:00",
+                        };
                       const isExpanded = expandedDay === day;
 
                       return (
                         <div
                           key={day}
-                          className={`bg-[#1E1E1E] border rounded-xl overflow-hidden transition-all ${
-                            daySchedule.available
-                              ? "border-green-500/30"
-                              : "border-[#2F2F2F]"
-                          }`}
+                          className={`bg-[#1E1E1E] border rounded-xl overflow-hidden transition-all ${daySchedule.available
+                            ? "border-green-500/30"
+                            : "border-[#2F2F2F]"
+                            }`}
                         >
                           <div className="p-4">
                             <div className="flex items-center justify-between">
