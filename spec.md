@@ -803,7 +803,7 @@ npm run preview
 - ✅ Service catalog management
 - ✅ Voucher system implementation
 
-### v1.0
+### v8.1.2
 - ✅ Initial booking system
 - ✅ User authentication
 - ✅ Basic CRUD operations

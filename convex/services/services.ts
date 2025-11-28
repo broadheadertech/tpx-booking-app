@@ -7,18 +7,18 @@ export const getAllServices = query({
   args: {},
   handler: async (ctx) => {
     const services = await ctx.db.query("services").collect();
-    
+
     // Get branch information for each service
     const servicesWithBranch = await Promise.all(
       services.map(async (service) => {
         const branch = await ctx.db.get(service.branch_id);
         return {
           ...service,
-          branch_name: branch?.name || 'Unknown Branch',
+          branch_name: branch?.name || "Unknown Branch",
         };
       })
     );
-    
+
     return servicesWithBranch;
   },
 });
@@ -42,8 +42,8 @@ export const getActiveServicesByBranch = query({
       .query("services")
       .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
       .collect();
-    
-    return services.filter(service => service.is_active);
+
+    return services.filter((service) => service.is_active);
   },
 });
 
@@ -92,13 +92,25 @@ export const createService = mutation({
   },
   handler: async (ctx, args) => {
     if (args.price < 0) {
-      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid price", "Price cannot be negative.");
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Invalid price",
+        "Price cannot be negative."
+      );
     }
     if (args.duration_minutes <= 0) {
-      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid duration", "Duration must be greater than 0 minutes.");
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Invalid duration",
+        "Duration must be greater than 0 minutes."
+      );
     }
     if (!args.name.trim()) {
-      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid name", "Service name cannot be empty.");
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Invalid name",
+        "Service name cannot be empty."
+      );
     }
 
     const serviceId = await ctx.db.insert("services", {
@@ -122,6 +134,7 @@ export const createService = mutation({
 // Update service
 export const updateService = mutation({
   args: {
+    branch_id: v.optional(v.id("branches")),
     id: v.id("services"),
     name: v.optional(v.string()),
     description: v.optional(v.string()),
@@ -137,18 +150,37 @@ export const updateService = mutation({
 
     const service = await ctx.db.get(id);
     if (!service) {
-      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Service not found", "The service you are trying to update does not exist.");
+      throwUserError(
+        ERROR_CODES.RESOURCE_NOT_FOUND,
+        "Service not found",
+        "The service you are trying to update does not exist."
+      );
     }
 
     // Validate updates if provided
     if (updates.price !== undefined && updates.price < 0) {
-      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid price", "Price cannot be negative.");
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Invalid price",
+        "Price cannot be negative."
+      );
     }
-    if (updates.duration_minutes !== undefined && updates.duration_minutes <= 0) {
-      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid duration", "Duration must be greater than 0 minutes.");
+    if (
+      updates.duration_minutes !== undefined &&
+      updates.duration_minutes <= 0
+    ) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Invalid duration",
+        "Duration must be greater than 0 minutes."
+      );
     }
     if (updates.name !== undefined && !updates.name.trim()) {
-      throwUserError(ERROR_CODES.INVALID_INPUT, "Invalid name", "Service name cannot be empty.");
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Invalid name",
+        "Service name cannot be empty."
+      );
     }
 
     await ctx.db.patch(id, {
@@ -166,7 +198,11 @@ export const deleteService = mutation({
   handler: async (ctx, args) => {
     const service = await ctx.db.get(args.id);
     if (!service) {
-      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Service not found", "The service you are trying to delete does not exist.");
+      throwUserError(
+        ERROR_CODES.RESOURCE_NOT_FOUND,
+        "Service not found",
+        "The service you are trying to delete does not exist."
+      );
     }
     await ctx.db.delete(args.id);
     return { success: true };
@@ -177,12 +213,14 @@ export const deleteService = mutation({
 export const bulkInsertServices = mutation({
   args: {
     branch_id: v.id("branches"),
-    services: v.array(v.object({
-      name: v.string(),
-      description: v.string(),
-      duration_minutes: v.number(),
-      price: v.number(),
-    }))
+    services: v.array(
+      v.object({
+        name: v.string(),
+        description: v.string(),
+        duration_minutes: v.number(),
+        price: v.number(),
+      })
+    ),
   },
   handler: async (ctx, args) => {
     const insertedServices: string[] = [];
@@ -194,13 +232,29 @@ export const bulkInsertServices = mutation({
       const serviceName = service.name.toLowerCase();
       const serviceDesc = service.description.toLowerCase();
 
-      if (serviceName.includes("beard") || serviceName.includes("mustache") || serviceDesc.includes("shav")) {
+      if (
+        serviceName.includes("beard") ||
+        serviceName.includes("mustache") ||
+        serviceDesc.includes("shav")
+      ) {
         category = "beard-care";
-      } else if (serviceName.includes("hair spa") || serviceName.includes("treatment") || serviceName.includes("scalp")) {
+      } else if (
+        serviceName.includes("hair spa") ||
+        serviceName.includes("treatment") ||
+        serviceName.includes("scalp")
+      ) {
         category = "hair-treatment";
-      } else if (serviceName.includes("color") || serviceName.includes("perm") || serviceName.includes("tattoo")) {
+      } else if (
+        serviceName.includes("color") ||
+        serviceName.includes("perm") ||
+        serviceName.includes("tattoo")
+      ) {
         category = "hair-styling";
-      } else if (serviceName.includes("package") || serviceName.includes("elite") || serviceName.includes("deluxe")) {
+      } else if (
+        serviceName.includes("package") ||
+        serviceName.includes("elite") ||
+        serviceName.includes("deluxe")
+      ) {
         category = "premium-package";
       }
 
@@ -222,7 +276,7 @@ export const bulkInsertServices = mutation({
     return {
       success: true,
       insertedCount: insertedServices.length,
-      serviceIds: insertedServices
+      serviceIds: insertedServices,
     };
   },
 });
@@ -231,12 +285,14 @@ export const bulkInsertServices = mutation({
 export const bulkInsertServicesForBranch = mutation({
   args: {
     branch_id: v.id("branches"),
-    services: v.array(v.object({
-      name: v.string(),
-      description: v.string(),
-      duration_minutes: v.number(),
-      price: v.number(),
-    }))
+    services: v.array(
+      v.object({
+        name: v.string(),
+        description: v.string(),
+        duration_minutes: v.number(),
+        price: v.number(),
+      })
+    ),
   },
   handler: async (ctx, args) => {
     const insertedServices: string[] = [];
@@ -248,13 +304,29 @@ export const bulkInsertServicesForBranch = mutation({
       const serviceName = service.name.toLowerCase();
       const serviceDesc = service.description.toLowerCase();
 
-      if (serviceName.includes("beard") || serviceName.includes("mustache") || serviceDesc.includes("shav")) {
+      if (
+        serviceName.includes("beard") ||
+        serviceName.includes("mustache") ||
+        serviceDesc.includes("shav")
+      ) {
         category = "beard-care";
-      } else if (serviceName.includes("hair spa") || serviceName.includes("treatment") || serviceName.includes("scalp")) {
+      } else if (
+        serviceName.includes("hair spa") ||
+        serviceName.includes("treatment") ||
+        serviceName.includes("scalp")
+      ) {
         category = "hair-treatment";
-      } else if (serviceName.includes("color") || serviceName.includes("perm") || serviceName.includes("tattoo")) {
+      } else if (
+        serviceName.includes("color") ||
+        serviceName.includes("perm") ||
+        serviceName.includes("tattoo")
+      ) {
         category = "hair-styling";
-      } else if (serviceName.includes("package") || serviceName.includes("elite") || serviceName.includes("deluxe")) {
+      } else if (
+        serviceName.includes("package") ||
+        serviceName.includes("elite") ||
+        serviceName.includes("deluxe")
+      ) {
         category = "premium-package";
       }
 
@@ -276,7 +348,7 @@ export const bulkInsertServicesForBranch = mutation({
     return {
       success: true,
       insertedCount: insertedServices.length,
-      serviceIds: insertedServices
+      serviceIds: insertedServices,
     };
   },
 });
@@ -284,7 +356,7 @@ export const bulkInsertServicesForBranch = mutation({
 // Insert default services for new branch
 export const insertDefaultServicesForBranch = mutation({
   args: {
-    branch_id: v.id("branches")
+    branch_id: v.id("branches"),
   },
   handler: async (ctx, args) => {
     const defaultServices = [
@@ -292,86 +364,90 @@ export const insertDefaultServicesForBranch = mutation({
         name: "Tipuno X Classico",
         description: "Consultation, Haircut",
         duration_minutes: 30,
-        price: 150.00
+        price: 150.0,
       },
       {
         name: "Tipuno X Signature",
         description: "Consultation, Haircut, Rinse Hot and Cold Towel Finish",
         duration_minutes: 60,
-        price: 500.00
+        price: 500.0,
       },
       {
         name: "Tipuno X Deluxe",
-        description: "Consultation, Haircut, Hair Spa Treatment, Rinse Hot and Cold Towel Finish",
+        description:
+          "Consultation, Haircut, Hair Spa Treatment, Rinse Hot and Cold Towel Finish",
         duration_minutes: 90,
-        price: 800.00
+        price: 800.0,
       },
       {
         name: "Beard Shave/Shaping/Sculpting",
         description: "More than a shave. It's a service you'll feel.",
         duration_minutes: 30,
-        price: 200.00
+        price: 200.0,
       },
       {
         name: "FACVNDO ELITE BARBERING SERVICE",
-        description: "If you are looking for wedding haircuts, trust the elite hands that turn grooms into legends.",
+        description:
+          "If you are looking for wedding haircuts, trust the elite hands that turn grooms into legends.",
         duration_minutes: 0,
-        price: 10000.00
+        price: 10000.0,
       },
       {
         name: "Package 1",
         description: "Consultation, Haircut, Shaving, Styling",
         duration_minutes: 45,
-        price: 500.00
+        price: 500.0,
       },
       {
         name: "Package 2",
-        description: "Consultation, Haircut, Hair Color or With Single Bleach, Rinse, Styling.\nNote: Short hair only, add 250 per length",
+        description:
+          "Consultation, Haircut, Hair Color or With Single Bleach, Rinse, Styling.\nNote: Short hair only, add 250 per length",
         duration_minutes: 60,
-        price: 850.00
+        price: 850.0,
       },
       {
         name: "Package 3",
-        description: "Consultation, Haircut, Hair Color or With Single Bleach, Hair Spa Treatment, Rinse, Styling.\nNote: Short hair only, add 250 per length",
+        description:
+          "Consultation, Haircut, Hair Color or With Single Bleach, Hair Spa Treatment, Rinse, Styling.\nNote: Short hair only, add 250 per length",
         duration_minutes: 60,
-        price: 1400.00
+        price: 1400.0,
       },
       {
         name: "Mustache/Beard Trim",
         description: "No Description with this product yet.",
         duration_minutes: 30,
-        price: 170.00
+        price: 170.0,
       },
       {
         name: "Hair Spa",
         description: "No description for this service yet.",
         duration_minutes: 30,
-        price: 600.00
+        price: 600.0,
       },
       {
         name: "Hair and Scalp Treatment",
         description: "No description for this product yet.",
         duration_minutes: 60,
-        price: 1500.00
+        price: 1500.0,
       },
       {
         name: "Hair Color",
         description: "No description for this product yet.",
         duration_minutes: 60,
-        price: 800.00
+        price: 800.0,
       },
       {
         name: "Perm",
         description: "No description for this product yet.",
         duration_minutes: 60,
-        price: 1500.00
+        price: 1500.0,
       },
       {
         name: "Hair Tattoo",
         description: "No description for this product yet.",
         duration_minutes: 60,
-        price: 100.00
-      }
+        price: 100.0,
+      },
     ];
 
     const insertedServices: string[] = [];
@@ -383,13 +459,29 @@ export const insertDefaultServicesForBranch = mutation({
       const serviceName = service.name.toLowerCase();
       const serviceDesc = service.description.toLowerCase();
 
-      if (serviceName.includes("beard") || serviceName.includes("mustache") || serviceDesc.includes("shav")) {
+      if (
+        serviceName.includes("beard") ||
+        serviceName.includes("mustache") ||
+        serviceDesc.includes("shav")
+      ) {
         category = "beard-care";
-      } else if (serviceName.includes("hair spa") || serviceName.includes("treatment") || serviceName.includes("scalp")) {
+      } else if (
+        serviceName.includes("hair spa") ||
+        serviceName.includes("treatment") ||
+        serviceName.includes("scalp")
+      ) {
         category = "hair-treatment";
-      } else if (serviceName.includes("color") || serviceName.includes("perm") || serviceName.includes("tattoo")) {
+      } else if (
+        serviceName.includes("color") ||
+        serviceName.includes("perm") ||
+        serviceName.includes("tattoo")
+      ) {
         category = "hair-styling";
-      } else if (serviceName.includes("package") || serviceName.includes("elite") || serviceName.includes("deluxe")) {
+      } else if (
+        serviceName.includes("package") ||
+        serviceName.includes("elite") ||
+        serviceName.includes("deluxe")
+      ) {
         category = "premium-package";
       }
 
@@ -411,7 +503,7 @@ export const insertDefaultServicesForBranch = mutation({
     return {
       success: true,
       insertedCount: insertedServices.length,
-      serviceIds: insertedServices
+      serviceIds: insertedServices,
     };
   },
 });
@@ -423,7 +515,9 @@ export const getServiceCategories = query({
     const services = await ctx.db.query("services").collect();
 
     // Extract unique categories
-    const categories = [...new Set(services.map(service => service.category))];
+    const categories = [
+      ...new Set(services.map((service) => service.category)),
+    ];
     return categories.sort();
   },
 });

@@ -232,7 +232,7 @@ const BarberDashboard = () => {
                     </p>
                   </div>
                   {/* Availability Toggle Desktop */}
-                  <div className="bg-[#1A1A1A] border border-[#333333] rounded-xl p-3 flex items-center space-x-3">
+                  {/* <div className="bg-[#1A1A1A] border border-[#333333] rounded-xl p-3 flex items-center space-x-3">
                     <span
                       className={`text-sm font-medium ${isAcceptingBookings ? "text-green-400" : "text-gray-400"}`}
                     >
@@ -258,7 +258,7 @@ const BarberDashboard = () => {
                         ></div>
                       </div>
                     </label>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>
@@ -266,7 +266,7 @@ const BarberDashboard = () => {
             <div className="px-4 md:max-w-7xl md:mx-auto md:px-6 lg:px-8 py-4 md:py-6">
               {/* Mobile Welcome Section with Toggle */}
               <div className="md:hidden mb-4 space-y-4">
-                <div className="bg-gradient-to-r from-[#F68B24] to-[#E67E22] rounded-2xl p-5 text-white shadow-lg">
+                <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-2xl p-5 text-white shadow-lg">
                   <div className="flex flex-col space-y-1">
                     <h2 className="text-xl font-bold">Welcome back!</h2>
                     <p className="text-sm opacity-90">
@@ -285,7 +285,7 @@ const BarberDashboard = () => {
                 </div>
 
                 {/* Availability Toggle Mobile */}
-                <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A] flex items-center justify-between">
+                {/* <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A] flex items-center justify-between">
                   <div>
                     <p className="text-sm font-bold text-white">
                       Booking Status
@@ -314,7 +314,7 @@ const BarberDashboard = () => {
                       ></div>
                     </div>
                   </label>
-                </div>
+                </div> */}
               </div>
 
               {/* Stats Cards - Redesigned */}
@@ -557,7 +557,7 @@ const BarberDashboard = () => {
               )}
 
               {/* Time Off Manager */}
-              <TimeOffManager barber={currentBarber} />
+              {/* <TimeOffManager barber={currentBarber} /> */}
             </div>
           </>
         );

@@ -55,7 +55,7 @@ const PlatformSelection = () => {
           <div className="flex items-center justify-center gap-3 mb-6">
             <img
               src="/img/tipuno_x_logo_white.avif"
-              alt="TPX Logo"
+              alt="Logo"
               className="w-20 h-20 object-contain"
             />
           </div>

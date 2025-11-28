@@ -313,7 +313,7 @@ Message 4: Write "file.js"
 - Restore context
 - Export workflows
 
-## Advanced Features (v2.0.0)
+## Advanced Features (v8.1.2)
 
 - 🚀 Automatic Topology Selection
 - ⚡ Parallel Execution (2.8-4.4x speed)

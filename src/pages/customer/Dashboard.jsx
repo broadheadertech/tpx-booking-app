@@ -99,7 +99,7 @@ const Dashboard = () => {
     { id: 'bookings', label: 'Bookings', icon: History },
     { id: 'wallet', label: 'Wallet', icon: Wallet },
     { id: 'vouchers', label: 'Vouchers', icon: Gift },
-    { id: 'ai-assistant', label: 'TPX AI', icon: Bot }
+    { id: 'ai-assistant', label: 'AI', icon: Bot }
   ]
 
   // Calculate dashboard stats from Convex data

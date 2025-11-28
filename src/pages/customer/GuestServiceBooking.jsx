@@ -25,7 +25,9 @@ import { formatTime } from "../../utils/dateUtils";
 // Helper function to convert hex to rgba
 const hexToRgba = (hex, alpha) => {
   if (!hex) return hex;
-  let r = 0, g = 0, b = 0;
+  let r = 0,
+    g = 0,
+    b = 0;
   if (hex.length === 4) {
     r = parseInt(hex[1] + hex[1], 16);
     g = parseInt(hex[2] + hex[2], 16);
@@ -304,19 +306,21 @@ const GuestServiceBooking = ({ onBack }) => {
     const currentMinute = currentDate.getMinutes();
 
     // Get day of week for schedule check
-    const dayOfWeek = selectedDateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-    
+    const dayOfWeek = selectedDateObj
+      .toLocaleDateString("en-US", { weekday: "long" })
+      .toLowerCase();
+
     // Check barber's schedule for this day
     const barberSchedule = selectedStaff.schedule?.[dayOfWeek];
-    
+
     // If barber doesn't have schedule or is not available this day, return empty
     if (!barberSchedule || !barberSchedule.available) {
       return [];
     }
 
     // Use barber's scheduled hours instead of branch hours
-    const [startHour, startMin] = barberSchedule.start.split(':').map(Number);
-    const [endHour, endMin] = barberSchedule.end.split(':').map(Number);
+    const [startHour, startMin] = barberSchedule.start.split(":").map(Number);
+    const [endHour, endMin] = barberSchedule.end.split(":").map(Number);
 
     // Get booked times for this barber on this date
     const bookedTimes = existingBookings
@@ -356,9 +360,14 @@ const GuestServiceBooking = ({ onBack }) => {
         }
 
         // Check blocked periods (Time Off)
-        if (selectedStaff.blocked_periods && selectedStaff.blocked_periods.length > 0) {
-          const dateString = selectedDateObj.toISOString().split('T')[0];
-          const blockingPeriod = selectedStaff.blocked_periods.find(p => p.date === dateString);
+        if (
+          selectedStaff.blocked_periods &&
+          selectedStaff.blocked_periods.length > 0
+        ) {
+          const dateString = selectedDateObj.toISOString().split("T")[0];
+          const blockingPeriod = selectedStaff.blocked_periods.find(
+            (p) => p.date === dateString
+          );
 
           if (blockingPeriod) {
             // If no specific times are set, it blocks the whole day
@@ -368,11 +377,11 @@ const GuestServiceBooking = ({ onBack }) => {
             } else {
               // Check specific time overlap
               const slotTime = timeString; // HH:mm format
-              
+
               // Convert times to comparable numbers (minutes from midnight)
               const getMinutes = (t) => {
                 if (!t) return 0;
-                const [h, m] = t.split(':').map(Number);
+                const [h, m] = t.split(":").map(Number);
                 return h * 60 + m;
               };
 
@@ -406,7 +415,7 @@ const GuestServiceBooking = ({ onBack }) => {
 
     // First, filter only active employees (is_active = true)
     // We keep those who are not accepting bookings, but they will be disabled in UI
-    let available = barbers.filter(b => b.is_active);
+    let available = barbers.filter((b) => b.is_active);
 
     // If a service is selected, further filter by who can perform that service
     if (selectedService) {
@@ -447,8 +456,10 @@ const GuestServiceBooking = ({ onBack }) => {
         : selectedTime;
 
       // Get guest email and name from state or session storage
-      const customerEmail = guestData.email || sessionStorage.getItem("guest_email");
-      const customerName = guestData.name || sessionStorage.getItem("guest_name");
+      const customerEmail =
+        guestData.email || sessionStorage.getItem("guest_email");
+      const customerName =
+        guestData.name || sessionStorage.getItem("guest_name");
 
       const bookingData = {
         customer: userId,
@@ -576,7 +587,8 @@ const GuestServiceBooking = ({ onBack }) => {
       });
 
       // Get guest user info for payment processing
-      const guestEmail = guestData.email || sessionStorage.getItem("guest_email");
+      const guestEmail =
+        guestData.email || sessionStorage.getItem("guest_email");
       const guestName = guestData.name || sessionStorage.getItem("guest_name");
 
       // Call Convex payment action
@@ -687,7 +699,10 @@ const GuestServiceBooking = ({ onBack }) => {
                 step >= stepNumber ? "text-white shadow-md" : "text-gray-500"
               }`}
               style={{
-                backgroundColor: step >= stepNumber ? (branding?.primary_color || "#F68B24") : (branding?.muted_color || "#E0E0E0"),
+                backgroundColor:
+                  step >= stepNumber
+                    ? branding?.primary_color || "#F68B24"
+                    : branding?.muted_color || "#E0E0E0",
               }}
             >
               {step > stepNumber ? "✓" : stepNumber}
@@ -696,7 +711,10 @@ const GuestServiceBooking = ({ onBack }) => {
               <div
                 className={`w-4 h-0.5 mx-1 rounded transition-all duration-300`}
                 style={{
-                  backgroundColor: step > stepNumber ? (branding?.primary_color || "#F68B24") : (branding?.muted_color || "#E0E0E0"),
+                  backgroundColor:
+                    step > stepNumber
+                      ? branding?.primary_color || "#F68B24"
+                      : branding?.muted_color || "#E0E0E0",
                 }}
               ></div>
             )}
@@ -858,22 +876,23 @@ const GuestServiceBooking = ({ onBack }) => {
 
     // Map service categories to standard categories (same as POS)
     const mapServiceCategory = (category) => {
-      if (!category) return 'Other Services';
+      if (!category) return "Other Services";
       const catLower = category.toLowerCase();
-      if (catLower.includes('haircut') || catLower.includes('hair')) {
-        return 'Haircut';
+      if (catLower.includes("haircut") || catLower.includes("hair")) {
+        return "Haircut";
       }
-      if (catLower.includes('package')) {
-        return 'Package';
+      if (catLower.includes("package")) {
+        return "Package";
       }
-      return 'Other Services';
+      return "Other Services";
     };
 
     // Group services by category
-    const servicesToDisplay = selectedStaff 
-      ? services.filter(service => 
-          selectedStaff.services && 
-          selectedStaff.services.includes(service._id)
+    const servicesToDisplay = selectedStaff
+      ? services.filter(
+          (service) =>
+            selectedStaff.services &&
+            selectedStaff.services.includes(service._id)
         )
       : services;
 
@@ -889,7 +908,10 @@ const GuestServiceBooking = ({ onBack }) => {
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-white mb-1">Choose Service</h2>
           <p className="text-sm text-gray-400">
-            Select the service you'd like to book {selectedStaff ? `with ${selectedStaff.full_name || selectedStaff.name}` : `at ${selectedBranch?.name}`}
+            Select the service you'd like to book{" "}
+            {selectedStaff
+              ? `with ${selectedStaff.full_name || selectedStaff.name}`
+              : `at ${selectedBranch?.name}`}
           </p>
         </div>
 
@@ -915,108 +937,105 @@ const GuestServiceBooking = ({ onBack }) => {
 
         {/* Category Dropdowns */}
         <div className="space-y-3">
-          {['Haircut', 'Package', 'Other Services'].map((categoryName) => {
-              const categoryServices = categories[categoryName] || [];
-              
-              // Filter services within this category based on search term
-              const filteredServices = categoryServices.filter((service) => {
-                const searchLower = serviceSearchTerm.toLowerCase();
-                return (
-                  service.name.toLowerCase().includes(searchLower) ||
-                  (service.description &&
-                    service.description.toLowerCase().includes(searchLower)) ||
-                  service.price.toString().includes(searchLower)
-                );
-              });
+          {["Haircut", "Package", "Other Services"].map((categoryName) => {
+            const categoryServices = categories[categoryName] || [];
 
-              if (filteredServices.length === 0) return null;
-
-              const isOpen = openCategory === categoryName;
-
+            // Filter services within this category based on search term
+            const filteredServices = categoryServices.filter((service) => {
+              const searchLower = serviceSearchTerm.toLowerCase();
               return (
-                <div
-                  key={categoryName}
-                  className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]"
-                >
-                  <button
-                    onClick={() =>
-                      setOpenCategory(isOpen ? null : categoryName)
-                    }
-                    className="w-full text-left px-4 py-3 flex justify-between items-center text-white font-semibold"
-                  >
-                    <span>{categoryName}</span>
-                    <span>{isOpen ? "−" : "+"}</span>
-                  </button>
-
-                  {isOpen && (
-                    <div className="space-y-2 px-4 pb-4">
-                      {filteredServices.map((service) => {
-                        const availableBarbers = barbers
-                          ? barbers.filter(
-                              (barber) =>
-                                barber.is_active &&
-                                barber.services &&
-                                Array.isArray(barber.services) &&
-                                barber.services.some(
-                                  (serviceId) => serviceId === service._id
-                                )
-                            ).length
-                          : 0;
-
-                        return (
-                          <button
-                            key={service._id}
-                            onClick={() => handleServiceSelect(service)}
-                            className="w-full bg-[#2A2A2A] hover:bg-[#333333] border border-[#444444] hover:border-[var(--color-primary)]/50 rounded-xl p-4 text-left transition-all duration-200 flex justify-between items-center group"
-                          >
-                            <div className="flex-1 min-w-0">
-                              {/* Service Name - Bold and prominent */}
-                              <h3 className="text-lg font-bold text-white mb-1 truncate">
-                                {service.name}
-                              </h3>
-
-                              {/* Optional subtitle/tag - like the "TEST" in the image */}
-                              {service.description && (
-                                <p className="text-sm text-gray-400 mb-2 line-clamp-1">
-                                  {service.description}
-                                </p>
-                              )}
-
-                              {/* Price - Orange and prominent like in the image */}
-                              <div className="text-[var(--color-primary)] font-bold text-base">
-                                {service.hide_price ? (
-                                  'Price may vary'
-                                ) : (
-                                  `₱${parseFloat(
-                                    service.price || 0
-                                  ).toLocaleString()}`
-                                )}
-                              </div>
-
-                              {/* Availability warning */}
-                              {availableBarbers === 0 && (
-                                <p 
-                                  className="text-[10px] mt-1"
-                                  style={{ color: branding?.primary_color || "#f59e0b" }}
-                                >
-                                  Limited availability
-                                </p>
-                              )}
-                            </div>
-
-                            {/* Right Arrow - Clean and modern */}
-                            <div className="self-center text-gray-400 group-hover:text-[var(--color-primary)] transition-colors duration-200 ml-4">
-                              <ChevronRight className="w-6 h-6" />
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                service.name.toLowerCase().includes(searchLower) ||
+                (service.description &&
+                  service.description.toLowerCase().includes(searchLower)) ||
+                service.price.toString().includes(searchLower)
               );
-            }
-          )}
+            });
+
+            if (filteredServices.length === 0) return null;
+
+            const isOpen = openCategory === categoryName;
+
+            return (
+              <div
+                key={categoryName}
+                className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]"
+              >
+                <button
+                  onClick={() => setOpenCategory(isOpen ? null : categoryName)}
+                  className="w-full text-left px-4 py-3 flex justify-between items-center text-white font-semibold"
+                >
+                  <span>{categoryName}</span>
+                  <span>{isOpen ? "−" : "+"}</span>
+                </button>
+
+                {isOpen && (
+                  <div className="space-y-2 px-4 pb-4">
+                    {filteredServices.map((service) => {
+                      const availableBarbers = barbers
+                        ? barbers.filter(
+                            (barber) =>
+                              barber.is_active &&
+                              barber.services &&
+                              Array.isArray(barber.services) &&
+                              barber.services.some(
+                                (serviceId) => serviceId === service._id
+                              )
+                          ).length
+                        : 0;
+
+                      return (
+                        <button
+                          key={service._id}
+                          onClick={() => handleServiceSelect(service)}
+                          className="w-full bg-[#2A2A2A] hover:bg-[#333333] border border-[#444444] hover:border-[var(--color-primary)]/50 rounded-xl p-4 text-left transition-all duration-200 flex justify-between items-center group"
+                        >
+                          <div className="flex-1 min-w-0">
+                            {/* Service Name - Bold and prominent */}
+                            <h3 className="text-lg font-bold text-white mb-1 truncate">
+                              {service.name}
+                            </h3>
+
+                            {/* Optional subtitle/tag - like the "TEST" in the image */}
+                            {service.description && (
+                              <p className="text-sm text-gray-400 mb-2 line-clamp-1">
+                                {service.description}
+                              </p>
+                            )}
+
+                            {/* Price - Orange and prominent like in the image */}
+                            <div className="text-[var(--color-primary)] font-bold text-base">
+                              {service.hide_price
+                                ? "Price may vary"
+                                : `₱${parseFloat(
+                                    service.price || 0
+                                  ).toLocaleString()}`}
+                            </div>
+
+                            {/* Availability warning */}
+                            {availableBarbers === 0 && (
+                              <p
+                                className="text-[10px] mt-1"
+                                style={{
+                                  color: branding?.primary_color || "#f59e0b",
+                                }}
+                              >
+                                Limited availability
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Right Arrow - Clean and modern */}
+                          <div className="self-center text-gray-400 group-hover:text-[var(--color-primary)] transition-colors duration-200 ml-4">
+                            <ChevronRight className="w-6 h-6" />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     );
@@ -1044,9 +1063,14 @@ const GuestServiceBooking = ({ onBack }) => {
             </h3>
             <div className="flex items-center gap-2 text-sm">
               <span className="text-[var(--color-primary)] font-semibold">
-                {selectedService?.hide_price ? 'Price may vary' : `₱${selectedService?.price.toLocaleString()}`}
+                {selectedService?.hide_price
+                  ? "Price may vary"
+                  : `₱${selectedService?.price.toLocaleString()}`}
+                <p className="text-grey-400 whitespace-pre-line w-full">
+                  {selectedService?.description}
+                </p>
               </span>
-              <span className="text-gray-500">•</span>
+
               <span className="text-gray-400">{selectedService?.duration}</span>
             </div>
           </div>
@@ -1055,9 +1079,7 @@ const GuestServiceBooking = ({ onBack }) => {
 
       {/* Date Selection */}
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
-        <h3 className="text-lg font-bold text-white mb-3">
-          Select Date
-        </h3>
+        <h3 className="text-lg font-bold text-white mb-3">Select Date</h3>
         <input
           type="date"
           value={selectedDate}
@@ -1079,9 +1101,7 @@ const GuestServiceBooking = ({ onBack }) => {
       {selectedDate && (
         <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
           <div className="flex justify-between items-center mb-3">
-            <h3 className="text-lg font-bold text-white">
-              Available Times
-            </h3>
+            <h3 className="text-lg font-bold text-white">Available Times</h3>
             <span className="text-xs text-gray-400">
               {new Date(selectedDate).toLocaleDateString("en-PH", {
                 weekday: "short",
@@ -1174,67 +1194,70 @@ const GuestServiceBooking = ({ onBack }) => {
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {getAvailableBarbers().map((barber) => {
           const isAvailable = barber.is_accepting_bookings !== false; // Default true if undefined
-          
+
           return (
-          <button
-            key={barber._id}
-            onClick={() => isAvailable && handleStaffSelect(barber)}
-            disabled={!isAvailable}
-            className={`group rounded-2xl p-4 sm:p-5 transition-all duration-300 border-2 hover:shadow-lg flex flex-col items-center text-center ${
-              selectedStaff?._id === barber._id
-                ? "bg-[var(--color-primary)]/15 border-[var(--color-primary)]"
-                : !isAvailable
-                  ? "bg-[#1A1A1A] border-[#2A2A2A] opacity-60 cursor-not-allowed"
-                  : "bg-[#1A1A1A] border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
-            }`}
-          >
-            {/* Avatar Container */}
-            <div className="relative mb-3">
-              <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden ring-2 ring-[#2A2A2A] ${isAvailable ? 'group-hover:ring-[var(--color-primary)]/50' : 'grayscale'} transition-all duration-300`}>
-                <BarberAvatar barber={barber} className="w-full h-full" />
-              </div>
-              {selectedStaff?._id === barber._id && (
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-[#1A1A1A] shadow-lg">
-                  <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
+            <button
+              key={barber._id}
+              onClick={() => isAvailable && handleStaffSelect(barber)}
+              disabled={!isAvailable}
+              className={`group rounded-2xl p-4 sm:p-5 transition-all duration-300 border-2 hover:shadow-lg flex flex-col items-center text-center ${
+                selectedStaff?._id === barber._id
+                  ? "bg-[var(--color-primary)]/15 border-[var(--color-primary)]"
+                  : !isAvailable
+                    ? "bg-[#1A1A1A] border-[#2A2A2A] opacity-60 cursor-not-allowed"
+                    : "bg-[#1A1A1A] border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
+              }`}
+            >
+              {/* Avatar Container */}
+              <div className="relative mb-3">
+                <div
+                  className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden ring-2 ring-[#2A2A2A] ${isAvailable ? "group-hover:ring-[var(--color-primary)]/50" : "grayscale"} transition-all duration-300`}
+                >
+                  <BarberAvatar barber={barber} className="w-full h-full" />
                 </div>
-              )}
-              {!isAvailable && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
-                  <div className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm">
-                    Busy
+                {selectedStaff?._id === barber._id && (
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-[#1A1A1A] shadow-lg">
+                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                   </div>
+                )}
+                {!isAvailable && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
+                    <div className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm">
+                      Busy
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Barber Name */}
+              <h3 className="text-base sm:text-lg font-bold text-white mb-1 line-clamp-2 group-hover:text-[var(--color-primary)] transition-colors duration-200">
+                {barber.full_name || barber.name}
+              </h3>
+
+              {/* Title Badge */}
+              {isAvailable ? (
+                <div className="px-2 py-0.5 bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-full text-xs font-semibold mb-2 inline-block">
+                  Professional
+                </div>
+              ) : (
+                <div className="px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full text-xs font-semibold mb-2 inline-block">
+                  Not Available
                 </div>
               )}
-            </div>
 
-            {/* Barber Name */}
-            <h3 className="text-base sm:text-lg font-bold text-white mb-1 line-clamp-2 group-hover:text-[var(--color-primary)] transition-colors duration-200">
-              {barber.full_name || barber.name}
-            </h3>
+              {/* Experience */}
+              <p className="text-xs text-gray-400 mb-2 line-clamp-1">
+                Experienced professional
+              </p>
 
-            {/* Title Badge */}
-            {isAvailable ? (
-              <div className="px-2 py-0.5 bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-full text-xs font-semibold mb-2 inline-block">
-                Professional
+              {/* Rating */}
+              <div className="flex items-center justify-center gap-1">
+                <div className="flex text-yellow-400 text-sm">★★★★★</div>
+                <span className="text-xs font-semibold text-gray-300">5.0</span>
               </div>
-            ) : (
-              <div className="px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full text-xs font-semibold mb-2 inline-block">
-                Not Available
-              </div>
-            )}
-
-            {/* Experience */}
-            <p className="text-xs text-gray-400 mb-2 line-clamp-1">
-              Experienced professional
-            </p>
-
-            {/* Rating */}
-            <div className="flex items-center justify-center gap-1">
-              <div className="flex text-yellow-400 text-sm">★★★★★</div>
-              <span className="text-xs font-semibold text-gray-300">5.0</span>
-            </div>
-          </button>
-        )})}
+            </button>
+          );
+        })}
       </div>
 
       {/* Empty State */}
@@ -1376,7 +1399,7 @@ const GuestServiceBooking = ({ onBack }) => {
         email: guestData.email.trim(),
         name: guestData.name.trim(),
         branchId: selectedBranch?._id,
-        isExisting: newUser.isExistingUser || false
+        isExisting: newUser.isExistingUser || false,
       });
 
       // Handle existing vs new guest user
@@ -1458,7 +1481,9 @@ const GuestServiceBooking = ({ onBack }) => {
           </p>
           <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20">
             <Lock className="w-3.5 h-3.5 text-[var(--color-primary)] mr-1" />
-            <span className="text-xs text-[var(--color-primary)]">Secure & Private</span>
+            <span className="text-xs text-[var(--color-primary)]">
+              Secure & Private
+            </span>
           </div>
         </div>
 
@@ -1606,7 +1631,9 @@ const GuestServiceBooking = ({ onBack }) => {
             </h3>
             <div className="flex justify-center items-center space-x-3">
               <span className="font-bold text-base text-[var(--color-primary)]">
-                {selectedService?.hide_price ? 'Price may vary' : `₱${selectedService?.price.toLocaleString()}`}
+                {selectedService?.hide_price
+                  ? "Price may vary"
+                  : `₱${selectedService?.price.toLocaleString()}`}
               </span>
               <span className="font-medium text-sm text-gray-400">
                 {selectedService?.duration}
@@ -1635,11 +1662,14 @@ const GuestServiceBooking = ({ onBack }) => {
                 </span>
               </div>
               <span className="font-bold text-sm text-white">
-                {selectedDate ? new Date(selectedDate).toLocaleDateString("en-PH", {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                }) : "Today"}, {formatTime(selectedTime)}
+                {selectedDate
+                  ? new Date(selectedDate).toLocaleDateString("en-PH", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })
+                  : "Today"}
+                , {formatTime(selectedTime)}
               </span>
             </div>
             <div className="flex items-center justify-between py-1">
@@ -1705,15 +1735,17 @@ const GuestServiceBooking = ({ onBack }) => {
                 {selectedVoucher && (
                   <div className="text-xs text-center p-2 rounded flex items-center justify-center gap-2 bg-blue-900/30 text-blue-300">
                     <Banknote className="w-4 h-4" />
-                    <span>You'll save ₱{parseFloat(selectedVoucher.value || 0).toFixed(2)} with this voucher</span>
+                    <span>
+                      You'll save ₱
+                      {parseFloat(selectedVoucher.value || 0).toFixed(2)} with
+                      this voucher
+                    </span>
                   </div>
                 )}
               </div>
             ) : (
               <div className="text-center py-3">
-                <p className="text-xs text-gray-400">
-                  No vouchers available
-                </p>
+                <p className="text-xs text-gray-400">No vouchers available</p>
               </div>
             )}
           </div>
@@ -1843,7 +1875,10 @@ const GuestServiceBooking = ({ onBack }) => {
         <div
           className="rounded-2xl p-6 border"
           style={{
-            backgroundColor: hexToRgba(branding?.primary_color || "#F68B24", 0.05),
+            backgroundColor: hexToRgba(
+              branding?.primary_color || "#F68B24",
+              0.05
+            ),
             borderColor: hexToRgba(branding?.primary_color || "#F68B24", 0.2),
           }}
         >
@@ -1893,7 +1928,9 @@ const GuestServiceBooking = ({ onBack }) => {
                   Subtotal:
                 </span>
                 <span className="font-normal line-through text-gray-500 text-sm">
-                  {selectedService?.hide_price ? 'Price may vary' : `₱${selectedService?.price.toLocaleString()}`}
+                  {selectedService?.hide_price
+                    ? "Price may vary"
+                    : `₱${selectedService?.price.toLocaleString()}`}
                 </span>
               </div>
             )}
@@ -1963,7 +2000,9 @@ const GuestServiceBooking = ({ onBack }) => {
             {/* Title - Centered */}
             <div className="text-center">
               <p className="text-lg font-light text-white">Book Service</p>
-              <p className="text-xs text-[var(--color-primary)]">Step {step} of 6</p>
+              <p className="text-xs text-[var(--color-primary)]">
+                Step {step} of 7
+              </p>
             </div>
           </div>
         </div>
@@ -2020,7 +2059,10 @@ const GuestServiceBooking = ({ onBack }) => {
             </div>
 
             {/* Title */}
-            <h3 id="error-dialog-title" className="text-lg font-semibold text-white text-center mb-2">
+            <h3
+              id="error-dialog-title"
+              className="text-lg font-semibold text-white text-center mb-2"
+            >
               {errorDialog.title}
             </h3>
 
@@ -2042,7 +2084,11 @@ const GuestServiceBooking = ({ onBack }) => {
 
       {/* Success Notification */}
       {successNotification.isOpen && (
-        <div className="fixed top-4 right-4 z-50 max-w-sm" role="status" aria-live="polite">
+        <div
+          className="fixed top-4 right-4 z-50 max-w-sm"
+          role="status"
+          aria-live="polite"
+        >
           <div className="bg-green-500/90 backdrop-blur-sm text-white rounded-xl shadow-2xl border border-green-400/30 p-4">
             <div className="flex items-start space-x-3">
               <div className="flex-shrink-0">
