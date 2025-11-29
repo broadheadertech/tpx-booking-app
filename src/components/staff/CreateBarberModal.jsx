@@ -39,6 +39,11 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, se
 
   const [currentMonth, setCurrentMonth] = useState(new Date())
 
+  // Debug log to track formData changes
+  React.useEffect(() => {
+    console.log('CreateBarberModal formData updated:', formData)
+  }, [formData])
+
   // Update form data when editingBarber changes
   useEffect(() => {
     if (editingBarber) {
@@ -706,19 +711,19 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, se
                     <div className="max-h-32 overflow-y-auto border border-[#444444] rounded-lg p-3 bg-[#1A1A1A]">
                       {!services ? (
                         <p className="text-sm text-gray-400 p-2">Loading services...</p>
-                      ) : services.length > 0 ? (
+                      ) : services && services.length > 0 ? (
                         services.map(service => (
                           <label key={service._id} className="flex items-center py-1 cursor-pointer">
                             <input
                               type="checkbox"
-                              checked={formData.services.includes(service._id)}
+                              checked={formData.services?.includes(service._id) || false}
                               onChange={(e) => {
                                 const serviceId = service._id
                                 setFormData(prev => ({
                                   ...prev,
                                   services: e.target.checked
-                                    ? [...prev.services, serviceId]
-                                    : prev.services.filter(id => id !== serviceId)
+                                    ? [...(prev.services || []), serviceId]
+                                    : (prev.services || []).filter(id => id !== serviceId)
                                 }))
                               }}
                               className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] rounded border-gray-300"
@@ -940,13 +945,21 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, se
                         </div>
 
                         {/* Selected Dates List */}
-                        {formData.specific_dates && formData.specific_dates.length > 0 && (
+                        {(() => {
+                          console.log('CreateBarberModal Debug:', {
+                            formData: formData,
+                            specific_dates: formData.specific_dates,
+                            isArray: Array.isArray(formData.specific_dates),
+                            length: formData.specific_dates?.length
+                          });
+                          return formData.specific_dates && Array.isArray(formData.specific_dates) && formData.specific_dates.length > 0;
+                        })() && (
                           <div className="space-y-2">
                             <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wide">Selected Dates</h4>
                             <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
                               {formData.specific_dates
-                                .sort((a, b) => new Date(a.date) - new Date(b.date))
-                                .map((dateObj) => {
+                                ?.sort((a, b) => new Date(a.date) - new Date(b.date))
+                                ?.map((dateObj) => {
                                   const timeOptions = generateTimeOptions()
                                   return (
                                     <div key={dateObj.date} className="bg-[#1A1A1A] border border-[#444444] rounded-lg p-3 flex items-center space-x-3">
