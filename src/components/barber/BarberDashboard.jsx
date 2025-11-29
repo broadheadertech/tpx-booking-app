@@ -36,6 +36,9 @@ import {
   AlertCircle,
   Home,
   UserCircle,
+  X,
+  BellRing,
+  Check,
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -46,6 +49,214 @@ import TimeOffManager from "./TimeOffManager";
 import LoadingSpinner from "../common/LoadingSpinner";
 import { formatTime } from "../../utils/dateUtils";
 import { useBranding } from "../../context/BrandingContext";
+
+// Notification Panel Component
+const NotificationPanel = ({ isOpen, onClose, userId }) => {
+  const notifications = useQuery(
+    api.services.notifications.getUserNotifications,
+    userId ? { userId, limit: 20 } : "skip"
+  );
+  const unreadCount = useQuery(
+    api.services.notifications.getUnreadCount,
+    userId ? { userId } : "skip"
+  );
+  const markAsRead = useMutation(api.services.notifications.markAsRead);
+  const markAllAsRead = useMutation(api.services.notifications.markAllAsRead);
+  const clearAllNotifications = useMutation(api.services.notifications.clearAllNotifications);
+
+  const handleMarkAsRead = async (notificationId) => {
+    try {
+      await markAsRead({ notificationId, userId });
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllAsRead({ userId });
+    } catch (error) {
+      console.error("Failed to mark all as read:", error);
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      await clearAllNotifications({ userId });
+    } catch (error) {
+      console.error("Failed to clear notifications:", error);
+    }
+  };
+
+  const formatNotificationTime = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const getNotificationIcon = (type, priority) => {
+    if (priority === "high" || priority === "urgent") {
+      return <AlertCircle className="w-5 h-5 text-[var(--color-primary)]" />;
+    }
+    switch (type) {
+      case "booking":
+        return <Calendar className="w-5 h-5 text-[var(--color-primary)]" />;
+      case "payment":
+        return <CreditCard className="w-5 h-5 text-green-500" />;
+      case "reminder":
+        return <Clock className="w-5 h-5 text-blue-500" />;
+      case "alert":
+        return <BellRing className="w-5 h-5 text-yellow-500" />;
+      default:
+        return <Bell className="w-5 h-5 text-gray-400" />;
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/60 z-40 animate-fade-in"
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div className="fixed top-0 right-0 bottom-20 w-full max-w-md bg-[#0D0D0D] z-50 animate-slide-in-right flex flex-col border-l border-[#2A2A2A]">
+        {/* Header */}
+        <div className="px-4 py-4 border-b border-[#2A2A2A] flex items-center justify-between bg-[#0D0D0D]">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-[#1A1A1A] rounded-xl flex items-center justify-center">
+              <Bell className="w-5 h-5 text-[var(--color-primary)]" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white">Notifications</h2>
+              <p className="text-xs text-gray-500">
+                {unreadCount > 0 ? `${unreadCount} unread` : "All caught up!"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 bg-[#1A1A1A] rounded-xl hover:bg-[#2A2A2A] transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+
+        {/* Actions */}
+        {notifications && notifications.length > 0 && (
+          <div className="px-4 py-2 border-b border-[#2A2A2A] flex items-center justify-between">
+            <button
+              onClick={handleMarkAllAsRead}
+              className="text-xs text-gray-400 hover:text-white flex items-center space-x-1"
+            >
+              <Check className="w-3 h-3" />
+              <span>Mark all read</span>
+            </button>
+            <button
+              onClick={handleClearAll}
+              className="text-xs text-gray-400 hover:text-red-400 flex items-center space-x-1"
+            >
+              <X className="w-3 h-3" />
+              <span>Clear all</span>
+            </button>
+          </div>
+        )}
+
+        {/* Notifications List */}
+        <div className="flex-1 overflow-y-auto">
+          {!notifications ? (
+            <div className="flex items-center justify-center h-40">
+              <LoadingSpinner size="md" />
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+              <div className="w-16 h-16 bg-[#1A1A1A] rounded-full flex items-center justify-center mb-4">
+                <Bell className="w-8 h-8 text-gray-600" />
+              </div>
+              <h3 className="text-white font-medium mb-2">No notifications</h3>
+              <p className="text-gray-500 text-sm">
+                You're all caught up! New booking notifications will appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-[#1A1A1A]">
+              {notifications.map((notification) => (
+                <div
+                  key={notification._id}
+                  onClick={() => !notification.is_read && handleMarkAsRead(notification._id)}
+                  className={`p-4 hover:bg-[#1A1A1A] transition-colors cursor-pointer ${
+                    !notification.is_read ? "bg-[#1A1A1A]/50 border-l-2 border-[var(--color-primary)]" : ""
+                  }`}
+                >
+                  <div className="flex items-start space-x-3">
+                    <div className={`p-2 rounded-xl ${
+                      !notification.is_read ? "bg-[var(--color-primary)]/20" : "bg-[#2A2A2A]"
+                    }`}>
+                      {getNotificationIcon(notification.type, notification.priority)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <h4 className={`text-sm font-medium ${
+                          !notification.is_read ? "text-white" : "text-gray-300"
+                        }`}>
+                          {notification.title}
+                        </h4>
+                        {!notification.is_read && (
+                          <span className="w-2 h-2 bg-[var(--color-primary)] rounded-full flex-shrink-0 mt-1.5 ml-2" />
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+                        {notification.message}
+                      </p>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-xs text-gray-500">
+                          {formatNotificationTime(notification.createdAt)}
+                        </span>
+                        {notification.priority === "high" || notification.priority === "urgent" ? (
+                          <span className="px-2 py-0.5 text-[10px] font-medium bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-full">
+                            {notification.priority}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <style jsx>{`
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slide-in-right {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.2s ease-out;
+        }
+        .animate-slide-in-right {
+          animation: slide-in-right 0.3s ease-out;
+        }
+      `}</style>
+    </>
+  );
+};
 
 // Tier Badge Component
 const TierBadge = ({ tier, size = "sm" }) => {
@@ -113,6 +324,13 @@ const BarberDashboard = () => {
   const { branding } = useBranding();
   const [activeTab, setActiveTab] = useState("overview");
   const [statsPeriod, setStatsPeriod] = useState("monthly");
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  // Get notification unread count
+  const notificationUnreadCount = useQuery(
+    api.services.notifications.getUnreadCount,
+    user?._id ? { userId: user._id } : "skip"
+  );
 
   // Check if we're on the barber dashboard route
   const isOnBarberDashboard = location.pathname === "/barber/dashboard";
@@ -777,11 +995,14 @@ const BarberDashboard = () => {
                activeTab === "clients" ? "Clients" :
                activeTab === "profile" ? "Profile" : "Dashboard"}
             </h1>
-            <button className="p-2 bg-[#1A1A1A] rounded-xl relative">
+            <button
+              onClick={() => setShowNotifications(true)}
+              className="p-2 bg-[#1A1A1A] rounded-xl relative active:scale-95 transition-transform"
+            >
               <Bell className="w-5 h-5 text-gray-400" />
-              {pendingBookings.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--color-primary)] text-white text-[10px] rounded-full flex items-center justify-center font-medium">
-                  {pendingBookings.length}
+              {(notificationUnreadCount > 0 || pendingBookings.length > 0) && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--color-primary)] text-white text-[10px] rounded-full flex items-center justify-center font-medium animate-pulse">
+                  {notificationUnreadCount > 0 ? notificationUnreadCount : pendingBookings.length}
                 </span>
               )}
             </button>
@@ -791,6 +1012,13 @@ const BarberDashboard = () => {
 
       {/* Content */}
       <div className="pt-4">{renderContent()}</div>
+
+      {/* Notification Panel */}
+      <NotificationPanel
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        userId={user?._id}
+      />
 
       {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0D0D0D] border-t border-[#1A1A1A] safe-area-inset-bottom">
