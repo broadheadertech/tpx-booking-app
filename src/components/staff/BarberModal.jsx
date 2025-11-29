@@ -111,9 +111,9 @@ const BarberModal = ({
 
   // Initialize form data when barber changes
   const initializeFormData = useCallback(() => {
-    if (barber) {
-      // Filter out services that no longer exist in the available services list
-      // This prevents "Service not found" errors if a service was deleted but remained in the barber's profile
+    if (barber && barber._id) {
+      // Filter out services that no longer exist in available services list
+      // This prevents "Service not found" errors if a service was deleted but remained in barber's profile
       const availableServiceIds = services?.map((s) => s._id) || [];
       const validServices = (barber.services || []).filter((id) =>
         availableServiceIds.includes(id)
@@ -122,7 +122,7 @@ const BarberModal = ({
       setFormData({
         full_name: barber.full_name || "",
         is_active: barber.is_active !== undefined ? barber.is_active : true,
-        services: validServices,
+        services: validServices || [],
         schedule_type: barber.schedule_type || "weekly",
         specific_dates: barber.specific_dates || [],
         schedule: barber.schedule || {
@@ -958,7 +958,7 @@ const BarberModal = ({
                           ))}
                           {(formData.specific_dates?.length || 0) > 5 && (
                             <span className="px-3 py-1 bg-[#2A2A2A] border border-[#3A3A3A] rounded-full text-xs text-gray-300">
-                              +{formData.specific_dates.length - 5} more
+                              +{(formData.specific_dates?.length || 0) - 5} more
                             </span>
                           )}
                         </div>

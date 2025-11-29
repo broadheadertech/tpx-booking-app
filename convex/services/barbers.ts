@@ -584,3 +584,314 @@ export const deleteImage = mutation({
     return { success: true };
   },
 });
+
+// Get barber statistics with time period filter
+export const getBarberStatsByPeriod = query({
+  args: {
+    barberId: v.id("barbers"),
+    period: v.union(
+      v.literal("daily"),
+      v.literal("weekly"),
+      v.literal("monthly"),
+      v.literal("yearly"),
+      v.literal("all_time")
+    ),
+  },
+  handler: async (ctx, args) => {
+    const barber = await ctx.db.get(args.barberId);
+    if (!barber) return null;
+
+    // Get all bookings for this barber
+    const bookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_barber", (q) => q.eq("barber", args.barberId))
+      .collect();
+
+    // Get all transactions for this barber
+    const transactions = await ctx.db
+      .query("transactions")
+      .withIndex("by_barber", (q) => q.eq("barber", args.barberId))
+      .filter((q) => q.eq(q.field("payment_status"), "completed"))
+      .collect();
+
+    // Calculate date range based on period
+    const now = new Date();
+    let startDate: Date;
+
+    switch (args.period) {
+      case "daily":
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case "weekly":
+        const dayOfWeek = now.getDay();
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
+        break;
+      case "monthly":
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case "yearly":
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      case "all_time":
+      default:
+        startDate = new Date(0);
+        break;
+    }
+
+    const startTimestamp = startDate.getTime();
+
+    // Filter bookings by period
+    const filteredBookings = bookings.filter((booking) => {
+      const bookingDate = new Date(booking.date).getTime();
+      return bookingDate >= startTimestamp;
+    });
+
+    // Filter transactions by period
+    const filteredTransactions = transactions.filter((transaction) => {
+      return transaction.createdAt >= startTimestamp;
+    });
+
+    // Calculate stats
+    const totalBookings = filteredBookings.length;
+    const completedBookings = filteredBookings.filter((b) => b.status === "completed").length;
+    const cancelledBookings = filteredBookings.filter((b) => b.status === "cancelled").length;
+    const pendingBookings = filteredBookings.filter((b) => b.status === "pending" || b.status === "booked" || b.status === "confirmed").length;
+
+    const totalRevenue = filteredTransactions.reduce(
+      (sum, t) => sum + t.total_amount,
+      0
+    );
+
+    // Get unique customers
+    const uniqueCustomers = new Set(
+      filteredBookings
+        .filter((b) => b.customer)
+        .map((b) => b.customer?.toString())
+    ).size;
+
+    return {
+      period: args.period,
+      totalBookings,
+      completedBookings,
+      cancelledBookings,
+      pendingBookings,
+      totalRevenue,
+      uniqueCustomers,
+      averageBookingValue: totalBookings > 0 ? totalRevenue / totalBookings : 0,
+    };
+  },
+});
+
+// Get top barbers by performance (for ranking/tiering)
+export const getTopBarbers = query({
+  args: {
+    branch_id: v.optional(v.id("branches")),
+    limit: v.optional(v.number()),
+    period: v.optional(
+      v.union(
+        v.literal("monthly"),
+        v.literal("yearly"),
+        v.literal("all_time")
+      )
+    ),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 10;
+    const period = args.period || "monthly";
+
+    // Get barbers (optionally filtered by branch)
+    let barbers;
+    if (args.branch_id) {
+      barbers = await ctx.db
+        .query("barbers")
+        .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+        .filter((q) => q.eq(q.field("is_active"), true))
+        .collect();
+    } else {
+      barbers = await ctx.db
+        .query("barbers")
+        .withIndex("by_active", (q) => q.eq("is_active", true))
+        .collect();
+    }
+
+    // Calculate date range
+    const now = new Date();
+    let startDate: Date;
+
+    switch (period) {
+      case "monthly":
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case "yearly":
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      case "all_time":
+      default:
+        startDate = new Date(0);
+        break;
+    }
+
+    const startTimestamp = startDate.getTime();
+
+    // Get performance data for each barber
+    const barberPerformance = await Promise.all(
+      barbers.map(async (barber) => {
+        // Get bookings
+        const bookings = await ctx.db
+          .query("bookings")
+          .withIndex("by_barber", (q) => q.eq("barber", barber._id))
+          .collect();
+
+        const filteredBookings = bookings.filter((b) => {
+          const bookingDate = new Date(b.date).getTime();
+          return bookingDate >= startTimestamp;
+        });
+
+        // Get transactions
+        const transactions = await ctx.db
+          .query("transactions")
+          .withIndex("by_barber", (q) => q.eq("barber", barber._id))
+          .filter((q) => q.eq(q.field("payment_status"), "completed"))
+          .collect();
+
+        const filteredTransactions = transactions.filter(
+          (t) => t.createdAt >= startTimestamp
+        );
+
+        const completedBookings = filteredBookings.filter(
+          (b) => b.status === "completed"
+        ).length;
+
+        const totalRevenue = filteredTransactions.reduce(
+          (sum, t) => sum + t.total_amount,
+          0
+        );
+
+        // Calculate performance score (weighted)
+        const performanceScore =
+          completedBookings * 10 + // 10 points per completed booking
+          barber.rating * 20 + // 20 points per rating star
+          totalRevenue * 0.01; // 0.01 points per peso revenue
+
+        // Determine tier based on performance
+        let tier: "platinum" | "gold" | "silver" | "bronze";
+        if (performanceScore >= 1000) tier = "platinum";
+        else if (performanceScore >= 500) tier = "gold";
+        else if (performanceScore >= 200) tier = "silver";
+        else tier = "bronze";
+
+        return {
+          _id: barber._id,
+          full_name: barber.full_name,
+          avatar: barber.avatar,
+          rating: barber.rating,
+          totalBookings: barber.totalBookings,
+          completedBookings,
+          totalRevenue,
+          performanceScore,
+          tier,
+          branch_id: barber.branch_id,
+        };
+      })
+    );
+
+    // Sort by performance score and limit
+    return barberPerformance
+      .sort((a, b) => b.performanceScore - a.performanceScore)
+      .slice(0, limit);
+  },
+});
+
+// Get barber activities (recent actions/events)
+export const getBarberActivities = query({
+  args: {
+    barberId: v.id("barbers"),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 20;
+    const barber = await ctx.db.get(args.barberId);
+    if (!barber) return [];
+
+    // Get recent bookings
+    const bookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_barber", (q) => q.eq("barber", args.barberId))
+      .order("desc")
+      .take(limit);
+
+    // Get recent transactions
+    const transactions = await ctx.db
+      .query("transactions")
+      .withIndex("by_barber", (q) => q.eq("barber", args.barberId))
+      .order("desc")
+      .take(limit);
+
+    // Get recent ratings
+    const ratings = await ctx.db
+      .query("ratings")
+      .withIndex("by_barber", (q) => q.eq("barber_id", args.barberId))
+      .order("desc")
+      .take(limit);
+
+    // Combine and format activities
+    const activities: Array<{
+      type: "booking" | "transaction" | "rating";
+      timestamp: number;
+      title: string;
+      description: string;
+      metadata?: Record<string, unknown>;
+    }> = [];
+
+    // Add booking activities
+    for (const booking of bookings) {
+      const service = await ctx.db.get(booking.service);
+      activities.push({
+        type: "booking",
+        timestamp: booking.updatedAt,
+        title: `Booking ${booking.status}`,
+        description: `${booking.customer_name || "Customer"} - ${service?.name || "Service"}`,
+        metadata: {
+          booking_code: booking.booking_code,
+          status: booking.status,
+          date: booking.date,
+          time: booking.time,
+        },
+      });
+    }
+
+    // Add transaction activities
+    for (const transaction of transactions) {
+      activities.push({
+        type: "transaction",
+        timestamp: transaction.createdAt,
+        title: `Transaction ${transaction.payment_status}`,
+        description: `₱${transaction.total_amount.toLocaleString()} via ${transaction.payment_method}`,
+        metadata: {
+          transaction_id: transaction.transaction_id,
+          amount: transaction.total_amount,
+          payment_method: transaction.payment_method,
+        },
+      });
+    }
+
+    // Add rating activities
+    for (const rating of ratings) {
+      activities.push({
+        type: "rating",
+        timestamp: rating.created_at,
+        title: `New ${rating.rating}-star rating`,
+        description: rating.feedback || "No feedback provided",
+        metadata: {
+          rating: rating.rating,
+          feedback: rating.feedback,
+        },
+      });
+    }
+
+    // Sort by timestamp and limit
+    return activities
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, limit);
+  },
+});

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { User, Mail, Phone, Calendar, Star, Edit3, Save, X, Camera, Award, Clock, MapPin, LogOut } from 'lucide-react'
+import { User, Mail, Phone, Calendar, Star, Edit3, Save, X, Camera, Award, Clock, MapPin, LogOut, Image, Plus, Trash2 } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
@@ -491,18 +491,18 @@ const BarberProfile = () => {
             <Star className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
             Performance Overview
           </h3>
-          
+
           <div className="grid grid-cols-3 gap-3">
             <div className="text-center p-3 bg-gradient-to-br from-green-500/20 to-green-600/20 rounded-xl border border-green-500/30">
               <div className="text-lg font-bold text-green-400 mb-1">{currentBarber.rating}/5</div>
               <div className="text-xs text-gray-400">Rating</div>
             </div>
-            
+
             <div className="text-center p-3 bg-gradient-to-br from-blue-500/20 to-blue-600/20 rounded-xl border border-blue-500/30">
               <div className="text-lg font-bold text-blue-400 mb-1">{currentBarber.totalBookings}</div>
               <div className="text-xs text-gray-400">Bookings</div>
             </div>
-            
+
             <div className="text-center p-3 bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 rounded-xl border border-[var(--color-primary)]/30">
               <div className="text-lg font-bold text-[var(--color-primary)] mb-1">
                 ₱{currentBarber.monthlyRevenue?.toLocaleString() || 0}
@@ -510,6 +510,62 @@ const BarberProfile = () => {
               <div className="text-xs text-gray-400">Revenue</div>
             </div>
           </div>
+        </div>
+
+        {/* Portfolio Section */}
+        <div className="bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl rounded-2xl p-4 border border-[#555555]/30 shadow-lg mt-4">
+          <h3 className="text-base font-bold text-white mb-3 flex items-center">
+            <Image className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+            Portfolio
+          </h3>
+          <p className="text-xs text-gray-400 mb-3">Showcase your best work to attract more customers</p>
+
+          {currentBarber.portfolio && currentBarber.portfolio.length > 0 ? (
+            <div className="grid grid-cols-3 gap-2">
+              {currentBarber.portfolio.map((image, index) => (
+                <div key={index} className="relative aspect-square rounded-lg overflow-hidden group">
+                  <img
+                    src={image.url}
+                    alt={image.caption || `Portfolio ${index + 1}`}
+                    className="w-full h-full object-cover"
+                  />
+                  {isEditing && (
+                    <button
+                      onClick={() => {/* Handle delete portfolio image */}}
+                      className="absolute top-1 right-1 p-1 bg-red-500/80 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="w-3 h-3 text-white" />
+                    </button>
+                  )}
+                  {image.caption && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                      <p className="text-xs text-white truncate">{image.caption}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {isEditing && (
+                <button className="aspect-square rounded-lg border-2 border-dashed border-[#555555] flex flex-col items-center justify-center text-gray-500 hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] transition-colors">
+                  <Plus className="w-6 h-6 mb-1" />
+                  <span className="text-xs">Add Photo</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <div className="w-16 h-16 bg-[#2A2A2A] rounded-full flex items-center justify-center mx-auto mb-3">
+                <Image className="w-8 h-8 text-gray-500" />
+              </div>
+              <p className="text-gray-400 text-sm mb-2">No portfolio images yet</p>
+              <p className="text-gray-500 text-xs mb-3">Add photos of your best haircuts to showcase your skills</p>
+              {isEditing && (
+                <button className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[#E67A1A] transition-colors text-sm">
+                  <Plus className="w-4 h-4 inline mr-1" />
+                  Add First Photo
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

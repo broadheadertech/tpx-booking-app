@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import {
   Calendar,
@@ -7,6 +7,38 @@ import {
   DollarSign,
   TrendingUp,
   Star,
+  Activity,
+  Clock,
+  CheckCircle,
+  XCircle,
+  CreditCard,
+  Wallet,
+  CalendarDays,
+  User,
+  Settings,
+  Bell,
+  ChevronRight,
+  ArrowUpRight,
+  ArrowDownRight,
+  Scissors,
+  Target,
+  Award,
+  Trophy,
+  Crown,
+  Medal,
+  Zap,
+  Eye,
+  MoreHorizontal,
+  Filter,
+  Search,
+  Phone,
+  MapPin,
+  AlertCircle,
+  Home,
+  UserCircle,
+  X,
+  BellRing,
+  Check,
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -14,685 +46,1001 @@ import { useAuth } from "../../context/AuthContext";
 import BarberBookings from "./BarberBookings";
 import BarberProfile from "./BarberProfile";
 import TimeOffManager from "./TimeOffManager";
-
 import LoadingSpinner from "../common/LoadingSpinner";
-import AlertModal from "../common/AlertModal";
 import { formatTime } from "../../utils/dateUtils";
 import { useBranding } from "../../context/BrandingContext";
+
+// Notification Panel Component
+const NotificationPanel = ({ isOpen, onClose, userId }) => {
+  const notifications = useQuery(
+    api.services.notifications.getUserNotifications,
+    userId ? { userId, limit: 20 } : "skip"
+  );
+  const unreadCount = useQuery(
+    api.services.notifications.getUnreadCount,
+    userId ? { userId } : "skip"
+  );
+  const markAsRead = useMutation(api.services.notifications.markAsRead);
+  const markAllAsRead = useMutation(api.services.notifications.markAllAsRead);
+  const clearAllNotifications = useMutation(api.services.notifications.clearAllNotifications);
+
+  const handleMarkAsRead = async (notificationId) => {
+    try {
+      await markAsRead({ notificationId, userId });
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllAsRead({ userId });
+    } catch (error) {
+      console.error("Failed to mark all as read:", error);
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      await clearAllNotifications({ userId });
+    } catch (error) {
+      console.error("Failed to clear notifications:", error);
+    }
+  };
+
+  const formatNotificationTime = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  };
+
+  const getNotificationIcon = (type, priority) => {
+    if (priority === "high" || priority === "urgent") {
+      return <AlertCircle className="w-5 h-5 text-[var(--color-primary)]" />;
+    }
+    switch (type) {
+      case "booking":
+        return <Calendar className="w-5 h-5 text-[var(--color-primary)]" />;
+      case "payment":
+        return <CreditCard className="w-5 h-5 text-green-500" />;
+      case "reminder":
+        return <Clock className="w-5 h-5 text-blue-500" />;
+      case "alert":
+        return <BellRing className="w-5 h-5 text-yellow-500" />;
+      default:
+        return <Bell className="w-5 h-5 text-gray-400" />;
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 bg-black/60 z-40 animate-fade-in"
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div className="fixed top-0 right-0 bottom-20 w-full max-w-md bg-[#0D0D0D] z-50 animate-slide-in-right flex flex-col border-l border-[#2A2A2A]">
+        {/* Header */}
+        <div className="px-4 py-4 border-b border-[#2A2A2A] flex items-center justify-between bg-[#0D0D0D]">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-[#1A1A1A] rounded-xl flex items-center justify-center">
+              <Bell className="w-5 h-5 text-[var(--color-primary)]" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white">Notifications</h2>
+              <p className="text-xs text-gray-500">
+                {unreadCount > 0 ? `${unreadCount} unread` : "All caught up!"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 bg-[#1A1A1A] rounded-xl hover:bg-[#2A2A2A] transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-400" />
+          </button>
+        </div>
+
+        {/* Actions */}
+        {notifications && notifications.length > 0 && (
+          <div className="px-4 py-2 border-b border-[#2A2A2A] flex items-center justify-between">
+            <button
+              onClick={handleMarkAllAsRead}
+              className="text-xs text-gray-400 hover:text-white flex items-center space-x-1"
+            >
+              <Check className="w-3 h-3" />
+              <span>Mark all read</span>
+            </button>
+            <button
+              onClick={handleClearAll}
+              className="text-xs text-gray-400 hover:text-red-400 flex items-center space-x-1"
+            >
+              <X className="w-3 h-3" />
+              <span>Clear all</span>
+            </button>
+          </div>
+        )}
+
+        {/* Notifications List */}
+        <div className="flex-1 overflow-y-auto">
+          {!notifications ? (
+            <div className="flex items-center justify-center h-40">
+              <LoadingSpinner size="md" />
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+              <div className="w-16 h-16 bg-[#1A1A1A] rounded-full flex items-center justify-center mb-4">
+                <Bell className="w-8 h-8 text-gray-600" />
+              </div>
+              <h3 className="text-white font-medium mb-2">No notifications</h3>
+              <p className="text-gray-500 text-sm">
+                You're all caught up! New booking notifications will appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-[#1A1A1A]">
+              {notifications.map((notification) => (
+                <div
+                  key={notification._id}
+                  onClick={() => !notification.is_read && handleMarkAsRead(notification._id)}
+                  className={`p-4 hover:bg-[#1A1A1A] transition-colors cursor-pointer ${
+                    !notification.is_read ? "bg-[#1A1A1A]/50 border-l-2 border-[var(--color-primary)]" : ""
+                  }`}
+                >
+                  <div className="flex items-start space-x-3">
+                    <div className={`p-2 rounded-xl ${
+                      !notification.is_read ? "bg-[var(--color-primary)]/20" : "bg-[#2A2A2A]"
+                    }`}>
+                      {getNotificationIcon(notification.type, notification.priority)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between">
+                        <h4 className={`text-sm font-medium ${
+                          !notification.is_read ? "text-white" : "text-gray-300"
+                        }`}>
+                          {notification.title}
+                        </h4>
+                        {!notification.is_read && (
+                          <span className="w-2 h-2 bg-[var(--color-primary)] rounded-full flex-shrink-0 mt-1.5 ml-2" />
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1 line-clamp-2">
+                        {notification.message}
+                      </p>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-xs text-gray-500">
+                          {formatNotificationTime(notification.createdAt)}
+                        </span>
+                        {notification.priority === "high" || notification.priority === "urgent" ? (
+                          <span className="px-2 py-0.5 text-[10px] font-medium bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-full">
+                            {notification.priority}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <style jsx>{`
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slide-in-right {
+          from { transform: translateX(100%); }
+          to { transform: translateX(0); }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.2s ease-out;
+        }
+        .animate-slide-in-right {
+          animation: slide-in-right 0.3s ease-out;
+        }
+      `}</style>
+    </>
+  );
+};
+
+// Tier Badge Component
+const TierBadge = ({ tier, size = "sm" }) => {
+  const tierConfig = {
+    platinum: { bg: "bg-white/20", text: "text-white", icon: Crown },
+    gold: { bg: "bg-[var(--color-primary)]/20", text: "text-[var(--color-primary)]", icon: Trophy },
+    silver: { bg: "bg-gray-500/20", text: "text-gray-300", icon: Medal },
+    bronze: { bg: "bg-gray-600/20", text: "text-gray-400", icon: Award },
+  };
+  const config = tierConfig[tier] || tierConfig.bronze;
+  const Icon = config.icon;
+  const sizeClasses = size === "sm" ? "px-2 py-0.5 text-xs" : "px-3 py-1 text-sm";
+
+  return (
+    <span className={`inline-flex items-center rounded-full font-medium ${config.bg} ${config.text} ${sizeClasses}`}>
+      <Icon className={size === "sm" ? "w-3 h-3 mr-1" : "w-4 h-4 mr-1.5"} />
+      {tier.charAt(0).toUpperCase() + tier.slice(1)}
+    </span>
+  );
+};
+
+// Quick Action Button Component
+const QuickActionButton = ({ icon: Icon, label, onClick, badge }) => (
+  <button
+    onClick={onClick}
+    className="flex flex-col items-center justify-center p-3 bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] hover:border-[#3A3A3A] transition-all duration-200 active:scale-95 relative"
+  >
+    {badge && (
+      <span className="absolute -top-1 -right-1 w-5 h-5 bg-[var(--color-primary)] text-white text-xs rounded-full flex items-center justify-center font-bold">
+        {badge}
+      </span>
+    )}
+    <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-2 bg-[#2A2A2A]">
+      <Icon className="w-5 h-5 text-white" />
+    </div>
+    <span className="text-xs font-medium text-gray-400">{label}</span>
+  </button>
+);
+
+// Stat Card Component
+const StatCard = ({ icon: Icon, label, value, subValue, trend, trendUp }) => (
+  <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] relative overflow-hidden">
+    <div className="absolute top-2 right-2 opacity-20">
+      <Icon className="w-12 h-12 text-gray-500" />
+    </div>
+    <p className="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">{label}</p>
+    <div className="flex items-baseline space-x-1">
+      <p className="text-2xl font-bold text-white">{value}</p>
+      {subValue && <span className="text-[10px] text-gray-500">{subValue}</span>}
+    </div>
+    {trend && (
+      <div className={`mt-2 flex items-center text-xs ${
+        trendUp ? "text-[var(--color-primary)]" : "text-gray-500"
+      }`}>
+        {trendUp ? <ArrowUpRight className="w-3 h-3 mr-0.5" /> : <ArrowDownRight className="w-3 h-3 mr-0.5" />}
+        <span>{trend}</span>
+      </div>
+    )}
+  </div>
+);
 
 const BarberDashboard = () => {
   const { user } = useAuth();
   const location = useLocation();
   const { branding } = useBranding();
   const [activeTab, setActiveTab] = useState("overview");
-  const [isAcceptingBookings, setIsAcceptingBookings] = useState(true);
-  const [alertState, setAlertState] = useState({
-    isOpen: false,
-    type: "info",
-    title: "",
-    message: "",
-  });
+  const [statsPeriod, setStatsPeriod] = useState("monthly");
+  const [showNotifications, setShowNotifications] = useState(false);
 
-  // Check if we're on the barber dashboard route (main dashboard only)
-  const isOnBarberDashboard = location.pathname === "/barber/dashboard";
-
-  // Early return if not on barber dashboard - prevents navigation conflicts
-  if (!isOnBarberDashboard) {
-    return null;
-  }
-
-  // Get barber data - only for current user's branch
-  const barbers = user?.branch_id
-    ? useQuery(api.services.barbers.getBarbersByBranch, {
-        branch_id: user.branch_id,
-      })
-    : useQuery(api.services.barbers.getAllBarbers);
-
-  const currentBarber = barbers?.find((barber) => barber.user === user?._id);
-
-  const updateBarberMutation = useMutation(api.services.barbers.updateBarber);
-
-  // Mutation to create barber profile
-  const createBarberProfile = useMutation(
-    api.services.barbers.createBarberProfile
+  // Get notification unread count
+  const notificationUnreadCount = useQuery(
+    api.services.notifications.getUnreadCount,
+    user?._id ? { userId: user._id } : "skip"
   );
 
-  // Initialize acceptance status when barber data loads
-  React.useEffect(() => {
-    if (currentBarber) {
-      setIsAcceptingBookings(currentBarber.is_accepting_bookings !== false);
-    }
-  }, [currentBarber]);
+  // Check if we're on the barber dashboard route
+  const isOnBarberDashboard = location.pathname === "/barber/dashboard";
+  if (!isOnBarberDashboard) return null;
 
-  const handleToggleBookings = async (newValue) => {
-    if (!currentBarber?._id) return;
+  // Get barber data
+  const barbers = user?.branch_id
+    ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
+    : useQuery(api.services.barbers.getAllBarbers);
+  const currentBarber = barbers?.find((barber) => barber.user === user?._id);
 
-    setIsAcceptingBookings(newValue);
+  // Mutations
+  const updateBarberMutation = useMutation(api.services.barbers.updateBarber);
+  const createBarberProfile = useMutation(api.services.barbers.createBarberProfile);
 
-    try {
-      await updateBarberMutation({
-        id: currentBarber._id,
-        is_accepting_bookings: newValue,
-      });
-    } catch (error) {
-      console.error("Failed to update availability:", error);
-      setIsAcceptingBookings(!newValue); // Revert on error
-      setAlertState({
-        isOpen: true,
-        type: "error",
-        title: "Update Failed",
-        message: "Failed to update availability status. Please try again.",
-      });
-    }
-  };
-
-  // Auto-create barber profile if user has barber role but no profile
-  React.useEffect(() => {
-    if (
-      user?.role === "barber" &&
-      barbers &&
-      !currentBarber &&
-      user._id &&
-      user.branch_id
-    ) {
-      createBarberProfile({
-        userId: user._id,
-        branch_id: user.branch_id,
-      })
-        .then(() => {
-          // Profile created, data will refresh automatically
-        })
-        .catch((error) => {
-          console.error("Failed to create barber profile:", error);
-        });
+  // Auto-create barber profile
+  useEffect(() => {
+    if (user?.role === "barber" && barbers && !currentBarber && user._id && user.branch_id) {
+      createBarberProfile({ userId: user._id, branch_id: user.branch_id }).catch(console.error);
     }
   }, [user, barbers, currentBarber, createBarberProfile]);
 
-  // Get bookings and transactions for overview - only for current branch
+  // Get transactions
   const allTransactions = user?.branch_id
-    ? useQuery(api.services.transactions.getTransactionsByBranch, {
-        branch_id: user.branch_id,
-      })
+    ? useQuery(api.services.transactions.getTransactionsByBranch, { branch_id: user.branch_id })
     : useQuery(api.services.transactions.getAllTransactions);
 
-  // Get bookings specifically for this barber
-  const barberBookings =
-    useQuery(
-      api.services.bookings.getBookingsByBarber,
-      currentBarber ? { barberId: currentBarber._id } : "skip"
-    ) || [];
+  // Get bookings for this barber
+  const barberBookings = useQuery(
+    api.services.bookings.getBookingsByBarber,
+    currentBarber ? { barberId: currentBarber._id } : "skip"
+  ) || [];
 
-  // Get rating analytics for current barber - always call the hook but skip if no barber
+  // Get rating analytics
   const ratingAnalytics = useQuery(
     api.services.ratings.getBarberRatingsAnalytics,
     currentBarber ? { barberId: currentBarber._id } : "skip"
   );
 
-  // Get all bookings for debugging - only from current branch
-  const allBookings = user?.branch_id
-    ? useQuery(api.services.bookings.getBookingsByBranch, {
-        branch_id: user.branch_id,
-      })
-    : useQuery(api.services.bookings.getAllBookings);
+  // Get stats by period
+  const periodStats = useQuery(
+    api.services.barbers.getBarberStatsByPeriod,
+    currentBarber ? { barberId: currentBarber._id, period: statsPeriod } : "skip"
+  );
 
-  // Debug logging
-  console.log("Debug - currentBarber:", currentBarber);
-  console.log("Debug - currentBarber._id:", currentBarber?._id);
-  console.log("Debug - barberBookings from specific query:", barberBookings);
-  console.log("Debug - allBookings:", allBookings);
+  // Get top barbers
+  const topBarbers = useQuery(
+    api.services.barbers.getTopBarbers,
+    user?.branch_id ? { branch_id: user.branch_id, limit: 5, period: "monthly" } : "skip"
+  );
 
-  // Check if any bookings have barber field populated
-  if (allBookings) {
-    console.log(
-      "Debug - Bookings with barber field:",
-      allBookings.filter((b) => b.barber)
-    );
-    console.log(
-      "Debug - All barber field values:",
-      allBookings.map((b) => ({ id: b._id, barber: b.barber }))
-    );
-  }
+  // Get activities
+  const barberActivities = useQuery(
+    api.services.barbers.getBarberActivities,
+    currentBarber ? { barberId: currentBarber._id, limit: 10 } : "skip"
+  );
 
-  const barberTransactions =
-    allTransactions?.filter(
-      (transaction) =>
-        transaction.barber === currentBarber?._id &&
-        transaction.payment_status === "completed"
-    ) || [];
+  // Filter transactions for this barber
+  const barberTransactions = allTransactions?.filter(
+    (t) => t.barber === currentBarber?._id && t.payment_status === "completed"
+  ) || [];
 
   // Calculate today's stats
   const today = new Date().toISOString().split("T")[0];
-  const todayBookings = barberBookings.filter(
-    (booking) => booking.date === today
-  );
+  const todayBookings = barberBookings.filter((b) => b.date === today);
+  const pendingBookings = barberBookings.filter((b) => b.status === "pending" || b.status === "confirmed");
   const todayRevenue = barberTransactions
-    .filter((transaction) => {
-      const transactionDate = new Date(transaction.createdAt)
-        .toISOString()
-        .split("T")[0];
-      return transactionDate === today;
-    })
-    .reduce((sum, transaction) => sum + transaction.total_amount, 0);
+    .filter((t) => new Date(t.createdAt).toISOString().split("T")[0] === today)
+    .reduce((sum, t) => sum + t.total_amount, 0);
 
   // Calculate this month's stats
   const thisMonth = new Date().toISOString().slice(0, 7);
-  const monthlyBookings = barberBookings.filter((booking) =>
-    booking.date.startsWith(thisMonth)
-  );
   const monthlyRevenue = barberTransactions
-    .filter((transaction) => {
-      const transactionDate = new Date(transaction.createdAt)
-        .toISOString()
-        .slice(0, 7);
-      return transactionDate === thisMonth;
-    })
-    .reduce((sum, transaction) => sum + transaction.total_amount, 0);
+    .filter((t) => new Date(t.createdAt).toISOString().slice(0, 7) === thisMonth)
+    .reduce((sum, t) => sum + t.total_amount, 0);
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat("en-PH", {
-      style: "currency",
-      currency: "PHP",
-    }).format(amount);
+  // Period options
+  const periodOptions = [
+    { value: "daily", label: "Today" },
+    { value: "weekly", label: "Week" },
+    { value: "monthly", label: "Month" },
+    { value: "yearly", label: "Year" },
+    { value: "all_time", label: "All" },
+  ];
+
+  // Tab configuration - 5 tabs for bottom nav
+  const tabs = [
+    { id: "overview", label: "Home", icon: Home },
+    { id: "bookings", label: "Bookings", icon: Calendar },
+    { id: "earnings", label: "Earnings", icon: Wallet },
+    { id: "schedule", label: "Schedule", icon: Clock },
+    { id: "profile", label: "Profile", icon: UserCircle },
+  ];
+
+  // Format activity time
+  const formatActivityTime = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    if (diffMins < 1) return "Just now";
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
   };
 
-  const primaryTabs = [
-    { id: "overview", label: "Overview", icon: BarChart3 },
-    { id: "bookings", label: "Bookings", icon: Calendar },
-    { id: "profile", label: "Profile", icon: Users },
-  ];
-
-  const moreTabs = [];
-
-  const tabs = [
-    { id: "overview", label: "Overview", icon: BarChart3 },
-    { id: "bookings", label: "Bookings", icon: Calendar },
-    { id: "profile", label: "Profile", icon: Users },
-  ];
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case "bookings":
-        return <BarberBookings />;
-      case "profile":
-        return <BarberProfile />;
-      default:
-        return (
-          <>
-            {/* Desktop Header - Hidden on Mobile */}
-            <div className="hidden md:block relative z-10 bg-gradient-to-r from-[#2A2A2A]/95 to-[#333333]/95 backdrop-blur-xl border-b border-[#444444]/30">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="py-6 flex justify-between items-center">
-                  <div>
-                    <h1 className="text-2xl font-bold text-white">
-                      Welcome back, {currentBarber?.full_name || user?.username}
-                      !
-                    </h1>
-                    <p className="text-gray-400 mt-1">
-                      Here's your performance overview
-                    </p>
-                  </div>
-                  {/* Availability Toggle Desktop */}
-                  {/* <div className="bg-[#1A1A1A] border border-[#333333] rounded-xl p-3 flex items-center space-x-3">
-                    <span
-                      className={`text-sm font-medium ${isAcceptingBookings ? "text-green-400" : "text-gray-400"}`}
-                    >
-                      {isAcceptingBookings
-                        ? "Accepting Bookings"
-                        : "Bookings Paused"}
-                    </span>
-                    <label className="flex items-center cursor-pointer">
-                      <div className="relative">
-                        <input
-                          type="checkbox"
-                          className="sr-only"
-                          checked={isAcceptingBookings}
-                          onChange={(e) =>
-                            handleToggleBookings(e.target.checked)
-                          }
-                        />
-                        <div
-                          className={`block w-10 h-6 rounded-full transition-colors ${isAcceptingBookings ? "bg-green-500" : "bg-gray-600"}`}
-                        ></div>
-                        <div
-                          className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${isAcceptingBookings ? "transform translate-x-4" : ""}`}
-                        ></div>
-                      </div>
-                    </label>
-                  </div> */}
-                </div>
-              </div>
-            </div>
-
-            <div className="px-4 md:max-w-7xl md:mx-auto md:px-6 lg:px-8 py-4 md:py-6">
-              {/* Mobile Welcome Section with Toggle */}
-              <div className="md:hidden mb-4 space-y-4">
-                <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-2xl p-5 text-white shadow-lg">
-                  <div className="flex flex-col space-y-1">
-                    <h2 className="text-xl font-bold">Welcome back!</h2>
-                    <p className="text-sm opacity-90">
-                      Ready to make today amazing?
-                    </p>
-                    <div className="flex items-center justify-between pt-2">
-                      <div className="text-xs opacity-80 font-medium bg-white/20 px-2 py-1 rounded-lg">
-                        Today,{" "}
-                        {new Date().toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Availability Toggle Mobile */}
-                {/* <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A] flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-bold text-white">
-                      Booking Status
-                    </p>
-                    <p
-                      className={`text-xs ${isAcceptingBookings ? "text-green-400" : "text-gray-400"}`}
-                    >
-                      {isAcceptingBookings
-                        ? "You are visible to clients"
-                        : "You appear as busy"}
-                    </p>
-                  </div>
-                  <label className="flex items-center cursor-pointer">
-                    <div className="relative">
-                      <input
-                        type="checkbox"
-                        className="sr-only"
-                        checked={isAcceptingBookings}
-                        onChange={(e) => handleToggleBookings(e.target.checked)}
-                      />
-                      <div
-                        className={`block w-12 h-7 rounded-full transition-colors ${isAcceptingBookings ? "bg-green-500" : "bg-gray-600"}`}
-                      ></div>
-                      <div
-                        className={`dot absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform shadow-sm ${isAcceptingBookings ? "transform translate-x-5" : ""}`}
-                      ></div>
-                    </div>
-                  </label>
-                </div> */}
-              </div>
-
-              {/* Stats Cards - Redesigned */}
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                {/* Total Bookings Card */}
-                <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A] relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <Calendar className="w-12 h-12 text-[var(--color-primary)]" />
-                  </div>
-                  <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">
-                    Total Bookings
-                  </p>
-                  <div className="flex items-baseline space-x-1">
-                    <p className="text-2xl font-bold text-[var(--color-primary)]">
-                      {barberBookings.length}
-                    </p>
-                    <span className="text-[10px] text-gray-500">lifetime</span>
-                  </div>
-                  <div className="mt-2 flex items-center text-xs text-green-400 bg-green-400/10 w-fit px-1.5 py-0.5 rounded">
-                    <TrendingUp className="w-3 h-3 mr-1" />
-                    <span>+2 this week</span>
-                  </div>
-                </div>
-
-                {/* Rating Card */}
-                <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A] relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <Star className="w-12 h-12 text-yellow-400" />
-                  </div>
-                  <p className="text-xs text-gray-400 font-medium uppercase tracking-wide mb-1">
-                    Rating
-                  </p>
-                  <div className="flex items-baseline space-x-1">
-                    <p className="text-2xl font-bold text-yellow-400">
-                      {ratingAnalytics?.averageRating ||
-                        currentBarber?.rating ||
-                        0}
-                    </p>
-                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                  </div>
-                  <div className="mt-2 text-xs text-gray-500">
-                    Based on {ratingAnalytics?.totalRatings || 0} reviews
-                  </div>
-                </div>
-              </div>
-
-              {/* Today's Appointments - Redesigned */}
-              <div className="bg-[#1A1A1A] rounded-xl p-0 border border-[#2A2A2A] overflow-hidden mb-4">
-                <div className="p-4 border-b border-[#2A2A2A] flex justify-between items-center">
-                  <h3 className="text-sm font-bold text-white">
-                    Today's Appointments
-                  </h3>
-                  <div className="bg-[#2A2A2A] px-2 py-1 rounded text-xs font-medium text-gray-300">
-                    {todayBookings.length} Total
-                  </div>
-                </div>
-
-                <div className="p-4">
-                  {todayBookings.length === 0 ? (
-                    <div className="text-center py-8 flex flex-col items-center">
-                      <div className="w-12 h-12 bg-[#2A2A2A] rounded-full flex items-center justify-center mb-3">
-                        <Calendar className="w-6 h-6 text-gray-500" />
-                      </div>
-                      <p className="text-gray-300 text-sm font-medium">
-                        No appointments today
-                      </p>
-                      <p className="text-gray-500 text-xs mt-1">
-                        Enjoy your free time! 🎉
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {todayBookings.slice(0, 3).map((booking) => (
-                        <div
-                          key={booking._id}
-                          className="flex items-center p-3 bg-[#222222] rounded-xl border border-[#333333]"
-                        >
-                          <div className="flex-shrink-0 w-12 h-12 bg-[#333333] rounded-lg flex flex-col items-center justify-center border border-[#444444]">
-                            <span className="text-[10px] text-gray-400 font-medium">
-                              {formatTime(booking.time).split(" ")[1]}
-                            </span>
-                            <span className="text-sm font-bold text-white">
-                              {formatTime(booking.time).split(" ")[0]}
-                            </span>
-                          </div>
-
-                          <div className="ml-3 flex-1 min-w-0">
-                            <p className="font-bold text-white text-sm truncate">
-                              {booking.customer_name}
-                            </p>
-                            <p className="text-xs text-[var(--color-primary)] truncate">
-                              {booking.service_name}
-                            </p>
-                          </div>
-
-                          <div className="text-right">
-                            <p className="text-sm font-bold text-white">
-                              ₱{booking.price}
-                            </p>
-                            <div className="text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded inline-block mt-1">
-                              Confirmed
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-
-                      {todayBookings.length > 3 && (
-                        <button
-                          onClick={() => setActiveTab("bookings")}
-                          className="w-full py-3 bg-[#2A2A2A] hover:bg-[#333333] text-gray-300 rounded-xl transition-colors font-medium text-xs"
-                        >
-                          View All {todayBookings.length} Appointments
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Rating Analytics - Redesigned */}
-              {ratingAnalytics && ratingAnalytics.totalRatings > 0 && (
-                <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg shadow-md border border-[#444444]/30 p-4 mt-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-bold text-white">
-                      Customer Ratings
-                    </h3>
-                    <div className="flex items-center space-x-1">
-                      <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                      <span className="text-xs text-yellow-400 font-medium">
-                        {ratingAnalytics.averageRating}/5
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    {/* Rating Summary */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <div className="flex">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Star
-                              key={star}
-                              className={`w-4 h-4 ${
-                                star <=
-                                Math.round(ratingAnalytics.averageRating)
-                                  ? "text-yellow-400 fill-yellow-400"
-                                  : "text-gray-500"
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-sm text-white font-medium">
-                          {ratingAnalytics.averageRating}
-                        </span>
-                      </div>
-                      <span className="text-xs text-gray-400">
-                        {ratingAnalytics.totalRatings} reviews
-                      </span>
-                    </div>
-
-                    {/* Rating Breakdown */}
-                    <div className="space-y-1">
-                      {[5, 4, 3, 2, 1].map((rating) => {
-                        const count =
-                          ratingAnalytics.ratingBreakdown[rating] || 0;
-                        const percentage =
-                          ratingAnalytics.totalRatings > 0
-                            ? (count / ratingAnalytics.totalRatings) * 100
-                            : 0;
-
-                        return (
-                          <div
-                            key={rating}
-                            className="flex items-center space-x-2"
-                          >
-                            <span className="text-xs text-gray-400 w-2">
-                              {rating}
-                            </span>
-                            <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                            <div className="flex-1 bg-gray-700 rounded-full h-1.5">
-                              <div
-                                className="bg-yellow-400 h-1.5 rounded-full transition-all duration-300"
-                                style={{ width: `${percentage}%` }}
-                              ></div>
-                            </div>
-                            <span className="text-xs text-gray-400 w-6 text-right">
-                              {count}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Recent Reviews */}
-                    {ratingAnalytics.recentRatings &&
-                      ratingAnalytics.recentRatings.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-gray-600">
-                          <h4 className="text-xs font-medium text-gray-400 mb-2">
-                            Recent Reviews
-                          </h4>
-                          <div className="space-y-2 max-h-32 overflow-y-auto">
-                            {ratingAnalytics.recentRatings
-                              .slice(0, 3)
-                              .map((review, index) => (
-                                <div
-                                  key={index}
-                                  className="bg-[#1A1A1A] rounded-md p-2"
-                                >
-                                  <div className="flex items-center justify-between mb-1">
-                                    <div className="flex">
-                                      {[1, 2, 3, 4, 5].map((star) => (
-                                        <Star
-                                          key={star}
-                                          className={`w-3 h-3 ${
-                                            star <= review.rating
-                                              ? "text-yellow-400 fill-yellow-400"
-                                              : "text-gray-500"
-                                          }`}
-                                        />
-                                      ))}
-                                    </div>
-                                    <span className="text-xs text-gray-500">
-                                      {new Date(
-                                        review.created_at
-                                      ).toLocaleDateString()}
-                                    </span>
-                                  </div>
-                                  {review.feedback && (
-                                    <p className="text-xs text-gray-300 line-clamp-2">
-                                      {review.feedback}
-                                    </p>
-                                  )}
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      )}
-                  </div>
-                </div>
-              )}
-
-              {/* Time Off Manager */}
-              {/* <TimeOffManager barber={currentBarber} /> */}
-            </div>
-          </>
-        );
+  // Get activity icon
+  const getActivityIcon = (type) => {
+    switch (type) {
+      case "booking": return Calendar;
+      case "transaction": return CreditCard;
+      case "rating": return Star;
+      default: return Activity;
     }
   };
 
-  // Show loading spinner while data is fetching
+  // Render Overview Tab
+  const renderOverview = () => (
+    <div className="px-4 pb-6 space-y-4">
+      {/* Welcome Hero Card */}
+      <div className="relative overflow-hidden rounded-2xl bg-[#1A1A1A] border border-[var(--color-primary)]/50">
+        <div className="relative p-5">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 rounded-xl bg-[#2A2A2A] flex items-center justify-center overflow-hidden border border-[#3A3A3A]">
+                {currentBarber?.avatar ? (
+                  <img src={currentBarber.avatar} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-lg font-bold text-[var(--color-primary)]">
+                    {currentBarber?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'U'}
+                  </span>
+                )}
+              </div>
+              <div>
+                <p className="text-sm text-gray-400">Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'},</p>
+                <h2 className="text-lg font-bold text-white">{currentBarber?.full_name?.split(' ')[0] || 'Barber'}!</h2>
+              </div>
+            </div>
+            {currentBarber?.rating > 0 && (
+              <div className="flex items-center space-x-1 bg-[#2A2A2A] rounded-lg px-2 py-1 border border-[#3A3A3A]">
+                <Star className="w-3 h-3 fill-[var(--color-primary)] text-[var(--color-primary)]" />
+                <span className="text-sm font-medium text-white">{currentBarber.rating}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Stats Row */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-[#2A2A2A] rounded-xl p-3 text-center border border-[#3A3A3A]">
+              <div className="text-xl font-bold text-white">{todayBookings.length}</div>
+              <div className="text-xs text-gray-500">Today</div>
+            </div>
+            <div className="bg-[#2A2A2A] rounded-xl p-3 text-center border border-[#3A3A3A]">
+              <div className="text-xl font-bold text-white">{pendingBookings.length}</div>
+              <div className="text-xs text-gray-500">Pending</div>
+            </div>
+            <div className="bg-[#2A2A2A] rounded-xl p-3 text-center border border-[#3A3A3A]">
+              <div className="text-xl font-bold text-[var(--color-primary)]">₱{todayRevenue.toLocaleString()}</div>
+              <div className="text-xs text-gray-500">Earned</div>
+            </div>
+          </div>
+
+          {/* Status Message */}
+          <div className="mt-3 bg-[#2A2A2A] rounded-xl p-2.5 border border-[#3A3A3A]">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-[var(--color-primary)] rounded-full animate-pulse"></div>
+              <p className="text-sm text-gray-400">
+                {todayBookings.length === 0 ? "No appointments yet - time to shine!" :
+                 todayBookings.length <= 2 ? "Great start! Keep up the momentum!" :
+                 todayBookings.length <= 4 ? "Busy day ahead! You're doing great!" :
+                 "Fully booked! You're on fire today!"}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div>
+        <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center">
+          <Zap className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+          Quick Actions
+        </h3>
+        <div className="grid grid-cols-4 gap-2">
+          <QuickActionButton
+            icon={Calendar}
+            label="Bookings"
+            onClick={() => setActiveTab("bookings")}
+            badge={pendingBookings.length > 0 ? pendingBookings.length : null}
+          />
+          <QuickActionButton
+            icon={Wallet}
+            label="Earnings"
+            onClick={() => setActiveTab("earnings")}
+          />
+          <QuickActionButton
+            icon={Clock}
+            label="Schedule"
+            onClick={() => setActiveTab("schedule")}
+          />
+          <QuickActionButton
+            icon={Users}
+            label="Clients"
+            onClick={() => setActiveTab("clients")}
+          />
+        </div>
+      </div>
+
+      {/* Stats Period Filter */}
+      <div className="flex items-center justify-between bg-[#1A1A1A] rounded-2xl p-3 border border-[#2A2A2A]">
+        <span className="text-xs text-gray-400 font-medium">Statistics</span>
+        <div className="flex gap-1">
+          {periodOptions.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => setStatsPeriod(option.value)}
+              className={`px-2.5 py-1 text-xs rounded-lg transition-colors ${
+                statsPeriod === option.value
+                  ? "bg-[var(--color-primary)] text-white"
+                  : "bg-[#2A2A2A] text-gray-400 hover:bg-[#333333]"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-3">
+        <StatCard
+          icon={Calendar}
+          label="Bookings"
+          value={periodStats?.totalBookings ?? barberBookings.length}
+          subValue={periodOptions.find(p => p.value === statsPeriod)?.label.toLowerCase()}
+          trend={`${periodStats?.completedBookings ?? 0} done`}
+          trendUp={true}
+        />
+        <StatCard
+          icon={Star}
+          label="Rating"
+          value={ratingAnalytics?.averageRating || currentBarber?.rating || "0.0"}
+          subValue="/5"
+          trend={`${ratingAnalytics?.totalRatings || 0} reviews`}
+          trendUp={true}
+        />
+        <StatCard
+          icon={DollarSign}
+          label="Revenue"
+          value={`₱${(periodStats?.totalRevenue ?? monthlyRevenue).toLocaleString()}`}
+          trend={`${periodStats?.uniqueCustomers ?? 0} customers`}
+          trendUp={true}
+        />
+        <StatCard
+          icon={Users}
+          label="Clients"
+          value={periodStats?.uniqueCustomers ?? 0}
+          subValue="unique"
+          trend={`${periodStats?.cancelledBookings ?? 0} cancelled`}
+          trendUp={false}
+        />
+      </div>
+
+      {/* Today's Appointments */}
+      <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
+        <div className="p-4 border-b border-[#2A2A2A] flex justify-between items-center">
+          <h3 className="text-sm font-medium text-white flex items-center">
+            <CalendarDays className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+            Today's Schedule
+          </h3>
+          <button
+            onClick={() => setActiveTab("bookings")}
+            className="text-xs text-gray-400 hover:text-white"
+          >
+            View All
+          </button>
+        </div>
+        <div className="divide-y divide-[#2A2A2A]">
+          {todayBookings.length === 0 ? (
+            <div className="p-8 text-center">
+              <div className="w-14 h-14 bg-[#2A2A2A] rounded-full flex items-center justify-center mx-auto mb-3">
+                <Calendar className="w-6 h-6 text-gray-600" />
+              </div>
+              <p className="text-white font-medium mb-1">No appointments today</p>
+              <p className="text-gray-500 text-sm">Time to relax or prepare for tomorrow!</p>
+            </div>
+          ) : (
+            todayBookings.slice(0, 4).map((booking) => (
+              <div key={booking._id} className="p-4 flex items-center space-x-3">
+                <div className="flex-shrink-0 w-12 h-12 bg-[#2A2A2A] rounded-xl flex flex-col items-center justify-center">
+                  <span className="text-[10px] text-gray-500">{formatTime(booking.time).split(" ")[1]}</span>
+                  <span className="text-sm font-bold text-white">{formatTime(booking.time).split(" ")[0]}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-white text-sm truncate">{booking.customer_name}</p>
+                  <p className="text-xs text-gray-400 truncate">{booking.service_name}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-bold text-white">₱{booking.price}</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    booking.status === 'confirmed' ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]' :
+                    booking.status === 'completed' ? 'bg-white/10 text-white' :
+                    booking.status === 'pending' ? 'bg-gray-500/20 text-gray-400' :
+                    'bg-gray-500/20 text-gray-400'
+                  }`}>
+                    {booking.status}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      {barberActivities && barberActivities.length > 0 && (
+        <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
+          <div className="p-4 border-b border-[#2A2A2A]">
+            <h3 className="text-sm font-medium text-white flex items-center">
+              <Activity className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+              Recent Activity
+            </h3>
+          </div>
+          <div className="divide-y divide-[#2A2A2A]">
+            {barberActivities.slice(0, 5).map((activity, index) => {
+              const Icon = getActivityIcon(activity.type);
+              return (
+                <div key={index} className="p-3 flex items-center space-x-3">
+                  <div className="p-2 rounded-xl bg-[#2A2A2A]">
+                    <Icon className="w-4 h-4 text-gray-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white">{activity.title}</p>
+                    <p className="text-xs text-gray-500 truncate">{activity.description}</p>
+                  </div>
+                  <span className="text-xs text-gray-500">{formatActivityTime(activity.timestamp)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Top Barbers Leaderboard */}
+      {topBarbers && topBarbers.length > 0 && (
+        <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
+          <div className="p-4 border-b border-[#2A2A2A] flex justify-between items-center">
+            <h3 className="text-sm font-medium text-white flex items-center">
+              <Trophy className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+              Leaderboard
+            </h3>
+            <span className="text-xs text-gray-500">This Month</span>
+          </div>
+          <div className="divide-y divide-[#2A2A2A]">
+            {topBarbers.slice(0, 3).map((barber, index) => {
+              const isCurrentBarber = currentBarber && barber._id === currentBarber._id;
+              return (
+                <div key={barber._id} className={`p-3 flex items-center space-x-3 ${isCurrentBarber ? "bg-[#2A2A2A]" : ""}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ${
+                    index === 0 ? "bg-[var(--color-primary)] text-white" :
+                    "bg-[#2A2A2A] text-gray-400"
+                  }`}>
+                    {index + 1}
+                  </div>
+                  <div className="w-9 h-9 rounded-full overflow-hidden bg-[#2A2A2A]">
+                    {barber.avatar ? (
+                      <img src={barber.avatar} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-500">
+                        <User className="w-4 h-4" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-medium truncate ${isCurrentBarber ? "text-[var(--color-primary)]" : "text-white"}`}>
+                      {barber.full_name}
+                      {isCurrentBarber && <span className="text-xs text-gray-500 ml-1">(You)</span>}
+                    </p>
+                    <div className="flex items-center space-x-2 text-xs text-gray-500">
+                      <span className="flex items-center">
+                        <Star className="w-3 h-3 text-[var(--color-primary)] fill-[var(--color-primary)] mr-0.5" />
+                        {barber.rating || 0}
+                      </span>
+                      <span>{barber.completedBookings} jobs</span>
+                    </div>
+                  </div>
+                  <TierBadge tier={barber.tier} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Rating Analytics */}
+      {ratingAnalytics && ratingAnalytics.totalRatings > 0 && (
+        <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] p-4">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-medium text-white flex items-center">
+              <Star className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+              Customer Reviews
+            </h3>
+            <div className="flex items-center space-x-1 bg-[var(--color-primary)]/20 px-2 py-1 rounded-lg">
+              <Star className="w-3 h-3 text-[var(--color-primary)] fill-[var(--color-primary)]" />
+              <span className="text-sm font-bold text-[var(--color-primary)]">{ratingAnalytics.averageRating}</span>
+            </div>
+          </div>
+
+          {/* Rating Breakdown */}
+          <div className="space-y-2 mb-4">
+            {[5, 4, 3, 2, 1].map((rating) => {
+              const count = ratingAnalytics.ratingBreakdown[rating] || 0;
+              const percentage = ratingAnalytics.totalRatings > 0 ? (count / ratingAnalytics.totalRatings) * 100 : 0;
+              return (
+                <div key={rating} className="flex items-center space-x-2">
+                  <span className="text-xs text-gray-500 w-3">{rating}</span>
+                  <Star className="w-3 h-3 text-[var(--color-primary)] fill-[var(--color-primary)]" />
+                  <div className="flex-1 bg-[#2A2A2A] rounded-full h-1.5">
+                    <div className="bg-[var(--color-primary)] h-1.5 rounded-full transition-all" style={{ width: `${percentage}%` }}></div>
+                  </div>
+                  <span className="text-xs text-gray-500 w-6 text-right">{count}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Recent Reviews */}
+          {ratingAnalytics.recentRatings?.length > 0 && (
+            <div className="border-t border-[#2A2A2A] pt-3">
+              <p className="text-xs text-gray-500 mb-2">Recent Reviews</p>
+              <div className="space-y-2">
+                {ratingAnalytics.recentRatings.slice(0, 2).map((review, index) => (
+                  <div key={index} className="bg-[#2A2A2A] rounded-lg p-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star
+                            key={star}
+                            className={`w-3 h-3 ${star <= review.rating ? "text-[var(--color-primary)] fill-[var(--color-primary)]" : "text-gray-600"}`}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-xs text-gray-500">{new Date(review.created_at).toLocaleDateString()}</span>
+                    </div>
+                    {review.feedback && <p className="text-xs text-gray-400 line-clamp-2">{review.feedback}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  // Render Earnings Tab
+  const renderEarnings = () => (
+    <div className="px-4 pb-6 space-y-4">
+      {/* Earnings Hero */}
+      <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
+        <p className="text-sm text-gray-500 mb-1">Total Earnings</p>
+        <h2 className="text-3xl font-bold text-white mb-3">₱{(periodStats?.totalRevenue ?? monthlyRevenue).toLocaleString()}</h2>
+        <div className="flex items-center text-[var(--color-primary)] text-sm">
+          <ArrowUpRight className="w-4 h-4 mr-1" />
+          <span>+12% vs last period</span>
+        </div>
+      </div>
+
+      {/* Period Filter */}
+      <div className="flex items-center justify-between bg-[#1A1A1A] rounded-2xl p-3 border border-[#2A2A2A]">
+        <span className="text-xs text-gray-500 font-medium">Period</span>
+        <div className="flex gap-1">
+          {periodOptions.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => setStatsPeriod(option.value)}
+              className={`px-2.5 py-1 text-xs rounded-lg transition-colors ${
+                statsPeriod === option.value
+                  ? "bg-[var(--color-primary)] text-white"
+                  : "bg-[#2A2A2A] text-gray-400 hover:bg-[#333333]"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Earnings Stats */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
+          <div className="flex items-center space-x-2 mb-2">
+            <CheckCircle className="w-4 h-4 text-gray-400" />
+            <span className="text-xs text-gray-500">Completed</span>
+          </div>
+          <p className="text-xl font-bold text-white">{periodStats?.completedBookings ?? 0}</p>
+          <p className="text-xs text-gray-500">services</p>
+        </div>
+        <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
+          <div className="flex items-center space-x-2 mb-2">
+            <Target className="w-4 h-4 text-gray-400" />
+            <span className="text-xs text-gray-500">Avg. Value</span>
+          </div>
+          <p className="text-xl font-bold text-white">₱{Math.round(periodStats?.averageBookingValue ?? 0).toLocaleString()}</p>
+          <p className="text-xs text-gray-500">per booking</p>
+        </div>
+      </div>
+
+      {/* Recent Transactions */}
+      <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
+        <div className="p-4 border-b border-[#2A2A2A]">
+          <h3 className="text-sm font-medium text-white flex items-center">
+            <CreditCard className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+            Recent Transactions
+          </h3>
+        </div>
+        <div className="divide-y divide-[#2A2A2A]">
+          {barberTransactions.slice(0, 5).map((transaction, index) => (
+            <div key={index} className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-white">Service Payment</p>
+                <p className="text-xs text-gray-500">{new Date(transaction.createdAt).toLocaleDateString()}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-bold text-[var(--color-primary)]">+₱{transaction.total_amount.toLocaleString()}</p>
+                <p className="text-xs text-gray-500">{transaction.payment_method}</p>
+              </div>
+            </div>
+          ))}
+          {barberTransactions.length === 0 && (
+            <div className="p-8 text-center">
+              <Wallet className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-500 text-sm">No transactions yet</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Render Schedule Tab
+  const renderSchedule = () => (
+    <div className="px-4 pb-6 space-y-4">
+      {/* Schedule Header */}
+      <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
+        <p className="text-sm text-gray-500 mb-1">Your Schedule</p>
+        <h2 className="text-xl font-bold text-white mb-1">Manage Availability</h2>
+        <p className="text-sm text-gray-500">Set your working hours and days off</p>
+      </div>
+
+      {/* Working Hours */}
+      <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
+        <div className="p-4 border-b border-[#2A2A2A] flex justify-between items-center">
+          <h3 className="text-sm font-medium text-white flex items-center">
+            <Clock className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+            Working Hours
+          </h3>
+          <button className="text-xs text-gray-400 hover:text-white">Edit</button>
+        </div>
+        <div className="divide-y divide-[#2A2A2A]">
+          {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day, index) => {
+            const isWorkDay = index < 6; // Mon-Sat
+            return (
+              <div key={day} className="p-3 flex items-center justify-between">
+                <span className={`text-sm ${isWorkDay ? 'text-white' : 'text-gray-600'}`}>{day}</span>
+                <span className={`text-sm ${isWorkDay ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {isWorkDay ? '9:00 AM - 8:00 PM' : 'Day Off'}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Upcoming Time Off */}
+      <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
+        <div className="p-4 border-b border-[#2A2A2A] flex justify-between items-center">
+          <h3 className="text-sm font-medium text-white flex items-center">
+            <CalendarDays className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+            Time Off
+          </h3>
+          <button className="text-xs bg-[var(--color-primary)] text-white px-3 py-1 rounded-lg">
+            + Request
+          </button>
+        </div>
+        <div className="p-8 text-center">
+          <CalendarDays className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+          <p className="text-gray-400 text-sm">No upcoming time off scheduled</p>
+          <p className="text-gray-500 text-xs mt-1">Request time off for vacations or personal days</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Render Clients Tab (placeholder)
+  const renderClients = () => (
+    <div className="px-4 pb-6 space-y-4">
+      <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
+        <p className="text-sm text-gray-500 mb-1">Your Clients</p>
+        <h2 className="text-xl font-bold text-white mb-1">{periodStats?.uniqueCustomers ?? 0} Customers</h2>
+        <p className="text-sm text-gray-500">Build lasting relationships</p>
+      </div>
+
+      <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] p-8 text-center">
+        <Users className="w-10 h-10 text-gray-600 mx-auto mb-4" />
+        <h3 className="text-white font-medium mb-2">Client Management</h3>
+        <p className="text-gray-500 text-sm">Track your regular clients and their preferences</p>
+        <p className="text-xs text-gray-600 mt-2">Coming soon</p>
+      </div>
+    </div>
+  );
+
+  // Main render content
+  const renderContent = () => {
+    switch (activeTab) {
+      case "overview": return renderOverview();
+      case "bookings": return <BarberBookings />;
+      case "earnings": return renderEarnings();
+      case "schedule": return renderSchedule();
+      case "clients": return renderClients();
+      case "profile": return <BarberProfile />;
+      default: return renderOverview();
+    }
+  };
+
+  // Loading state
   if (barbers === undefined || user === undefined) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center p-4">
         <LoadingSpinner size="lg" message="Loading dashboard..." />
       </div>
     );
   }
 
+  // No barber profile state
   if (!currentBarber) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center p-4">
         <div className="text-center">
-          <Users className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">
-            Barber Profile Not Found
-          </h2>
-          <p className="text-gray-400">
-            Please contact admin to set up your barber profile.
-          </p>
+          <Users className="w-10 h-10 text-gray-600 mx-auto mb-4" />
+          <h2 className="text-lg font-bold text-white mb-2">Setting Up Profile</h2>
+          <p className="text-gray-500 text-sm">Please wait while we set up your barber profile...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] pb-20 md:pb-0">
-      {/* Subtle background pattern */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
-        <div
-          className="h-full bg-cover bg-center bg-no-repeat opacity-5"
-          style={{
-            backgroundImage: branding?.logo_dark_url
-              ? `url(${branding.logo_dark_url})`
-              : '',
-            filter: 'brightness(0.2)'
-          }}
-        ></div>
-      </div>
-
-      {/* Mobile Header - Compact Design */}
-      <div className="relative z-10 bg-gradient-to-r from-[#1A1A1A]/95 to-[#2A2A2A]/95 backdrop-blur-xl border-b border-[#444444]/30 sticky top-0">
+    <div className="min-h-screen bg-[#0D0D0D] pb-20">
+      {/* Mobile Header */}
+      <div className="bg-[#0D0D0D] border-b border-[#1A1A1A] sticky top-0 z-20">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <img
-                src={branding?.logo_light_url }
-                alt=" Barbershop Logo"
-                className="w-10 h-10 object-contain"
-              />
-              <div>
-                <h1 className="text-sm font-bold text-white">Dashboard</h1>
-                <p className="text-xs text-gray-400 truncate max-w-[120px]">
-                  {currentBarber?.full_name}
-                </p>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-xs text-gray-400">Today</div>
-              <div className="text-sm font-semibold text-[var(--color-primary)]">
-                {new Date().toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })}
-              </div>
-            </div>
+            <h1 className="text-lg font-bold text-white">
+              {activeTab === "overview" ? "Dashboard" :
+               activeTab === "bookings" ? "Bookings" :
+               activeTab === "earnings" ? "Earnings" :
+               activeTab === "schedule" ? "Schedule" :
+               activeTab === "clients" ? "Clients" :
+               activeTab === "profile" ? "Profile" : "Dashboard"}
+            </h1>
+            <button
+              onClick={() => setShowNotifications(true)}
+              className="p-2 bg-[#1A1A1A] rounded-xl relative active:scale-95 transition-transform"
+            >
+              <Bell className="w-5 h-5 text-gray-400" />
+              {(notificationUnreadCount > 0 || pendingBookings.length > 0) && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--color-primary)] text-white text-[10px] rounded-full flex items-center justify-center font-medium animate-pulse">
+                  {notificationUnreadCount > 0 ? notificationUnreadCount : pendingBookings.length}
+                </span>
+              )}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Desktop Tab Navigation - Hidden on Mobile */}
-      <div className="hidden md:block relative z-10 bg-gradient-to-br from-[#333333]/90 to-[#444444]/90 backdrop-blur-xl border-b border-[#555555]/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-1 overflow-x-auto py-3">
-            {tabs.map((tab) => {
-              const IconComponent = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center space-x-2 px-4 py-3 rounded-xl font-medium text-sm whitespace-nowrap transition-all duration-200 ${
-                    activeTab === tab.id
-                      ? "bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg"
-                      : "text-gray-400 hover:text-gray-300 hover:bg-white/5"
-                  }`}
-                >
-                  <IconComponent className="w-4 h-4" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      {/* Content */}
+      <div className="pt-4">{renderContent()}</div>
 
-      {/* Mobile Bottom Navigation - Compact Design */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-[#1A1A1A]/95 to-[#2A2A2A]/95 backdrop-blur-xl border-t border-[#444444]/30">
-        <div className="grid grid-cols-3 gap-1 p-2">
-          {/* Primary Tabs */}
-          {primaryTabs.map((tab) => {
-            const IconComponent = tab.icon;
+      {/* Notification Panel */}
+      <NotificationPanel
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        userId={user?._id}
+      />
+
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0D0D0D] border-t border-[#1A1A1A] safe-area-inset-bottom">
+        <div className="grid grid-cols-5 p-1 pb-2">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all duration-200 ${
-                  activeTab === tab.id
-                    ? "bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg scale-95"
-                    : "text-gray-400 hover:text-gray-300 hover:bg-white/5 active:scale-95"
+                className={`flex flex-col items-center justify-center py-2 transition-colors ${
+                  isActive ? "text-[var(--color-primary)]" : "text-gray-600"
                 }`}
               >
-                <div
-                  className={`p-1 rounded-md ${activeTab === tab.id ? "bg-white/20" : "bg-transparent"}`}
-                >
-                  <IconComponent className="w-4 h-4" />
-                </div>
-                <span className="text-xs font-medium mt-1 truncate">
-                  {tab.label}
-                </span>
+                <Icon className="w-5 h-5" />
+                <span className="text-[10px] mt-1 font-medium">{tab.label}</span>
               </button>
             );
           })}
         </div>
       </div>
-
-      {/* Content */}
-      <div className="relative z-10">{renderContent()}</div>
     </div>
   );
 };
