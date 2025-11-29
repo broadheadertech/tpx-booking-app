@@ -99,7 +99,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, se
         }
       })
     }
-  }, [editingBarber])
+  }, [editingBarber, services])
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -940,7 +940,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, se
                         </div>
 
                         {/* Selected Dates List */}
-                        {formData.specific_dates.length > 0 && (
+                        {formData.specific_dates && formData.specific_dates.length > 0 && (
                           <div className="space-y-2">
                             <h4 className="text-xs font-medium text-gray-400 uppercase tracking-wide">Selected Dates</h4>
                             <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
