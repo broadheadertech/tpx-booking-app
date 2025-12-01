@@ -20,7 +20,7 @@ const AuthRedirect = ({ children }) => {
       case 'branch_admin':
         return <Navigate to="/staff/dashboard" replace />
       case 'barber':
-        return <Navigate to="/barber/dashboard" replace />
+        return <Navigate to="/barber/home" replace />
       case 'customer':
       default:
         return <Navigate to="/customer/dashboard" replace />

@@ -135,10 +135,10 @@ function App() {
               />
               <Route
                 path="/barber"
-                element={<Navigate to="/barber/dashboard" replace />}
+                element={<Navigate to="/barber/home" replace />}
               />
               <Route
-                path="/barber/dashboard"
+                path="/barber/:tab"
                 element={
                   <ProtectedRoute requireBarber={true}>
                     <BarberDashboard />

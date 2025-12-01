@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Calendar,
   Users,
@@ -39,6 +39,7 @@ import {
   X,
   BellRing,
   Check,
+  Edit3,
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -321,10 +322,29 @@ const StatCard = ({ icon: Icon, label, value, subValue, trend, trendUp }) => (
 const BarberDashboard = () => {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { tab } = useParams();
   const { branding } = useBranding();
-  const [activeTab, setActiveTab] = useState("overview");
   const [statsPeriod, setStatsPeriod] = useState("monthly");
   const [showNotifications, setShowNotifications] = useState(false);
+
+  // Map URL tab to internal tab names
+  const tabMapping = {
+    home: "overview",
+    bookings: "bookings",
+    earnings: "earnings",
+    schedule: "schedule",
+    profile: "profile",
+  };
+
+  // Get active tab from URL or default to overview
+  const activeTab = tabMapping[tab] || "overview";
+
+  // Function to change tab (updates URL)
+  const setActiveTab = (newTab) => {
+    const urlTab = Object.keys(tabMapping).find(key => tabMapping[key] === newTab) || "home";
+    navigate(`/barber/${urlTab}`, { replace: true });
+  };
 
   // Get notification unread count
   const notificationUnreadCount = useQuery(
@@ -332,9 +352,9 @@ const BarberDashboard = () => {
     user?._id ? { userId: user._id } : "skip"
   );
 
-  // Check if we're on the barber dashboard route
-  const isOnBarberDashboard = location.pathname === "/barber/dashboard";
-  if (!isOnBarberDashboard) return null;
+  // Check if we're on the barber route
+  const isOnBarberRoute = location.pathname.startsWith("/barber");
+  if (!isOnBarberRoute) return null;
 
   // Get barber data
   const barbers = user?.branch_id
@@ -368,6 +388,12 @@ const BarberDashboard = () => {
   const ratingAnalytics = useQuery(
     api.services.ratings.getBarberRatingsAnalytics,
     currentBarber ? { barberId: currentBarber._id } : "skip"
+  );
+
+  // Get avatar URL from storage
+  const avatarUrl = useQuery(
+    api.services.barbers.getImageUrl,
+    currentBarber?.avatarStorageId ? { storageId: currentBarber.avatarStorageId } : "skip"
   );
 
   // Get stats by period
@@ -416,13 +442,12 @@ const BarberDashboard = () => {
     { value: "all_time", label: "All" },
   ];
 
-  // Tab configuration - 5 tabs for bottom nav
+  // Tab configuration - 4 tabs for bottom nav (Profile moved to header)
   const tabs = [
-    { id: "overview", label: "Home", icon: Home },
-    { id: "bookings", label: "Bookings", icon: Calendar },
-    { id: "earnings", label: "Earnings", icon: Wallet },
-    { id: "schedule", label: "Schedule", icon: Clock },
-    { id: "profile", label: "Profile", icon: UserCircle },
+    { id: "overview", urlPath: "home", label: "Home", icon: Home },
+    { id: "bookings", urlPath: "bookings", label: "Bookings", icon: Calendar },
+    { id: "earnings", urlPath: "earnings", label: "Earnings", icon: Wallet },
+    { id: "schedule", urlPath: "schedule", label: "Schedule", icon: Clock },
   ];
 
   // Format activity time
@@ -582,9 +607,9 @@ const BarberDashboard = () => {
         />
         <StatCard
           icon={DollarSign}
-          label="Revenue"
-          value={`₱${(periodStats?.totalRevenue ?? monthlyRevenue).toLocaleString()}`}
-          trend={`${periodStats?.uniqueCustomers ?? 0} customers`}
+          label="Earnings"
+          value={`₱${(periodStats?.totalEarnings ?? 0).toLocaleString()}`}
+          trend={`${periodStats?.commissionRate ?? 0}% commission`}
           trendUp={true}
         />
         <StatCard
@@ -794,11 +819,15 @@ const BarberDashboard = () => {
     <div className="px-4 pb-6 space-y-4">
       {/* Earnings Hero */}
       <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
-        <p className="text-sm text-gray-500 mb-1">Total Earnings</p>
-        <h2 className="text-3xl font-bold text-white mb-3">₱{(periodStats?.totalRevenue ?? monthlyRevenue).toLocaleString()}</h2>
-        <div className="flex items-center text-[var(--color-primary)] text-sm">
-          <ArrowUpRight className="w-4 h-4 mr-1" />
-          <span>+12% vs last period</span>
+        <p className="text-sm text-gray-500 mb-1">Your Earnings</p>
+        <h2 className="text-3xl font-bold text-white mb-3">₱{(periodStats?.totalEarnings ?? 0).toLocaleString()}</h2>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center text-gray-400 text-xs">
+            <span>Gross Revenue: ₱{(periodStats?.totalRevenue ?? monthlyRevenue).toLocaleString()}</span>
+          </div>
+          <div className="flex items-center text-[var(--color-primary)] text-xs">
+            <span>{periodStats?.daysWorked ?? 0} days worked</span>
+          </div>
         </div>
       </div>
 
@@ -822,6 +851,38 @@ const BarberDashboard = () => {
         </div>
       </div>
 
+      {/* Commission Breakdown */}
+      <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
+        <h3 className="text-sm font-medium text-white mb-3 flex items-center">
+          <Wallet className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+          Commission Breakdown
+        </h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 rounded-full bg-[var(--color-primary)]"></div>
+              <span className="text-sm text-gray-400">Service Commission</span>
+            </div>
+            <span className="text-sm font-medium text-white">₱{(periodStats?.serviceCommission ?? 0).toLocaleString()}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+              <span className="text-sm text-gray-400">Product Commission</span>
+            </div>
+            <span className="text-sm font-medium text-white">₱{(periodStats?.productCommission ?? 0).toLocaleString()}</span>
+          </div>
+          <div className="border-t border-[#2A2A2A] pt-3 flex items-center justify-between">
+            <span className="text-sm text-gray-400">Daily Rate</span>
+            <span className="text-sm text-gray-500">₱{(periodStats?.dailyRate ?? 0).toLocaleString()}/day</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-400">Commission Rate</span>
+            <span className="text-sm text-gray-500">{(periodStats?.commissionRate ?? 0)}%</span>
+          </div>
+        </div>
+      </div>
+
       {/* Earnings Stats */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
@@ -835,10 +896,10 @@ const BarberDashboard = () => {
         <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
           <div className="flex items-center space-x-2 mb-2">
             <Target className="w-4 h-4 text-gray-400" />
-            <span className="text-xs text-gray-500">Avg. Value</span>
+            <span className="text-xs text-gray-500">Avg. Earning</span>
           </div>
-          <p className="text-xl font-bold text-white">₱{Math.round(periodStats?.averageBookingValue ?? 0).toLocaleString()}</p>
-          <p className="text-xs text-gray-500">per booking</p>
+          <p className="text-xl font-bold text-white">₱{Math.round((periodStats?.totalEarnings ?? 0) / Math.max(periodStats?.daysWorked ?? 1, 1)).toLocaleString()}</p>
+          <p className="text-xs text-gray-500">per day</p>
         </div>
       </div>
 
@@ -874,14 +935,36 @@ const BarberDashboard = () => {
     </div>
   );
 
+  // Format time from 24h to 12h format
+  const formatScheduleTime = (time) => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
+
+  // Get schedule data from barber
+  const scheduleData = currentBarber?.schedule || {};
+  const days = [
+    { key: 'monday', label: 'Monday' },
+    { key: 'tuesday', label: 'Tuesday' },
+    { key: 'wednesday', label: 'Wednesday' },
+    { key: 'thursday', label: 'Thursday' },
+    { key: 'friday', label: 'Friday' },
+    { key: 'saturday', label: 'Saturday' },
+    { key: 'sunday', label: 'Sunday' },
+  ];
+
   // Render Schedule Tab
   const renderSchedule = () => (
     <div className="px-4 pb-6 space-y-4">
       {/* Schedule Header */}
       <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
         <p className="text-sm text-gray-500 mb-1">Your Schedule</p>
-        <h2 className="text-xl font-bold text-white mb-1">Manage Availability</h2>
-        <p className="text-sm text-gray-500">Set your working hours and days off</p>
+        <h2 className="text-xl font-bold text-white mb-1">Working Hours</h2>
+        <p className="text-sm text-gray-500">Your weekly availability schedule</p>
       </div>
 
       {/* Working Hours */}
@@ -889,18 +972,24 @@ const BarberDashboard = () => {
         <div className="p-4 border-b border-[#2A2A2A] flex justify-between items-center">
           <h3 className="text-sm font-medium text-white flex items-center">
             <Clock className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
-            Working Hours
+            Weekly Schedule
           </h3>
-          <button className="text-xs text-gray-400 hover:text-white">Edit</button>
         </div>
         <div className="divide-y divide-[#2A2A2A]">
-          {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day, index) => {
-            const isWorkDay = index < 6; // Mon-Sat
+          {days.map(({ key, label }) => {
+            const daySchedule = scheduleData[key];
+            const isAvailable = daySchedule?.available ?? false;
+            const startTime = daySchedule?.start || '09:00';
+            const endTime = daySchedule?.end || '17:00';
+
             return (
-              <div key={day} className="p-3 flex items-center justify-between">
-                <span className={`text-sm ${isWorkDay ? 'text-white' : 'text-gray-600'}`}>{day}</span>
-                <span className={`text-sm ${isWorkDay ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {isWorkDay ? '9:00 AM - 8:00 PM' : 'Day Off'}
+              <div key={key} className="p-3 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-2 h-2 rounded-full ${isAvailable ? 'bg-green-500' : 'bg-gray-600'}`} />
+                  <span className={`text-sm ${isAvailable ? 'text-white' : 'text-gray-500'}`}>{label}</span>
+                </div>
+                <span className={`text-sm ${isAvailable ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {isAvailable ? `${formatScheduleTime(startTime)} - ${formatScheduleTime(endTime)}` : 'Day Off'}
                 </span>
               </div>
             );
@@ -908,21 +997,25 @@ const BarberDashboard = () => {
         </div>
       </div>
 
-      {/* Upcoming Time Off */}
-      <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
-        <div className="p-4 border-b border-[#2A2A2A] flex justify-between items-center">
-          <h3 className="text-sm font-medium text-white flex items-center">
-            <CalendarDays className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
-            Time Off
-          </h3>
-          <button className="text-xs bg-[var(--color-primary)] text-white px-3 py-1 rounded-lg">
-            + Request
-          </button>
-        </div>
-        <div className="p-8 text-center">
-          <CalendarDays className="w-10 h-10 text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-400 text-sm">No upcoming time off scheduled</p>
-          <p className="text-gray-500 text-xs mt-1">Request time off for vacations or personal days</p>
+      {/* Weekly Summary */}
+      <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] p-4">
+        <h3 className="text-sm font-medium text-white mb-3 flex items-center">
+          <CalendarDays className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+          Schedule Summary
+        </h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-[#2A2A2A] rounded-xl p-3 text-center">
+            <p className="text-xl font-bold text-white">
+              {days.filter(d => scheduleData[d.key]?.available).length}
+            </p>
+            <p className="text-xs text-gray-500">Working Days</p>
+          </div>
+          <div className="bg-[#2A2A2A] rounded-xl p-3 text-center">
+            <p className="text-xl font-bold text-white">
+              {days.filter(d => !scheduleData[d.key]?.available).length}
+            </p>
+            <p className="text-xs text-gray-500">Days Off</p>
+          </div>
         </div>
       </div>
     </div>
@@ -995,17 +1088,52 @@ const BarberDashboard = () => {
                activeTab === "clients" ? "Clients" :
                activeTab === "profile" ? "Profile" : "Dashboard"}
             </h1>
-            <button
-              onClick={() => setShowNotifications(true)}
-              className="p-2 bg-[#1A1A1A] rounded-xl relative active:scale-95 transition-transform"
-            >
-              <Bell className="w-5 h-5 text-gray-400" />
-              {(notificationUnreadCount > 0 || pendingBookings.length > 0) && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--color-primary)] text-white text-[10px] rounded-full flex items-center justify-center font-medium animate-pulse">
-                  {notificationUnreadCount > 0 ? notificationUnreadCount : pendingBookings.length}
-                </span>
+            <div className="flex items-center gap-2">
+              {/* Edit Profile Button - only show on profile tab */}
+              {activeTab === "profile" && (
+                <button
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('toggleBarberProfileEdit'));
+                  }}
+                  className="w-9 h-9 flex items-center justify-center bg-[#1A1A1A] rounded-xl active:scale-95 transition-transform"
+                >
+                  <Edit3 className="w-[18px] h-[18px] text-gray-400" />
+                </button>
               )}
-            </button>
+              {/* Notification Button */}
+              <button
+                onClick={() => setShowNotifications(true)}
+                className="w-9 h-9 flex items-center justify-center bg-[#1A1A1A] rounded-xl relative active:scale-95 transition-transform"
+              >
+                <Bell className="w-[18px] h-[18px] text-gray-400" />
+                {(notificationUnreadCount > 0 || pendingBookings.length > 0) && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--color-primary)] text-white text-[10px] rounded-full flex items-center justify-center font-medium animate-pulse">
+                    {notificationUnreadCount > 0 ? notificationUnreadCount : pendingBookings.length}
+                  </span>
+                )}
+              </button>
+              {/* Profile Button */}
+              <button
+                onClick={() => setActiveTab("profile")}
+                className={`w-9 h-9 flex items-center justify-center rounded-xl active:scale-95 transition-transform overflow-hidden ${
+                  activeTab === "profile"
+                    ? "bg-[var(--color-primary)] ring-2 ring-[var(--color-primary)]"
+                    : "bg-[#1A1A1A]"
+                }`}
+              >
+                {(avatarUrl || currentBarber?.avatar) ? (
+                  <img
+                    src={avatarUrl || currentBarber.avatar}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <UserCircle className={`w-[18px] h-[18px] ${
+                    activeTab === "profile" ? "text-white" : "text-gray-400"
+                  }`} />
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1022,14 +1150,14 @@ const BarberDashboard = () => {
 
       {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0D0D0D] border-t border-[#1A1A1A] safe-area-inset-bottom">
-        <div className="grid grid-cols-5 p-1 pb-2">
+        <div className="grid grid-cols-4 p-1 pb-2">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => navigate(`/barber/${tab.urlPath}`, { replace: true })}
                 className={`flex flex-col items-center justify-center py-2 transition-colors ${
                   isActive ? "text-[var(--color-primary)]" : "text-gray-600"
                 }`}

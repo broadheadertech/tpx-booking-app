@@ -669,15 +669,171 @@ export const getBarberStatsByPeriod = query({
         .map((b) => b.customer?.toString())
     ).size;
 
+    // ========== COMMISSION CALCULATIONS ==========
+
+    // Get service commission rates for this branch
+    const serviceRates = await ctx.db
+      .query("service_commission_rates")
+      .withIndex("by_branch", (q) => q.eq("branch_id", barber.branch_id))
+      .filter((q) => q.eq(q.field("is_active"), true))
+      .collect();
+
+    const serviceRateMap = new Map<string, number>();
+    for (const r of serviceRates) {
+      serviceRateMap.set(r.service_id as string, r.commission_rate);
+    }
+
+    // Get product commission rates for this branch
+    const productRates = await ctx.db
+      .query("product_commission_rates")
+      .withIndex("by_branch", (q) => q.eq("branch_id", barber.branch_id))
+      .filter((q) => q.eq(q.field("is_active"), true))
+      .collect();
+
+    const productRateMap = new Map<string, { type: string; rate?: number; amount?: number }>();
+    for (const r of productRates) {
+      productRateMap.set(r.product_id as string, {
+        type: r.commission_type,
+        rate: r.commission_rate,
+        amount: r.fixed_amount,
+      });
+    }
+
+    // Get barber's individual commission rate
+    const barberCommissionRate = await ctx.db
+      .query("barber_commission_rates")
+      .withIndex("by_barber_active", (q) =>
+        q.eq("barber_id", args.barberId).eq("is_active", true)
+      )
+      .first();
+
+    // Get branch default commission rate
+    const payrollSettings = await ctx.db
+      .query("payroll_settings")
+      .withIndex("by_branch", (q) => q.eq("branch_id", barber.branch_id))
+      .filter((q) => q.eq(q.field("is_active"), true))
+      .first();
+
+    const fallbackRate = barberCommissionRate?.commission_rate ||
+      payrollSettings?.default_commission_rate || 10;
+
+    // Get barber's daily rate
+    const barberDailyRate = await ctx.db
+      .query("barber_daily_rates")
+      .withIndex("by_barber_active", (q) =>
+        q.eq("barber_id", args.barberId).eq("is_active", true)
+      )
+      .first();
+
+    const dailyRate = barberDailyRate?.daily_rate || 0;
+
+    // Calculate service commission from completed & paid bookings
+    let serviceCommission = 0;
+    let serviceRevenue = 0;
+    const completedPaidBookings = filteredBookings.filter(
+      (b) => b.status === "completed" && b.payment_status === "paid"
+    );
+
+    // Track commission per day for daily rate comparison
+    const dailyServiceCommission = new Map<string, number>();
+
+    for (const booking of completedPaidBookings) {
+      const price = booking.price || 0;
+      serviceRevenue += price;
+
+      // Get commission rate for this service
+      const serviceRate = serviceRateMap.get(String(booking.service)) ?? fallbackRate;
+      const bookingCommission = (price * serviceRate) / 100;
+      serviceCommission += bookingCommission;
+
+      // Track daily commission
+      const dateKey = booking.date || new Date(booking.updatedAt).toISOString().split("T")[0];
+      const currentDayComm = dailyServiceCommission.get(dateKey) || 0;
+      dailyServiceCommission.set(dateKey, currentDayComm + bookingCommission);
+    }
+
+    // Calculate product commission from transactions
+    let productCommission = 0;
+    let productRevenue = 0;
+    const dailyProductCommission = new Map<string, number>();
+
+    for (const transaction of filteredTransactions) {
+      if (transaction.products) {
+        for (const product of transaction.products) {
+          const revenue = product.price * product.quantity;
+          productRevenue += revenue;
+
+          // Get commission for this product
+          const productConfig = productRateMap.get(product.product_id);
+          let prodComm = 0;
+
+          if (productConfig) {
+            if (productConfig.type === "fixed_amount" && productConfig.amount !== undefined) {
+              prodComm = productConfig.amount * product.quantity;
+            } else if (productConfig.type === "percentage" && productConfig.rate !== undefined) {
+              prodComm = (revenue * productConfig.rate) / 100;
+            } else {
+              prodComm = (revenue * fallbackRate) / 100;
+            }
+          } else {
+            prodComm = (revenue * fallbackRate) / 100;
+          }
+
+          productCommission += prodComm;
+
+          // Track daily product commission
+          const dateKey = new Date(transaction.createdAt).toISOString().split("T")[0];
+          const currentDayProdComm = dailyProductCommission.get(dateKey) || 0;
+          dailyProductCommission.set(dateKey, currentDayProdComm + prodComm);
+        }
+      }
+    }
+
+    // Calculate final earnings using daily rate comparison
+    // For each day: max(service_commission, daily_rate) + product_commission
+    const allWorkDates = new Set([
+      ...dailyServiceCommission.keys(),
+      ...dailyProductCommission.keys(),
+    ]);
+
+    let totalEarnings = 0;
+    const daysWorked = allWorkDates.size;
+
+    for (const dateKey of allWorkDates) {
+      const dayServiceComm = dailyServiceCommission.get(dateKey) || 0;
+      const dayProductComm = dailyProductCommission.get(dateKey) || 0;
+
+      // Service pay = max(service commission, daily rate)
+      const dayServicePay = Math.max(dayServiceComm, dailyRate);
+      // Product commission is added on top
+      const dayTotal = dayServicePay + dayProductComm;
+
+      totalEarnings += dayTotal;
+    }
+
+    // Gross commission (before daily rate comparison)
+    const grossCommission = serviceCommission + productCommission;
+
     return {
       period: args.period,
       totalBookings,
       completedBookings,
       cancelledBookings,
       pendingBookings,
-      totalRevenue,
+      totalRevenue, // Total booking/transaction value
       uniqueCustomers,
       averageBookingValue: totalBookings > 0 ? totalRevenue / totalBookings : 0,
+
+      // Commission data
+      serviceRevenue,
+      serviceCommission,
+      productRevenue,
+      productCommission,
+      grossCommission,
+      dailyRate,
+      daysWorked,
+      totalEarnings, // Final earnings after daily rate comparison
+      commissionRate: fallbackRate,
     };
   },
 });
