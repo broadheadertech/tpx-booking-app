@@ -256,9 +256,11 @@ function StaffDashboard() {
         return <BranchUserManagement onRefresh={handleRefresh} />;
 
       case "customers":
+        // Filter to only show customers (exclude staff, barbers, admins, etc.)
+        const customersOnly = (customers || []).filter(c => c.role === 'customer');
         return (
           <CustomersManagement
-            customers={customers || []}
+            customers={customersOnly}
             onRefresh={handleRefresh}
           />
         );
