@@ -933,6 +933,44 @@ export default defineSchema({
     .index("by_payment", ["payment_id"])
     .index("by_status", ["status"]),
 
+  // Barber portfolio for Instagram-like gallery posts
+  barber_portfolio: defineTable({
+    barber_id: v.id("barbers"),
+    branch_id: v.id("branches"),
+    image_storage_id: v.id("_storage"),
+    caption: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    likes_count: v.optional(v.number()),
+    is_featured: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_barber", ["barber_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_featured", ["is_featured"])
+    .index("by_created_at", ["createdAt"]),
+
+  // Barber achievements/certifications
+  barber_achievements: defineTable({
+    barber_id: v.id("barbers"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    achievement_type: v.union(
+      v.literal("certification"),
+      v.literal("award"),
+      v.literal("milestone"),
+      v.literal("training")
+    ),
+    date_earned: v.optional(v.string()),
+    issuer: v.optional(v.string()),
+    image_storage_id: v.optional(v.id("_storage")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_barber", ["barber_id"])
+    .index("by_type", ["achievement_type"])
+    .index("by_created_at", ["createdAt"]),
+
   // Email templates for customizable email content
   email_templates: defineTable({
     template_type: v.union(

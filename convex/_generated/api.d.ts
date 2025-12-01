@@ -28,6 +28,7 @@ import type * as services_notifications from "../services/notifications.js";
 import type * as services_payments from "../services/payments.js";
 import type * as services_paymongo from "../services/paymongo.js";
 import type * as services_payroll from "../services/payroll.js";
+import type * as services_portfolio from "../services/portfolio.js";
 import type * as services_products from "../services/products.js";
 import type * as services_ratings from "../services/ratings.js";
 import type * as services_services from "../services/services.js";
@@ -63,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   "services/payments": typeof services_payments;
   "services/paymongo": typeof services_paymongo;
   "services/payroll": typeof services_payroll;
+  "services/portfolio": typeof services_portfolio;
   "services/products": typeof services_products;
   "services/ratings": typeof services_ratings;
   "services/services": typeof services_services;

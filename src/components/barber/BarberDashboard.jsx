@@ -40,6 +40,16 @@ import {
   BellRing,
   Check,
   Edit3,
+  Image,
+  Plus,
+  Trash2,
+  Camera,
+  Grid3X3,
+  Heart,
+  MessageCircle,
+  Bookmark,
+  MoreVertical,
+  Sparkles,
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -332,6 +342,7 @@ const BarberDashboard = () => {
   const tabMapping = {
     home: "overview",
     bookings: "bookings",
+    portfolio: "portfolio",
     earnings: "earnings",
     schedule: "schedule",
     profile: "profile",
@@ -414,6 +425,25 @@ const BarberDashboard = () => {
     currentBarber ? { barberId: currentBarber._id, limit: 10 } : "skip"
   );
 
+  // Get portfolio items
+  const portfolioItems = useQuery(
+    api.services.portfolio.getBarberPortfolio,
+    currentBarber ? { barber_id: currentBarber._id } : "skip"
+  );
+
+  // Portfolio mutations
+  const addPortfolioItem = useMutation(api.services.portfolio.addPortfolioItem);
+  const deletePortfolioItem = useMutation(api.services.portfolio.deletePortfolioItem);
+  const generateUploadUrl = useMutation(api.services.barbers.generateUploadUrl);
+
+  // Portfolio state
+  const [isUploadingPortfolio, setIsUploadingPortfolio] = useState(false);
+  const [portfolioCaption, setPortfolioCaption] = useState("");
+  const [selectedPortfolioItem, setSelectedPortfolioItem] = useState(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
+
   // Filter transactions for this barber
   const barberTransactions = allTransactions?.filter(
     (t) => t.barber === currentBarber?._id && t.payment_status === "completed"
@@ -442,10 +472,11 @@ const BarberDashboard = () => {
     { value: "all_time", label: "All" },
   ];
 
-  // Tab configuration - 4 tabs for bottom nav (Profile moved to header)
+  // Tab configuration - 5 tabs for bottom nav (Profile moved to header)
   const tabs = [
     { id: "overview", urlPath: "home", label: "Home", icon: Home },
     { id: "bookings", urlPath: "bookings", label: "Bookings", icon: Calendar },
+    { id: "portfolio", urlPath: "portfolio", label: "Portfolio", icon: Image },
     { id: "earnings", urlPath: "earnings", label: "Earnings", icon: Wallet },
     { id: "schedule", urlPath: "schedule", label: "Schedule", icon: Clock },
   ];
@@ -1039,11 +1070,462 @@ const BarberDashboard = () => {
     </div>
   );
 
+  // Handle portfolio upload
+  const handlePortfolioUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !currentBarber) return;
+
+    setIsUploadingPortfolio(true);
+    try {
+      // Get upload URL
+      const uploadUrl = await generateUploadUrl();
+
+      // Upload file
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const { storageId } = await result.json();
+
+      // Add portfolio item
+      await addPortfolioItem({
+        barber_id: currentBarber._id,
+        branch_id: currentBarber.branch_id,
+        image_storage_id: storageId,
+        caption: portfolioCaption || "",
+        tags: [],
+        is_featured: false,
+      });
+
+      setPortfolioCaption("");
+    } catch (error) {
+      console.error("Failed to upload portfolio image:", error);
+    } finally {
+      setIsUploadingPortfolio(false);
+    }
+  };
+
+  // Handle delete portfolio item
+  const handleDeletePortfolio = async (itemId) => {
+    if (!confirm("Delete this portfolio image?")) return;
+    try {
+      await deletePortfolioItem({ id: itemId });
+    } catch (error) {
+      console.error("Failed to delete portfolio item:", error);
+    }
+  };
+
+  // Render Portfolio Tab - Instagram-like Design
+  const renderPortfolio = () => (
+    <div className="pb-6 px-4">
+      {/* Instagram-style Profile Header */}
+      <div className="pt-2 pb-4">
+        <div className="flex items-center gap-5">
+          {/* Avatar */}
+          <div className="relative">
+            <div className="w-20 h-20 rounded-full overflow-hidden ring-2 ring-[var(--color-primary)] ring-offset-2 ring-offset-[#0D0D0D]">
+              {(avatarUrl || currentBarber?.avatar) ? (
+                <img
+                  src={avatarUrl || currentBarber?.avatar}
+                  alt={currentBarber?.full_name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center">
+                  <span className="text-2xl font-bold text-white">
+                    {currentBarber?.full_name?.charAt(0)}
+                  </span>
+                </div>
+              )}
+            </div>
+            {/* Add Story Button */}
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="absolute -bottom-1 -right-1 w-7 h-7 bg-[var(--color-primary)] rounded-full flex items-center justify-center border-2 border-[#0D0D0D] shadow-lg"
+            >
+              <Plus className="w-4 h-4 text-white" />
+            </button>
+          </div>
+
+          {/* Stats */}
+          <div className="flex-1 grid grid-cols-3 gap-2">
+            <div className="text-center">
+              <p className="text-xl font-bold text-white">{portfolioItems?.length || 0}</p>
+              <p className="text-xs text-gray-500">Posts</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-bold text-white">{currentBarber?.totalBookings || 0}</p>
+              <p className="text-xs text-gray-500">Clients</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-bold text-white">{currentBarber?.rating?.toFixed(1) || "5.0"}</p>
+              <p className="text-xs text-gray-500">Rating</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Bio Section */}
+        <div className="mt-4">
+          <h3 className="text-base font-bold text-white">{currentBarber?.full_name}</h3>
+          <p className="text-sm text-[var(--color-primary)] font-medium">Professional Barber</p>
+          {currentBarber?.specialties?.length > 0 && (
+            <p className="text-sm text-gray-400 mt-1">
+              {currentBarber.specialties.slice(0, 3).join(" • ")}
+            </p>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="flex-1 py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            New Post
+          </button>
+          <button
+            onClick={() => setActiveTab("profile")}
+            className="flex-1 py-2.5 bg-[#1A1A1A] hover:bg-[#2A2A2A] text-white font-semibold rounded-xl transition-colors border border-[#2A2A2A]"
+          >
+            Edit Profile
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="border-t border-[#1A1A1A] flex -mx-4">
+        <button className="flex-1 py-3 flex items-center justify-center gap-2 border-b-2 border-white text-white">
+          <Grid3X3 className="w-5 h-5" />
+          <span className="text-sm font-medium">Grid</span>
+        </button>
+        <button className="flex-1 py-3 flex items-center justify-center gap-2 border-b-2 border-transparent text-gray-500">
+          <Bookmark className="w-5 h-5" />
+          <span className="text-sm font-medium">Saved</span>
+        </button>
+      </div>
+
+      {/* Portfolio Grid - Instagram Style */}
+      {portfolioItems?.length === 0 ? (
+        <div className="py-16 text-center">
+          <div className="w-20 h-20 mx-auto mb-4 rounded-full border-2 border-gray-700 flex items-center justify-center">
+            <Camera className="w-10 h-10 text-gray-600" />
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">Share Photos</h3>
+          <p className="text-gray-500 text-sm max-w-xs mx-auto mb-6">
+            When you share photos, they will appear on your profile.
+          </p>
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="text-[var(--color-primary)] font-semibold text-sm hover:text-[var(--color-accent)]"
+          >
+            Share your first photo
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-1 -mx-4 mt-2">
+          {portfolioItems?.map((item, index) => (
+            <div
+              key={item._id}
+              onClick={() => setSelectedPortfolioItem(item)}
+              className="relative aspect-square cursor-pointer group"
+            >
+              <img
+                src={item.imageUrl}
+                alt={item.caption || "Portfolio"}
+                className="w-full h-full object-cover"
+              />
+              {/* Hover Overlay */}
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-6">
+                <div className="flex items-center gap-1.5 text-white">
+                  <Heart className="w-5 h-5 fill-white" />
+                  <span className="font-semibold">{item.likes_count || 0}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-white">
+                  <MessageCircle className="w-5 h-5 fill-white" />
+                  <span className="font-semibold">0</span>
+                </div>
+              </div>
+              {/* Featured Badge */}
+              {item.is_featured && (
+                <div className="absolute top-2 right-2">
+                  <Sparkles className="w-4 h-4 text-yellow-400 drop-shadow-lg" />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => {
+              if (!isUploadingPortfolio) {
+                setShowUploadModal(false);
+                setSelectedFile(null);
+                setFilePreview(null);
+              }
+            }}
+          />
+          <div className="relative w-full max-w-xl mx-4 bg-[#1A1A1A] rounded-t-3xl sm:rounded-2xl overflow-hidden animate-slide-up">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-[#2A2A2A]">
+              <button
+                onClick={() => {
+                  if (!isUploadingPortfolio) {
+                    setShowUploadModal(false);
+                    setSelectedFile(null);
+                    setFilePreview(null);
+                  }
+                }}
+                className="text-gray-400 hover:text-white transition-colors"
+                disabled={isUploadingPortfolio}
+              >
+                Cancel
+              </button>
+              <h3 className="text-base font-semibold text-white">New Post</h3>
+              <div className="w-12" />
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-4">
+              {/* Upload Area / Preview */}
+              <div className={`aspect-video rounded-2xl overflow-hidden ${
+                filePreview ? "" : "border-2 border-dashed border-[#3A3A3A]"
+              } bg-[#0D0D0D] transition-all flex flex-col items-center justify-center`}>
+                {isUploadingPortfolio ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-10 h-10 border-3 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm text-gray-400">Uploading...</span>
+                  </div>
+                ) : filePreview ? (
+                  <img
+                    src={filePreview}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-16 h-16 rounded-full bg-[#2A2A2A] flex items-center justify-center">
+                      <Camera className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-500">Select a photo to upload</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Caption Input */}
+              <input
+                type="text"
+                value={portfolioCaption}
+                onChange={(e) => setPortfolioCaption(e.target.value)}
+                placeholder="Write a caption..."
+                className="w-full h-12 px-4 bg-[#0D0D0D] border border-[#2A2A2A] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-transparent text-sm"
+                disabled={isUploadingPortfolio}
+              />
+
+              {/* Tips */}
+              <div className="flex items-start gap-3 p-3 bg-[#0D0D0D] rounded-xl">
+                <Sparkles className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  Pro tip: Upload high-quality photos of your best work to attract more clients
+                </p>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                {/* Select Photo Button */}
+                <label className={`flex-1 ${selectedFile ? "" : "flex-[2]"}`}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setSelectedFile(file);
+                        setFilePreview(URL.createObjectURL(file));
+                      }
+                    }}
+                    className="hidden"
+                    disabled={isUploadingPortfolio}
+                  />
+                  <div className={`w-full py-4 rounded-xl font-semibold text-center cursor-pointer transition-all ${
+                    isUploadingPortfolio
+                      ? "bg-gray-700 text-gray-500 cursor-not-allowed"
+                      : selectedFile
+                        ? "bg-[#2A2A2A] hover:bg-[#3A3A3A] text-white border border-[#3A3A3A]"
+                        : "bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white"
+                  }`}>
+                    {selectedFile ? "Change Photo" : "Select Photo"}
+                  </div>
+                </label>
+
+                {/* Upload Button - Only show when file is selected */}
+                {selectedFile && (
+                  <button
+                    onClick={async () => {
+                      if (!selectedFile || isUploadingPortfolio) return;
+
+                      // Create a fake event object to pass to the existing handler
+                      const fakeEvent = { target: { files: [selectedFile] } };
+                      await handlePortfolioUpload(fakeEvent);
+
+                      // Reset and close
+                      setSelectedFile(null);
+                      setFilePreview(null);
+                      setShowUploadModal(false);
+                    }}
+                    disabled={isUploadingPortfolio}
+                    className={`flex-[2] py-4 rounded-xl font-semibold text-center transition-all ${
+                      isUploadingPortfolio
+                        ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                        : "bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white"
+                    }`}
+                  >
+                    {isUploadingPortfolio ? "Uploading..." : "Upload"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Image Modal */}
+      {selectedPortfolioItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/95"
+            onClick={() => setSelectedPortfolioItem(null)}
+          />
+          <div className="relative w-full max-w-lg mx-4">
+            {/* Post Card */}
+            <div className="bg-[#1A1A1A] rounded-2xl overflow-hidden">
+              {/* Post Header */}
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full overflow-hidden">
+                    {(avatarUrl || currentBarber?.avatar) ? (
+                      <img
+                        src={avatarUrl || currentBarber?.avatar}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center">
+                        <span className="text-sm font-bold text-white">
+                          {currentBarber?.full_name?.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white">{currentBarber?.full_name}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(selectedPortfolioItem.createdAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedPortfolioItem(null)}
+                  className="w-8 h-8 flex items-center justify-center hover:bg-[#2A2A2A] rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+
+              {/* Post Image */}
+              <div className="aspect-square">
+                <img
+                  src={selectedPortfolioItem.imageUrl}
+                  alt={selectedPortfolioItem.caption || "Portfolio"}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              {/* Post Actions */}
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-4">
+                    <button className="hover:opacity-70 transition-opacity">
+                      <Heart className="w-6 h-6 text-white" />
+                    </button>
+                    <button className="hover:opacity-70 transition-opacity">
+                      <MessageCircle className="w-6 h-6 text-white" />
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleDeletePortfolio(selectedPortfolioItem._id);
+                      setSelectedPortfolioItem(null);
+                    }}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors text-sm"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                </div>
+
+                {/* Likes */}
+                <p className="text-sm font-semibold text-white mb-2">
+                  {selectedPortfolioItem.likes_count || 0} likes
+                </p>
+
+                {/* Caption */}
+                {selectedPortfolioItem.caption && (
+                  <p className="text-sm text-gray-300">
+                    <span className="font-semibold text-white mr-2">{currentBarber?.full_name?.split(' ')[0]}</span>
+                    {selectedPortfolioItem.caption}
+                  </p>
+                )}
+
+                {/* Tags */}
+                {selectedPortfolioItem.tags?.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {selectedPortfolioItem.tags.map((tag, i) => (
+                      <span key={i} className="text-sm text-[var(--color-primary)]">#{tag}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSS for animations */}
+      <style>{`
+        @keyframes slide-up {
+          from {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out forwards;
+        }
+      `}</style>
+    </div>
+  );
+
   // Main render content
   const renderContent = () => {
     switch (activeTab) {
       case "overview": return renderOverview();
       case "bookings": return <BarberBookings />;
+      case "portfolio": return renderPortfolio();
       case "earnings": return renderEarnings();
       case "schedule": return renderSchedule();
       case "clients": return renderClients();
@@ -1083,6 +1565,7 @@ const BarberDashboard = () => {
             <h1 className="text-lg font-bold text-white">
               {activeTab === "overview" ? "Dashboard" :
                activeTab === "bookings" ? "Bookings" :
+               activeTab === "portfolio" ? "Portfolio" :
                activeTab === "earnings" ? "Earnings" :
                activeTab === "schedule" ? "Schedule" :
                activeTab === "clients" ? "Clients" :
@@ -1150,7 +1633,7 @@ const BarberDashboard = () => {
 
       {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0D0D0D] border-t border-[#1A1A1A] safe-area-inset-bottom">
-        <div className="grid grid-cols-4 p-1 pb-2">
+        <div className="grid grid-cols-5 p-1 pb-2">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
