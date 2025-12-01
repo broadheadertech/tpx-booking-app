@@ -95,7 +95,8 @@ function StaffDashboard() {
           branch_id: user.branch_id,
         })
         : undefined;
-  const customers =
+  // Fetch all users - we'll filter them into staff and customers
+  const allUsers =
     user?.role === "super_admin"
       ? useQuery(api.services.auth.getAllUsers)
       : user?.branch_id
@@ -103,6 +104,12 @@ function StaffDashboard() {
           branch_id: user.branch_id,
         })
         : undefined;
+
+  // Filter to get only customers (role = 'customer')
+  const customers = allUsers?.filter(u => u.role === 'customer') || [];
+
+  // Filter to get staff users for stats (excluding customers)
+  const staffUsers = allUsers?.filter(u => u.role !== 'customer') || [];
 
   // Calculate incomplete bookings count (pending, booked, confirmed - not completed or cancelled)
   const incompleteBookingsCount = bookings
@@ -121,7 +128,7 @@ function StaffDashboard() {
 
   // Calculate stats from Convex data
   const calculateStats = () => {
-    if (!bookings || !services || !vouchers || !barbers || !customers) {
+    if (!bookings || !services || !vouchers || !barbers || !allUsers) {
       return null;
     }
 
@@ -131,6 +138,7 @@ function StaffDashboard() {
       totalVouchers: vouchers.length,
       totalBarbers: barbers.length,
       totalCustomers: customers.length,
+      totalStaff: staffUsers.length,
       todayBookings: bookings.filter((b) => {
         const today = new Date().toDateString();
         return new Date(b.date).toDateString() === today;
@@ -258,7 +266,7 @@ function StaffDashboard() {
       case "customers":
         return (
           <CustomersManagement
-            customers={customers || []}
+            customers={customers}
             onRefresh={handleRefresh}
           />
         );
