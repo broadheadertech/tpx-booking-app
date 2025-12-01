@@ -272,18 +272,19 @@ const CustomersManagement = ({ customers = [], onRefresh }) => {
                           <User className="h-5 w-5 text-[var(--color-primary)]" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="text-sm font-semibold text-white truncate">
-                            {customer.name || customer.username}
+                          <div className="text-sm font-semibold text-white truncate max-w-[200px]" title={customer.name || customer.username}>
+                            {(customer.name || customer.username || '').length > 25
+                              ? (customer.name || customer.username).substring(0, 25) + '...'
+                              : (customer.name || customer.username)}
                           </div>
-                          <div className="text-sm text-gray-400">
-                            @{customer.username}
+                          <div className="text-sm text-gray-400 truncate max-w-[180px]" title={customer.username}>
+                            @{customer.username?.length > 20 ? customer.username.substring(0, 20) + '...' : customer.username}
                             {customer.nickname && (
                               <span className="ml-2 text-xs bg-[#444444] text-gray-300 px-2 py-0.5 rounded-full">
                                 {customer.nickname}
                               </span>
                             )}
                           </div>
-                          <div className="text-xs text-gray-500">ID: {customer.id}</div>
                         </div>
                       </div>
                     </td>
