@@ -19,7 +19,7 @@ import {
   ChevronRight,
   Map,
   Sparkles,
-  ChevronDown,
+  ChevronDown
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -37,7 +37,7 @@ const Landing = () => {
   // Fetch active services and branches from Convex
   const services = useQuery(api.services.services.getActiveServices);
   const branches = useQuery(api.services.branches.getActiveBranches);
-
+  
   const loadingServices = services === undefined;
   const loadingBranches = branches === undefined;
 
@@ -62,24 +62,21 @@ const Landing = () => {
     {
       name: "Miguel Santos",
       role: "Regular Client",
-      comment:
-        "The attention to detail is unmatched. I've never had a barber take this much care with my fade.",
+      comment: "The attention to detail is unmatched. I've never had a barber take this much care with my fade.",
       rating: 5,
       image: "https://i.pravatar.cc/150?u=miguel",
     },
     {
       name: "Carlos Rivera",
       role: "Business Owner",
-      comment:
-        "Perfect for my busy schedule. Booking is seamless and they always run on time.",
+      comment: "Perfect for my busy schedule. Booking is seamless and they always run on time.",
       rating: 5,
       image: "https://i.pravatar.cc/150?u=carlos",
     },
     {
       name: "David Chen",
       role: "Software Engineer",
-      comment:
-        "The ambiance is amazing. It's not just a haircut, it's a relaxing break from my day.",
+      comment: "The ambiance is amazing. It's not just a haircut, it's a relaxing break from my day.",
       rating: 5,
       image: "https://i.pravatar.cc/150?u=david",
     },
@@ -101,12 +98,9 @@ const Landing = () => {
         <div className="pt-32 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Skeleton className="w-full h-[400px] rounded-2xl mb-12 bg-gray-800" />
           <div className="grid md:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton
-                key={i}
-                className="w-full h-64 rounded-xl bg-gray-800"
-              />
-            ))}
+             {[...Array(4)].map((_, i) => (
+               <Skeleton key={i} className="w-full h-64 rounded-xl bg-gray-800" />
+             ))}
           </div>
         </div>
       </div>
@@ -163,19 +157,9 @@ const Landing = () => {
 
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center gap-8">
-              <a
-                href="#"
-                className="text-sm font-medium text-gray-300 hover:text-white transition-colors"
-              >
-                For Business
-              </a>
-              <a
-                href="#"
-                className="text-sm font-medium text-gray-300 hover:text-white transition-colors"
-              >
-                Help
-              </a>
-
+              <a href="#" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">For Business</a>
+              <a href="#" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">Help</a>
+              
               <div className="flex items-center gap-4 pl-4 border-l border-white/10">
                 <button
                   onClick={() => navigate("/auth/login")}
@@ -205,34 +189,12 @@ const Landing = () => {
         {/* Mobile Menu Overlay */}
         {mobileMenuOpen && (
           <div className="absolute top-full left-0 right-0 bg-gray-900 border-b border-white/10 p-4 md:hidden flex flex-col gap-4 shadow-2xl">
-            <a
-              href="#services"
-              className="text-lg font-medium text-gray-300 py-2"
-            >
-              Services
-            </a>
-            <a href="#about" className="text-lg font-medium text-gray-300 py-2">
-              About
-            </a>
-            <a
-              href="#reviews"
-              className="text-lg font-medium text-gray-300 py-2"
-            >
-              Reviews
-            </a>
+            <a href="#services" className="text-lg font-medium text-gray-300 py-2">Services</a>
+            <a href="#about" className="text-lg font-medium text-gray-300 py-2">About</a>
+            <a href="#reviews" className="text-lg font-medium text-gray-300 py-2">Reviews</a>
             <hr className="border-white/10" />
-            <button
-              onClick={() => navigate("/auth/login")}
-              className="text-left text-lg font-medium text-white py-2"
-            >
-              Log In
-            </button>
-            <button
-              onClick={() => navigate("/guest/booking")}
-              className="w-full py-3 rounded-xl bg-[var(--color-primary)] text-white font-bold"
-            >
-              Book Now
-            </button>
+            <button onClick={() => navigate("/auth/login")} className="text-left text-lg font-medium text-white py-2">Log In</button>
+            <button onClick={() => navigate("/guest/booking")} className="w-full py-3 rounded-xl bg-[var(--color-primary)] text-white font-bold">Book Now</button>
           </div>
         )}
       </nav>
@@ -242,7 +204,7 @@ const Landing = () => {
         {/* Background with overlay */}
         <div className="absolute inset-0 z-0">
           <img
-            src="/landing/2.webp"
+            src={branding?.hero_image_url || "/landing/2.webp"}
             alt="Background"
             className="w-full h-full object-cover opacity-50"
           />
@@ -274,19 +236,17 @@ const Landing = () => {
                   className={`w-full h-14 pl-12 pr-10 bg-transparent rounded-xl focus:bg-white/5 outline-none font-medium transition-colors appearance-none cursor-pointer [&>option]:bg-black [&>option]:text-white ${selectedService === "" ? "text-gray-400" : "text-white"}`}
                 >
                   <option value="">Book your services...</option>
-                  {services?.map((service) => (
-                    <option key={service._id} value={service._id}>
-                      {service.name}
-                    </option>
+                  {services?.map(service => (
+                    <option key={service._id} value={service._id}>{service.name}</option>
                   ))}
                 </select>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                   <ChevronDown className="w-4 h-4" />
                 </div>
               </div>
-
+              
               <div className="w-px h-10 bg-white/10 my-auto hidden md:block"></div>
-
+              
               <div className="flex-1 relative group">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none group-focus-within:text-[var(--color-primary)] transition-colors">
                   <MapPin className="w-5 h-5" />
@@ -297,34 +257,27 @@ const Landing = () => {
                   className={`w-full h-14 pl-12 pr-10 bg-transparent rounded-xl focus:bg-white/5 outline-none font-medium transition-colors appearance-none cursor-pointer [&>option]:bg-black [&>option]:text-white ${selectedBranch === "" ? "text-gray-400" : "text-white"}`}
                 >
                   <option value="">Select branch...</option>
-                  {branches?.map((branch) => (
-                    <option key={branch._id} value={branch._id}>
-                      {branch.name}
-                    </option>
+                  {branches?.map(branch => (
+                    <option key={branch._id} value={branch._id}>{branch.name}</option>
                   ))}
                 </select>
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
                   <ChevronDown className="w-4 h-4" />
                 </div>
               </div>
-
-              <button
-                onClick={() => navigate("/guest/booking")}
+              
+              <button 
+                onClick={() => navigate('/guest/booking')}
                 className="bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white h-14 px-8 rounded-xl font-bold transition-colors shadow-lg shadow-[var(--color-primary)]/20"
               >
                 Search
               </button>
             </div>
-
+            
             <div className="mt-6 flex flex-wrap gap-3">
-              <span className="text-sm text-gray-500 font-medium">
-                Popular:
-              </span>
-              {["Haircut", "Massage", "Skin Fade", "Beard Trim"].map((tag) => (
-                <button
-                  key={tag}
-                  className="text-sm text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1 rounded-full transition-colors border border-white/5 hover:border-white/20"
-                >
+              <span className="text-sm text-gray-500 font-medium">Popular:</span>
+              {['Haircut', 'Massage', 'Skin Fade', 'Beard Trim'].map((tag) => (
+                <button key={tag} className="text-sm text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1 rounded-full transition-colors border border-white/5 hover:border-white/20">
                   {tag}
                 </button>
               ))}
@@ -336,21 +289,17 @@ const Landing = () => {
       {/* Categories Section */}
       <section className="py-12 border-b border-white/5 bg-black">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-xl font-bold text-white mb-8">
-            Browse by category
-          </h2>
+          <h2 className="text-xl font-bold text-white mb-8">Browse by category</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {categories.map((category, index) => (
-              <div
+              <div 
                 key={index}
                 className="group cursor-pointer p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-[var(--color-primary)]/30 transition-all duration-300 flex flex-col items-center gap-3 text-center"
               >
                 <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 group-hover:text-[var(--color-primary)] group-hover:border-[var(--color-primary)] transition-colors">
                   <category.icon className="w-6 h-6" />
                 </div>
-                <span className="font-semibold text-gray-300 group-hover:text-white">
-                  {category.name}
-                </span>
+                <span className="font-semibold text-gray-300 group-hover:text-white">{category.name}</span>
               </div>
             ))}
           </div>
@@ -362,15 +311,11 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-end mb-10">
             <div>
-              <h2 className="text-3xl font-bold text-white">
-                Recommended for you
-              </h2>
-              <p className="text-gray-500 mt-2">
-                Top rated services in your area
-              </p>
+              <h2 className="text-3xl font-bold text-white">Recommended for you</h2>
+              <p className="text-gray-500 mt-2">Top rated services in your area</p>
             </div>
-            <button
-              onClick={() => navigate("/guest/booking")}
+            <button 
+              onClick={() => navigate('/guest/booking')}
               className="hidden md:flex items-center gap-2 text-[var(--color-primary)] font-bold hover:brightness-110 transition-all"
             >
               View all <ArrowRight className="w-4 h-4" />
@@ -379,14 +324,14 @@ const Landing = () => {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {recommendedServices.map((service, index) => (
-              <div
+              <div 
                 key={index}
                 className="bg-gray-900 rounded-2xl overflow-hidden border border-white/5 hover:border-[var(--color-primary)]/30 hover:shadow-xl hover:shadow-[var(--color-primary)]/5 transition-all duration-300 cursor-pointer group"
-                onClick={() => navigate("/guest/booking")}
+                onClick={() => navigate('/guest/booking')}
               >
                 <div className="relative aspect-[4/3] overflow-hidden bg-gray-800">
-                  <img
-                    src={service.image || "/landing/2.webp"}
+                  <img 
+                    src={service.image || "/landing/2.webp"} 
                     alt={service.name}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
@@ -395,13 +340,11 @@ const Landing = () => {
                   </div>
                 </div>
                 <div className="p-5">
-                  <h3 className="font-bold text-lg text-white mb-1 group-hover:text-[var(--color-primary)] transition-colors">
-                    {service.name}
-                  </h3>
+                  <h3 className="font-bold text-lg text-white mb-1 group-hover:text-[var(--color-primary)] transition-colors">{service.name}</h3>
                   <p className="text-gray-400 text-sm mb-3 flex items-center gap-1 line-clamp-1">
                     {service.description}
                   </p>
-
+                  
                   <div className="flex items-center gap-2 mb-4">
                     <div className="flex items-center gap-1 bg-[var(--color-primary)]/10 px-2 py-0.5 rounded text-[var(--color-primary)] text-xs font-bold border border-[var(--color-primary)]/20">
                       <span className="font-black">5.0</span>
@@ -412,9 +355,7 @@ const Landing = () => {
 
                   <div className="pt-4 border-t border-white/5 flex items-center justify-between">
                     <div>
-                      <p className="text-xs text-gray-500 uppercase font-bold">
-                        Price
-                      </p>
+                      <p className="text-xs text-gray-500 uppercase font-bold">Price</p>
                       <p className="font-bold text-white">₱{service.price}</p>
                     </div>
                     <button className="px-4 py-2 rounded-lg bg-white text-black text-sm font-bold hover:bg-[var(--color-primary)] hover:text-white transition-colors">
@@ -422,17 +363,20 @@ const Landing = () => {
                     </button>
                   </div>
                 </div>
+                <span className="font-semibold text-gray-300 group-hover:text-white">
+                  {category.name}
+                </span>
               </div>
             ))}
             {recommendedServices.length === 0 && !loadingServices && (
-              <div className="col-span-full text-center py-10 text-gray-500">
-                No services found.
-              </div>
+               <div className="col-span-full text-center py-10 text-gray-500">
+                 No services found.
+               </div>
             )}
           </div>
-
-          <button
-            onClick={() => navigate("/guest/booking")}
+          
+          <button 
+            onClick={() => navigate('/guest/booking')}
             className="md:hidden w-full mt-8 py-3 rounded-xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
           >
             View all services <ArrowRight className="w-4 h-4" />
@@ -467,37 +411,21 @@ const Landing = () => {
                 Why {branding?.display_name || "Tipuno X"} is the best choice
               </h2>
               <p className="text-gray-400 text-lg mb-8 leading-relaxed">
-                We combine traditional barbering techniques with modern styling
-                to create a unique experience. Our platform makes booking easier
-                than ever.
+                We combine traditional barbering techniques with modern styling to create a unique experience. Our platform makes booking easier than ever.
               </p>
 
               <div className="space-y-6">
                 {[
-                  {
-                    title: "Expert Barbers",
-                    desc: "Highly trained professionals",
-                    icon: Users,
-                  },
-                  {
-                    title: "Easy Booking",
-                    desc: "Book in seconds, 24/7",
-                    icon: Clock,
-                  },
-                  {
-                    title: "Hygienic Safe",
-                    desc: "Top-tier sterilization",
-                    icon: Shield,
-                  },
+                  { title: "Expert Barbers", desc: "Highly trained professionals", icon: Users },
+                  { title: "Easy Booking", desc: "Book in seconds, 24/7", icon: Clock },
+                  { title: "Hygienic Safe", desc: "Top-tier sterilization", icon: Shield }
                 ].map((feature, index) => (
                   <div key={index} className="flex gap-4">
                     <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center flex-shrink-0 text-[var(--color-primary)] border border-[var(--color-primary)]/20">
                       <feature.icon className="w-6 h-6" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold mb-1 text-white">
-                        {feature.title}
-                      </h3>
+                      <h3 className="text-lg font-bold mb-1 text-white">{feature.title}</h3>
                       <p className="text-gray-500 text-sm">{feature.desc}</p>
                     </div>
                   </div>
@@ -578,51 +506,20 @@ const Landing = () => {
                 ) : (
                   <Scissors className="w-6 h-6 text-[var(--color-primary)]" />
                 )}
-                <span className="text-xl font-bold text-white">
-                  {branding?.display_name || "Tipuno X"}
-                </span>
+                <span className="text-xl font-bold text-white">{branding?.display_name || "Tipuno X"}</span>
               </div>
               <p className="text-gray-500 text-sm leading-relaxed">
-                Premium grooming experiences for the modern gentleman. Elevating
-                style, one cut at a time.
+                Premium grooming experiences for the modern gentleman. Elevating style, one cut at a time.
               </p>
             </div>
 
             <div>
               <h4 className="font-bold mb-6 text-white">Quick Links</h4>
               <ul className="space-y-4 text-sm text-gray-500">
-                <li>
-                  <a
-                    href="#"
-                    className="hover:text-[var(--color-primary)] transition-colors"
-                  >
-                    Home
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#services"
-                    className="hover:text-[var(--color-primary)] transition-colors"
-                  >
-                    Services
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#about"
-                    className="hover:text-[var(--color-primary)] transition-colors"
-                  >
-                    About Us
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#reviews"
-                    className="hover:text-[var(--color-primary)] transition-colors"
-                  >
-                    Reviews
-                  </a>
-                </li>
+                <li><a href="#" className="hover:text-[var(--color-primary)] transition-colors">Home</a></li>
+                <li><a href="#services" className="hover:text-[var(--color-primary)] transition-colors">Services</a></li>
+                <li><a href="#about" className="hover:text-[var(--color-primary)] transition-colors">About Us</a></li>
+                <li><a href="#reviews" className="hover:text-[var(--color-primary)] transition-colors">Reviews</a></li>
               </ul>
             </div>
 
@@ -646,16 +543,16 @@ const Landing = () => {
 
             <div>
               <h4 className="font-bold mb-6 text-white">Newsletter</h4>
-              <p className="text-gray-500 text-sm mb-4">
-                Subscribe for updates and exclusive offers.
-              </p>
+              <p className="text-gray-500 text-sm mb-4">Subscribe for updates and exclusive offers.</p>
               <div className="flex gap-2">
                 <input
                   type="email"
                   placeholder="Enter your email"
                   className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm w-full focus:outline-none focus:border-[var(--color-primary)] text-white placeholder-gray-500"
                 />
-                <button className="p-2 rounded-lg transition-colors text-white bg-[var(--color-primary)] hover:bg-[var(--color-accent)]">
+                <button
+                  className="p-2 rounded-lg transition-colors text-white bg-[var(--color-primary)] hover:bg-[var(--color-accent)]"
+                >
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -663,17 +560,10 @@ const Landing = () => {
           </div>
 
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-gray-500 text-sm">
-              © 2024 {branding?.display_name || "Tipuno X"}. All rights
-              reserved.
-            </p>
+            <p className="text-gray-500 text-sm">© 2024 {branding?.display_name || "Tipuno X"}. All rights reserved.</p>
             <div className="flex gap-6 text-sm text-gray-500">
-              <a href="#" className="hover:text-white transition-colors">
-                Privacy Policy
-              </a>
-              <a href="#" className="hover:text-white transition-colors">
-                Terms of Service
-              </a>
+              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
             </div>
           </div>
         </div>

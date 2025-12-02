@@ -73,6 +73,9 @@ function validateBrandingPayload(payload: any): string[] {
   if (payload.banner_url && !isValidUrl(payload.banner_url)) {
     errors.push('Invalid banner_url format (must be http:// or https:// or /path)');
   }
+  if (payload.hero_image_url && !isValidUrl(payload.hero_image_url)) {
+    errors.push('Invalid hero_image_url format (must be http:// or https:// or /path)');
+  }
 
   // Display name length
   if (payload.display_name && payload.display_name.length > 100) {
@@ -128,6 +131,7 @@ export const getGlobalBranding = query({
       logo_dark_url: "",
       favicon_url: "",
       banner_url: "",
+      hero_image_url: "",
       feature_toggles: {
         kiosk: true,
         wallet: true,
@@ -155,6 +159,7 @@ export const upsertGlobalBranding = mutation({
       logo_dark_url: v.optional(v.string()),
       favicon_url: v.optional(v.string()),
       banner_url: v.optional(v.string()),
+      hero_image_url: v.optional(v.string()),
       feature_toggles: v.optional(v.object({
         kiosk: v.optional(v.boolean()),
         wallet: v.optional(v.boolean()),
@@ -436,6 +441,7 @@ export const upsertBranding = mutation({
       logo_dark_url: v.optional(v.string()),
       favicon_url: v.optional(v.string()),
       banner_url: v.optional(v.string()),
+      hero_image_url: v.optional(v.string()),
       feature_toggles: v.optional(v.object({
         kiosk: v.optional(v.boolean()),
         wallet: v.optional(v.boolean()),

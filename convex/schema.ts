@@ -33,6 +33,7 @@ export default defineSchema({
     logo_dark_url: v.optional(v.string()),
     favicon_url: v.optional(v.string()),
     banner_url: v.optional(v.string()),
+    hero_image_url: v.optional(v.string()),
     feature_toggles: v.optional(
       v.object({
         kiosk: v.optional(v.boolean()),
@@ -59,6 +60,7 @@ export default defineSchema({
     logo_dark_url: v.optional(v.string()),
     favicon_url: v.optional(v.string()),
     banner_url: v.optional(v.string()),
+    hero_image_url: v.optional(v.string()),
     feature_toggles: v.optional(
       v.object({
         kiosk: v.optional(v.boolean()),
