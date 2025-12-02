@@ -53,7 +53,7 @@ const getRoleBasedRedirect = (role) => {
     case 'branch_admin':
       return '/staff/dashboard'
     case 'barber':
-      return '/barber/dashboard'
+      return '/barber/home'
     case 'customer':
     default:
       return '/customer/dashboard'

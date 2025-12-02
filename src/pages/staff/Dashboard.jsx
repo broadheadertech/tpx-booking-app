@@ -95,8 +95,7 @@ function StaffDashboard() {
           branch_id: user.branch_id,
         })
         : undefined;
-  // Fetch all users - we'll filter them into staff and customers
-  const allUsers =
+  const customers =
     user?.role === "super_admin"
       ? useQuery(api.services.auth.getAllUsers)
       : user?.branch_id
@@ -104,12 +103,6 @@ function StaffDashboard() {
           branch_id: user.branch_id,
         })
         : undefined;
-
-  // Filter to get only customers (role = 'customer')
-  const customers = allUsers?.filter(u => u.role === 'customer') || [];
-
-  // Filter to get staff users for stats (excluding customers)
-  const staffUsers = allUsers?.filter(u => u.role !== 'customer') || [];
 
   // Calculate incomplete bookings count (pending, booked, confirmed - not completed or cancelled)
   const incompleteBookingsCount = bookings
@@ -128,7 +121,7 @@ function StaffDashboard() {
 
   // Calculate stats from Convex data
   const calculateStats = () => {
-    if (!bookings || !services || !vouchers || !barbers || !allUsers) {
+    if (!bookings || !services || !vouchers || !barbers || !customers) {
       return null;
     }
 
@@ -138,7 +131,6 @@ function StaffDashboard() {
       totalVouchers: vouchers.length,
       totalBarbers: barbers.length,
       totalCustomers: customers.length,
-      totalStaff: staffUsers.length,
       todayBookings: bookings.filter((b) => {
         const today = new Date().toDateString();
         return new Date(b.date).toDateString() === today;
@@ -264,9 +256,11 @@ function StaffDashboard() {
         return <BranchUserManagement onRefresh={handleRefresh} />;
 
       case "customers":
+        // Filter to only show customers (exclude staff, barbers, admins, etc.)
+        const customersOnly = (customers || []).filter(c => c.role === 'customer');
         return (
           <CustomersManagement
-            customers={customers}
+            customers={customersOnly}
             onRefresh={handleRefresh}
           />
         );
@@ -387,7 +381,7 @@ function StaffDashboard() {
       <div className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8 lg:py-12">
           <div className="space-y-4 sm:space-y-6 md:space-y-8 lg:space-y-12">
-            {user?.role !== "branch_admin" && (
+            {/* {user?.role !== "branch_admin" && (
               <QuickActions
                 onAddCustomer={handleAddCustomer}
                 onCreateBooking={handleCreateBooking}
@@ -397,7 +391,7 @@ function StaffDashboard() {
                 activeModal={activeModal}
                 setActiveModal={setActiveModal}
               />
-            )}
+            )} */}
             <TabNavigation
               tabs={tabs}
               activeTab={activeTab}

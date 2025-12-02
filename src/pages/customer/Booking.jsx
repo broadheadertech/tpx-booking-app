@@ -34,6 +34,30 @@ function CustomerBooking() {
 
   const queryLoading = selectedBranch && (services === undefined || barbers === undefined)
 
+  // Check for pre-selected barber from barber profile page
+  useEffect(() => {
+    const preSelectedBarberData = sessionStorage.getItem("preSelectedBarber");
+    if (preSelectedBarberData && barbers && barbers.length > 0) {
+      try {
+        const preSelectedBarber = JSON.parse(preSelectedBarberData);
+        // Find the matching barber from the current barbers list
+        const matchingBarber = barbers.find(
+          (barber) => barber._id === preSelectedBarber.barberId
+        );
+
+        if (matchingBarber) {
+          setSelectedBarber(matchingBarber);
+        }
+
+        // Clear the stored barber after using it
+        sessionStorage.removeItem("preSelectedBarber");
+      } catch (error) {
+        console.error("Error parsing pre-selected barber:", error);
+        sessionStorage.removeItem("preSelectedBarber");
+      }
+    }
+  }, [barbers]);
+
   // Generate available times based on barber schedule
   const availableTimes = React.useMemo(() => {
     if (!selectedBarber || !selectedDate) {

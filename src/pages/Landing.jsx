@@ -156,6 +156,7 @@ const Landing = () => {
               <a href="#services" className="text-sm font-medium text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors">Services</a>
               <a href="#about" className="text-sm font-medium text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors">About</a>
               <a href="#reviews" className="text-sm font-medium text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors">Reviews</a>
+              <button onClick={() => navigate("/barbers")} className="text-sm font-medium text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors">Barbers</button>
 
               <div className="flex items-center gap-4 pl-4 border-l border-white/10">
                 <button
@@ -189,6 +190,7 @@ const Landing = () => {
             <a href="#services" className="text-lg font-medium text-[var(--color-muted)] py-2">Services</a>
             <a href="#about" className="text-lg font-medium text-[var(--color-muted)] py-2">About</a>
             <a href="#reviews" className="text-lg font-medium text-[var(--color-muted)] py-2">Reviews</a>
+            <button onClick={() => { setMobileMenuOpen(false); navigate("/barbers"); }} className="text-left text-lg font-medium text-[var(--color-muted)] py-2">Barbers</button>
             <hr className="border-white/10" />
             <button onClick={() => navigate("/auth/login")} className="text-left text-lg font-medium text-[var(--color-text)] py-2">Sign In</button>
             <button onClick={() => navigate("/guest/booking")} className="w-full py-3 rounded-xl bg-[var(--color-primary)] text-white font-bold">Book Now</button>

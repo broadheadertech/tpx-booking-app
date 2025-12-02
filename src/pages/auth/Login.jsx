@@ -95,7 +95,7 @@ function Login() {
         if (role === 'staff' || role === 'admin' || role === 'super_admin' || role === 'branch_admin') {
           navigate('/staff/dashboard')
         } else if (role === 'barber') {
-          navigate('/barber/dashboard')
+          navigate('/barber/home')
         } else {
           navigate('/customer/dashboard')
         }

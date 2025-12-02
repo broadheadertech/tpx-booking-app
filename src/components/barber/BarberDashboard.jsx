@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Calendar,
   Users,
@@ -39,6 +39,17 @@ import {
   X,
   BellRing,
   Check,
+  Edit3,
+  Image,
+  Plus,
+  Trash2,
+  Camera,
+  Grid3X3,
+  Heart,
+  MessageCircle,
+  Bookmark,
+  MoreVertical,
+  Sparkles,
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -321,10 +332,30 @@ const StatCard = ({ icon: Icon, label, value, subValue, trend, trendUp }) => (
 const BarberDashboard = () => {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { tab } = useParams();
   const { branding } = useBranding();
-  const [activeTab, setActiveTab] = useState("overview");
   const [statsPeriod, setStatsPeriod] = useState("monthly");
   const [showNotifications, setShowNotifications] = useState(false);
+
+  // Map URL tab to internal tab names
+  const tabMapping = {
+    home: "overview",
+    bookings: "bookings",
+    portfolio: "portfolio",
+    earnings: "earnings",
+    schedule: "schedule",
+    profile: "profile",
+  };
+
+  // Get active tab from URL or default to overview
+  const activeTab = tabMapping[tab] || "overview";
+
+  // Function to change tab (updates URL)
+  const setActiveTab = (newTab) => {
+    const urlTab = Object.keys(tabMapping).find(key => tabMapping[key] === newTab) || "home";
+    navigate(`/barber/${urlTab}`, { replace: true });
+  };
 
   // Get notification unread count
   const notificationUnreadCount = useQuery(
@@ -332,9 +363,9 @@ const BarberDashboard = () => {
     user?._id ? { userId: user._id } : "skip"
   );
 
-  // Check if we're on the barber dashboard route
-  const isOnBarberDashboard = location.pathname === "/barber/dashboard";
-  if (!isOnBarberDashboard) return null;
+  // Check if we're on the barber route
+  const isOnBarberRoute = location.pathname.startsWith("/barber");
+  if (!isOnBarberRoute) return null;
 
   // Get barber data
   const barbers = user?.branch_id
@@ -370,6 +401,12 @@ const BarberDashboard = () => {
     currentBarber ? { barberId: currentBarber._id } : "skip"
   );
 
+  // Get avatar URL from storage
+  const avatarUrl = useQuery(
+    api.services.barbers.getImageUrl,
+    currentBarber?.avatarStorageId ? { storageId: currentBarber.avatarStorageId } : "skip"
+  );
+
   // Get stats by period
   const periodStats = useQuery(
     api.services.barbers.getBarberStatsByPeriod,
@@ -387,6 +424,25 @@ const BarberDashboard = () => {
     api.services.barbers.getBarberActivities,
     currentBarber ? { barberId: currentBarber._id, limit: 10 } : "skip"
   );
+
+  // Get portfolio items
+  const portfolioItems = useQuery(
+    api.services.portfolio.getBarberPortfolio,
+    currentBarber ? { barber_id: currentBarber._id } : "skip"
+  );
+
+  // Portfolio mutations
+  const addPortfolioItem = useMutation(api.services.portfolio.addPortfolioItem);
+  const deletePortfolioItem = useMutation(api.services.portfolio.deletePortfolioItem);
+  const generateUploadUrl = useMutation(api.services.barbers.generateUploadUrl);
+
+  // Portfolio state
+  const [isUploadingPortfolio, setIsUploadingPortfolio] = useState(false);
+  const [portfolioCaption, setPortfolioCaption] = useState("");
+  const [selectedPortfolioItem, setSelectedPortfolioItem] = useState(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [filePreview, setFilePreview] = useState(null);
 
   // Filter transactions for this barber
   const barberTransactions = allTransactions?.filter(
@@ -416,13 +472,13 @@ const BarberDashboard = () => {
     { value: "all_time", label: "All" },
   ];
 
-  // Tab configuration - 5 tabs for bottom nav
+  // Tab configuration - 5 tabs for bottom nav (Profile moved to header)
   const tabs = [
-    { id: "overview", label: "Home", icon: Home },
-    { id: "bookings", label: "Bookings", icon: Calendar },
-    { id: "earnings", label: "Earnings", icon: Wallet },
-    { id: "schedule", label: "Schedule", icon: Clock },
-    { id: "profile", label: "Profile", icon: UserCircle },
+    { id: "overview", urlPath: "home", label: "Home", icon: Home },
+    { id: "bookings", urlPath: "bookings", label: "Bookings", icon: Calendar },
+    { id: "portfolio", urlPath: "portfolio", label: "Portfolio", icon: Image },
+    { id: "earnings", urlPath: "earnings", label: "Earnings", icon: Wallet },
+    { id: "schedule", urlPath: "schedule", label: "Schedule", icon: Clock },
   ];
 
   // Format activity time
@@ -582,9 +638,9 @@ const BarberDashboard = () => {
         />
         <StatCard
           icon={DollarSign}
-          label="Revenue"
-          value={`₱${(periodStats?.totalRevenue ?? monthlyRevenue).toLocaleString()}`}
-          trend={`${periodStats?.uniqueCustomers ?? 0} customers`}
+          label="Earnings"
+          value={`₱${(periodStats?.totalEarnings ?? 0).toLocaleString()}`}
+          trend={`${periodStats?.commissionRate ?? 0}% commission`}
           trendUp={true}
         />
         <StatCard
@@ -794,11 +850,15 @@ const BarberDashboard = () => {
     <div className="px-4 pb-6 space-y-4">
       {/* Earnings Hero */}
       <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
-        <p className="text-sm text-gray-500 mb-1">Total Earnings</p>
-        <h2 className="text-3xl font-bold text-white mb-3">₱{(periodStats?.totalRevenue ?? monthlyRevenue).toLocaleString()}</h2>
-        <div className="flex items-center text-[var(--color-primary)] text-sm">
-          <ArrowUpRight className="w-4 h-4 mr-1" />
-          <span>+12% vs last period</span>
+        <p className="text-sm text-gray-500 mb-1">Your Earnings</p>
+        <h2 className="text-3xl font-bold text-white mb-3">₱{(periodStats?.totalEarnings ?? 0).toLocaleString()}</h2>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center text-gray-400 text-xs">
+            <span>Gross Revenue: ₱{(periodStats?.totalRevenue ?? monthlyRevenue).toLocaleString()}</span>
+          </div>
+          <div className="flex items-center text-[var(--color-primary)] text-xs">
+            <span>{periodStats?.daysWorked ?? 0} days worked</span>
+          </div>
         </div>
       </div>
 
@@ -822,6 +882,38 @@ const BarberDashboard = () => {
         </div>
       </div>
 
+      {/* Commission Breakdown */}
+      <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
+        <h3 className="text-sm font-medium text-white mb-3 flex items-center">
+          <Wallet className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+          Commission Breakdown
+        </h3>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 rounded-full bg-[var(--color-primary)]"></div>
+              <span className="text-sm text-gray-400">Service Commission</span>
+            </div>
+            <span className="text-sm font-medium text-white">₱{(periodStats?.serviceCommission ?? 0).toLocaleString()}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+              <span className="text-sm text-gray-400">Product Commission</span>
+            </div>
+            <span className="text-sm font-medium text-white">₱{(periodStats?.productCommission ?? 0).toLocaleString()}</span>
+          </div>
+          <div className="border-t border-[#2A2A2A] pt-3 flex items-center justify-between">
+            <span className="text-sm text-gray-400">Daily Rate</span>
+            <span className="text-sm text-gray-500">₱{(periodStats?.dailyRate ?? 0).toLocaleString()}/day</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-400">Commission Rate</span>
+            <span className="text-sm text-gray-500">{(periodStats?.commissionRate ?? 0)}%</span>
+          </div>
+        </div>
+      </div>
+
       {/* Earnings Stats */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
@@ -835,10 +927,10 @@ const BarberDashboard = () => {
         <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
           <div className="flex items-center space-x-2 mb-2">
             <Target className="w-4 h-4 text-gray-400" />
-            <span className="text-xs text-gray-500">Avg. Value</span>
+            <span className="text-xs text-gray-500">Avg. Earning</span>
           </div>
-          <p className="text-xl font-bold text-white">₱{Math.round(periodStats?.averageBookingValue ?? 0).toLocaleString()}</p>
-          <p className="text-xs text-gray-500">per booking</p>
+          <p className="text-xl font-bold text-white">₱{Math.round((periodStats?.totalEarnings ?? 0) / Math.max(periodStats?.daysWorked ?? 1, 1)).toLocaleString()}</p>
+          <p className="text-xs text-gray-500">per day</p>
         </div>
       </div>
 
@@ -874,14 +966,36 @@ const BarberDashboard = () => {
     </div>
   );
 
+  // Format time from 24h to 12h format
+  const formatScheduleTime = (time) => {
+    if (!time) return '';
+    const [hours, minutes] = time.split(':');
+    const hour = parseInt(hours, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${ampm}`;
+  };
+
+  // Get schedule data from barber
+  const scheduleData = currentBarber?.schedule || {};
+  const days = [
+    { key: 'monday', label: 'Monday' },
+    { key: 'tuesday', label: 'Tuesday' },
+    { key: 'wednesday', label: 'Wednesday' },
+    { key: 'thursday', label: 'Thursday' },
+    { key: 'friday', label: 'Friday' },
+    { key: 'saturday', label: 'Saturday' },
+    { key: 'sunday', label: 'Sunday' },
+  ];
+
   // Render Schedule Tab
   const renderSchedule = () => (
     <div className="px-4 pb-6 space-y-4">
       {/* Schedule Header */}
       <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
         <p className="text-sm text-gray-500 mb-1">Your Schedule</p>
-        <h2 className="text-xl font-bold text-white mb-1">Manage Availability</h2>
-        <p className="text-sm text-gray-500">Set your working hours and days off</p>
+        <h2 className="text-xl font-bold text-white mb-1">Working Hours</h2>
+        <p className="text-sm text-gray-500">Your weekly availability schedule</p>
       </div>
 
       {/* Working Hours */}
@@ -889,18 +1003,24 @@ const BarberDashboard = () => {
         <div className="p-4 border-b border-[#2A2A2A] flex justify-between items-center">
           <h3 className="text-sm font-medium text-white flex items-center">
             <Clock className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
-            Working Hours
+            Weekly Schedule
           </h3>
-          <button className="text-xs text-gray-400 hover:text-white">Edit</button>
         </div>
         <div className="divide-y divide-[#2A2A2A]">
-          {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day, index) => {
-            const isWorkDay = index < 6; // Mon-Sat
+          {days.map(({ key, label }) => {
+            const daySchedule = scheduleData[key];
+            const isAvailable = daySchedule?.available ?? false;
+            const startTime = daySchedule?.start || '09:00';
+            const endTime = daySchedule?.end || '17:00';
+
             return (
-              <div key={day} className="p-3 flex items-center justify-between">
-                <span className={`text-sm ${isWorkDay ? 'text-white' : 'text-gray-600'}`}>{day}</span>
-                <span className={`text-sm ${isWorkDay ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {isWorkDay ? '9:00 AM - 8:00 PM' : 'Day Off'}
+              <div key={key} className="p-3 flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-2 h-2 rounded-full ${isAvailable ? 'bg-green-500' : 'bg-gray-600'}`} />
+                  <span className={`text-sm ${isAvailable ? 'text-white' : 'text-gray-500'}`}>{label}</span>
+                </div>
+                <span className={`text-sm ${isAvailable ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {isAvailable ? `${formatScheduleTime(startTime)} - ${formatScheduleTime(endTime)}` : 'Day Off'}
                 </span>
               </div>
             );
@@ -908,21 +1028,25 @@ const BarberDashboard = () => {
         </div>
       </div>
 
-      {/* Upcoming Time Off */}
-      <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
-        <div className="p-4 border-b border-[#2A2A2A] flex justify-between items-center">
-          <h3 className="text-sm font-medium text-white flex items-center">
-            <CalendarDays className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
-            Time Off
-          </h3>
-          <button className="text-xs bg-[var(--color-primary)] text-white px-3 py-1 rounded-lg">
-            + Request
-          </button>
-        </div>
-        <div className="p-8 text-center">
-          <CalendarDays className="w-10 h-10 text-gray-600 mx-auto mb-3" />
-          <p className="text-gray-400 text-sm">No upcoming time off scheduled</p>
-          <p className="text-gray-500 text-xs mt-1">Request time off for vacations or personal days</p>
+      {/* Weekly Summary */}
+      <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] p-4">
+        <h3 className="text-sm font-medium text-white mb-3 flex items-center">
+          <CalendarDays className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+          Schedule Summary
+        </h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-[#2A2A2A] rounded-xl p-3 text-center">
+            <p className="text-xl font-bold text-white">
+              {days.filter(d => scheduleData[d.key]?.available).length}
+            </p>
+            <p className="text-xs text-gray-500">Working Days</p>
+          </div>
+          <div className="bg-[#2A2A2A] rounded-xl p-3 text-center">
+            <p className="text-xl font-bold text-white">
+              {days.filter(d => !scheduleData[d.key]?.available).length}
+            </p>
+            <p className="text-xs text-gray-500">Days Off</p>
+          </div>
         </div>
       </div>
     </div>
@@ -946,11 +1070,462 @@ const BarberDashboard = () => {
     </div>
   );
 
+  // Handle portfolio upload
+  const handlePortfolioUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !currentBarber) return;
+
+    setIsUploadingPortfolio(true);
+    try {
+      // Get upload URL
+      const uploadUrl = await generateUploadUrl();
+
+      // Upload file
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const { storageId } = await result.json();
+
+      // Add portfolio item
+      await addPortfolioItem({
+        barber_id: currentBarber._id,
+        branch_id: currentBarber.branch_id,
+        image_storage_id: storageId,
+        caption: portfolioCaption || "",
+        tags: [],
+        is_featured: false,
+      });
+
+      setPortfolioCaption("");
+    } catch (error) {
+      console.error("Failed to upload portfolio image:", error);
+    } finally {
+      setIsUploadingPortfolio(false);
+    }
+  };
+
+  // Handle delete portfolio item
+  const handleDeletePortfolio = async (itemId) => {
+    if (!confirm("Delete this portfolio image?")) return;
+    try {
+      await deletePortfolioItem({ id: itemId });
+    } catch (error) {
+      console.error("Failed to delete portfolio item:", error);
+    }
+  };
+
+  // Render Portfolio Tab - Instagram-like Design
+  const renderPortfolio = () => (
+    <div className="pb-6 px-4">
+      {/* Instagram-style Profile Header */}
+      <div className="pt-2 pb-4">
+        <div className="flex items-center gap-5">
+          {/* Avatar */}
+          <div className="relative">
+            <div className="w-20 h-20 rounded-full overflow-hidden ring-2 ring-[var(--color-primary)] ring-offset-2 ring-offset-[#0D0D0D]">
+              {(avatarUrl || currentBarber?.avatar) ? (
+                <img
+                  src={avatarUrl || currentBarber?.avatar}
+                  alt={currentBarber?.full_name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center">
+                  <span className="text-2xl font-bold text-white">
+                    {currentBarber?.full_name?.charAt(0)}
+                  </span>
+                </div>
+              )}
+            </div>
+            {/* Add Story Button */}
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="absolute -bottom-1 -right-1 w-7 h-7 bg-[var(--color-primary)] rounded-full flex items-center justify-center border-2 border-[#0D0D0D] shadow-lg"
+            >
+              <Plus className="w-4 h-4 text-white" />
+            </button>
+          </div>
+
+          {/* Stats */}
+          <div className="flex-1 grid grid-cols-3 gap-2">
+            <div className="text-center">
+              <p className="text-xl font-bold text-white">{portfolioItems?.length || 0}</p>
+              <p className="text-xs text-gray-500">Posts</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-bold text-white">{currentBarber?.totalBookings || 0}</p>
+              <p className="text-xs text-gray-500">Clients</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-bold text-white">{currentBarber?.rating?.toFixed(1) || "5.0"}</p>
+              <p className="text-xs text-gray-500">Rating</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Bio Section */}
+        <div className="mt-4">
+          <h3 className="text-base font-bold text-white">{currentBarber?.full_name}</h3>
+          <p className="text-sm text-[var(--color-primary)] font-medium">Professional Barber</p>
+          {currentBarber?.specialties?.length > 0 && (
+            <p className="text-sm text-gray-400 mt-1">
+              {currentBarber.specialties.slice(0, 3).join(" • ")}
+            </p>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="flex-1 py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            New Post
+          </button>
+          <button
+            onClick={() => setActiveTab("profile")}
+            className="flex-1 py-2.5 bg-[#1A1A1A] hover:bg-[#2A2A2A] text-white font-semibold rounded-xl transition-colors border border-[#2A2A2A]"
+          >
+            Edit Profile
+          </button>
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="border-t border-[#1A1A1A] flex -mx-4">
+        <button className="flex-1 py-3 flex items-center justify-center gap-2 border-b-2 border-white text-white">
+          <Grid3X3 className="w-5 h-5" />
+          <span className="text-sm font-medium">Grid</span>
+        </button>
+        <button className="flex-1 py-3 flex items-center justify-center gap-2 border-b-2 border-transparent text-gray-500">
+          <Bookmark className="w-5 h-5" />
+          <span className="text-sm font-medium">Saved</span>
+        </button>
+      </div>
+
+      {/* Portfolio Grid - Instagram Style */}
+      {portfolioItems?.length === 0 ? (
+        <div className="py-16 text-center">
+          <div className="w-20 h-20 mx-auto mb-4 rounded-full border-2 border-gray-700 flex items-center justify-center">
+            <Camera className="w-10 h-10 text-gray-600" />
+          </div>
+          <h3 className="text-xl font-bold text-white mb-2">Share Photos</h3>
+          <p className="text-gray-500 text-sm max-w-xs mx-auto mb-6">
+            When you share photos, they will appear on your profile.
+          </p>
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="text-[var(--color-primary)] font-semibold text-sm hover:text-[var(--color-accent)]"
+          >
+            Share your first photo
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-1 -mx-4 mt-2">
+          {portfolioItems?.map((item, index) => (
+            <div
+              key={item._id}
+              onClick={() => setSelectedPortfolioItem(item)}
+              className="relative aspect-square cursor-pointer group"
+            >
+              <img
+                src={item.imageUrl}
+                alt={item.caption || "Portfolio"}
+                className="w-full h-full object-cover"
+              />
+              {/* Hover Overlay */}
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-6">
+                <div className="flex items-center gap-1.5 text-white">
+                  <Heart className="w-5 h-5 fill-white" />
+                  <span className="font-semibold">{item.likes_count || 0}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-white">
+                  <MessageCircle className="w-5 h-5 fill-white" />
+                  <span className="font-semibold">0</span>
+                </div>
+              </div>
+              {/* Featured Badge */}
+              {item.is_featured && (
+                <div className="absolute top-2 right-2">
+                  <Sparkles className="w-4 h-4 text-yellow-400 drop-shadow-lg" />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => {
+              if (!isUploadingPortfolio) {
+                setShowUploadModal(false);
+                setSelectedFile(null);
+                setFilePreview(null);
+              }
+            }}
+          />
+          <div className="relative w-full max-w-xl mx-4 bg-[#1A1A1A] rounded-t-3xl sm:rounded-2xl overflow-hidden animate-slide-up">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-[#2A2A2A]">
+              <button
+                onClick={() => {
+                  if (!isUploadingPortfolio) {
+                    setShowUploadModal(false);
+                    setSelectedFile(null);
+                    setFilePreview(null);
+                  }
+                }}
+                className="text-gray-400 hover:text-white transition-colors"
+                disabled={isUploadingPortfolio}
+              >
+                Cancel
+              </button>
+              <h3 className="text-base font-semibold text-white">New Post</h3>
+              <div className="w-12" />
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-4">
+              {/* Upload Area / Preview */}
+              <div className={`aspect-video rounded-2xl overflow-hidden ${
+                filePreview ? "" : "border-2 border-dashed border-[#3A3A3A]"
+              } bg-[#0D0D0D] transition-all flex flex-col items-center justify-center`}>
+                {isUploadingPortfolio ? (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-10 h-10 border-3 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+                    <span className="text-sm text-gray-400">Uploading...</span>
+                  </div>
+                ) : filePreview ? (
+                  <img
+                    src={filePreview}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-16 h-16 rounded-full bg-[#2A2A2A] flex items-center justify-center">
+                      <Camera className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-500">Select a photo to upload</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Caption Input */}
+              <input
+                type="text"
+                value={portfolioCaption}
+                onChange={(e) => setPortfolioCaption(e.target.value)}
+                placeholder="Write a caption..."
+                className="w-full h-12 px-4 bg-[#0D0D0D] border border-[#2A2A2A] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-transparent text-sm"
+                disabled={isUploadingPortfolio}
+              />
+
+              {/* Tips */}
+              <div className="flex items-start gap-3 p-3 bg-[#0D0D0D] rounded-xl">
+                <Sparkles className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  Pro tip: Upload high-quality photos of your best work to attract more clients
+                </p>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3">
+                {/* Select Photo Button */}
+                <label className={`flex-1 ${selectedFile ? "" : "flex-[2]"}`}>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setSelectedFile(file);
+                        setFilePreview(URL.createObjectURL(file));
+                      }
+                    }}
+                    className="hidden"
+                    disabled={isUploadingPortfolio}
+                  />
+                  <div className={`w-full py-4 rounded-xl font-semibold text-center cursor-pointer transition-all ${
+                    isUploadingPortfolio
+                      ? "bg-gray-700 text-gray-500 cursor-not-allowed"
+                      : selectedFile
+                        ? "bg-[#2A2A2A] hover:bg-[#3A3A3A] text-white border border-[#3A3A3A]"
+                        : "bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white"
+                  }`}>
+                    {selectedFile ? "Change Photo" : "Select Photo"}
+                  </div>
+                </label>
+
+                {/* Upload Button - Only show when file is selected */}
+                {selectedFile && (
+                  <button
+                    onClick={async () => {
+                      if (!selectedFile || isUploadingPortfolio) return;
+
+                      // Create a fake event object to pass to the existing handler
+                      const fakeEvent = { target: { files: [selectedFile] } };
+                      await handlePortfolioUpload(fakeEvent);
+
+                      // Reset and close
+                      setSelectedFile(null);
+                      setFilePreview(null);
+                      setShowUploadModal(false);
+                    }}
+                    disabled={isUploadingPortfolio}
+                    className={`flex-[2] py-4 rounded-xl font-semibold text-center transition-all ${
+                      isUploadingPortfolio
+                        ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                        : "bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white"
+                    }`}
+                  >
+                    {isUploadingPortfolio ? "Uploading..." : "Upload"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Image Modal */}
+      {selectedPortfolioItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/95"
+            onClick={() => setSelectedPortfolioItem(null)}
+          />
+          <div className="relative w-full max-w-lg mx-4">
+            {/* Post Card */}
+            <div className="bg-[#1A1A1A] rounded-2xl overflow-hidden">
+              {/* Post Header */}
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full overflow-hidden">
+                    {(avatarUrl || currentBarber?.avatar) ? (
+                      <img
+                        src={avatarUrl || currentBarber?.avatar}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center">
+                        <span className="text-sm font-bold text-white">
+                          {currentBarber?.full_name?.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-white">{currentBarber?.full_name}</p>
+                    <p className="text-xs text-gray-500">
+                      {new Date(selectedPortfolioItem.createdAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedPortfolioItem(null)}
+                  className="w-8 h-8 flex items-center justify-center hover:bg-[#2A2A2A] rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-400" />
+                </button>
+              </div>
+
+              {/* Post Image */}
+              <div className="aspect-square">
+                <img
+                  src={selectedPortfolioItem.imageUrl}
+                  alt={selectedPortfolioItem.caption || "Portfolio"}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              {/* Post Actions */}
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-4">
+                    <button className="hover:opacity-70 transition-opacity">
+                      <Heart className="w-6 h-6 text-white" />
+                    </button>
+                    <button className="hover:opacity-70 transition-opacity">
+                      <MessageCircle className="w-6 h-6 text-white" />
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleDeletePortfolio(selectedPortfolioItem._id);
+                      setSelectedPortfolioItem(null);
+                    }}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors text-sm"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                </div>
+
+                {/* Likes */}
+                <p className="text-sm font-semibold text-white mb-2">
+                  {selectedPortfolioItem.likes_count || 0} likes
+                </p>
+
+                {/* Caption */}
+                {selectedPortfolioItem.caption && (
+                  <p className="text-sm text-gray-300">
+                    <span className="font-semibold text-white mr-2">{currentBarber?.full_name?.split(' ')[0]}</span>
+                    {selectedPortfolioItem.caption}
+                  </p>
+                )}
+
+                {/* Tags */}
+                {selectedPortfolioItem.tags?.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {selectedPortfolioItem.tags.map((tag, i) => (
+                      <span key={i} className="text-sm text-[var(--color-primary)]">#{tag}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSS for animations */}
+      <style>{`
+        @keyframes slide-up {
+          from {
+            transform: translateY(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.3s ease-out forwards;
+        }
+      `}</style>
+    </div>
+  );
+
   // Main render content
   const renderContent = () => {
     switch (activeTab) {
       case "overview": return renderOverview();
       case "bookings": return <BarberBookings />;
+      case "portfolio": return renderPortfolio();
       case "earnings": return renderEarnings();
       case "schedule": return renderSchedule();
       case "clients": return renderClients();
@@ -990,22 +1565,58 @@ const BarberDashboard = () => {
             <h1 className="text-lg font-bold text-white">
               {activeTab === "overview" ? "Dashboard" :
                activeTab === "bookings" ? "Bookings" :
+               activeTab === "portfolio" ? "Portfolio" :
                activeTab === "earnings" ? "Earnings" :
                activeTab === "schedule" ? "Schedule" :
                activeTab === "clients" ? "Clients" :
                activeTab === "profile" ? "Profile" : "Dashboard"}
             </h1>
-            <button
-              onClick={() => setShowNotifications(true)}
-              className="p-2 bg-[#1A1A1A] rounded-xl relative active:scale-95 transition-transform"
-            >
-              <Bell className="w-5 h-5 text-gray-400" />
-              {(notificationUnreadCount > 0 || pendingBookings.length > 0) && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--color-primary)] text-white text-[10px] rounded-full flex items-center justify-center font-medium animate-pulse">
-                  {notificationUnreadCount > 0 ? notificationUnreadCount : pendingBookings.length}
-                </span>
+            <div className="flex items-center gap-2">
+              {/* Edit Profile Button - only show on profile tab */}
+              {activeTab === "profile" && (
+                <button
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('toggleBarberProfileEdit'));
+                  }}
+                  className="w-9 h-9 flex items-center justify-center bg-[#1A1A1A] rounded-xl active:scale-95 transition-transform"
+                >
+                  <Edit3 className="w-[18px] h-[18px] text-gray-400" />
+                </button>
               )}
-            </button>
+              {/* Notification Button */}
+              <button
+                onClick={() => setShowNotifications(true)}
+                className="w-9 h-9 flex items-center justify-center bg-[#1A1A1A] rounded-xl relative active:scale-95 transition-transform"
+              >
+                <Bell className="w-[18px] h-[18px] text-gray-400" />
+                {(notificationUnreadCount > 0 || pendingBookings.length > 0) && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--color-primary)] text-white text-[10px] rounded-full flex items-center justify-center font-medium animate-pulse">
+                    {notificationUnreadCount > 0 ? notificationUnreadCount : pendingBookings.length}
+                  </span>
+                )}
+              </button>
+              {/* Profile Button */}
+              <button
+                onClick={() => setActiveTab("profile")}
+                className={`w-9 h-9 flex items-center justify-center rounded-xl active:scale-95 transition-transform overflow-hidden ${
+                  activeTab === "profile"
+                    ? "bg-[var(--color-primary)] ring-2 ring-[var(--color-primary)]"
+                    : "bg-[#1A1A1A]"
+                }`}
+              >
+                {(avatarUrl || currentBarber?.avatar) ? (
+                  <img
+                    src={avatarUrl || currentBarber.avatar}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <UserCircle className={`w-[18px] h-[18px] ${
+                    activeTab === "profile" ? "text-white" : "text-gray-400"
+                  }`} />
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1029,7 +1640,7 @@ const BarberDashboard = () => {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => navigate(`/barber/${tab.urlPath}`, { replace: true })}
                 className={`flex flex-col items-center justify-center py-2 transition-colors ${
                   isActive ? "text-[var(--color-primary)]" : "text-gray-600"
                 }`}

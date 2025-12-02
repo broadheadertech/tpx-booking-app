@@ -191,6 +191,40 @@ const GuestServiceBooking = ({ onBack }) => {
     }
   }, [services, selectedBranch]);
 
+  // Check for pre-selected barber from barber profile page
+  useEffect(() => {
+    const preSelectedBarberData = sessionStorage.getItem("preSelectedBarber");
+    if (preSelectedBarberData && barbers && barbers.length > 0) {
+      try {
+        const preSelectedBarber = JSON.parse(preSelectedBarberData);
+        // Find the matching barber from the current barbers list
+        const matchingBarber = barbers.find(
+          (barber) => barber._id === preSelectedBarber.barberId
+        );
+
+        if (matchingBarber) {
+          setSelectedStaff(matchingBarber);
+          // If we also have a branch, auto-select it
+          if (matchingBarber.branch_id && branches) {
+            const matchingBranch = branches.find(
+              (branch) => branch._id === matchingBarber.branch_id
+            );
+            if (matchingBranch && !selectedBranch) {
+              setSelectedBranch(matchingBranch);
+              setStep(2); // Go to services step
+            }
+          }
+        }
+
+        // Clear the stored barber after using it
+        sessionStorage.removeItem("preSelectedBarber");
+      } catch (error) {
+        console.error("Error parsing pre-selected barber:", error);
+        sessionStorage.removeItem("preSelectedBarber");
+      }
+    }
+  }, [barbers, branches, selectedBranch]);
+
   // Reset QR code loading state when step changes
   useEffect(() => {
     if (step === 7) {

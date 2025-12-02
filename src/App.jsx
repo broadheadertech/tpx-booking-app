@@ -25,6 +25,8 @@ import GuestServiceBooking from "./pages/customer/GuestServiceBooking.jsx";
 import Wallet from "./pages/customer/Wallet.jsx";
 import WalletTopUp from "./pages/customer/WalletTopUp.jsx";
 import BarberDashboard from "./components/barber/BarberDashboard";
+import BarbersList from "./pages/barbers/BarbersList";
+import BarberProfile from "./pages/barbers/BarberProfile";
 import Kiosk from "./pages/Kiosk";
 import PaymentSuccess from "./pages/booking/payment/success.jsx";
 import PaymentFailure from "./pages/booking/payment/failure.jsx";
@@ -58,6 +60,8 @@ function App() {
               />
               <Route path="/landing" element={<Landing />} />
               <Route path="/guest/booking" element={<GuestServiceBooking />} />
+              <Route path="/barbers" element={<BarbersList />} />
+              <Route path="/barbers/:barberId" element={<BarberProfile />} />
               <Route
                 path="/platform-selection"
                 element={<PlatformSelection />}
@@ -135,10 +139,10 @@ function App() {
               />
               <Route
                 path="/barber"
-                element={<Navigate to="/barber/dashboard" replace />}
+                element={<Navigate to="/barber/home" replace />}
               />
               <Route
-                path="/barber/dashboard"
+                path="/barber/:tab"
                 element={
                   <ProtectedRoute requireBarber={true}>
                     <BarberDashboard />
