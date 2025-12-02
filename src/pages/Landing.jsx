@@ -148,9 +148,10 @@ const Landing = () => {
 
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center gap-8">
-              <a href="#" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">For Business</a>
-              <a href="#" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">Help</a>
-              
+              <button onClick={() => navigate("/barbers")} className="text-sm font-medium text-gray-300 hover:text-white transition-colors">Our Barbers</button>
+              <a href="#services" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">Services</a>
+              <a href="#about" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">About</a>
+
               <div className="flex items-center gap-4 pl-4 border-l border-white/10">
                 <button
                   onClick={() => navigate("/auth/login")}
@@ -180,9 +181,9 @@ const Landing = () => {
         {/* Mobile Menu Overlay */}
         {mobileMenuOpen && (
           <div className="absolute top-full left-0 right-0 bg-gray-900 border-b border-white/10 p-4 md:hidden flex flex-col gap-4 shadow-2xl">
+            <button onClick={() => { navigate("/barbers"); setMobileMenuOpen(false); }} className="text-left text-lg font-medium text-gray-300 py-2">Our Barbers</button>
             <a href="#services" className="text-lg font-medium text-gray-300 py-2">Services</a>
             <a href="#about" className="text-lg font-medium text-gray-300 py-2">About</a>
-            <a href="#reviews" className="text-lg font-medium text-gray-300 py-2">Reviews</a>
             <hr className="border-white/10" />
             <button onClick={() => navigate("/auth/login")} className="text-left text-lg font-medium text-white py-2">Log In</button>
             <button onClick={() => navigate("/guest/booking")} className="w-full py-3 rounded-xl bg-[var(--color-primary)] text-white font-bold">Book Now</button>
@@ -449,12 +450,29 @@ const Landing = () => {
                   </button>
                 </div>
               </div>
-              <div className="relative hidden md:block">
-                <img
-                  src="/screenshots/ss1.png"
-                  alt="App Screenshot"
-                  className="absolute -bottom-32 left-1/2 -translate-x-1/2 w-64 rounded-3xl shadow-2xl rotate-12 hover:rotate-0 transition-transform duration-500"
-                />
+              <div className="relative hidden md:flex flex-col items-center justify-center">
+                <div className="relative bg-black/20 backdrop-blur-sm rounded-3xl p-10 border border-white/10">
+                  {/* Decorative elements */}
+                  <div className="absolute top-0 left-0 w-20 h-20 border-l-2 border-t-2 border-white/20 rounded-tl-3xl"></div>
+                  <div className="absolute bottom-0 right-0 w-20 h-20 border-r-2 border-b-2 border-white/20 rounded-br-3xl"></div>
+
+                  <div className="text-center px-6">
+                    <p className="text-xs uppercase tracking-[0.4em] text-white/50 font-medium mb-6">
+                      Available Soon
+                    </p>
+                    <h3 className="text-4xl font-black text-white mb-3 tracking-tight">
+                      COMING SOON
+                    </h3>
+                    <div className="flex items-center justify-center gap-3 mb-6">
+                      <div className="h-px w-12 bg-gradient-to-r from-transparent to-white/40"></div>
+                      <div className="w-2 h-2 rounded-full bg-white/60"></div>
+                      <div className="h-px w-12 bg-gradient-to-l from-transparent to-white/40"></div>
+                    </div>
+                    <p className="text-white/60 text-sm leading-relaxed max-w-[240px]">
+                      Your premium grooming experience, right in your pocket
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
