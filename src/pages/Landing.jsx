@@ -49,15 +49,6 @@ const Landing = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const categories = [
-    { name: "Haircuts", icon: Scissors },
-    { name: "Beard Trim", icon: Users },
-    { name: "Shaves", icon: Shield },
-    { name: "Styling", icon: Star },
-    { name: "Treatments", icon: Award },
-    { name: "Packages", icon: Calendar },
-  ];
-
   const testimonials = [
     {
       name: "Miguel Santos",
@@ -282,26 +273,6 @@ const Landing = () => {
                 </button>
               ))}
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Categories Section */}
-      <section className="py-12 border-b border-white/5 bg-black">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-xl font-bold text-white mb-8">Browse by category</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {categories.map((category, index) => (
-              <div 
-                key={index}
-                className="group cursor-pointer p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-[var(--color-primary)]/30 transition-all duration-300 flex flex-col items-center gap-3 text-center"
-              >
-                <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 group-hover:text-[var(--color-primary)] group-hover:border-[var(--color-primary)] transition-colors">
-                  <category.icon className="w-6 h-6" />
-                </div>
-                <span className="font-semibold text-gray-300 group-hover:text-white">{category.name}</span>
-              </div>
-            ))}
           </div>
         </div>
       </section>
