@@ -79,17 +79,45 @@ const ReportsManagement = ({ onRefresh, user }) => {
     if (selectedPeriod === 'month') periodStart = monthStart
     if (selectedPeriod === 'year') periodStart = yearStart
 
-    const periodTransactions = transactions.filter(t => t.createdAt >= periodStart && t.payment_status === 'completed')
-    const periodBookings = bookings.filter(b => b.createdAt >= periodStart)
+    // Filter transactions - include both 'completed' payment_status and 'paid' status for consistency
+    const periodTransactions = transactions.filter(t =>
+      t.createdAt >= periodStart &&
+      (t.payment_status === 'completed' || t.payment_status === 'paid')
+    )
+
+    // Filter bookings by EITHER createdAt OR booking date (appointment date)
+    // This ensures bookings scheduled for today show up even if created earlier
+    const periodBookings = bookings.filter(b => {
+      // Check if booking was created in this period
+      const createdInPeriod = b.createdAt >= periodStart
+
+      // Check if booking date (appointment date) falls in this period
+      // Convert booking date string (YYYY-MM-DD) to timestamp for comparison
+      let bookingDateInPeriod = false
+      if (b.date) {
+        const bookingDate = new Date(b.date).setHours(0, 0, 0, 0)
+        const periodEnd = Date.now()
+        bookingDateInPeriod = bookingDate >= periodStart && bookingDate <= periodEnd
+      }
+
+      // Check if booking was updated/completed in this period
+      const updatedInPeriod = b.updatedAt && b.updatedAt >= periodStart
+
+      return createdInPeriod || bookingDateInPeriod || updatedInPeriod
+    })
     const validPeriodBookings = periodBookings.filter(b => b.status !== 'cancelled')
-    const allCompletedTransactions = transactions.filter(t => t.payment_status === 'completed')
+    const allCompletedTransactions = transactions.filter(t =>
+      t.payment_status === 'completed' || t.payment_status === 'paid'
+    )
 
     // Previous period for comparison
     const periodLength = now - periodStart
     const prevPeriodStart = periodStart - periodLength
     const prevPeriodEnd = periodStart
     const prevTransactions = transactions.filter(t =>
-      t.createdAt >= prevPeriodStart && t.createdAt < prevPeriodEnd && t.payment_status === 'completed'
+      t.createdAt >= prevPeriodStart &&
+      t.createdAt < prevPeriodEnd &&
+      (t.payment_status === 'completed' || t.payment_status === 'paid')
     )
     const prevBookings = bookings.filter(b => b.createdAt >= prevPeriodStart && b.createdAt < prevPeriodEnd)
     const prevValidBookings = prevBookings.filter(b => b.status !== 'cancelled')
@@ -128,6 +156,11 @@ const ReportsManagement = ({ onRefresh, user }) => {
     const prevCompletionRate = prevValidBookings.length > 0
       ? (prevValidBookings.filter(b => b.status === 'completed').length / prevValidBookings.length) * 100
       : 0
+
+    // Count completed services from transactions (more accurate for walk-in customers)
+    const completedServices = periodTransactions.reduce((sum, t) =>
+      sum + (t.services?.length || 0), 0
+    )
 
     // Staff performance
     const barberStats = barbers.map(barber => {
@@ -453,7 +486,8 @@ const ReportsManagement = ({ onRefresh, user }) => {
         totalAll: periodBookings.length,
         completed: completedBookings,
         completionRate,
-        completionChange: completionRate - prevCompletionRate
+        completionChange: completionRate - prevCompletionRate,
+        completedServices // Services completed via transactions (more accurate for walk-ins)
       },
       barbers: barberStats,
       services: popularServices,
@@ -748,10 +782,10 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
       <MetricCard
         icon={Calendar}
         iconColor="text-gray-400"
-        value={`${analytics.bookings.completionRate.toFixed(0)}%`}
+        value={analytics.bookings.total > 0 ? `${analytics.bookings.completionRate.toFixed(0)}%` : 'N/A'}
         label="Completion Rate"
-        subtext={`${analytics.bookings.completed}/${analytics.bookings.total} bookings`}
-        change={analytics.bookings.completionChange}
+        subtext={analytics.bookings.total > 0 ? `${analytics.bookings.completed}/${analytics.bookings.total} bookings` : 'No bookings'}
+        change={analytics.bookings.total > 0 ? analytics.bookings.completionChange : undefined}
       />
     </div>
 
@@ -771,11 +805,11 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
             <div className="w-full bg-[#0A0A0A] rounded-full h-2">
               <div
                 className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] h-2 rounded-full transition-all duration-500"
-                style={{ width: `${(analytics.revenue.services / analytics.revenue.total) * 100}%` }}
+                style={{ width: `${analytics.revenue.total > 0 ? (analytics.revenue.services / analytics.revenue.total) * 100 : 0}%` }}
               />
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              {((analytics.revenue.services / analytics.revenue.total) * 100).toFixed(1)}% of total revenue
+              {analytics.revenue.total > 0 ? ((analytics.revenue.services / analytics.revenue.total) * 100).toFixed(1) : '0.0'}% of total revenue
             </p>
           </div>
           <div>
@@ -786,11 +820,11 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
             <div className="w-full bg-[#0A0A0A] rounded-full h-2">
               <div
                 className="bg-gray-500 h-2 rounded-full transition-all duration-500"
-                style={{ width: `${(analytics.revenue.products / analytics.revenue.total) * 100}%` }}
+                style={{ width: `${analytics.revenue.total > 0 ? (analytics.revenue.products / analytics.revenue.total) * 100 : 0}%` }}
               />
             </div>
             <p className="text-xs text-gray-500 mt-1">
-              {((analytics.revenue.products / analytics.revenue.total) * 100).toFixed(1)}% of total revenue
+              {analytics.revenue.total > 0 ? ((analytics.revenue.products / analytics.revenue.total) * 100).toFixed(1) : '0.0'}% of total revenue
             </p>
           </div>
         </div>
@@ -811,10 +845,16 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
             <span className="text-white font-semibold">{analytics.bookings.completed}</span>
           </div>
           <div className="flex items-center justify-between">
+            <span className="text-gray-400 text-sm">Services Completed</span>
+            <span className="text-[var(--color-primary)] font-semibold">{analytics.bookings.completedServices}</span>
+          </div>
+          <div className="flex items-center justify-between">
             <span className="text-gray-400 text-sm">Completion Rate</span>
             <div className="flex items-center gap-2">
-              <span className="text-white font-semibold">{analytics.bookings.completionRate.toFixed(1)}%</span>
-              {analytics.bookings.completionChange !== 0 && (
+              <span className="text-white font-semibold">
+                {analytics.bookings.total > 0 ? `${analytics.bookings.completionRate.toFixed(1)}%` : 'N/A'}
+              </span>
+              {analytics.bookings.total > 0 && analytics.bookings.completionChange !== 0 && (
                 <span className={`text-xs flex items-center ${analytics.bookings.completionChange > 0 ? 'text-green-400' : 'text-red-400'}`}>
                   {analytics.bookings.completionChange > 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
                   {Math.abs(analytics.bookings.completionChange).toFixed(1)}%
@@ -846,7 +886,7 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
               <div>
                 <p className="text-white font-medium text-sm">{barber.name}</p>
                 <p className="text-gray-400 text-xs">
-                  {barber.transactions} txn • {barber.completionRate.toFixed(0)}% complete
+                  {barber.transactions} txn{barber.bookings > 0 ? ` • ${barber.completionRate.toFixed(0)}% complete` : ''}
                 </p>
               </div>
             </div>
@@ -936,7 +976,7 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
       </h3>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {Object.entries(analytics.paymentMethods).map(([method, count]) => {
-          const percentage = (count / analytics.transactions.count) * 100
+          const percentage = analytics.transactions.count > 0 ? (count / analytics.transactions.count) * 100 : 0
           return (
             <div key={method} className="bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg p-3 text-center">
               <p className="text-2xl font-bold text-white mb-1">{count}</p>

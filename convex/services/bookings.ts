@@ -46,7 +46,8 @@ export const getAllBookings = query({
           discount_amount: booking.discount_amount,
           voucher_id: booking.voucher_id,
           notes: booking.notes,
-          createdAt: booking._creationTime,
+          createdAt: booking.createdAt || booking._creationTime,
+          updatedAt: booking.updatedAt || booking._creationTime, // Include updatedAt for reports filtering
           // Prioritize booking.customer_name (for walk-in customers with actual names)
           // Only fall back to customer?.username if booking.customer_name is not set
           customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
@@ -106,7 +107,8 @@ export const getBookingsByBranch = query({
           discount_amount: booking.discount_amount,
           voucher_id: booking.voucher_id,
           notes: booking.notes,
-          createdAt: booking._creationTime,
+          createdAt: booking.createdAt || booking._creationTime,
+          updatedAt: booking.updatedAt || booking._creationTime, // Include updatedAt for reports filtering
           // Prioritize booking.customer_name (for walk-in customers with actual names)
           // Only fall back to customer?.username if booking.customer_name is not set
           customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',

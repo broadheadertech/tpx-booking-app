@@ -6,60 +6,78 @@ import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 
 // Helper function to get or create a walk-in customer
 async function getOrCreateWalkInCustomer(ctx: any, branch_id: Id<"branches">, customerName?: string, customerPhone?: string): Promise<Id<"users"> | undefined> {
-  try {
-    console.log('[WALK-IN CUSTOMER] Creating walk-in customer:', {
-      branch_id,
-      customerName,
-      customerPhone
-    });
-    
-    // For walk-in customers, we'll always create a new record
-    // This ensures each walk-in transaction is properly tracked
-    // Use customer name if provided, otherwise generate a unique walk-in username
-    const baseUsername = customerName?.trim() 
-      ? customerName.trim().replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()
-      : `walkin_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    const walkInUsername = `${baseUsername}_${Date.now()}`;
-    const walkInEmail = `${walkInUsername}@walkin.local`;
+  // Retry mechanism for walk-in customer creation
+  const maxRetries = 3;
+  let lastError: any = null;
 
-    console.log('[WALK-IN CUSTOMER] Generated credentials:', {
-      walkInUsername,
-      walkInEmail
-    });
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[WALK-IN CUSTOMER] Attempt ${attempt}/${maxRetries} - Creating walk-in customer:`, {
+        branch_id,
+        customerName,
+        customerPhone
+      });
 
-    const userData = {
-      username: walkInUsername,
-      email: walkInEmail,
-      password: "walkin_" + Math.random().toString(36), // Random password for walk-ins
-      mobile_number: customerPhone || "",
-      nickname: customerName?.trim() || "", // Store actual name in nickname
-      role: "customer",
-      branch_id: branch_id,
-      is_active: true,
-      avatar: "",
-      bio: "",
-      skills: [],
-      isVerified: false,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
+      // For walk-in customers, we'll always create a new record
+      // This ensures each walk-in transaction is properly tracked
+      // Use customer name if provided, otherwise generate a unique walk-in username
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).substring(2, 8);
+      const baseUsername = customerName?.trim()
+        ? customerName.trim().replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()
+        : `walkin_${timestamp}_${randomSuffix}`;
+      const walkInUsername = `${baseUsername}_${timestamp}_${randomSuffix}`;
+      const walkInEmail = `${walkInUsername}@walkin.local`;
 
-    console.log('[WALK-IN CUSTOMER] Inserting user with data:', userData);
+      console.log('[WALK-IN CUSTOMER] Generated credentials:', {
+        walkInUsername,
+        walkInEmail
+      });
 
-    const customerId = await ctx.db.insert("users", userData);
+      const userData = {
+        username: walkInUsername,
+        email: walkInEmail,
+        password: "walkin_" + Math.random().toString(36), // Random password for walk-ins
+        mobile_number: customerPhone || "",
+        nickname: customerName?.trim() || "", // Store actual name in nickname
+        role: "customer",
+        branch_id: branch_id,
+        is_active: true,
+        avatar: "",
+        bio: "",
+        skills: [],
+        isVerified: false,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      };
 
-    console.log('[WALK-IN CUSTOMER] Successfully created walk-in customer with ID:', customerId);
+      console.log('[WALK-IN CUSTOMER] Inserting user with data:', userData);
 
-    return customerId;
-  } catch (error) {
-    console.error("[WALK-IN CUSTOMER] ERROR - Failed to create walk-in customer:", error);
-    console.error('[WALK-IN CUSTOMER] ERROR details:', {
-      message: error.message,
-      stack: error.stack,
-      data: error.data
-    });
-    return undefined;
+      const customerId = await ctx.db.insert("users", userData);
+
+      console.log('[WALK-IN CUSTOMER] Successfully created walk-in customer with ID:', customerId);
+
+      return customerId;
+    } catch (error: any) {
+      lastError = error;
+      console.error(`[WALK-IN CUSTOMER] Attempt ${attempt}/${maxRetries} failed:`, error?.message || error);
+
+      // If it's not the last attempt, wait briefly before retrying
+      if (attempt < maxRetries) {
+        console.log(`[WALK-IN CUSTOMER] Retrying in ${attempt * 100}ms...`);
+        // Small delay between retries (can't use setTimeout in Convex, so we just continue)
+      }
+    }
   }
+
+  // All retries failed
+  console.error("[WALK-IN CUSTOMER] All retry attempts failed:", lastError?.message || lastError);
+  console.error('[WALK-IN CUSTOMER] ERROR details:', {
+    message: lastError?.message,
+    stack: lastError?.stack,
+    data: lastError?.data
+  });
+  return undefined;
 }
 
 // Create a new transaction
