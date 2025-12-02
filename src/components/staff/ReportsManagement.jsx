@@ -101,7 +101,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
       }
 
       // Check if booking was updated/completed in this period
-      const updatedInPeriod = b.updatedAt && b.updatedAt >= periodStart
+      const updatedInPeriod = b.date && b.date >= periodStart
 
       return createdInPeriod || bookingDateInPeriod || updatedInPeriod
     })
