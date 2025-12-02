@@ -306,9 +306,9 @@ const Landing = () => {
                     alt={service.name}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
-                  <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-bold text-white border border-white/10">
+                  {/* <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-bold text-white border border-white/10">
                     {service.category || "Service"}
-                  </div>
+                  </div> */}
                 </div>
                 <div className="p-5">
                   <h3 className="font-bold text-lg text-white mb-1 group-hover:text-[var(--color-primary)] transition-colors">{service.name}</h3>
@@ -334,6 +334,9 @@ const Landing = () => {
                     </button>
                   </div>
                 </div>
+                <span className="font-semibold text-gray-300 group-hover:text-white">
+                  {category.name}
+                </span>
               </div>
             ))}
             {recommendedServices.length === 0 && !loadingServices && (
