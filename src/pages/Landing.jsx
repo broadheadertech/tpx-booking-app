@@ -153,7 +153,7 @@ const Landing = () => {
               )}
               <div>
                 <h1 className="text-xl font-bold tracking-tight leading-none text-white">
-                  {branding?.display_name || "Tipuno X"}
+                  {branding?.display_name || "Title"}
                 </h1>
                 <p className="text-[10px] font-medium tracking-[0.2em] uppercase mt-1 text-gray-400">
                   Premium Grooming
@@ -258,7 +258,7 @@ const Landing = () => {
               </span>
             </h1>
             <p className="text-lg text-gray-400 mb-8 max-w-lg">
-              Experience the pinnacle of grooming at FCVNDO. Where traditional
+              Experience the pinnacle of grooming. Where traditional
               barbering meets modern luxury.{" "}
             </p>
 
