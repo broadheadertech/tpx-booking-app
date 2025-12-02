@@ -145,8 +145,6 @@ const ReceiptModal = ({
   </style>
 </head>
 <body>
-  <div class="center bold" style="font-size: 20px; margin-bottom: 1.5mm; letter-spacing: 1.5px;">TIPUNOX</div>
-  <div class="center bold" style="font-size: 17px; margin-bottom: 1mm;">ANGELES BARBERSHOP</div>
   ${branchInfo?.name ? `<div class="center" style="font-size: 12px; margin-bottom: 0.5mm;">${escapeHtml(branchInfo.name)}</div>` : ''}
   ${branchInfo?.address ? `<div class="center" style="font-size: 12px; margin-bottom: 0.5mm;">${escapeHtml(branchInfo.address)}</div>` : ''}
   ${branchInfo?.phone ? `<div class="center" style="font-size: 12px; margin-bottom: 1mm;">Tel: ${escapeHtml(branchInfo.phone)}</div>` : ''}
@@ -240,8 +238,8 @@ const ReceiptModal = ({
     const dashedLine = '-'.repeat(width)
     
     const lines = []
-    lines.push(center('TIPUNOX'))
-    lines.push(center('ANGELES BARBERSHOP'))
+    lines.push(center(branchInfo?.name))
+    lines.push(center('SYSTEM'))
     if (branchInfo?.name) lines.push(center(branchInfo.name))
     if (branchInfo?.address) lines.push(center(branchInfo.address.substring(0, width)))
     if (branchInfo?.phone) lines.push(center(`Tel: ${branchInfo.phone}`))
