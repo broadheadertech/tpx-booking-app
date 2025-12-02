@@ -2191,14 +2191,14 @@ const BookingsManagement = ({ onRefresh, user }) => {
                                         <>
                                           <button
                                             onClick={() => {
-                                              setConfirmModal({ show: true, booking, action: 'complete' })
+                                              handlePOSRedirect(booking)
                                               setDropdownState({ id: null, position: null })
                                             }}
                                             className="w-full px-3 py-2 text-left text-sm text-white hover:bg-[#2A2A2A] transition-colors flex items-center gap-2"
                                             disabled={loading}
                                           >
-                                            <CheckCircle className="h-4 w-4 text-[var(--color-primary)]" />
-                                            <span>Complete</span>
+                                            <CreditCard className="h-4 w-4 text-green-400" />
+                                            <span>POS</span>
                                           </button>
                                           <button
                                             onClick={() => {
@@ -2334,8 +2334,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal />
 
-      {/* Confirmation Modal */}
-      {confirmModal.show && (
+      {/* Confirmation Modal - rendered via portal to escape parent overflow constraints */}
+      {confirmModal.show && createPortal(
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" style={{ zIndex: 99999 }}>
           <div className="bg-[#1A1A1A] rounded-2xl p-6 max-w-md w-full shadow-2xl border border-[#2A2A2A]/50">
             <div className="text-center space-y-4">
@@ -2426,7 +2426,8 @@ const BookingsManagement = ({ onRefresh, user }) => {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
