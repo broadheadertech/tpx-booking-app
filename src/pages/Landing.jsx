@@ -282,10 +282,10 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-end mb-10">
             <div>
-              <h2 className="text-3xl font-bold text-white">Recommended for you</h2>
-              <p className="text-gray-500 mt-2">Top rated services in your area</p>
+              <h2 className="text-3xl font-bold text-white">Our Services</h2>
+              <p className="text-gray-500 mt-2">Premium grooming experiences tailored for you</p>
             </div>
-            <button 
+            <button
               onClick={() => navigate('/guest/booking')}
               className="hidden md:flex items-center gap-2 text-[var(--color-primary)] font-bold hover:brightness-110 transition-all"
             >
@@ -293,45 +293,47 @@ const Landing = () => {
             </button>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
             {recommendedServices.map((service, index) => (
-              <div 
+              <div
                 key={index}
-                className="bg-gray-900 rounded-2xl overflow-hidden border border-white/5 hover:border-[var(--color-primary)]/30 hover:shadow-xl hover:shadow-[var(--color-primary)]/5 transition-all duration-300 cursor-pointer group"
+                className="group relative bg-gradient-to-br from-[#1A1A1A] to-[#0D0D0D] rounded-2xl p-6 border border-[#2A2A2A] hover:border-[var(--color-primary)]/50 transition-all duration-300 cursor-pointer overflow-hidden"
                 onClick={() => navigate('/guest/booking')}
               >
-                <div className="relative aspect-[4/3] overflow-hidden bg-gray-800">
-                  <img 
-                    src={service.image || "/landing/2.webp"} 
-                    alt={service.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                  <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-bold text-white border border-white/10">
+                {/* Accent glow on hover */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+                {/* Category badge */}
+                <div className="relative z-10">
+                  <span className="inline-block px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--color-primary)] bg-[var(--color-primary)]/10 rounded-full border border-[var(--color-primary)]/20 mb-4">
                     {service.category || "Service"}
-                  </div>
-                </div>
-                <div className="p-5">
-                  <h3 className="font-bold text-lg text-white mb-1 group-hover:text-[var(--color-primary)] transition-colors">{service.name}</h3>
-                  <p className="text-gray-400 text-sm mb-3 flex items-center gap-1 line-clamp-1">
-                    {service.description}
+                  </span>
+
+                  {/* Service name */}
+                  <h3 className="font-bold text-xl text-white mb-2 group-hover:text-[var(--color-primary)] transition-colors line-clamp-1">
+                    {service.name}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="text-gray-500 text-sm mb-5 line-clamp-2 min-h-[40px]">
+                    {service.description || "Premium service"}
                   </p>
-                  
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="flex items-center gap-1 bg-[var(--color-primary)]/10 px-2 py-0.5 rounded text-[var(--color-primary)] text-xs font-bold border border-[var(--color-primary)]/20">
-                      <span className="font-black">5.0</span>
-                      <Star className="w-3 h-3 fill-current" />
-                    </div>
-                    <span className="text-xs text-gray-500">(25+ reviews)</span>
+
+                  {/* Duration indicator */}
+                  <div className="flex items-center gap-2 text-gray-400 text-xs mb-5">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>{service.duration_minutes || 30} mins</span>
                   </div>
 
-                  <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                  {/* Price and CTA */}
+                  <div className="flex items-center justify-between pt-4 border-t border-[#2A2A2A]">
                     <div>
-                      <p className="text-xs text-gray-500 uppercase font-bold">Price</p>
-                      <p className="font-bold text-white">₱{service.price}</p>
+                      <p className="text-[10px] text-gray-600 uppercase font-semibold tracking-wider">Starting at</p>
+                      <p className="text-2xl font-black text-white">₱{service.price}</p>
                     </div>
-                    <button className="px-4 py-2 rounded-lg bg-white text-black text-sm font-bold hover:bg-[var(--color-primary)] hover:text-white transition-colors">
-                      Book
-                    </button>
+                    <div className="w-10 h-10 rounded-full bg-[var(--color-primary)] flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                      <ArrowRight className="w-5 h-5 text-white" />
+                    </div>
                   </div>
                 </div>
               </div>
