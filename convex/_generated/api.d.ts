@@ -19,6 +19,8 @@ import type * as services_bookingNotifications from "../services/bookingNotifica
 import type * as services_bookings from "../services/bookings.js";
 import type * as services_branches from "../services/branches.js";
 import type * as services_branding from "../services/branding.js";
+import type * as services_customBookingForms from "../services/customBookingForms.js";
+import type * as services_customBookingSubmissions from "../services/customBookingSubmissions.js";
 import type * as services_emailMarketing from "../services/emailMarketing.js";
 import type * as services_emailTemplates from "../services/emailTemplates.js";
 import type * as services_events from "../services/events.js";
@@ -55,6 +57,8 @@ declare const fullApi: ApiFromModules<{
   "services/bookings": typeof services_bookings;
   "services/branches": typeof services_branches;
   "services/branding": typeof services_branding;
+  "services/customBookingForms": typeof services_customBookingForms;
+  "services/customBookingSubmissions": typeof services_customBookingSubmissions;
   "services/emailMarketing": typeof services_emailMarketing;
   "services/emailTemplates": typeof services_emailTemplates;
   "services/events": typeof services_events;

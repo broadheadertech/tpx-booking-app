@@ -203,12 +203,16 @@ export default defineSchema({
         })
       )
     ),
+    // Custom booking feature - allows barbers to have a custom form instead of regular booking
+    custom_booking_enabled: v.optional(v.boolean()),
+    custom_booking_form_id: v.optional(v.id("custom_booking_forms")),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_user", ["user"])
     .index("by_active", ["is_active"])
-    .index("by_branch", ["branch_id"]),
+    .index("by_branch", ["branch_id"])
+    .index("by_custom_booking", ["custom_booking_enabled"]),
 
   // Services table
   services: defineTable({
@@ -994,4 +998,80 @@ export default defineSchema({
   })
     .index("by_template_type", ["template_type"])
     .index("by_active", ["is_active"]),
+
+  // Custom booking forms - form builder for barbers with custom booking process
+  custom_booking_forms: defineTable({
+    barber_id: v.id("barbers"),
+    branch_id: v.id("branches"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    fields: v.array(
+      v.object({
+        id: v.string(), // unique field identifier
+        type: v.union(
+          v.literal("text"),
+          v.literal("email"),
+          v.literal("phone"),
+          v.literal("textarea"),
+          v.literal("select"),
+          v.literal("multiselect"),
+          v.literal("radio"),
+          v.literal("checkbox"),
+          v.literal("date"),
+          v.literal("date_range"), // For preferred dates (2-3 possible dates)
+          v.literal("number")
+        ),
+        label: v.string(),
+        placeholder: v.optional(v.string()),
+        required: v.boolean(),
+        options: v.optional(v.array(v.string())), // For select, multiselect, radio, checkbox
+        helpText: v.optional(v.string()),
+        order: v.number(),
+      })
+    ),
+    status: v.union(v.literal("active"), v.literal("inactive")),
+    created_by: v.optional(v.id("users")),
+    updated_by: v.optional(v.id("users")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_barber", ["barber_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"]),
+
+  // Custom booking submissions - customer submissions for custom booking forms
+  custom_booking_submissions: defineTable({
+    form_id: v.id("custom_booking_forms"),
+    barber_id: v.id("barbers"),
+    branch_id: v.id("branches"),
+    booking_id: v.optional(v.id("bookings")), // Reference booking for transaction tracking
+    // Customer info (always captured)
+    customer_name: v.string(),
+    customer_email: v.optional(v.string()),
+    customer_phone: v.optional(v.string()),
+    // Form responses as key-value pairs (field_id -> response)
+    responses: v.any(), // Object with field_id keys and response values
+    // Status workflow
+    status: v.union(
+      v.literal("pending"),      // New submission
+      v.literal("contacted"),    // Staff has contacted customer
+      v.literal("confirmed"),    // Booking confirmed with customer
+      v.literal("completed"),    // Service completed
+      v.literal("cancelled")     // Cancelled
+    ),
+    // Staff notes and follow-up
+    notes: v.optional(v.string()),
+    contacted_at: v.optional(v.number()),
+    confirmed_at: v.optional(v.number()),
+    completed_at: v.optional(v.number()),
+    handled_by: v.optional(v.id("users")), // Staff who handled this submission
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_form", ["form_id"])
+    .index("by_barber", ["barber_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"])
+    .index("by_booking", ["booking_id"])
+    .index("by_created_at", ["createdAt"]),
 });

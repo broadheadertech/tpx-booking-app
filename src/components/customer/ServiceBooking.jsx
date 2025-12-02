@@ -98,6 +98,15 @@ const ServiceBooking = ({ onBack }) => {
   const qrRef = useRef(null);
   const [openCategory, setOpenCategory] = useState(null); // ✅ Top level hook
 
+  // Custom booking form states
+  const [showCustomBookingForm, setShowCustomBookingForm] = useState(false);
+  const [customFormResponses, setCustomFormResponses] = useState({});
+  const [customFormCustomerName, setCustomFormCustomerName] = useState(user?.full_name || user?.nickname || "");
+  const [customFormCustomerEmail, setCustomFormCustomerEmail] = useState(user?.email || "");
+  const [customFormCustomerPhone, setCustomFormCustomerPhone] = useState(user?.mobile_number || user?.phone || "");
+  const [customBookingSubmitting, setCustomBookingSubmitting] = useState(false);
+  const [customBookingSuccess, setCustomBookingSuccess] = useState(null);
+
   // Convex queries
   const branches = useQuery(api.services.branches.getActiveBranches);
   const services = useQuery(
@@ -112,6 +121,17 @@ const ServiceBooking = ({ onBack }) => {
     api.services.vouchers.getVouchersByUser,
     user?._id ? { userId: user._id } : "skip"
   );
+
+  // Query for custom booking form when a barber with custom booking is selected
+  const customBookingForm = useQuery(
+    api.services.customBookingForms.getActiveFormByBarber,
+    selectedStaff?.custom_booking_enabled && selectedStaff?._id
+      ? { barber_id: selectedStaff._id }
+      : "skip"
+  );
+
+  // Mutation for submitting custom booking form
+  const submitCustomBookingForm = useMutation(api.services.customBookingSubmissions.submitForm);
 
   // Convex mutations and actions
   const createBooking = useMutation(api.services.bookings.createBooking);
@@ -611,7 +631,76 @@ const ServiceBooking = ({ onBack }) => {
     sessionStorage.setItem("barberId", barber._id);
 
     setSelectedStaff(barber); // keep full object
-    setStep(3);
+
+    // Check if barber has custom booking enabled
+    if (barber.custom_booking_enabled) {
+      // Reset custom form state
+      setCustomFormResponses({});
+      setCustomFormCustomerName(user?.full_name || user?.nickname || "");
+      setCustomFormCustomerEmail(user?.email || "");
+      setCustomFormCustomerPhone(user?.mobile_number || user?.phone || "");
+      setCustomBookingSuccess(null);
+      setShowCustomBookingForm(true);
+    } else {
+      setStep(3);
+    }
+  };
+
+  // Handle custom booking form submission
+  const handleCustomBookingSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!customBookingForm || !selectedStaff) return;
+
+    // Validate required fields
+    if (!customFormCustomerName.trim()) {
+      setError("Please enter your name");
+      return;
+    }
+
+    // Validate required form fields
+    for (const field of customBookingForm.fields) {
+      if (field.required) {
+        const response = customFormResponses[field.id];
+        if (
+          response === undefined ||
+          response === null ||
+          response === "" ||
+          (Array.isArray(response) && response.length === 0)
+        ) {
+          setError(`Please fill in: ${field.label}`);
+          return;
+        }
+      }
+    }
+
+    setCustomBookingSubmitting(true);
+    setError(null);
+
+    try {
+      const result = await submitCustomBookingForm({
+        form_id: customBookingForm._id,
+        customer_name: customFormCustomerName.trim(),
+        customer_email: customFormCustomerEmail.trim() || undefined,
+        customer_phone: customFormCustomerPhone.trim() || undefined,
+        responses: customFormResponses,
+      });
+
+      setCustomBookingSuccess(result);
+    } catch (err) {
+      setError(err.message || "Failed to submit booking request");
+    } finally {
+      setCustomBookingSubmitting(false);
+    }
+  };
+
+  // Close custom booking form
+  const handleCloseCustomBookingForm = () => {
+    setShowCustomBookingForm(false);
+    setSelectedStaff(null);
+    setCustomFormResponses({});
+    setCustomBookingSuccess(null);
+    setError(null);
   };
 
   const handleConfirmBooking = async (
@@ -1748,8 +1837,326 @@ const ServiceBooking = ({ onBack }) => {
     );
   };
 
+  // Render field input based on type
+  const renderCustomFormField = (field) => {
+    const value = customFormResponses[field.id] || (field.type === 'checkbox' || field.type === 'multiselect' ? [] : '');
+
+    const baseInputClass = "w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-primary)] transition-all";
+
+    switch (field.type) {
+      case 'text':
+      case 'email':
+      case 'phone':
+      case 'number':
+        return (
+          <input
+            type={field.type === 'phone' ? 'tel' : field.type}
+            value={value}
+            onChange={(e) => setCustomFormResponses(prev => ({ ...prev, [field.id]: e.target.value }))}
+            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+            className={baseInputClass}
+          />
+        );
+      case 'textarea':
+        return (
+          <textarea
+            value={value}
+            onChange={(e) => setCustomFormResponses(prev => ({ ...prev, [field.id]: e.target.value }))}
+            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+            rows={3}
+            className={`${baseInputClass} resize-none`}
+          />
+        );
+      case 'select':
+        return (
+          <select
+            value={value}
+            onChange={(e) => setCustomFormResponses(prev => ({ ...prev, [field.id]: e.target.value }))}
+            className={baseInputClass}
+          >
+            <option value="">Select an option...</option>
+            {(field.options || []).map((option, idx) => (
+              <option key={idx} value={option}>{option}</option>
+            ))}
+          </select>
+        );
+      case 'multiselect':
+      case 'checkbox':
+        return (
+          <div className="space-y-2">
+            {(field.options || []).map((option, idx) => {
+              const isSelected = Array.isArray(value) && value.includes(option);
+              return (
+                <label key={idx} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={(e) => {
+                      setCustomFormResponses(prev => {
+                        const current = Array.isArray(prev[field.id]) ? prev[field.id] : [];
+                        if (e.target.checked) {
+                          return { ...prev, [field.id]: [...current, option] };
+                        } else {
+                          return { ...prev, [field.id]: current.filter(v => v !== option) };
+                        }
+                      });
+                    }}
+                    className="w-5 h-5 rounded border-gray-600 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                  />
+                  <span className="text-white">{option}</span>
+                </label>
+              );
+            })}
+          </div>
+        );
+      case 'radio':
+        return (
+          <div className="space-y-2">
+            {(field.options || []).map((option, idx) => (
+              <label key={idx} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl cursor-pointer hover:bg-white/10 transition-all">
+                <input
+                  type="radio"
+                  name={field.id}
+                  checked={value === option}
+                  onChange={() => setCustomFormResponses(prev => ({ ...prev, [field.id]: option }))}
+                  className="w-5 h-5 border-gray-600 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                />
+                <span className="text-white">{option}</span>
+              </label>
+            ))}
+          </div>
+        );
+      case 'date':
+        return (
+          <input
+            type="date"
+            value={value}
+            onChange={(e) => setCustomFormResponses(prev => ({ ...prev, [field.id]: e.target.value }))}
+            min={new Date().toISOString().split('T')[0]}
+            className={baseInputClass}
+          />
+        );
+      case 'date_range':
+        return (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">From</label>
+              <input
+                type="date"
+                value={value?.from || ''}
+                onChange={(e) => setCustomFormResponses(prev => ({
+                  ...prev,
+                  [field.id]: { ...prev[field.id], from: e.target.value }
+                }))}
+                min={new Date().toISOString().split('T')[0]}
+                className={baseInputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">To</label>
+              <input
+                type="date"
+                value={value?.to || ''}
+                onChange={(e) => setCustomFormResponses(prev => ({
+                  ...prev,
+                  [field.id]: { ...prev[field.id], to: e.target.value }
+                }))}
+                min={value?.from || new Date().toISOString().split('T')[0]}
+                className={baseInputClass}
+              />
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => setCustomFormResponses(prev => ({ ...prev, [field.id]: e.target.value }))}
+            placeholder={field.placeholder}
+            className={baseInputClass}
+          />
+        );
+    }
+  };
+
+  // Custom booking form modal content
+  const renderCustomBookingFormModal = () => {
+    if (!showCustomBookingForm || !selectedStaff) return null;
+
+    // Show success state
+    if (customBookingSuccess) {
+      return (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0A0A0A] rounded-2xl w-full max-w-md border border-[#2A2A2A] overflow-hidden">
+            <div className="p-8 text-center">
+              <div className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center"
+                style={{ backgroundColor: hexToRgba(branding?.primary_color || "#F68B24", 0.2) }}>
+                <CheckCircle className="w-10 h-10" style={{ color: branding?.primary_color || "#F68B24" }} />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">Request Submitted!</h2>
+              <p className="text-gray-400 mb-4">
+                Your booking request has been sent to {selectedStaff.full_name || selectedStaff.name}.
+                They will contact you soon to confirm your appointment.
+              </p>
+              <p className="text-sm text-gray-500 mb-6">
+                Reference Code: <span className="font-mono text-[var(--color-primary)]">{customBookingSuccess.booking_code}</span>
+              </p>
+              <button
+                onClick={handleCloseCustomBookingForm}
+                className="w-full py-4 text-white font-bold rounded-xl transition-all"
+                style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Loading state for form
+    if (!customBookingForm) {
+      return (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0A0A0A] rounded-2xl w-full max-w-md p-8 text-center border border-[#2A2A2A]">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[var(--color-primary)] mx-auto mb-4"></div>
+            <p className="text-gray-400">Loading booking form...</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-[#0A0A0A] rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col border border-[#2A2A2A]">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-[#2A2A2A]">
+            <div className="flex items-center gap-3">
+              <BarberAvatar barber={selectedStaff} className="w-10 h-10" />
+              <div>
+                <h2 className="font-bold text-white">{customBookingForm.title}</h2>
+                <p className="text-sm text-gray-400">with {selectedStaff.full_name || selectedStaff.name}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleCloseCustomBookingForm}
+              className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Form Content */}
+          <form onSubmit={handleCustomBookingSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
+            {customBookingForm.description && (
+              <p className="text-gray-400 text-sm mb-4">{customBookingForm.description}</p>
+            )}
+
+            {/* Customer Info */}
+            <div className="space-y-4 pb-4 border-b border-[#2A2A2A]">
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Your Information</h3>
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">
+                  Full Name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={customFormCustomerName}
+                  onChange={(e) => setCustomFormCustomerName(e.target.value)}
+                  placeholder="Enter your full name"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-primary)]"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Email Address</label>
+                <input
+                  type="email"
+                  value={customFormCustomerEmail}
+                  onChange={(e) => setCustomFormCustomerEmail(e.target.value)}
+                  placeholder="Enter your email"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-primary)]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Phone Number</label>
+                <input
+                  type="tel"
+                  value={customFormCustomerPhone}
+                  onChange={(e) => setCustomFormCustomerPhone(e.target.value)}
+                  placeholder="Enter your phone number"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-primary)]"
+                />
+              </div>
+            </div>
+
+            {/* Custom Fields */}
+            {customBookingForm.fields && customBookingForm.fields.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Booking Details</h3>
+                {customBookingForm.fields.sort((a, b) => a.order - b.order).map(field => (
+                  <div key={field.id}>
+                    <label className="block text-sm font-medium text-white mb-2">
+                      {field.label}
+                      {field.required && <span className="text-red-400 ml-1">*</span>}
+                    </label>
+                    {field.helpText && (
+                      <p className="text-xs text-gray-500 mb-2">{field.helpText}</p>
+                    )}
+                    {renderCustomFormField(field)}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Error Display */}
+            {error && (
+              <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+                <p className="text-red-400 text-sm flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  {error}
+                </p>
+              </div>
+            )}
+          </form>
+
+          {/* Footer */}
+          <div className="p-4 border-t border-[#2A2A2A] space-y-3">
+            <button
+              type="submit"
+              onClick={handleCustomBookingSubmit}
+              disabled={customBookingSubmitting}
+              className="w-full py-4 text-white font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
+            >
+              {customBookingSubmitting ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                "Submit Booking Request"
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={handleCloseCustomBookingForm}
+              className="w-full py-3 text-gray-400 font-medium rounded-xl hover:bg-white/5 transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
+      {/* Custom Booking Form Modal */}
+      {renderCustomBookingFormModal()}
+
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
         <div className="max-w-md mx-auto px-4">

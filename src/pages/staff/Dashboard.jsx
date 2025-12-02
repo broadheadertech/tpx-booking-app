@@ -18,6 +18,7 @@ import ProductsManagement from "../../components/staff/ProductsManagement";
 import NotificationsManagement from "../../components/staff/NotificationsManagement";
 import EmailMarketing from "../../components/staff/EmailMarketing";
 import PayrollManagement from "../../components/staff/PayrollManagement";
+import CustomBookingsManagement from "../../components/staff/CustomBookingsManagement";
 import DashboardFooter from "../../components/common/DashboardFooter";
 import {
   NotificationModal,
@@ -205,7 +206,8 @@ function StaffDashboard() {
   const renderTabContent = () => {
     // Basic security check: if user doesn't have access to the tab, fall back to overview
     // Super admins bypass this check
-    if (user?.role !== "super_admin" && activeTab !== "overview") {
+    // Always allow overview and custom_bookings tabs
+    if (user?.role !== "super_admin" && activeTab !== "overview" && activeTab !== "custom_bookings") {
       if (
         user?.page_access &&
         user.page_access.length > 0 &&
@@ -289,6 +291,9 @@ function StaffDashboard() {
       case "email_marketing":
         return <EmailMarketing onRefresh={handleRefresh} />;
 
+      case "custom_bookings":
+        return <CustomBookingsManagement onRefresh={handleRefresh} user={user} />;
+
       default:
         return renderOverview();
     }
@@ -336,6 +341,7 @@ function StaffDashboard() {
     { id: "overview", label: "Overview", icon: "dashboard" },
     { id: "reports", label: "Reports", icon: "chart" },
     { id: "bookings", label: "Bookings", icon: "calendar" },
+    { id: "custom_bookings", label: "Custom Bookings", icon: "file-text" },
     { id: "calendar", label: "Calendar", icon: "calendar" },
     { id: "services", label: "Services", icon: "scissors" },
     { id: "vouchers", label: "Vouchers", icon: "gift" },
@@ -356,8 +362,8 @@ function StaffDashboard() {
       ? baseTabs
       : user?.page_access
         ? baseTabs.filter(
-          (t) => user.page_access.includes(t.id) || t.id === "overview"
-        ) // Always include overview
+          (t) => user.page_access.includes(t.id) || t.id === "overview" || t.id === "custom_bookings"
+        ) // Always include overview and custom_bookings
         : baseTabs;
 
   // Redirect if current active tab is not allowed (unless it's overview)
