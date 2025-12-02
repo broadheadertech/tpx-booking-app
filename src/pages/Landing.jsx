@@ -334,9 +334,9 @@ const Landing = () => {
                     </button>
                   </div>
                 </div>
-                <span className="font-semibold text-gray-300 group-hover:text-white">
+                {/* <span className="font-semibold text-gray-300 group-hover:text-white">
                   {category.name}
-                </span>
+                </span> */}
               </div>
             ))}
             {recommendedServices.length === 0 && !loadingServices && (
