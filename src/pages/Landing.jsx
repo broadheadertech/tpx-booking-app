@@ -11,22 +11,35 @@ import {
   Award,
   Shield,
   ArrowRight,
-  Check,
-  TrendingUp,
-  Heart,
-  Sparkles,
   Menu,
   X,
   Smartphone,
   Download,
+  Search,
+  ChevronRight,
+  Map,
+  Sparkles,
+  ChevronDown
 } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import { useBranding } from "../context/BrandingContext";
+import Skeleton from "../components/common/Skeleton";
 
 const Landing = () => {
   const navigate = useNavigate();
-  const { branding } = useBranding();
+  const { branding, loading: brandingLoading } = useBranding();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [selectedBranch, setSelectedBranch] = useState("");
+  const [selectedService, setSelectedService] = useState("");
+
+  // Fetch active services and branches from Convex
+  const services = useQuery(api.services.services.getActiveServices);
+  const branches = useQuery(api.services.branches.getActiveBranches);
+  
+  const loadingServices = services === undefined;
+  const loadingBranches = branches === undefined;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -36,94 +49,81 @@ const Landing = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const services = [
-    {
-      title: "Premium Haircuts",
-      description:
-        "Expert styling with precision and attention to detail. Includes wash and style.",
-      price: "₱299",
-      image: "/landing/2.webp",
-      popular: true,
-    },
-    {
-      title: "Beard Grooming",
-      description:
-        "Professional beard trimming, sculpting, and hot towel service.",
-      price: "₱199",
-      image: "/landing/4.webp",
-      popular: false,
-    },
-    {
-      title: "Hair Treatments",
-      description:
-        "Revitalizing treatments for scalp health and hair vitality.",
-      price: "₱399",
-      image: "/landing/7.jpg",
-      popular: false,
-    },
-    {
-      title: "The Full Experience",
-      description: "Complete haircut, shave, and facial treatment package.",
-      price: "₱599",
-      image: "/landing/8.webp",
-      popular: false,
-    },
-  ];
-
-  const features = [
-    {
-      title: "Master Barbers",
-      description:
-        "Our team consists of award-winning professionals with over 10 years of experience.",
-      icon: Users,
-    },
-    {
-      title: "Premium Products",
-      description:
-        "We use only top-tier, imported grooming products for the best results.",
-      icon: Award,
-    },
-    {
-      title: "Hygienic & Safe",
-      description:
-        "Hospital-grade sterilization protocols for all tools and equipment.",
-      icon: Shield,
-    },
+  const categories = [
+    { name: "Haircuts", icon: Scissors },
+    { name: "Beard Trim", icon: Users },
+    { name: "Shaves", icon: Shield },
+    { name: "Styling", icon: Star },
+    { name: "Treatments", icon: Award },
+    { name: "Packages", icon: Calendar },
   ];
 
   const testimonials = [
     {
       name: "Miguel Santos",
       role: "Regular Client",
-      comment:
-        "The attention to detail is unmatched. I've never had a barber take this much care with my fade.",
+      comment: "The attention to detail is unmatched. I've never had a barber take this much care with my fade.",
       rating: 5,
       image: "https://i.pravatar.cc/150?u=miguel",
     },
     {
       name: "Carlos Rivera",
       role: "Business Owner",
-      comment:
-        "Perfect for my busy schedule. Booking is seamless and they always run on time.",
+      comment: "Perfect for my busy schedule. Booking is seamless and they always run on time.",
       rating: 5,
       image: "https://i.pravatar.cc/150?u=carlos",
     },
     {
       name: "David Chen",
       role: "Software Engineer",
-      comment:
-        "The ambiance is amazing. It's not just a haircut, it's a relaxing break from my day.",
+      comment: "The ambiance is amazing. It's not just a haircut, it's a relaxing break from my day.",
       rating: 5,
       image: "https://i.pravatar.cc/150?u=david",
     },
   ];
 
+  if (brandingLoading || loadingServices || loadingBranches) {
+    return (
+      <div className="min-h-screen bg-black text-white">
+        <nav className="fixed top-0 left-0 right-0 z-50 py-6 bg-black border-b border-white/10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+            <Skeleton className="w-32 h-10" />
+            <div className="hidden md:flex gap-8">
+              <Skeleton className="w-20 h-6" />
+              <Skeleton className="w-20 h-6" />
+              <Skeleton className="w-20 h-6" />
+            </div>
+          </div>
+        </nav>
+        <div className="pt-32 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Skeleton className="w-full h-[400px] rounded-2xl mb-12 bg-gray-800" />
+          <div className="grid md:grid-cols-4 gap-6">
+             {[...Array(4)].map((_, i) => (
+               <Skeleton key={i} className="w-full h-64 rounded-xl bg-gray-800" />
+             ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Filter top 4 services for recommended section
+  const recommendedServices = services ? services.slice(0, 4) : [];
+
   return (
-    <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] selection:bg-[var(--color-primary)]/30">
+    <div className="min-h-screen bg-black text-gray-100 font-sans selection:bg-[var(--color-primary)]/30">
+      <style>{`
+        :root {
+          --color-bg: #000000;
+          --color-text: #ffffff;
+        }
+      `}</style>
+
       {/* Navigation */}
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
-            ? "bg-[var(--color-bg)]/80 backdrop-blur-xl border-b border-white/5 py-4"
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          isScrolled
+            ? "bg-black/80 backdrop-blur-md border-b border-white/10 py-4"
             : "bg-transparent py-6"
         }`}
       >
@@ -134,18 +134,22 @@ const Landing = () => {
               className="flex items-center gap-3 cursor-pointer"
               onClick={() => navigate("/")}
             >
-              <img
-                src={
-                  branding?.logo_light_url || ""
-                }
-                alt="Logo"
-                className="w-10 h-10 object-contain"
-              />
+              {branding?.logo_light_url ? (
+                <img
+                  src={branding.logo_light_url}
+                  alt="Logo"
+                  className="w-10 h-10 object-contain"
+                />
+              ) : (
+                <div className="w-10 h-10 bg-[var(--color-primary)] rounded-lg flex items-center justify-center shadow-lg shadow-[var(--color-primary)]/20">
+                  <Scissors className="w-6 h-6 text-white" />
+                </div>
+              )}
               <div>
-                <h1 className="text-xl font-bold tracking-tight text-[var(--color-text)]">
-                  {branding?.display_name || ''}
+                <h1 className="text-xl font-bold tracking-tight leading-none text-white">
+                  {branding?.display_name || "Tipuno X"}
                 </h1>
-                <p className="text-[10px] font-medium tracking-[0.2em] uppercase text-[var(--color-primary)]">
+                <p className="text-[10px] font-medium tracking-[0.2em] uppercase mt-1 text-gray-400">
                   Premium Grooming
                 </p>
               </div>
@@ -153,21 +157,19 @@ const Landing = () => {
 
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center gap-8">
-              <a href="#services" className="text-sm font-medium text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors">Services</a>
-              <a href="#about" className="text-sm font-medium text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors">About</a>
-              <a href="#reviews" className="text-sm font-medium text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors">Reviews</a>
-              <button onClick={() => navigate("/barbers")} className="text-sm font-medium text-[var(--color-muted)] hover:text-[var(--color-text)] transition-colors">Barbers</button>
-
+              <a href="#" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">For Business</a>
+              <a href="#" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">Help</a>
+              
               <div className="flex items-center gap-4 pl-4 border-l border-white/10">
                 <button
                   onClick={() => navigate("/auth/login")}
-                  className="text-sm font-medium text-[var(--color-text)] hover:text-[var(--color-primary)] transition-colors"
+                  className="text-sm font-bold text-white hover:text-[var(--color-primary)] transition-colors"
                 >
-                  Sign In
+                  Log In
                 </button>
                 <button
                   onClick={() => navigate("/guest/booking")}
-                  className="px-5 py-2.5 rounded-full bg-[var(--color-text)] text-[var(--color-bg)] text-sm font-bold hover:opacity-90 transition-all transform hover:scale-105 active:scale-95"
+                  className="px-5 py-2.5 rounded-full text-sm font-bold transition-all active:scale-95 shadow-lg bg-[var(--color-primary)] text-white hover:brightness-110"
                 >
                   Book Now
                 </button>
@@ -176,7 +178,7 @@ const Landing = () => {
 
             {/* Mobile Menu Button */}
             <button
-              className="md:hidden p-2 text-[var(--color-text)]"
+              className="md:hidden p-2 text-white"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? <X /> : <Menu />}
@@ -186,327 +188,245 @@ const Landing = () => {
 
         {/* Mobile Menu Overlay */}
         {mobileMenuOpen && (
-          <div className="absolute top-full left-0 right-0 bg-[var(--color-bg)]/95 backdrop-blur-xl border-b border-white/10 p-4 md:hidden flex flex-col gap-4">
-            <a href="#services" className="text-lg font-medium text-[var(--color-muted)] py-2">Services</a>
-            <a href="#about" className="text-lg font-medium text-[var(--color-muted)] py-2">About</a>
-            <a href="#reviews" className="text-lg font-medium text-[var(--color-muted)] py-2">Reviews</a>
-            <button onClick={() => { setMobileMenuOpen(false); navigate("/barbers"); }} className="text-left text-lg font-medium text-[var(--color-muted)] py-2">Barbers</button>
+          <div className="absolute top-full left-0 right-0 bg-gray-900 border-b border-white/10 p-4 md:hidden flex flex-col gap-4 shadow-2xl">
+            <a href="#services" className="text-lg font-medium text-gray-300 py-2">Services</a>
+            <a href="#about" className="text-lg font-medium text-gray-300 py-2">About</a>
+            <a href="#reviews" className="text-lg font-medium text-gray-300 py-2">Reviews</a>
             <hr className="border-white/10" />
-            <button onClick={() => navigate("/auth/login")} className="text-left text-lg font-medium text-[var(--color-text)] py-2">Sign In</button>
+            <button onClick={() => navigate("/auth/login")} className="text-left text-lg font-medium text-white py-2">Log In</button>
             <button onClick={() => navigate("/guest/booking")} className="w-full py-3 rounded-xl bg-[var(--color-primary)] text-white font-bold">Book Now</button>
           </div>
         )}
       </nav>
 
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
-        {/* Background Elements */}
+      <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
+        {/* Background with overlay */}
         <div className="absolute inset-0 z-0">
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `radial-gradient(ellipse at top right, color-mix(in srgb, var(--color-primary) 20%, transparent), var(--color-bg), var(--color-bg))`
-            }}
-          ></div>
-          <div
-            className="absolute top-0 right-0 w-2/3 h-full"
-            style={{
-              background: `linear-gradient(to left, color-mix(in srgb, var(--color-primary) 5%, transparent), transparent)`
-            }}
-          ></div>
+          <img 
+            src="/landing/2.webp" 
+            alt="Background" 
+            className="w-full h-full object-cover opacity-50"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent"></div>
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-            <div className="space-y-8">
-              <div
-                className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-wider uppercase"
-                style={{
-                  border: `1px solid color-mix(in srgb, var(--color-primary) 30%, transparent)`,
-                  backgroundColor: `color-mix(in srgb, var(--color-primary) 10%, transparent)`,
-                  color: 'var(--color-primary)'
-                }}
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-2xl">
+            <h1 className="text-4xl sm:text-6xl font-bold text-white mb-6 leading-tight">
+              Book local <br/>
+              <span className="text-[var(--color-primary)]">beauty & wellness</span> <br/>
+              services
+            </h1>
+            <p className="text-lg text-gray-400 mb-8 max-w-lg">
+              Discover and book the best barbers, salons, and spas in your area. Instant confirmation, no phone calls required.
+            </p>
+
+            {/* Search Box */}
+            <div className="bg-white/10 backdrop-blur-md p-2 rounded-2xl border border-white/10 flex flex-col md:flex-row gap-2">
+              <div className="flex-1 relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none group-focus-within:text-[var(--color-primary)] transition-colors">
+                  <Search className="w-5 h-5" />
+                </div>
+                <select
+                  value={selectedService}
+                  onChange={(e) => setSelectedService(e.target.value)}
+                  className={`w-full h-14 pl-12 pr-10 bg-transparent rounded-xl focus:bg-white/5 outline-none font-medium transition-colors appearance-none cursor-pointer [&>option]:bg-black [&>option]:text-white ${selectedService === "" ? "text-gray-400" : "text-white"}`}
+                >
+                  <option value="">Book your services...</option>
+                  {services?.map(service => (
+                    <option key={service._id} value={service._id}>{service.name}</option>
+                  ))}
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </div>
+              
+              <div className="w-px h-10 bg-white/10 my-auto hidden md:block"></div>
+              
+              <div className="flex-1 relative group">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none group-focus-within:text-[var(--color-primary)] transition-colors">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <select
+                  value={selectedBranch}
+                  onChange={(e) => setSelectedBranch(e.target.value)}
+                  className={`w-full h-14 pl-12 pr-10 bg-transparent rounded-xl focus:bg-white/5 outline-none font-medium transition-colors appearance-none cursor-pointer [&>option]:bg-black [&>option]:text-white ${selectedBranch === "" ? "text-gray-400" : "text-white"}`}
+                >
+                  <option value="">Select branch...</option>
+                  {branches?.map(branch => (
+                    <option key={branch._id} value={branch._id}>{branch.name}</option>
+                  ))}
+                </select>
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </div>
+              
+              <button 
+                onClick={() => navigate('/guest/booking')}
+                className="bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white h-14 px-8 rounded-xl font-bold transition-colors shadow-lg shadow-[var(--color-primary)]/20"
               >
-                <span
-                  className="w-2 h-2 rounded-full animate-pulse"
-                  style={{ backgroundColor: 'var(--color-primary)' }}
-                ></span>
-                Now Accepting Bookings
-              </div>
-
-              <h1 className="text-5xl sm:text-7xl font-bold tracking-tight leading-[1.1]">
-                Refine Your <br />
-                <span
-                  className="text-transparent bg-clip-text"
-                  style={{
-                    backgroundImage: `linear-gradient(to right, var(--color-primary), var(--color-accent))`
-                  }}
-                >
-                  Signature Look
-                </span>
-              </h1>
-
-              <p className="text-lg text-[var(--color-muted)] max-w-lg leading-relaxed">
-                Experience the pinnacle of grooming at {branding?.display_name || ''}.
-                Where traditional barbering meets modern luxury.
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                <button
-                  onClick={() => navigate("/guest/booking")}
-                  className="px-8 py-4 rounded-full bg-[var(--color-primary)] text-white font-bold text-lg hover:bg-[var(--color-accent)] transition-all flex items-center justify-center gap-2"
-                  style={{
-                    boxShadow: `0 0 30px color-mix(in srgb, var(--color-primary) 30%, transparent)`
-                  }}
-                >
-                  <Calendar className="w-5 h-5" />
-                  Book Appointment
-                </button>
-                <button
-                  onClick={() => navigate("/auth/login")}
-                  className="px-8 py-4 rounded-full border border-white/10 bg-white/5 text-[var(--color-text)] font-semibold hover:bg-white/10 transition-all backdrop-blur-sm"
-                >
-                  Sign In
-                </button>
-              </div>
-
-              <div className="flex items-center gap-8 pt-8 border-t border-white/5">
-                <div>
-                  <p className="text-3xl font-bold text-[var(--color-text)]">4.9</p>
-                  <div className="flex text-[var(--color-primary)] text-xs mt-1">
-                    <Star className="w-3 h-3 fill-current" />
-                    <Star className="w-3 h-3 fill-current" />
-                    <Star className="w-3 h-3 fill-current" />
-                    <Star className="w-3 h-3 fill-current" />
-                    <Star className="w-3 h-3 fill-current" />
-                  </div>
-                </div>
-                <div className="w-px h-10 bg-white/10"></div>
-                <div>
-                  <p className="text-3xl font-bold text-[var(--color-text)]">2.5k+</p>
-                  <p className="text-xs text-[var(--color-muted)] uppercase tracking-wider mt-1">Clients</p>
-                </div>
-              </div>
+                Search
+              </button>
             </div>
-
-            <div className="hidden lg:block relative">
-              <div className="relative z-10 rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
-                <img
-                  src={branding?.banner_url}
-                  alt="Barber"
-                  className="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-700"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-
-                <div className="absolute bottom-6 left-6 right-6 p-4 rounded-xl bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-white"
-                      style={{ backgroundColor: 'var(--color-primary)' }}
-                    >
-                      <Scissors className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white">
-                        Master Barber
-                      </p>
-                      <p className="text-xs text-gray-300">Available Today</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-green-400 font-bold uppercase tracking-wider">
-                      Open Now
-                    </p>
-                    <p className="text-xs text-white/60">Until 9:00 PM</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Decorative elements */}
-              <div
-                className="absolute -top-10 -right-10 w-64 h-64 rounded-full blur-3xl -z-10"
-                style={{ backgroundColor: `color-mix(in srgb, var(--color-primary) 20%, transparent)` }}
-              ></div>
-              <div
-                className="absolute -bottom-10 -left-10 w-64 h-64 rounded-full blur-3xl -z-10"
-                style={{ backgroundColor: `color-mix(in srgb, var(--color-accent) 10%, transparent)` }}
-              ></div>
+            
+            <div className="mt-6 flex flex-wrap gap-3">
+              <span className="text-sm text-gray-500 font-medium">Popular:</span>
+              {['Haircut', 'Massage', 'Skin Fade', 'Beard Trim'].map((tag) => (
+                <button key={tag} className="text-sm text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1 rounded-full transition-colors border border-white/5 hover:border-white/20">
+                  {tag}
+                </button>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Services Section */}
-      <section id="services" className="py-24 relative" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg) 95%, white)' }}>
+      {/* Categories Section */}
+      <section className="py-12 border-b border-white/5 bg-black">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-[var(--color-text)]">Premium Services</h2>
-            <p className="text-[var(--color-muted)] max-w-2xl mx-auto">
-              Tailored grooming services designed for the modern gentleman.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {services.map((service, index) => (
-              <div
+          <h2 className="text-xl font-bold text-white mb-8">Browse by category</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {categories.map((category, index) => (
+              <div 
                 key={index}
-                className="group relative rounded-2xl overflow-hidden border border-white/5 transition-all duration-300 hover:-translate-y-1"
-                style={{
-                  backgroundColor: 'color-mix(in srgb, var(--color-bg) 90%, white)',
-                }}
+                className="group cursor-pointer p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-[var(--color-primary)]/30 transition-all duration-300 flex flex-col items-center gap-3 text-center"
               >
-                <div
-                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{
-                    border: `1px solid color-mix(in srgb, var(--color-primary) 50%, transparent)`,
-                    borderRadius: '1rem'
-                  }}
-                ></div>
-                <div className="aspect-[4/3] overflow-hidden relative">
-                  <img
-                    src={service.image}
-                    alt={service.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                  <div
-                    className="absolute inset-0 opacity-90"
-                    style={{ background: `linear-gradient(to top, color-mix(in srgb, var(--color-bg) 90%, white), transparent)` }}
-                  ></div>
+                <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 group-hover:text-[var(--color-primary)] group-hover:border-[var(--color-primary)] transition-colors">
+                  <category.icon className="w-6 h-6" />
                 </div>
-                <div className="p-6 relative">
-                  <h3 className="text-xl font-bold mb-2 text-[var(--color-text)] group-hover:text-[var(--color-primary)] transition-colors">{service.title}</h3>
-                  <p className="text-[var(--color-muted)] text-sm mb-4 line-clamp-2">{service.description}</p>
-                  <button
-                    onClick={() => navigate("/guest/booking")}
-                    className="text-sm font-semibold text-[var(--color-text)] flex items-center gap-2 group-hover:gap-3 transition-all"
-                  >
-                    Book Now <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
+                <span className="font-semibold text-gray-300 group-hover:text-white">{category.name}</span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="about" className="py-24 bg-[var(--color-bg)] relative overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl opacity-30 pointer-events-none">
-          <div
-            className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-[100px]"
-            style={{ backgroundColor: `color-mix(in srgb, var(--color-primary) 10%, transparent)` }}
-          ></div>
-        </div>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+      {/* Recommended Section */}
+      <section className="py-20 bg-[#050505]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-end mb-10">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-[var(--color-text)]">
-                Why Choose <span className="text-[var(--color-primary)]">{branding?.display_name || ''}</span>?
+              <h2 className="text-3xl font-bold text-white">Recommended for you</h2>
+              <p className="text-gray-500 mt-2">Top rated services in your area</p>
+            </div>
+            <button 
+              onClick={() => navigate('/guest/booking')}
+              className="hidden md:flex items-center gap-2 text-[var(--color-primary)] font-bold hover:brightness-110 transition-all"
+            >
+              View all <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {recommendedServices.map((service, index) => (
+              <div 
+                key={index}
+                className="bg-gray-900 rounded-2xl overflow-hidden border border-white/5 hover:border-[var(--color-primary)]/30 hover:shadow-xl hover:shadow-[var(--color-primary)]/5 transition-all duration-300 cursor-pointer group"
+                onClick={() => navigate('/guest/booking')}
+              >
+                <div className="relative aspect-[4/3] overflow-hidden bg-gray-800">
+                  <img 
+                    src={service.image || "/landing/2.webp"} 
+                    alt={service.name}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-bold text-white border border-white/10">
+                    {service.category || "Service"}
+                  </div>
+                </div>
+                <div className="p-5">
+                  <h3 className="font-bold text-lg text-white mb-1 group-hover:text-[var(--color-primary)] transition-colors">{service.name}</h3>
+                  <p className="text-gray-400 text-sm mb-3 flex items-center gap-1 line-clamp-1">
+                    {service.description}
+                  </p>
+                  
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex items-center gap-1 bg-[var(--color-primary)]/10 px-2 py-0.5 rounded text-[var(--color-primary)] text-xs font-bold border border-[var(--color-primary)]/20">
+                      <span className="font-black">5.0</span>
+                      <Star className="w-3 h-3 fill-current" />
+                    </div>
+                    <span className="text-xs text-gray-500">(25+ reviews)</span>
+                  </div>
+
+                  <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase font-bold">Price</p>
+                      <p className="font-bold text-white">₱{service.price}</p>
+                    </div>
+                    <button className="px-4 py-2 rounded-lg bg-white text-black text-sm font-bold hover:bg-[var(--color-primary)] hover:text-white transition-colors">
+                      Book
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {recommendedServices.length === 0 && !loadingServices && (
+               <div className="col-span-full text-center py-10 text-gray-500">
+                 No services found.
+               </div>
+            )}
+          </div>
+          
+          <button 
+            onClick={() => navigate('/guest/booking')}
+            className="md:hidden w-full mt-8 py-3 rounded-xl border border-white/10 bg-white/5 text-white font-bold hover:bg-white/10 transition-colors flex items-center justify-center gap-2"
+          >
+            View all services <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      </section>
+
+      {/* Why Choose Us - Dark Style */}
+      <section className="py-20 bg-black border-y border-white/5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div className="order-2 lg:order-1">
+              <div className="grid grid-cols-2 gap-4">
+                <img
+                  src="/landing/4.webp"
+                  alt="Barber working"
+                  className="rounded-2xl w-full h-64 object-cover mt-12 shadow-2xl shadow-[var(--color-primary)]/10 border border-white/5"
+                />
+                <img
+                  src="/landing/2.webp"
+                  alt="Haircut detail"
+                  className="rounded-2xl w-full h-64 object-cover shadow-2xl shadow-[var(--color-primary)]/10 border border-white/5"
+                />
+              </div>
+            </div>
+            <div className="order-1 lg:order-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-xs font-bold tracking-wider uppercase mb-6 border border-[var(--color-primary)]/20">
+                <Award className="w-4 h-4" />
+                World Class Service
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-6 text-white">
+                Why {branding?.display_name || "Tipuno X"} is the best choice
               </h2>
-              <p className="text-[var(--color-muted)] text-lg mb-8 leading-relaxed">
-                We don't just cut hair; we cultivate confidence. Our barbershop combines traditional techniques with modern style to give you the best grooming experience in the city.
+              <p className="text-gray-400 text-lg mb-8 leading-relaxed">
+                We combine traditional barbering techniques with modern styling to create a unique experience. Our platform makes booking easier than ever.
               </p>
 
-              <div className="space-y-8">
-                {features.map((feature, index) => (
+              <div className="space-y-6">
+                {[
+                  { title: "Expert Barbers", desc: "Highly trained professionals", icon: Users },
+                  { title: "Easy Booking", desc: "Book in seconds, 24/7", icon: Clock },
+                  { title: "Hygienic Safe", desc: "Top-tier sterilization", icon: Shield }
+                ].map((feature, index) => (
                   <div key={index} className="flex gap-4">
-                    <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                      style={{
-                        backgroundColor: 'color-mix(in srgb, var(--color-bg) 90%, white)',
-                        border: '1px solid rgba(255,255,255,0.1)'
-                      }}
-                    >
-                      <feature.icon className="w-6 h-6 text-[var(--color-primary)]" />
+                    <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center flex-shrink-0 text-[var(--color-primary)] border border-[var(--color-primary)]/20">
+                      <feature.icon className="w-6 h-6" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold mb-2 text-[var(--color-text)]">{feature.title}</h3>
-                      <p className="text-[var(--color-muted)] text-sm leading-relaxed">{feature.description}</p>
+                      <h3 className="text-lg font-bold mb-1 text-white">{feature.title}</h3>
+                      <p className="text-gray-500 text-sm">{feature.desc}</p>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-            <div className="relative">
-              <div className="grid grid-cols-2 gap-4">
-                <img
-                  src="/landing/4.webp"
-                  alt="Barber working"
-                  className="rounded-2xl w-full h-64 object-cover mt-12"
-                />
-                <img
-                  src="/landing/2.webp"
-                  alt="Haircut detail"
-                  className="rounded-2xl w-full h-64 object-cover"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section id="reviews" className="py-24" style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg) 95%, white)' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-end mb-12">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-2 text-[var(--color-text)]">Client Stories</h2>
-              <p className="text-[var(--color-muted)]">Don't just take our word for it.</p>
-            </div>
-            <div className="hidden md:flex gap-2">
-              <button className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors text-[var(--color-text)]">
-                <ArrowRight className="w-5 h-5 rotate-180" />
-              </button>
-              <button
-                className="w-10 h-10 rounded-full flex items-center justify-center transition-colors text-white"
-                style={{ backgroundColor: 'var(--color-primary)' }}
-              >
-                <ArrowRight className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {testimonials.map((t, i) => (
-              <div
-                key={i}
-                className="p-8 rounded-2xl border border-white/5 hover:border-white/10 transition-colors"
-                style={{ backgroundColor: 'color-mix(in srgb, var(--color-bg) 90%, white)' }}
-              >
-                <div className="flex gap-1 mb-6">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 text-[var(--color-primary)] fill-current" />
-                  ))}
-                </div>
-                <p className="text-[var(--color-muted)] mb-6 leading-relaxed">"{t.comment}"</p>
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden">
-                    <img
-                      src={t.image}
-                      alt={t.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div>
-                    <p className="font-bold text-sm text-[var(--color-text)]">{t.name}</p>
-                    <p className="text-xs text-[var(--color-muted)]">{t.role}</p>
-                  </div>
-                </div>
-                <div className="p-6 relative">
-                  {/* Remove these if you don't have service info here */}
-                  {/* Or you can include service info if relevant */}
-                  {/* <h3 className="text-xl font-bold mb-2 group-hover:text-orange-500 transition-colors">{t.title}</h3>
-      <p className="text-gray-400 text-sm mb-4 line-clamp-2">{t.description}</p> */}
-                  <button
-                    onClick={() => navigate("/guest/booking")}
-                    className="text-sm font-semibold text-white flex items-center gap-2 group-hover:gap-3 transition-all"
-                  >
-                    Book Now <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -527,7 +447,7 @@ const Landing = () => {
                   Book appointments, track your loyalty points, and get exclusive offers right from your phone.
                 </p>
                 <div className="flex flex-wrap gap-4 pt-4">
-                  <button className="flex items-center gap-3 bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-900 transition-colors">
+                  <button className="flex items-center gap-3 bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-900 transition-colors border border-white/10">
                     <Smartphone className="w-6 h-6" />
                     <div className="text-left">
                       <p className="text-[10px] uppercase font-bold text-gray-400">
@@ -538,7 +458,7 @@ const Landing = () => {
                       </p>
                     </div>
                   </button>
-                  <button className="flex items-center gap-3 bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-900 transition-colors">
+                  <button className="flex items-center gap-3 bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-900 transition-colors border border-white/10">
                     <Download className="w-6 h-6" />
                     <div className="text-left">
                       <p className="text-[10px] uppercase font-bold text-gray-400">
@@ -564,28 +484,30 @@ const Landing = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[var(--color-bg)] border-t border-white/10 pt-20 pb-10">
+      <footer className="bg-black border-t border-white/10 pt-20 pb-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-12 mb-16">
             <div className="space-y-6">
               <div className="flex items-center gap-2">
-                <img
-                  src={
-                    branding?.logo_light_url || ""
-                  }
-                  alt="Logo"
-                  className="w-8 h-8 object-contain"
-                />
-                <span className="text-xl font-bold text-[var(--color-text)]">{branding?.display_name || ''}</span>
+                {branding?.logo_light_url ? (
+                  <img
+                    src={branding.logo_light_url}
+                    alt="Logo"
+                    className="w-8 h-8 object-contain"
+                  />
+                ) : (
+                  <Scissors className="w-6 h-6 text-[var(--color-primary)]" />
+                )}
+                <span className="text-xl font-bold text-white">{branding?.display_name || "Tipuno X"}</span>
               </div>
-              <p className="text-[var(--color-muted)] text-sm leading-relaxed">
+              <p className="text-gray-500 text-sm leading-relaxed">
                 Premium grooming experiences for the modern gentleman. Elevating style, one cut at a time.
               </p>
             </div>
 
             <div>
-              <h4 className="font-bold mb-6 text-[var(--color-text)]">Quick Links</h4>
-              <ul className="space-y-4 text-sm text-[var(--color-muted)]">
+              <h4 className="font-bold mb-6 text-white">Quick Links</h4>
+              <ul className="space-y-4 text-sm text-gray-500">
                 <li><a href="#" className="hover:text-[var(--color-primary)] transition-colors">Home</a></li>
                 <li><a href="#services" className="hover:text-[var(--color-primary)] transition-colors">Services</a></li>
                 <li><a href="#about" className="hover:text-[var(--color-primary)] transition-colors">About Us</a></li>
@@ -594,8 +516,8 @@ const Landing = () => {
             </div>
 
             <div>
-              <h4 className="font-bold mb-6 text-[var(--color-text)]">Contact</h4>
-              <ul className="space-y-4 text-sm text-[var(--color-muted)]">
+              <h4 className="font-bold mb-6 text-white">Contact</h4>
+              <ul className="space-y-4 text-sm text-gray-500">
                 <li className="flex items-center gap-3">
                   <MapPin className="w-4 h-4" />
                   123 Main Street, Quezon City
@@ -612,17 +534,16 @@ const Landing = () => {
             </div>
 
             <div>
-              <h4 className="font-bold mb-6 text-[var(--color-text)]">Newsletter</h4>
-              <p className="text-[var(--color-muted)] text-sm mb-4">Subscribe for updates and exclusive offers.</p>
+              <h4 className="font-bold mb-6 text-white">Newsletter</h4>
+              <p className="text-gray-500 text-sm mb-4">Subscribe for updates and exclusive offers.</p>
               <div className="flex gap-2">
                 <input
                   type="email"
                   placeholder="Enter your email"
-                  className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm w-full focus:outline-none focus:border-[var(--color-primary)] text-[var(--color-text)] placeholder-[var(--color-muted)]"
+                  className="bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm w-full focus:outline-none focus:border-[var(--color-primary)] text-white placeholder-gray-500"
                 />
                 <button
-                  className="p-2 rounded-lg transition-colors text-white"
-                  style={{ backgroundColor: 'var(--color-primary)' }}
+                  className="p-2 rounded-lg transition-colors text-white bg-[var(--color-primary)] hover:bg-[var(--color-accent)]"
                 >
                   <ArrowRight className="w-4 h-4" />
                 </button>
@@ -631,10 +552,10 @@ const Landing = () => {
           </div>
 
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-[var(--color-muted)] text-sm">© 2024 {branding?.display_name}. All rights reserved.</p>
-            <div className="flex gap-6 text-sm text-[var(--color-muted)]">
-              <a href="#" className="hover:text-[var(--color-text)] transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-[var(--color-text)] transition-colors">Terms of Service</a>
+            <p className="text-gray-500 text-sm">© 2024 {branding?.display_name || "Tipuno X"}. All rights reserved.</p>
+            <div className="flex gap-6 text-sm text-gray-500">
+              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
             </div>
           </div>
         </div>
