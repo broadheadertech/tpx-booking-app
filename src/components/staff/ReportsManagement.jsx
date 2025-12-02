@@ -85,25 +85,16 @@ const ReportsManagement = ({ onRefresh, user }) => {
       (t.payment_status === 'completed' || t.payment_status === 'paid')
     )
 
-    // Filter bookings by EITHER createdAt OR booking date (appointment date)
-    // This ensures bookings scheduled for today show up even if created earlier
+    // Filter bookings by appointment date (b.date) - the actual scheduled date
+    // This ensures we count bookings based on when they were scheduled, not when created
     const periodBookings = bookings.filter(b => {
-      // Check if booking was created in this period
-      const createdInPeriod = b.createdAt >= periodStart
+      if (!b.date) return false
 
-      // Check if booking date (appointment date) falls in this period
       // Convert booking date string (YYYY-MM-DD) to timestamp for comparison
-      let bookingDateInPeriod = false
-      if (b.date) {
-        const bookingDate = new Date(b.date).setHours(0, 0, 0, 0)
-        const periodEnd = Date.now()
-        bookingDateInPeriod = bookingDate >= periodStart && bookingDate <= periodEnd
-      }
+      const bookingDate = new Date(b.date).setHours(0, 0, 0, 0)
+      const periodEnd = Date.now()
 
-      // Check if booking was updated/completed in this period
-      const updatedInPeriod = b.updatedAt && b.updatedAt >= periodStart
-
-      return createdInPeriod || bookingDateInPeriod || updatedInPeriod
+      return bookingDate >= periodStart && bookingDate <= periodEnd
     })
     const validPeriodBookings = periodBookings.filter(b => b.status !== 'cancelled')
     const allCompletedTransactions = transactions.filter(t =>
@@ -119,7 +110,12 @@ const ReportsManagement = ({ onRefresh, user }) => {
       t.createdAt < prevPeriodEnd &&
       (t.payment_status === 'completed' || t.payment_status === 'paid')
     )
-    const prevBookings = bookings.filter(b => b.createdAt >= prevPeriodStart && b.createdAt < prevPeriodEnd)
+    // Filter previous period bookings by appointment date
+    const prevBookings = bookings.filter(b => {
+      if (!b.date) return false
+      const bookingDate = new Date(b.date).setHours(0, 0, 0, 0)
+      return bookingDate >= prevPeriodStart && bookingDate < prevPeriodEnd
+    })
     const prevValidBookings = prevBookings.filter(b => b.status !== 'cancelled')
 
     // === DESCRIPTIVE ANALYTICS: What happened? ===
