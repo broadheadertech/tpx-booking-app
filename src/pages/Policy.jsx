@@ -53,7 +53,7 @@ const Policy = () => {
           <section>
             <h2 className="text-xl font-semibold text-white mb-2">Contact</h2>
             <p>
-              For privacy requests, contact us at <span className="text-orange-400">support@tpx-barbershop.example</span> or visit the
+              For privacy requests, contact us at <span className="text-orange-400">fcvndo@fcv.com</span> or visit the
               {' '}<Link to="/account-deletion" className="text-orange-400 hover:text-orange-300">Account Deletion</Link>{' '}page.
             </p>
           </section>

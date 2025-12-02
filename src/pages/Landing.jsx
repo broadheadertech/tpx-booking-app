@@ -147,7 +147,7 @@ const Landing = () => {
               )}
               <div>
                 <h1 className="text-xl font-bold tracking-tight leading-none text-white">
-                  {branding?.display_name || "Tipuno X"}
+                  {branding?.display_name || "Title"}
                 </h1>
                 <p className="text-[10px] font-medium tracking-[0.2em] uppercase mt-1 text-gray-400">
                   Premium Grooming
@@ -214,12 +214,14 @@ const Landing = () => {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl">
             <h1 className="text-4xl sm:text-6xl font-bold text-white mb-6 leading-tight">
-              Book local <br/>
-              <span className="text-[var(--color-primary)]">beauty & wellness</span> <br/>
-              services
+              Refine Your <br />
+              <span className="text-[var(--color-primary)]">
+                Signature Look
+              </span>
             </h1>
             <p className="text-lg text-gray-400 mb-8 max-w-lg">
-              Discover and book the best barbers, salons, and spas in your area. Instant confirmation, no phone calls required.
+              Experience the pinnacle of grooming. Where traditional
+              barbering meets modern luxury.{" "}
             </p>
 
             {/* Search Box */}
@@ -361,6 +363,9 @@ const Landing = () => {
                     </button>
                   </div>
                 </div>
+                <span className="font-semibold text-gray-300 group-hover:text-white">
+                  {category.name}
+                </span>
               </div>
             ))}
             {recommendedServices.length === 0 && !loadingServices && (
@@ -437,14 +442,17 @@ const Landing = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div
             className="rounded-3xl p-8 md:p-16 relative overflow-hidden"
-            style={{ backgroundColor: 'var(--color-primary)' }}
+            style={{ backgroundColor: "var(--color-primary)" }}
           >
             <div className="absolute top-0 right-0 w-full h-full bg-[url('/noise.png')] opacity-10 mix-blend-overlay"></div>
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <div className="text-white space-y-6">
-                <h2 className="text-3xl md:text-5xl font-bold">Get the {branding?.display_name} App</h2>
+                <h2 className="text-3xl md:text-5xl font-bold">
+                  Get the {branding?.display_name} App
+                </h2>
                 <p className="text-white/80 text-lg max-w-md">
-                  Book appointments, track your loyalty points, and get exclusive offers right from your phone.
+                  Book appointments, track your loyalty points, and get
+                  exclusive offers right from your phone.
                 </p>
                 <div className="flex flex-wrap gap-4 pt-4">
                   <button className="flex items-center gap-3 bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-900 transition-colors border border-white/10">
