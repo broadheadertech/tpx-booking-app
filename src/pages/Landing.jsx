@@ -148,9 +148,10 @@ const Landing = () => {
 
             {/* Desktop Menu */}
             <div className="hidden md:flex items-center gap-8">
-              <a href="#" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">For Business</a>
-              <a href="#" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">Help</a>
-              
+              <button onClick={() => navigate("/barbers")} className="text-sm font-medium text-gray-300 hover:text-white transition-colors">Our Barbers</button>
+              <a href="#services" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">Services</a>
+              <a href="#about" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">About</a>
+
               <div className="flex items-center gap-4 pl-4 border-l border-white/10">
                 <button
                   onClick={() => navigate("/auth/login")}
@@ -180,9 +181,9 @@ const Landing = () => {
         {/* Mobile Menu Overlay */}
         {mobileMenuOpen && (
           <div className="absolute top-full left-0 right-0 bg-gray-900 border-b border-white/10 p-4 md:hidden flex flex-col gap-4 shadow-2xl">
+            <button onClick={() => { navigate("/barbers"); setMobileMenuOpen(false); }} className="text-left text-lg font-medium text-gray-300 py-2">Our Barbers</button>
             <a href="#services" className="text-lg font-medium text-gray-300 py-2">Services</a>
             <a href="#about" className="text-lg font-medium text-gray-300 py-2">About</a>
-            <a href="#reviews" className="text-lg font-medium text-gray-300 py-2">Reviews</a>
             <hr className="border-white/10" />
             <button onClick={() => navigate("/auth/login")} className="text-left text-lg font-medium text-white py-2">Log In</button>
             <button onClick={() => navigate("/guest/booking")} className="w-full py-3 rounded-xl bg-[var(--color-primary)] text-white font-bold">Book Now</button>
