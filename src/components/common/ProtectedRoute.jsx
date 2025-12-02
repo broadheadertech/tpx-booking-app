@@ -1,10 +1,57 @@
+import { useState, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { Navigate, useLocation } from 'react-router-dom'
 import LoadingScreen from './LoadingScreen'
+import useIdleTimer from '../../hooks/useIdleTimer'
+import IdleTimeoutDialog from './IdleTimeoutDialog'
+
+const IDLE_TIMEOUT = 30 * 60 * 1000 // 30 minutes
+const WARNING_TIME = 60 * 1000 // 60 seconds warning before logout
 
 const ProtectedRoute = ({ children, requireStaff = false, requireBarber = false, requireSuperAdmin = false, requirePageAccess = null }) => {
-  const { isAuthenticated, user, loading } = useAuth()
+  const { isAuthenticated, user, loading, logout } = useAuth()
   const location = useLocation()
+  const [showWarning, setShowWarning] = useState(false)
+
+  // Determine if idle timeout should be enabled (only for staff and barber)
+  const shouldEnableIdleTimeout = requireStaff || requireBarber || requireSuperAdmin
+
+  // Handle idle timeout
+  const handleIdle = useCallback(async () => {
+    setShowWarning(false)
+    await logout()
+  }, [logout])
+
+  // Handle warning state
+  const handleWarning = useCallback(() => {
+    setShowWarning(true)
+  }, [])
+
+  // Handle when user becomes active during warning
+  const handleActive = useCallback(() => {
+    setShowWarning(false)
+  }, [])
+
+  const { isWarning, remainingTime, extendSession } = useIdleTimer({
+    idleTime: IDLE_TIMEOUT,
+    warningTime: WARNING_TIME,
+    onIdle: handleIdle,
+    onWarning: handleWarning,
+    onActive: handleActive,
+    enabled: shouldEnableIdleTimeout && isAuthenticated,
+  })
+
+  // Handle stay logged in button click
+  const handleStayLoggedIn = useCallback(() => {
+    setShowWarning(false)
+    extendSession()
+  }, [extendSession])
+
+  // Handle manual logout from dialog
+  const handleLogoutClick = useCallback(async () => {
+    setShowWarning(false)
+    await logout()
+  }, [logout])
 
   // Show loading while checking authentication
   if (loading) {
@@ -40,7 +87,20 @@ const ProtectedRoute = ({ children, requireStaff = false, requireBarber = false,
     }
   }
 
-  return children
+  return (
+    <>
+      {children}
+      {/* Idle timeout warning dialog for staff/barber */}
+      {shouldEnableIdleTimeout && (
+        <IdleTimeoutDialog
+          open={showWarning || isWarning}
+          remainingTime={remainingTime}
+          onStayLoggedIn={handleStayLoggedIn}
+          onLogout={handleLogoutClick}
+        />
+      )}
+    </>
+  )
 }
 
 // Helper function to get role-based redirect
