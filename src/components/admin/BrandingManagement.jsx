@@ -18,6 +18,7 @@ const DEFAULT_BRANDING = {
   logo_dark_url: '/img/tipuno_x_logo_white.avif',
   favicon_url: '/img/app_logo.png',
   banner_url: '',
+  hero_image_url: '/landing/2.webp',
   feature_toggles: {
     kiosk: true,
     wallet: true,
@@ -172,6 +173,7 @@ const ALLOWED_FIELDS = new Set([
   'logo_dark_url',
   'favicon_url',
   'banner_url',
+  'hero_image_url',
   'feature_toggles',
 ])
 
@@ -836,6 +838,13 @@ export default function BrandingManagement() {
               disabled={!canEdit || !isEditing}
               onChange={(v) => setForm((prev) => ({ ...prev, banner_url: v }))}
               placeholder="https://domain/banner.png or upload"
+            />
+            <ImageUploadInput
+              label="Hero Background Image"
+              value={form.hero_image_url}
+              disabled={!canEdit || !isEditing}
+              onChange={(v) => setForm((prev) => ({ ...prev, hero_image_url: v }))}
+              placeholder="https://domain/hero.jpg or upload"
             />
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">

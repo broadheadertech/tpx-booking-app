@@ -11,6 +11,7 @@ const FALLBACK_BRANDING = {
   bg_color: '#0A0A0A',
   text_color: '#FFFFFF',
   muted_color: '#333333',
+  hero_image_url: '/landing/2.webp',
   feature_toggles: {
     kiosk: true,
     wallet: true,

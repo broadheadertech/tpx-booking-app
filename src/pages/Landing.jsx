@@ -203,9 +203,9 @@ const Landing = () => {
       <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
         {/* Background with overlay */}
         <div className="absolute inset-0 z-0">
-          <img 
-            src="/landing/2.webp" 
-            alt="Background" 
+          <img
+            src={branding?.hero_image_url || "/landing/2.webp"}
+            alt="Background"
             className="w-full h-full object-cover opacity-50"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent"></div>
