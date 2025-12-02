@@ -423,22 +423,22 @@ const Landing = () => {
                   exclusive offers right from your phone.
                 </p>
                 <div className="flex flex-wrap gap-4 pt-4">
-                  <button className="flex items-center gap-3 bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-900 transition-colors border border-white/10">
+                  <button className="flex items-center gap-3 bg-black/50 text-white px-6 py-3 rounded-xl cursor-not-allowed border border-white/10 opacity-80">
                     <Smartphone className="w-6 h-6" />
                     <div className="text-left">
-                      <p className="text-[10px] uppercase font-bold text-gray-400">
-                        Download on the
+                      <p className="text-[10px] uppercase font-bold text-yellow-400">
+                        Coming Soon
                       </p>
                       <p className="text-sm font-bold leading-none">
                         App Store
                       </p>
                     </div>
                   </button>
-                  <button className="flex items-center gap-3 bg-black text-white px-6 py-3 rounded-xl hover:bg-gray-900 transition-colors border border-white/10">
+                  <button className="flex items-center gap-3 bg-black/50 text-white px-6 py-3 rounded-xl cursor-not-allowed border border-white/10 opacity-80">
                     <Download className="w-6 h-6" />
                     <div className="text-left">
-                      <p className="text-[10px] uppercase font-bold text-gray-400">
-                        Get it on
+                      <p className="text-[10px] uppercase font-bold text-yellow-400">
+                        Coming Soon
                       </p>
                       <p className="text-sm font-bold leading-none">
                         Google Play
