@@ -89,7 +89,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
     // This ensures bookings scheduled for today show up even if created earlier
     const periodBookings = bookings.filter(b => {
       // Check if booking was created in this period
-      const createdInPeriod = b.date >= periodStart
+      const createdInPeriod = b.createdAt >= periodStart
 
       // Check if booking date (appointment date) falls in this period
       // Convert booking date string (YYYY-MM-DD) to timestamp for comparison
