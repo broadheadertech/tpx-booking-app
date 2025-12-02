@@ -24,6 +24,7 @@ import CustomerBooking from "./pages/customer/Booking";
 import GuestServiceBooking from "./pages/customer/GuestServiceBooking.jsx";
 import Wallet from "./pages/customer/Wallet.jsx";
 import WalletTopUp from "./pages/customer/WalletTopUp.jsx";
+import CustomerProfile from "./pages/customer/Profile.jsx";
 import BarberDashboard from "./components/barber/BarberDashboard";
 import BarbersList from "./pages/barbers/BarbersList";
 import BarberProfile from "./pages/barbers/BarberProfile";
@@ -150,6 +151,10 @@ function App() {
                 }
               />
               <Route
+                path="/customer"
+                element={<Navigate to="/customer/dashboard" replace />}
+              />
+              <Route
                 path="/customer/dashboard"
                 element={
                   <ProtectedRoute>
@@ -186,6 +191,54 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <WalletTopUp />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/customer/bookings"
+                element={
+                  <ProtectedRoute>
+                    <CustomerDashboard initialSection="bookings" />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/customer/vouchers"
+                element={
+                  <ProtectedRoute>
+                    <CustomerDashboard initialSection="vouchers" />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/customer/profile"
+                element={
+                  <ProtectedRoute>
+                    <CustomerProfile />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/customer/notifications"
+                element={
+                  <ProtectedRoute>
+                    <CustomerDashboard initialSection="notifications" />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/customer/ai-assistant"
+                element={
+                  <ProtectedRoute>
+                    <CustomerDashboard initialSection="ai-assistant" />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/customer/loyalty"
+                element={
+                  <ProtectedRoute>
+                    <CustomerDashboard initialSection="loyalty" />
                   </ProtectedRoute>
                 }
               />

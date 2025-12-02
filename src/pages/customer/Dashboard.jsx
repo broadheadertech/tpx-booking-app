@@ -19,12 +19,12 @@ import { useBookingNotificationListener } from '../../utils/bookingNotifications
 import { NotificationBell } from '../../components/common/NotificationSystem'
 import NotificationsPage from '../../components/customer/NotificationsPage'
 
-const Dashboard = () => {
+const Dashboard = ({ initialSection = 'home' }) => {
   const { user, isAuthenticated } = useAuth()
   const { branding } = useBranding()
   const location = useLocation()
   const navigate = useNavigate()
-  const [activeSection, setActiveSection] = useState('home')
+  const [activeSection, setActiveSection] = useState(initialSection)
   const [showOnboarding, setShowOnboarding] = useState(false)
 
   // Hook for real-time notifications with toast alerts
@@ -33,15 +33,10 @@ const Dashboard = () => {
   // Hook for booking notification events
   useBookingNotificationListener()
 
-  // Check if we're EXACTLY on the customer dashboard route (not on booking or other pages)
-  const isOnCustomerDashboard = location.pathname === '/customer/dashboard' &&
-    !location.pathname.includes('/home') &&
-    !location.pathname.includes('/client')
-
-  // Early return if not on dashboard route - prevents navigation from showing on other pages
-  if (!isOnCustomerDashboard) {
-    return null
-  }
+  // Sync activeSection with initialSection prop when route changes
+  useEffect(() => {
+    setActiveSection(initialSection)
+  }, [initialSection])
 
   // Check if onboarding should be shown (once per session)
   useEffect(() => {
@@ -135,11 +130,11 @@ const Dashboard = () => {
   const renderContent = () => {
     switch (activeSection) {
       case 'booking':
-        return <ServiceBooking onBack={() => setActiveSection('home')} />
+        return <ServiceBooking onBack={() => navigate('/customer/dashboard')} />
       case 'bookings':
-        return <MyBookings onBack={() => setActiveSection('home')} />
+        return <MyBookings onBack={() => navigate('/customer/dashboard')} />
       case 'vouchers':
-        return <VoucherManagement onBack={() => setActiveSection('home')} />
+        return <VoucherManagement onBack={() => navigate('/customer/dashboard')} />
       case 'ai-assistant':
         return <AIBarberAssistant onNavigateToBooking={(selectedService) => {
           // Navigate to booking with pre-selected service
@@ -150,11 +145,11 @@ const Dashboard = () => {
           }
         }} />
       case 'profile':
-        return <Profile onBack={() => setActiveSection('home')} />
+        return <Profile onBack={() => navigate('/customer/dashboard')} />
       case 'loyalty':
-        return <LoyaltyPoints onBack={() => setActiveSection('home')} />
+        return <LoyaltyPoints onBack={() => navigate('/customer/dashboard')} />
       case 'notifications':
-        return <NotificationsPage onBack={() => setActiveSection('home')} />
+        return <NotificationsPage onBack={() => navigate('/customer/dashboard')} />
       default:
         return (
           <div className="space-y-6">
@@ -271,9 +266,9 @@ const Dashboard = () => {
                 </div>
               </div>
               <div className="flex items-center space-x-3">
-                <NotificationBell userId={user?._id} onOpenModal={() => setActiveSection('notifications')} />
+                <NotificationBell userId={user?._id} onOpenModal={() => navigate('/customer/notifications')} />
                 <button
-                  onClick={() => setActiveSection('profile')}
+                  onClick={() => navigate('/customer/profile')}
                   className="relative group"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-full opacity-0 group-hover:opacity-100 blur-md transition-opacity duration-300" />
@@ -309,8 +304,16 @@ const Dashboard = () => {
                     <button
                       key={section.id}
                       onClick={() => {
-                        if (section.id === 'wallet') {
+                        if (section.id === 'home') {
+                          navigate('/customer/dashboard')
+                        } else if (section.id === 'wallet') {
                           navigate('/customer/wallet')
+                        } else if (section.id === 'bookings') {
+                          navigate('/customer/bookings')
+                        } else if (section.id === 'vouchers') {
+                          navigate('/customer/vouchers')
+                        } else if (section.id === 'ai-assistant') {
+                          navigate('/customer/ai-assistant')
                         } else {
                           setActiveSection(section.id)
                         }
