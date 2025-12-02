@@ -11,6 +11,11 @@ import { parseError } from '../../utils/errorHandler'
 
 const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, services = [] }) => {
   const { user } = useAuth()
+
+  // Track if form has been initialized to prevent resetting on services refetch
+  const [formInitialized, setFormInitialized] = useState(false)
+  const [lastEditingBarberId, setLastEditingBarberId] = useState(null)
+
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -39,18 +44,35 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, se
 
   const [currentMonth, setCurrentMonth] = useState(new Date())
 
-  // Debug log to track formData changes
-  React.useEffect(() => {
-    console.log('CreateBarberModal formData updated:', formData)
-  }, [formData])
-
-  // Update form data when editingBarber changes
+  // Reset form initialization when modal closes
   useEffect(() => {
+    if (!isOpen) {
+      setFormInitialized(false)
+      setLastEditingBarberId(null)
+    }
+  }, [isOpen])
+
+  // Update form data when editingBarber changes - only run once per barber
+  useEffect(() => {
+    // Skip if services are not loaded yet
+    if (!services || services.length === 0) return
+
+    // Check if we're editing a different barber or creating new
+    const currentBarberId = editingBarber?._id || null
+    const isNewBarber = currentBarberId !== lastEditingBarberId
+
+    // Only initialize form if it's a new barber or not yet initialized
+    if (!isNewBarber && formInitialized) return
+
     if (editingBarber) {
-      // Filter services to ensure they exist in the current services list
-      // Use the passed services prop (array) for filtering
-      const availableServiceIds = services?.map(s => s._id) || []
-      const validServices = (editingBarber.services || []).filter(id => availableServiceIds.includes(id))
+      // Keep all existing services from the barber - don't filter them out
+      // Only filter if we have a valid services list to check against
+      const availableServiceIds = services.map(s => s._id)
+      const barberServices = editingBarber.services || []
+
+      // Keep services that exist in the current services list
+      // If a service ID doesn't exist, it might have been deleted, so we exclude it
+      const validServices = barberServices.filter(id => availableServiceIds.includes(id))
 
       setFormData({
         username: '', // Don't populate username for editing
@@ -104,7 +126,10 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, se
         }
       })
     }
-  }, [editingBarber, services])
+
+    setFormInitialized(true)
+    setLastEditingBarberId(currentBarberId)
+  }, [editingBarber, services, formInitialized, lastEditingBarberId])
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -412,6 +437,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, se
       experience: '0 years',
       avatar: '',
       avatarStorageId: undefined,
+      schedule_type: 'weekly',
+      specific_dates: [],
       schedule: {
         monday: { available: true, start: '09:00', end: '17:00' },
         tuesday: { available: true, start: '09:00', end: '17:00' },
@@ -424,6 +451,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, se
     })
     setError('')
     setExpandedDay(null)
+    setFormInitialized(false)
+    setLastEditingBarberId(null)
     onClose()
   }
 
@@ -705,36 +734,90 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, se
                   </h3>
 
                   <div>
-                    <label className="block text-gray-300 font-medium text-sm mb-2">
-                      Services Offered
-                    </label>
-                    <div className="max-h-32 overflow-y-auto border border-[#444444] rounded-lg p-3 bg-[#1A1A1A]">
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="block text-gray-300 font-medium text-sm">
+                        Services Offered
+                      </label>
+                      {services && services.length > 0 && (
+                        <span className="text-xs text-gray-500">
+                          {formData.services?.length || 0} of {services.length} selected
+                        </span>
+                      )}
+                    </div>
+                    <div className="max-h-48 overflow-y-auto border border-[#444444] rounded-xl bg-[#1A1A1A] divide-y divide-[#333333]">
                       {!services ? (
-                        <p className="text-sm text-gray-400 p-2">Loading services...</p>
+                        <div className="flex items-center justify-center py-8">
+                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-[var(--color-primary)] border-t-transparent mr-2"></div>
+                          <span className="text-sm text-gray-400">Loading services...</span>
+                        </div>
                       ) : services && services.length > 0 ? (
-                        services.map(service => (
-                          <label key={service._id} className="flex items-center py-1 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={formData.services?.includes(service._id) || false}
-                              onChange={(e) => {
-                                const serviceId = service._id
-                                setFormData(prev => ({
-                                  ...prev,
-                                  services: e.target.checked
-                                    ? [...(prev.services || []), serviceId]
-                                    : (prev.services || []).filter(id => id !== serviceId)
-                                }))
-                              }}
-                              className="h-4 w-4 text-[var(--color-primary)] focus:ring-[var(--color-primary)] rounded border-gray-300"
-                            />
-                            <span className="ml-2 text-sm text-gray-300">
-                              {service.name} - ₱{parseFloat(service.price).toFixed(2)}
-                            </span>
-                          </label>
-                        ))
+                        services.map(service => {
+                          const isSelected = formData.services?.includes(service._id) || false
+                          return (
+                            <label
+                              key={service._id}
+                              className={`flex items-center p-3 cursor-pointer transition-all duration-200 hover:bg-[#2A2A2A] ${
+                                isSelected ? 'bg-[var(--color-primary)]/10' : ''
+                              }`}
+                            >
+                              <div className={`relative flex-shrink-0 w-5 h-5 rounded-md border-2 transition-all duration-200 ${
+                                isSelected
+                                  ? 'bg-[var(--color-primary)] border-[var(--color-primary)]'
+                                  : 'border-[#555555] hover:border-[var(--color-primary)]/50'
+                              }`}>
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={(e) => {
+                                    const serviceId = service._id
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      services: e.target.checked
+                                        ? [...(prev.services || []), serviceId]
+                                        : (prev.services || []).filter(id => id !== serviceId)
+                                    }))
+                                  }}
+                                  className="sr-only"
+                                />
+                                {isSelected && (
+                                  <svg className="absolute inset-0 w-full h-full text-white p-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                  </svg>
+                                )}
+                              </div>
+                              <div className="ml-3 flex-1 min-w-0">
+                                <div className="flex items-center justify-between">
+                                  <span className={`text-sm font-medium truncate ${isSelected ? 'text-white' : 'text-gray-300'}`}>
+                                    {service.name}
+                                  </span>
+                                  <span className={`ml-2 text-sm font-semibold whitespace-nowrap ${
+                                    isSelected ? 'text-[var(--color-primary)]' : 'text-gray-400'
+                                  }`}>
+                                    ₱{parseFloat(service.price).toFixed(0)}
+                                  </span>
+                                </div>
+                                {service.duration && (
+                                  <div className="flex items-center mt-0.5">
+                                    <Clock className="w-3 h-3 text-gray-500 mr-1" />
+                                    <span className="text-xs text-gray-500">{service.duration} min</span>
+                                    {service.category && (
+                                      <>
+                                        <span className="mx-1.5 text-gray-600">•</span>
+                                        <span className="text-xs text-gray-500 capitalize">{service.category}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </label>
+                          )
+                        })
                       ) : (
-                        <p className="text-sm text-gray-400 p-2">No services available</p>
+                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                          <Scissors className="w-8 h-8 text-gray-600 mb-2" />
+                          <p className="text-sm text-gray-400">No services available</p>
+                          <p className="text-xs text-gray-500 mt-1">Add services in the Services section</p>
+                        </div>
                       )}
                     </div>
                   </div>
