@@ -115,11 +115,11 @@ const ReportsManagement = ({ onRefresh, user }) => {
     const prevPeriodStart = periodStart - periodLength
     const prevPeriodEnd = periodStart
     const prevTransactions = transactions.filter(t =>
-      t.createdAt >= prevPeriodStart &&
-      t.createdAt < prevPeriodEnd &&
+      t.date >= prevPeriodStart &&
+      t.date < prevPeriodEnd &&
       (t.payment_status === 'completed' || t.payment_status === 'paid')
     )
-    const prevBookings = bookings.filter(b => b.createdAt >= prevPeriodStart && b.createdAt < prevPeriodEnd)
+    const prevBookings = bookings.filter(b => b.date >= prevPeriodStart && b.date < prevPeriodEnd)
     const prevValidBookings = prevBookings.filter(b => b.status !== 'cancelled')
 
     // === DESCRIPTIVE ANALYTICS: What happened? ===
