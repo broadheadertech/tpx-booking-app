@@ -14,9 +14,9 @@ const DEFAULT_BRANDING = {
   bg_color: 'var(--color-bg)',
   text_color: '#FFFFFF',
   muted_color: '#333333',
-  logo_light_url: '/img/tipuno_x_logo_white.avif',
-  logo_dark_url: '/img/tipuno_x_logo_white.avif',
-  favicon_url: '/img/app_logo.png',
+  logo_light_url: '',
+  logo_dark_url: '',
+  favicon_url: '',
   banner_url: '',
   hero_image_url: '/landing/2.webp',
   feature_toggles: {
