@@ -183,6 +183,7 @@ export const updateBarber = mutation({
     phone: v.optional(v.string()),
     avatar: v.optional(v.string()),
     avatarStorageId: v.optional(v.id("_storage")),
+    bio: v.optional(v.string()),
     experience: v.optional(v.string()),
     specialties: v.optional(v.array(v.string())),
     schedule: v.optional(v.object({
