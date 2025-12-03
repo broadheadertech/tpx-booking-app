@@ -99,13 +99,13 @@ const ServiceBooking = ({ onBack }) => {
   const [openCategory, setOpenCategory] = useState(null); // ✅ Top level hook
 
   // Custom booking form states
-  const [showCustomBookingForm, setShowCustomBookingForm] = useState(false);
   const [customFormResponses, setCustomFormResponses] = useState({});
   const [customFormCustomerName, setCustomFormCustomerName] = useState(user?.full_name || user?.nickname || "");
   const [customFormCustomerEmail, setCustomFormCustomerEmail] = useState(user?.email || "");
   const [customFormCustomerPhone, setCustomFormCustomerPhone] = useState(user?.mobile_number || user?.phone || "");
   const [customBookingSubmitting, setCustomBookingSubmitting] = useState(false);
   const [customBookingSuccess, setCustomBookingSuccess] = useState(null);
+  const [isCustomBookingFlow, setIsCustomBookingFlow] = useState(false);
 
   // Convex queries
   const branches = useQuery(api.services.branches.getActiveBranches);
@@ -634,14 +634,16 @@ const ServiceBooking = ({ onBack }) => {
 
     // Check if barber has custom booking enabled
     if (barber.custom_booking_enabled) {
-      // Reset custom form state
+      // Reset custom form state and enter custom booking flow
       setCustomFormResponses({});
       setCustomFormCustomerName(user?.full_name || user?.nickname || "");
       setCustomFormCustomerEmail(user?.email || "");
       setCustomFormCustomerPhone(user?.mobile_number || user?.phone || "");
       setCustomBookingSuccess(null);
-      setShowCustomBookingForm(true);
+      setIsCustomBookingFlow(true);
+      setStep(3); // Go to step 3 which will show custom booking form
     } else {
+      setIsCustomBookingFlow(false);
       setStep(3);
     }
   };
@@ -694,13 +696,14 @@ const ServiceBooking = ({ onBack }) => {
     }
   };
 
-  // Close custom booking form
+  // Close/cancel custom booking form - go back to barber selection
   const handleCloseCustomBookingForm = () => {
-    setShowCustomBookingForm(false);
+    setIsCustomBookingFlow(false);
     setSelectedStaff(null);
     setCustomFormResponses({});
     setCustomBookingSuccess(null);
     setError(null);
+    setStep(2); // Go back to barber selection
   };
 
   const handleConfirmBooking = async (
@@ -717,7 +720,7 @@ const ServiceBooking = ({ onBack }) => {
       case 2:
         return "Choose Barber";
       case 3:
-        return "Choose Service";
+        return isCustomBookingFlow ? "Custom Booking" : "Choose Service";
       case 4:
         return "Select Date & Time";
       case 5:
@@ -729,34 +732,45 @@ const ServiceBooking = ({ onBack }) => {
     }
   };
 
-  const renderStepIndicator = () => (
-    <div className="flex justify-center mb-4 px-4 py-2">
-      <div className="flex items-center space-x-3">
-        {[1, 2, 3, 4, 5].map((stepNumber) => (
-          <div key={stepNumber} className="flex items-center">
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                step >= stepNumber ? "text-white shadow-md" : "text-gray-500"
-              }`}
-              style={{
-                backgroundColor: step >= stepNumber ? (branding?.primary_color || "#F68B24") : (branding?.muted_color || "#E0E0E0"),
-              }}
-            >
-              {step > stepNumber ? "✓" : stepNumber}
-            </div>
-            {stepNumber < 5 && (
+  const renderStepIndicator = () => {
+    // For custom booking flow, show only 3 steps: Branch -> Barber -> Custom Form
+    const totalSteps = isCustomBookingFlow ? 3 : 5;
+    const stepsArray = isCustomBookingFlow ? [1, 2, 3] : [1, 2, 3, 4, 5];
+
+    // Hide step indicator on success page
+    if (customBookingSuccess && isCustomBookingFlow) {
+      return null;
+    }
+
+    return (
+      <div className="flex justify-center mb-4 px-4 py-2">
+        <div className="flex items-center space-x-3">
+          {stepsArray.map((stepNumber) => (
+            <div key={stepNumber} className="flex items-center">
               <div
-                className={`w-8 h-0.5 mx-1 rounded transition-all duration-300`}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                  step >= stepNumber ? "text-white shadow-md" : "text-gray-500"
+                }`}
                 style={{
-                  backgroundColor: step > stepNumber ? (branding?.primary_color || "#F68B24") : (branding?.muted_color || "#E0E0E0"),
+                  backgroundColor: step >= stepNumber ? (branding?.primary_color || "#F68B24") : (branding?.muted_color || "#E0E0E0"),
                 }}
-              ></div>
-            )}
-          </div>
-        ))}
+              >
+                {step > stepNumber ? "✓" : stepNumber}
+              </div>
+              {stepNumber < totalSteps && (
+                <div
+                  className={`w-8 h-0.5 mx-1 rounded transition-all duration-300`}
+                  style={{
+                    backgroundColor: step > stepNumber ? (branding?.primary_color || "#F68B24") : (branding?.muted_color || "#E0E0E0"),
+                  }}
+                ></div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderBranchSelection = () => {
     if (!branches) {
@@ -1980,34 +1994,70 @@ const ServiceBooking = ({ onBack }) => {
     }
   };
 
-  // Custom booking form modal content
-  const renderCustomBookingFormModal = () => {
-    if (!showCustomBookingForm || !selectedStaff) return null;
+  // Custom booking form page content (not modal)
+  const renderCustomBookingForm = () => {
+    if (!selectedStaff) return null;
 
-    // Show success state
+    // Show success state as a page
     if (customBookingSuccess) {
       return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0A0A0A] rounded-2xl w-full max-w-md border border-[#2A2A2A] overflow-hidden">
-            <div className="p-8 text-center">
-              <div className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center"
-                style={{ backgroundColor: hexToRgba(branding?.primary_color || "#F68B24", 0.2) }}>
-                <CheckCircle className="w-10 h-10" style={{ color: branding?.primary_color || "#F68B24" }} />
+        <div className="px-4 pb-6 max-w-2xl mx-auto">
+          <div className="text-center py-8">
+            <div className="w-24 h-24 rounded-full mx-auto mb-6 flex items-center justify-center"
+              style={{ backgroundColor: hexToRgba(branding?.primary_color || "#F68B24", 0.2) }}>
+              <CheckCircle className="w-12 h-12" style={{ color: branding?.primary_color || "#F68B24" }} />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-3">Request Submitted!</h2>
+            <p className="text-gray-400 mb-6 max-w-sm mx-auto">
+              Your booking request has been sent to {selectedStaff.full_name || selectedStaff.name}.
+              They will contact you soon to confirm your appointment.
+            </p>
+
+            {/* Reference Code Card */}
+            <div className="bg-[#1A1A1A] rounded-xl p-6 border border-[#2A2A2A] mb-6">
+              <p className="text-sm text-gray-400 mb-2">Reference Code</p>
+              <p className="text-2xl font-mono font-bold" style={{ color: branding?.primary_color || "#F68B24" }}>
+                {customBookingSuccess.booking_code}
+              </p>
+            </div>
+
+            {/* Booking Summary */}
+            <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A] mb-6 text-left">
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide mb-3">Booking Details</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Barber</span>
+                  <span className="text-white font-medium">{selectedStaff.full_name || selectedStaff.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Branch</span>
+                  <span className="text-white font-medium">{selectedBranch?.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Status</span>
+                  <span className="text-yellow-400 font-medium">Pending Confirmation</span>
+                </div>
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">Request Submitted!</h2>
-              <p className="text-gray-400 mb-4">
-                Your booking request has been sent to {selectedStaff.full_name || selectedStaff.name}.
-                They will contact you soon to confirm your appointment.
-              </p>
-              <p className="text-sm text-gray-500 mb-6">
-                Reference Code: <span className="font-mono text-[var(--color-primary)]">{customBookingSuccess.booking_code}</span>
-              </p>
+            </div>
+
+            <div className="space-y-3">
               <button
-                onClick={handleCloseCustomBookingForm}
+                onClick={onBack}
                 className="w-full py-4 text-white font-bold rounded-xl transition-all"
                 style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
               >
-                Done
+                Back to Home
+              </button>
+              <button
+                onClick={() => {
+                  setCustomBookingSuccess(null);
+                  setIsCustomBookingFlow(false);
+                  setSelectedStaff(null);
+                  setStep(2);
+                }}
+                className="w-full py-3 text-gray-400 font-medium rounded-xl border border-[#2A2A2A] hover:bg-white/5 transition-all"
+              >
+                Book Another Appointment
               </button>
             </div>
           </div>
@@ -2018,8 +2068,8 @@ const ServiceBooking = ({ onBack }) => {
     // Loading state for form
     if (!customBookingForm) {
       return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0A0A0A] rounded-2xl w-full max-w-md p-8 text-center border border-[#2A2A2A]">
+        <div className="px-4 pb-6 max-w-2xl mx-auto">
+          <div className="text-center py-12">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[var(--color-primary)] mx-auto mb-4"></div>
             <p className="text-gray-400">Loading booking form...</p>
           </div>
@@ -2028,104 +2078,94 @@ const ServiceBooking = ({ onBack }) => {
     }
 
     return (
-      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div className="bg-[#0A0A0A] rounded-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col border border-[#2A2A2A]">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-[#2A2A2A]">
-            <div className="flex items-center gap-3">
-              <BarberAvatar barber={selectedStaff} className="w-10 h-10" />
-              <div>
-                <h2 className="font-bold text-white">{customBookingForm.title}</h2>
-                <p className="text-sm text-gray-400">with {selectedStaff.full_name || selectedStaff.name}</p>
-              </div>
+      <div className="px-4 pb-6 max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-4 mb-4">
+            <BarberAvatar barber={selectedStaff} className="w-16 h-16" />
+            <div>
+              <h2 className="text-2xl font-bold text-white">{customBookingForm.title}</h2>
+              <p className="text-gray-400">with {selectedStaff.full_name || selectedStaff.name}</p>
             </div>
-            <button
-              onClick={handleCloseCustomBookingForm}
-              className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          </div>
+          {customBookingForm.description && (
+            <p className="text-gray-400 text-sm">{customBookingForm.description}</p>
+          )}
+        </div>
+
+        {/* Form Content */}
+        <form onSubmit={handleCustomBookingSubmit} className="space-y-6">
+          {/* Customer Info */}
+          <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A] space-y-4">
+            <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Your Information</h3>
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                Full Name <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={customFormCustomerName}
+                onChange={(e) => setCustomFormCustomerName(e.target.value)}
+                placeholder="Enter your full name"
+                className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-primary)]"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Email Address</label>
+              <input
+                type="email"
+                value={customFormCustomerEmail}
+                onChange={(e) => setCustomFormCustomerEmail(e.target.value)}
+                placeholder="Enter your email"
+                className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-primary)]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Phone Number</label>
+              <input
+                type="tel"
+                value={customFormCustomerPhone}
+                onChange={(e) => setCustomFormCustomerPhone(e.target.value)}
+                placeholder="Enter your phone number"
+                className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-primary)]"
+              />
+            </div>
           </div>
 
-          {/* Form Content */}
-          <form onSubmit={handleCustomBookingSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
-            {customBookingForm.description && (
-              <p className="text-gray-400 text-sm mb-4">{customBookingForm.description}</p>
-            )}
-
-            {/* Customer Info */}
-            <div className="space-y-4 pb-4 border-b border-[#2A2A2A]">
-              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Your Information</h3>
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Full Name <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={customFormCustomerName}
-                  onChange={(e) => setCustomFormCustomerName(e.target.value)}
-                  placeholder="Enter your full name"
-                  className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-primary)]"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">Email Address</label>
-                <input
-                  type="email"
-                  value={customFormCustomerEmail}
-                  onChange={(e) => setCustomFormCustomerEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-primary)]"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">Phone Number</label>
-                <input
-                  type="tel"
-                  value={customFormCustomerPhone}
-                  onChange={(e) => setCustomFormCustomerPhone(e.target.value)}
-                  placeholder="Enter your phone number"
-                  className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-primary)]"
-                />
-              </div>
+          {/* Custom Fields */}
+          {customBookingForm.fields && customBookingForm.fields.length > 0 && (
+            <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A] space-y-4">
+              <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Booking Details</h3>
+              {customBookingForm.fields.sort((a, b) => a.order - b.order).map(field => (
+                <div key={field.id}>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    {field.label}
+                    {field.required && <span className="text-red-400 ml-1">*</span>}
+                  </label>
+                  {field.helpText && (
+                    <p className="text-xs text-gray-500 mb-2">{field.helpText}</p>
+                  )}
+                  {renderCustomFormField(field)}
+                </div>
+              ))}
             </div>
+          )}
 
-            {/* Custom Fields */}
-            {customBookingForm.fields && customBookingForm.fields.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wide">Booking Details</h3>
-                {customBookingForm.fields.sort((a, b) => a.order - b.order).map(field => (
-                  <div key={field.id}>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      {field.label}
-                      {field.required && <span className="text-red-400 ml-1">*</span>}
-                    </label>
-                    {field.helpText && (
-                      <p className="text-xs text-gray-500 mb-2">{field.helpText}</p>
-                    )}
-                    {renderCustomFormField(field)}
-                  </div>
-                ))}
-              </div>
-            )}
+          {/* Error Display */}
+          {error && (
+            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+              <p className="text-red-400 text-sm flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                {error}
+              </p>
+            </div>
+          )}
 
-            {/* Error Display */}
-            {error && (
-              <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
-                <p className="text-red-400 text-sm flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4" />
-                  {error}
-                </p>
-              </div>
-            )}
-          </form>
-
-          {/* Footer */}
-          <div className="p-4 border-t border-[#2A2A2A] space-y-3">
+          {/* Action Buttons */}
+          <div className="space-y-3 pt-2">
             <button
               type="submit"
-              onClick={handleCustomBookingSubmit}
               disabled={customBookingSubmitting}
               className="w-full py-4 text-white font-bold rounded-xl transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
@@ -2139,38 +2179,70 @@ const ServiceBooking = ({ onBack }) => {
                 "Submit Booking Request"
               )}
             </button>
-            <button
-              type="button"
-              onClick={handleCloseCustomBookingForm}
-              className="w-full py-3 text-gray-400 font-medium rounded-xl hover:bg-white/5 transition-all"
-            >
-              Cancel
-            </button>
           </div>
-        </div>
+        </form>
       </div>
     );
   };
 
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
-      {/* Custom Booking Form Modal */}
-      {renderCustomBookingFormModal()}
-
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
         <div className="max-w-md mx-auto px-4">
           <div className="flex items-center justify-between py-4">
             <button
-              onClick={onBack}
+              onClick={() => {
+                // Handle back navigation based on current step
+                if (step === 1) {
+                  // On first step, exit to home
+                  onBack();
+                } else if (step === 6) {
+                  // On success step, exit to home
+                  onBack();
+                } else if (step === 3 && isCustomBookingFlow) {
+                  // In custom booking flow at step 3, go back to barber selection
+                  if (customBookingSuccess) {
+                    // If on success page, exit to home
+                    onBack();
+                  } else {
+                    setIsCustomBookingFlow(false);
+                    setSelectedStaff(null);
+                    setCustomFormResponses({});
+                    setError(null);
+                    setStep(2);
+                  }
+                } else {
+                  // Go to previous step
+                  // Step flow: 1 (branch) -> 2 (barber) -> 3 (service) -> 4 (date/time) -> 5 (confirm)
+                  setStep(step - 1);
+                  // Reset relevant selections when going back
+                  if (step === 2) {
+                    setSelectedBranch(null);
+                  } else if (step === 3) {
+                    setSelectedStaff(null);
+                  } else if (step === 4) {
+                    setSelectedService(null);
+                  } else if (step === 5) {
+                    setSelectedTime(null);
+                  }
+                }
+              }}
               className="flex items-center space-x-2 px-3 py-2 text-white font-semibold rounded-xl hover:bg-white/10 transition-all duration-200"
             >
               <ArrowLeft className="w-5 h-5" />
               <span className="text-sm">Back</span>
             </button>
             <div className="text-right">
-              <p className="text-lg font-bold text-white">Book Service</p>
-              <p className="text-xs text-[var(--color-primary)]">Step {step} of 4</p>
+              <p className="text-lg font-bold text-white">
+                {isCustomBookingFlow ? "Custom Booking" : "Book Service"}
+              </p>
+              <p className="text-xs text-[var(--color-primary)]">
+                {isCustomBookingFlow
+                  ? (customBookingSuccess ? "Complete" : `Step ${step} of 3`)
+                  : `Step ${step} of 5`
+                }
+              </p>
             </div>
           </div>
         </div>
@@ -2183,7 +2255,7 @@ const ServiceBooking = ({ onBack }) => {
       <div className="relative z-10 pb-8">
         {step === 1 && renderBranchSelection()}
         {step === 2 && renderStaffSelection()}
-        {step === 3 && renderServiceSelection()}
+        {step === 3 && (isCustomBookingFlow ? renderCustomBookingForm() : renderServiceSelection())}
         {step === 4 && renderTimeSelection()}
         {step === 5 && renderConfirmation()}
         {step === 6 && renderBookingSuccess()}
