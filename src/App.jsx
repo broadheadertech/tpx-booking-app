@@ -62,7 +62,7 @@ function App() {
               <Route path="/landing" element={<Landing />} />
               <Route path="/guest/booking" element={<GuestServiceBooking />} />
               <Route path="/barbers" element={<BarbersList />} />
-              <Route path="/barbers/:barberId" element={<BarberProfile />} />
+              <Route path="/barbers/:barberSlug" element={<BarberProfile />} />
               <Route
                 path="/platform-selection"
                 element={<PlatformSelection />}

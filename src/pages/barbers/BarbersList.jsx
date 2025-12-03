@@ -32,6 +32,16 @@ const BarbersList = () => {
     }
   };
 
+  // Convert name to URL-friendly slug
+  const slugify = (name) => {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
+  };
+
   const filteredBarbers = barbers?.filter(
     (barber) =>
       barber.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -138,7 +148,7 @@ const BarbersList = () => {
             {filteredBarbers?.map((barber) => (
               <div
                 key={barber._id}
-                onClick={() => navigate(`/barbers/${barber._id}`)}
+                onClick={() => navigate(`/barbers/${slugify(barber.name)}`)}
                 className="group bg-[#111111] rounded-xl overflow-hidden border border-[#1A1A1A] hover:border-[var(--color-primary)]/50 transition-all duration-300 cursor-pointer"
               >
                 {/* Image Container */}

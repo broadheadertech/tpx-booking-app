@@ -191,6 +191,110 @@ export const deleteAchievement = mutation({
   },
 });
 
+// Get public barber profile by slug (URL-friendly name)
+export const getPublicBarberProfileBySlug = query({
+  args: {
+    slug: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Find barber by matching the slug against full_name converted to slug format
+    const allBarbers = await ctx.db
+      .query("barbers")
+      .withIndex("by_active", (q) => q.eq("is_active", true))
+      .collect();
+
+    // Convert name to slug format for matching
+    const slugify = (name: string) => {
+      return name
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-');
+    };
+
+    const barber = allBarbers.find(b => slugify(b.full_name) === args.slug.toLowerCase());
+    if (!barber) return null;
+
+    // Get user info
+    const user = await ctx.db.get(barber.user);
+
+    // Get avatar URL
+    let avatarUrl = barber.avatar;
+    if (barber.avatarStorageId) {
+      avatarUrl = await ctx.storage.getUrl(barber.avatarStorageId);
+    }
+
+    // Get services
+    const services = await Promise.all(
+      barber.services.map(async (serviceId) => {
+        const service = await ctx.db.get(serviceId);
+        return service;
+      })
+    );
+
+    // Get portfolio
+    const portfolio = await ctx.db
+      .query("barber_portfolio")
+      .withIndex("by_barber", (q) => q.eq("barber_id", barber._id))
+      .order("desc")
+      .take(12);
+
+    const portfolioWithUrls = await Promise.all(
+      portfolio.map(async (item) => {
+        const imageUrl = await ctx.storage.getUrl(item.image_storage_id);
+        return { ...item, imageUrl };
+      })
+    );
+
+    // Get achievements
+    const achievements = await ctx.db
+      .query("barber_achievements")
+      .withIndex("by_barber", (q) => q.eq("barber_id", barber._id))
+      .order("desc")
+      .collect();
+
+    const achievementsWithUrls = await Promise.all(
+      achievements.map(async (item) => {
+        let imageUrl = null;
+        if (item.image_storage_id) {
+          imageUrl = await ctx.storage.getUrl(item.image_storage_id);
+        }
+        return { ...item, imageUrl };
+      })
+    );
+
+    // Get ratings
+    const ratings = await ctx.db
+      .query("ratings")
+      .withIndex("by_barber", (q) => q.eq("barber_id", barber._id))
+      .order("desc")
+      .take(10);
+
+    const ratingsWithCustomers = await Promise.all(
+      ratings.map(async (rating) => {
+        const customer = await ctx.db.get(rating.customer_id);
+        return {
+          ...rating,
+          customerName: customer?.nickname || customer?.username || "Customer",
+          customerAvatar: customer?.avatar,
+        };
+      })
+    );
+
+    return {
+      ...barber,
+      name: barber.full_name,
+      email: user?.email,
+      avatarUrl,
+      services: services.filter(Boolean),
+      portfolio: portfolioWithUrls,
+      achievements: achievementsWithUrls,
+      reviews: ratingsWithCustomers,
+    };
+  },
+});
+
 // Get public barber profile with all details
 export const getPublicBarberProfile = query({
   args: {

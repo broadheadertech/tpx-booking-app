@@ -21,17 +21,23 @@ import { useBranding } from "../../context/BrandingContext";
 
 const BarberProfile = () => {
   const navigate = useNavigate();
-  const { barberId } = useParams();
+  const { barberSlug } = useParams();
   const { branding } = useBranding();
   const { isAuthenticated } = useAuth();
   const [selectedImage, setSelectedImage] = useState(null);
   const [activeTab, setActiveTab] = useState("portfolio");
   const [isFavorite, setIsFavorite] = useState(false);
 
+  // Fetch barber profile using slug (URL-friendly name)
+  const barberProfile = useQuery(
+    api.services.portfolio.getPublicBarberProfileBySlug,
+    barberSlug ? { slug: barberSlug } : "skip"
+  );
+
   // Handle booking with this barber
   const handleBookWithBarber = () => {
     sessionStorage.setItem("preSelectedBarber", JSON.stringify({
-      barberId: barberId,
+      barberId: barberProfile?._id,
       barberName: barberProfile?.name,
       branchId: barberProfile?.branch_id
     }));
@@ -42,11 +48,6 @@ const BarberProfile = () => {
       navigate("/guest/booking");
     }
   };
-
-  const barberProfile = useQuery(
-    api.services.portfolio.getPublicBarberProfile,
-    barberId ? { barber_id: barberId } : "skip"
-  );
 
   const formatTime = (time) => {
     if (!time) return "";
