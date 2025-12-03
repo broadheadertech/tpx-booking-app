@@ -73,6 +73,37 @@ const BarberProfile = () => {
     { id: "reviews", icon: MessageSquare, label: "Reviews" },
   ];
 
+  // Get today's day key
+  const getTodayKey = () => {
+    const daysMap = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    return daysMap[new Date().getDay()];
+  };
+
+  // Check if barber is available today
+  const isAvailableToday = () => {
+    if (!barberProfile) return false;
+
+    // First check if barber is accepting bookings at all
+    if (barberProfile.is_accepting_bookings === false) return false;
+
+    // Then check today's schedule
+    const todayKey = getTodayKey();
+    const todaySchedule = barberProfile.schedule?.[todayKey];
+
+    if (!todaySchedule?.available) return false;
+
+    // Optionally check if current time is within working hours
+    const now = new Date();
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    // If we have start/end times, check if within range
+    if (todaySchedule.start && todaySchedule.end) {
+      return currentTime >= todaySchedule.start && currentTime <= todaySchedule.end;
+    }
+
+    return true;
+  };
+
   // Calculate years of experience
   const getYearsExperience = () => {
     if (!barberProfile?.experience) return "0 years";
@@ -148,10 +179,10 @@ const BarberProfile = () => {
                 </div>
               )}
             </div>
-            {/* Green availability dot */}
-            {barberProfile.is_accepting_bookings && (
-              <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 rounded-full border-3 border-[#0A0A0A]" />
-            )}
+            {/* Availability dot - green if available today, gray if not */}
+            <div className={`absolute bottom-1 right-1 w-5 h-5 rounded-full border-2 border-[#0A0A0A] ${
+              isAvailableToday() ? "bg-green-500" : "bg-gray-500"
+            }`} />
           </div>
 
           {/* Name */}
@@ -176,9 +207,9 @@ const BarberProfile = () => {
           </div>
 
           {/* Availability Status */}
-          {barberProfile.is_accepting_bookings && (
-            <p className="text-green-500 text-sm">Available Today</p>
-          )}
+          <p className={`text-sm ${isAvailableToday() ? "text-green-500" : "text-gray-500"}`}>
+            {isAvailableToday() ? "Available Today" : "Not Available Today"}
+          </p>
 
           {/* Bio */}
           <p className="text-gray-400 text-sm mt-3 max-w-md mx-auto leading-relaxed">
