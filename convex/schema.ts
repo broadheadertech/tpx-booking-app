@@ -138,6 +138,7 @@ export default defineSchema({
     phone: v.optional(v.string()),
     avatar: v.optional(v.string()),
     avatarStorageId: v.optional(v.id("_storage")),
+    bio: v.optional(v.string()),
     experience: v.string(),
     rating: v.number(),
     totalBookings: v.number(),

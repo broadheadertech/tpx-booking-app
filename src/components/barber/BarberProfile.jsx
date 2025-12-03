@@ -73,7 +73,7 @@ const BarberProfile = () => {
         phone: currentBarber.phone || user.mobile_number || '',
         experience: currentBarber.experience || '',
         specialties: currentBarber.specialties || [],
-        bio: user.bio || '',
+        bio: currentBarber.bio || '',
         avatar: getImageUrl || currentBarber.avatar || ''
       })
     }
@@ -165,15 +165,6 @@ const BarberProfile = () => {
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      const sessionToken = localStorage.getItem('session_token')
-      if (sessionToken) {
-        await updateUserProfile({
-          sessionToken,
-          bio: editForm.bio,
-          avatar: editForm.avatar
-        })
-      }
-
       if (currentBarber?._id) {
         await updateBarberMutation({
           id: currentBarber._id,
@@ -182,6 +173,7 @@ const BarberProfile = () => {
           phone: editForm.phone,
           experience: editForm.experience,
           specialties: editForm.specialties,
+          bio: editForm.bio,
         })
       }
 
@@ -205,7 +197,7 @@ const BarberProfile = () => {
         phone: currentBarber.phone || user.mobile_number || '',
         experience: currentBarber.experience || '',
         specialties: currentBarber.specialties || [],
-        bio: user.bio || '',
+        bio: currentBarber.bio || '',
         avatar: getImageUrl || currentBarber.avatar || ''
       })
     }
@@ -376,7 +368,7 @@ const BarberProfile = () => {
                 placeholder="Write a short bio about yourself..."
               />
             ) : (
-              <p className="text-gray-400 text-sm">{user?.bio || 'No bio added yet'}</p>
+              <p className="text-gray-400 text-sm">{currentBarber?.bio || 'No bio added yet'}</p>
             )}
           </div>
         </div>
