@@ -32,7 +32,8 @@ const BarberProfile = () => {
   const handleBookWithBarber = () => {
     sessionStorage.setItem("preSelectedBarber", JSON.stringify({
       barberId: barberId,
-      barberName: barberProfile?.name
+      barberName: barberProfile?.name,
+      branchId: barberProfile?.branch_id
     }));
 
     if (isAuthenticated) {

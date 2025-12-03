@@ -191,10 +191,34 @@ const GuestServiceBooking = ({ onBack }) => {
     }
   }, [services, selectedBranch]);
 
-  // Check for pre-selected barber from barber profile page
+  // Check for pre-selected barber from barber profile page - auto-select branch first
   useEffect(() => {
     const preSelectedBarberData = sessionStorage.getItem("preSelectedBarber");
-    if (preSelectedBarberData && barbers && barbers.length > 0) {
+    if (preSelectedBarberData && branches) {
+      try {
+        const preSelectedBarber = JSON.parse(preSelectedBarberData);
+
+        // If we have a branchId, auto-select the branch first
+        if (preSelectedBarber.branchId) {
+          const matchingBranch = branches.find(
+            (branch) => branch._id === preSelectedBarber.branchId
+          );
+
+          if (matchingBranch && !selectedBranch) {
+            setSelectedBranch(matchingBranch);
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing pre-selected barber:", error);
+        sessionStorage.removeItem("preSelectedBarber");
+      }
+    }
+  }, [branches, selectedBranch]);
+
+  // Once branch is selected and barbers are loaded, auto-select barber and skip to service selection
+  useEffect(() => {
+    const preSelectedBarberData = sessionStorage.getItem("preSelectedBarber");
+    if (preSelectedBarberData && barbers && barbers.length > 0 && selectedBranch) {
       try {
         const preSelectedBarber = JSON.parse(preSelectedBarberData);
         // Find the matching barber from the current barbers list
@@ -202,28 +226,23 @@ const GuestServiceBooking = ({ onBack }) => {
           (barber) => barber._id === preSelectedBarber.barberId
         );
 
-        if (matchingBarber) {
+        if (matchingBarber && !selectedStaff) {
+          // Auto-select the barber
           setSelectedStaff(matchingBarber);
-          // If we also have a branch, auto-select it
-          if (matchingBarber.branch_id && branches) {
-            const matchingBranch = branches.find(
-              (branch) => branch._id === matchingBarber.branch_id
-            );
-            if (matchingBranch && !selectedBranch) {
-              setSelectedBranch(matchingBranch);
-              setStep(2); // Go to services step
-            }
-          }
-        }
+          sessionStorage.setItem("barberId", matchingBarber._id);
 
-        // Clear the stored barber after using it
-        sessionStorage.removeItem("preSelectedBarber");
+          // Skip directly to step 3 (service selection) since branch and barber are pre-selected
+          setStep(3);
+
+          // Clear the stored barber after using it
+          sessionStorage.removeItem("preSelectedBarber");
+        }
       } catch (error) {
         console.error("Error parsing pre-selected barber:", error);
         sessionStorage.removeItem("preSelectedBarber");
       }
     }
-  }, [barbers, branches, selectedBranch]);
+  }, [barbers, selectedBranch, selectedStaff]);
 
   // Reset QR code loading state when step changes
   useEffect(() => {
@@ -2043,6 +2062,33 @@ const GuestServiceBooking = ({ onBack }) => {
 
       {/* Step Indicator */}
       <div className="relative z-10">{renderStepIndicator()}</div>
+
+      {/* Registration Promo Banner */}
+      {step < 7 && (
+        <div className="relative z-10 px-4 mb-4 max-w-2xl mx-auto">
+          <div className="bg-gradient-to-r from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 border border-[var(--color-primary)]/30 rounded-xl p-3">
+            <div className="flex items-center gap-3">
+              <div className="flex-shrink-0">
+                <Gift className="w-5 h-5 text-[var(--color-primary)]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white">
+                  Get better deals & exclusive vouchers!
+                </p>
+                <p className="text-xs text-gray-400">
+                  Register for a free account to unlock special discounts and rewards
+                </p>
+              </div>
+              <button
+                onClick={() => window.location.href = "/auth/register"}
+                className="flex-shrink-0 px-3 py-1.5 bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white text-xs font-semibold rounded-lg transition-colors"
+              >
+                Register
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div className="relative z-10 pb-8">

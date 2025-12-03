@@ -185,6 +185,72 @@ const ServiceBooking = ({ onBack }) => {
     }
   }, [services, selectedBranch]);
 
+  // Check for pre-selected barber from barber profile page
+  useEffect(() => {
+    const preSelectedBarberData = sessionStorage.getItem("preSelectedBarber");
+    if (preSelectedBarberData && branches) {
+      try {
+        const preSelectedBarber = JSON.parse(preSelectedBarberData);
+
+        // If we have a branchId, auto-select the branch first
+        if (preSelectedBarber.branchId) {
+          const matchingBranch = branches.find(
+            (branch) => branch._id === preSelectedBarber.branchId
+          );
+
+          if (matchingBranch && !selectedBranch) {
+            setSelectedBranch(matchingBranch);
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing pre-selected barber:", error);
+        sessionStorage.removeItem("preSelectedBarber");
+      }
+    }
+  }, [branches, selectedBranch]);
+
+  // Once we have barbers loaded and pre-selected barber data, auto-select barber and skip to service selection
+  useEffect(() => {
+    const preSelectedBarberData = sessionStorage.getItem("preSelectedBarber");
+    if (preSelectedBarberData && barbers && barbers.length > 0 && selectedBranch) {
+      try {
+        const preSelectedBarber = JSON.parse(preSelectedBarberData);
+
+        // Find the matching barber
+        const matchingBarber = barbers.find(
+          (barber) => barber._id === preSelectedBarber.barberId
+        );
+
+        if (matchingBarber && !selectedStaff) {
+          // Auto-select the barber
+          setSelectedStaff(matchingBarber);
+          sessionStorage.setItem("barberId", matchingBarber._id);
+
+          // Check if barber has custom booking enabled
+          if (matchingBarber.custom_booking_enabled) {
+            setCustomFormResponses({});
+            setCustomFormCustomerName(user?.full_name || user?.nickname || "");
+            setCustomFormCustomerEmail(user?.email || "");
+            setCustomFormCustomerPhone(user?.mobile_number || user?.phone || "");
+            setCustomBookingSuccess(null);
+            setIsCustomBookingFlow(true);
+          } else {
+            setIsCustomBookingFlow(false);
+          }
+
+          // Skip directly to step 3 (service selection)
+          setStep(3);
+
+          // Clear the stored barber after using it
+          sessionStorage.removeItem("preSelectedBarber");
+        }
+      } catch (error) {
+        console.error("Error parsing pre-selected barber:", error);
+        sessionStorage.removeItem("preSelectedBarber");
+      }
+    }
+  }, [barbers, selectedBranch, selectedStaff, user]);
+
   // Reset QR code loading state when step changes
   useEffect(() => {
     if (step === 6) {
