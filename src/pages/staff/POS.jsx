@@ -323,6 +323,35 @@ const POS = () => {
   // Add service to transaction
   const addService = (service) => {
     setCurrentTransaction(prev => {
+      // When a booking is attached, REPLACE the service instead of adding
+      // This allows staff to change the service for the booking
+      if (currentBooking) {
+        // Check if clicking the same service that's already in cart
+        const existingIndex = prev.services.findIndex(item => item.service_id === service._id)
+        if (existingIndex >= 0) {
+          // Same service clicked - increment quantity
+          const updatedServices = [...prev.services]
+          updatedServices[existingIndex].quantity += 1
+          return { ...prev, services: updatedServices }
+        } else {
+          // Different service clicked - REPLACE the entire services array
+          // This clears the booking service and sets the new one
+          return {
+            ...prev,
+            services: [{
+              service_id: service._id,
+              service_name: service.name,
+              price: service.price,
+              quantity: 1
+            }],
+            // Also reset the voucher/discount since we're changing the service
+            discount_amount: 0,
+            voucher_applied: null
+          }
+        }
+      }
+
+      // Normal behavior when no booking is attached - add to cart
       const existingIndex = prev.services.findIndex(item => item.service_id === service._id)
       if (existingIndex >= 0) {
         const updatedServices = [...prev.services]

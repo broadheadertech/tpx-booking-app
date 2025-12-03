@@ -25,6 +25,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, se
     full_name: '',
     phone: '',
     is_active: true,
+    custom_booking_enabled: false, // Custom booking process toggle
     services: [],
     experience: '0 years',
     avatar: '',
@@ -83,6 +84,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, se
         full_name: editingBarber.full_name || '',
         phone: editingBarber.phone || '',
         is_active: editingBarber.is_active ?? true,
+        custom_booking_enabled: editingBarber.custom_booking_enabled ?? false,
         services: validServices,
         experience: editingBarber.experience || '0 years',
         avatar: editingBarber.avatar || '',
@@ -109,6 +111,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, se
         full_name: '',
         phone: '',
         is_active: true,
+        custom_booking_enabled: false,
         services: [],
         experience: '0 years',
         avatar: '',
@@ -334,7 +337,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, se
           avatarStorageId: formData.avatarStorageId || undefined,
           schedule: formData.schedule,
           schedule_type: formData.schedule_type,
-          specific_dates: formData.specific_dates
+          specific_dates: formData.specific_dates,
+          custom_booking_enabled: formData.custom_booking_enabled
         }
 
         // Update barber profile
@@ -370,7 +374,8 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, se
           avatarStorageId: formData.avatarStorageId || undefined,
           schedule: formData.schedule,
           schedule_type: formData.schedule_type,
-          specific_dates: formData.specific_dates
+          specific_dates: formData.specific_dates,
+          custom_booking_enabled: formData.custom_booking_enabled
         }
 
         await createBarberWithAccount(barberData)
@@ -723,6 +728,44 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, se
                         />
                         <span className="ml-2 text-gray-300 font-medium">Inactive</span>
                       </label>
+                    </div>
+                  </div>
+
+                  {/* Custom Booking Toggle */}
+                  <div>
+                    <label className="block text-gray-300 font-medium text-sm mb-2">
+                      Booking Process
+                    </label>
+                    <div className="flex items-center justify-between p-4 bg-[#1A1A1A] rounded-xl border border-[#444444]">
+                      <div className="flex-1">
+                        <div className="flex items-center">
+                          <span className="text-gray-200 font-medium">Custom Booking Form</span>
+                          {formData.custom_booking_enabled && (
+                            <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-full">
+                              Enabled
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {formData.custom_booking_enabled
+                            ? 'Customers will fill out a custom form instead of the regular booking flow'
+                            : 'Enable to use a customizable booking form for this barber'
+                          }
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleInputChange('custom_booking_enabled', !formData.custom_booking_enabled)}
+                        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:ring-offset-2 focus:ring-offset-[#1A1A1A] ${
+                          formData.custom_booking_enabled ? 'bg-[var(--color-primary)]' : 'bg-[#444444]'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            formData.custom_booking_enabled ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
                     </div>
                   </div>
                 </div>

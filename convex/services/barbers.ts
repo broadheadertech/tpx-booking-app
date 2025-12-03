@@ -201,6 +201,7 @@ export const updateBarber = mutation({
       start: v.string(),
       end: v.string()
     }))),
+    custom_booking_enabled: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
