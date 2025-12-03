@@ -14,8 +14,6 @@ import {
   MessageSquare,
   CheckCircle,
   XCircle,
-  Plus,
-  ChevronRight,
 } from "lucide-react";
 import { useBranding } from "../../context/BrandingContext";
 
@@ -300,7 +298,7 @@ const BarberProfile = () => {
                         <p className={`text-sm ${isAvailable ? "text-gray-400" : "text-gray-600"}`}>
                           {isAvailable
                             ? `${formatTime(schedule.start)} - ${formatTime(schedule.end)}`
-                            : "Closed"
+                            : "Day off"
                           }
                         </p>
                       </div>
@@ -341,8 +339,11 @@ const BarberProfile = () => {
                           </span>
                         </div>
                       </div>
-                      <button className="w-8 h-8 bg-[#D4A853] rounded-full flex items-center justify-center ml-4">
-                        <Plus className="w-5 h-5 text-black" />
+                      <button
+                        onClick={() => handleBookWithBarber()}
+                        className="w-8 h-8 bg-[#D4A853] rounded-full flex items-center justify-center ml-4 hover:bg-[#C49843] transition-colors"
+                      >
+                        <Calendar className="w-4 h-4 text-black" />
                       </button>
                     </div>
                   ))}
