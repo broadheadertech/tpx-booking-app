@@ -471,6 +471,8 @@ export const createBarberWithAccount = mutation({
       start: v.string(),
       end: v.string()
     }))),
+    custom_booking_enabled: v.optional(v.boolean()),
+    custom_booking_form_id: v.optional(v.id("custom_booking_forms")),
   },
   handler: async (ctx, args) => {
     try {
@@ -587,6 +589,8 @@ export const createBarberWithAccount = mutation({
         },
         schedule_type: args.schedule_type || 'weekly',
         specific_dates: args.specific_dates || [],
+        custom_booking_enabled: args.custom_booking_enabled || false,
+        custom_booking_form_id: args.custom_booking_form_id || undefined,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
