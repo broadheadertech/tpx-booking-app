@@ -759,9 +759,16 @@ export const deleteUser = mutation({
 });
 
 export const getAllUsers = query({
-  args: {},
-  handler: async (ctx) => {
-    const users = await ctx.db.query("users").collect();
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 200; // Default to 200 users
+
+    const users = await ctx.db
+      .query("users")
+      .order("desc")
+      .take(limit);
 
     // Return only necessary fields to reduce bandwidth
     return users.map(user => ({

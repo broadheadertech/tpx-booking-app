@@ -2,27 +2,45 @@ import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 
-// Get all barbers (for super admin)
+// Get all barbers (for super admin) - with pagination
 export const getAllBarbers = query({
-  args: {},
-  handler: async (ctx) => {
-    const barbers = await ctx.db.query("barbers").collect();
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 100; // Default to 100 barbers
+
+    const barbers = await ctx.db
+      .query("barbers")
+      .order("desc")
+      .take(limit);
 
     // Get associated user and branch data for each barber
     const barbersWithUsers = await Promise.all(
       barbers.map(async (barber) => {
-        const [user, branch] = await Promise.all([
-          ctx.db.get(barber.user),
-          ctx.db.get(barber.branch_id),
-        ]);
-        return {
-          ...barber,
-          name: barber.full_name,
-          email: user?.email || '',
-          phone: user?.mobile_number || '',
-          avatarUrl: barber.avatar || '/img/avatar_default.jpg',
-          branch_name: branch?.name || 'Unknown Branch',
-        };
+        try {
+          const [user, branch] = await Promise.all([
+            barber.user ? ctx.db.get(barber.user) : null,
+            barber.branch_id ? ctx.db.get(barber.branch_id) : null,
+          ]);
+          return {
+            ...barber,
+            name: barber.full_name,
+            email: user?.email || '',
+            phone: user?.mobile_number || '',
+            avatarUrl: barber.avatar || '/img/avatar_default.jpg',
+            branch_name: branch?.name || 'Unknown Branch',
+          };
+        } catch (error) {
+          return {
+            ...barber,
+            name: barber.full_name,
+            email: '',
+            phone: '',
+            avatarUrl: barber.avatar || '/img/avatar_default.jpg',
+            branch_name: 'Unknown Branch',
+          };
+        }
       })
     );
 
@@ -30,26 +48,41 @@ export const getAllBarbers = query({
   },
 });
 
-// Get barbers by branch
+// Get barbers by branch - with pagination
 export const getBarbersByBranch = query({
-  args: { branch_id: v.id("branches") },
+  args: {
+    branch_id: v.id("branches"),
+    limit: v.optional(v.number()),
+  },
   handler: async (ctx, args) => {
+    const limit = args.limit || 50; // Default to 50 barbers per branch
+
     const barbers = await ctx.db
       .query("barbers")
       .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
-      .collect();
+      .take(limit);
 
     // Get associated user data for each barber
     const barbersWithUsers = await Promise.all(
       barbers.map(async (barber) => {
-        const user = await ctx.db.get(barber.user);
-        return {
-          ...barber,
-          name: barber.full_name,
-          email: user?.email || '',
-          phone: user?.mobile_number || '',
-          avatarUrl: barber.avatar || '/img/avatar_default.jpg',
-        };
+        try {
+          const user = barber.user ? await ctx.db.get(barber.user) : null;
+          return {
+            ...barber,
+            name: barber.full_name,
+            email: user?.email || '',
+            phone: user?.mobile_number || '',
+            avatarUrl: barber.avatar || '/img/avatar_default.jpg',
+          };
+        } catch (error) {
+          return {
+            ...barber,
+            name: barber.full_name,
+            email: '',
+            phone: '',
+            avatarUrl: barber.avatar || '/img/avatar_default.jpg',
+          };
+        }
       })
     );
 
@@ -297,26 +330,40 @@ export const getBarbersByService = query({
   },
 });
 
-// Get active barbers
+// Get active barbers - with pagination
 export const getActiveBarbers = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 100; // Default to 100 active barbers
+
     const barbers = await ctx.db
       .query("barbers")
       .withIndex("by_active", (q) => q.eq("is_active", true))
-      .collect();
+      .take(limit);
 
     // Get associated user data for each barber
     const barbersWithUsers = await Promise.all(
       barbers.map(async (barber) => {
-        const user = await ctx.db.get(barber.user);
-        return {
-          ...barber,
-          name: barber.full_name,
-          email: user?.email || '',
-          phone: user?.mobile_number || '',
-          avatarUrl: barber.avatar || '/img/avatar_default.jpg',
-        };
+        try {
+          const user = barber.user ? await ctx.db.get(barber.user) : null;
+          return {
+            ...barber,
+            name: barber.full_name,
+            email: user?.email || '',
+            phone: user?.mobile_number || '',
+            avatarUrl: barber.avatar || '/img/avatar_default.jpg',
+          };
+        } catch (error) {
+          return {
+            ...barber,
+            name: barber.full_name,
+            email: '',
+            phone: '',
+            avatarUrl: barber.avatar || '/img/avatar_default.jpg',
+          };
+        }
       })
     );
 
