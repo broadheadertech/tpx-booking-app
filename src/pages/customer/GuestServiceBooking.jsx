@@ -1802,12 +1802,8 @@ const GuestServiceBooking = ({ onBack }) => {
             )}
           </div>
 
-          {/* Payment Options - Pay Later Only */}
+          {/* Book Now Button */}
           <div className="border-t pt-3 border-[#2A2A2A]">
-            <h4 className="text-sm font-bold mb-3 text-white">
-              Complete Your Booking
-            </h4>
-
             <button
               onClick={() => handleConfirmBooking("pay_later")}
               disabled={bookingLoading}
@@ -1824,15 +1820,11 @@ const GuestServiceBooking = ({ onBack }) => {
                 </div>
               ) : (
                 <>
-                  <Building className="w-4 h-4" />
-                  <span>Complete Booking - Pay at Shop</span>
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Book Now</span>
                 </>
               )}
             </button>
-
-            <p className="text-xs text-center mt-3 text-gray-400">
-              Complete your booking now and pay when you arrive at the shop
-            </p>
           </div>
 
           {/* Go Back Button */}
