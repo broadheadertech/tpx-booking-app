@@ -457,6 +457,31 @@ export const createBooking = mutation({
       throwUserError(ERROR_CODES.BOOKING_PAST_DATE);
     }
 
+    // SERVER-SIDE DOUBLE-BOOKING PREVENTION
+    // Check if there's already an active booking for this barber at the same date and time
+    if (args.barber) {
+      const existingBooking = await ctx.db
+        .query("bookings")
+        .withIndex("by_barber_date", (q) =>
+          q.eq("barber", args.barber).eq("date", args.date)
+        )
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("time"), args.time),
+            q.neq(q.field("status"), "cancelled")
+          )
+        )
+        .first();
+
+      if (existingBooking) {
+        throwUserError(
+          ERROR_CODES.BOOKING_TIME_UNAVAILABLE,
+          'Time slot already booked',
+          'This time slot is already booked for this barber. Please select a different time.'
+        );
+      }
+    }
+
     // Validate barber schedule if barber is specified
     if (args.barber) {
       const barber = await ctx.db.get(args.barber);
@@ -740,16 +765,20 @@ export const updateBooking = mutation({
 
         // Notify the previous barber about unassignment
         if (previousBarber) {
-          await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
-            bookingId: id,
-            notificationType: "BARBER_APPOINTMENT_CANCELLED",
-            recipients: [
-              { type: "barber", userId: previousBarber as unknown as Id<"users"> },
-            ],
-            metadata: {
-              reason: "Reassigned to another barber",
-            }
-          });
+          // Look up the previous barber to get their associated user ID
+          const prevBarberRecord = await ctx.db.get(previousBarber);
+          if (prevBarberRecord && prevBarberRecord.user) {
+            await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+              bookingId: id,
+              notificationType: "BARBER_APPOINTMENT_CANCELLED",
+              recipients: [
+                { type: "barber", userId: prevBarberRecord.user },
+              ],
+              metadata: {
+                reason: "Reassigned to another barber",
+              }
+            });
+          }
         }
 
         // Notify customer about barber change
@@ -799,21 +828,25 @@ export const updateBooking = mutation({
 
         // Notify barber if assigned
         if (currentBooking.barber) {
-          await ctx.runMutation(api.services.notifications.createNotification, {
-            title: "Booking Confirmed",
-            message: "A booking has been confirmed for you.",
-            type: "booking",
-            priority: "medium",
-            recipient_id: currentBooking.barber as unknown as Id<"users">,
-            recipient_type: "barber",
-            branch_id: currentBooking.branch_id,
-            action_url: `/bookings/${currentBooking.booking_code}`,
-            action_label: "View Details",
-            metadata: {
-              booking_id: id,
+          // Look up the barber to get their associated user ID
+          const barber = await ctx.db.get(currentBooking.barber);
+          if (barber && barber.user) {
+            await ctx.runMutation(api.services.notifications.createNotification, {
+              title: "Booking Confirmed",
+              message: "A booking has been confirmed for you.",
+              type: "booking",
+              priority: "medium",
+              recipient_id: barber.user,
+              recipient_type: "barber",
               branch_id: currentBooking.branch_id,
-            }
-          });
+              action_url: `/bookings/${currentBooking.booking_code}`,
+              action_label: "View Details",
+              metadata: {
+                booking_id: id,
+                branch_id: currentBooking.branch_id,
+              }
+            });
+          }
         }
       } catch (error) {
         console.error("Failed to create booking status notification:", error);
@@ -863,16 +896,20 @@ export const deleteBooking = mutation({
 
         // Notify barber if assigned
         if (booking.barber) {
-          await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
-            bookingId: args.id,
-            notificationType: "BARBER_APPOINTMENT_CANCELLED",
-            recipients: [
-              { type: "barber", userId: booking.barber as unknown as Id<"users"> },
-            ],
-            metadata: {
-              reason: "Booking deleted by administrator"
-            }
-          });
+          // Look up the barber to get their associated user ID
+          const barberRecord = await ctx.db.get(booking.barber);
+          if (barberRecord && barberRecord.user) {
+            await ctx.runMutation(api.services.bookingNotifications.sendBookingNotifications, {
+              bookingId: args.id,
+              notificationType: "BARBER_APPOINTMENT_CANCELLED",
+              recipients: [
+                { type: "barber", userId: barberRecord.user },
+              ],
+              metadata: {
+                reason: "Booking deleted by administrator"
+              }
+            });
+          }
         }
       } catch (error) {
         console.error("Failed to send booking deletion notifications:", error);
@@ -1313,6 +1350,31 @@ export const createWalkInBooking = mutation({
 
     if (bookingDate < today) {
       throwUserError(ERROR_CODES.BOOKING_PAST_DATE);
+    }
+
+    // SERVER-SIDE DOUBLE-BOOKING PREVENTION FOR WALK-IN
+    // Check if there's already an active booking for this barber at the same date and time
+    if (args.barber) {
+      const existingBooking = await ctx.db
+        .query("bookings")
+        .withIndex("by_barber_date", (q) =>
+          q.eq("barber", args.barber).eq("date", args.date)
+        )
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("time"), args.time),
+            q.neq(q.field("status"), "cancelled")
+          )
+        )
+        .first();
+
+      if (existingBooking) {
+        throwUserError(
+          ERROR_CODES.BOOKING_TIME_UNAVAILABLE,
+          'Time slot already booked',
+          'This time slot is already booked for this barber. Please select a different time.'
+        );
+      }
     }
 
     // Validate barber schedule if barber is specified
