@@ -272,7 +272,8 @@ export default defineSchema({
     .index("by_payment_status", ["payment_status"])
     .index("by_booking_code", ["booking_code"])
     .index("by_branch", ["branch_id"])
-    .index("by_date_reminder", ["date", "reminder_sent"]),
+    .index("by_date_reminder", ["date", "reminder_sent"])
+    .index("by_barber_date", ["barber", "date"]),
 
   // Vouchers table
   vouchers: defineTable({
