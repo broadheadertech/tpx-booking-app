@@ -27,13 +27,15 @@ function AdminDashboard() {
     localStorage.setItem('admin_dashboard_active_tab', activeTab)
   }, [activeTab])
 
-  // Global queries for super admin
+  // Global queries for super admin - with pagination limits to avoid byte limit errors
   const branches = useQuery(api.services.branches.getAllBranches) || []
   const users = useQuery(api.services.auth.getAllUsers) || []
-  const bookings = useQuery(api.services.bookings.getAllBookings) || []
+  const bookingsData = useQuery(api.services.bookings.getAllBookings, { limit: 100 })
+  const bookings = bookingsData?.bookings || []
   const services = useQuery(api.services.services.getAllServices) || []
   const barbers = useQuery(api.services.barbers.getAllBarbers) || []
-  const transactions = useQuery(api.services.transactions.getAllTransactions) || []
+  const transactionsData = useQuery(api.services.transactions.getAllTransactions, { limit: 100 })
+  const transactions = transactionsData?.transactions || []
 
   // Calculate global stats
   const calculateStats = () => {
