@@ -86,10 +86,10 @@ const CalendarManagement = ({ user }) => {
   const branchId = user?.branch_id
 
   // Fetch Data - Always call hooks unconditionally
-  // Bookings
-  const allBookings = useQuery(api.services.bookings.getAllBookings, isSuperAdmin ? undefined : "skip")
-  const branchBookings = useQuery(api.services.bookings.getBookingsByBranch, branchId && !isSuperAdmin ? { branch_id: branchId } : "skip")
-  const bookings = (isSuperAdmin ? allBookings : branchBookings) || []
+  // Bookings - with pagination limits to avoid byte limit errors
+  const allBookingsData = useQuery(api.services.bookings.getAllBookings, isSuperAdmin ? { limit: 100 } : "skip")
+  const branchBookingsData = useQuery(api.services.bookings.getBookingsByBranch, branchId && !isSuperAdmin ? { branch_id: branchId, limit: 100 } : "skip")
+  const bookings = (isSuperAdmin ? allBookingsData?.bookings : branchBookingsData?.bookings) || []
 
   // Services
   const allServices = useQuery(api.services.services.getAllServices, isSuperAdmin ? undefined : "skip")
