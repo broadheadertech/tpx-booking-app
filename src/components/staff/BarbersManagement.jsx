@@ -49,9 +49,10 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
   const [error, setError] = useState('')
   const [uploadingImage, setUploadingImage] = useState(false)
 
-  // Convex queries
+  // Convex queries - with pagination limits to avoid byte limit errors
   const services = useQuery(api.services.services.getAllServices)
-  const allBookings = useQuery(api.services.bookings.getAllBookings)
+  const allBookingsData = useQuery(api.services.bookings.getAllBookings, { limit: 100 })
+  const allBookings = allBookingsData?.bookings || []
 
   // Convex mutations
   const createBarber = useMutation(api.services.barbers.createBarber)

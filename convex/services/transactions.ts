@@ -507,17 +507,27 @@ export const createTransaction = mutation({
   },
 });
 
-// Get all transactions (for super admin)
+// Get all transactions (for super admin) - with pagination
 export const getAllTransactions = query({
-  handler: async (ctx) => {
+  args: {
+    limit: v.optional(v.number()),
+    cursor: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 50; // Default to 50 records per page
+
     const transactions = await ctx.db
       .query("transactions")
       .order("desc")
-      .collect();
+      .take(limit + 1); // Take one extra to check if there are more
+
+    const hasMore = transactions.length > limit;
+    const results = hasMore ? transactions.slice(0, limit) : transactions;
+    const nextCursor = hasMore ? results[results.length - 1]._id : null;
 
     // Populate related data
     const populatedTransactions = await Promise.all(
-      transactions.map(async (transaction) => {
+      results.map(async (transaction) => {
         const [customer, barber, processedBy, voucher, branch] = await Promise.all([
           transaction.customer ? ctx.db.get(transaction.customer) : null,
           ctx.db.get(transaction.barber),
@@ -537,23 +547,36 @@ export const getAllTransactions = query({
       })
     );
 
-    return populatedTransactions;
+    return {
+      transactions: populatedTransactions,
+      nextCursor,
+      hasMore,
+    };
   },
 });
 
-// Get transactions by branch (for branch admin/staff)
+// Get transactions by branch (for branch admin/staff) - with pagination
 export const getTransactionsByBranch = query({
-  args: { branch_id: v.id("branches") },
+  args: {
+    branch_id: v.id("branches"),
+    limit: v.optional(v.number()),
+  },
   handler: async (ctx, args) => {
+    const limit = args.limit || 50; // Default to 50 records per page
+
     const transactions = await ctx.db
       .query("transactions")
       .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
       .order("desc")
-      .collect();
+      .take(limit + 1);
+
+    const hasMore = transactions.length > limit;
+    const results = hasMore ? transactions.slice(0, limit) : transactions;
+    const nextCursor = hasMore ? results[results.length - 1]._id : null;
 
     // Populate related data
     const populatedTransactions = await Promise.all(
-      transactions.map(async (transaction) => {
+      results.map(async (transaction) => {
         const [customer, barber, processedBy, voucher] = await Promise.all([
           transaction.customer ? ctx.db.get(transaction.customer) : null,
           ctx.db.get(transaction.barber),
@@ -571,7 +594,11 @@ export const getTransactionsByBranch = query({
       })
     );
 
-    return populatedTransactions;
+    return {
+      transactions: populatedTransactions,
+      nextCursor,
+      hasMore,
+    };
   },
 });
 

@@ -14,18 +14,20 @@ const ReportsManagement = ({ onRefresh, user }) => {
   const [activeTab, setActiveTab] = useState('descriptive')
   const [loading, setLoading] = useState(false)
 
-  // Fetch data
-  const bookings = user?.role === 'super_admin'
-    ? useQuery(api.services.bookings.getAllBookings)
+  // Fetch data - with pagination limits to avoid byte limit errors
+  const bookingsData = user?.role === 'super_admin'
+    ? useQuery(api.services.bookings.getAllBookings, { limit: 200 })
     : user?.branch_id
-      ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id })
-      : []
+      ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id, limit: 200 })
+      : null
+  const bookings = bookingsData?.bookings || []
 
-  const transactions = user?.role === 'super_admin'
-    ? useQuery(api.services.transactions.getAllTransactions)
+  const transactionsData = user?.role === 'super_admin'
+    ? useQuery(api.services.transactions.getAllTransactions, { limit: 200 })
     : user?.branch_id
-      ? useQuery(api.services.transactions.getTransactionsByBranch, { branch_id: user.branch_id })
-      : []
+      ? useQuery(api.services.transactions.getTransactionsByBranch, { branch_id: user.branch_id, limit: 200 })
+      : null
+  const transactions = transactionsData?.transactions || []
 
   const barbers = user?.role === 'super_admin'
     ? useQuery(api.services.barbers.getAllBarbers)

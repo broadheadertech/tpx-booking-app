@@ -53,14 +53,17 @@ function StaffDashboard() {
   }, [activeTab]);
 
   // Convex queries for data - adjust based on user role
-  const bookings =
+  // Added pagination limits to avoid Convex byte limit errors
+  const bookingsData =
     user?.role === "super_admin"
-      ? useQuery(api.services.bookings.getAllBookings)
+      ? useQuery(api.services.bookings.getAllBookings, { limit: 100 })
       : user?.branch_id
         ? useQuery(api.services.bookings.getBookingsByBranch, {
           branch_id: user.branch_id,
+          limit: 100,
         })
         : undefined;
+  const bookings = bookingsData?.bookings || [];
 
   const services =
     user?.role === "super_admin"

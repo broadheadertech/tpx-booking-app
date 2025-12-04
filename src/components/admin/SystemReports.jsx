@@ -8,10 +8,12 @@ const SystemReports = ({ onRefresh }) => {
   const [selectedBranch, setSelectedBranch] = useState('all')
   const [activeTab, setActiveTab] = useState('overview')
 
-  // Query all data
+  // Query all data - with pagination limits to avoid byte limit errors
   const branches = useQuery(api.services.branches.getAllBranches) || []
-  const bookings = useQuery(api.services.bookings.getAllBookings) || []
-  const transactions = useQuery(api.services.transactions.getAllTransactions) || []
+  const bookingsData = useQuery(api.services.bookings.getAllBookings, { limit: 200 })
+  const bookings = bookingsData?.bookings || []
+  const transactionsData = useQuery(api.services.transactions.getAllTransactions, { limit: 200 })
+  const transactions = transactionsData?.transactions || []
   const users = useQuery(api.services.auth.getAllUsers) || []
   const barbers = useQuery(api.services.barbers.getAllBarbers) || []
   const services = useQuery(api.services.services.getAllServices) || []

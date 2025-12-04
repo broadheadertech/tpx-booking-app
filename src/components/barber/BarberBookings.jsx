@@ -42,12 +42,14 @@ const BarberBookings = () => {
   }, [user, barbers, currentBarber, createBarberProfile])
 
   // Get bookings for this barber - only from their branch
-  const allBookings = user?.branch_id 
-    ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id })
-    : useQuery(api.services.bookings.getAllBookings)
-  const barberBookings = allBookings?.filter(booking => 
+  // Added pagination limits to avoid Convex byte limit errors
+  const allBookingsData = user?.branch_id
+    ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id, limit: 100 })
+    : useQuery(api.services.bookings.getAllBookings, { limit: 100 })
+  const allBookings = allBookingsData?.bookings || []
+  const barberBookings = allBookings.filter(booking =>
     booking.barber === currentBarber?._id
-  ) || []
+  )
 
   // Filter bookings
   const filteredBookings = barberBookings.filter(booking => {

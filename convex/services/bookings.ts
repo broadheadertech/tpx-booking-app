@@ -14,15 +14,26 @@ function generateBookingCode() {
   return code;
 }
 
-// Get all bookings
+// Get all bookings - with pagination
 export const getAllBookings = query({
-  args: {},
-  handler: async (ctx) => {
-    const bookings = await ctx.db.query("bookings").collect();
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 50; // Default to 50 records per page
+
+    const bookings = await ctx.db
+      .query("bookings")
+      .order("desc")
+      .take(limit + 1);
+
+    const hasMore = bookings.length > limit;
+    const results = hasMore ? bookings.slice(0, limit) : bookings;
+    const nextCursor = hasMore ? results[results.length - 1]._id : null;
 
     // Get associated data for each booking
     const bookingsWithData = await Promise.all(
-      bookings.map(async (booking) => {
+      results.map(async (booking) => {
         const [customer, service, barber, branch] = await Promise.all([
           booking.customer ? ctx.db.get(booking.customer) : null,
           ctx.db.get(booking.service),
@@ -69,22 +80,36 @@ export const getAllBookings = query({
       })
     );
 
-    return bookingsWithData.sort((a, b) => b.createdAt - a.createdAt);
+    return {
+      bookings: bookingsWithData,
+      nextCursor,
+      hasMore,
+    };
   },
 });
 
-// Get bookings by branch (for branch admin/staff)
+// Get bookings by branch (for branch admin/staff) - with pagination
 export const getBookingsByBranch = query({
-  args: { branch_id: v.id("branches") },
+  args: {
+    branch_id: v.id("branches"),
+    limit: v.optional(v.number()),
+  },
   handler: async (ctx, args) => {
+    const limit = args.limit || 50; // Default to 50 records per page
+
     const bookings = await ctx.db
       .query("bookings")
       .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
-      .collect();
+      .order("desc")
+      .take(limit + 1);
+
+    const hasMore = bookings.length > limit;
+    const results = hasMore ? bookings.slice(0, limit) : bookings;
+    const nextCursor = hasMore ? results[results.length - 1]._id : null;
 
     // Get associated data for each booking
     const bookingsWithData = await Promise.all(
-      bookings.map(async (booking) => {
+      results.map(async (booking) => {
         const [customer, service, barber] = await Promise.all([
           booking.customer ? ctx.db.get(booking.customer) : null,
           ctx.db.get(booking.service),
@@ -129,7 +154,11 @@ export const getBookingsByBranch = query({
       })
     );
 
-    return bookingsWithData.sort((a, b) => b.createdAt - a.createdAt);
+    return {
+      bookings: bookingsWithData,
+      nextCursor,
+      hasMore,
+    };
   },
 });
 

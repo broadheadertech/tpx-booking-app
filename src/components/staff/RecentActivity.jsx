@@ -7,17 +7,19 @@ import { useAuth } from '../../context/AuthContext'
 const RecentActivity = ({ activities: propActivities = [] }) => {
   const { user } = useAuth()
   
-  // Fetch recent bookings to generate activity feed
-  const bookings = user?.role === 'super_admin' 
-    ? useQuery(api.services.bookings.getAllBookings)
-    : user?.branch_id 
-      ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id })
+  // Fetch recent bookings to generate activity feed - with pagination limits
+  const bookingsData = user?.role === 'super_admin'
+    ? useQuery(api.services.bookings.getAllBookings, { limit: 50 })
+    : user?.branch_id
+      ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id, limit: 50 })
       : undefined
-  
-  // Fetch recent transactions
-  const transactions = user?.branch_id 
-    ? useQuery(api.services.transactions.getTransactionsByBranch, { branch_id: user.branch_id })
+  const bookings = bookingsData?.bookings || []
+
+  // Fetch recent transactions - with pagination limits
+  const transactionsData = user?.branch_id
+    ? useQuery(api.services.transactions.getTransactionsByBranch, { branch_id: user.branch_id, limit: 50 })
     : undefined
+  const transactions = transactionsData?.transactions || []
   
   // Transform bookings and transactions into activity items
   const generateActivities = () => {

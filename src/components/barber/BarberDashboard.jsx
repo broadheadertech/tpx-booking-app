@@ -384,10 +384,11 @@ const BarberDashboard = () => {
     }
   }, [user, barbers, currentBarber, createBarberProfile]);
 
-  // Get transactions
-  const allTransactions = user?.branch_id
-    ? useQuery(api.services.transactions.getTransactionsByBranch, { branch_id: user.branch_id })
-    : useQuery(api.services.transactions.getAllTransactions);
+  // Get transactions - with pagination limits to avoid byte limit errors
+  const transactionsData = user?.branch_id
+    ? useQuery(api.services.transactions.getTransactionsByBranch, { branch_id: user.branch_id, limit: 100 })
+    : useQuery(api.services.transactions.getAllTransactions, { limit: 100 });
+  const allTransactions = transactionsData?.transactions || [];
 
   // Get bookings for this barber
   const barberBookings = useQuery(
