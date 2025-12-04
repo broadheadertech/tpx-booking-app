@@ -29,54 +29,90 @@ export const getAllBookings = query({
 
     const hasMore = bookings.length > limit;
     const results = hasMore ? bookings.slice(0, limit) : bookings;
-    const nextCursor = hasMore ? results[results.length - 1]._id : null;
+    const nextCursor = hasMore && results.length > 0 ? results[results.length - 1]._id : null;
 
-    // Get associated data for each booking
+    // Get associated data for each booking with error handling
     const bookingsWithData = await Promise.all(
       results.map(async (booking) => {
-        const [customer, service, barber, branch] = await Promise.all([
-          booking.customer ? ctx.db.get(booking.customer) : null,
-          ctx.db.get(booking.service),
-          booking.barber ? ctx.db.get(booking.barber) : null,
-          ctx.db.get(booking.branch_id),
-        ]);
+        try {
+          const [customer, service, barber, branch] = await Promise.all([
+            booking.customer ? ctx.db.get(booking.customer) : null,
+            booking.service ? ctx.db.get(booking.service) : null,
+            booking.barber ? ctx.db.get(booking.barber) : null,
+            booking.branch_id ? ctx.db.get(booking.branch_id) : null,
+          ]);
 
-        return {
-          _id: booking._id,
-          booking_code: booking.booking_code,
-          branch_id: booking.branch_id,
-          customer: booking.customer,
-          service: booking.service,
-          barber: booking.barber,
-          date: booking.date,
-          time: booking.time,
-          status: booking.status,
-          payment_status: booking.payment_status,
-          price: booking.price,
-          final_price: booking.final_price,
-          discount_amount: booking.discount_amount,
-          voucher_id: booking.voucher_id,
-          notes: booking.notes,
-          createdAt: booking.createdAt || booking._creationTime,
-          updatedAt: booking.updatedAt || booking._creationTime, // Include updatedAt for reports filtering
-          // Prioritize booking.customer_name (for walk-in customers with actual names)
-          // Only fall back to customer?.username if booking.customer_name is not set
-          customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
-          customer_email: booking.customer_email || customer?.email || '',
-          customer_phone: booking.customer_phone || customer?.mobile_number || '',
-          service_name: service?.name || 'Unknown Service',
-          service_price: service?.price || 0,
-          service_duration: service?.duration_minutes || 0,
-          barber_name: barber?.full_name || 'Not assigned',
-          branch_name: branch?.name || 'Unknown Branch',
-          formattedDate: new Date(booking.date).toLocaleDateString('en-US', {
-            weekday: 'short',
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-          }),
-          formattedTime: formatTime(booking.time),
-        };
+          return {
+            _id: booking._id,
+            booking_code: booking.booking_code,
+            branch_id: booking.branch_id,
+            customer: booking.customer,
+            service: booking.service,
+            barber: booking.barber,
+            date: booking.date,
+            time: booking.time,
+            status: booking.status,
+            payment_status: booking.payment_status,
+            price: booking.price,
+            final_price: booking.final_price,
+            discount_amount: booking.discount_amount,
+            voucher_id: booking.voucher_id,
+            notes: booking.notes,
+            createdAt: booking.createdAt || booking._creationTime,
+            updatedAt: booking.updatedAt || booking._creationTime,
+            customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
+            customer_email: booking.customer_email || customer?.email || '',
+            customer_phone: booking.customer_phone || customer?.mobile_number || '',
+            service_name: service?.name || 'Unknown Service',
+            service_price: service?.price || 0,
+            service_duration: service?.duration_minutes || 0,
+            barber_name: barber?.full_name || 'Not assigned',
+            branch_name: branch?.name || 'Unknown Branch',
+            formattedDate: new Date(booking.date).toLocaleDateString('en-US', {
+              weekday: 'short',
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            }),
+            formattedTime: formatTime(booking.time),
+          };
+        } catch (error) {
+          // Return minimal booking data if lookup fails
+          return {
+            _id: booking._id,
+            booking_code: booking.booking_code,
+            branch_id: booking.branch_id,
+            customer: booking.customer,
+            service: booking.service,
+            barber: booking.barber,
+            date: booking.date,
+            time: booking.time,
+            status: booking.status,
+            payment_status: booking.payment_status,
+            price: booking.price,
+            final_price: booking.final_price,
+            discount_amount: booking.discount_amount,
+            voucher_id: booking.voucher_id,
+            notes: booking.notes,
+            createdAt: booking.createdAt || booking._creationTime,
+            updatedAt: booking.updatedAt || booking._creationTime,
+            customer_name: booking.customer_name || 'Unknown',
+            customer_email: booking.customer_email || '',
+            customer_phone: booking.customer_phone || '',
+            service_name: 'Unknown Service',
+            service_price: 0,
+            service_duration: 0,
+            barber_name: 'Not assigned',
+            branch_name: 'Unknown Branch',
+            formattedDate: new Date(booking.date).toLocaleDateString('en-US', {
+              weekday: 'short',
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            }),
+            formattedTime: formatTime(booking.time),
+          };
+        }
       })
     );
 
@@ -105,52 +141,87 @@ export const getBookingsByBranch = query({
 
     const hasMore = bookings.length > limit;
     const results = hasMore ? bookings.slice(0, limit) : bookings;
-    const nextCursor = hasMore ? results[results.length - 1]._id : null;
+    const nextCursor = hasMore && results.length > 0 ? results[results.length - 1]._id : null;
 
-    // Get associated data for each booking
+    // Get associated data for each booking with error handling
     const bookingsWithData = await Promise.all(
       results.map(async (booking) => {
-        const [customer, service, barber] = await Promise.all([
-          booking.customer ? ctx.db.get(booking.customer) : null,
-          ctx.db.get(booking.service),
-          booking.barber ? ctx.db.get(booking.barber) : null,
-        ]);
+        try {
+          const [customer, service, barber] = await Promise.all([
+            booking.customer ? ctx.db.get(booking.customer) : null,
+            booking.service ? ctx.db.get(booking.service) : null,
+            booking.barber ? ctx.db.get(booking.barber) : null,
+          ]);
 
-        return {
-          _id: booking._id,
-          booking_code: booking.booking_code,
-          branch_id: booking.branch_id,
-          customer: booking.customer,
-          service: booking.service,
-          barber: booking.barber,
-          date: booking.date,
-          time: booking.time,
-          status: booking.status,
-          payment_status: booking.payment_status,
-          price: booking.price,
-          final_price: booking.final_price,
-          discount_amount: booking.discount_amount,
-          voucher_id: booking.voucher_id,
-          notes: booking.notes,
-          createdAt: booking.createdAt || booking._creationTime,
-          updatedAt: booking.updatedAt || booking._creationTime, // Include updatedAt for reports filtering
-          // Prioritize booking.customer_name (for walk-in customers with actual names)
-          // Only fall back to customer?.username if booking.customer_name is not set
-          customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
-          customer_email: booking.customer_email || customer?.email || '',
-          customer_phone: booking.customer_phone || customer?.mobile_number || '',
-          service_name: service?.name || 'Unknown Service',
-          service_price: service?.price || 0,
-          service_duration: service?.duration_minutes || 0,
-          barber_name: barber?.full_name || 'Not assigned',
-          formattedDate: new Date(booking.date).toLocaleDateString('en-US', {
-            weekday: 'short',
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-          }),
-          formattedTime: formatTime(booking.time),
-        };
+          return {
+            _id: booking._id,
+            booking_code: booking.booking_code,
+            branch_id: booking.branch_id,
+            customer: booking.customer,
+            service: booking.service,
+            barber: booking.barber,
+            date: booking.date,
+            time: booking.time,
+            status: booking.status,
+            payment_status: booking.payment_status,
+            price: booking.price,
+            final_price: booking.final_price,
+            discount_amount: booking.discount_amount,
+            voucher_id: booking.voucher_id,
+            notes: booking.notes,
+            createdAt: booking.createdAt || booking._creationTime,
+            updatedAt: booking.updatedAt || booking._creationTime,
+            customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
+            customer_email: booking.customer_email || customer?.email || '',
+            customer_phone: booking.customer_phone || customer?.mobile_number || '',
+            service_name: service?.name || 'Unknown Service',
+            service_price: service?.price || 0,
+            service_duration: service?.duration_minutes || 0,
+            barber_name: barber?.full_name || 'Not assigned',
+            formattedDate: new Date(booking.date).toLocaleDateString('en-US', {
+              weekday: 'short',
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            }),
+            formattedTime: formatTime(booking.time),
+          };
+        } catch (error) {
+          // Return minimal booking data if lookup fails
+          return {
+            _id: booking._id,
+            booking_code: booking.booking_code,
+            branch_id: booking.branch_id,
+            customer: booking.customer,
+            service: booking.service,
+            barber: booking.barber,
+            date: booking.date,
+            time: booking.time,
+            status: booking.status,
+            payment_status: booking.payment_status,
+            price: booking.price,
+            final_price: booking.final_price,
+            discount_amount: booking.discount_amount,
+            voucher_id: booking.voucher_id,
+            notes: booking.notes,
+            createdAt: booking.createdAt || booking._creationTime,
+            updatedAt: booking.updatedAt || booking._creationTime,
+            customer_name: booking.customer_name || 'Unknown',
+            customer_email: booking.customer_email || '',
+            customer_phone: booking.customer_phone || '',
+            service_name: 'Unknown Service',
+            service_price: 0,
+            service_duration: 0,
+            barber_name: 'Not assigned',
+            formattedDate: new Date(booking.date).toLocaleDateString('en-US', {
+              weekday: 'short',
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            }),
+            formattedTime: formatTime(booking.time),
+          };
+        }
       })
     );
 
