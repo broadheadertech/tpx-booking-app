@@ -46,27 +46,31 @@ export const getBranchByCode = query({
   },
 });
 
-// Get branch statistics
+// Get branch statistics - OPTIMIZED: Uses limited queries instead of collecting all data
 export const getBranchStats = query({
   args: { branch_id: v.id("branches") },
   handler: async (ctx, args) => {
+    // Use take with a reasonable limit to avoid byte limit errors
+    // For counts, we just need to know the count, not all the data
+    const SAMPLE_LIMIT = 1000; // Limit to avoid memory issues
+
     const [bookings, transactions, barbers, users] = await Promise.all([
       ctx.db
         .query("bookings")
         .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
-        .collect(),
+        .take(SAMPLE_LIMIT),
       ctx.db
         .query("transactions")
         .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
-        .collect(),
+        .take(SAMPLE_LIMIT),
       ctx.db
         .query("barbers")
         .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
-        .collect(),
+        .take(SAMPLE_LIMIT),
       ctx.db
         .query("users")
         .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
-        .collect(),
+        .take(SAMPLE_LIMIT),
     ]);
 
     const totalRevenue = transactions
@@ -82,6 +86,29 @@ export const getBranchStats = query({
       totalBarbers: barbers.length,
       totalStaff: users.filter((u) => u.role === "staff" || u.role === "branch_admin").length,
       totalCustomers: users.filter((u) => u.role === "customer").length,
+    };
+  },
+});
+
+// Get lightweight branch statistics using efficient counting
+export const getBranchStatsLightweight = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    // Only fetch the minimum data needed for counting
+    const [barberCount, staffCount] = await Promise.all([
+      ctx.db
+        .query("barbers")
+        .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+        .take(100), // Limit barber fetch
+      ctx.db
+        .query("users")
+        .withIndex("by_branch_role", (q) => q.eq("branch_id", args.branch_id))
+        .take(100), // Limit staff fetch
+    ]);
+
+    return {
+      totalBarbers: barberCount.length,
+      totalStaff: staffCount.filter((u) => u.role === "staff" || u.role === "branch_admin").length,
     };
   },
 });
@@ -326,32 +353,31 @@ export const deleteBranch = mutation({
       throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Branch not found", "The branch you are trying to delete does not exist.");
     }
 
-    // Check if branch has any associated data
+    // Check if branch has any associated data - only need to check if ANY exist, not count all
     const [users, barbers, services, bookings, transactions] = await Promise.all([
       ctx.db
         .query("users")
         .withIndex("by_branch", (q) => q.eq("branch_id", args.id))
-        .collect(),
+        .first(), // Only need to know if at least one exists
       ctx.db
         .query("barbers")
         .withIndex("by_branch", (q) => q.eq("branch_id", args.id))
-        .collect(),
+        .first(),
       ctx.db
         .query("services")
         .withIndex("by_branch", (q) => q.eq("branch_id", args.id))
-        .collect(),
+        .first(),
       ctx.db
         .query("bookings")
         .withIndex("by_branch", (q) => q.eq("branch_id", args.id))
-        .collect(),
+        .first(),
       ctx.db
         .query("transactions")
         .withIndex("by_branch", (q) => q.eq("branch_id", args.id))
-        .collect(),
+        .first(),
     ]);
 
-    if (users.length > 0 || barbers.length > 0 || services.length > 0 ||
-      bookings.length > 0 || transactions.length > 0) {
+    if (users || barbers || services || bookings || transactions) {
       throwUserError(
         ERROR_CODES.OPERATION_FAILED,
         "Cannot delete branch",

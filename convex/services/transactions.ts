@@ -523,27 +523,39 @@ export const getAllTransactions = query({
 
     const hasMore = transactions.length > limit;
     const results = hasMore ? transactions.slice(0, limit) : transactions;
-    const nextCursor = hasMore ? results[results.length - 1]._id : null;
+    const nextCursor = hasMore && results.length > 0 ? results[results.length - 1]._id : null;
 
-    // Populate related data
+    // Populate related data with error handling
     const populatedTransactions = await Promise.all(
       results.map(async (transaction) => {
-        const [customer, barber, processedBy, voucher, branch] = await Promise.all([
-          transaction.customer ? ctx.db.get(transaction.customer) : null,
-          ctx.db.get(transaction.barber),
-          ctx.db.get(transaction.processed_by),
-          transaction.voucher_applied ? ctx.db.get(transaction.voucher_applied) : null,
-          ctx.db.get(transaction.branch_id),
-        ]);
+        try {
+          const [customer, barber, processedBy, voucher, branch] = await Promise.all([
+            transaction.customer ? ctx.db.get(transaction.customer) : null,
+            transaction.barber ? ctx.db.get(transaction.barber) : null,
+            transaction.processed_by ? ctx.db.get(transaction.processed_by) : null,
+            transaction.voucher_applied ? ctx.db.get(transaction.voucher_applied) : null,
+            transaction.branch_id ? ctx.db.get(transaction.branch_id) : null,
+          ]);
 
-        return {
-          ...transaction,
-          branch_name: branch?.name || 'Unknown Branch',
-          customer_details: customer,
-          barber_details: barber,
-          processed_by_details: processedBy,
-          voucher_details: voucher
-        };
+          return {
+            ...transaction,
+            branch_name: branch?.name || 'Unknown Branch',
+            customer_details: customer,
+            barber_details: barber,
+            processed_by_details: processedBy,
+            voucher_details: voucher
+          };
+        } catch (error) {
+          // Return transaction with minimal details if lookup fails
+          return {
+            ...transaction,
+            branch_name: 'Unknown Branch',
+            customer_details: null,
+            barber_details: null,
+            processed_by_details: null,
+            voucher_details: null
+          };
+        }
       })
     );
 
@@ -572,25 +584,36 @@ export const getTransactionsByBranch = query({
 
     const hasMore = transactions.length > limit;
     const results = hasMore ? transactions.slice(0, limit) : transactions;
-    const nextCursor = hasMore ? results[results.length - 1]._id : null;
+    const nextCursor = hasMore && results.length > 0 ? results[results.length - 1]._id : null;
 
-    // Populate related data
+    // Populate related data with error handling
     const populatedTransactions = await Promise.all(
       results.map(async (transaction) => {
-        const [customer, barber, processedBy, voucher] = await Promise.all([
-          transaction.customer ? ctx.db.get(transaction.customer) : null,
-          ctx.db.get(transaction.barber),
-          ctx.db.get(transaction.processed_by),
-          transaction.voucher_applied ? ctx.db.get(transaction.voucher_applied) : null,
-        ]);
+        try {
+          const [customer, barber, processedBy, voucher] = await Promise.all([
+            transaction.customer ? ctx.db.get(transaction.customer) : null,
+            transaction.barber ? ctx.db.get(transaction.barber) : null,
+            transaction.processed_by ? ctx.db.get(transaction.processed_by) : null,
+            transaction.voucher_applied ? ctx.db.get(transaction.voucher_applied) : null,
+          ]);
 
-        return {
-          ...transaction,
-          customer_display: customer?.username || transaction.customer_name || 'Walk-in Customer',
-          barber_name: barber?.full_name || 'Unknown Barber',
-          processed_by_name: processedBy?.username || 'Unknown Staff',
-          voucher_code: voucher?.code || null,
-        };
+          return {
+            ...transaction,
+            customer_display: customer?.username || transaction.customer_name || 'Walk-in Customer',
+            barber_name: barber?.full_name || 'Unknown Barber',
+            processed_by_name: processedBy?.username || 'Unknown Staff',
+            voucher_code: voucher?.code || null,
+          };
+        } catch (error) {
+          // Return transaction with minimal details if lookup fails
+          return {
+            ...transaction,
+            customer_display: transaction.customer_name || 'Walk-in Customer',
+            barber_name: 'Unknown Barber',
+            processed_by_name: 'Unknown Staff',
+            voucher_code: null,
+          };
+        }
       })
     );
 
