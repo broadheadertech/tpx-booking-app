@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   Calendar,
@@ -12,6 +13,7 @@ import {
   MessageSquare,
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useQuery, useMutation } from 'convex/react'
@@ -19,6 +21,7 @@ import { api } from '../../../convex/_generated/api'
 import { useAuth } from "../../context/AuthContext";
 
 const MyBookings = ({ onBack }) => {
+  const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
   const [activeFilter, setActiveFilter] = useState("all");
   const [showQRCode, setShowQRCode] = useState(null);
@@ -480,10 +483,15 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                     {/* Compact Header */}
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <h3 className="text-base font-semibold text-white truncate">
-                            {service.name || "Service"}
+                            {booking.is_custom_booking ? 'Custom Booking' : (service.name || "Service")}
                           </h3>
+                          {booking.is_custom_booking && (
+                            <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-[var(--color-primary)]/20 text-[var(--color-primary)] border border-[var(--color-primary)]/30">
+                              CUSTOM
+                            </span>
+                          )}
                           <span
                             className={`px-2 py-0.5 rounded-md text-xs font-medium ${getStatusColor(
                               booking.status
@@ -559,7 +567,17 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
 
                        {/* Compact Action Buttons */}
                        <div className="flex gap-2">
-                         {booking.status === "booked" && (
+                         {/* Track button for custom bookings */}
+                         {booking.is_custom_booking && (
+                           <button
+                             onClick={() => navigate(`/track/${booking.booking_code}`)}
+                             className="flex-1 py-2 px-3 bg-[var(--color-primary)] text-white text-xs font-medium rounded-lg hover:bg-[var(--color-accent)] transition-colors flex items-center justify-center gap-1"
+                           >
+                             <ExternalLink className="w-3 h-3" />
+                             <span>Track</span>
+                           </button>
+                         )}
+                         {booking.status === "booked" && !booking.is_custom_booking && (
                            <button
                              onClick={() => setShowQRCode({ ...booking, service, barber })}
                              className="flex-1 py-2 px-3 bg-[var(--color-primary)] text-white text-xs font-medium rounded-lg hover:bg-[var(--color-accent)] transition-colors flex items-center justify-center gap-1"
@@ -568,7 +586,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                              <span>Show QR</span>
                            </button>
                          )}
-                         {booking.status === "pending" && (
+                         {booking.status === "pending" && !booking.is_custom_booking && (
                            <>
                              <button
                                onClick={() => setShowCancelModal({ ...booking, service, barber })}
@@ -585,7 +603,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                              </button>
                            </>
                          )}
-                         {booking.status === "completed" && !hasBeenRated(booking._id) && (
+                         {booking.status === "completed" && !hasBeenRated(booking._id) && !booking.is_custom_booking && (
                            <button
                              onClick={() => setShowRatingModal({ ...booking, service, barber })}
                              className="flex-1 py-2 px-3 bg-yellow-500 text-white text-xs font-medium rounded-lg hover:bg-yellow-600 transition-colors flex items-center justify-center gap-1"

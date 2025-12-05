@@ -46,6 +46,7 @@ export const getAllSubmissions = query({
           barber_name: barber?.full_name || "Unknown",
           branch_name: branch?.name || "Unknown",
           form_title: form?.title || "Unknown Form",
+          form_fields: form?.fields || [],
           handled_by_name: handledBy?.nickname || handledBy?.email,
         };
       })
@@ -77,6 +78,7 @@ export const getSubmissionsByBranch = query({
           ...sub,
           barber_name: barber?.full_name || "Unknown",
           form_title: form?.title || "Unknown Form",
+          form_fields: form?.fields || [],
           handled_by_name: handledBy?.nickname || handledBy?.email,
         };
       })
@@ -106,6 +108,7 @@ export const getSubmissionsByBarber = query({
         return {
           ...sub,
           form_title: form?.title || "Unknown Form",
+          form_fields: form?.fields || [],
           handled_by_name: handledBy?.nickname || handledBy?.email,
         };
       })
@@ -185,6 +188,8 @@ export const submitForm = mutation({
       throw new Error("Custom booking is not enabled for this barber");
     }
 
+    const branch = await ctx.db.get(form.branch_id);
+
     // Validate required fields
     for (const field of form.fields) {
       if (field.required) {
@@ -235,12 +240,96 @@ export const submitForm = mutation({
       updatedAt: now,
     });
 
+    // Send in-app notification to barber
+    if (barber.user) {
+      await ctx.db.insert("notifications", {
+        title: "New Custom Booking Request",
+        message: `${args.customer_name} submitted a custom booking request via "${form.title}".`,
+        type: "booking",
+        priority: "high",
+        recipient_id: barber.user,
+        recipient_type: "barber",
+        branch_id: form.branch_id,
+        is_read: false,
+        is_archived: false,
+        action_url: `/staff/custom-bookings`,
+        action_label: "View Request",
+        metadata: {
+          submission_id: submissionId,
+          booking_code: bookingCode,
+          customer_name: args.customer_name,
+          customer_email: args.customer_email,
+          customer_phone: args.customer_phone,
+          form_title: form.title,
+        },
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    // Send notification to branch admins
+    const branchAdmins = await ctx.db
+      .query("users")
+      .withIndex("by_branch_role", (q) =>
+        q.eq("branch_id", form.branch_id).eq("role", "branch_admin")
+      )
+      .filter((q) => q.eq(q.field("is_active"), true))
+      .collect();
+
+    for (const admin of branchAdmins) {
+      await ctx.db.insert("notifications", {
+        title: "New Custom Booking Request",
+        message: `${args.customer_name} submitted a custom booking for ${barber.full_name} via "${form.title}".`,
+        type: "booking",
+        priority: "medium",
+        recipient_id: admin._id,
+        recipient_type: "admin",
+        branch_id: form.branch_id,
+        is_read: false,
+        is_archived: false,
+        action_url: `/staff/custom-bookings`,
+        action_label: "View Request",
+        metadata: {
+          submission_id: submissionId,
+          booking_code: bookingCode,
+          customer_name: args.customer_name,
+          barber_name: barber.full_name,
+          form_title: form.title,
+        },
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
     return {
       submission_id: submissionId,
       booking_code: bookingCode,
+      branch_name: branch?.name || "Unknown",
+      barber_name: barber.full_name,
+      form_title: form.title,
     };
   },
 });
+
+// Status messages for customer notifications
+const STATUS_MESSAGES = {
+  contacted: {
+    title: "We've Received Your Request",
+    message: "Our team has reviewed your booking request and will contact you shortly to discuss the details.",
+  },
+  confirmed: {
+    title: "Booking Confirmed!",
+    message: "Great news! Your booking has been confirmed. We look forward to seeing you!",
+  },
+  completed: {
+    title: "Thank You for Your Visit",
+    message: "Thank you for choosing us. We hope you enjoyed your experience!",
+  },
+  cancelled: {
+    title: "Booking Cancelled",
+    message: "Your booking request has been cancelled. If you have any questions, please contact us.",
+  },
+};
 
 // Update submission status (staff action)
 export const updateStatus = mutation({
@@ -271,6 +360,13 @@ export const updateStatus = mutation({
       throw new Error("Permission denied");
     }
 
+    // Get form and barber details for notification
+    const [form, barber, branch] = await Promise.all([
+      ctx.db.get(submission.form_id),
+      ctx.db.get(submission.barber_id),
+      ctx.db.get(submission.branch_id),
+    ]);
+
     const now = Date.now();
     const updates: any = {
       status: args.status,
@@ -296,6 +392,7 @@ export const updateStatus = mutation({
     await ctx.db.patch(args.id, updates);
 
     // Update the reference booking status as well
+    let bookingCode = "";
     if (submission.booking_id) {
       let bookingStatus: "pending" | "booked" | "confirmed" | "completed" | "cancelled" = "pending";
       if (args.status === "contacted") bookingStatus = "booked";
@@ -307,9 +404,52 @@ export const updateStatus = mutation({
         status: bookingStatus,
         updatedAt: now,
       });
+
+      const booking = await ctx.db.get(submission.booking_id);
+      bookingCode = booking?.booking_code || "";
     }
 
-    return args.id;
+    // Store customer notification data for email sending (will be picked up by email service)
+    // This creates a record that can trigger email notifications
+    if (args.status !== "pending" && submission.customer_email) {
+      const statusMsg = STATUS_MESSAGES[args.status as keyof typeof STATUS_MESSAGES];
+      if (statusMsg) {
+        await ctx.db.insert("notifications", {
+          title: statusMsg.title,
+          message: `${statusMsg.message} Reference: ${bookingCode}`,
+          type: "booking",
+          priority: args.status === "cancelled" ? "high" : "medium",
+          recipient_id: undefined, // No user account for custom booking customers
+          recipient_type: "customer",
+          branch_id: submission.branch_id,
+          is_read: false,
+          is_archived: false,
+          action_url: `/track/${bookingCode}`,
+          action_label: "Track Booking",
+          metadata: {
+            submission_id: args.id,
+            booking_code: bookingCode,
+            customer_name: submission.customer_name,
+            customer_email: submission.customer_email,
+            customer_phone: submission.customer_phone,
+            barber_name: barber?.full_name || "Unknown",
+            branch_name: branch?.name || "Unknown",
+            form_title: form?.title || "Custom Booking",
+            status: args.status,
+            requires_email: true, // Flag for email service to pick up
+          },
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    }
+
+    return {
+      id: args.id,
+      status: args.status,
+      booking_code: bookingCode,
+      customer_email: submission.customer_email,
+    };
   },
 });
 
@@ -435,6 +575,44 @@ export const deleteSubmission = mutation({
     await ctx.db.delete(args.id);
 
     return true;
+  },
+});
+
+// Get submission by booking code (for customer tracking page)
+export const getSubmissionByBookingCode = query({
+  args: { booking_code: v.string() },
+  handler: async (ctx, args) => {
+    // First find the booking by code
+    const booking = await ctx.db
+      .query("bookings")
+      .withIndex("by_booking_code", (q) => q.eq("booking_code", args.booking_code))
+      .first();
+
+    if (!booking) return null;
+
+    // Find the submission linked to this booking
+    const submission = await ctx.db
+      .query("custom_booking_submissions")
+      .filter((q) => q.eq(q.field("booking_id"), booking._id))
+      .first();
+
+    if (!submission) return null;
+
+    // Enrich with related data
+    const [barber, branch, form] = await Promise.all([
+      ctx.db.get(submission.barber_id),
+      ctx.db.get(submission.branch_id),
+      ctx.db.get(submission.form_id),
+    ]);
+
+    return {
+      ...submission,
+      booking_code: booking.booking_code,
+      barber_name: barber?.full_name || "Unknown",
+      branch_name: branch?.name || "Unknown",
+      form_title: form?.title || "Custom Booking",
+      form_fields: form?.fields || [],
+    };
   },
 });
 

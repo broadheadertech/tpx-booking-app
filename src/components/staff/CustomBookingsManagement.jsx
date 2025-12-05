@@ -10,6 +10,7 @@ import {
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
+import { sendCustomBookingStatusUpdate } from '../../services/emailService'
 
 const CustomBookingsManagement = ({ onRefresh, user }) => {
   const { sessionToken } = useAuth()
@@ -264,11 +265,30 @@ const CustomBookingsManagement = ({ onRefresh, user }) => {
 
     setLoading(true)
     try {
-      await updateSubmissionStatus({
+      const result = await updateSubmissionStatus({
         sessionToken,
         id: selectedSubmission._id,
         status: newStatus
       })
+
+      // Send status update email to customer if they have an email
+      if (selectedSubmission.customer_email && newStatus !== 'pending') {
+        try {
+          await sendCustomBookingStatusUpdate({
+            customerEmail: selectedSubmission.customer_email,
+            customerName: selectedSubmission.customer_name,
+            bookingCode: result.booking_code || selectedSubmission.booking_code || 'N/A',
+            barberName: selectedSubmission.barber_name,
+            branchName: selectedSubmission.branch_name || 'Our Branch',
+            status: newStatus
+          })
+          console.log('✅ Status update email sent to customer')
+        } catch (emailError) {
+          // Don't fail the status update if email fails
+          console.error('Failed to send status update email:', emailError)
+        }
+      }
+
       setSuccess('Status updated successfully!')
       setShowStatusModal(false)
       setNewStatus('')

@@ -439,6 +439,251 @@ class EmailService {
       throw error;
     }
   }
+
+  // Send custom booking confirmation email (when form is submitted)
+  async sendCustomBookingConfirmation(bookingData) {
+    const trackUrl = `${window.location.origin}/track/${bookingData.bookingCode}`;
+
+    const emailData = {
+      from: `${this.fromName} <${this.fromEmail}>`,
+      to: bookingData.customerEmail,
+      subject: `Booking Request Received - ${bookingData.bookingCode}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Booking Request Received</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background-color: #0A0A0A;
+              color: #ffffff;
+              margin: 0;
+              padding: 0;
+              line-height: 1.6;
+            }
+            .container { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
+            .content {
+              background: linear-gradient(135deg, #1A1A1A 0%, #2A2A2A 100%);
+              border-radius: 16px;
+              padding: 40px;
+              border: 1px solid #333;
+            }
+            .title { font-size: 24px; font-weight: bold; margin-bottom: 20px; color: #D4A574; text-align: center; }
+            .booking-code {
+              font-size: 28px; font-weight: bold; text-align: center;
+              color: #D4A574; margin: 20px 0; font-family: monospace;
+              background: rgba(212, 165, 116, 0.1);
+              padding: 15px; border-radius: 8px;
+            }
+            .details { background: rgba(255,255,255,0.05); border-radius: 8px; padding: 20px; margin: 20px 0; }
+            .details p { margin: 8px 0; color: #ccc; }
+            .track-button {
+              display: inline-block; background: linear-gradient(135deg, #D4A574 0%, #B8956E 100%);
+              color: #000; text-decoration: none; padding: 14px 28px; border-radius: 8px;
+              font-weight: bold; margin: 20px 0;
+            }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="content">
+              <h1 class="title">✨ Booking Request Received!</h1>
+              <p style="text-align: center; color: #ccc;">
+                Hi ${bookingData.customerName}, thank you for your booking request!
+              </p>
+
+              <div class="booking-code">
+                Reference: ${bookingData.bookingCode}
+              </div>
+
+              <div class="details">
+                <h3 style="color: #D4A574; margin-top: 0;">Booking Details</h3>
+                <p><strong>Barber:</strong> ${bookingData.barberName}</p>
+                <p><strong>Form:</strong> ${bookingData.formTitle}</p>
+                <p><strong>Branch:</strong> ${bookingData.branchName}</p>
+              </div>
+
+              <p style="text-align: center; color: #ccc;">
+                Our team will review your request and contact you shortly to confirm the details.
+              </p>
+
+              <div style="text-align: center;">
+                <a href="${trackUrl}" class="track-button">Track Your Booking</a>
+              </div>
+
+              <p style="text-align: center; color: #888; font-size: 13px; margin-top: 30px;">
+                You can use your reference code to track the status of your booking anytime.
+              </p>
+            </div>
+
+            <div class="footer">
+              <p>Thank you for choosing us!</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    try {
+      if (import.meta.env.DEV) {
+        console.log('📧 [DEV MODE] Custom Booking Confirmation Email:');
+        console.log('  To:', bookingData.customerEmail);
+        console.log('  Booking Code:', bookingData.bookingCode);
+        return { success: true, messageId: 'dev-mock-' + Date.now(), isDev: true };
+      }
+
+      const result = await resend.emails.send(emailData);
+      if (result.error) throw new Error(result.error.message);
+      return { success: true, messageId: result.data?.id };
+    } catch (error) {
+      console.error('Failed to send custom booking confirmation:', error);
+      throw error;
+    }
+  }
+
+  // Send custom booking status update email
+  async sendCustomBookingStatusUpdate(bookingData) {
+    const trackUrl = `${window.location.origin}/track/${bookingData.bookingCode}`;
+
+    const statusConfig = {
+      contacted: {
+        title: "We're Working on Your Request",
+        icon: "📞",
+        message: "Great news! Our team has reviewed your booking request and will contact you shortly to discuss the details and finalize your appointment.",
+        color: "#3B82F6"
+      },
+      confirmed: {
+        title: "Booking Confirmed!",
+        icon: "✅",
+        message: "Your booking has been confirmed! We look forward to seeing you. Please arrive 5-10 minutes before your scheduled time.",
+        color: "#10B981"
+      },
+      completed: {
+        title: "Thank You for Your Visit!",
+        icon: "🌟",
+        message: "Thank you for choosing us! We hope you enjoyed your experience. We'd love to see you again soon.",
+        color: "#8B5CF6"
+      },
+      cancelled: {
+        title: "Booking Cancelled",
+        icon: "❌",
+        message: "Your booking request has been cancelled. If you have any questions or would like to reschedule, please don't hesitate to contact us.",
+        color: "#EF4444"
+      }
+    };
+
+    const status = statusConfig[bookingData.status] || statusConfig.contacted;
+
+    const emailData = {
+      from: `${this.fromName} <${this.fromEmail}>`,
+      to: bookingData.customerEmail,
+      subject: `${status.icon} ${status.title} - ${bookingData.bookingCode}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${status.title}</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background-color: #0A0A0A;
+              color: #ffffff;
+              margin: 0;
+              padding: 0;
+              line-height: 1.6;
+            }
+            .container { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
+            .content {
+              background: linear-gradient(135deg, #1A1A1A 0%, #2A2A2A 100%);
+              border-radius: 16px;
+              padding: 40px;
+              border: 1px solid #333;
+            }
+            .status-badge {
+              display: inline-block; padding: 8px 16px; border-radius: 20px;
+              font-weight: bold; font-size: 14px; margin-bottom: 20px;
+              background: ${status.color}22; color: ${status.color}; border: 1px solid ${status.color}44;
+            }
+            .title { font-size: 24px; font-weight: bold; margin-bottom: 15px; color: #fff; }
+            .booking-code {
+              font-size: 20px; font-weight: bold; color: #D4A574;
+              font-family: monospace; margin: 15px 0;
+            }
+            .message-box {
+              background: rgba(255,255,255,0.05); border-radius: 8px;
+              padding: 20px; margin: 20px 0; border-left: 4px solid ${status.color};
+            }
+            .details { margin: 20px 0; }
+            .details p { margin: 8px 0; color: #ccc; }
+            .track-button {
+              display: inline-block; background: linear-gradient(135deg, #D4A574 0%, #B8956E 100%);
+              color: #000; text-decoration: none; padding: 14px 28px; border-radius: 8px;
+              font-weight: bold; margin: 20px 0;
+            }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="content">
+              <div style="text-align: center;">
+                <span class="status-badge">${status.icon} ${bookingData.status.charAt(0).toUpperCase() + bookingData.status.slice(1)}</span>
+              </div>
+
+              <h1 class="title" style="text-align: center;">${status.title}</h1>
+
+              <p class="booking-code" style="text-align: center;">
+                Reference: ${bookingData.bookingCode}
+              </p>
+
+              <div class="message-box">
+                <p style="margin: 0; color: #ddd;">${status.message}</p>
+              </div>
+
+              <div class="details">
+                <p><strong>Name:</strong> ${bookingData.customerName}</p>
+                <p><strong>Barber:</strong> ${bookingData.barberName}</p>
+                <p><strong>Branch:</strong> ${bookingData.branchName}</p>
+              </div>
+
+              <div style="text-align: center;">
+                <a href="${trackUrl}" class="track-button">View Booking Details</a>
+              </div>
+            </div>
+
+            <div class="footer">
+              <p>Questions? Contact us or visit our location.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    try {
+      if (import.meta.env.DEV) {
+        console.log('📧 [DEV MODE] Custom Booking Status Update Email:');
+        console.log('  To:', bookingData.customerEmail);
+        console.log('  Status:', bookingData.status);
+        console.log('  Booking Code:', bookingData.bookingCode);
+        return { success: true, messageId: 'dev-mock-' + Date.now(), isDev: true };
+      }
+
+      const result = await resend.emails.send(emailData);
+      if (result.error) throw new Error(result.error.message);
+      return { success: true, messageId: result.data?.id };
+    } catch (error) {
+      console.error('Failed to send status update email:', error);
+      throw error;
+    }
+  }
 }
 
 export const isEmailServiceConfigured = () => {
@@ -449,5 +694,7 @@ export const isEmailServiceConfigured = () => {
 const emailService = new EmailService();
 export const sendVoucherEmail = emailService.sendVoucherEmail.bind(emailService);
 export const sendWelcomeEmail = emailService.sendWelcomeEmail.bind(emailService);
+export const sendCustomBookingConfirmation = emailService.sendCustomBookingConfirmation.bind(emailService);
+export const sendCustomBookingStatusUpdate = emailService.sendCustomBookingStatusUpdate.bind(emailService);
 
 export default new EmailService();

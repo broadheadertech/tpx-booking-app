@@ -20,6 +20,7 @@ import { api } from "../../../convex/_generated/api";
 import { useAuth } from "../../context/AuthContext";
 import { useBranding } from "../../context/BrandingContext";
 import { formatTime } from "../../utils/dateUtils";
+import { sendCustomBookingConfirmation } from "../../services/emailService";
 
 // Helper function to convert hex to rgba
 const hexToRgba = (hex, alpha) => {
@@ -752,6 +753,24 @@ const ServiceBooking = ({ onBack }) => {
       });
 
       setCustomBookingSuccess(result);
+
+      // Send confirmation email if customer provided email
+      if (customFormCustomerEmail.trim()) {
+        try {
+          await sendCustomBookingConfirmation({
+            customerEmail: customFormCustomerEmail.trim(),
+            customerName: customFormCustomerName.trim(),
+            bookingCode: result.booking_code,
+            barberName: result.barber_name,
+            branchName: result.branch_name,
+            formTitle: result.form_title,
+          });
+          console.log('✅ Confirmation email sent successfully');
+        } catch (emailError) {
+          // Don't fail the submission if email fails
+          console.error('Failed to send confirmation email:', emailError);
+        }
+      }
     } catch (err) {
       setError(err.message || "Failed to submit booking request");
     } finally {
