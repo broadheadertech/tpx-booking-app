@@ -373,9 +373,9 @@ const ProductsManagement = ({ onRefresh, user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-400">Total Products</p>
-              <p className="text-2xl font-bold text-white">{stats.total}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.total}</p>
             </div>
-            <Package className="h-8 w-8 text-blue-400" />
+            <Package className="h-8 w-8 text-[var(--color-primary)] opacity-50" />
           </div>
         </div>
 
@@ -383,9 +383,9 @@ const ProductsManagement = ({ onRefresh, user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-400">In Stock</p>
-              <p className="text-2xl font-bold text-green-400">{stats.inStock}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.inStock}</p>
             </div>
-            <TrendingUp className="h-8 w-8 text-green-400" />
+            <TrendingUp className="h-8 w-8 text-[var(--color-primary)] opacity-50" />
           </div>
         </div>
 
@@ -393,9 +393,9 @@ const ProductsManagement = ({ onRefresh, user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-400">Low Stock</p>
-              <p className="text-2xl font-bold text-yellow-400">{stats.lowStock}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.lowStock}</p>
             </div>
-            <AlertCircle className="h-8 w-8 text-yellow-400" />
+            <AlertCircle className="h-8 w-8 text-[var(--color-primary)] opacity-50" />
           </div>
         </div>
 
@@ -403,9 +403,9 @@ const ProductsManagement = ({ onRefresh, user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-400">Out of Stock</p>
-              <p className="text-2xl font-bold text-red-400">{stats.outOfStock}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.outOfStock}</p>
             </div>
-            <TrendingDown className="h-8 w-8 text-red-400" />
+            <TrendingDown className="h-8 w-8 text-[var(--color-primary)] opacity-50" />
           </div>
         </div>
 
@@ -413,9 +413,9 @@ const ProductsManagement = ({ onRefresh, user }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-400">Inventory Value</p>
-              <p className="text-2xl font-bold text-purple-400">₱{stats.totalValue.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-[var(--color-primary)]">₱{stats.totalValue.toLocaleString()}</p>
             </div>
-            <DollarSign className="h-8 w-8 text-purple-400" />
+            <DollarSign className="h-8 w-8 text-[var(--color-primary)] opacity-50" />
           </div>
         </div>
 
@@ -425,7 +425,7 @@ const ProductsManagement = ({ onRefresh, user }) => {
               <p className="text-sm font-medium text-gray-400">Sold This Month</p>
               <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.totalSold}</p>
             </div>
-            <ShoppingCart className="h-8 w-8 text-[var(--color-primary)]" />
+            <ShoppingCart className="h-8 w-8 text-[var(--color-primary)] opacity-50" />
           </div>
         </div>
       </div>
@@ -441,7 +441,7 @@ const ProductsManagement = ({ onRefresh, user }) => {
                 placeholder="Search products..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
+                className="pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
               />
             </div>
 
@@ -450,7 +450,7 @@ const ProductsManagement = ({ onRefresh, user }) => {
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
-                className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
               >
                 <option value="all">All Categories</option>
                 <option value="hair-care">Hair Care</option>
@@ -464,7 +464,7 @@ const ProductsManagement = ({ onRefresh, user }) => {
             <select
               value={filterStock}
               onChange={(e) => setFilterStock(e.target.value)}
-              className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="bg-[#1A1A1A] border border-[#444444] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
             >
               <option value="all">All Stock Levels</option>
               <option value="in-stock">In Stock</option>
@@ -613,7 +613,7 @@ const ProductsManagement = ({ onRefresh, user }) => {
             <div className="mt-6">
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700"
+                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:brightness-110 transition-all"
               >
                 <Plus className="-ml-1 mr-2 h-4 w-4" />
                 New Product
