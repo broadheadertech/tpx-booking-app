@@ -11,7 +11,6 @@ import {
   X,
   MapPin,
   AlertTriangle,
-  CreditCard,
   Banknote,
   Star,
 } from "lucide-react";
@@ -89,8 +88,6 @@ const ServiceBooking = ({ onBack }) => {
   const [error, setError] = useState(null);
   const [createdBooking, setCreatedBooking] = useState(null);
   const [qrCodeLoading, setQrCodeLoading] = useState(true);
-  const [showPaymentMethods, setShowPaymentMethods] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
   const [selectedVoucher, setSelectedVoucher] = useState(null);
   const [loadingTimeSlots, setLoadingTimeSlots] = useState(false);
   const [branchSearchTerm, setBranchSearchTerm] = useState("");
@@ -1197,7 +1194,7 @@ const ServiceBooking = ({ onBack }) => {
           }}
           min={new Date().toISOString().split("T")[0]}
           max={
-            new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
               .toISOString()
               .split("T")[0]
           }
@@ -1363,364 +1360,206 @@ const ServiceBooking = ({ onBack }) => {
   );
 
   const renderConfirmation = () => (
-    <div className="space-y-3 px-4">
-      <div className="text-center mb-3">
-        <h2 className="text-xl font-bold mb-1" style={{ color: "#36454F" }}>
+    <div className="px-4 pb-6 max-w-2xl mx-auto">
+      {/* Header */}
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-white mb-1">
           Confirm Your Booking
         </h2>
-        <p className="text-sm font-medium" style={{ color: "#8B8B8B" }}>
+        <p className="text-sm text-gray-400">
           Please review your appointment details
         </p>
       </div>
 
-      <div
-        className="bg-white rounded-xl p-4 border shadow-lg"
-        style={{ borderColor: "#E0E0E0" }}
-      >
-        <div className="space-y-4">
-          {/* Service Details */}
-          <div
-            className="text-center border-b pb-3"
-            style={{ borderColor: "#E0E0E0" }}
-          >
-            <div className="text-2xl mb-2">{selectedService?.image}</div>
-            <h3 className="text-lg font-bold mb-1" style={{ color: "#36454F" }}>
-              {selectedService?.name}
-            </h3>
-            <div className="flex justify-center items-center space-x-3">
-              <span
-                className="font-bold text-base"
-                style={{ color: branding?.primary_color || "#F68B24" }}
-              >
-                {selectedService?.hide_price ? 'Price may vary' : `₱${selectedService?.price.toLocaleString()}`}
-              </span>
-              <span
-                className="font-medium text-sm"
-                style={{ color: "#8B8B8B" }}
-              >
-                {selectedService?.duration}
-              </span>
-            </div>
-          </div>
-
-          {/* Appointment Details */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between py-1">
-              <div className="flex items-center space-x-2">
-                <Building className="w-4 h-4" style={{ color: branding?.primary_color || "#F68B24" }} />
-                <span
-                  className="font-semibold text-sm"
-                  style={{ color: "#36454F" }}
-                >
-                  Branch
-                </span>
-              </div>
-              <span className="font-bold text-sm" style={{ color: "#36454F" }}>
-                {selectedBranch?.name}
-              </span>
-            </div>
-            <div className="flex items-center justify-between py-1">
-              <div className="flex items-center space-x-2">
-                <Calendar className="w-4 h-4" style={{ color: branding?.primary_color || "#F68B24" }} />
-                <span
-                  className="font-semibold text-sm"
-                  style={{ color: "#36454F" }}
-                >
-                  Date & Time
-                </span>
-              </div>
-              <span className="font-bold text-sm" style={{ color: "#36454F" }}>
-                Today, {formatTime(selectedTime)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between py-1">
-              <div className="flex items-center space-x-2">
-                <User className="w-4 h-4" style={{ color: branding?.primary_color || "#F68B24" }} />
-                <span
-                  className="font-semibold text-sm"
-                  style={{ color: "#36454F" }}
-                >
-                  Your Barber
-                </span>
-              </div>
-              <span className="font-bold text-sm" style={{ color: "#36454F" }}>
-                {selectedStaff?.full_name ||
-                  selectedStaff?.name ||
-                  "Any Barber"}
-              </span>
-            </div>
-          </div>
-
-          {/* Voucher Selection */}
-          <div className="border-t pt-3" style={{ borderColor: "#E0E0E0" }}>
-            <h4
-              className="text-sm font-bold mb-3 flex items-center"
-              style={{ color: "#36454F" }}
+      {/* Main Card */}
+      <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] overflow-hidden">
+        {/* Service Details Header */}
+        <div className="text-center p-5 border-b border-[#2A2A2A] bg-gradient-to-b from-[#1F1F1F] to-[#1A1A1A]">
+          <h3 className="text-xl font-bold text-white mb-1">
+            {selectedService?.name}
+          </h3>
+          <div className="flex justify-center items-center gap-3">
+            <span
+              className="font-bold text-lg"
+              style={{ color: branding?.primary_color || "#F68B24" }}
             >
-              <Gift className="w-4 h-4 mr-2" style={{ color: branding?.primary_color || "#F68B24" }} />
-              Apply Voucher (Optional)
-            </h4>
-
-            {getAvailableVouchers().length > 0 ? (
-              <div className="space-y-2 mb-3">
-                <div className="max-h-32 overflow-y-auto space-y-2">
-                  {getAvailableVouchers().map((voucher) => (
-                    <button
-                      key={voucher._id}
-                      onClick={() =>
-                        setSelectedVoucher(
-                          selectedVoucher?._id === voucher._id ? null : voucher
-                        )
-                      }
-                      className="w-full p-2 rounded-lg border-2 transition-all duration-200 text-left"
-                      style={{
-                        borderColor:
-                          selectedVoucher?._id === voucher._id
-                            ? (branding?.primary_color || "#F68B24")
-                            : "#E0E0E0",
-                        backgroundColor:
-                          selectedVoucher?._id === voucher._id
-                            ? hexToRgba(branding?.primary_color || "#F68B24", 0.1)
-                            : "white",
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <Gift className="w-4 h-4" style={{ color: branding?.primary_color || "#F68B24" }} />
-                          <div>
-                            <p
-                              className="text-xs font-bold"
-                              style={{ color: "#36454F" }}
-                            >
-                              {voucher.code}
-                            </p>
-                            <p className="text-xs" style={{ color: branding?.primary_color || "#F68B24" }}>
-                              ₱{parseFloat(voucher.value || 0).toFixed(2)}
-                            </p>
-                          </div>
-                        </div>
-                        {selectedVoucher?._id === voucher._id && (
-                          <div
-                            className="w-4 h-4 rounded-full flex items-center justify-center"
-                            style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
-                          >
-                            <span className="text-white text-xs">✓</span>
-                          </div>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-                {selectedVoucher && (
-                  <div className="text-xs text-center p-2 rounded flex items-center justify-center gap-2" style={{ backgroundColor: "#F0F8FF", color: "#36454F" }}>
-                    <Banknote className="w-4 h-4" />
-                    <span>You'll save ₱{parseFloat(selectedVoucher.value || 0).toFixed(2)} with this voucher</span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-center py-3">
-                <p className="text-xs" style={{ color: "#8B8B8B" }}>
-                  No vouchers available
-                </p>
-              </div>
+              {selectedService?.hide_price ? 'Price may vary' : `₱${selectedService?.price.toLocaleString()}`}
+            </span>
+            {selectedService?.duration && (
+              <>
+                <span className="text-gray-600">•</span>
+                <span className="text-gray-400 text-sm">
+                  {selectedService?.duration}
+                </span>
+              </>
             )}
           </div>
+        </div>
 
-          {/* Payment Options */}
-          <div className="border-t pt-3" style={{ borderColor: "#E0E0E0" }}>
-            <h4 className="text-sm font-bold mb-3" style={{ color: "#36454F" }}>
-              Complete Your Booking
-            </h4>
-
-            {!showPaymentMethods ? (
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                <button
-                  onClick={() => setShowPaymentMethods(true)}
-                  disabled={bookingLoading}
-                  className={`py-3 px-4 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg transition-all duration-200 text-sm flex items-center justify-center gap-2 ${
-                    bookingLoading ? "opacity-75 cursor-not-allowed" : ""
-                  }`}
-                >
-                  <CreditCard className="w-4 h-4" />
-                  <span>Pay Now</span>
-                </button>
-                <button
-                  onClick={() => handleConfirmBooking("pay_later")}
-                  disabled={bookingLoading}
-                  className={`py-3 px-4 border-2 hover:bg-[var(--color-primary)] hover:text-white font-bold rounded-lg transition-all duration-200 text-sm flex items-center justify-center gap-2 ${
-                    bookingLoading ? "opacity-75 cursor-not-allowed" : ""
-                  }`}
-                  style={{ borderColor: branding?.primary_color || "#F68B24", color: branding?.primary_color || "#F68B24" }}
-                >
-                  {bookingLoading ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <div className="animate-spin w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full"></div>
-                      <span>Booking...</span>
-                    </div>
-                  ) : (
-                    <>
-                      <Building className="w-4 h-4" />
-                      <span>Pay Later</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="bg-[#1A1A1A] rounded-lg p-3 border border-[#2A2A2A]">
-                  <h5 className="text-sm font-bold mb-2 text-white">
-                    Select Payment Method
-                  </h5>
-                  <div className="space-y-2">
-                    <button
-                      key="gcash"
-                      onClick={() => setSelectedPaymentMethod("gcash")}
-                      className={`w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-3 ${
-                        selectedPaymentMethod === "gcash"
-                          ? "border-blue-500 bg-blue-50"
-                          : "border-gray-200 hover:border-blue-300"
-                      }`}
-                    >
-                      <div className="w-8 h-8 bg-blue-500 rounded flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">G</span>
-                      </div>
-                      <div className="text-left">
-                        <p
-                          className="font-bold text-sm"
-                          style={{ color: "#36454F" }}
-                        >
-                          GCash
-                        </p>
-                        <p className="text-xs" style={{ color: "#8B8B8B" }}>
-                          Digital wallet payment
-                        </p>
-                      </div>
-                    </button>
-
-                    <button
-                      key="maya"
-                      onClick={() => setSelectedPaymentMethod("maya")}
-                      className={`w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-3 ${
-                        selectedPaymentMethod === "maya"
-                          ? "border-green-500 bg-green-50"
-                          : "border-gray-200 hover:border-green-300"
-                      }`}
-                    >
-                      <div className="w-8 h-8 bg-green-500 rounded flex items-center justify-center">
-                        <span className="text-white text-xs font-bold">M</span>
-                      </div>
-                      <div className="text-left">
-                        <p
-                          className="font-bold text-sm"
-                          style={{ color: "#36454F" }}
-                        >
-                          Maya
-                        </p>
-                        <p className="text-xs" style={{ color: "#8B8B8B" }}>
-                          Digital wallet payment
-                        </p>
-                      </div>
-                    </button>
-
-                    <button
-                      key="card"
-                      onClick={() => setSelectedPaymentMethod("card")}
-                      className={`w-full p-3 rounded-lg border-2 transition-all duration-200 flex items-center space-x-3 ${
-                        selectedPaymentMethod === "card"
-                          ? "border-purple-500 bg-purple-50"
-                          : "border-gray-200 hover:border-purple-300"
-                      }`}
-                    >
-                      <div className="w-8 h-8 bg-purple-500 rounded flex items-center justify-center">
-                        <CreditCard className="w-4 h-4 text-white" />
-                      </div>
-                      <div className="text-left">
-                        <p
-                          className="font-bold text-sm"
-                          style={{ color: "#36454F" }}
-                        >
-                          Credit/Debit Card
-                        </p>
-                        <p className="text-xs" style={{ color: "#8B8B8B" }}>
-                          Visa, Mastercard, etc.
-                        </p>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => {
-                      setShowPaymentMethods(false);
-                      setSelectedPaymentMethod(null);
-                    }}
-                    className="flex-1 py-2 px-3 border border-[#2A2A2A] text-gray-400 hover:bg-[#1A1A1A] hover:text-white font-bold rounded-lg transition-all duration-200 text-sm"
-                  >
-                    Back
-                  </button>
-                  <button
-                    onClick={() =>
-                      handleConfirmBooking("pay_now", selectedPaymentMethod)
-                    }
-                    disabled={!selectedPaymentMethod || bookingLoading}
-                    className={`flex-1 py-2 px-3 text-white font-bold rounded-lg transition-all duration-200 shadow-lg text-sm ${
-                      !selectedPaymentMethod || bookingLoading
-                        ? "opacity-75 cursor-not-allowed"
-                        : ""
-                    }`}
-                    style={{
-                      backgroundColor:
-                        !selectedPaymentMethod || bookingLoading
-                          ? "#CCCCCC"
-                          : "#22C55E",
-                    }}
-                    onMouseEnter={(e) =>
-                      !selectedPaymentMethod ||
-                      bookingLoading ||
-                      (e.target.style.backgroundColor = "#16A34A")
-                    }
-                    onMouseLeave={(e) =>
-                      !selectedPaymentMethod ||
-                      bookingLoading ||
-                      (e.target.style.backgroundColor = "#22C55E")
-                    }
-                  >
-                    {bookingLoading ? (
-                      <div className="flex items-center justify-center space-x-2">
-                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
-                        <span>Processing...</span>
-                      </div>
-                    ) : (
-                      "Confirm & Pay"
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {!showPaymentMethods && (
-              <p
-                className="text-xs text-center mb-3"
-                style={{ color: "#8B8B8B" }}
+        {/* Appointment Details */}
+        <div className="p-4 space-y-3">
+          <div className="flex items-center justify-between py-2 px-3 bg-[#0F0F0F] rounded-lg">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: hexToRgba(branding?.primary_color || "#F68B24", 0.15) }}
               >
-                Choose your preferred payment option to complete booking
-              </p>
-            )}
+                <Building className="w-4 h-4" style={{ color: branding?.primary_color || "#F68B24" }} />
+              </div>
+              <span className="text-gray-400 text-sm">Branch</span>
+            </div>
+            <span className="font-semibold text-white text-sm">
+              {selectedBranch?.name}
+            </span>
           </div>
 
-          {/* Go Back Button */}
-          {!showPaymentMethods && (
-            <div className="pt-2">
+          <div className="flex items-center justify-between py-2 px-3 bg-[#0F0F0F] rounded-lg">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: hexToRgba(branding?.primary_color || "#F68B24", 0.15) }}
+              >
+                <Calendar className="w-4 h-4" style={{ color: branding?.primary_color || "#F68B24" }} />
+              </div>
+              <span className="text-gray-400 text-sm">Date & Time</span>
+            </div>
+            <span className="font-semibold text-white text-sm">
+              {selectedDate === new Date().toISOString().split('T')[0] ? 'Today' : new Date(selectedDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}, {formatTime(selectedTime)}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between py-2 px-3 bg-[#0F0F0F] rounded-lg">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ backgroundColor: hexToRgba(branding?.primary_color || "#F68B24", 0.15) }}
+              >
+                <User className="w-4 h-4" style={{ color: branding?.primary_color || "#F68B24" }} />
+              </div>
+              <span className="text-gray-400 text-sm">Your Barber</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {selectedStaff && (
+                <BarberAvatar barber={selectedStaff} className="w-6 h-6" />
+              )}
+              <span className="font-semibold text-white text-sm">
+                {selectedStaff?.full_name || selectedStaff?.name || "Any Barber"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Voucher Selection */}
+        <div className="p-4 border-t border-[#2A2A2A]">
+          <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+            <Gift className="w-4 h-4" style={{ color: branding?.primary_color || "#F68B24" }} />
+            Apply Voucher (Optional)
+          </h4>
+
+          {getAvailableVouchers().length > 0 ? (
+            <div className="space-y-2">
+              <div className="max-h-32 overflow-y-auto space-y-2">
+                {getAvailableVouchers().map((voucher) => (
                   <button
-                    onClick={() => setStep(3)}
-                    className="w-full py-2 px-3 border border-[#2A2A2A] text-gray-400 hover:bg-[#1A1A1A] hover:text-white font-bold rounded-lg transition-all duration-200 text-sm"
+                    key={voucher._id}
+                    onClick={() =>
+                      setSelectedVoucher(
+                        selectedVoucher?._id === voucher._id ? null : voucher
+                      )
+                    }
+                    className="w-full p-3 rounded-lg border transition-all duration-200 text-left"
+                    style={{
+                      borderColor:
+                        selectedVoucher?._id === voucher._id
+                          ? (branding?.primary_color || "#F68B24")
+                          : "#2A2A2A",
+                      backgroundColor:
+                        selectedVoucher?._id === voucher._id
+                          ? hexToRgba(branding?.primary_color || "#F68B24", 0.1)
+                          : "#0F0F0F",
+                    }}
                   >
-                    ← Go Back to Edit Details
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center"
+                          style={{ backgroundColor: hexToRgba(branding?.primary_color || "#F68B24", 0.2) }}
+                        >
+                          <Gift className="w-4 h-4" style={{ color: branding?.primary_color || "#F68B24" }} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-white">
+                            {voucher.code}
+                          </p>
+                          <p className="text-xs" style={{ color: branding?.primary_color || "#F68B24" }}>
+                            Save ₱{parseFloat(voucher.value || 0).toFixed(2)}
+                          </p>
+                        </div>
+                      </div>
+                      {selectedVoucher?._id === voucher._id && (
+                        <div
+                          className="w-5 h-5 rounded-full flex items-center justify-center"
+                          style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
+                        >
+                          <CheckCircle className="w-3 h-3 text-white" />
+                        </div>
+                      )}
+                    </div>
                   </button>
+                ))}
+              </div>
+              {selectedVoucher && (
+                <div
+                  className="text-xs p-3 rounded-lg flex items-center justify-center gap-2"
+                  style={{
+                    backgroundColor: hexToRgba(branding?.primary_color || "#F68B24", 0.1),
+                    color: branding?.primary_color || "#F68B24"
+                  }}
+                >
+                  <Banknote className="w-4 h-4" />
+                  <span className="font-medium">You'll save ₱{parseFloat(selectedVoucher.value || 0).toFixed(2)} with this voucher!</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-4 bg-[#0F0F0F] rounded-lg">
+              <p className="text-xs text-gray-500">
+                No vouchers available
+              </p>
             </div>
           )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="p-4 border-t border-[#2A2A2A] space-y-3">
+          <button
+            onClick={() => handleConfirmBooking("pay_later")}
+            disabled={bookingLoading}
+            className={`w-full py-3.5 px-4 text-white font-bold rounded-xl transition-all duration-200 text-sm flex items-center justify-center gap-2 shadow-lg ${
+              bookingLoading ? "opacity-75 cursor-not-allowed" : "hover:opacity-90"
+            }`}
+            style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
+          >
+            {bookingLoading ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                <span>Booking...</span>
+              </div>
+            ) : (
+              <>
+                <CheckCircle className="w-5 h-5" />
+                <span>Book Now</span>
+              </>
+            )}
+          </button>
+
+          <button
+            onClick={() => setStep(4)}
+            className="w-full py-3 px-4 border border-[#2A2A2A] text-gray-400 hover:bg-[#0F0F0F] hover:text-white font-semibold rounded-xl transition-all duration-200 text-sm flex items-center justify-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Go Back to Edit Details</span>
+          </button>
         </div>
       </div>
     </div>
