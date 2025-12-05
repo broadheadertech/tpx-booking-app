@@ -46,6 +46,7 @@ export const getAllSubmissions = query({
           barber_name: barber?.full_name || "Unknown",
           branch_name: branch?.name || "Unknown",
           form_title: form?.title || "Unknown Form",
+          form_fields: form?.fields || [],
           handled_by_name: handledBy?.nickname || handledBy?.email,
         };
       })
@@ -77,6 +78,7 @@ export const getSubmissionsByBranch = query({
           ...sub,
           barber_name: barber?.full_name || "Unknown",
           form_title: form?.title || "Unknown Form",
+          form_fields: form?.fields || [],
           handled_by_name: handledBy?.nickname || handledBy?.email,
         };
       })
@@ -106,6 +108,7 @@ export const getSubmissionsByBarber = query({
         return {
           ...sub,
           form_title: form?.title || "Unknown Form",
+          form_fields: form?.fields || [],
           handled_by_name: handledBy?.nickname || handledBy?.email,
         };
       })
