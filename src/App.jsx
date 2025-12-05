@@ -22,6 +22,7 @@ import AdminDashboard from "./pages/admin/Dashboard";
 import CustomerDashboard from "./pages/customer/Dashboard";
 import CustomerBooking from "./pages/customer/Booking";
 import GuestServiceBooking from "./pages/customer/GuestServiceBooking.jsx";
+import TrackBooking from "./pages/customer/TrackBooking.jsx";
 import Wallet from "./pages/customer/Wallet.jsx";
 import WalletTopUp from "./pages/customer/WalletTopUp.jsx";
 import CustomerProfile from "./pages/customer/Profile.jsx";
@@ -61,6 +62,8 @@ function App() {
               />
               <Route path="/landing" element={<Landing />} />
               <Route path="/guest/booking" element={<GuestServiceBooking />} />
+              <Route path="/track" element={<TrackBooking />} />
+              <Route path="/track/:bookingCode" element={<TrackBooking />} />
               <Route path="/barbers" element={<BarbersList />} />
               <Route path="/barbers/:barberSlug" element={<BarberProfile />} />
               <Route
