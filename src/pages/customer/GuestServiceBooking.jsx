@@ -467,7 +467,8 @@ const GuestServiceBooking = ({ onBack }) => {
 
     // First, filter only active employees (is_active = true)
     // We keep those who are not accepting bookings, but they will be disabled in UI
-    let available = barbers.filter((b) => b.is_active);
+    // Also exclude barbers with custom booking enabled (guests can't use custom booking forms)
+    let available = barbers.filter((b) => b.is_active && !b.custom_booking_enabled);
 
     // If a service is selected, further filter by who can perform that service
     if (selectedService) {
