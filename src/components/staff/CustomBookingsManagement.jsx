@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import {
   FileText, Users, Clock, CheckCircle, XCircle, AlertCircle,
   Search, Filter, Plus, Edit, Trash2, Eye, Phone, Mail,
   Calendar, MessageSquare, MoreVertical, ChevronDown, ChevronUp,
   Settings, Copy, ToggleLeft, ToggleRight, GripVertical,
-  PlusCircle, MinusCircle, Save, X, ArrowRight, User
+  PlusCircle, MinusCircle, Save, X, ArrowRight, User, Send
 } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
@@ -24,11 +24,28 @@ const CustomBookingsManagement = ({ onRefresh, user }) => {
   const [showSubmissionDetail, setShowSubmissionDetail] = useState(false)
   const [showStatusModal, setShowStatusModal] = useState(false)
   const [showNotesModal, setShowNotesModal] = useState(false)
+  const [showSendNotificationModal, setShowSendNotificationModal] = useState(false)
+  const [openDropdownId, setOpenDropdownId] = useState(null)
   const [newNote, setNewNote] = useState('')
   const [newStatus, setNewStatus] = useState('')
+  const [notificationTemplate, setNotificationTemplate] = useState('custom')
+  const [notificationMessage, setNotificationMessage] = useState('')
+  const [sendingNotification, setSendingNotification] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const dropdownRef = useRef(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpenDropdownId(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   // Form builder state
   const [formData, setFormData] = useState({
@@ -335,6 +352,74 @@ const CustomBookingsManagement = ({ onRefresh, user }) => {
     }
   }
 
+  // Notification templates
+  const notificationTemplates = {
+    reminder: {
+      label: 'Appointment Reminder',
+      getMessage: (sub) => `Hi ${sub.customer_name}, this is a reminder about your booking request. Please contact us if you have any questions. Reference: ${sub.booking_code || 'N/A'}`
+    },
+    followup: {
+      label: 'Follow-up',
+      getMessage: (sub) => `Hi ${sub.customer_name}, we wanted to follow up on your booking request. Please let us know if you're still interested. Reference: ${sub.booking_code || 'N/A'}`
+    },
+    confirmation: {
+      label: 'Booking Confirmed',
+      getMessage: (sub) => `Great news ${sub.customer_name}! Your booking has been confirmed. We look forward to seeing you! Reference: ${sub.booking_code || 'N/A'}`
+    },
+    reschedule: {
+      label: 'Reschedule Request',
+      getMessage: (sub) => `Hi ${sub.customer_name}, we need to reschedule your appointment. Please contact us at your earliest convenience to arrange a new time. Reference: ${sub.booking_code || 'N/A'}`
+    },
+    custom: {
+      label: 'Custom Message',
+      getMessage: () => ''
+    }
+  }
+
+  // Handle send notification
+  const handleSendNotification = async () => {
+    if (!selectedSubmission) return
+    if (!selectedSubmission.customer_email) {
+      setError('Customer email is not available')
+      return
+    }
+    if (!notificationMessage.trim()) {
+      setError('Please enter a message')
+      return
+    }
+
+    setSendingNotification(true)
+    try {
+      await sendCustomBookingStatusUpdate({
+        customerEmail: selectedSubmission.customer_email,
+        customerName: selectedSubmission.customer_name,
+        bookingCode: selectedSubmission.booking_code || 'N/A',
+        barberName: selectedSubmission.barber_name,
+        branchName: selectedSubmission.branch_name || 'Our Branch',
+        status: 'contacted',
+        customMessage: notificationMessage
+      })
+      setSuccess('Notification sent successfully!')
+      setShowSendNotificationModal(false)
+      setNotificationMessage('')
+      setNotificationTemplate('custom')
+    } catch (err) {
+      setError(err.message || 'Failed to send notification')
+    } finally {
+      setSendingNotification(false)
+    }
+  }
+
+  // Handle template change
+  const handleTemplateChange = (templateKey) => {
+    setNotificationTemplate(templateKey)
+    if (templateKey !== 'custom' && selectedSubmission) {
+      setNotificationMessage(notificationTemplates[templateKey].getMessage(selectedSubmission))
+    } else {
+      setNotificationMessage('')
+    }
+  }
+
   // Clear messages
   useEffect(() => {
     if (success || error) {
@@ -531,45 +616,81 @@ const CustomBookingsManagement = ({ onRefresh, user }) => {
                           Form: {submission.form_title}
                         </p>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="relative" ref={openDropdownId === submission._id ? dropdownRef : null}>
                         <button
-                          onClick={() => {
-                            setSelectedSubmission(submission)
-                            setShowSubmissionDetail(true)
-                          }}
+                          onClick={() => setOpenDropdownId(openDropdownId === submission._id ? null : submission._id)}
                           className="p-2 text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded-lg transition-all"
-                          title="View Details"
+                          title="Actions"
                         >
-                          <Eye className="w-4 h-4" />
+                          <MoreVertical className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => {
-                            setSelectedSubmission(submission)
-                            setNewStatus(submission.status)
-                            setShowStatusModal(true)
-                          }}
-                          className="p-2 text-gray-400 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 rounded-lg transition-all"
-                          title="Update Status"
-                        >
-                          <Settings className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedSubmission(submission)
-                            setShowNotesModal(true)
-                          }}
-                          className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all"
-                          title="Add Notes"
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteSubmission(submission)}
-                          className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+
+                        {openDropdownId === submission._id && (
+                          <div className="absolute right-0 top-full mt-1 w-48 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl shadow-xl z-50 overflow-hidden">
+                            <button
+                              onClick={() => {
+                                setSelectedSubmission(submission)
+                                setShowSubmissionDetail(true)
+                                setOpenDropdownId(null)
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2A2A2A] hover:text-white transition-all"
+                            >
+                              <Eye className="w-4 h-4" />
+                              View Details
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedSubmission(submission)
+                                setNewStatus(submission.status)
+                                setShowStatusModal(true)
+                                setOpenDropdownId(null)
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2A2A2A] hover:text-[var(--color-primary)] transition-all"
+                            >
+                              <Settings className="w-4 h-4" />
+                              Update Status
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedSubmission(submission)
+                                setShowNotesModal(true)
+                                setOpenDropdownId(null)
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2A2A2A] hover:text-blue-400 transition-all"
+                            >
+                              <MessageSquare className="w-4 h-4" />
+                              Add Notes
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedSubmission(submission)
+                                setNotificationTemplate('custom')
+                                setNotificationMessage('')
+                                setShowSendNotificationModal(true)
+                                setOpenDropdownId(null)
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-[#2A2A2A] hover:text-green-400 transition-all"
+                              disabled={!submission.customer_email}
+                            >
+                              <Send className="w-4 h-4" />
+                              Send Notification
+                              {!submission.customer_email && (
+                                <span className="text-xs text-gray-500 ml-auto">(No email)</span>
+                              )}
+                            </button>
+                            <div className="border-t border-[#2A2A2A]" />
+                            <button
+                              onClick={() => {
+                                handleDeleteSubmission(submission)
+                                setOpenDropdownId(null)
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-red-400/10 transition-all"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1193,6 +1314,99 @@ const CustomBookingsManagement = ({ onRefresh, user }) => {
                   <MessageSquare className="w-4 h-4" />
                 )}
                 Add Note
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Send Notification Modal */}
+      {showSendNotificationModal && selectedSubmission && createPortal(
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-[#0A0A0A] rounded-2xl w-full max-w-md border border-[#2A2A2A]">
+            <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Send className="w-5 h-5 text-[var(--color-primary)]" />
+                Send Notification
+              </h2>
+              <button
+                onClick={() => {
+                  setShowSendNotificationModal(false)
+                  setNotificationMessage('')
+                  setNotificationTemplate('custom')
+                }}
+                className="p-2 text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded-lg transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <p className="text-gray-400 text-sm mb-1">Sending to:</p>
+                <p className="text-white font-medium">{selectedSubmission.customer_name}</p>
+                <p className="text-sm text-[var(--color-primary)]">{selectedSubmission.customer_email}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Template
+                </label>
+                <select
+                  value={notificationTemplate}
+                  onChange={(e) => handleTemplateChange(e.target.value)}
+                  className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl text-white focus:outline-none focus:border-[var(--color-primary)]"
+                >
+                  {Object.entries(notificationTemplates).map(([key, template]) => (
+                    <option key={key} value={key}>{template.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Message
+                </label>
+                <textarea
+                  value={notificationMessage}
+                  onChange={(e) => setNotificationMessage(e.target.value)}
+                  placeholder="Enter your message here..."
+                  rows={5}
+                  className="w-full px-4 py-3 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-[var(--color-primary)] resize-none"
+                />
+              </div>
+
+              <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A]">
+                <p className="text-xs text-gray-500 mb-2">Booking Reference</p>
+                <p className="text-sm font-mono text-[var(--color-primary)]">
+                  {selectedSubmission.booking_code || 'N/A'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-[#2A2A2A]">
+              <button
+                onClick={() => {
+                  setShowSendNotificationModal(false)
+                  setNotificationMessage('')
+                  setNotificationTemplate('custom')
+                }}
+                className="px-4 py-2 text-gray-400 hover:text-white hover:bg-[#2A2A2A] rounded-xl transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSendNotification}
+                disabled={sendingNotification || !notificationMessage.trim()}
+                className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl hover:bg-[var(--color-primary)]/90 transition-all disabled:opacity-50"
+              >
+                {sendingNotification ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                Send Email
               </button>
             </div>
           </div>

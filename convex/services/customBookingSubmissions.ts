@@ -34,11 +34,12 @@ export const getAllSubmissions = query({
 
     const enriched = await Promise.all(
       submissions.map(async (sub) => {
-        const [barber, branch, form, handledBy] = await Promise.all([
+        const [barber, branch, form, handledBy, booking] = await Promise.all([
           ctx.db.get(sub.barber_id),
           ctx.db.get(sub.branch_id),
           ctx.db.get(sub.form_id),
           sub.handled_by ? ctx.db.get(sub.handled_by) : null,
+          sub.booking_id ? ctx.db.get(sub.booking_id) : null,
         ]);
 
         return {
@@ -48,6 +49,7 @@ export const getAllSubmissions = query({
           form_title: form?.title || "Unknown Form",
           form_fields: form?.fields || [],
           handled_by_name: handledBy?.nickname || handledBy?.email,
+          booking_code: booking?.booking_code,
         };
       })
     );
@@ -68,10 +70,11 @@ export const getSubmissionsByBranch = query({
 
     const enriched = await Promise.all(
       submissions.map(async (sub) => {
-        const [barber, form, handledBy] = await Promise.all([
+        const [barber, form, handledBy, booking] = await Promise.all([
           ctx.db.get(sub.barber_id),
           ctx.db.get(sub.form_id),
           sub.handled_by ? ctx.db.get(sub.handled_by) : null,
+          sub.booking_id ? ctx.db.get(sub.booking_id) : null,
         ]);
 
         return {
@@ -80,6 +83,7 @@ export const getSubmissionsByBranch = query({
           form_title: form?.title || "Unknown Form",
           form_fields: form?.fields || [],
           handled_by_name: handledBy?.nickname || handledBy?.email,
+          booking_code: booking?.booking_code,
         };
       })
     );
@@ -100,9 +104,10 @@ export const getSubmissionsByBarber = query({
 
     const enriched = await Promise.all(
       submissions.map(async (sub) => {
-        const [form, handledBy] = await Promise.all([
+        const [form, handledBy, booking] = await Promise.all([
           ctx.db.get(sub.form_id),
           sub.handled_by ? ctx.db.get(sub.handled_by) : null,
+          sub.booking_id ? ctx.db.get(sub.booking_id) : null,
         ]);
 
         return {
@@ -110,6 +115,7 @@ export const getSubmissionsByBarber = query({
           form_title: form?.title || "Unknown Form",
           form_fields: form?.fields || [],
           handled_by_name: handledBy?.nickname || handledBy?.email,
+          booking_code: booking?.booking_code,
         };
       })
     );
