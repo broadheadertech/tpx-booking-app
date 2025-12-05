@@ -847,6 +847,9 @@ const CustomBookingsManagement = ({ onRefresh, user }) => {
                                 <textarea
                                   value={(field.options || []).join('\n')}
                                   onChange={(e) => updateField(field.id, {
+                                    options: e.target.value.split('\n')
+                                  })}
+                                  onBlur={(e) => updateField(field.id, {
                                     options: e.target.value.split('\n').filter(o => o.trim())
                                   })}
                                   placeholder="Option 1&#10;Option 2&#10;Option 3"

@@ -629,26 +629,27 @@ const ProductsManagement = ({ onRefresh, user }) => {
         onClose={handleCloseModal}
         title={editingProduct ? 'Edit Product' : 'Add New Product'}
         size="xl"
+        variant="dark"
       >
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Product Image Section */}
-          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 border border-orange-100">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-              <Camera className="w-5 h-5 mr-2 text-orange-600" />
+          <div className="bg-[#252525] rounded-2xl p-5 border border-[#333333]">
+            <h3 className="text-base font-bold text-white mb-4 flex items-center">
+              <Camera className="w-5 h-5 mr-2 text-[var(--color-primary)]" />
               Product Image
             </h3>
 
-            <div className="flex flex-col lg:flex-row gap-6">
+            <div className="flex flex-col lg:flex-row gap-5">
               {/* Image Preview */}
               <div className="flex-1">
                 <div className="relative">
                   {imagePreview ? (
-                    <div className="relative group bg-white rounded-xl overflow-hidden">
+                    <div className="relative group bg-[#1A1A1A] rounded-xl overflow-hidden border border-[#333333]">
                       <img
                         src={imagePreview}
                         alt="Product preview"
-                        className="w-full h-48 object-cover border-2 border-orange-200 shadow-lg"
-                        style={{ display: 'block', maxWidth: '100%', height: '192px' }}
+                        className="w-full h-44 object-cover"
+                        style={{ display: 'block', maxWidth: '100%', height: '176px' }}
                         onError={(e) => {
                           console.error('Image failed to load:', imagePreview)
                           console.error('Image error event:', e)
@@ -660,7 +661,7 @@ const ProductsManagement = ({ onRefresh, user }) => {
                           setFormErrors(prev => ({ ...prev, image: '' }))
                         }}
                       />
-                      <div className="absolute inset-0 bg-transparent group-hover:bg-black group-hover:bg-opacity-30 transition-all duration-200 flex items-center justify-center">
+                      <div className="absolute inset-0 bg-transparent group-hover:bg-black/50 transition-all duration-200 flex items-center justify-center">
                         <button
                           type="button"
                           onClick={handleRemoveImage}
@@ -671,10 +672,13 @@ const ProductsManagement = ({ onRefresh, user }) => {
                       </div>
                     </div>
                   ) : (
-                    <div className="w-full h-48 border-2 border-dashed border-orange-300 rounded-xl flex flex-col items-center justify-center bg-white/50 hover:bg-white/80 transition-colors duration-200">
-                      <Upload className="w-12 h-12 text-orange-400 mb-2" />
-                      <p className="text-sm text-gray-600 text-center">
-                        <span className="font-semibold text-orange-600">Click to upload</span> or drag and drop
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full h-44 border-2 border-dashed border-[#444444] rounded-xl flex flex-col items-center justify-center bg-[#1A1A1A] hover:bg-[#222222] hover:border-[var(--color-primary)]/50 transition-all duration-200 cursor-pointer"
+                    >
+                      <Upload className="w-10 h-10 text-[var(--color-primary)] mb-2" />
+                      <p className="text-sm text-gray-400 text-center">
+                        <span className="font-semibold text-[var(--color-primary)]">Click to upload</span> or drag and drop
                       </p>
                       <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 5MB</p>
                     </div>
@@ -683,39 +687,37 @@ const ProductsManagement = ({ onRefresh, user }) => {
               </div>
 
               {/* Upload Controls */}
-              <div className="flex-1 space-y-4">
-                <div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    className="hidden"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingImage}
-                    className="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-4 rounded-xl transition-colors duration-200 flex items-center justify-center space-x-2 disabled:opacity-50"
-                  >
-                    {uploadingImage ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Uploading...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4" />
-                        <span>Choose Image</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+              <div className="lg:w-48 space-y-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingImage}
+                  className="w-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:brightness-110 text-white font-semibold py-2.5 px-4 rounded-xl transition-all duration-200 flex items-center justify-center space-x-2 disabled:opacity-50"
+                >
+                  {uploadingImage ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      <span>Choose Image</span>
+                    </>
+                  )}
+                </button>
 
                 {formErrors.image && (
-                  <p className="text-sm text-red-600 flex items-center">
-                    <AlertCircle className="h-4 w-4 mr-1" />
-                    {formErrors.image}
+                  <p className="text-sm text-red-400 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-1 flex-shrink-0" />
+                    <span>{formErrors.image}</span>
                   </p>
                 )}
               </div>
@@ -723,58 +725,58 @@ const ProductsManagement = ({ onRefresh, user }) => {
           </div>
 
           {/* Product Information */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Basic Information */}
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div>
-                <label className="block text-sm font-bold text-gray-900 mb-3">
-                  Product Name *
+                <label className="block text-sm font-semibold text-gray-300 mb-2">
+                  Product Name <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${formErrors.name ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                  className={`w-full px-4 py-2.5 bg-[#1A1A1A] border rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200 ${formErrors.name ? 'border-red-500/50 bg-red-500/10' : 'border-[#333333] hover:border-[#444444]'
                     }`}
                   placeholder="Enter product name"
                 />
                 {formErrors.name && (
-                  <p className="mt-2 text-sm text-red-600 flex items-center">
-                    <AlertCircle className="h-4 w-4 mr-1" />
+                  <p className="mt-1.5 text-sm text-red-400 flex items-center">
+                    <AlertCircle className="h-3.5 w-3.5 mr-1" />
                     {formErrors.name}
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-900 mb-3">
-                  Description *
+                <label className="block text-sm font-semibold text-gray-300 mb-2">
+                  Description <span className="text-red-400">*</span>
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  rows={4}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 resize-none ${formErrors.description ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                  rows={3}
+                  className={`w-full px-4 py-2.5 bg-[#1A1A1A] border rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200 resize-none ${formErrors.description ? 'border-red-500/50 bg-red-500/10' : 'border-[#333333] hover:border-[#444444]'
                     }`}
                   placeholder="Describe the product features and benefits"
                 />
                 {formErrors.description && (
-                  <p className="mt-2 text-sm text-red-600 flex items-center">
-                    <AlertCircle className="h-4 w-4 mr-1" />
+                  <p className="mt-1.5 text-sm text-red-400 flex items-center">
+                    <AlertCircle className="h-3.5 w-3.5 mr-1" />
                     {formErrors.description}
                   </p>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-3">
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">
                     Category
                   </label>
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 hover:border-orange-300"
+                    className="w-full px-4 py-2.5 bg-[#1A1A1A] border border-[#333333] rounded-xl text-white focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200 hover:border-[#444444]"
                   >
                     <option value="hair-care">Hair Care</option>
                     <option value="beard-care">Beard Care</option>
@@ -785,20 +787,20 @@ const ProductsManagement = ({ onRefresh, user }) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-3">
-                    Brand *
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">
+                    Brand <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.brand}
                     onChange={(e) => setFormData(prev => ({ ...prev, brand: e.target.value }))}
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${formErrors.brand ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                    className={`w-full px-4 py-2.5 bg-[#1A1A1A] border rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200 ${formErrors.brand ? 'border-red-500/50 bg-red-500/10' : 'border-[#333333] hover:border-[#444444]'
                       }`}
-                    placeholder="Product brand"
+                    placeholder="Brand name"
                   />
                   {formErrors.brand && (
-                    <p className="mt-2 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="h-4 w-4 mr-1" />
+                    <p className="mt-1.5 text-sm text-red-400 flex items-center">
+                      <AlertCircle className="h-3.5 w-3.5 mr-1" />
                       {formErrors.brand}
                     </p>
                   )}
@@ -807,11 +809,11 @@ const ProductsManagement = ({ onRefresh, user }) => {
             </div>
 
             {/* Pricing & Inventory */}
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-3">
-                    Selling Price (₱) *
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">
+                    Selling Price (₱) <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="number"
@@ -819,21 +821,21 @@ const ProductsManagement = ({ onRefresh, user }) => {
                     onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
                     min="0"
                     step="0.01"
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${formErrors.price ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                    className={`w-full px-4 py-2.5 bg-[#1A1A1A] border rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200 ${formErrors.price ? 'border-red-500/50 bg-red-500/10' : 'border-[#333333] hover:border-[#444444]'
                       }`}
                     placeholder="0.00"
                   />
                   {formErrors.price && (
-                    <p className="mt-2 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="h-4 w-4 mr-1" />
+                    <p className="mt-1.5 text-sm text-red-400 flex items-center">
+                      <AlertCircle className="h-3.5 w-3.5 mr-1" />
                       {formErrors.price}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-3">
-                    Cost Price (₱) *
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">
+                    Cost Price (₱) <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="number"
@@ -841,13 +843,13 @@ const ProductsManagement = ({ onRefresh, user }) => {
                     onChange={(e) => setFormData(prev => ({ ...prev, cost: e.target.value }))}
                     min="0"
                     step="0.01"
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${formErrors.cost ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                    className={`w-full px-4 py-2.5 bg-[#1A1A1A] border rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200 ${formErrors.cost ? 'border-red-500/50 bg-red-500/10' : 'border-[#333333] hover:border-[#444444]'
                       }`}
                     placeholder="0.00"
                   />
                   {formErrors.cost && (
-                    <p className="mt-2 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="h-4 w-4 mr-1" />
+                    <p className="mt-1.5 text-sm text-red-400 flex items-center">
+                      <AlertCircle className="h-3.5 w-3.5 mr-1" />
                       {formErrors.cost}
                     </p>
                   )}
@@ -855,63 +857,63 @@ const ProductsManagement = ({ onRefresh, user }) => {
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-900 mb-3">
-                  SKU *
+                <label className="block text-sm font-semibold text-gray-300 mb-2">
+                  SKU <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
                   value={formData.sku}
                   onChange={(e) => setFormData(prev => ({ ...prev, sku: e.target.value.toUpperCase() }))}
-                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent font-mono transition-all duration-200 ${formErrors.sku ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                  className={`w-full px-4 py-2.5 bg-[#1A1A1A] border rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent font-mono transition-all duration-200 ${formErrors.sku ? 'border-red-500/50 bg-red-500/10' : 'border-[#333333] hover:border-[#444444]'
                     }`}
                   placeholder="PROD-001"
                 />
                 {formErrors.sku && (
-                  <p className="mt-2 text-sm text-red-600 flex items-center">
-                    <AlertCircle className="h-4 w-4 mr-1" />
+                  <p className="mt-1.5 text-sm text-red-400 flex items-center">
+                    <AlertCircle className="h-3.5 w-3.5 mr-1" />
                     {formErrors.sku}
                   </p>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-3">
-                    Current Stock *
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">
+                    Current Stock <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="number"
                     value={formData.stock}
                     onChange={(e) => setFormData(prev => ({ ...prev, stock: e.target.value }))}
                     min="0"
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${formErrors.stock ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                    className={`w-full px-4 py-2.5 bg-[#1A1A1A] border rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200 ${formErrors.stock ? 'border-red-500/50 bg-red-500/10' : 'border-[#333333] hover:border-[#444444]'
                       }`}
                     placeholder="0"
                   />
                   {formErrors.stock && (
-                    <p className="mt-2 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="h-4 w-4 mr-1" />
+                    <p className="mt-1.5 text-sm text-red-400 flex items-center">
+                      <AlertCircle className="h-3.5 w-3.5 mr-1" />
                       {formErrors.stock}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-3">
-                    Minimum Stock *
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">
+                    Min. Stock <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="number"
                     value={formData.minStock}
                     onChange={(e) => setFormData(prev => ({ ...prev, minStock: e.target.value }))}
                     min="0"
-                    className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-200 ${formErrors.minStock ? 'border-red-300 bg-red-50' : 'border-gray-300 hover:border-orange-300'
+                    className={`w-full px-4 py-2.5 bg-[#1A1A1A] border rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200 ${formErrors.minStock ? 'border-red-500/50 bg-red-500/10' : 'border-[#333333] hover:border-[#444444]'
                       }`}
                     placeholder="0"
                   />
                   {formErrors.minStock && (
-                    <p className="mt-2 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="h-4 w-4 mr-1" />
+                    <p className="mt-1.5 text-sm text-red-400 flex items-center">
+                      <AlertCircle className="h-3.5 w-3.5 mr-1" />
                       {formErrors.minStock}
                     </p>
                   )}
@@ -922,26 +924,26 @@ const ProductsManagement = ({ onRefresh, user }) => {
 
           {/* Profit Margin Preview */}
           {formData.price && formData.cost && parseFloat(formData.price) > parseFloat(formData.cost) && (
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6">
+            <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
-                  <div className="bg-green-100 p-2 rounded-xl">
-                    <BarChart3 className="h-6 w-6 text-green-600" />
+                  <div className="bg-green-500/20 p-2 rounded-lg">
+                    <BarChart3 className="h-5 w-5 text-green-400" />
                   </div>
                   <div>
-                    <h4 className="text-lg font-bold text-green-800">
+                    <h4 className="text-base font-bold text-green-400">
                       Profit Margin: {(((parseFloat(formData.price) - parseFloat(formData.cost)) / parseFloat(formData.price)) * 100).toFixed(1)}%
                     </h4>
-                    <p className="text-sm text-green-700">
+                    <p className="text-sm text-green-400/70">
                       Profit per unit: ₱{(parseFloat(formData.price) - parseFloat(formData.cost)).toFixed(2)}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-green-600">
+                  <div className="text-xl font-bold text-green-400">
                     ₱{(parseFloat(formData.price) - parseFloat(formData.cost)).toFixed(2)}
                   </div>
-                  <div className="text-sm text-green-600">per unit</div>
+                  <div className="text-xs text-green-400/70">per unit</div>
                 </div>
               </div>
             </div>
@@ -949,37 +951,37 @@ const ProductsManagement = ({ onRefresh, user }) => {
 
           {/* Form Errors */}
           {formErrors.submit && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-              <p className="text-sm text-red-600 flex items-center">
-                <AlertCircle className="h-4 w-4 mr-2" />
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+              <p className="text-sm text-red-400 flex items-center">
+                <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
                 {formErrors.submit}
               </p>
             </div>
           )}
 
           {/* Action Buttons */}
-          <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
+          <div className="flex justify-end space-x-3 pt-4 border-t border-[#333333]">
             <button
               type="button"
               onClick={handleCloseModal}
               disabled={isSubmitting || uploadingImage}
-              className="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50"
+              className="px-5 py-2.5 bg-[#333333] text-gray-300 font-semibold rounded-xl hover:bg-[#444444] transition-colors duration-200 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting || uploadingImage}
-              className="px-8 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold rounded-xl hover:from-orange-600 hover:to-orange-700 transition-all duration-200 flex items-center space-x-2 disabled:opacity-50 shadow-lg hover:shadow-xl"
+              className="px-6 py-2.5 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-bold rounded-xl hover:brightness-110 transition-all duration-200 flex items-center space-x-2 disabled:opacity-50 shadow-lg shadow-[var(--color-primary)]/20"
             >
               {isSubmitting || uploadingImage ? (
                 <>
-                  <RefreshCw className="w-5 h-5 animate-spin" />
+                  <RefreshCw className="w-4 h-4 animate-spin" />
                   <span>{uploadingImage ? 'Uploading...' : (editingProduct ? 'Updating...' : 'Adding...')}</span>
                 </>
               ) : (
                 <>
-                  <Save className="w-5 h-5" />
+                  <Save className="w-4 h-4" />
                   <span>{editingProduct ? 'Update Product' : 'Add Product'}</span>
                 </>
               )}

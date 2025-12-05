@@ -50,7 +50,12 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
   const [uploadingImage, setUploadingImage] = useState(false)
 
   // Convex queries - with pagination limits to avoid byte limit errors
-  const services = useQuery(api.services.services.getAllServices)
+  // Get services filtered by branch to avoid showing duplicates from other branches
+  const services = user?.role === 'super_admin'
+    ? useQuery(api.services.services.getAllServices)
+    : user?.branch_id
+      ? useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id })
+      : undefined
   const allBookingsData = useQuery(api.services.bookings.getAllBookings, { limit: 100 })
   const allBookings = allBookingsData?.bookings || []
 
