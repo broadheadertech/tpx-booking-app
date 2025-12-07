@@ -253,7 +253,20 @@ const GuestServiceBooking = ({ onBack }) => {
           setSelectedStaff(matchingBarber);
           sessionStorage.setItem("barberId", matchingBarber._id);
 
-          // Skip directly to step 3 (service selection) since branch and barber are pre-selected
+          // Check if barber has custom booking enabled (from stored data or barber object)
+          if (matchingBarber.custom_booking_enabled || preSelectedBarber.customBookingEnabled) {
+            // Reset custom form state and enter custom booking flow
+            setCustomFormResponses({});
+            setCustomFormCustomerName("");
+            setCustomFormCustomerEmail("");
+            setCustomFormCustomerPhone("");
+            setCustomBookingSuccess(null);
+            setIsCustomBookingFlow(true);
+          } else {
+            setIsCustomBookingFlow(false);
+          }
+
+          // Skip directly to step 3 (service selection or custom booking form)
           setStep(3);
 
           // Clear the stored barber after using it
