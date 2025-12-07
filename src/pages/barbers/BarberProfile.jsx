@@ -37,7 +37,8 @@ const BarberProfile = () => {
     sessionStorage.setItem("preSelectedBarber", JSON.stringify({
       barberId: barberProfile?._id,
       barberName: barberProfile?.name,
-      branchId: barberProfile?.branch_id
+      branchId: barberProfile?.branch_id,
+      customBookingEnabled: barberProfile?.custom_booking_enabled || false
     }));
 
     if (isAuthenticated) {
