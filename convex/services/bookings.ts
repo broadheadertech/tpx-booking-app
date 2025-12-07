@@ -233,23 +233,49 @@ export const getBookingsByBranch = query({
   },
 });
 
-// Get bookings by customer
+// Get bookings by customer (includes both regular and custom bookings)
 export const getBookingsByCustomer = query({
   args: { customerId: v.id("users") },
   handler: async (ctx, args) => {
-    const bookings = await ctx.db
+    // Get the user to find their email
+    const user = await ctx.db.get(args.customerId);
+    const userEmail = user?.email?.toLowerCase();
+
+    // Get bookings by customer ID (regular bookings)
+    const bookingsByCustomerId = await ctx.db
       .query("bookings")
       .withIndex("by_customer", (q) => q.eq("customer", args.customerId))
       .collect();
 
+    // Also get bookings by email (for custom bookings where customer is undefined)
+    let bookingsByEmail: typeof bookingsByCustomerId = [];
+    if (userEmail) {
+      const allBookings = await ctx.db.query("bookings").collect();
+      bookingsByEmail = allBookings.filter(
+        (b) =>
+          !b.customer && // No customer ID linked
+          b.customer_email?.toLowerCase() === userEmail
+      );
+    }
+
+    // Merge and deduplicate
+    const bookingIds = new Set(bookingsByCustomerId.map((b) => b._id.toString()));
+    const mergedBookings = [
+      ...bookingsByCustomerId,
+      ...bookingsByEmail.filter((b) => !bookingIds.has(b._id.toString())),
+    ];
+
     // Get associated data
     const bookingsWithData = await Promise.all(
-      bookings.map(async (booking) => {
+      mergedBookings.map(async (booking) => {
         const [service, barber, branch] = await Promise.all([
           ctx.db.get(booking.service),
           booking.barber ? ctx.db.get(booking.barber) : null,
           ctx.db.get(booking.branch_id),
         ]);
+
+        // Check if this is a custom booking
+        const isCustomBooking = !booking.customer && booking.notes?.includes("Custom Booking Form");
 
         return {
           _id: booking._id,
@@ -268,13 +294,14 @@ export const getBookingsByCustomer = query({
           voucher_id: booking.voucher_id,
           notes: booking.notes,
           createdAt: booking._creationTime,
-          service_name: service?.name || 'Unknown Service',
+          service_name: service?.name || (isCustomBooking ? 'Custom Booking' : 'Unknown Service'),
           service_price: service?.price || 0,
           service_duration: service?.duration_minutes || 0,
           barber_name: barber?.full_name || 'Not assigned',
           branch_name: branch?.name || 'Unknown Branch',
           formattedDate: new Date(booking.date).toLocaleDateString(),
           formattedTime: formatTime(booking.time),
+          is_custom_booking: isCustomBooking,
         };
       })
     );
