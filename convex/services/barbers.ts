@@ -26,8 +26,9 @@ export const getAllBarbers = query({
           return {
             ...barber,
             name: barber.full_name,
-            email: user?.email || '',
-            phone: user?.mobile_number || '',
+            // Use user email first, fallback to barber's own email field
+            email: user?.email || barber.email || '',
+            phone: user?.mobile_number || barber.phone || '',
             avatarUrl: barber.avatar || '/img/avatar_default.jpg',
             branch_name: branch?.name || 'Unknown Branch',
           };
@@ -35,8 +36,9 @@ export const getAllBarbers = query({
           return {
             ...barber,
             name: barber.full_name,
-            email: '',
-            phone: '',
+            // Fallback to barber's own email field if user lookup fails
+            email: barber.email || '',
+            phone: barber.phone || '',
             avatarUrl: barber.avatar || '/img/avatar_default.jpg',
             branch_name: 'Unknown Branch',
           };
@@ -70,16 +72,18 @@ export const getBarbersByBranch = query({
           return {
             ...barber,
             name: barber.full_name,
-            email: user?.email || '',
-            phone: user?.mobile_number || '',
+            // Use user email first, fallback to barber's own email field
+            email: user?.email || barber.email || '',
+            phone: user?.mobile_number || barber.phone || '',
             avatarUrl: barber.avatar || '/img/avatar_default.jpg',
           };
         } catch (error) {
           return {
             ...barber,
             name: barber.full_name,
-            email: '',
-            phone: '',
+            // Fallback to barber's own email field if user lookup fails
+            email: barber.email || '',
+            phone: barber.phone || '',
             avatarUrl: barber.avatar || '/img/avatar_default.jpg',
           };
         }
@@ -101,8 +105,9 @@ export const getBarberById = query({
     return {
       ...barber,
       name: barber.full_name,
-      email: user?.email || '',
-      phone: user?.mobile_number || '',
+      // Use user email first, fallback to barber's own email field
+      email: user?.email || barber.email || '',
+      phone: user?.mobile_number || barber.phone || '',
       avatarUrl: barber.avatar || '/img/avatar_default.jpg',
     };
   },
@@ -319,8 +324,9 @@ export const getBarbersByService = query({
         return {
           ...barber,
           name: barber.full_name,
-          email: user?.email || '',
-          phone: user?.mobile_number || '',
+          // Use user email first, fallback to barber's own email field
+          email: user?.email || barber.email || '',
+          phone: user?.mobile_number || barber.phone || '',
           avatarUrl: barber.avatar || '/img/avatar_default.jpg',
         };
       })
@@ -351,16 +357,18 @@ export const getActiveBarbers = query({
           return {
             ...barber,
             name: barber.full_name,
-            email: user?.email || '',
-            phone: user?.mobile_number || '',
+            // Use user email first, fallback to barber's own email field
+            email: user?.email || barber.email || '',
+            phone: user?.mobile_number || barber.phone || '',
             avatarUrl: barber.avatar || '/img/avatar_default.jpg',
           };
         } catch (error) {
           return {
             ...barber,
             name: barber.full_name,
-            email: '',
-            phone: '',
+            // Fallback to barber's own email field if user lookup fails
+            email: barber.email || '',
+            phone: barber.phone || '',
             avatarUrl: barber.avatar || '/img/avatar_default.jpg',
           };
         }
