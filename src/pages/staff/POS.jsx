@@ -10,7 +10,7 @@ import PaymentConfirmationModal from '../../components/staff/PaymentConfirmation
 import CustomerSelectionModal from '../../components/staff/CustomerSelectionModal'
 import ReceiptModal from '../../components/staff/ReceiptModal'
 import Modal from '../../components/common/Modal'
-import { sendWelcomeEmail, isEmailServiceConfigured } from '../../services/emailService'
+import { sendWelcomeEmail, isEmailServiceConfigured, sendBarberBookingNotification } from '../../services/emailService'
 import { APP_VERSION } from '../../config/version'
 
 // Barber Avatar Component for POS
@@ -649,6 +649,44 @@ const POS = () => {
       })
       
       console.log('[POS] Transaction created successfully:', result)
+
+      // Send email notification to the barber about the new POS transaction
+      console.log('📧 [POS] Attempting to send barber notification...');
+      console.log('  → selectedBarber:', selectedBarber?.full_name);
+      console.log('  → selectedBarber.email:', selectedBarber?.email);
+      console.log('  → services count:', currentTransaction.services.length);
+      
+      if (selectedBarber?.email && currentTransaction.services.length > 0) {
+        try {
+          // Get the current date in Philippine timezone
+          const phNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+          const phDateString = `${phNow.getFullYear()}-${String(phNow.getMonth() + 1).padStart(2, '0')}-${String(phNow.getDate()).padStart(2, '0')}`;
+          const phTimeString = `${String(phNow.getHours()).padStart(2, '0')}:${String(phNow.getMinutes()).padStart(2, '0')}`;
+
+          const emailResult = await sendBarberBookingNotification({
+            barberEmail: selectedBarber.email,
+            barberName: selectedBarber.full_name,
+            customerName: currentTransaction.customer_name || currentTransaction.customer?.username || 'Walk-in Customer',
+            customerPhone: currentTransaction.customer_phone || currentTransaction.customer?.mobile_number,
+            customerEmail: currentTransaction.customer_email || currentTransaction.customer?.email,
+            serviceName: currentTransaction.services.map(s => s.service_name).join(', '),
+            servicePrice: currentTransaction.total_amount,
+            bookingDate: phDateString,
+            bookingTime: phTimeString,
+            branchName: currentBranch?.name,
+            bookingCode: result.receipt_number || null,
+            bookingType: 'pos'
+          });
+          console.log('📧 [POS] Email send result:', emailResult);
+        } catch (emailError) {
+          // Don't fail the transaction if email fails
+          console.error('❌ [POS] Failed to send barber notification email:', emailError);
+        }
+      } else {
+        console.warn('⚠️ [POS] Barber notification skipped: No barber email or no services');
+        console.warn('  → selectedBarber:', JSON.stringify(selectedBarber, null, 2));
+        console.warn('  → services count:', currentTransaction.services.length);
+      }
 
       // Update the existing booking if this is a booking payment
       if (isBookingPayment) {

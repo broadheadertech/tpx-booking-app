@@ -546,6 +546,326 @@ class EmailService {
     }
   }
 
+  // Send barber notification email when a new booking is made
+  async sendBarberBookingNotification(bookingData) {
+    const {
+      barberEmail,
+      barberName,
+      customerName,
+      customerPhone,
+      customerEmail,
+      serviceName,
+      servicePrice,
+      bookingDate,
+      bookingTime,
+      branchName,
+      bookingCode,
+      bookingType // 'regular', 'guest', or 'pos'
+    } = bookingData;
+
+    // Format time for display (convert 24h to 12h format)
+    const formatDisplayTime = (time) => {
+      if (!time) return 'TBD';
+      const [hours, minutes] = time.split(':');
+      const hour = parseInt(hours, 10);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour % 12 || 12;
+      return `${displayHour}:${minutes || '00'} ${ampm}`;
+    };
+
+    // Format date for display
+    const formatDisplayDate = (date) => {
+      if (!date) return 'TBD';
+      try {
+        const dateObj = new Date(date + 'T00:00:00');
+        return dateObj.toLocaleDateString('en-PH', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      } catch {
+        return date;
+      }
+    };
+
+    const bookingTypeLabel = {
+      'regular': '🎯 Online Booking',
+      'guest': '👤 Guest Booking',
+      'pos': '💳 Walk-in (POS)',
+      'custom': '📋 Custom Booking Request'
+    };
+
+    const emailData = {
+      from: `${this.fromName} <${this.fromEmail}>`,
+      to: barberEmail,
+      subject: `🔔 New Booking Alert - ${customerName} on ${formatDisplayDate(bookingDate)}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New Booking Notification</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              background-color: #0A0A0A;
+              color: #ffffff;
+              margin: 0;
+              padding: 0;
+              line-height: 1.6;
+            }
+            .container { max-width: 600px; margin: 0 auto; padding: 40px 20px; }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+            }
+            .content {
+              background: linear-gradient(135deg, #1A1A1A 0%, #2A2A2A 100%);
+              border-radius: 16px;
+              padding: 40px;
+              border: 1px solid #333;
+              box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            }
+            .alert-badge {
+              display: inline-block;
+              background: linear-gradient(135deg, #D4A574 0%, #B8956E 100%);
+              color: #000;
+              padding: 8px 20px;
+              border-radius: 20px;
+              font-weight: bold;
+              font-size: 14px;
+              margin-bottom: 20px;
+            }
+            .title {
+              font-size: 24px;
+              font-weight: bold;
+              margin-bottom: 10px;
+              color: #fff;
+            }
+            .subtitle {
+              color: #888;
+              margin-bottom: 30px;
+            }
+            .booking-card {
+              background: rgba(212, 165, 116, 0.1);
+              border: 1px solid rgba(212, 165, 116, 0.3);
+              border-radius: 12px;
+              padding: 25px;
+              margin: 20px 0;
+            }
+            .booking-card h3 {
+              color: #D4A574;
+              margin: 0 0 15px 0;
+              font-size: 18px;
+            }
+            .detail-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 10px 0;
+              border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+            .detail-row:last-child {
+              border-bottom: none;
+            }
+            .detail-label {
+              color: #888;
+              font-size: 14px;
+            }
+            .detail-value {
+              color: #fff;
+              font-weight: 600;
+              font-size: 14px;
+              text-align: right;
+            }
+            .customer-info {
+              background: rgba(59, 130, 246, 0.1);
+              border: 1px solid rgba(59, 130, 246, 0.3);
+              border-radius: 12px;
+              padding: 20px;
+              margin: 20px 0;
+            }
+            .customer-info h3 {
+              color: #3B82F6;
+              margin: 0 0 15px 0;
+              font-size: 16px;
+            }
+            .contact-link {
+              color: #D4A574;
+              text-decoration: none;
+            }
+            .booking-code {
+              font-size: 24px;
+              font-weight: bold;
+              text-align: center;
+              color: #D4A574;
+              font-family: monospace;
+              background: rgba(0,0,0,0.3);
+              padding: 15px;
+              border-radius: 8px;
+              margin: 20px 0;
+              letter-spacing: 2px;
+            }
+            .type-badge {
+              display: inline-block;
+              padding: 6px 12px;
+              border-radius: 6px;
+              font-size: 12px;
+              font-weight: bold;
+              background: rgba(212, 165, 116, 0.2);
+              color: #D4A574;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 30px;
+              color: #666;
+              font-size: 14px;
+            }
+            .action-note {
+              background: rgba(16, 185, 129, 0.1);
+              border: 1px solid rgba(16, 185, 129, 0.3);
+              border-radius: 8px;
+              padding: 15px;
+              margin-top: 20px;
+              text-align: center;
+            }
+            .action-note p {
+              color: #10B981;
+              margin: 0;
+              font-size: 14px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="color: #D4A574; font-size: 28px; margin-bottom: 5px;">Barbershop</h1>
+              <p style="color: #666; margin: 0;">Booking Management System</p>
+            </div>
+            
+            <div class="content">
+              <div style="text-align: center;">
+                <span class="alert-badge">🔔 New Booking Alert</span>
+              </div>
+              
+              <h1 class="title" style="text-align: center;">Hi ${barberName}!</h1>
+              <p class="subtitle" style="text-align: center;">
+                You have a new booking. Here are the details:
+              </p>
+
+              ${bookingCode ? `<div class="booking-code">Booking Code: ${bookingCode}</div>` : ''}
+
+              <div class="booking-card">
+                <h3>📅 Appointment Details</h3>
+                <div class="detail-row">
+                  <span class="detail-label">Date</span>
+                  <span class="detail-value">${formatDisplayDate(bookingDate)}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Time</span>
+                  <span class="detail-value">${formatDisplayTime(bookingTime)}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Service</span>
+                  <span class="detail-value">${serviceName || 'Not specified'}</span>
+                </div>
+                ${servicePrice ? `
+                <div class="detail-row">
+                  <span class="detail-label">Price</span>
+                  <span class="detail-value">₱${parseFloat(servicePrice).toLocaleString()}</span>
+                </div>
+                ` : ''}
+                <div class="detail-row">
+                  <span class="detail-label">Branch</span>
+                  <span class="detail-value">${branchName || 'Main Branch'}</span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Booking Type</span>
+                  <span class="detail-value"><span class="type-badge">${bookingTypeLabel[bookingType] || bookingType}</span></span>
+                </div>
+              </div>
+
+              <div class="customer-info">
+                <h3>👤 Customer Information</h3>
+                <div class="detail-row">
+                  <span class="detail-label">Name</span>
+                  <span class="detail-value">${customerName}</span>
+                </div>
+                ${customerPhone ? `
+                <div class="detail-row">
+                  <span class="detail-label">Phone</span>
+                  <span class="detail-value"><a href="tel:${customerPhone}" class="contact-link">${customerPhone}</a></span>
+                </div>
+                ` : ''}
+                ${customerEmail ? `
+                <div class="detail-row">
+                  <span class="detail-label">Email</span>
+                  <span class="detail-value"><a href="mailto:${customerEmail}" class="contact-link">${customerEmail}</a></span>
+                </div>
+                ` : ''}
+              </div>
+
+              <div class="action-note">
+                <p>✅ Please prepare for this appointment and ensure you're available at the scheduled time.</p>
+              </div>
+            </div>
+            
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Barbershop. All rights reserved.</p>
+              <p>This is an automated notification. Please do not reply to this email.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    try {
+      // Check if Resend API is configured
+      if (!RESEND_API_KEY || RESEND_API_KEY === 'your_resend_api_key_here') {
+        console.warn('⚠️ Barber notification skipped: Resend API key not configured');
+        console.warn('Please set VITE_RESEND_API_KEY in your .env file');
+        return { success: false, error: 'Email service not configured' };
+      }
+
+      // Validate barber email before sending
+      if (!barberEmail || !barberEmail.includes('@')) {
+        console.warn('⚠️ Barber notification skipped: Invalid or missing barber email');
+        console.warn('Received barberEmail:', barberEmail);
+        console.warn('Make sure the barber has a valid email address in the database');
+        return { success: false, error: 'Invalid or missing barber email', receivedEmail: barberEmail };
+      }
+
+      console.log('📧 Sending barber booking notification:');
+      console.log('  → To:', barberEmail);
+      console.log('  → Barber:', barberName);
+      console.log('  → Customer:', customerName);
+      console.log('  → Date:', bookingDate);
+      console.log('  → Time:', bookingTime);
+      console.log('  → Service:', serviceName);
+      console.log('  → Booking Type:', bookingType);
+
+      const result = await resend.emails.send(emailData);
+      
+      if (result.error) {
+        console.error('❌ Email service error:', result.error);
+        throw new Error(`Email service error: ${result.error.message || 'Unknown error'}`);
+      }
+
+      console.log('✅ Barber notification email sent successfully!');
+      console.log('  → Message ID:', result.data?.id);
+      return { success: true, messageId: result.data?.id };
+    } catch (error) {
+      console.error('❌ Failed to send barber notification email:', error);
+      console.error('  → Email To:', barberEmail);
+      console.error('  → Barber Name:', barberName);
+      console.error('  → Customer Name:', customerName);
+      // Don't throw - we don't want to fail the booking if email fails
+      return { success: false, error: error.message };
+    }
+  }
+
   // Send custom booking status update email
   async sendCustomBookingStatusUpdate(bookingData) {
     const trackUrl = `${window.location.origin}/track/${bookingData.bookingCode}`;
@@ -696,5 +1016,6 @@ export const sendVoucherEmail = emailService.sendVoucherEmail.bind(emailService)
 export const sendWelcomeEmail = emailService.sendWelcomeEmail.bind(emailService);
 export const sendCustomBookingConfirmation = emailService.sendCustomBookingConfirmation.bind(emailService);
 export const sendCustomBookingStatusUpdate = emailService.sendCustomBookingStatusUpdate.bind(emailService);
+export const sendBarberBookingNotification = emailService.sendBarberBookingNotification.bind(emailService);
 
 export default new EmailService();
