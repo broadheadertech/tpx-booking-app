@@ -396,10 +396,10 @@ const ServiceBooking = ({ onBack }) => {
       // Default to weekly schedule
       // Get day of week for schedule check
       const dayOfWeek = selectedDateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-      
+
       // Check barber's schedule for this day
       const barberSchedule = selectedStaff.schedule?.[dayOfWeek];
-      
+
       // If barber doesn't have schedule or is not available this day, return empty
       if (!barberSchedule || !barberSchedule.available) {
         return [];
@@ -413,8 +413,8 @@ const ServiceBooking = ({ onBack }) => {
     // Get booked times for this barber on this date
     const bookedTimes = existingBookings
       ? existingBookings
-          .filter((booking) => booking.status !== "cancelled")
-          .map((booking) => booking.time.substring(0, 5)) // Remove seconds part
+        .filter((booking) => booking.status !== "cancelled")
+        .map((booking) => booking.time.substring(0, 5)) // Remove seconds part
       : [];
 
     for (let hour = startHour; hour < endHour; hour++) {
@@ -572,7 +572,7 @@ const ServiceBooking = ({ onBack }) => {
       console.log('📧 Attempting to send barber notification...');
       console.log('  → selectedStaff:', selectedStaff?.full_name || selectedStaff?.name);
       console.log('  → selectedStaff.email:', selectedStaff?.email);
-      
+
       if (selectedStaff?.email) {
         try {
           const emailResult = await sendBarberBookingNotification({
@@ -880,9 +880,8 @@ const ServiceBooking = ({ onBack }) => {
           {stepsArray.map((stepNumber) => (
             <div key={stepNumber} className="flex items-center">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                  step >= stepNumber ? "text-white shadow-md" : "text-gray-500"
-                }`}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${step >= stepNumber ? "text-white shadow-md" : "text-gray-500"
+                  }`}
                 style={{
                   backgroundColor: step >= stepNumber ? (branding?.primary_color || "#F68B24") : (branding?.muted_color || "#E0E0E0"),
                 }}
@@ -1068,11 +1067,11 @@ const ServiceBooking = ({ onBack }) => {
     };
 
     // Group services by category
-    const servicesToDisplay = selectedStaff 
-      ? services.filter(service => 
-          selectedStaff.services && 
-          selectedStaff.services.includes(service._id)
-        )
+    const servicesToDisplay = selectedStaff
+      ? services.filter(service =>
+        selectedStaff.services &&
+        selectedStaff.services.includes(service._id)
+      )
       : services;
 
     const categories = servicesToDisplay.reduce((acc, service) => {
@@ -1114,104 +1113,104 @@ const ServiceBooking = ({ onBack }) => {
         {/* Category Dropdowns */}
         <div className="space-y-3">
           {['Haircut', 'Package', 'Other Services'].map((categoryName) => {
-              const categoryServices = categories[categoryName] || [];
-              
-              // Filter services within this category based on search term
-              const filteredServices = categoryServices.filter((service) => {
-                const searchLower = serviceSearchTerm.toLowerCase();
-                return (
-                  service.name.toLowerCase().includes(searchLower) ||
-                  (service.description &&
-                    service.description.toLowerCase().includes(searchLower)) ||
-                  service.price.toString().includes(searchLower)
-                );
-              });
+            const categoryServices = categories[categoryName] || [];
 
-              if (filteredServices.length === 0) return null;
-
-              const isOpen = openCategory === categoryName;
-
+            // Filter services within this category based on search term
+            const filteredServices = categoryServices.filter((service) => {
+              const searchLower = serviceSearchTerm.toLowerCase();
               return (
-                <div
-                  key={categoryName}
-                  className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]"
-                >
-                  <button
-                    onClick={() =>
-                      setOpenCategory(isOpen ? null : categoryName)
-                    }
-                    className="w-full text-left px-4 py-3 flex justify-between items-center text-white font-semibold"
-                  >
-                    <span>{categoryName}</span>
-                    <span>{isOpen ? "−" : "+"}</span>
-                  </button>
-
-                  {isOpen && (
-                    <div className="space-y-2 px-4 pb-4">
-                      {filteredServices.map((service) => {
-                        const availableBarbers = barbers
-                          ? barbers.filter(
-                              (barber) =>
-                                barber.is_active &&
-                                barber.services &&
-                                Array.isArray(barber.services) &&
-                                barber.services.some(
-                                  (serviceId) => serviceId === service._id
-                                )
-                            ).length
-                          : 0;
-
-                        return (
-                          <button
-                            key={service._id}
-                            onClick={() => handleServiceSelect(service)}
-                            className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[var(--color-primary)] rounded-lg p-4 text-left transition-all duration-200 flex justify-between items-start"
-                          >
-                            <div>
-                              <h3 className="text-base font-semibold text-white">
-                                {service.name}
-                              </h3>
-                              {service.description && (
-                                <p className="text-xs text-gray-400 line-clamp-2">
-                                  {service.description}
-                                </p>
-                              )}
-                              <span className="text-[var(--color-primary)] font-bold mt-1 block">
-                                {service.hide_price ? (
-                                  'Price may vary'
-                                ) : (
-                                  `₱${parseFloat(service.price || 0).toLocaleString()}`
-                                )}
-                              </span>
-                              {availableBarbers === 0 && (
-                                <p className="text-[10px] text-amber-500 mt-1">
-                                  Limited availability
-                                </p>
-                              )}
-                            </div>
-                            <div className="self-center text-gray-500">
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M9 5l7 7-7 7"
-                                />
-                              </svg>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                service.name.toLowerCase().includes(searchLower) ||
+                (service.description &&
+                  service.description.toLowerCase().includes(searchLower)) ||
+                service.price.toString().includes(searchLower)
               );
-            }
+            });
+
+            if (filteredServices.length === 0) return null;
+
+            const isOpen = openCategory === categoryName;
+
+            return (
+              <div
+                key={categoryName}
+                className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]"
+              >
+                <button
+                  onClick={() =>
+                    setOpenCategory(isOpen ? null : categoryName)
+                  }
+                  className="w-full text-left px-4 py-3 flex justify-between items-center text-white font-semibold"
+                >
+                  <span>{categoryName}</span>
+                  <span>{isOpen ? "−" : "+"}</span>
+                </button>
+
+                {isOpen && (
+                  <div className="space-y-2 px-4 pb-4">
+                    {filteredServices.map((service) => {
+                      const availableBarbers = barbers
+                        ? barbers.filter(
+                          (barber) =>
+                            barber.is_active &&
+                            barber.services &&
+                            Array.isArray(barber.services) &&
+                            barber.services.some(
+                              (serviceId) => serviceId === service._id
+                            )
+                        ).length
+                        : 0;
+
+                      return (
+                        <button
+                          key={service._id}
+                          onClick={() => handleServiceSelect(service)}
+                          className="w-full bg-[#1A1A1A] hover:bg-[#222222] border border-[#2A2A2A] hover:border-[var(--color-primary)] rounded-lg p-4 text-left transition-all duration-200 flex justify-between items-start"
+                        >
+                          <div>
+                            <h3 className="text-base font-semibold text-white">
+                              {service.name}
+                            </h3>
+                            {service.description && (
+                              <p className="text-xs text-gray-400 line-clamp-2">
+                                {service.description}
+                              </p>
+                            )}
+                            <span className="text-[var(--color-primary)] font-bold mt-1 block">
+                              {service.hide_price ? (
+                                'Price may vary'
+                              ) : (
+                                `₱${parseFloat(service.price || 0).toLocaleString()}`
+                              )}
+                            </span>
+                            {availableBarbers === 0 && (
+                              <p className="text-[10px] text-amber-500 mt-1">
+                                Limited availability
+                              </p>
+                            )}
+                          </div>
+                          <div className="self-center text-gray-500">
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 5l7 7-7 7"
+                              />
+                            </svg>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          }
           )}
         </div>
       </div>
@@ -1290,7 +1289,7 @@ const ServiceBooking = ({ onBack }) => {
             </span>
           </div>
 
-          {loadingTimeSlots ? (
+          {loadingTimeSlots || existingBookings === undefined ? (
             <div className="flex justify-center items-center py-6 space-x-2">
               <div className="animate-spin w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full"></div>
               <span className="text-gray-400 text-sm">Loading times...</span>
@@ -1309,13 +1308,12 @@ const ServiceBooking = ({ onBack }) => {
                     key={slot.time}
                     onClick={() => slot.available && setSelectedTime(slot.time)}
                     disabled={!slot.available}
-                    className={`p-2 text-sm rounded-lg border transition-all duration-200 ${
-                      slot.available
+                    className={`p-2 text-sm rounded-lg border transition-all duration-200 ${slot.available
                         ? selectedTime === slot.time
                           ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
                           : "bg-[#1F1F1F] text-gray-200 border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
                         : "bg-[#111111] text-gray-500 border-[#1F1F1F] cursor-not-allowed"
-                    }`}
+                      }`}
                   >
                     {slot.displayTime}
                   </button>
@@ -1369,56 +1367,56 @@ const ServiceBooking = ({ onBack }) => {
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {getAvailableBarbers().map((barber) => {
           const isAvailable = barber.is_accepting_bookings !== false; // Default true if undefined
-          
+
           return (
-          <button
-            key={barber._id}
-            onClick={() => isAvailable && handleStaffSelect(barber)}
-            disabled={!isAvailable}
-            className={`group rounded-xl p-3 transition-all duration-300 border hover:shadow-lg flex flex-col items-center text-center relative overflow-hidden ${
-              selectedStaff?._id === barber._id
-                ? "bg-[var(--color-primary)]/10 border-[var(--color-primary)]"
-                : !isAvailable 
-                  ? "bg-[#1A1A1A] border-[#2A2A2A] opacity-60 cursor-not-allowed"
-                  : "bg-[#1A1A1A] border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
-            }`}
-          >
-            {/* Avatar Container */}
-            <div className="relative mb-2">
-              <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden ring-2 ring-[#2A2A2A] ${isAvailable ? 'group-hover:ring-[var(--color-primary)]/50' : 'grayscale'} transition-all duration-300`}>
-                <BarberAvatar barber={barber} className="w-full h-full" />
-              </div>
-              {selectedStaff?._id === barber._id && (
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-[#1A1A1A] shadow-lg">
-                  <CheckCircle className="w-3 h-3 text-white" />
+            <button
+              key={barber._id}
+              onClick={() => isAvailable && handleStaffSelect(barber)}
+              disabled={!isAvailable}
+              className={`group rounded-xl p-3 transition-all duration-300 border hover:shadow-lg flex flex-col items-center text-center relative overflow-hidden ${selectedStaff?._id === barber._id
+                  ? "bg-[var(--color-primary)]/10 border-[var(--color-primary)]"
+                  : !isAvailable
+                    ? "bg-[#1A1A1A] border-[#2A2A2A] opacity-60 cursor-not-allowed"
+                    : "bg-[#1A1A1A] border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
+                }`}
+            >
+              {/* Avatar Container */}
+              <div className="relative mb-2">
+                <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden ring-2 ring-[#2A2A2A] ${isAvailable ? 'group-hover:ring-[var(--color-primary)]/50' : 'grayscale'} transition-all duration-300`}>
+                  <BarberAvatar barber={barber} className="w-full h-full" />
                 </div>
-              )}
-              {!isAvailable && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
-                  <div className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow-sm">
-                    Busy
+                {selectedStaff?._id === barber._id && (
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center border-2 border-[#1A1A1A] shadow-lg">
+                    <CheckCircle className="w-3 h-3 text-white" />
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+                {!isAvailable && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
+                    <div className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold shadow-sm">
+                      Busy
+                    </div>
+                  </div>
+                )}
+              </div>
 
-            {/* Barber Name */}
-            <h3 className="text-sm font-bold text-white mb-0.5 line-clamp-1 w-full group-hover:text-[var(--color-primary)] transition-colors duration-200">
-              {barber.full_name || barber.name}
-            </h3>
+              {/* Barber Name */}
+              <h3 className="text-sm font-bold text-white mb-0.5 line-clamp-1 w-full group-hover:text-[var(--color-primary)] transition-colors duration-200">
+                {barber.full_name || barber.name}
+              </h3>
 
-            {/* Rating */}
-            <div className="flex items-center justify-center gap-1 mb-1">
-              <Star className="w-3 h-3 text-yellow-400 fill-current" />
-              <span className="text-xs font-medium text-gray-300">5.0</span>
-            </div>
+              {/* Rating */}
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <Star className="w-3 h-3 text-yellow-400 fill-current" />
+                <span className="text-xs font-medium text-gray-300">5.0</span>
+              </div>
 
-            {/* Experience or Status */}
-            <p className={`text-[10px] line-clamp-1 ${!isAvailable ? 'text-red-400 font-medium' : 'text-gray-500'}`}>
-              {!isAvailable ? 'Currently Unavailable' : (barber.experience || 'Professional')}
-            </p>
-          </button>
-        )})}
+              {/* Experience or Status */}
+              <p className={`text-[10px] line-clamp-1 ${!isAvailable ? 'text-red-400 font-medium' : 'text-gray-500'}`}>
+                {!isAvailable ? 'Currently Unavailable' : (barber.experience || 'Professional')}
+              </p>
+            </button>
+          )
+        })}
       </div>
 
       {/* Empty State */}
@@ -1607,9 +1605,8 @@ const ServiceBooking = ({ onBack }) => {
           <button
             onClick={() => handleConfirmBooking("pay_later")}
             disabled={bookingLoading}
-            className={`w-full py-3.5 px-4 text-white font-bold rounded-xl transition-all duration-200 text-sm flex items-center justify-center gap-2 shadow-lg ${
-              bookingLoading ? "opacity-75 cursor-not-allowed" : "hover:opacity-90"
-            }`}
+            className={`w-full py-3.5 px-4 text-white font-bold rounded-xl transition-all duration-200 text-sm flex items-center justify-center gap-2 shadow-lg ${bookingLoading ? "opacity-75 cursor-not-allowed" : "hover:opacity-90"
+              }`}
             style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
           >
             {bookingLoading ? (
@@ -1770,12 +1767,12 @@ const ServiceBooking = ({ onBack }) => {
                 </span>
               </div>
             )}
-            <div 
+            <div
               className="flex justify-between border-t pt-3"
               style={{ borderColor: hexToRgba(branding?.primary_color || "#F68B24", 0.3) }}
             >
               <span className="font-bold text-white">Total:</span>
-              <span 
+              <span
                 className="font-black text-lg"
                 style={{ color: branding?.primary_color || "#F68B24" }}
               >
@@ -1783,10 +1780,10 @@ const ServiceBooking = ({ onBack }) => {
                 {createdBooking?.total_amount
                   ? parseFloat(createdBooking.total_amount).toLocaleString()
                   : Math.max(
-                      0,
-                      (selectedService?.price || 0) -
-                        (selectedVoucher?.value || 0)
-                    ).toLocaleString()}
+                    0,
+                    (selectedService?.price || 0) -
+                    (selectedVoucher?.value || 0)
+                  ).toLocaleString()}
               </span>
             </div>
           </div>
