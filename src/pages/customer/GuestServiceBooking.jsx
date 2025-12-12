@@ -431,8 +431,8 @@ const GuestServiceBooking = ({ onBack }) => {
     // Get booked times for this barber on this date
     const bookedTimes = existingBookings
       ? existingBookings
-          .filter((booking) => booking.status !== "cancelled")
-          .map((booking) => booking.time.substring(0, 5)) // Remove seconds part
+        .filter((booking) => booking.status !== "cancelled")
+        .map((booking) => booking.time.substring(0, 5)) // Remove seconds part
       : [];
 
     for (let hour = startHour; hour < endHour; hour++) {
@@ -605,7 +605,7 @@ const GuestServiceBooking = ({ onBack }) => {
       console.log('📧 Attempting to send barber notification...');
       console.log('  → selectedStaff:', selectedStaff?.full_name || selectedStaff?.name);
       console.log('  → selectedStaff.email:', selectedStaff?.email);
-      
+
       if (selectedStaff?.email) {
         try {
           const emailResult = await sendBarberBookingNotification({
@@ -933,9 +933,8 @@ const GuestServiceBooking = ({ onBack }) => {
           {stepsArray.map((stepNumber) => (
             <div key={stepNumber} className="flex items-center">
               <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                  step >= stepNumber ? "text-white shadow-md" : "text-gray-500"
-                }`}
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${step >= stepNumber ? "text-white shadow-md" : "text-gray-500"
+                  }`}
                 style={{
                   backgroundColor:
                     step >= stepNumber
@@ -1129,10 +1128,10 @@ const GuestServiceBooking = ({ onBack }) => {
     // Group services by category
     const servicesToDisplay = selectedStaff
       ? services.filter(
-          (service) =>
-            selectedStaff.services &&
-            selectedStaff.services.includes(service._id)
-        )
+        (service) =>
+          selectedStaff.services &&
+          selectedStaff.services.includes(service._id)
+      )
       : services;
 
     const categories = servicesToDisplay.reduce((acc, service) => {
@@ -1212,14 +1211,14 @@ const GuestServiceBooking = ({ onBack }) => {
                     {filteredServices.map((service) => {
                       const availableBarbers = barbers
                         ? barbers.filter(
-                            (barber) =>
-                              barber.is_active &&
-                              barber.services &&
-                              Array.isArray(barber.services) &&
-                              barber.services.some(
-                                (serviceId) => serviceId === service._id
-                              )
-                          ).length
+                          (barber) =>
+                            barber.is_active &&
+                            barber.services &&
+                            Array.isArray(barber.services) &&
+                            barber.services.some(
+                              (serviceId) => serviceId === service._id
+                            )
+                        ).length
                         : 0;
 
                       return (
@@ -1246,8 +1245,8 @@ const GuestServiceBooking = ({ onBack }) => {
                               {service.hide_price
                                 ? "Price may vary"
                                 : `₱${parseFloat(
-                                    service.price || 0
-                                  ).toLocaleString()}`}
+                                  service.price || 0
+                                ).toLocaleString()}`}
                             </div>
 
                             {/* Availability warning */}
@@ -1353,7 +1352,7 @@ const GuestServiceBooking = ({ onBack }) => {
             </span>
           </div>
 
-          {loadingTimeSlots ? (
+          {loadingTimeSlots || existingBookings === undefined ? (
             <div className="flex justify-center items-center py-6 space-x-2">
               <div className="animate-spin w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full"></div>
               <span className="text-gray-400 text-sm">Loading times...</span>
@@ -1376,13 +1375,12 @@ const GuestServiceBooking = ({ onBack }) => {
                     key={slot.time}
                     onClick={() => slot.available && setSelectedTime(slot.time)}
                     disabled={!slot.available}
-                    className={`p-2 text-sm rounded-lg border transition-all duration-200 ${
-                      slot.available
+                    className={`p-2 text-sm rounded-lg border transition-all duration-200 ${slot.available
                         ? selectedTime === slot.time
                           ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
                           : "bg-[#1F1F1F] text-gray-200 border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
                         : "bg-[#111111] text-gray-500 border-[#1F1F1F] cursor-not-allowed"
-                    }`}
+                      }`}
                   >
                     {slot.displayTime}
                   </button>
@@ -1442,13 +1440,12 @@ const GuestServiceBooking = ({ onBack }) => {
               key={barber._id}
               onClick={() => isAvailable && handleStaffSelect(barber)}
               disabled={!isAvailable}
-              className={`group rounded-2xl p-4 sm:p-5 transition-all duration-300 border-2 hover:shadow-lg flex flex-col items-center text-center ${
-                selectedStaff?._id === barber._id
+              className={`group rounded-2xl p-4 sm:p-5 transition-all duration-300 border-2 hover:shadow-lg flex flex-col items-center text-center ${selectedStaff?._id === barber._id
                   ? "bg-[var(--color-primary)]/15 border-[var(--color-primary)]"
                   : !isAvailable
                     ? "bg-[#1A1A1A] border-[#2A2A2A] opacity-60 cursor-not-allowed"
                     : "bg-[#1A1A1A] border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
-              }`}
+                }`}
             >
               {/* Avatar Container */}
               <div className="relative mb-3">
@@ -1747,11 +1744,10 @@ const GuestServiceBooking = ({ onBack }) => {
                     setFormErrors({ ...formErrors, name: "" });
                   }
                 }}
-                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
-                  formErrors.name
+                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${formErrors.name
                     ? "border-red-500 focus:border-red-500"
                     : "border-[#3A3A3A] focus:border-[var(--color-primary)]"
-                }`}
+                  }`}
               />
               {formErrors.name && (
                 <p className="text-xs text-red-400 mt-1">{formErrors.name}</p>
@@ -1773,11 +1769,10 @@ const GuestServiceBooking = ({ onBack }) => {
                     setFormErrors({ ...formErrors, email: "" });
                   }
                 }}
-                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
-                  formErrors.email
+                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${formErrors.email
                     ? "border-red-500 focus:border-red-500"
                     : "border-[#3A3A3A] focus:border-[var(--color-primary)]"
-                }`}
+                  }`}
               />
               {formErrors.email && (
                 <p className="text-xs text-red-400 mt-1">{formErrors.email}</p>
@@ -1802,11 +1797,10 @@ const GuestServiceBooking = ({ onBack }) => {
                     setFormErrors({ ...formErrors, number: "" });
                   }
                 }}
-                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${
-                  formErrors.number
+                className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${formErrors.number
                     ? "border-red-500 focus:border-red-500"
                     : "border-[#3A3A3A] focus:border-[var(--color-primary)]"
-                }`}
+                  }`}
               />
               {formErrors.number && (
                 <p className="text-xs text-red-400 mt-1">{formErrors.number}</p>
@@ -1820,11 +1814,10 @@ const GuestServiceBooking = ({ onBack }) => {
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full py-3 rounded-xl font-light transition-all duration-300 text-sm ${
-                  loading
+                className={`w-full py-3 rounded-xl font-light transition-all duration-300 text-sm ${loading
                     ? "bg-gray-600 text-gray-300 cursor-not-allowed"
                     : "bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white hover:shadow-lg transform hover:scale-[1.02]"
-                }`}
+                  }`}
               >
                 {loading ? (
                   <div className="flex items-center justify-center space-x-2">
@@ -1906,10 +1899,10 @@ const GuestServiceBooking = ({ onBack }) => {
               <span className="font-bold text-sm text-white">
                 {selectedDate
                   ? new Date(selectedDate).toLocaleDateString("en-PH", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    })
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                  })
                   : "Today"}
                 , {formatTime(selectedTime)}
               </span>
@@ -1947,11 +1940,10 @@ const GuestServiceBooking = ({ onBack }) => {
                           selectedVoucher?._id === voucher._id ? null : voucher
                         )
                       }
-                      className={`w-full p-2 rounded-lg border-2 transition-all duration-200 text-left ${
-                        selectedVoucher?._id === voucher._id
+                      className={`w-full p-2 rounded-lg border-2 transition-all duration-200 text-left ${selectedVoucher?._id === voucher._id
                           ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
                           : "border-[#2A2A2A] bg-[#0F0F0F] hover:border-[var(--color-primary)]/50"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
@@ -1997,11 +1989,10 @@ const GuestServiceBooking = ({ onBack }) => {
             <button
               onClick={() => handleConfirmBooking("pay_later")}
               disabled={bookingLoading}
-              className={`w-full py-3 px-4 rounded-lg transition-all duration-200 text-sm flex items-center justify-center gap-2 font-bold ${
-                bookingLoading
+              className={`w-full py-3 px-4 rounded-lg transition-all duration-200 text-sm flex items-center justify-center gap-2 font-bold ${bookingLoading
                   ? "bg-gray-600 text-gray-300 cursor-not-allowed"
                   : "bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white hover:shadow-lg"
-              }`}
+                }`}
             >
               {bookingLoading ? (
                 <div className="flex items-center justify-center space-x-2">
@@ -2185,10 +2176,10 @@ const GuestServiceBooking = ({ onBack }) => {
                 {createdBooking?.total_amount
                   ? parseFloat(createdBooking.total_amount).toLocaleString()
                   : Math.max(
-                      0,
-                      (selectedService?.price || 0) -
-                        (selectedVoucher?.value || 0)
-                    ).toLocaleString()}
+                    0,
+                    (selectedService?.price || 0) -
+                    (selectedVoucher?.value || 0)
+                  ).toLocaleString()}
               </span>
             </div>
           </div>
