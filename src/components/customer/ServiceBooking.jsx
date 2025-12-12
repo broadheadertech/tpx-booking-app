@@ -112,6 +112,7 @@ const ServiceBooking = ({ onBack }) => {
   const [serviceSearchTerm, setServiceSearchTerm] = useState("");
   const qrRef = useRef(null);
   const [openCategory, setOpenCategory] = useState(null); // ✅ Top level hook
+  const [dateError, setDateError] = useState(null);
 
   // Custom booking form states
   const [customFormResponses, setCustomFormResponses] = useState({});
@@ -374,6 +375,12 @@ const ServiceBooking = ({ onBack }) => {
     // Use Philippine time for all time comparisons
     const phNow = getPhilippineDate();
     const phTodayString = getPhilippineDateString();
+
+    // Prevent past dates from having available slots
+    if (selectedDate < phTodayString) {
+      return [];
+    }
+
     const selectedDateObj = new Date(selectedDate + "T00:00:00");
     const isToday = selectedDate === phTodayString;
     const currentHour = phNow.getHours();
@@ -1257,8 +1264,17 @@ const ServiceBooking = ({ onBack }) => {
           type="date"
           value={selectedDate}
           onChange={(e) => {
-            setSelectedDate(e.target.value);
+            const newDate = e.target.value;
+            setSelectedDate(newDate);
             setSelectedTime(null);
+
+            // Immediate validation listener
+            const phToday = getPhilippineDateString();
+            if (newDate < phToday) {
+              setDateError("Dates in the past cannot be selected.");
+            } else {
+              setDateError(null);
+            }
           }}
           min={getPhilippineDateString()}
           max={(() => {
@@ -1272,6 +1288,14 @@ const ServiceBooking = ({ onBack }) => {
           className="w-full px-3 py-2.5 rounded-lg bg-[#121212] border border-[#2A2A2A] text-gray-200 text-sm focus:outline-none focus:border-[var(--color-primary)] transition-colors"
         />
       </div>
+
+      {/* Date Error Message */}
+      {dateError && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
+          <p className="text-red-400 text-sm font-medium">{dateError}</p>
+        </div>
+      )}
 
       {/* Time Slots */}
       {selectedDate && (
@@ -1309,10 +1333,10 @@ const ServiceBooking = ({ onBack }) => {
                     onClick={() => slot.available && setSelectedTime(slot.time)}
                     disabled={!slot.available}
                     className={`p-2 text-sm rounded-lg border transition-all duration-200 ${slot.available
-                        ? selectedTime === slot.time
-                          ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                          : "bg-[#1F1F1F] text-gray-200 border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
-                        : "bg-[#111111] text-gray-500 border-[#1F1F1F] cursor-not-allowed"
+                      ? selectedTime === slot.time
+                        ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                        : "bg-[#1F1F1F] text-gray-200 border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
+                      : "bg-[#111111] text-gray-500 border-[#1F1F1F] cursor-not-allowed"
                       }`}
                   >
                     {slot.displayTime}
@@ -1343,7 +1367,11 @@ const ServiceBooking = ({ onBack }) => {
       {selectedDate && selectedTime && (
         <button
           onClick={() => setStep(5)}
-          className="w-full py-3 bg-[var(--color-primary)] text-white font-bold rounded-lg hover:bg-[var(--color-accent)] transition-all duration-200"
+          disabled={!!dateError || !selectedTime}
+          className={`w-full py-3 font-bold rounded-lg transition-all duration-200 ${!dateError && selectedTime
+            ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)]"
+            : "bg-[#1A1A1A] text-gray-500 border border-[#2A2A2A] cursor-not-allowed"
+            }`}
         >
           Continue to Confirmation
         </button>
@@ -1374,10 +1402,10 @@ const ServiceBooking = ({ onBack }) => {
               onClick={() => isAvailable && handleStaffSelect(barber)}
               disabled={!isAvailable}
               className={`group rounded-xl p-3 transition-all duration-300 border hover:shadow-lg flex flex-col items-center text-center relative overflow-hidden ${selectedStaff?._id === barber._id
-                  ? "bg-[var(--color-primary)]/10 border-[var(--color-primary)]"
-                  : !isAvailable
-                    ? "bg-[#1A1A1A] border-[#2A2A2A] opacity-60 cursor-not-allowed"
-                    : "bg-[#1A1A1A] border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
+                ? "bg-[var(--color-primary)]/10 border-[var(--color-primary)]"
+                : !isAvailable
+                  ? "bg-[#1A1A1A] border-[#2A2A2A] opacity-60 cursor-not-allowed"
+                  : "bg-[#1A1A1A] border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
                 }`}
             >
               {/* Avatar Container */}
