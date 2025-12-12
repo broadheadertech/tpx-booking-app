@@ -124,6 +124,7 @@ const GuestServiceBooking = ({ onBack }) => {
   const [serviceSearchTerm, setServiceSearchTerm] = useState("");
   const qrRef = useRef(null);
   const [openCategory, setOpenCategory] = useState(null); // ✅ Top level hook
+  const [dateError, setDateError] = useState(null);
 
   // Custom booking form states
   const [customFormResponses, setCustomFormResponses] = useState({});
@@ -406,6 +407,12 @@ const GuestServiceBooking = ({ onBack }) => {
     // Use Philippine time for all time comparisons
     const phNow = getPhilippineDate();
     const phTodayString = getPhilippineDateString();
+
+    // Prevent past dates from having available slots
+    if (selectedDate < phTodayString) {
+      return [];
+    }
+
     const selectedDateObj = new Date(selectedDate + "T00:00:00");
     const isToday = selectedDate === phTodayString;
     const currentHour = phNow.getHours();
@@ -543,6 +550,27 @@ const GuestServiceBooking = ({ onBack }) => {
   ) => {
     if (!selectedService || !selectedDate || !selectedTime) {
       alert("Please fill in all booking details");
+      return;
+    }
+
+    // Validate availability against existing bookings
+    if (existingBookings === undefined) {
+      alert("Please wait while we verify availability...");
+      return;
+    }
+
+    // Check if time slot is already taken
+    const isSlotTaken = existingBookings.some(
+      (booking) =>
+        booking.status !== "cancelled" &&
+        booking.time.substring(0, 5) === selectedTime.substring(0, 5)
+    );
+
+    if (isSlotTaken) {
+      alert(
+        "This time slot is no longer available. Please select another time."
+      );
+      setStep(4); // Return to Date & Time selection
       return;
     }
 
@@ -1322,8 +1350,17 @@ const GuestServiceBooking = ({ onBack }) => {
           type="date"
           value={selectedDate}
           onChange={(e) => {
-            setSelectedDate(e.target.value);
+            const newDate = e.target.value;
+            setSelectedDate(newDate);
             setSelectedTime(null);
+
+            // Immediate validation listener
+            const phToday = getPhilippineDateString();
+            if (newDate < phToday) {
+              setDateError("Dates in the past cannot be selected.");
+            } else {
+              setDateError(null);
+            }
           }}
           min={getPhilippineDateString()}
           max={(() => {
@@ -1337,6 +1374,14 @@ const GuestServiceBooking = ({ onBack }) => {
           className="w-full px-3 py-2.5 rounded-lg bg-[#121212] border border-[#2A2A2A] text-gray-200 text-sm focus:outline-none focus:border-[var(--color-primary)] transition-colors"
         />
       </div>
+
+      {/* Date Error Message */}
+      {dateError && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
+          <p className="text-red-400 text-sm font-medium">{dateError}</p>
+        </div>
+      )}
 
       {/* Time Slots */}
       {selectedDate && (
@@ -1376,10 +1421,10 @@ const GuestServiceBooking = ({ onBack }) => {
                     onClick={() => slot.available && setSelectedTime(slot.time)}
                     disabled={!slot.available}
                     className={`p-2 text-sm rounded-lg border transition-all duration-200 ${slot.available
-                        ? selectedTime === slot.time
-                          ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                          : "bg-[#1F1F1F] text-gray-200 border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
-                        : "bg-[#111111] text-gray-500 border-[#1F1F1F] cursor-not-allowed"
+                      ? selectedTime === slot.time
+                        ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                        : "bg-[#1F1F1F] text-gray-200 border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
+                      : "bg-[#111111] text-gray-500 border-[#1F1F1F] cursor-not-allowed"
                       }`}
                   >
                     {slot.displayTime}
@@ -1410,7 +1455,11 @@ const GuestServiceBooking = ({ onBack }) => {
       {selectedDate && selectedTime && (
         <button
           onClick={() => setStep(5)}
-          className="w-full py-3 bg-[var(--color-primary)] text-white font-bold rounded-lg hover:bg-[var(--color-accent)] transition-all duration-200"
+          disabled={!!dateError || !selectedTime}
+          className={`w-full py-3 font-bold rounded-lg transition-all duration-200 ${!dateError && selectedTime
+              ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)]"
+              : "bg-[#1A1A1A] text-gray-500 border border-[#2A2A2A] cursor-not-allowed"
+            }`}
         >
           Continue to Your Information
         </button>
@@ -1441,10 +1490,10 @@ const GuestServiceBooking = ({ onBack }) => {
               onClick={() => isAvailable && handleStaffSelect(barber)}
               disabled={!isAvailable}
               className={`group rounded-2xl p-4 sm:p-5 transition-all duration-300 border-2 hover:shadow-lg flex flex-col items-center text-center ${selectedStaff?._id === barber._id
-                  ? "bg-[var(--color-primary)]/15 border-[var(--color-primary)]"
-                  : !isAvailable
-                    ? "bg-[#1A1A1A] border-[#2A2A2A] opacity-60 cursor-not-allowed"
-                    : "bg-[#1A1A1A] border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
+                ? "bg-[var(--color-primary)]/15 border-[var(--color-primary)]"
+                : !isAvailable
+                  ? "bg-[#1A1A1A] border-[#2A2A2A] opacity-60 cursor-not-allowed"
+                  : "bg-[#1A1A1A] border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
                 }`}
             >
               {/* Avatar Container */}
@@ -1745,8 +1794,8 @@ const GuestServiceBooking = ({ onBack }) => {
                   }
                 }}
                 className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${formErrors.name
-                    ? "border-red-500 focus:border-red-500"
-                    : "border-[#3A3A3A] focus:border-[var(--color-primary)]"
+                  ? "border-red-500 focus:border-red-500"
+                  : "border-[#3A3A3A] focus:border-[var(--color-primary)]"
                   }`}
               />
               {formErrors.name && (
@@ -1770,8 +1819,8 @@ const GuestServiceBooking = ({ onBack }) => {
                   }
                 }}
                 className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${formErrors.email
-                    ? "border-red-500 focus:border-red-500"
-                    : "border-[#3A3A3A] focus:border-[var(--color-primary)]"
+                  ? "border-red-500 focus:border-red-500"
+                  : "border-[#3A3A3A] focus:border-[var(--color-primary)]"
                   }`}
               />
               {formErrors.email && (
@@ -1798,8 +1847,8 @@ const GuestServiceBooking = ({ onBack }) => {
                   }
                 }}
                 className={`w-full h-12 px-4 bg-[#2A2A2A] border rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 transition-all duration-300 text-sm text-white placeholder-gray-500 ${formErrors.number
-                    ? "border-red-500 focus:border-red-500"
-                    : "border-[#3A3A3A] focus:border-[var(--color-primary)]"
+                  ? "border-red-500 focus:border-red-500"
+                  : "border-[#3A3A3A] focus:border-[var(--color-primary)]"
                   }`}
               />
               {formErrors.number && (
@@ -1815,8 +1864,8 @@ const GuestServiceBooking = ({ onBack }) => {
                 type="submit"
                 disabled={loading}
                 className={`w-full py-3 rounded-xl font-light transition-all duration-300 text-sm ${loading
-                    ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                    : "bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white hover:shadow-lg transform hover:scale-[1.02]"
+                  ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                  : "bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white hover:shadow-lg transform hover:scale-[1.02]"
                   }`}
               >
                 {loading ? (
@@ -1941,8 +1990,8 @@ const GuestServiceBooking = ({ onBack }) => {
                         )
                       }
                       className={`w-full p-2 rounded-lg border-2 transition-all duration-200 text-left ${selectedVoucher?._id === voucher._id
-                          ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
-                          : "border-[#2A2A2A] bg-[#0F0F0F] hover:border-[var(--color-primary)]/50"
+                        ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
+                        : "border-[#2A2A2A] bg-[#0F0F0F] hover:border-[var(--color-primary)]/50"
                         }`}
                     >
                       <div className="flex items-center justify-between">
@@ -1990,8 +2039,8 @@ const GuestServiceBooking = ({ onBack }) => {
               onClick={() => handleConfirmBooking("pay_later")}
               disabled={bookingLoading}
               className={`w-full py-3 px-4 rounded-lg transition-all duration-200 text-sm flex items-center justify-center gap-2 font-bold ${bookingLoading
-                  ? "bg-gray-600 text-gray-300 cursor-not-allowed"
-                  : "bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white hover:shadow-lg"
+                ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                : "bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white hover:shadow-lg"
                 }`}
             >
               {bookingLoading ? (
