@@ -761,14 +761,44 @@ export const deleteUser = mutation({
 export const getAllUsers = query({
   args: {
     limit: v.optional(v.number()),
+    roles: v.optional(v.array(v.string())),
+    branch_id: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
-    const limit = args.limit || 200; // Default to 200 users
+    const limit = args.limit || 1000; // Increased default to 1000 users
 
-    const users = await ctx.db
-      .query("users")
-      .order("desc")
-      .take(limit);
+    let usersQuery = ctx.db.query("users").order("desc");
+
+    const hasRoles = args.roles && args.roles.length > 0;
+    const hasBranch = !!args.branch_id;
+
+    if (hasRoles || hasBranch) {
+      usersQuery = usersQuery.filter((q) => {
+        const conditions = [];
+
+        if (hasRoles) {
+          // Create OR condition for multiple roles
+          const roleConditions = args.roles!.map(role => q.eq(q.field("role"), role));
+          if (roleConditions.length === 1) {
+            conditions.push(roleConditions[0]);
+          } else {
+            conditions.push(q.or(...roleConditions));
+          }
+        }
+
+        if (hasBranch) {
+          conditions.push(q.eq(q.field("branch_id"), args.branch_id));
+        }
+
+        // This should not be reached if the outer check is correct, but for type safety:
+        if (conditions.length === 0) return q.eq(q.field("role"), q.field("role")); // Unreachable but type safe
+        if (conditions.length === 1) return conditions[0];
+
+        return q.and(...conditions);
+      });
+    }
+
+    const users = await usersQuery.take(limit);
 
     // Return only necessary fields to reduce bandwidth
     return users.map(user => ({
@@ -827,17 +857,17 @@ export const sendPasswordResetEmail = action({
   },
   handler: async (ctx, args) => {
     const { api } = require("../_generated/api");
-    
+
     // Fetch branding and email template
     const branding = await ctx.runQuery(api.services.branding.getGlobalBranding, {});
     const template = await ctx.runQuery(api.services.emailTemplates.getTemplateByType, { template_type: "password_reset" });
-    
+
     // Extract branding colors (fallback to defaults)
     const primaryColor = branding?.primary_color || '#000000';
     const accentColor = branding?.accent_color || '#000000';
     const bgColor = branding?.bg_color || '#0A0A0A';
     const brandName = branding?.display_name || '';
-    
+
     // Email template content
     const subject = (template?.subject || 'Reset your {{brand_name}} password').replace(/\{\{brand_name\}\}/g, brandName);
     const heading = (template?.heading || 'Reset Your Password').replace(/\{\{brand_name\}\}/g, brandName);
@@ -845,7 +875,7 @@ export const sendPasswordResetEmail = action({
       .replace(/\{\{brand_name\}\}/g, brandName);
     const ctaText = template?.cta_text || 'Reset Password';
     const footerText = template?.footer_text || 'This link will expire in 15 minutes for your security. If you didn\'t request a password reset, you can safely ignore this email.';
-    
+
     const resetUrl = `https://fcv.broadheader.com/auth/reset-password?token=${args.token}`;
 
     const emailData = {
@@ -1144,20 +1174,20 @@ export const sendVoucherEmailWithQR = action({
   },
   handler: async (ctx, args) => {
     const { api } = require("../_generated/api");
-    
+
     // Fetch branding and email template
     const branding = await ctx.runQuery(api.services.branding.getGlobalBranding, {});
     const template = await ctx.runQuery(api.services.emailTemplates.getTemplateByType, { template_type: "voucher" });
-    
+
     // Extract branding colors (fallback to defaults)
     const primaryColor = branding?.primary_color || '#000000';
     const accentColor = branding?.accent_color || '#000000';
     const brandName = branding?.display_name || '';
-    
+
     // Lighter versions of primary color for backgrounds
     const primaryLight = `${primaryColor}1a`;
     const primaryBorder = `${primaryColor}40`;
-    
+
     // Email template content with variable replacements
     const subject = (template?.subject || 'Your Voucher {{voucher_code}} from {{brand_name}}')
       .replace(/\{\{brand_name\}\}/g, brandName)
@@ -1174,7 +1204,7 @@ export const sendVoucherEmailWithQR = action({
       .replace(/\n/g, '<br>');
     const footerText = (template?.footer_text || '✓ Present this email or scan the QR code at checkout\n✓ Our staff will apply your discount\n✓ One voucher per visit')
       .replace(/\n/g, '<br>');
-    
+
     // Generate QR code
     const qrPayload = JSON.stringify({
       voucherId: args.voucherId || "",
@@ -1459,21 +1489,21 @@ export const sendBookingConfirmationEmail = action({
   },
   handler: async (ctx, args) => {
     const { api } = require("../_generated/api");
-    
+
     // Fetch branding and email template
     const branding = await ctx.runQuery(api.services.branding.getGlobalBranding, {});
     const template = await ctx.runQuery(api.services.emailTemplates.getTemplateByType, { template_type: "booking_confirmation" });
-    
+
     // Extract branding colors (fallback to defaults)
     const primaryColor = branding?.primary_color || '#000000';
     const accentColor = branding?.accent_color || '#000000';
     const bgColor = branding?.bg_color || '#0A0A0A';
     const brandName = branding?.display_name || '';
-    
+
     // Lighter versions of primary color for backgrounds
     const primaryLight = `${primaryColor}1a`;
     const primaryBorder = `${primaryColor}40`;
-    
+
     // Format date for display
     const formattedDate = new Date(args.date).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -1481,7 +1511,7 @@ export const sendBookingConfirmationEmail = action({
       month: 'long',
       day: 'numeric'
     });
-    
+
     // Email template content with variable replacements
     const subject = (template?.subject || 'Booking Confirmed - {{brand_name}}')
       .replace(/\{\{brand_name\}\}/g, brandName);
@@ -1498,7 +1528,7 @@ export const sendBookingConfirmationEmail = action({
     const ctaText = template?.cta_text || 'View Booking';
     const footerText = (template?.footer_text || 'If you need to reschedule or cancel, please contact us at least 24 hours in advance.')
       .replace(/\n/g, '<br>');
-    
+
     // Generate QR code for booking
     const qrPayload = JSON.stringify({
       bookingId: args.bookingId || "",
