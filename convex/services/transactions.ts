@@ -106,6 +106,8 @@ export const createTransaction = mutation({
     discount_amount: v.number(),
     voucher_applied: v.optional(v.id("vouchers")),
     tax_amount: v.number(),
+    booking_fee: v.optional(v.number()),
+    late_fee: v.optional(v.number()),
     total_amount: v.number(),
     payment_method: v.union(
       v.literal("cash"),
@@ -127,7 +129,7 @@ export const createTransaction = mutation({
   },
   handler: async (ctx, args) => {
     console.log('[TRANSACTION] Starting transaction creation with args:', args);
-    
+
     // Validate walk-in customer has a name
     if (!args.customer && (!args.customer_name || args.customer_name.trim() === '')) {
       console.error('[TRANSACTION] Invalid customer name for walk-in customer');
@@ -156,7 +158,7 @@ export const createTransaction = mutation({
     const timestamp = Date.now();
     const transactionId = `TXN-${timestamp}`;
     const receiptNumber = `RCP-${timestamp}`;
-    
+
     console.log('[TRANSACTION] Generated IDs:', { transactionId, receiptNumber });
 
     // Extract control flags that shouldn't be stored in the database
@@ -171,7 +173,7 @@ export const createTransaction = mutation({
     };
 
     console.log('[TRANSACTION] Final transaction data to insert:', transactionData);
-    
+
     let transactionDocId: Id<"transactions">;
     try {
       transactionDocId = await ctx.db.insert("transactions", transactionData);
@@ -194,15 +196,15 @@ export const createTransaction = mutation({
 
     if (args.services && args.services.length > 0 && !skip_booking_creation) {
       console.log('[BOOKING CREATION] Starting booking creation for', args.services.length, 'services');
-      
+
       for (const serviceItem of args.services) {
         try {
           console.log('[BOOKING CREATION] Processing service:', serviceItem.service_name);
-          
+
           // Check if a booking already exists for this service and customer on the same day
           const today = new Date().toISOString().split('T')[0];
           let customerId = args.customer;
-          
+
           console.log('[BOOKING CREATION] Initial customerId:', customerId);
 
           // For walk-in customers, create or find a walk-in customer record
@@ -239,35 +241,35 @@ export const createTransaction = mutation({
 
             if (!existingBooking) {
               console.log('[BOOKING CREATION] No existing booking found, creating new booking');
-              
+
               // Get service details for price
               const serviceDetails = await ctx.db.get(serviceItem.service_id);
               if (!serviceDetails) {
                 console.error('[BOOKING CREATION] Service not found:', serviceItem.service_id);
                 continue;
               }
-              
+
               // Generate booking code - exactly 8 characters (uppercase alphanumeric)
               const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
               let bookingCode = '';
               for (let i = 0; i < 8; i++) {
                 bookingCode += chars.charAt(Math.floor(Math.random() * chars.length));
               }
-              
+
               // Verify barber exists
               if (!args.barber) {
                 console.error('[BOOKING CREATION] ERROR: No barber assigned to transaction');
                 continue;
               }
-              
+
               // Get current time in Philippine timezone (UTC+8)
               const philippineTime = new Date(Date.now() + (8 * 60 * 60 * 1000)); // Add 8 hours to UTC
               const hours = philippineTime.getUTCHours().toString().padStart(2, '0');
               const minutes = philippineTime.getUTCMinutes().toString().padStart(2, '0');
               const currentTime = `${hours}:${minutes}`;
-              
+
               console.log('[BOOKING CREATION] Philippine time:', currentTime);
-              
+
               // Create booking directly in database (bypass mutation validation)
               const bookingData = {
                 booking_code: bookingCode,
@@ -285,6 +287,8 @@ export const createTransaction = mutation({
                 price: serviceDetails.price,
                 final_price: serviceItem.price, // Use the actual price from transaction (may include discounts)
                 discount_amount: args.discount_amount || 0,
+                booking_fee: args.booking_fee || 0,
+                late_fee: args.late_fee || 0,
                 voucher_id: args.voucher_applied || undefined,
                 notes: `POS Transaction - Receipt: ${receiptNumber}${args.customer_name ? ` - ${args.customer_name}` : ''}`,
                 reminder_sent: false,
@@ -292,13 +296,13 @@ export const createTransaction = mutation({
                 createdAt: timestamp,
                 updatedAt: timestamp,
               };
-              
+
               console.log('[BOOKING CREATION] Creating booking directly in database:', bookingData);
-              
+
               try {
                 const bookingId = await ctx.db.insert("bookings", bookingData);
                 console.log('[BOOKING CREATION] Successfully created booking with ID:', bookingId);
-                
+
                 // Track booking ID for notifications
                 createdBookingIds.push(bookingId);
               } catch (bookingError) {
@@ -307,26 +311,26 @@ export const createTransaction = mutation({
                 throw bookingError;
               }
             } else {
-                // Track existing booking ID for notifications
-                createdBookingIds.push(existingBooking._id);
-                
-                // Update existing booking to completed
-                await ctx.runMutation(api.services.bookings.updateBooking, {
-                  id: existingBooking._id,
-                  status: "completed",
-                  notes: existingBooking.notes
-                    ? `${existingBooking.notes}\nPOS Transaction - Receipt: ${receiptNumber}`
-                    : `POS Transaction - Receipt: ${receiptNumber}`
-                });
-                
-                // Update payment status to paid since transaction is completed
-                await ctx.runMutation(api.services.bookings.updatePaymentStatus, {
-                  id: existingBooking._id,
-                  payment_status: "paid"
-                });
+              // Track existing booking ID for notifications
+              createdBookingIds.push(existingBooking._id);
+
+              // Update existing booking to completed
+              await ctx.runMutation(api.services.bookings.updateBooking, {
+                id: existingBooking._id,
+                status: "completed",
+                notes: existingBooking.notes
+                  ? `${existingBooking.notes}\nPOS Transaction - Receipt: ${receiptNumber}`
+                  : `POS Transaction - Receipt: ${receiptNumber}`
+              });
+
+              // Update payment status to paid since transaction is completed
+              await ctx.runMutation(api.services.bookings.updatePaymentStatus, {
+                id: existingBooking._id,
+                payment_status: "paid"
+              });
             }
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error(`[BOOKING CREATION] ERROR - Failed to create/update booking for service ${serviceItem.service_name}:`, error);
           console.error('[BOOKING CREATION] ERROR details:', {
             message: error.message,
@@ -336,14 +340,14 @@ export const createTransaction = mutation({
           // Don't fail the transaction if booking creation fails, but log it prominently
         }
       }
-      
+
       console.log('[BOOKING CREATION] Completed booking creation process. Created bookings:', createdBookingIds.length);
     } else {
       console.log('[BOOKING CREATION] Skipping booking creation:', {
-        reason: !args.services ? 'No services' : 
-                args.services.length === 0 ? 'Services array empty' : 
-                skip_booking_creation ? 'skip_booking_creation flag is true' : 
-                'Unknown'
+        reason: !args.services ? 'No services' :
+          args.services.length === 0 ? 'Services array empty' :
+            skip_booking_creation ? 'skip_booking_creation flag is true' :
+              'Unknown'
       });
     }
 
@@ -394,7 +398,7 @@ export const createTransaction = mutation({
           voucherId,
           customerIdForVoucher
         });
-        
+
         // Find the specific user's assignment for this voucher
         const userAssignment = await ctx.db
           .query("user_vouchers")
@@ -426,8 +430,8 @@ export const createTransaction = mutation({
       } else {
         console.warn(
           "[VOUCHER REDEMPTION] Skipping voucher redemption because no customer is attached to the transaction",
-          JSON.stringify({ 
-            voucherId, 
+          JSON.stringify({
+            voucherId,
             providedCustomer: args.customer,
             providedEmail: args.customer_email,
             providedName: args.customer_name
@@ -634,7 +638,7 @@ export const getTransactionsByDateRange = query({
   handler: async (ctx, args) => {
     const transactions = await ctx.db
       .query("transactions")
-      .filter((q) => 
+      .filter((q) =>
         q.and(
           q.gte(q.field("createdAt"), args.startDate),
           q.lte(q.field("createdAt"), args.endDate)
@@ -679,12 +683,12 @@ export const getTransactionByReceiptNumber = query({
     }
 
     // Populate related data
-    const customer = transaction.customer 
+    const customer = transaction.customer
       ? await ctx.db.get(transaction.customer)
       : null;
     const barber = await ctx.db.get(transaction.barber);
     const processedBy = await ctx.db.get(transaction.processed_by);
-    const voucher = transaction.voucher_applied 
+    const voucher = transaction.voucher_applied
       ? await ctx.db.get(transaction.voucher_applied)
       : null;
 
@@ -717,7 +721,7 @@ export const updateTransactionStatus = mutation({
     }
 
     const timestamp = Date.now();
-    
+
     await ctx.db.patch(args.transactionId, {
       payment_status: args.payment_status,
       notes: args.notes,
@@ -739,7 +743,7 @@ export const getDailySalesSummary = query({
 
     const transactions = await ctx.db
       .query("transactions")
-      .filter((q) => 
+      .filter((q) =>
         q.and(
           q.gte(q.field("createdAt"), startOfDay),
           q.lte(q.field("createdAt"), endOfDay),
@@ -766,13 +770,13 @@ export const getDailySalesSummary = query({
     // Calculate top services and products
     transactions.forEach(transaction => {
       transaction.services.forEach(service => {
-        summary.topServices[service.service_name] = 
+        summary.topServices[service.service_name] =
           (summary.topServices[service.service_name] || 0) + service.quantity;
       });
-      
+
       if (transaction.products) {
         transaction.products.forEach(product => {
-          summary.topProducts[product.product_name] = 
+          summary.topProducts[product.product_name] =
             (summary.topProducts[product.product_name] || 0) + product.quantity;
         });
       }

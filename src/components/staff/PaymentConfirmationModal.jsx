@@ -86,6 +86,18 @@ const PaymentConfirmationModal = ({ isOpen, onClose, onConfirm, transactionData,
                   <span className="text-gray-200 font-semibold">₱{transactionData.tax_amount.toFixed(2)}</span>
                 </div>
               )}
+              {transactionData.booking_fee > 0 && (
+                <div className="flex justify-between items-center px-2 py-1.5 bg-orange-500/10 rounded border border-orange-500/20">
+                  <span className="text-orange-400 font-medium">Booking Fee</span>
+                  <span className="text-orange-300 font-bold">+₱{transactionData.booking_fee.toFixed(2)}</span>
+                </div>
+              )}
+              {transactionData.late_fee > 0 && (
+                <div className="flex justify-between items-center px-2 py-1.5 bg-red-500/10 rounded border border-red-500/20">
+                  <span className="text-red-400 font-medium">Late Fee</span>
+                  <span className="text-red-300 font-bold">+₱{transactionData.late_fee.toFixed(2)}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -105,11 +117,10 @@ const PaymentConfirmationModal = ({ isOpen, onClose, onConfirm, transactionData,
                 <button
                   key={method.value}
                   onClick={() => setPaymentMethod(method.value)}
-                  className={`p-2 rounded-lg border-2 transition-all duration-200 flex flex-col items-center justify-center space-y-1 text-xs font-semibold ${
-                    paymentMethod === method.value
+                  className={`p-2 rounded-lg border-2 transition-all duration-200 flex flex-col items-center justify-center space-y-1 text-xs font-semibold ${paymentMethod === method.value
                       ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/20 text-[var(--color-primary)]'
                       : 'border-[#555555] bg-[#1A1A1A] text-gray-400 hover:border-[var(--color-primary)]/50'
-                  }`}
+                    }`}
                 >
                   <IconComponent className="w-4 h-4" />
                   <span>{method.label}</span>
