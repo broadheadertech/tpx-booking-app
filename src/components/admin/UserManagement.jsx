@@ -29,7 +29,10 @@ export default function UserManagement() {
   const [pendingUpdate, setPendingUpdate] = useState(null)
 
   // Queries
-  const users = useQuery(api.services.auth.getAllUsers) || []
+  const users = useQuery(api.services.auth.getAllUsers, {
+    limit: 1000,
+    roles: ['super_admin', 'admin', 'branch_admin', 'staff']
+  }) || []
   const branches = useQuery(api.services.branches.getActiveBranches) || []
 
   // Mutations
@@ -40,6 +43,8 @@ export default function UserManagement() {
     switch (role) {
       case 'super_admin':
         return { bg: 'bg-purple-100', text: 'text-purple-800', border: 'border-purple-200' }
+      case 'admin':
+        return { bg: 'bg-indigo-100', text: 'text-indigo-800', border: 'border-indigo-200' }
       case 'branch_admin':
         return { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200' }
       case 'staff':
@@ -70,6 +75,7 @@ export default function UserManagement() {
   const stats = {
     total: adminUsers.length,
     superAdmins: adminUsers.filter(u => u.role === 'super_admin').length,
+    admins: adminUsers.filter(u => u.role === 'admin').length,
     branchAdmins: adminUsers.filter(u => u.role === 'branch_admin').length,
     staff: adminUsers.filter(u => u.role === 'staff').length
   }
@@ -280,7 +286,7 @@ export default function UserManagement() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -296,6 +302,16 @@ export default function UserManagement() {
             <div>
               <p className="text-sm font-medium text-gray-300">Super Admin</p>
               <p className="text-xl font-bold text-[var(--color-primary)]">{stats.superAdmins}</p>
+            </div>
+            <Shield className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-300">Admin</p>
+              <p className="text-xl font-bold text-[var(--color-primary)]">{stats.admins}</p>
             </div>
             <Shield className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
           </div>
@@ -348,6 +364,7 @@ export default function UserManagement() {
               >
                 <option value="all">All Roles</option>
                 <option value="super_admin">Super Admin</option>
+                <option value="admin">Admin</option>
                 <option value="branch_admin">Branch Admin</option>
                 <option value="staff">Staff</option>
               </select>
