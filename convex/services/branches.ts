@@ -317,6 +317,13 @@ export const updateBranch = mutation({
     booking_start_hour: v.optional(v.number()),
     booking_end_hour: v.optional(v.number()),
     carousel_images: v.optional(v.array(v.string())),
+    enable_booking_fee: v.optional(v.boolean()),
+    booking_fee_amount: v.optional(v.number()),
+    enable_late_fee: v.optional(v.boolean()),
+    late_fee_amount: v.optional(v.number()),
+    booking_fee_type: v.optional(v.string()),
+    late_fee_type: v.optional(v.string()),
+    late_fee_grace_period: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;

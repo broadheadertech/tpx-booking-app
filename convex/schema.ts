@@ -10,8 +10,15 @@ export default defineSchema({
     phone: v.string(),
     email: v.string(),
     is_active: v.boolean(),
+    enable_booking_fee: v.optional(v.boolean()), // Toggle for booking fee
+    booking_fee_amount: v.optional(v.number()), // Amount of the booking fee
     booking_start_hour: v.optional(v.number()), // Start hour for bookings (0-23, default: 10)
     booking_end_hour: v.optional(v.number()), // End hour for bookings (0-23, default: 20)
+    enable_late_fee: v.optional(v.boolean()), // Toggle for late fee
+    late_fee_amount: v.optional(v.number()), // Amount of the late fee (or rate)
+    booking_fee_type: v.optional(v.string()), // 'fixed' or 'percent'
+    late_fee_type: v.optional(v.string()), // 'fixed', 'per_minute', 'per_hour'
+    late_fee_grace_period: v.optional(v.number()), // Grace period in minutes
     carousel_images: v.optional(v.array(v.string())), // Array of carousel image URLs
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -258,6 +265,8 @@ export default defineSchema({
     price: v.number(),
     voucher_id: v.optional(v.id("vouchers")), // Link to voucher if used
     discount_amount: v.optional(v.number()), // Discount applied
+    booking_fee: v.optional(v.number()), // Booking fee applied
+    late_fee: v.optional(v.number()), // Late fee applied
     final_price: v.optional(v.number()), // Price after discount
     notes: v.optional(v.string()),
     reminder_sent: v.optional(v.boolean()),
@@ -476,6 +485,8 @@ export default defineSchema({
     subtotal: v.number(),
     discount_amount: v.number(),
     voucher_applied: v.optional(v.id("vouchers")),
+    booking_fee: v.optional(v.number()), // Booking fee applied
+    late_fee: v.optional(v.number()), // Late fee applied
     tax_amount: v.number(),
     total_amount: v.number(),
     payment_method: v.union(

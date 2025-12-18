@@ -461,6 +461,7 @@ export const createBooking = mutation({
     customer_name: v.optional(v.string()), // For walk-in customers - actual name entered
     customer_phone: v.optional(v.string()),
     customer_email: v.optional(v.string()),
+    booking_fee: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     // Get service details for price
@@ -540,7 +541,7 @@ export const createBooking = mutation({
       } else {
         // Default to weekly schedule
         const dayOfWeek = bookingDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-        const daySchedule = barber.schedule?.[dayOfWeek];
+        const daySchedule = barber.schedule?.[dayOfWeek as keyof typeof barber.schedule];
 
         // Check if barber is available on this day
         if (!daySchedule || !daySchedule.available) {
@@ -582,6 +583,7 @@ export const createBooking = mutation({
       payment_status: "unpaid",
       price: originalPrice,
       voucher_id: args.voucher_id,
+      booking_fee: args.booking_fee,
       discount_amount: discountAmount > 0 ? discountAmount : undefined,
       final_price: discountAmount > 0 ? finalPrice : undefined,
       notes: args.notes || undefined,
@@ -1435,7 +1437,7 @@ export const createWalkInBooking = mutation({
       } else {
         // Default to weekly schedule
         const dayOfWeek = bookingDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-        const daySchedule = barber.schedule?.[dayOfWeek];
+        const daySchedule = barber.schedule?.[dayOfWeek as keyof typeof barber.schedule];
 
         // Check if barber is available on this day
         if (!daySchedule || !daySchedule.available) {

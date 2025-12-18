@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode, CreditCard, Receipt, DollarSign, Eye, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Check, Ban } from 'lucide-react'
+import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode, CreditCard, Receipt, DollarSign, Eye, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Check, Ban, Settings } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import QRCode from 'qrcode'
 import { createPortal } from 'react-dom'
 import CreateBookingModal from './CreateBookingModal'
 import Modal from '../common/Modal'
+import BookingSettingsModal from './BookingSettingsModal'
 
 const BookingsManagement = ({ onRefresh, user }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -14,7 +15,9 @@ const BookingsManagement = ({ onRefresh, user }) => {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [editingBooking, setEditingBooking] = useState(null)
+
   const [showQRCode, setShowQRCode] = useState(null)
   const [editFormData, setEditFormData] = useState({
     service: '',
@@ -1866,6 +1869,13 @@ const BookingsManagement = ({ onRefresh, user }) => {
               <RotateCcw className="h-4 w-4" />
             </button>
             <button
+              onClick={() => setShowSettingsModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#2A2A2A] text-white rounded-md hover:bg-[#333333] transition-all text-xs font-medium border border-[#3A3A3A] mr-1"
+            >
+              <Settings className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Booking Settings</span>
+            </button>
+            <button
               onClick={handleCreate}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-md hover:from-[var(--color-accent)] hover:brightness-110 transition-all text-xs font-medium shadow-sm"
             >
@@ -2431,6 +2441,11 @@ const BookingsManagement = ({ onRefresh, user }) => {
         </div>,
         document.body
       )}
+      <BookingSettingsModal
+        isOpen={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        branchId={user?.branch_id}
+      />
     </div>
   )
 }
