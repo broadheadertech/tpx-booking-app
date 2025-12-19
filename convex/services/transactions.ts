@@ -633,21 +633,27 @@ export const getTransactionsByBranch = query({
 export const getTransactionsByDateRange = query({
   args: {
     startDate: v.number(),
-    endDate: v.number()
+    endDate: v.number(),
+    branch_id: v.optional(v.id("branches"))
   },
   handler: async (ctx, args) => {
-    const transactions = await ctx.db
+    // Basic query with time range filter using index
+    let query = ctx.db
       .query("transactions")
-      .filter((q) =>
-        q.and(
-          q.gte(q.field("createdAt"), args.startDate),
-          q.lte(q.field("createdAt"), args.endDate)
-        )
-      )
-      .order("desc")
-      .collect();
+      .withIndex("by_created_at", q => q.gte("createdAt", args.startDate).lte("createdAt", args.endDate));
 
-    return transactions;
+    // Apply branch filter if provided
+    // We use regular filter here because we already used the index for time range
+    // Filtering by branch after fetching by time is usually efficient enough for analytics
+    if (args.branch_id) {
+      const branchId = args.branch_id;
+      return await query
+        .filter(q => q.eq(q.field("branch_id"), branchId))
+        .order("desc")
+        .collect();
+    }
+
+    return await query.order("desc").collect();
   },
 });
 

@@ -240,8 +240,8 @@ export const calculateBarberEarnings = query({
       )
       .collect();
 
-    // Sort by effective_from desc
-    const barberCommissionRate = barberCommissionRates.sort((a, b) => b.effective_from - a.effective_from)[0];
+    // Sort by effective_from desc to get latest rate
+    const barberCommissionRate = barberCommissionRates.slice().sort((a, b) => b.effective_from - a.effective_from)[0];
 
     const fallbackRate =
       barberCommissionRate?.commission_rate ||
@@ -311,7 +311,6 @@ export const calculateBarberEarnings = query({
               // Fallback to percentage
               productComm = (productRevenue * fallbackRate) / 100;
             }
-          } else {
             // No specific rate, use fallback percentage
             productComm = (productRevenue * fallbackRate) / 100;
           }
@@ -386,11 +385,9 @@ export const calculateBarberEarnings = query({
         bookingDateTimestamp <= args.period_end;
 
       if (completed && paid && inPeriod) {
-        const dateKey =
-          b.date ||
-          new Date(
-            new Date(b.updatedAt).toISOString().split("T")[0],
-          ).toISOString();
+        const dateKey = b.date; // Use the YYYY-MM-DD string directly
+
+        if (!dateKey) continue; // Should not happen with current schema/logic but safe
 
         if (!bookingsByDate.has(dateKey)) {
           bookingsByDate.set(dateKey, []);
@@ -410,9 +407,8 @@ export const calculateBarberEarnings = query({
 
         // Calculate commission for this booking
         const rates = serviceRateMap.get(String(b.service)) || [];
-        // ALWAYS use the latest active rate to allow retroactive corrections
-        // This assumes the user wants the currently configured rate to apply to the period being calculated
-        const activeRate = rates.sort((a, b) => (b.effective_from || 0) - (a.effective_from || 0))[0];
+        // Sort rates by effective_from DESC and take the most recent one (retroactive rule)
+        const activeRate = rates.slice().sort((a, b) => (b.effective_from || 0) - (a.effective_from || 0))[0];
 
         const serviceRate = activeRate ? activeRate.commission_rate : fallbackRate;
         const bookingCommission = ((b.price || 0) * (serviceRate || 0)) / 100;
@@ -455,6 +451,7 @@ export const calculateBarberEarnings = query({
 
     // Use the latest rate as the "display" rate for the summary, or 0 if none
     const latestDailyRate = barberDailyRates
+      .slice()
       .sort((a, b) => b.effective_from - a.effective_from)[0];
     const displayDailyRate = latestDailyRate?.daily_rate || 0;
 
@@ -498,19 +495,15 @@ export const calculateBarberEarnings = query({
 
     let finalSalary = 0;
     if (totalServices > 0 || totalProducts > 0) {
+      // Pre-sort daily rates to find the latest active one (retroactive rule)
+      const currentRateDoc = barberDailyRates.slice().sort((a, b) => b.effective_from - a.effective_from)[0];
+      const currentDailyRate = currentRateDoc?.daily_rate || 0;
+
       // Debug logging to check daily rates and commissions
       console.log(
-        `Barber ${barber.full_name}: dailyRate = ${dailyRate}, days worked = ${allWorkDates.size}`,
-      );
-      console.log(
-        `Barber ${barber.full_name}: display dailyRate = ${dailyRate}, days worked = ${allWorkDates.size}`,
+        `Barber ${barber.full_name}: currentDailyRate = ${currentDailyRate}, days worked = ${allWorkDates.size}`,
       );
       for (const dateKey of allWorkDates) {
-        // Determine daily rate for this specific day
-        // ALWAYS use the latest active daily rate to allow retroactive corrections
-        const activeDailyRate = barberDailyRates.sort((a, b) => b.effective_from - a.effective_from)[0];
-
-        const currentDailyRate = activeDailyRate?.daily_rate || 0;
         const dayServiceCommission = dailyCommissions.get(dateKey) || 0;
         const dayProductCommission = dailyProductCommissions.get(dateKey) || 0;
 
@@ -893,19 +886,49 @@ export const getBookingsByBarberAndPeriod = query({
 });
 
 // ACTION: Obtain bookings for print (imperative use from client)
-export const getBookingsForPrint = action({
+export const getBookingsForPrint = query({
   args: {
     barber_id: v.id("barbers"),
     period_start: v.number(),
     period_end: v.number(),
   },
   handler: async (ctx, args) => {
-    // Reuse the query logic by invoking it via runQuery
-    const items = await ctx.runQuery(
-      api.services.payroll.getBookingsByBarberAndPeriod,
-      args as any,
-    );
-    return items || [];
+    const bookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_barber", (q) => q.eq("barber", args.barber_id))
+      .collect();
+
+    const items = bookings
+      .filter((b) => {
+        const completed = b.status === "completed";
+        const paid = b.payment_status === "paid";
+
+        let bookingDateTimestamp = b.updatedAt;
+        if (b.date) {
+          try {
+            const bookingDate = new Date(b.date + "T00:00:00.000Z");
+            bookingDateTimestamp = bookingDate.getTime();
+          } catch (error) {
+            // ignore
+          }
+        }
+
+        return completed && paid &&
+          bookingDateTimestamp >= args.period_start &&
+          bookingDateTimestamp <= args.period_end;
+      })
+      .map((b) => ({
+        id: b._id,
+        booking_code: b.booking_code,
+        date: b.date,
+        time: b.time,
+        price: b.price,
+        status: b.status,
+        payment_status: b.payment_status,
+        updatedAt: b.updatedAt,
+      }));
+
+    return items;
   },
 });
 
@@ -1097,15 +1120,16 @@ export const calculatePayrollForPeriod = mutation({
     }
 
     // Get all active barbers in the branch
-    const activeBarbers = await ctx.db
+    const branchIdValue = period.branch_id;
+    let barbersToProcess = await ctx.db
       .query("barbers")
-      .withIndex("by_branch", (q) => q.eq("branch_id", period.branch_id))
+      .withIndex("by_branch", (q) => q.eq("branch_id", branchIdValue))
       .filter((q) => q.eq(q.field("is_active"), true))
       .collect();
 
     // Merge active barbers with any barbers that already have records for this period
     const barberMap = new Map(
-      activeBarbers.map((barber) => [barber._id, barber]),
+      barbersToProcess.map((barber) => [barber._id, barber]),
     );
     for (const record of existingRecords) {
       if (!barberMap.has(record.barber_id)) {
@@ -1116,7 +1140,7 @@ export const calculatePayrollForPeriod = mutation({
       }
     }
 
-    const barbers = Array.from(barberMap.values());
+    const barbersToCalculate = Array.from(barberMap.values());
     const existingRecordMap = new Map(
       existingRecords.map((record) => [record.barber_id, record]),
     );
@@ -1129,7 +1153,7 @@ export const calculatePayrollForPeriod = mutation({
     const timestamp = Date.now();
 
     // Calculate earnings for each barber
-    for (const barber of barbers) {
+    for (const barber of barbersToCalculate) {
       const earnings = await ctx.runQuery(
         api.services.payroll.calculateBarberEarnings,
         {
@@ -1205,7 +1229,7 @@ export const calculatePayrollForPeriod = mutation({
     });
 
     return {
-      total_barbers: barbers.length,
+      total_barbers: barbersToCalculate.length,
       total_earnings: totalEarnings,
       total_commissions: totalCommissions,
       total_deductions: totalDeductions,
