@@ -432,8 +432,27 @@ const GuestServiceBooking = ({ onBack }) => {
     }
 
     // Use barber's scheduled hours instead of branch hours
-    const [startHour, startMin] = barberSchedule.start.split(":").map(Number);
-    const [endHour, endMin] = barberSchedule.end.split(":").map(Number);
+    let [startHour, startMin] = barberSchedule.start.split(":").map(Number);
+    let [endHour, endMin] = barberSchedule.end.split(":").map(Number);
+
+    // Apply Branch Operating Hours Constraints
+    // Ensure that even if a barber sets availability outside branch hours, 
+    // the branch's operating hours take precedence.
+    if (selectedBranch) {
+      const branchStart = selectedBranch.booking_start_hour ?? 10;
+      const branchEnd = selectedBranch.booking_end_hour ?? 20;
+
+      // New start hour is the later of the two
+      startHour = Math.max(startHour, branchStart);
+
+      // New end hour is the earlier of the two
+      endHour = Math.min(endHour, branchEnd);
+
+      // If the resulting range is invalid (e.g., barber starts after branch closes), return empty
+      if (startHour >= endHour) {
+        return [];
+      }
+    }
 
     // Get booked times for this barber on this date
     const bookedTimes = existingBookings
@@ -611,6 +630,16 @@ const GuestServiceBooking = ({ onBack }) => {
         discount_amount: selectedVoucher?.value || undefined,
         customer_email: customerEmail,
         customer_name: customerName,
+        // Calculate booking fee based on type
+        booking_fee: (() => {
+          if (!selectedBranch?.enable_booking_fee) return 0;
+
+          const feeAmount = selectedBranch.booking_fee_amount || 0;
+          if (selectedBranch.booking_fee_type === 'percent') {
+            return (selectedService.price * feeAmount) / 100;
+          }
+          return feeAmount;
+        })(),
       };
 
       console.log("Creating booking with data:", bookingData);
@@ -738,7 +767,20 @@ const GuestServiceBooking = ({ onBack }) => {
       // Calculate final amount after voucher discount
       const originalAmount = selectedService?.price || 0;
       const discountAmount = selectedVoucher?.value || 0;
-      const finalAmount = Math.max(0, originalAmount - discountAmount);
+
+      // Calculate booking fee dynamically
+      const bookingFee = (() => {
+        if (!selectedBranch?.enable_booking_fee) return 0;
+
+        const feeAmount = selectedBranch.booking_fee_amount || 0;
+        if (selectedBranch.booking_fee_type === 'percent') {
+          return (originalAmount * feeAmount) / 100;
+        }
+        return feeAmount;
+      })();
+
+      const subtotalAfterDiscount = Math.max(0, originalAmount - discountAmount);
+      const finalAmount = subtotalAfterDiscount + bookingFee;
 
       if (finalAmount === 0) {
         // If amount is 0 after voucher, no payment needed
@@ -1457,8 +1499,8 @@ const GuestServiceBooking = ({ onBack }) => {
           onClick={() => setStep(5)}
           disabled={!!dateError || !selectedTime}
           className={`w-full py-3 font-bold rounded-lg transition-all duration-200 ${!dateError && selectedTime
-              ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)]"
-              : "bg-[#1A1A1A] text-gray-500 border border-[#2A2A2A] cursor-not-allowed"
+            ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)]"
+            : "bg-[#1A1A1A] text-gray-500 border border-[#2A2A2A] cursor-not-allowed"
             }`}
         >
           Continue to Your Information
@@ -2033,6 +2075,61 @@ const GuestServiceBooking = ({ onBack }) => {
             )}
           </div>
 
+          {/* Payment Summary */}
+          <div className="border-t pt-3 border-[#2A2A2A]">
+            <h4 className="text-sm font-bold mb-3 flex items-center text-white">
+              <Banknote className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+              Payment Summary
+            </h4>
+            <div className="space-y-2 bg-[#0F0F0F] p-3 rounded-lg border border-[#2A2A2A]">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Service Price</span>
+                <span className="text-white">₱{selectedService?.price.toLocaleString()}</span>
+              </div>
+              {selectedVoucher && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Voucher Discount</span>
+                  <span className="text-green-400">-₱{parseFloat(selectedVoucher.value || 0).toLocaleString()}</span>
+                </div>
+              )}
+              {selectedBranch?.enable_booking_fee && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">
+                    Booking Fee {selectedBranch.booking_fee_type === 'percent' ? `(${selectedBranch.booking_fee_amount}%)` : ''}
+                  </span>
+                  <span className="text-white">
+                    ₱{(() => {
+                      if (selectedBranch.booking_fee_type === 'percent') {
+                        return ((selectedService?.price || 0) * (selectedBranch.booking_fee_amount || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      }
+                      return (selectedBranch.booking_fee_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    })()}
+                  </span>
+                </div>
+              )}
+              <div className="border-t border-[#2A2A2A] pt-2 mt-1 flex justify-between items-center">
+                <span className="font-bold text-white">Total Amount</span>
+                <span className="font-bold text-lg text-[var(--color-primary)]">
+                  ₱{(() => {
+                    const price = selectedService?.price || 0;
+                    const discount = selectedVoucher?.value || 0;
+                    let fee = 0;
+
+                    if (selectedBranch?.enable_booking_fee) {
+                      if (selectedBranch.booking_fee_type === 'percent') {
+                        fee = (price * (selectedBranch.booking_fee_amount || 0)) / 100;
+                      } else {
+                        fee = selectedBranch.booking_fee_amount || 0;
+                      }
+                    }
+
+                    return (Math.max(0, price - discount) + fee).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  })()}
+                </span>
+              </div>
+            </div>
+          </div>
+
           {/* Book Now Button */}
           <div className="border-t pt-3 border-[#2A2A2A]">
             <button
@@ -2218,17 +2315,42 @@ const GuestServiceBooking = ({ onBack }) => {
                 </span>
               </div>
             )}
+            {selectedBranch?.enable_booking_fee && (
+              <div className="flex justify-between">
+                <span className="font-light text-gray-400 text-sm">
+                  Booking Fee: {selectedBranch.booking_fee_type === 'percent' ? `(${selectedBranch.booking_fee_amount}%)` : ''}
+                </span>
+                <span className="font-normal text-white text-sm">
+                  ₱{(() => {
+                    if (selectedBranch.booking_fee_type === 'percent') {
+                      return ((selectedService?.price || 0) * (selectedBranch.booking_fee_amount || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    }
+                    return (selectedBranch.booking_fee_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  })()}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between border-t pt-3 border-orange-500/30">
               <span className="font-light text-white">Total:</span>
               <span className="font-normal text-lg text-[var(--color-primary)]">
                 ₱
                 {createdBooking?.total_amount
                   ? parseFloat(createdBooking.total_amount).toLocaleString()
-                  : Math.max(
-                    0,
-                    (selectedService?.price || 0) -
-                    (selectedVoucher?.value || 0)
-                  ).toLocaleString()}
+                  : (() => {
+                    const price = selectedService?.price || 0;
+                    const discount = selectedVoucher?.value || 0;
+                    let fee = 0;
+
+                    if (selectedBranch?.enable_booking_fee) {
+                      if (selectedBranch.booking_fee_type === 'percent') {
+                        fee = (price * (selectedBranch.booking_fee_amount || 0)) / 100;
+                      } else {
+                        fee = selectedBranch.booking_fee_amount || 0;
+                      }
+                    }
+
+                    return (Math.max(0, price - discount) + fee).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  })()}
               </span>
             </div>
           </div>

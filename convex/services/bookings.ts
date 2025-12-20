@@ -461,6 +461,7 @@ export const createBooking = mutation({
     customer_name: v.optional(v.string()), // For walk-in customers - actual name entered
     customer_phone: v.optional(v.string()),
     customer_email: v.optional(v.string()),
+    booking_fee: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     // Get service details for price
@@ -540,7 +541,7 @@ export const createBooking = mutation({
       } else {
         // Default to weekly schedule
         const dayOfWeek = bookingDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-        const daySchedule = barber.schedule?.[dayOfWeek];
+        const daySchedule = barber.schedule?.[dayOfWeek as keyof typeof barber.schedule];
 
         // Check if barber is available on this day
         if (!daySchedule || !daySchedule.available) {
@@ -582,6 +583,7 @@ export const createBooking = mutation({
       payment_status: "unpaid",
       price: originalPrice,
       voucher_id: args.voucher_id,
+      booking_fee: args.booking_fee,
       discount_amount: discountAmount > 0 ? discountAmount : undefined,
       final_price: discountAmount > 0 ? finalPrice : undefined,
       notes: args.notes || undefined,
@@ -1013,6 +1015,113 @@ export const deleteBooking = mutation({
   },
 });
 
+// Get bookings by date range
+export const getBookingsByDateRange = query({
+  args: {
+    startDate: v.string(), // YYYY-MM-DD
+    endDate: v.string(), // YYYY-MM-DD
+    branch_id: v.optional(v.id("branches"))
+  },
+  handler: async (ctx, args) => {
+    let query = ctx.db
+      .query("bookings")
+      .withIndex("by_date", q => q.gte("date", args.startDate).lte("date", args.endDate));
+
+    if (args.branch_id) {
+      query = query.filter(q => q.eq(q.field("branch_id"), args.branch_id));
+    }
+
+    const bookings = await query.collect();
+
+    // Get associated data for each booking with error handling
+    const bookingsWithData = await Promise.all(
+      bookings.map(async (booking) => {
+        try {
+          const [customer, service, barber, branch] = await Promise.all([
+            booking.customer ? ctx.db.get(booking.customer) : null,
+            booking.service ? ctx.db.get(booking.service) : null,
+            booking.barber ? ctx.db.get(booking.barber) : null,
+            booking.branch_id ? ctx.db.get(booking.branch_id) : null,
+          ]);
+
+          return {
+            _id: booking._id,
+            booking_code: booking.booking_code,
+            branch_id: booking.branch_id,
+            customer: booking.customer,
+            service: booking.service,
+            barber: booking.barber,
+            date: booking.date,
+            time: booking.time,
+            status: booking.status,
+            payment_status: booking.payment_status,
+            price: booking.price,
+            final_price: booking.final_price,
+            discount_amount: booking.discount_amount,
+            voucher_id: booking.voucher_id,
+            notes: booking.notes,
+            createdAt: booking.createdAt || booking._creationTime,
+            updatedAt: booking.updatedAt || booking._creationTime,
+            customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
+            customer_email: booking.customer_email || customer?.email || '',
+            customer_phone: booking.customer_phone || customer?.mobile_number || '',
+            service_name: service?.name || 'Unknown Service',
+            service_price: service?.price || 0,
+            service_duration: service?.duration_minutes || 0,
+            barber_name: barber?.full_name || 'Not assigned',
+            branch_name: branch?.name || 'Unknown Branch',
+            formattedDate: new Date(booking.date).toLocaleDateString('en-US', {
+              weekday: 'short',
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            }),
+            formattedTime: formatTime(booking.time),
+          };
+        } catch (error) {
+          // Return minimal booking data if lookup fails
+          return {
+            _id: booking._id,
+            booking_code: booking.booking_code,
+            branch_id: booking.branch_id,
+            customer: booking.customer,
+            service: booking.service,
+            barber: booking.barber,
+            date: booking.date,
+            time: booking.time,
+            status: booking.status,
+            payment_status: booking.payment_status,
+            price: booking.price,
+            final_price: booking.final_price,
+            discount_amount: booking.discount_amount,
+            voucher_id: booking.voucher_id,
+            notes: booking.notes,
+            createdAt: booking.createdAt || booking._creationTime,
+            updatedAt: booking.updatedAt || booking._creationTime,
+            customer_name: booking.customer_name || 'Unknown',
+            customer_email: booking.customer_email || '',
+            customer_phone: booking.customer_phone || '',
+            service_name: 'Unknown Service',
+            service_price: 0,
+            service_duration: 0,
+            barber_name: 'Not assigned',
+            branch_name: 'Unknown Branch',
+            formattedDate: new Date(booking.date).toLocaleDateString('en-US', {
+              weekday: 'short',
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            }),
+            formattedTime: formatTime(booking.time),
+          };
+        }
+      })
+    );
+
+    return bookingsWithData;
+  },
+});
+
 // Get bookings by status
 export const getBookingsByStatus = query({
   args: {
@@ -1435,7 +1544,7 @@ export const createWalkInBooking = mutation({
       } else {
         // Default to weekly schedule
         const dayOfWeek = bookingDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-        const daySchedule = barber.schedule?.[dayOfWeek];
+        const daySchedule = barber.schedule?.[dayOfWeek as keyof typeof barber.schedule];
 
         // Check if barber is available on this day
         if (!daySchedule || !daySchedule.available) {

@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   Banknote,
   Star,
+  Receipt,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from "convex/react";
@@ -417,6 +418,25 @@ const ServiceBooking = ({ onBack }) => {
       [endHour, endMin] = barberSchedule.end.split(':').map(Number);
     }
 
+    // Apply Branch Operating Hours Constraints
+    // Ensure that even if a barber sets availability outside branch hours, 
+    // the branch's operating hours take precedence.
+    if (selectedBranch) {
+      const branchStart = selectedBranch.booking_start_hour ?? 10;
+      const branchEnd = selectedBranch.booking_end_hour ?? 20;
+
+      // New start hour is the later of the two
+      startHour = Math.max(startHour, branchStart);
+
+      // New end hour is the earlier of the two
+      endHour = Math.min(endHour, branchEnd);
+
+      // If the resulting range is invalid (e.g., barber starts after branch closes), return empty
+      if (startHour >= endHour) {
+        return [];
+      }
+    }
+
     // Get booked times for this barber on this date
     const bookedTimes = existingBookings
       ? existingBookings
@@ -557,6 +577,16 @@ const ServiceBooking = ({ onBack }) => {
         discount_amount: selectedVoucher?.value || undefined,
         customer_email: user.email,
         customer_name: user.full_name || user.nickname || user.username,
+        // Calculate booking fee for initial creation
+        booking_fee: (() => {
+          if (!selectedBranch?.enable_booking_fee) return 0;
+
+          const feeAmount = selectedBranch.booking_fee_amount || 0;
+          if (selectedBranch.booking_fee_type === 'percent') {
+            return (selectedService.price * feeAmount) / 100;
+          }
+          return feeAmount;
+        })(),
       };
 
       console.log("Creating booking with data:", bookingData);
@@ -684,7 +714,20 @@ const ServiceBooking = ({ onBack }) => {
       // Calculate final amount after voucher discount
       const originalAmount = selectedService?.price || 0;
       const discountAmount = selectedVoucher?.value || 0;
-      const finalAmount = Math.max(0, originalAmount - discountAmount);
+
+      // Calculate booking fee dynamically
+      const bookingFee = (() => {
+        if (!selectedBranch?.enable_booking_fee) return 0;
+
+        const feeAmount = selectedBranch.booking_fee_amount || 0;
+        if (selectedBranch.booking_fee_type === 'percent') {
+          return (originalAmount * feeAmount) / 100;
+        }
+        return feeAmount;
+      })();
+
+      const subtotalAfterDiscount = Math.max(0, originalAmount - discountAmount);
+      const finalAmount = subtotalAfterDiscount + bookingFee;
 
       if (finalAmount === 0) {
         // If amount is 0 after voucher, no payment needed
@@ -1628,6 +1671,61 @@ const ServiceBooking = ({ onBack }) => {
           )}
         </div>
 
+        {/* Payment Summary */}
+        <div className="p-4 border-t border-[#2A2A2A] bg-[#0F0F0F]">
+          <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+            <Receipt className="w-4 h-4" style={{ color: branding?.primary_color || "#F68B24" }} />
+            Payment Summary
+          </h4>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-400">Service Price</span>
+              <span className="text-white">₱{selectedService?.price.toLocaleString()}</span>
+            </div>
+            {selectedVoucher && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Voucher Discount</span>
+                <span className="text-green-400">-₱{parseFloat(selectedVoucher.value || 0).toLocaleString()}</span>
+              </div>
+            )}
+            {selectedBranch?.enable_booking_fee && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">
+                  Booking Fee {selectedBranch.booking_fee_type === 'percent' ? `(${selectedBranch.booking_fee_amount}%)` : ''}
+                </span>
+                <span className="text-white">
+                  ₱{(() => {
+                    if (selectedBranch.booking_fee_type === 'percent') {
+                      return ((selectedService?.price || 0) * (selectedBranch.booking_fee_amount || 0) / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    }
+                    return (selectedBranch.booking_fee_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  })()}
+                </span>
+              </div>
+            )}
+            <div className="border-t border-[#2A2A2A] pt-2 mt-2 flex justify-between items-center">
+              <span className="font-bold text-white">Total Amount</span>
+              <span className="font-bold text-lg" style={{ color: branding?.primary_color || "#F68B24" }}>
+                ₱{(() => {
+                  const price = selectedService?.price || 0;
+                  const discount = selectedVoucher?.value || 0;
+                  let fee = 0;
+
+                  if (selectedBranch?.enable_booking_fee) {
+                    if (selectedBranch.booking_fee_type === 'percent') {
+                      fee = (price * (selectedBranch.booking_fee_amount || 0)) / 100;
+                    } else {
+                      fee = selectedBranch.booking_fee_amount || 0;
+                    }
+                  }
+
+                  return (Math.max(0, price - discount) + fee).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                })()}
+              </span>
+            </div>
+          </div>
+        </div>
+
         {/* Action Buttons */}
         <div className="p-4 border-t border-[#2A2A2A] space-y-3">
           <button
@@ -1795,6 +1893,16 @@ const ServiceBooking = ({ onBack }) => {
                 </span>
               </div>
             )}
+            {selectedBranch?.enable_booking_fee && (
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-300">
+                  Booking Fee:
+                </span>
+                <span className="font-bold text-white">
+                  ₱{(selectedBranch.booking_fee_amount || 0).toLocaleString()}
+                </span>
+              </div>
+            )}
             <div
               className="flex justify-between border-t pt-3"
               style={{ borderColor: hexToRgba(branding?.primary_color || "#F68B24", 0.3) }}
@@ -1807,10 +1915,9 @@ const ServiceBooking = ({ onBack }) => {
                 ₱
                 {createdBooking?.total_amount
                   ? parseFloat(createdBooking.total_amount).toLocaleString()
-                  : Math.max(
-                    0,
-                    (selectedService?.price || 0) -
-                    (selectedVoucher?.value || 0)
+                  : (
+                    Math.max(0, (selectedService?.price || 0) - (selectedVoucher?.value || 0)) +
+                    (selectedBranch?.enable_booking_fee ? (selectedBranch?.booking_fee_amount || 0) : 0)
                   ).toLocaleString()}
               </span>
             </div>
@@ -1849,7 +1956,7 @@ const ServiceBooking = ({ onBack }) => {
             View My Bookings
           </button>
         </div>
-      </div>
+      </div >
     );
   };
 

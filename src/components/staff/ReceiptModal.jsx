@@ -2,12 +2,12 @@ import React from 'react'
 import Modal from '../common/Modal'
 import { Printer, Download, CheckCircle } from 'lucide-react'
 
-const ReceiptModal = ({ 
-  isOpen, 
-  onClose, 
+const ReceiptModal = ({
+  isOpen,
+  onClose,
   transactionData,
   branchInfo,
-  staffInfo 
+  staffInfo
 }) => {
   if (!transactionData) return null
 
@@ -52,11 +52,11 @@ const ReceiptModal = ({
 
     const servicesHtml = Array.isArray(transactionData.services)
       ? transactionData.services.map((service) => {
-          const qty = Number(service?.quantity || 1)
-          const price = Number(service?.price || 0)
-          const total = qty * price
-          const name = escapeHtml(service?.service_name || service?.name || 'Service')
-          return `
+        const qty = Number(service?.quantity || 1)
+        const price = Number(service?.price || 0)
+        const total = qty * price
+        const name = escapeHtml(service?.service_name || service?.name || 'Service')
+        return `
             <tr>
               <td class="bold" style="font-size: 14px;">${name}</td>
               <td class="right bold" style="font-size: 14px;">${formatCurrency(total)}</td>
@@ -66,16 +66,16 @@ const ReceiptModal = ({
               <td></td>
             </tr>
           `
-        }).join('')
+      }).join('')
       : ''
 
     const productsHtml = Array.isArray(transactionData.products)
       ? transactionData.products.map((product) => {
-          const qty = Number(product?.quantity || 1)
-          const price = Number(product?.price || 0)
-          const total = qty * price
-          const name = escapeHtml(product?.product_name || product?.name || 'Product')
-          return `
+        const qty = Number(product?.quantity || 1)
+        const price = Number(product?.price || 0)
+        const total = qty * price
+        const name = escapeHtml(product?.product_name || product?.name || 'Product')
+        return `
             <tr>
               <td class="bold" style="font-size: 14px;">${name}</td>
               <td class="right bold" style="font-size: 14px;">${formatCurrency(total)}</td>
@@ -85,12 +85,14 @@ const ReceiptModal = ({
               <td></td>
             </tr>
           `
-        }).join('')
+      }).join('')
       : ''
 
     const subtotal = Number(transactionData.subtotal || 0)
     const discount = Number(transactionData.discount_amount || 0)
     const tax = Number(transactionData.tax_amount || 0)
+    const bookingFee = Number(transactionData.booking_fee || 0)
+    const lateFee = Number(transactionData.late_fee || 0)
     const total = Number(transactionData.total_amount || 0)
     const cashReceived = Number(transactionData.cash_received || 0)
     const change = Number(transactionData.change_amount || 0)
@@ -172,6 +174,8 @@ const ReceiptModal = ({
   <table style="font-size: 14px;">
     <tr><td class="bold">Subtotal:</td><td class="right bold">${formatCurrency(subtotal)}</td></tr>
     ${discount > 0 ? `<tr><td class="bold">Discount:</td><td class="right bold">-${formatCurrency(discount)}</td></tr>` : ''}
+    ${bookingFee > 0 ? `<tr><td class="bold">Booking Fee:</td><td class="right bold">+${formatCurrency(bookingFee)}</td></tr>` : ''}
+    ${lateFee > 0 ? `<tr><td class="bold">Late Fee:</td><td class="right bold">+${formatCurrency(lateFee)}</td></tr>` : ''}
     ${tax > 0 ? `<tr><td class="bold">Tax:</td><td class="right bold">${formatCurrency(tax)}</td></tr>` : ''}
   </table>
   <div class="line2"></div>
@@ -198,7 +202,7 @@ const ReceiptModal = ({
   const handlePrint = () => {
     const html = generateReceiptHTML()
     const printWindow = window.open('', '_blank')
-    
+
     if (printWindow) {
       printWindow.document.write(html)
       printWindow.document.close()
@@ -236,7 +240,7 @@ const ReceiptModal = ({
     }
     const separator = '='.repeat(width)
     const dashedLine = '-'.repeat(width)
-    
+
     const lines = []
     lines.push(center(branchInfo?.name))
     lines.push(center('SYSTEM'))
@@ -246,7 +250,7 @@ const ReceiptModal = ({
     lines.push(separator)
     lines.push(center('OFFICIAL RECEIPT'))
     lines.push('')
-    
+
     const receiptNumber = transactionData.receipt_number || transactionData.transaction_id || 'N/A'
     const timestamp = transactionData.timestamp || Date.now()
     lines.push(leftRight('Receipt No:', receiptNumber.substring(0, 15)))
@@ -257,7 +261,7 @@ const ReceiptModal = ({
     lines.push(separator)
     lines.push(leftRight('Item', 'Amount'))
     lines.push(dashedLine)
-    
+
     if (transactionData.services?.length) {
       transactionData.services.forEach(service => {
         const name = (service.service_name || service.name || 'Service').substring(0, 20)
@@ -267,7 +271,7 @@ const ReceiptModal = ({
         lines.push(leftRight(`  ${qty}x ${formatCurrency(price)}`, formatCurrency(qty * price)))
       })
     }
-    
+
     if (transactionData.products?.length) {
       transactionData.products.forEach(product => {
         const name = (product.product_name || product.name || 'Product').substring(0, 20)
@@ -277,15 +281,17 @@ const ReceiptModal = ({
         lines.push(leftRight(`  ${qty}x ${formatCurrency(price)}`, formatCurrency(qty * price)))
       })
     }
-    
+
     lines.push(dashedLine)
     lines.push(leftRight('Subtotal:', formatCurrency(transactionData.subtotal || 0)))
     if (transactionData.discount_amount > 0) lines.push(leftRight('Discount:', `-${formatCurrency(transactionData.discount_amount)}`))
+    if (transactionData.booking_fee > 0) lines.push(leftRight('Booking Fee:', `+${formatCurrency(transactionData.booking_fee)}`))
+    if (transactionData.late_fee > 0) lines.push(leftRight('Late Fee:', `+${formatCurrency(transactionData.late_fee)}`))
     if (transactionData.tax_amount > 0) lines.push(leftRight('Tax:', formatCurrency(transactionData.tax_amount)))
     lines.push(separator)
     lines.push(leftRight('TOTAL:', formatCurrency(transactionData.total_amount || 0)))
     lines.push(separator)
-    
+
     const paymentMethod = (transactionData.payment_method || 'cash').replace(/_/g, ' ').toUpperCase()
     lines.push('')
     lines.push(leftRight('Payment:', paymentMethod))
@@ -293,7 +299,7 @@ const ReceiptModal = ({
       if (transactionData.cash_received) lines.push(leftRight('Cash Received:', formatCurrency(transactionData.cash_received)))
       if (transactionData.change_amount) lines.push(leftRight('Change:', formatCurrency(transactionData.change_amount)))
     }
-    
+
     lines.push('')
     lines.push(separator)
     lines.push('')
@@ -301,7 +307,7 @@ const ReceiptModal = ({
     lines.push(center('business!'))
     lines.push(center('Please come again!'))
     lines.push('')
-    
+
     return lines.join('\n')
   }
 
@@ -328,7 +334,7 @@ const ReceiptModal = ({
             <Printer className="w-5 h-5" />
             <span>Print Receipt</span>
           </button>
-          
+
           <button
             onClick={handleDownload}
             className="py-3 border-2 border-[#555555] text-gray-300 font-semibold rounded-xl hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 transition-all flex items-center justify-center space-x-2"

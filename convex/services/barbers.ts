@@ -101,7 +101,7 @@ export const getBarberById = query({
     const barber = await ctx.db.get(args.id);
     if (!barber) return null;
 
-    const user = await ctx.db.get(barber.user);
+    const user = barber.user ? await ctx.db.get(barber.user) : null;
     return {
       ...barber,
       name: barber.full_name,
@@ -681,17 +681,17 @@ export const getBarberStatsByPeriod = query({
 
     switch (args.period) {
       case "daily":
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
         break;
       case "weekly":
-        const dayOfWeek = now.getDay();
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
+        const dayOfWeek = now.getUTCDay();
+        startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - dayOfWeek));
         break;
       case "monthly":
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
         break;
       case "yearly":
-        startDate = new Date(now.getFullYear(), 0, 1);
+        startDate = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
         break;
       case "all_time":
       default:
@@ -703,7 +703,7 @@ export const getBarberStatsByPeriod = query({
 
     // Filter bookings by period
     const filteredBookings = bookings.filter((booking) => {
-      const bookingDate = new Date(booking.date).getTime();
+      const bookingDate = new Date(booking.date + "T00:00:00Z").getTime();
       return bookingDate >= startTimestamp;
     });
 
@@ -808,7 +808,7 @@ export const getBarberStatsByPeriod = query({
       serviceCommission += bookingCommission;
 
       // Track daily commission
-      const dateKey = booking.date || new Date(booking.updatedAt).toISOString().split("T")[0];
+      const dateKey = booking.date; // already YYYY-MM-DD
       const currentDayComm = dailyServiceCommission.get(dateKey) || 0;
       dailyServiceCommission.set(dateKey, currentDayComm + bookingCommission);
     }
@@ -937,10 +937,10 @@ export const getTopBarbers = query({
 
     switch (period) {
       case "monthly":
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
         break;
       case "yearly":
-        startDate = new Date(now.getFullYear(), 0, 1);
+        startDate = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
         break;
       case "all_time":
       default:
@@ -960,7 +960,7 @@ export const getTopBarbers = query({
           .collect();
 
         const filteredBookings = bookings.filter((b) => {
-          const bookingDate = new Date(b.date).getTime();
+          const bookingDate = new Date(b.date + "T00:00:00Z").getTime();
           return bookingDate >= startTimestamp;
         });
 

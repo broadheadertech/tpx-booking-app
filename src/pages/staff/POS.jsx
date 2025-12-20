@@ -58,6 +58,8 @@ const POS = () => {
     discount_amount: 0,
     voucher_applied: null,
     tax_amount: 0,
+    booking_fee: 0,
+    late_fee: 0,
     total_amount: 0
   })
   const [activeModal, setActiveModal] = useState(null)
@@ -72,15 +74,15 @@ const POS = () => {
   const [newCustomerCredentials, setNewCustomerCredentials] = useState(null) // Store new customer credentials
   const [completedTransaction, setCompletedTransaction] = useState(null) // Store completed transaction for receipt
   const [alertModal, setAlertModal] = useState({ show: false, title: '', message: '', type: 'warning' }) // Alert modal state
-  
+
   // Mobile-specific states
   const [showMobileCart, setShowMobileCart] = useState(false)
   const [expandedSection, setExpandedSection] = useState('catalog') // 'barber', 'customer', 'catalog'
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024)
-  
+
   const itemsPerPage = 9 // For card view
   const tableItemsPerPage = 15 // For table view
-  
+
   // Detect mobile viewport
   useEffect(() => {
     const handleResize = () => {
@@ -96,15 +98,15 @@ const POS = () => {
     : user?.branch_id
       ? useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id })
       : []
-      
+
   const products = useQuery(api.services.products.getAllProducts) // Products remain global
-  
+
   const barbers = user?.role === 'super_admin'
     ? useQuery(api.services.barbers.getAllBarbers)
     : user?.branch_id
       ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
       : []
-      
+
   const customers = user?.role === 'super_admin'
     ? useQuery(api.services.auth.getAllUsers)
     : user?.branch_id
@@ -184,13 +186,15 @@ const POS = () => {
           services: [{
             service_id: service._id,
             service_name: service.name,
-            price: booking.final_price || service.price, // Use discounted price if available
+            price: booking.price || service.price, // Use original price as discount is applied separately
             quantity: 1
           }],
-          subtotal: booking.final_price || service.price,
+          subtotal: booking.price || service.price,
           discount_amount: booking.discount_amount || 0, // Track discount from booking
           voucher_applied: booking.voucher_id || null, // Track voucher if used
-          total_amount: booking.final_price || service.price // Use final price
+          booking_fee: booking.booking_fee || 0, // Track booking fee
+          late_fee: 0, // Initialize late fee as 0
+          total_amount: (booking.price || service.price) - (booking.discount_amount || 0) + (booking.booking_fee || 0) // Calculate initial total
         }))
 
         // Find and set the barber
@@ -208,6 +212,45 @@ const POS = () => {
       }
     }
   }, [services, customers, barbers])
+
+  // Apply default booking fee for new transactions (walk-ins)
+  useEffect(() => {
+    // Only apply if no booking is attached (walk-in/new transaction)
+    if (!currentBooking && currentBranch) {
+      if (currentBranch.enable_booking_fee) {
+        const hasServices = currentTransaction.services.length > 0
+
+        let calculatedFee = 0
+        if (currentBranch.booking_fee_type === 'percent') {
+          // This is handled in the calculation effect, but we initialize here
+          // We can leave it as 0 here and let the calc effect update it
+          // OR we can calculate it here. Better to let calc effect handle dynamic updates.
+          // However, if we don't set it initially, it might flicker.
+          // Let's set the flag or base amount.
+          // For simplicity, if percent, we rely on main calc.
+        } else {
+          calculatedFee = currentBranch.booking_fee_amount || 0
+        }
+
+        const currentFee = currentTransaction.booking_fee
+
+        // If services exist and fee isn't set correct (for fixed), apply it
+        if (hasServices && currentBranch.booking_fee_type !== 'percent' && currentFee !== calculatedFee) {
+          setCurrentTransaction(prev => ({ ...prev, booking_fee: calculatedFee }))
+        }
+        // If no services, ensure fee is 0
+        else if (!hasServices && currentFee !== 0) {
+          setCurrentTransaction(prev => ({ ...prev, booking_fee: 0 }))
+        }
+      } else {
+        // If booking fee is disabled in branch settings, ensure it's 0 for walk-ins
+        if (currentTransaction.booking_fee !== 0) {
+          setCurrentTransaction(prev => ({ ...prev, booking_fee: 0 }))
+        }
+      }
+    }
+  }, [currentBranch, currentBooking, currentTransaction.services.length, currentTransaction.booking_fee])
+
   const customerUsers = customers?.filter(customer => customer.role === 'customer') || []
 
   // Handle canceling booking attachment
@@ -239,7 +282,12 @@ const POS = () => {
       discount_amount: 0,
       voucher_applied: null,
       tax_amount: 0,
-      total_amount: 0
+      booking_fee: 0,
+      late_fee: 0,
+      total_amount: 0,
+      // Reset fee metadata
+      late_fee_minutes: 0,
+      late_fee_hours: 0
     }))
 
     console.log('Booking attachment canceled - converted to regular POS transaction')
@@ -310,15 +358,35 @@ const POS = () => {
     const productsTotal = currentTransaction.products.reduce((sum, item) => sum + (item.price * item.quantity), 0)
     const subtotal = servicesTotal + productsTotal
     const taxAmount = 0 // No tax
-    const totalAmount = subtotal - currentTransaction.discount_amount
 
-    setCurrentTransaction(prev => ({
-      ...prev,
-      subtotal,
-      tax_amount: taxAmount,
-      total_amount: totalAmount
-    }))
-  }, [currentTransaction.services, currentTransaction.products, currentTransaction.discount_amount])
+    // Calculate booking fee dynamically if type is percentage
+    let bookingFee = currentTransaction.booking_fee || 0
+
+    // Only recalculate for walk-ins (no booking attached) or if explicitly needed
+    if (!currentBooking && currentBranch && currentBranch.enable_booking_fee && currentBranch.booking_fee_type === 'percent') {
+      // Percentage of subtotal
+      bookingFee = (subtotal * (currentBranch.booking_fee_amount || 0)) / 100
+    }
+
+    const lateFee = currentTransaction.late_fee || 0
+    // Total = Subtotal - Discount + Booking Fee + Late Fee
+    const totalAmount = Math.max(0, subtotal - currentTransaction.discount_amount + bookingFee + lateFee)
+
+    // Only update if values actually changed to prevent infinite loops
+    if (
+      subtotal !== currentTransaction.subtotal ||
+      totalAmount !== currentTransaction.total_amount ||
+      (currentBranch?.booking_fee_type === 'percent' && bookingFee !== currentTransaction.booking_fee)
+    ) {
+      setCurrentTransaction(prev => ({
+        ...prev,
+        subtotal,
+        tax_amount: taxAmount,
+        booking_fee: bookingFee,
+        total_amount: totalAmount
+      }))
+    }
+  }, [currentTransaction.services, currentTransaction.products, currentTransaction.discount_amount, currentTransaction.booking_fee, currentTransaction.late_fee, currentBranch, currentBooking])
 
   // Add service to transaction
   const addService = (service) => {
@@ -428,6 +496,8 @@ const POS = () => {
       discount_amount: 0,
       voucher_applied: null,
       tax_amount: 0,
+      booking_fee: 0,
+      late_fee: 0,
       total_amount: 0
     })
   }
@@ -516,13 +586,13 @@ const POS = () => {
       }
 
       let finalCustomerId = currentTransaction.customer?._id
-      
+
       // Auto-register walk-in customer ONLY if they have a valid email
       // Check if email exists and is not empty after trimming
-      const hasValidEmail = currentTransaction.customer_email && 
-                            currentTransaction.customer_email.trim() !== '' &&
-                            currentTransaction.customer_email.includes('@')
-      
+      const hasValidEmail = currentTransaction.customer_email &&
+        currentTransaction.customer_email.trim() !== '' &&
+        currentTransaction.customer_email.includes('@')
+
       if (!currentTransaction.customer && currentTransaction.customer_name && hasValidEmail) {
         try {
           const generatedPassword = generateSecurePassword()
@@ -534,9 +604,9 @@ const POS = () => {
             role: 'customer',
             branch_id: user.branch_id // Assign new customers to the current branch
           })
-          
+
           finalCustomerId = newUser._id
-          
+
           // Send welcome email to the new customer
           if (isEmailServiceConfigured()) {
             try {
@@ -546,7 +616,7 @@ const POS = () => {
                 password: generatedPassword,
                 loginUrl: `${window.location.origin}/auth/login`
               })
-              
+
               if (emailResult.success) {
                 console.log('Welcome email sent successfully to:', currentTransaction.customer_email.trim())
               } else {
@@ -558,7 +628,7 @@ const POS = () => {
           } else {
             console.warn('Email service not configured - welcome email not sent')
           }
-          
+
           // Show password to staff for customer
           setActiveModal('customerCreated')
           setNewCustomerCredentials({
@@ -574,7 +644,7 @@ const POS = () => {
       // Debug logging
       console.log('Current transaction voucher_applied:', currentTransaction.voucher_applied)
       console.log('Current transaction voucher_applied type:', typeof currentTransaction.voucher_applied)
-      
+
       // Handle voucher ID conversion if needed
       let voucherApplied = currentTransaction.voucher_applied
       if (typeof voucherApplied === 'string') {
@@ -584,7 +654,7 @@ const POS = () => {
           voucherApplied = getVoucherByCode._id
         }
       }
-      
+
       // Validate all required fields before creating transaction
       if (!resolvedBranchId) {
         throw new Error('Branch ID is required for transaction')
@@ -614,6 +684,8 @@ const POS = () => {
           ? undefined
           : voucherApplied || undefined,
         tax_amount: currentTransaction.tax_amount,
+        booking_fee: currentTransaction.booking_fee,
+        late_fee: currentTransaction.late_fee,
         total_amount: currentTransaction.total_amount,
         payment_method: paymentData.payment_method,
         payment_status: 'completed',
@@ -621,7 +693,7 @@ const POS = () => {
         cash_received: paymentData.cash_received,
         change_amount: paymentData.change_amount
       }
-      
+
       console.log('Final voucher_applied value:', voucherApplied)
       console.log('Final voucher_applied type:', typeof voucherApplied)
       console.log('Transaction data voucher_applied:', transactionData.voucher_applied)
@@ -642,12 +714,12 @@ const POS = () => {
         ...transactionData,
         skip_booking_creation: isBookingPayment || false
       })
-      
+
       const result = await createTransaction({
         ...transactionData,
         skip_booking_creation: isBookingPayment || false
       })
-      
+
       console.log('[POS] Transaction created successfully:', result)
 
       // Send email notification to the barber about the new POS transaction
@@ -655,7 +727,7 @@ const POS = () => {
       console.log('  → selectedBarber:', selectedBarber?.full_name);
       console.log('  → selectedBarber.email:', selectedBarber?.email);
       console.log('  → services count:', currentTransaction.services.length);
-      
+
       if (selectedBarber?.email && currentTransaction.services.length > 0) {
         try {
           // Get the current date in Philippine timezone
@@ -735,7 +807,7 @@ const POS = () => {
       const timestamp = Date.now()
       const transactionId = `TXN-${timestamp}`
       const receiptNumber = `RCP-${timestamp}`
-      
+
       // Store completed transaction data for receipt
       const completedTransactionData = {
         transaction_id: transactionId,
@@ -748,17 +820,19 @@ const POS = () => {
         subtotal: currentTransaction.subtotal,
         discount_amount: currentTransaction.discount_amount,
         tax_amount: currentTransaction.tax_amount,
+        booking_fee: currentTransaction.booking_fee,
+        late_fee: currentTransaction.late_fee,
         total_amount: currentTransaction.total_amount,
         payment_method: paymentData.payment_method,
         cash_received: paymentData.cash_received,
         change_amount: paymentData.change_amount
       }
-      
+
       setCompletedTransaction(completedTransactionData)
 
       // Show receipt modal instead of generic success
       setActiveModal('receipt')
-      
+
       // Clear transaction data after showing receipt
       clearTransaction()
       setSelectedBarber(null)
@@ -769,7 +843,7 @@ const POS = () => {
         data: error.data,
         stack: error.stack
       })
-      
+
       // Provide more specific error messages
       let errorMessage = 'Transaction failed. Please try again.'
       if (error.message) {
@@ -783,7 +857,7 @@ const POS = () => {
           errorMessage = `Transaction failed: ${error.message}`
         }
       }
-      
+
       alert(errorMessage)
       setActiveModal(null)
     }
@@ -804,7 +878,7 @@ const POS = () => {
   // Handle voucher scanning with discount application
   const handleVoucherScanned = (voucher) => {
     console.log('Voucher scanned:', voucher) // Debug log
-    
+
     // Ensure we have a valid voucher ID
     const voucherId = voucher._id || voucher.id
     if (!voucherId) {
@@ -816,7 +890,7 @@ const POS = () => {
       })
       return
     }
-    
+
     // Apply voucher discount
     setCurrentTransaction(prev => ({
       ...prev,
@@ -847,7 +921,7 @@ const POS = () => {
   // Mobile Layout
   if (isMobile) {
     const totalItems = currentTransaction.services.length + currentTransaction.products.length
-    
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] pb-32">
         {/* Mobile Header - Compact */}
@@ -857,7 +931,7 @@ const POS = () => {
               <Link to="/staff" className="w-9 h-9 bg-[#0A0A0A] rounded-lg flex items-center justify-center border border-[#1A1A1A]/50">
                 <ArrowLeft className="w-4 h-4 text-gray-400" />
               </Link>
-              
+
               <div className="flex items-center space-x-2 flex-1 min-w-0">
                 <div className="w-9 h-9 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg flex items-center justify-center flex-shrink-0">
                   <CreditCard className="w-5 h-5 text-white" />
@@ -910,7 +984,7 @@ const POS = () => {
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               )}
             </button>
-            
+
             {expandedSection === 'barber' && (
               <div className="px-4 pb-4 grid grid-cols-3 gap-2">
                 {activeBarbers.map((barber) => (
@@ -920,11 +994,10 @@ const POS = () => {
                       setSelectedBarber(barber)
                       setExpandedSection(null)
                     }}
-                    className={`p-3 rounded-lg border transition-all ${
-                      selectedBarber?._id === barber._id
-                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
-                        : 'border-[#555555] hover:border-[var(--color-primary)]/50'
-                    }`}
+                    className={`p-3 rounded-lg border transition-all ${selectedBarber?._id === barber._id
+                      ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
+                      : 'border-[#555555] hover:border-[var(--color-primary)]/50'
+                      }`}
                   >
                     <div className="w-12 h-12 rounded-full overflow-hidden mx-auto mb-2 border-2 border-[var(--color-primary)]/30">
                       <BarberAvatar barber={barber} className="w-12 h-12" />
@@ -974,7 +1047,7 @@ const POS = () => {
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               </div>
             </button>
-            
+
             {expandedSection === 'customer' && (
               <div className="px-4 pb-4 space-y-2">
                 <button
@@ -987,7 +1060,7 @@ const POS = () => {
                   <User className="w-4 h-4" />
                   <span className="text-sm font-medium">Select Existing</span>
                 </button>
-                
+
                 <button
                   onClick={() => {
                     setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '', customer_email: '' }))
@@ -1076,11 +1149,10 @@ const POS = () => {
                 setSelectedCategory(null)
                 setOpenCategory(null)
               }}
-              className={`flex-1 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-                activeTab === 'services'
-                  ? 'bg-[var(--color-primary)] text-white'
-                  : 'text-gray-400'
-              }`}
+              className={`flex-1 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${activeTab === 'services'
+                ? 'bg-[var(--color-primary)] text-white'
+                : 'text-gray-400'
+                }`}
             >
               <Scissors className="w-4 h-4 inline mr-2" />
               Services
@@ -1091,11 +1163,10 @@ const POS = () => {
                 setSelectedCategory(null)
                 setOpenCategory(null)
               }}
-              className={`flex-1 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-                activeTab === 'products'
-                  ? 'bg-[var(--color-primary)] text-white'
-                  : 'text-gray-400'
-              }`}
+              className={`flex-1 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${activeTab === 'products'
+                ? 'bg-[var(--color-primary)] text-white'
+                : 'text-gray-400'
+                }`}
             >
               <Package className="w-4 h-4 inline mr-2" />
               Products
@@ -1108,7 +1179,7 @@ const POS = () => {
               {['Haircut', 'Package', 'Other Services'].map((categoryName) => {
                 const categoryServices = servicesByCategory[categoryName] || []
                 const filteredCategoryServices = filterServicesByCategory(categoryServices)
-                
+
                 if (filteredCategoryServices.length === 0) return null
 
                 const isOpen = openCategory === categoryName
@@ -1204,7 +1275,7 @@ const POS = () => {
                   <X className="w-5 h-5 text-gray-400" />
                 </button>
               </div>
-              
+
               <div className="p-4 space-y-3">
                 {currentTransaction.services.map((service, index) => (
                   <div key={`service-${index}`} className="flex items-center justify-between p-3 bg-[#1A1A1A] rounded-lg">
@@ -1229,7 +1300,7 @@ const POS = () => {
                     </div>
                   </div>
                 ))}
-                
+
                 {currentTransaction.products.map((product, index) => (
                   <div key={`product-${index}`} className="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
                     <div className="flex-1 min-w-0">
@@ -1275,6 +1346,12 @@ const POS = () => {
               {currentTransaction.discount_amount > 0 && (
                 <p className="text-xs text-green-400">-₱{currentTransaction.discount_amount.toFixed(2)} discount</p>
               )}
+              {currentTransaction.booking_fee > 0 && (
+                <p className="text-xs text-orange-400">+₱{currentTransaction.booking_fee.toFixed(2)} booking fee</p>
+              )}
+              {currentTransaction.late_fee > 0 && (
+                <p className="text-xs text-red-400">+₱{currentTransaction.late_fee.toFixed(2)} late fee</p>
+              )}
             </div>
             <button
               onClick={() => {
@@ -1296,7 +1373,7 @@ const POS = () => {
               <Trash2 className="w-4 h-4" />
               <span>Clear</span>
             </button>
-            
+
             <button
               onClick={openPaymentModal}
               disabled={!selectedBarber || totalItems === 0}
@@ -1359,6 +1436,8 @@ const POS = () => {
               subtotal: currentTransaction.subtotal,
               discount_amount: currentTransaction.discount_amount,
               tax_amount: currentTransaction.tax_amount,
+              booking_fee: currentTransaction.booking_fee,
+              late_fee: currentTransaction.late_fee,
               total_amount: currentTransaction.total_amount,
               services: currentTransaction.services,
               products: currentTransaction.products
@@ -1419,7 +1498,7 @@ const POS = () => {
               <p className="text-gray-600 mb-6 text-sm">
                 Please provide the following credentials to the customer:
               </p>
-              
+
               <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
                 <div className="space-y-3">
                   <div>
@@ -1434,7 +1513,7 @@ const POS = () => {
                       </button>
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Password:</label>
                     <div className="flex items-center justify-between bg-white border border-gray-200 rounded-md px-3 py-2">
@@ -1449,7 +1528,7 @@ const POS = () => {
                   </div>
                 </div>
               </div>
-              
+
               <button
                 onClick={() => { setActiveModal(null); setNewCustomerCredentials(null); }}
                 className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium rounded-lg transition-all duration-200"
@@ -1579,11 +1658,10 @@ const POS = () => {
                   <button
                     key={barber._id}
                     onClick={() => setSelectedBarber(barber)}
-                    className={`p-3 rounded-xl border-2 transition-all duration-200 ${
-                      selectedBarber?._id === barber._id
-                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-                        : 'border-[#555555] hover:border-[var(--color-primary)]/50 text-gray-300 hover:text-[var(--color-primary)]'
-                    }`}
+                    className={`p-3 rounded-xl border-2 transition-all duration-200 ${selectedBarber?._id === barber._id
+                      ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                      : 'border-[#555555] hover:border-[var(--color-primary)]/50 text-gray-300 hover:text-[var(--color-primary)]'
+                      }`}
                   >
                     <div className="text-center">
                       <div className="w-10 h-10 rounded-full overflow-hidden mx-auto mb-2 border-2 border-[var(--color-primary)]/30">
@@ -1598,7 +1676,7 @@ const POS = () => {
 
             {/* Search and Tabs */}
             <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
-                            <div className="flex flex-col space-y-4 mb-6">
+              <div className="flex flex-col space-y-4 mb-6">
                 {/* Top row: Tabs and View Mode Toggle */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex space-x-1 bg-[#1A1A1A] rounded-xl p-1 mb-4 sm:mb-0">
@@ -1608,11 +1686,10 @@ const POS = () => {
                         setSelectedCategory(null)
                         setOpenCategory(null)
                       }}
-                      className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
-                        activeTab === 'services'
-                          ? 'bg-[var(--color-primary)] text-white shadow-lg'
-                          : 'text-gray-400 hover:text-[var(--color-primary)]'
-                      }`}
+                      className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${activeTab === 'services'
+                        ? 'bg-[var(--color-primary)] text-white shadow-lg'
+                        : 'text-gray-400 hover:text-[var(--color-primary)]'
+                        }`}
                     >
                       <Scissors className="w-4 h-4 inline mr-2" />
                       Services
@@ -1623,11 +1700,10 @@ const POS = () => {
                         setSelectedCategory(null)
                         setOpenCategory(null)
                       }}
-                      className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
-                        activeTab === 'products'
-                          ? 'bg-[var(--color-primary)] text-white shadow-lg'
-                          : 'text-gray-400 hover:text-[var(--color-primary)]'
-                      }`}
+                      className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${activeTab === 'products'
+                        ? 'bg-[var(--color-primary)] text-white shadow-lg'
+                        : 'text-gray-400 hover:text-[var(--color-primary)]'
+                        }`}
                     >
                       <Package className="w-4 h-4 inline mr-2" />
                       Products
@@ -1640,22 +1716,20 @@ const POS = () => {
                     <div className="flex space-x-1 bg-[#1A1A1A] rounded-lg p-1">
                       <button
                         onClick={() => setViewMode('card')}
-                        className={`p-2 rounded-md transition-all duration-200 ${
-                          viewMode === 'card'
-                            ? 'bg-[var(--color-primary)] text-white'
-                            : 'text-gray-400 hover:text-[var(--color-primary)]'
-                        }`}
+                        className={`p-2 rounded-md transition-all duration-200 ${viewMode === 'card'
+                          ? 'bg-[var(--color-primary)] text-white'
+                          : 'text-gray-400 hover:text-[var(--color-primary)]'
+                          }`}
                         title="Card View"
                       >
                         <Grid3X3 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setViewMode('table')}
-                        className={`p-2 rounded-md transition-all duration-200 ${
-                          viewMode === 'table'
-                            ? 'bg-[var(--color-primary)] text-white'
-                            : 'text-gray-400 hover:text-[var(--color-primary)]'
-                        }`}
+                        className={`p-2 rounded-md transition-all duration-200 ${viewMode === 'table'
+                          ? 'bg-[var(--color-primary)] text-white'
+                          : 'text-gray-400 hover:text-[var(--color-primary)]'
+                          }`}
                         title="Table View"
                       >
                         <List className="w-4 h-4" />
@@ -1690,7 +1764,7 @@ const POS = () => {
                   {['Haircut', 'Package', 'Other Services'].map((categoryName) => {
                     const categoryServices = servicesByCategory[categoryName] || []
                     const filteredCategoryServices = filterServicesByCategory(categoryServices)
-                    
+
                     if (filteredCategoryServices.length === 0) return null
 
                     const isOpen = openCategory === categoryName
@@ -1876,11 +1950,10 @@ const POS = () => {
                         <button
                           key={pageNum}
                           onClick={() => handlePageChange(pageNum)}
-                          className={`px-3 py-2 text-sm rounded-lg transition-colors ${
-                            currentPage === pageNum
-                              ? 'bg-[var(--color-primary)] text-white'
-                              : 'bg-[#1A1A1A] border border-[#555555] text-gray-400 hover:bg-[#333333] hover:text-white'
-                          }`}
+                          className={`px-3 py-2 text-sm rounded-lg transition-colors ${currentPage === pageNum
+                            ? 'bg-[var(--color-primary)] text-white'
+                            : 'bg-[#1A1A1A] border border-[#555555] text-gray-400 hover:bg-[#333333] hover:text-white'
+                            }`}
                         >
                           {pageNum}
                         </button>
@@ -1923,7 +1996,7 @@ const POS = () => {
                   </button>
                 </div>
               </div>
-              
+
               {currentTransaction.customer ? (
                 <div className="p-4 bg-gradient-to-r from-green-500/20 to-green-600/20 rounded-lg border border-green-500/30">
                   <div className="flex items-center justify-between">
@@ -1939,13 +2012,13 @@ const POS = () => {
                         )}
                       </div>
                     </div>
-                      <button
-                        onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '', customer_email: '' }))}
-                        className="text-red-400 hover:text-red-300 transition-colors"
-                        title="Remove Customer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                    <button
+                      onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '', customer_email: '' }))}
+                      className="text-red-400 hover:text-red-300 transition-colors"
+                      title="Remove Customer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               ) : currentTransaction.customer_name !== undefined && currentTransaction.customer_name !== null ? (
@@ -1976,7 +2049,7 @@ const POS = () => {
                       </button>
                     </div>
                   </div>
-                  
+
                   {/* Walk-in Customer Input Fields */}
                   <div className="grid grid-cols-1 gap-3">
                     <input
@@ -2003,17 +2076,17 @@ const POS = () => {
                       className="px-3 py-2 bg-[#1A1A1A] border border-[#555555] text-white placeholder-gray-400 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                     />
                   </div>
-                  
-                  {currentTransaction.customer_email && 
-                   currentTransaction.customer_email.trim() !== '' && 
-                   currentTransaction.customer_email.includes('@') && (
-                    <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-                      <p className="text-xs text-green-400 font-medium flex items-center">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Customer account will be created automatically
-                      </p>
-                    </div>
-                  )}
+
+                  {currentTransaction.customer_email &&
+                    currentTransaction.customer_email.trim() !== '' &&
+                    currentTransaction.customer_email.includes('@') && (
+                      <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                        <p className="text-xs text-green-400 font-medium flex items-center">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Customer account will be created automatically
+                        </p>
+                      </div>
+                    )}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -2024,9 +2097,9 @@ const POS = () => {
                     <User className="w-5 h-5" />
                     <span className="font-medium">Select Existing Customer</span>
                   </button>
-                  
+
                   <div className="text-center text-gray-500 text-sm">or</div>
-                  
+
                   <button
                     onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '', customer_email: '' }))}
                     className="w-full p-4 border-2 border-dashed border-blue-500/30 rounded-lg hover:border-blue-500 hover:bg-blue-500/10 transition-all duration-200 flex items-center justify-center space-x-2 text-blue-400 hover:text-blue-300"
@@ -2201,6 +2274,60 @@ const POS = () => {
                     <span>-₱{currentTransaction.discount_amount.toFixed(2)}</span>
                   </div>
                 )}
+                {currentTransaction.booking_fee > 0 && (
+                  <div className="flex justify-between text-orange-400">
+                    <span>Booking Fee:</span>
+                    <span>+₱{currentTransaction.booking_fee.toFixed(2)}</span>
+                  </div>
+                )}
+                {currentTransaction.late_fee > 0 && (
+                  <div className="flex justify-between text-red-400">
+                    <div className="flex items-center">
+                      <span>Late Fee:</span>
+                      <button
+                        onClick={() => setCurrentTransaction(prev => ({ ...prev, late_fee: 0 }))}
+                        className="ml-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 p-0.5 rounded transition-colors"
+                        title="Remove Late Fee"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <span>+₱{currentTransaction.late_fee.toFixed(2)}</span>
+                  </div>
+                )}
+                {currentBranch?.enable_late_fee && currentTransaction.late_fee === 0 && (
+                  <div className="flex justify-end pt-1 pb-1">
+                    <button
+                      onClick={() => {
+                        const lateFeeType = currentBranch.late_fee_type || 'fixed';
+                        const feeAmount = currentBranch.late_fee_amount || 0;
+
+                        if (lateFeeType === 'fixed') {
+                          setCurrentTransaction(prev => ({ ...prev, late_fee: feeAmount }));
+                        } else {
+                          // Prompt for duration
+                          const unit = lateFeeType === 'per_minute' ? 'minutes' : 'hours';
+                          const duration = prompt(`Enter number of ${unit} late:`);
+                          if (duration && !isNaN(duration) && duration > 0) {
+                            const fee = feeAmount * parseFloat(duration);
+                            setCurrentTransaction(prev => ({
+                              ...prev,
+                              late_fee: fee,
+                              late_fee_units: parseFloat(duration), // Optional: store for record
+                              late_fee_unit_type: unit
+                            }));
+                          }
+                        }
+                      }}
+                      className="text-xs flex items-center gap-1 text-red-400 hover:text-red-300 transition-colors"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Apply Late Fee ({currentBranch.late_fee_type === 'fixed'
+                        ? `₱${currentBranch.late_fee_amount?.toFixed(2)}`
+                        : `₱${currentBranch.late_fee_amount?.toFixed(2)}/${currentBranch.late_fee_type === 'per_minute' ? 'min' : 'hr'}`})
+                    </button>
+                  </div>
+                )}
                 <div className="border-t border-[#555555] pt-2">
                   <div className="flex justify-between text-xl font-bold text-white">
                     <span>Total:</span>
@@ -2227,13 +2354,13 @@ const POS = () => {
               {/* Action Buttons */}
               <div className="space-y-3">
                 <button
-                onClick={openPaymentModal}
-                disabled={!selectedBarber || (currentTransaction.services.length === 0 && currentTransaction.products.length === 0)}
-                className="w-full py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-bold rounded-xl hover:from-[var(--color-accent)] hover:to-[var(--color-accent)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
-              >
-                <CreditCard className="w-5 h-5" />
-                <span>Process Payment</span>
-              </button>
+                  onClick={openPaymentModal}
+                  disabled={!selectedBarber || (currentTransaction.services.length === 0 && currentTransaction.products.length === 0)}
+                  className="w-full py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-bold rounded-xl hover:from-[var(--color-accent)] hover:to-[var(--color-accent)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
+                >
+                  <CreditCard className="w-5 h-5" />
+                  <span>Process Payment</span>
+                </button>
 
                 <button
                   onClick={() => setAlertModal({
@@ -2305,6 +2432,8 @@ const POS = () => {
             subtotal: currentTransaction.subtotal,
             discount_amount: currentTransaction.discount_amount,
             tax_amount: currentTransaction.tax_amount,
+            booking_fee: currentTransaction.booking_fee,
+            late_fee: currentTransaction.late_fee,
             total_amount: currentTransaction.total_amount,
             services: currentTransaction.services,
             products: currentTransaction.products
@@ -2328,7 +2457,7 @@ const POS = () => {
       )}
 
       {activeModal === 'paymentSuccess' && (
-        <Modal isOpen={true} onClose={() => {}} title="Payment Successful" size="sm">
+        <Modal isOpen={true} onClose={() => { }} title="Payment Successful" size="sm">
           <div className="text-center py-8">
             <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="w-8 h-8 text-white" />
@@ -2381,34 +2510,31 @@ const POS = () => {
 
       {/* Alert Modal for Validation Messages */}
       {alertModal.show && (
-        <Modal 
-          isOpen={true} 
-          onClose={() => setAlertModal({ show: false, title: '', message: '', type: 'warning' })} 
-          title={alertModal.title} 
+        <Modal
+          isOpen={true}
+          onClose={() => setAlertModal({ show: false, title: '', message: '', type: 'warning' })}
+          title={alertModal.title}
           size="sm"
         >
           <div className="text-center py-6">
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border-2 ${
-              alertModal.type === 'error' ? 'bg-red-500/20 border-red-500/30' :
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 border-2 ${alertModal.type === 'error' ? 'bg-red-500/20 border-red-500/30' :
               alertModal.type === 'success' ? 'bg-green-500/20 border-green-500/30' :
-              'bg-yellow-500/20 border-yellow-500/30'
-            }`}>
-              <AlertCircle className={`w-8 h-8 ${
-                alertModal.type === 'error' ? 'text-red-500' :
+                'bg-yellow-500/20 border-yellow-500/30'
+              }`}>
+              <AlertCircle className={`w-8 h-8 ${alertModal.type === 'error' ? 'text-red-500' :
                 alertModal.type === 'success' ? 'text-green-500' :
-                'text-yellow-500'
-              }`} />
+                  'text-yellow-500'
+                }`} />
             </div>
             <p className="text-gray-700 mb-6 text-base">
               {alertModal.message}
             </p>
             <button
               onClick={() => setAlertModal({ show: false, title: '', message: '', type: 'warning' })}
-              className={`w-full px-6 py-3 text-white font-medium rounded-lg transition-all duration-200 ${
-                alertModal.type === 'error' ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700' :
+              className={`w-full px-6 py-3 text-white font-medium rounded-lg transition-all duration-200 ${alertModal.type === 'error' ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700' :
                 alertModal.type === 'success' ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700' :
-                'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700'
-              }`}
+                  'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700'
+                }`}
             >
               OK
             </button>
@@ -2426,7 +2552,7 @@ const POS = () => {
             <p className="text-gray-600 mb-6">
               Please provide the following login credentials to the customer:
             </p>
-            
+
             <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
               <div className="space-y-3">
                 <div>
@@ -2441,7 +2567,7 @@ const POS = () => {
                     </button>
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Temporary Password:</label>
                   <div className="flex items-center justify-between bg-white border border-gray-200 rounded-md px-3 py-2">
@@ -2456,19 +2582,19 @@ const POS = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
               <p className="text-sm text-blue-800">
                 <strong>Important:</strong> The customer should change their password after first login for security.
               </p>
             </div>
-            
+
             <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
               <p className="text-sm text-green-800">
                 <strong>📧 Welcome Email:</strong> A welcome email with login instructions has been sent to the customer's email address.
               </p>
             </div>
-            
+
             <button
               onClick={() => { setActiveModal(null); setNewCustomerCredentials(null); }}
               className="w-full px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium rounded-lg transition-all duration-200"
