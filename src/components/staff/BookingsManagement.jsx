@@ -52,12 +52,25 @@ const BookingsManagement = ({ onRefresh, user }) => {
 
   // Convex queries - use branch-scoped queries for staff, global for super_admin
   // Added pagination limits to avoid Convex byte limit errors
-  const bookingsData = user?.role === 'super_admin'
-    ? useQuery(api.services.bookings.getAllBookings, { limit: 100 })
-    : user?.branch_id
-      ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id, limit: 100 })
-      : null
-  const bookings = bookingsData?.bookings || []
+  // If date filter is applied, use server-side date filtering
+  const hasDateFilter = startDate && endDate
+
+  const bookingsData = hasDateFilter
+    ? useQuery(api.services.bookings.getBookingsByDateRange, {
+      startDate,
+      endDate,
+      branch_id: user?.branch_id
+    })
+    : user?.role === 'super_admin'
+      ? useQuery(api.services.bookings.getAllBookings, { limit: 100 })
+      : user?.branch_id
+        ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id, limit: 100 })
+        : null
+
+  // Handle data structure differences: getBookingsByDateRange returns raw array, others return { bookings: [...] }
+  const bookings = hasDateFilter
+    ? (bookingsData || [])
+    : (bookingsData?.bookings || [])
 
   const services = user?.role === 'super_admin'
     ? (useQuery(api.services.services.getAllServices) || [])

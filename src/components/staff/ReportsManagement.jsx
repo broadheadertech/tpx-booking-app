@@ -14,20 +14,49 @@ const ReportsManagement = ({ onRefresh, user }) => {
   const [activeTab, setActiveTab] = useState('descriptive')
   const [loading, setLoading] = useState(false)
 
-  // Fetch data - with pagination limits to avoid byte limit errors
+  // Calculate date ranges for fetching (include previous period for comparison)
+  const getFetchRange = (period) => {
+    const now = new Date();
+    const end = now.getTime();
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+
+    let days = 1;
+    if (period === 'today') days = 2; // Today + Yesterday
+    if (period === 'week') days = 14; // 2 Weeks
+    if (period === 'month') days = 60; // 2 Months
+    if (period === 'year') days = 730; // 2 Years
+
+    start.setDate(start.getDate() - days);
+
+    return {
+      start: start.getTime(),
+      end,
+      startDateStr: start.toISOString().split('T')[0],
+      endDateStr: now.toISOString().split('T')[0]
+    };
+  };
+
+  const { start: queryStart, end: queryEnd, startDateStr, endDateStr } = getFetchRange(selectedPeriod);
+
+  // Fetch data with specific date ranges to support "This Year" and other long periods
+  // We fetch enough data for current period + previous period comparison
   const bookingsData = user?.role === 'super_admin'
-    ? useQuery(api.services.bookings.getAllBookings, { limit: 200 })
+    ? useQuery(api.services.bookings.getBookingsByDateRange, { startDate: startDateStr, endDate: endDateStr })
     : user?.branch_id
-      ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id, limit: 200 })
+      ? useQuery(api.services.bookings.getBookingsByDateRange, { startDate: startDateStr, endDate: endDateStr, branch_id: user.branch_id })
       : null
-  const bookings = bookingsData?.bookings || []
+
+  // Handle both array return (from new date range query) and object return (legacy pagination support if needed)
+  const bookings = Array.isArray(bookingsData) ? bookingsData : (bookingsData?.bookings || [])
 
   const transactionsData = user?.role === 'super_admin'
-    ? useQuery(api.services.transactions.getAllTransactions, { limit: 200 })
+    ? useQuery(api.services.transactions.getTransactionsByDateRange, { startDate: queryStart, endDate: queryEnd })
     : user?.branch_id
-      ? useQuery(api.services.transactions.getTransactionsByBranch, { branch_id: user.branch_id, limit: 200 })
+      ? useQuery(api.services.transactions.getTransactionsByDateRange, { startDate: queryStart, endDate: queryEnd, branch_id: user.branch_id })
       : null
-  const transactions = transactionsData?.transactions || []
+
+  const transactions = transactionsData || []
 
   const barbers = user?.role === 'super_admin'
     ? useQuery(api.services.barbers.getAllBarbers)
