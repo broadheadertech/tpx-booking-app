@@ -339,7 +339,7 @@ const CompleteBookingModal = ({ booking, onConfirm, onClose, loading }) => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex space-x-3">
+          {/* <div className="flex space-x-3">
             <button
               onClick={onClose}
               disabled={loading}
@@ -361,7 +361,7 @@ const CompleteBookingModal = ({ booking, onConfirm, onClose, loading }) => {
                 "Complete Booking"
               )}
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
