@@ -41,7 +41,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
 
   // Fetch data with specific date ranges to support "This Year" and other long periods
   // We fetch enough data for current period + previous period comparison
-  const bookingsData = user?.role === 'branch_admin'
+  const bookingsData = user?.role === 'super_admin'
     ? useQuery(api.services.bookings.getBookingsByDateRange, { startDate: startDateStr, endDate: endDateStr })
     : user?.branch_id
       ? useQuery(api.services.bookings.getBookingsByDateRange, { startDate: startDateStr, endDate: endDateStr, branch_id: user.branch_id })
@@ -50,7 +50,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
   // Handle both array return (from new date range query) and object return (legacy pagination support if needed)
   const bookings = Array.isArray(bookingsData) ? bookingsData : (bookingsData?.bookings || [])
 
-  const transactionsData = user?.role === 'branch_admin'
+  const transactionsData = user?.role === 'super_admin'
     ? useQuery(api.services.transactions.getTransactionsByDateRange, { startDate: queryStart, endDate: queryEnd })
     : user?.branch_id
       ? useQuery(api.services.transactions.getTransactionsByDateRange, { startDate: queryStart, endDate: queryEnd, branch_id: user.branch_id })
@@ -58,13 +58,13 @@ const ReportsManagement = ({ onRefresh, user }) => {
 
   const transactions = transactionsData || []
 
-  const barbers = user?.role === 'branch_admin'
+  const barbers = user?.role === 'super_admin'
     ? useQuery(api.services.barbers.getAllBarbers)
     : user?.branch_id
       ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
       : []
 
-  const services = user?.role === 'branch_admin'
+  const services = user?.role === 'super_admin'
     ? useQuery(api.services.services.getAllServices)
     : user?.branch_id
       ? useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id })
