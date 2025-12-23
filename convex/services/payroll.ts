@@ -523,14 +523,10 @@ export const calculateBarberEarnings = query({
         let dayServicePay = Math.max(dayServiceCommission, currentDailyRate);
 
         // Add fees if enabled in payroll settings
-        if (payrollSettings?.include_booking_fee) {
-          // Note: This logic assumes fees are distributed per day they occurred.
-          // However, our `dailyCommissions` map only tracks service commission.
-          // Let's refine this to be more precise if needed, but for now we follow the general pattern.
-          // Actually, let's just add the total fees to the final salary at the end if enabled.
-        }
+
 
         const dayPay = dayServicePay + dayProductCommission;
+        finalSalary += dayPay;
 
         console.log(
           `Date ${dateKey}: service comm = ${dayServiceCommission}, product comm = ${dayProductCommission}, service pay = ${dayServicePay}, final dayPay (with product bonus) = ${dayPay}`,
