@@ -716,6 +716,8 @@ export default defineSchema({
           updatedAt: v.number(),
           commission: v.optional(v.number()),
           commission_rate: v.optional(v.number()),
+          booking_fee: v.optional(v.number()),
+          late_fee: v.optional(v.number()),
         })
       )
     ),
