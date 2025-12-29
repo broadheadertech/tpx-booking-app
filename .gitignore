@@ -48,3 +48,5 @@ claude_code_zai_env.sh
 .env.local
 .env.local
 .env.local
+/dist
+/dist
