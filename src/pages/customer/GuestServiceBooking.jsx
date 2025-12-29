@@ -497,9 +497,10 @@ const GuestServiceBooking = ({ onBack }) => {
         selectedStaff.blocked_periods &&
         selectedStaff.blocked_periods.length > 0
       ) {
-        const dateString = selectedDateObj.toISOString().split("T")[0];
+        // Use selectedDate directly (YYYY-MM-DD string) to avoid timezone issues
+        // Do NOT use toISOString() as it converts to UTC and can shift the date
         const blockingPeriod = selectedStaff.blocked_periods.find(
-          (p) => p.date === dateString
+          (p) => p.date === selectedDate
         );
 
         if (blockingPeriod) {
@@ -2465,7 +2466,7 @@ const GuestServiceBooking = ({ onBack }) => {
             type="date"
             value={value}
             onChange={(e) => setCustomFormResponses(prev => ({ ...prev, [field.id]: e.target.value }))}
-            min={new Date().toISOString().split('T')[0]}
+            min={getPhilippineDateString()}
             className={baseInputClass}
           />
         );
@@ -2481,7 +2482,7 @@ const GuestServiceBooking = ({ onBack }) => {
                   ...prev,
                   [field.id]: { ...prev[field.id], from: e.target.value }
                 }))}
-                min={new Date().toISOString().split('T')[0]}
+                min={getPhilippineDateString()}
                 className={baseInputClass}
               />
             </div>
@@ -2494,7 +2495,7 @@ const GuestServiceBooking = ({ onBack }) => {
                   ...prev,
                   [field.id]: { ...prev[field.id], to: e.target.value }
                 }))}
-                min={value?.from || new Date().toISOString().split('T')[0]}
+                min={value?.from || getPhilippineDateString()}
                 className={baseInputClass}
               />
             </div>

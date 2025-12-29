@@ -24,10 +24,11 @@ import {
 } from "lucide-react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { createPortal } from "react-dom";
+import { useBranding } from "../../context/BrandingContext";
 import AlertModal from "../common/AlertModal";
 
 const PayrollManagement = ({ onRefresh, user }) => {
+  const { branding } = useBranding();
   const [activeView, setActiveView] = useState("overview");
   const [selectedPeriod, setSelectedPeriod] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -112,6 +113,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
     payout_frequency: "weekly",
     payout_day: 5, // Friday for weekly
     tax_rate: 0,
+    include_booking_fee: false,
+    include_late_fee: false,
   });
 
   // Convex queries - branch-scoped for staff
@@ -238,6 +241,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
         payout_frequency: payrollSettingsData.payout_frequency,
         payout_day: payrollSettingsData.payout_day,
         tax_rate: payrollSettingsData.tax_rate || 0,
+        include_booking_fee: payrollSettingsData.include_booking_fee || false,
+        include_late_fee: payrollSettingsData.include_late_fee || false,
       });
     }
   }, [payrollSettingsData]);
@@ -371,6 +376,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
         payout_frequency: payrollSettings.payout_frequency,
         payout_day: payrollSettings.payout_day,
         tax_rate: payrollSettings.tax_rate,
+        include_booking_fee: payrollSettings.include_booking_fee,
+        include_late_fee: payrollSettings.include_late_fee,
         created_by: user._id,
       });
       setShowSettings(false);
@@ -792,7 +799,15 @@ const PayrollManagement = ({ onRefresh, user }) => {
       // 2. Total pay = service pay + product commission (product is bonus on top)
       const dailyRate = record.daily_rate || 0;
       const dayServicePay = Math.max(dayServiceCommission, dailyRate);
-      const dayTotalPay = dayServicePay + dayProductCommission;
+      // Calculate additional fees if enabled in settings
+      const bookingFees = (payrollSettingsData?.include_booking_fee || record.total_booking_fees > 0)
+        ? (dateBookings.reduce((sum, b) => sum + (b.booking_fee || 0), 0))
+        : 0;
+      const lateFees = (payrollSettingsData?.include_late_fee || record.total_late_fees > 0)
+        ? (dateBookings.reduce((sum, b) => sum + (b.late_fee || 0), 0))
+        : 0;
+
+      const dayTotalPay = dayServicePay + dayProductCommission + bookingFees + lateFees;
 
       // Update grand totals
       grandTotalServices += dayServiceCount;
@@ -812,7 +827,16 @@ const PayrollManagement = ({ onRefresh, user }) => {
             const commInfo = b.commission !== undefined
               ? `<span class="muted" style="font-size: 0.9em">(${b.commission_rate}%: ${format(b.commission)})</span>`
               : "";
-            return `<div class="row"><span><span class="muted">${tm}</span> — ${b.service_name} <span class="muted">• ${b.customer_name} • ${b.booking_code}</span></span><span>${format(b.price)} ${commInfo}</span></div>`;
+
+            let feesInfo = "";
+            if (payrollSettingsData?.include_booking_fee && b.booking_fee) {
+              feesInfo += ` <span class="muted" style="color: #4ade80;">(BF: ${format(b.booking_fee)})</span>`;
+            }
+            if (payrollSettingsData?.include_late_fee && b.late_fee) {
+              feesInfo += ` <span class="muted" style="color: #f87171;">(LF: ${format(b.late_fee)})</span>`;
+            }
+
+            return `<div class="row"><span><span class="muted">${tm}</span> — ${b.service_name} <span class="muted">• ${b.customer_name} • ${b.booking_code}</span>${feesInfo}</span><span>${format(b.price)} ${commInfo}</span></div>`;
           })
           .join("");
         bookingsHtml = `<hr/><div style="font-weight: 600; margin: 12px 0 8px; color: white;">Service Booking Details</div>${bookingRows}`;
@@ -854,6 +878,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
             <div class="row"><span class="muted">Service Commission</span><span>${format(dayServiceCommission)}</span></div>
             ${payBasisNote}
             <div class="row"><span class="muted">Product Commission</span><span>${format(dayProductCommission)}</span></div>
+            ${bookingFees > 0 ? `<div class="row"><span class="muted">Booking Fees</span><span>${format(bookingFees)}</span></div>` : ''}
+            ${lateFees > 0 ? `<div class="row"><span class="muted">Late Fees</span><span>${format(lateFees)}</span></div>` : ''}
             <div class="row"><span class="muted">Final Daily Salary</span><span>${format(dayTotalPay)}</span></div>
             <hr/>
             <div class="row" style="font-weight:800"><span>Total</span><span class="accent">${format(dayTotalPay)}</span></div>
@@ -1138,7 +1164,12 @@ const PayrollManagement = ({ onRefresh, user }) => {
         <title>${title}</title>
         <style>${printStyles}</style>
       </head>
-      <body>${body}</body>
+      <body>
+        <div style="display: flex; justify-content: center; margin-bottom: 20px;">
+          <img src="${branding?.logo_light_url}" alt="Logo" style="height: 60px; object-contain;" />
+        </div>
+        ${body}
+      </body>
     </html>`;
 
   const printHtml = (html) => {
@@ -1770,6 +1801,41 @@ const PayrollManagement = ({ onRefresh, user }) => {
                     }
                     className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                   />
+                </div>
+
+                <div className="flex flex-col space-y-2 pt-2">
+                  <label className="flex items-center space-x-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={payrollSettings.include_booking_fee}
+                      onChange={(e) =>
+                        setPayrollSettings((prev) => ({
+                          ...prev,
+                          include_booking_fee: e.target.checked,
+                        }))
+                      }
+                      className="w-4 h-4 rounded border-[#2A2A2A] bg-[#1A1A1A] text-[var(--color-primary)] focus:ring-[var(--color-primary)] focus:ring-offset-0 transition-colors"
+                    />
+                    <span className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">
+                      Include Booking Fees in Payroll
+                    </span>
+                  </label>
+                  <label className="flex items-center space-x-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={payrollSettings.include_late_fee}
+                      onChange={(e) =>
+                        setPayrollSettings((prev) => ({
+                          ...prev,
+                          include_late_fee: e.target.checked,
+                        }))
+                      }
+                      className="w-4 h-4 rounded border-[#2A2A2A] bg-[#1A1A1A] text-[var(--color-primary)] focus:ring-[var(--color-primary)] focus:ring-offset-0 transition-colors"
+                    />
+                    <span className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">
+                      Include Late Fees in Payroll
+                    </span>
+                  </label>
                 </div>
               </div>
 

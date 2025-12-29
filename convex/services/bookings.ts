@@ -1023,15 +1023,15 @@ export const getBookingsByDateRange = query({
     branch_id: v.optional(v.id("branches"))
   },
   handler: async (ctx, args) => {
-    let query = ctx.db
+    let bookingsQuery = ctx.db
       .query("bookings")
       .withIndex("by_date", q => q.gte("date", args.startDate).lte("date", args.endDate));
 
     if (args.branch_id) {
-      query = query.filter(q => q.eq(q.field("branch_id"), args.branch_id));
+      bookingsQuery = bookingsQuery.filter(q => q.eq(q.field("branch_id"), args.branch_id));
     }
 
-    const bookings = await query.collect();
+    const bookings = await bookingsQuery.collect();
 
     // Get associated data for each booking with error handling
     const bookingsWithData = await Promise.all(

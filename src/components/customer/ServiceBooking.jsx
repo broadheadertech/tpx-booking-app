@@ -391,8 +391,8 @@ const ServiceBooking = ({ onBack }) => {
 
     // Check schedule type (specific dates vs weekly)
     if (selectedStaff.schedule_type === 'specific_dates' && selectedStaff.specific_dates) {
-      const dateStr = selectedDateObj.toISOString().split('T')[0];
-      const specificDate = selectedStaff.specific_dates.find(d => d.date === dateStr);
+      // Use selectedDate directly (YYYY-MM-DD string) to avoid timezone issues
+      const specificDate = selectedStaff.specific_dates.find(d => d.date === selectedDate);
 
       if (!specificDate || !specificDate.available) {
         return [];
@@ -480,9 +480,10 @@ const ServiceBooking = ({ onBack }) => {
         selectedStaff.blocked_periods &&
         selectedStaff.blocked_periods.length > 0
       ) {
-        const dateString = selectedDateObj.toISOString().split("T")[0];
+        // Use selectedDate directly (YYYY-MM-DD string) to avoid timezone issues
+        // Do NOT use toISOString() as it converts to UTC and can shift the date
         const blockingPeriod = selectedStaff.blocked_periods.find(
-          (p) => p.date === dateString
+          (p) => p.date === selectedDate
         );
 
         if (blockingPeriod) {
@@ -1565,7 +1566,7 @@ const ServiceBooking = ({ onBack }) => {
               <span className="text-gray-400 text-sm">Date & Time</span>
             </div>
             <span className="font-semibold text-white text-sm">
-              {selectedDate === new Date().toISOString().split('T')[0] ? 'Today' : new Date(selectedDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}, {formatTime(selectedTime)}
+              {selectedDate === getPhilippineDateString() ? 'Today' : new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}, {formatTime(selectedTime)}
             </span>
           </div>
 
@@ -2055,7 +2056,7 @@ const ServiceBooking = ({ onBack }) => {
             type="date"
             value={value}
             onChange={(e) => setCustomFormResponses(prev => ({ ...prev, [field.id]: e.target.value }))}
-            min={new Date().toISOString().split('T')[0]}
+            min={getPhilippineDateString()}
             className={baseInputClass}
           />
         );
@@ -2071,7 +2072,7 @@ const ServiceBooking = ({ onBack }) => {
                   ...prev,
                   [field.id]: { ...prev[field.id], from: e.target.value }
                 }))}
-                min={new Date().toISOString().split('T')[0]}
+                min={getPhilippineDateString()}
                 className={baseInputClass}
               />
             </div>
@@ -2084,7 +2085,7 @@ const ServiceBooking = ({ onBack }) => {
                   ...prev,
                   [field.id]: { ...prev[field.id], to: e.target.value }
                 }))}
-                min={value?.from || new Date().toISOString().split('T')[0]}
+                min={value?.from || getPhilippineDateString()}
                 className={baseInputClass}
               />
             </div>

@@ -5,10 +5,18 @@ import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import AlertModal from '../common/AlertModal'
 
+// Helper function to get Philippine date string (YYYY-MM-DD) to avoid timezone issues
+const getPhilippineDateString = () => {
+  const now = new Date()
+  // Convert to Philippine timezone and format as YYYY-MM-DD
+  const phDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+  return phDateStr
+}
+
 const TimeOffManager = ({ barber }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: getPhilippineDateString(),
     isWholeDay: true,
     startTime: '09:00',
     endTime: '17:00',
@@ -40,7 +48,7 @@ const TimeOffManager = ({ barber }) => {
 
       setShowAddForm(false)
       setFormData({
-        date: new Date().toISOString().split('T')[0],
+        date: getPhilippineDateString(),
         isWholeDay: true,
         startTime: '09:00',
         endTime: '17:00',
@@ -93,11 +101,13 @@ const TimeOffManager = ({ barber }) => {
     }
   }
 
-  // Sort periods by date
-  const sortedPeriods = [...(barber?.blocked_periods || [])].sort((a, b) => new Date(a.date) - new Date(b.date))
+  // Sort periods by date (string comparison works for YYYY-MM-DD format)
+  const sortedPeriods = [...(barber?.blocked_periods || [])].sort((a, b) => a.date.localeCompare(b.date))
 
   // Filter out past periods (optional, but keeps list clean)
-  const upcomingPeriods = sortedPeriods.filter(p => new Date(p.date) >= new Date(new Date().setHours(0,0,0,0)))
+  // Use Philippine date string for comparison to follow PH timezone
+  const todayString = getPhilippineDateString()
+  const upcomingPeriods = sortedPeriods.filter(p => p.date >= todayString)
 
   return (
     <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 mt-4">
@@ -125,7 +135,7 @@ const TimeOffManager = ({ barber }) => {
               <input
                 type="date"
                 value={formData.date}
-                min={new Date().toISOString().split('T')[0]}
+                min={getPhilippineDateString()}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 className="w-full bg-[#1A1A1A] border border-[#333333] rounded-lg px-3 py-2 text-white text-sm focus:border-[var(--color-primary)] outline-none"
               />
@@ -216,18 +226,20 @@ const TimeOffManager = ({ barber }) => {
         <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
           {upcomingPeriods.map((period, index) => {
             // Format display time
-            const timeDisplay = !period.start_time 
-              ? 'Whole Day' 
+            const timeDisplay = !period.start_time
+              ? 'Whole Day'
               : `${format(new Date(`2000-01-01T${period.start_time}`), 'h:mm a')} - ${format(new Date(`2000-01-01T${period.end_time}`), 'h:mm a')}`
-            
-            const dateDisplay = format(new Date(period.date), 'MMM d, yyyy (EEE)')
+
+            // Add T00:00:00 to parse date as local time, not UTC (prevents timezone date shift)
+            const periodDate = new Date(period.date + 'T00:00:00')
+            const dateDisplay = format(periodDate, 'MMM d, yyyy (EEE)')
 
             return (
               <div key={index} className="flex items-center justify-between p-3 bg-[#222222] rounded-lg border border-[#333333] group">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 rounded-lg bg-[#333333] flex flex-col items-center justify-center border border-[#444444]">
-                    <span className="text-[10px] text-gray-400 uppercase">{format(new Date(period.date), 'MMM')}</span>
-                    <span className="text-sm font-bold text-white">{format(new Date(period.date), 'd')}</span>
+                    <span className="text-[10px] text-gray-400 uppercase">{format(periodDate, 'MMM')}</span>
+                    <span className="text-sm font-bold text-white">{format(periodDate, 'd')}</span>
                   </div>
                   <div>
                     <div className="flex items-center space-x-2">

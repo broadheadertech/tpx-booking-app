@@ -613,6 +613,8 @@ export default defineSchema({
     ),
     payout_day: v.number(), // Day of week (0-6) for weekly, day of month (1-31) for monthly
     tax_rate: v.optional(v.number()), // Tax percentage to deduct
+    include_booking_fee: v.optional(v.boolean()), // Whether to include booking fees in payroll
+    include_late_fee: v.optional(v.boolean()), // Whether to include late fees in payroll
     is_active: v.boolean(),
     created_by: v.id("users"),
     createdAt: v.number(),
@@ -714,6 +716,8 @@ export default defineSchema({
           updatedAt: v.number(),
           commission: v.optional(v.number()),
           commission_rate: v.optional(v.number()),
+          booking_fee: v.optional(v.number()),
+          late_fee: v.optional(v.number()),
         })
       )
     ),
@@ -736,6 +740,10 @@ export default defineSchema({
         })
       )
     ),
+
+    // Fee earnings breakdown
+    total_booking_fees: v.optional(v.number()),
+    total_late_fees: v.optional(v.number()),
 
     // Deductions
     tax_deduction: v.number(), // Tax deducted

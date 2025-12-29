@@ -14,30 +14,29 @@ const ReportsManagement = ({ onRefresh, user }) => {
   const [activeTab, setActiveTab] = useState('descriptive')
   const [loading, setLoading] = useState(false)
 
-  // Calculate date ranges for fetching (include previous period for comparison)
-  const getFetchRange = (period) => {
+  // Calculate date ranges for fetching (include previous period for comparison) using useMemo for stability
+  const { queryStart, queryEnd, startDateStr, endDateStr } = useMemo(() => {
     const now = new Date();
-    const end = now.getTime();
-    const start = new Date();
+    // Set end to end of day to be stable and inclusive
+    const end = new Date(now).setHours(23, 59, 59, 999);
+    const start = new Date(now);
     start.setHours(0, 0, 0, 0);
 
     let days = 1;
-    if (period === 'today') days = 2; // Today + Yesterday
-    if (period === 'week') days = 14; // 2 Weeks
-    if (period === 'month') days = 60; // 2 Months
-    if (period === 'year') days = 730; // 2 Years
+    if (selectedPeriod === 'today') days = 2; // Today + Yesterday
+    if (selectedPeriod === 'week') days = 14; // 2 Weeks
+    if (selectedPeriod === 'month') days = 60; // 2 Months
+    if (selectedPeriod === 'year') days = 730; // 2 Years
 
     start.setDate(start.getDate() - days);
 
     return {
-      start: start.getTime(),
-      end,
+      queryStart: start.getTime(),
+      queryEnd: end,
       startDateStr: start.toISOString().split('T')[0],
       endDateStr: now.toISOString().split('T')[0]
     };
-  };
-
-  const { start: queryStart, end: queryEnd, startDateStr, endDateStr } = getFetchRange(selectedPeriod);
+  }, [selectedPeriod]);
 
   // Fetch data with specific date ranges to support "This Year" and other long periods
   // We fetch enough data for current period + previous period comparison
@@ -58,13 +57,13 @@ const ReportsManagement = ({ onRefresh, user }) => {
 
   const transactions = transactionsData || []
 
-  const barbers = user?.role === 'super_admin'
+  const barbers = user?.role === 'branch_admin'
     ? useQuery(api.services.barbers.getAllBarbers)
     : user?.branch_id
       ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
       : []
 
-  const services = user?.role === 'super_admin'
+  const services = user?.role === 'branch_admin'
     ? useQuery(api.services.services.getAllServices)
     : user?.branch_id
       ? useQuery(api.services.services.getServicesByBranch, { branch_id: user.branch_id })
@@ -97,6 +96,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
       const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour
       return `${displayHour}:00 ${period}`
     }
+
 
     const now = Date.now()
     const todayStart = new Date().setHours(0, 0, 0, 0)
@@ -157,7 +157,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
     const revenueChange = prevRevenue > 0 ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : 0
 
     const servicesRevenue = periodTransactions.reduce((sum, t) => {
-      return sum + t.services.reduce((s, svc) => s + (svc.price * svc.quantity), 0)
+      return sum + (t.services || []).reduce((s, svc) => s + (svc.price * svc.quantity), 0)
     }, 0)
 
     const productsRevenue = periodTransactions.reduce((sum, t) => {

@@ -31,6 +31,8 @@ export const createOrUpdatePayrollSettings = mutation({
     ),
     payout_day: v.number(),
     tax_rate: v.optional(v.number()),
+    include_booking_fee: v.optional(v.boolean()),
+    include_late_fee: v.optional(v.boolean()),
     created_by: v.id("users"),
   },
   handler: async (ctx, args) => {
@@ -81,17 +83,20 @@ export const createOrUpdatePayrollSettings = mutation({
         payout_frequency: args.payout_frequency,
         payout_day: args.payout_day,
         tax_rate: args.tax_rate,
+        include_booking_fee: args.include_booking_fee,
+        include_late_fee: args.include_late_fee,
         updatedAt: timestamp,
       });
       return existingSettings._id;
     } else {
-      // Create new settings
       return await ctx.db.insert("payroll_settings", {
         branch_id: args.branch_id,
         default_commission_rate: args.default_commission_rate,
         payout_frequency: args.payout_frequency,
         payout_day: args.payout_day,
         tax_rate: args.tax_rate || 0,
+        include_booking_fee: args.include_booking_fee || false,
+        include_late_fee: args.include_late_fee || false,
         is_active: true,
         created_by: args.created_by,
         createdAt: timestamp,
@@ -252,6 +257,8 @@ export const calculateBarberEarnings = query({
     let totalServices = 0;
     let totalServiceRevenue = 0;
     let serviceCommission = 0;
+    let totalBookingFees = 0;
+    let totalLateFees = 0;
     // We'll compute days worked from bookings (per request)
 
     // We'll fill bookingsInPeriod below; use it for totals
@@ -426,6 +433,8 @@ export const calculateBarberEarnings = query({
           updatedAt: b.updatedAt,
           commission: bookingCommission,
           commission_rate: serviceRate,
+          booking_fee: b.booking_fee || 0,
+          late_fee: b.late_fee || 0,
         };
 
         bookingsByDate.get(dateKey)!.push(enrichedBooking);
@@ -433,6 +442,8 @@ export const calculateBarberEarnings = query({
 
         totalServices += 1;
         totalServiceRevenue += b.price || 0;
+        totalBookingFees += b.booking_fee || 0;
+        totalLateFees += b.late_fee || 0;
 
         // Track commission per day for correct daily pay calculation
         const currentDayCommission = dailyCommissions.get(dateKey) || 0;
@@ -509,14 +520,29 @@ export const calculateBarberEarnings = query({
 
         // NEW LOGIC: Product commission is ADDED on top of daily salary
         // Compare service commission vs daily rate, then add product commission
-        const dayServicePay = Math.max(dayServiceCommission, currentDailyRate);
+        let dayServicePay = Math.max(dayServiceCommission, currentDailyRate);
+
+        // Add fees if enabled in payroll settings
+
+
         const dayPay = dayServicePay + dayProductCommission;
+        finalSalary += dayPay;
 
         console.log(
           `Date ${dateKey}: service comm = ${dayServiceCommission}, product comm = ${dayProductCommission}, service pay = ${dayServicePay}, final dayPay (with product bonus) = ${dayPay}`,
         );
-        finalSalary += dayPay;
       }
+
+      // Add booking and late fees if enabled
+      if (payrollSettings?.include_booking_fee) {
+        finalSalary += totalBookingFees;
+        console.log(`Added booking fees: ${totalBookingFees}`);
+      }
+      if (payrollSettings?.include_late_fee) {
+        finalSalary += totalLateFees;
+        console.log(`Added late fees: ${totalLateFees}`);
+      }
+
       console.log(`Total finalSalary = ${finalSalary}`);
     } else {
       // No bookings or products = no salary
@@ -560,6 +586,10 @@ export const calculateBarberEarnings = query({
       daily_rate: dailyRate,
       days_worked: daysWorked,
       daily_pay: finalSalary,
+
+      // Fees
+      total_booking_fees: totalBookingFees,
+      total_late_fees: totalLateFees,
 
       // Totals
       gross_commission: grossCommission,
@@ -1179,6 +1209,8 @@ export const calculatePayrollForPeriod = mutation({
         daily_rate: earnings.daily_rate,
         days_worked: earnings.days_worked,
         daily_pay: earnings.daily_pay,
+        total_booking_fees: earnings.total_booking_fees,
+        total_late_fees: earnings.total_late_fees,
         tax_deduction: earnings.tax_deduction,
         other_deductions: earnings.other_deductions,
         total_deductions: earnings.total_deductions,
@@ -1579,12 +1611,18 @@ export const generateNextPayrollPeriod = mutation({
       periodEnd = endDate.getTime();
     }
 
-    return await ctx.runMutation(api.services.payroll.createPayrollPeriod, {
+    const timestamp = Date.now();
+    return await ctx.db.insert("payroll_periods", {
       branch_id: args.branch_id,
       period_start: periodStart,
       period_end: periodEnd,
       period_type: settings.payout_frequency,
-      created_by: args.created_by,
+      status: "draft",
+      total_earnings: 0,
+      total_commissions: 0,
+      total_deductions: 0,
+      createdAt: timestamp,
+      updatedAt: timestamp,
     });
   },
 });
