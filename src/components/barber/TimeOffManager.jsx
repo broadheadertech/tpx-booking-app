@@ -5,10 +5,18 @@ import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import AlertModal from '../common/AlertModal'
 
+// Helper function to get Philippine date string (YYYY-MM-DD) to avoid timezone issues
+const getPhilippineDateString = () => {
+  const now = new Date()
+  // Convert to Philippine timezone and format as YYYY-MM-DD
+  const phDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+  return phDateStr
+}
+
 const TimeOffManager = ({ barber }) => {
   const [showAddForm, setShowAddForm] = useState(false)
   const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: getPhilippineDateString(),
     isWholeDay: true,
     startTime: '09:00',
     endTime: '17:00',
@@ -40,7 +48,7 @@ const TimeOffManager = ({ barber }) => {
 
       setShowAddForm(false)
       setFormData({
-        date: new Date().toISOString().split('T')[0],
+        date: getPhilippineDateString(),
         isWholeDay: true,
         startTime: '09:00',
         endTime: '17:00',
@@ -97,8 +105,8 @@ const TimeOffManager = ({ barber }) => {
   const sortedPeriods = [...(barber?.blocked_periods || [])].sort((a, b) => a.date.localeCompare(b.date))
 
   // Filter out past periods (optional, but keeps list clean)
-  // Use local date string for comparison to avoid timezone issues
-  const todayString = new Date().toLocaleDateString('en-CA') // Returns YYYY-MM-DD format
+  // Use Philippine date string for comparison to follow PH timezone
+  const todayString = getPhilippineDateString()
   const upcomingPeriods = sortedPeriods.filter(p => p.date >= todayString)
 
   return (
@@ -127,7 +135,7 @@ const TimeOffManager = ({ barber }) => {
               <input
                 type="date"
                 value={formData.date}
-                min={new Date().toISOString().split('T')[0]}
+                min={getPhilippineDateString()}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 className="w-full bg-[#1A1A1A] border border-[#333333] rounded-lg px-3 py-2 text-white text-sm focus:border-[var(--color-primary)] outline-none"
               />
