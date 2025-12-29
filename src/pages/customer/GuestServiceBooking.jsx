@@ -2466,7 +2466,7 @@ const GuestServiceBooking = ({ onBack }) => {
             type="date"
             value={value}
             onChange={(e) => setCustomFormResponses(prev => ({ ...prev, [field.id]: e.target.value }))}
-            min={new Date().toISOString().split('T')[0]}
+            min={getPhilippineDateString()}
             className={baseInputClass}
           />
         );
@@ -2482,7 +2482,7 @@ const GuestServiceBooking = ({ onBack }) => {
                   ...prev,
                   [field.id]: { ...prev[field.id], from: e.target.value }
                 }))}
-                min={new Date().toISOString().split('T')[0]}
+                min={getPhilippineDateString()}
                 className={baseInputClass}
               />
             </div>
@@ -2495,7 +2495,7 @@ const GuestServiceBooking = ({ onBack }) => {
                   ...prev,
                   [field.id]: { ...prev[field.id], to: e.target.value }
                 }))}
-                min={value?.from || new Date().toISOString().split('T')[0]}
+                min={value?.from || getPhilippineDateString()}
                 className={baseInputClass}
               />
             </div>

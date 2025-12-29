@@ -1566,7 +1566,7 @@ const ServiceBooking = ({ onBack }) => {
               <span className="text-gray-400 text-sm">Date & Time</span>
             </div>
             <span className="font-semibold text-white text-sm">
-              {selectedDate === new Date().toISOString().split('T')[0] ? 'Today' : new Date(selectedDate).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}, {formatTime(selectedTime)}
+              {selectedDate === getPhilippineDateString() ? 'Today' : new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}, {formatTime(selectedTime)}
             </span>
           </div>
 
@@ -2056,7 +2056,7 @@ const ServiceBooking = ({ onBack }) => {
             type="date"
             value={value}
             onChange={(e) => setCustomFormResponses(prev => ({ ...prev, [field.id]: e.target.value }))}
-            min={new Date().toISOString().split('T')[0]}
+            min={getPhilippineDateString()}
             className={baseInputClass}
           />
         );
@@ -2072,7 +2072,7 @@ const ServiceBooking = ({ onBack }) => {
                   ...prev,
                   [field.id]: { ...prev[field.id], from: e.target.value }
                 }))}
-                min={new Date().toISOString().split('T')[0]}
+                min={getPhilippineDateString()}
                 className={baseInputClass}
               />
             </div>
@@ -2085,7 +2085,7 @@ const ServiceBooking = ({ onBack }) => {
                   ...prev,
                   [field.id]: { ...prev[field.id], to: e.target.value }
                 }))}
-                min={value?.from || new Date().toISOString().split('T')[0]}
+                min={value?.from || getPhilippineDateString()}
                 className={baseInputClass}
               />
             </div>
