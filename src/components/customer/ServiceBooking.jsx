@@ -391,8 +391,8 @@ const ServiceBooking = ({ onBack }) => {
 
     // Check schedule type (specific dates vs weekly)
     if (selectedStaff.schedule_type === 'specific_dates' && selectedStaff.specific_dates) {
-      const dateStr = selectedDateObj.toISOString().split('T')[0];
-      const specificDate = selectedStaff.specific_dates.find(d => d.date === dateStr);
+      // Use selectedDate directly (YYYY-MM-DD string) to avoid timezone issues
+      const specificDate = selectedStaff.specific_dates.find(d => d.date === selectedDate);
 
       if (!specificDate || !specificDate.available) {
         return [];
@@ -480,9 +480,10 @@ const ServiceBooking = ({ onBack }) => {
         selectedStaff.blocked_periods &&
         selectedStaff.blocked_periods.length > 0
       ) {
-        const dateString = selectedDateObj.toISOString().split("T")[0];
+        // Use selectedDate directly (YYYY-MM-DD string) to avoid timezone issues
+        // Do NOT use toISOString() as it converts to UTC and can shift the date
         const blockingPeriod = selectedStaff.blocked_periods.find(
-          (p) => p.date === dateString
+          (p) => p.date === selectedDate
         );
 
         if (blockingPeriod) {

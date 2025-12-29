@@ -93,11 +93,13 @@ const TimeOffManager = ({ barber }) => {
     }
   }
 
-  // Sort periods by date
-  const sortedPeriods = [...(barber?.blocked_periods || [])].sort((a, b) => new Date(a.date) - new Date(b.date))
+  // Sort periods by date (string comparison works for YYYY-MM-DD format)
+  const sortedPeriods = [...(barber?.blocked_periods || [])].sort((a, b) => a.date.localeCompare(b.date))
 
   // Filter out past periods (optional, but keeps list clean)
-  const upcomingPeriods = sortedPeriods.filter(p => new Date(p.date) >= new Date(new Date().setHours(0,0,0,0)))
+  // Use local date string for comparison to avoid timezone issues
+  const todayString = new Date().toLocaleDateString('en-CA') // Returns YYYY-MM-DD format
+  const upcomingPeriods = sortedPeriods.filter(p => p.date >= todayString)
 
   return (
     <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 mt-4">
@@ -216,18 +218,20 @@ const TimeOffManager = ({ barber }) => {
         <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
           {upcomingPeriods.map((period, index) => {
             // Format display time
-            const timeDisplay = !period.start_time 
-              ? 'Whole Day' 
+            const timeDisplay = !period.start_time
+              ? 'Whole Day'
               : `${format(new Date(`2000-01-01T${period.start_time}`), 'h:mm a')} - ${format(new Date(`2000-01-01T${period.end_time}`), 'h:mm a')}`
-            
-            const dateDisplay = format(new Date(period.date), 'MMM d, yyyy (EEE)')
+
+            // Add T00:00:00 to parse date as local time, not UTC (prevents timezone date shift)
+            const periodDate = new Date(period.date + 'T00:00:00')
+            const dateDisplay = format(periodDate, 'MMM d, yyyy (EEE)')
 
             return (
               <div key={index} className="flex items-center justify-between p-3 bg-[#222222] rounded-lg border border-[#333333] group">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 rounded-lg bg-[#333333] flex flex-col items-center justify-center border border-[#444444]">
-                    <span className="text-[10px] text-gray-400 uppercase">{format(new Date(period.date), 'MMM')}</span>
-                    <span className="text-sm font-bold text-white">{format(new Date(period.date), 'd')}</span>
+                    <span className="text-[10px] text-gray-400 uppercase">{format(periodDate, 'MMM')}</span>
+                    <span className="text-sm font-bold text-white">{format(periodDate, 'd')}</span>
                   </div>
                   <div>
                     <div className="flex items-center space-x-2">

@@ -57,8 +57,6 @@ const ReportsManagement = ({ onRefresh, user }) => {
 
   const transactions = transactionsData || []
 
-  const transactions = transactionsData || []
-
   const barbers = user?.role === 'branch_admin'
     ? useQuery(api.services.barbers.getAllBarbers)
     : user?.branch_id
