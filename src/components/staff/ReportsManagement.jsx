@@ -57,11 +57,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
 
   const transactions = transactionsData || []
 
-<<<<<<< Updated upstream
-  const barbers = user?.role === 'branch_admin'
-=======
   const barbers = user?.role === 'super_admin'
->>>>>>> Stashed changes
     ? useQuery(api.services.barbers.getAllBarbers)
     : user?.branch_id
       ? useQuery(api.services.barbers.getBarbersByBranch, { branch_id: user.branch_id })
