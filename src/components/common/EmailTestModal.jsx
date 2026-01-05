@@ -157,7 +157,7 @@ const EmailTestModal = ({ isOpen, onClose }) => {
             <div className="flex justify-between">
               <span>From Email:</span>
               <span className="text-gray-300">
-                {import.meta.env.VITE_RESEND_FROM_EMAIL || 'no-reply@fcv.broadheader.com'}
+                {import.meta.env.VITE_RESEND_FROM_EMAIL || 'no-reply@tipunox.broadheader.com'}
               </span>
             </div>
           </div>

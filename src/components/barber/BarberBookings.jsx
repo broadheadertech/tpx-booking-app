@@ -250,12 +250,12 @@ const BarberBookings = () => {
                   <span className="font-bold text-[var(--color-primary)] text-sm">₱{booking.price}</span>
                 </div>
 
-                {booking.customer_phone && (
+                {/* {booking.customer_phone && (
                   <div className="flex items-center text-gray-500 text-xs mt-2">
                     <Phone className="w-3 h-3 mr-1.5" />
                     <span>{booking.customer_phone}</span>
                   </div>
-                )}
+                )} */}
               </div>
             ))
           )}
@@ -462,7 +462,7 @@ const BookingDetailsSheet = ({ booking, onClose, onConfirm, onCancel, onComplete
             </div>
 
             {/* Customer Info Card */}
-            <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
+            {/* <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
               <h3 className="text-xs text-gray-500 uppercase tracking-wide mb-3">Customer Information</h3>
               <div className="space-y-3">
                 <div className="flex items-center space-x-3">
@@ -503,7 +503,7 @@ const BookingDetailsSheet = ({ booking, onClose, onConfirm, onCancel, onComplete
                   </div>
                 )}
               </div>
-            </div>
+            </div> */}
 
             {/* Payment Info */}
             <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">

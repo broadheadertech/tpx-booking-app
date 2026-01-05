@@ -5,7 +5,7 @@ const resend = new Resend(RESEND_API_KEY);
 
 class EmailService {
   constructor() {
-    this.fromEmail = 'no-reply@fcv.broadheader.com';
+    this.fromEmail = 'no-reply@tipunox.broadheader.com';
     this.fromName = 'Barbershop';
   }
 
