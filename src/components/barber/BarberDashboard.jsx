@@ -538,7 +538,7 @@ const BarberDashboard = () => {
           </div>
 
           {/* Quick Stats Row */}
-          <div className="grid grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <div className="bg-[#2A2A2A] rounded-xl p-3 text-center border border-[#3A3A3A]">
               <div className="text-xl font-bold text-white">{todayBookings.length}</div>
               <div className="text-xs text-gray-500">Today's Booking</div>
