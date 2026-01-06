@@ -541,15 +541,11 @@ const BarberDashboard = () => {
           <div className="grid grid-cols-3 gap-2">
             <div className="bg-[#2A2A2A] rounded-xl p-3 text-center border border-[#3A3A3A]">
               <div className="text-xl font-bold text-white">{todayBookings.length}</div>
-              <div className="text-xs text-gray-500">Today</div>
+              <div className="text-xs text-gray-500">Today's Booking</div>
             </div>
             <div className="bg-[#2A2A2A] rounded-xl p-3 text-center border border-[#3A3A3A]">
               <div className="text-xl font-bold text-white">{pendingBookings.length}</div>
-              <div className="text-xs text-gray-500">Pending</div>
-            </div>
-            <div className="bg-[#2A2A2A] rounded-xl p-3 text-center border border-[#3A3A3A]">
-              <div className="text-xl font-bold text-[var(--color-primary)]">₱{todayRevenue.toLocaleString()}</div>
-              <div className="text-xs text-gray-500">Earned</div>
+              <div className="text-xs text-gray-500">Pending Bookings</div>
             </div>
           </div>
 
