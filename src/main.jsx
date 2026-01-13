@@ -45,6 +45,7 @@ import ErrorBoundary from "./components/common/ErrorBoundary";
 import { getInitialRoute } from "./utils/platform";
 import "./styles/index.css";
 import "./styles/print.css";
+import { dark, neobrutalism } from '@clerk/themes'
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
@@ -62,7 +63,7 @@ function App() {
       <ToastProvider>
         <BrandingProvider>
         <Router>
-          <ClerkSync />
+          <ClerkSync  />
           <div className="min-h-screen bg-[var(--color-bg)]">
             <Routes>
               <Route
@@ -293,6 +294,7 @@ createRoot(document.getElementById("root")).render(
       appearance={{
         elements: {
           // Global styling for all Clerk components
+          theme: dark,
           rootBox: "w-full",
           card: "bg-[#1A1A1A] backdrop-blur-xl rounded-3xl shadow-2xl border border-[#2A2A2A]/50",
           headerTitle: "text-white text-2xl font-bold",

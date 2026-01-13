@@ -1,6 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { SignIn, SignedIn, SignedOut, UserButton } from '@clerk/clerk-react'
+import { SignIn, SignedIn, SignedOut, UserButton, useUser } from '@clerk/clerk-react'
+import { useQuery } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import bannerImage from '../../assets/img/banner.jpg'
 import { useBranding } from '../../context/BrandingContext'
 import { APP_VERSION } from '../../config/version'
@@ -10,6 +12,37 @@ function Login() {
   const [show2FA, setShow2FA] = useState(false)
   const navigate = useNavigate()
   const { branding } = useBranding()
+  const { user: clerkUser, isLoaded } = useUser()
+  
+  // Query user data from Convex using Clerk ID
+  const convexUser = useQuery(
+    api.services.clerkSync.getUserByClerkId,
+    clerkUser?.id ? { clerkUserId: clerkUser.id } : "skip"
+  )
+
+  // Role-based redirect after login
+  useEffect(() => {
+    if (isLoaded && clerkUser && convexUser) {
+      // User is logged in and we have their role data
+      switch (convexUser.role) {
+        case 'super_admin':
+          navigate('/admin/dashboard', { replace: true })
+          break
+        case 'staff':
+        case 'admin':
+        case 'branch_admin':
+          navigate('/staff/dashboard', { replace: true })
+          break
+        case 'barber':
+          navigate('/barber/home', { replace: true })
+          break
+        case 'customer':
+        default:
+          navigate('/customer/dashboard', { replace: true })
+          break
+      }
+    }
+  }, [isLoaded, clerkUser, convexUser, navigate])
 
   // Guest login handler
   const handleGuestLogin = () => {
@@ -121,15 +154,15 @@ function Login() {
             <div className="bg-[#1A1A1A] backdrop-blur-xl rounded-3xl shadow-2xl border border-[#2A2A2A]/50 p-8">
               <div className="flex flex-col items-center gap-4">
                 <div className="flex items-center justify-center gap-3 p-4 bg-[#2A2A2A] rounded-2xl w-full">
-                  <span className="text-sm text-gray-300">Signed in with Clerk</span>
+                  <span className="text-sm text-gray-300">Signed in successfully</span>
                   <UserButton afterSignOutUrl="/auth/login" />
                 </div>
-                <button
-                  onClick={() => navigate('/customer/dashboard')}
-                  className="w-full h-12 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:brightness-110 text-white font-semibold rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl active:scale-95"
-                >
-                  Go to Dashboard
-                </button>
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mx-auto"></div>
+                  <p className="text-xs text-gray-500 mt-3">
+                    {convexUser ? 'Redirecting to your dashboard...' : 'Loading your profile...'}
+                  </p>
+                </div>
               </div>
             </div>
           </SignedIn>

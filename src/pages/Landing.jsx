@@ -19,12 +19,15 @@ import {
   ChevronRight,
   Map,
   Sparkles,
-  ChevronDown
+  ChevronDown,
+  User,
+  LogOut
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useBranding } from "../context/BrandingContext";
 import Skeleton from "../components/common/Skeleton";
+import { useUser, SignedIn, SignedOut, useClerk } from "@clerk/clerk-react";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -33,6 +36,10 @@ const Landing = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState("");
   const [selectedService, setSelectedService] = useState("");
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  
+  const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
 
   // Fetch active services and branches from Convex
   const services = useQuery(api.services.services.getActiveServices);
@@ -40,6 +47,16 @@ const Landing = () => {
   
   const loadingServices = services === undefined;
   const loadingBranches = branches === undefined;
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      setShowProfileModal(false);
+      navigate('/auth/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -153,12 +170,31 @@ const Landing = () => {
               <a href="#about" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">About</a>
 
               <div className="flex items-center gap-4 pl-4 border-l border-white/10">
-                <button
-                  onClick={() => navigate("/auth/login")}
-                  className="text-sm font-bold text-white hover:text-[var(--color-primary)] transition-colors"
-                >
-                  Log In
-                </button>
+                <SignedOut>
+                  <button
+                    onClick={() => navigate("/auth/login")}
+                    className="text-sm font-bold text-white hover:text-[var(--color-primary)] transition-colors"
+                  >
+                    Log In
+                  </button>
+                </SignedOut>
+                
+                <SignedIn>
+                  <button
+                    onClick={() => setShowProfileModal(true)}
+                    className="flex items-center gap-2 text-sm font-bold text-white hover:text-[var(--color-primary)] transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-[var(--color-primary)] flex items-center justify-center">
+                      {user?.imageUrl ? (
+                        <img src={user.imageUrl} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        <User className="w-4 h-4 text-white" />
+                      )}
+                    </div>
+                    <span className="hidden lg:inline">{user?.firstName || 'Profile'}</span>
+                  </button>
+                </SignedIn>
+                
                 <button
                   onClick={() => navigate("/guest/booking")}
                   className="px-5 py-2.5 rounded-full text-sm font-bold transition-all active:scale-95 shadow-lg bg-[var(--color-primary)] text-white hover:brightness-110"
@@ -185,11 +221,87 @@ const Landing = () => {
             <a href="#services" className="text-lg font-medium text-gray-300 py-2">Services</a>
             <a href="#about" className="text-lg font-medium text-gray-300 py-2">About</a>
             <hr className="border-white/10" />
-            <button onClick={() => navigate("/auth/login")} className="text-left text-lg font-medium text-white py-2">Log In</button>
+            
+            <SignedOut>
+              <button onClick={() => navigate("/auth/login")} className="text-left text-lg font-medium text-white py-2">Log In</button>
+            </SignedOut>
+            
+            <SignedIn>
+              <button 
+                onClick={() => { setShowProfileModal(true); setMobileMenuOpen(false); }} 
+                className="flex items-center gap-3 text-left text-lg font-medium text-white py-2"
+              >
+                <div className="w-8 h-8 rounded-full bg-[var(--color-primary)] flex items-center justify-center">
+                  {user?.imageUrl ? (
+                    <img src={user.imageUrl} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    <User className="w-4 h-4 text-white" />
+                  )}
+                </div>
+                {user?.firstName || 'Profile'}
+              </button>
+            </SignedIn>
+            
             <button onClick={() => navigate("/guest/booking")} className="w-full py-3 rounded-xl bg-[var(--color-primary)] text-white font-bold">Book Now</button>
           </div>
         )}
       </nav>
+
+      {/* Profile Modal */}
+      {showProfileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowProfileModal(false)}>
+          <div className="bg-[#1A1A1A] rounded-3xl shadow-2xl border border-[#2A2A2A] w-full max-w-md p-8" onClick={(e) => e.stopPropagation()}>
+            {/* Close button */}
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-white">Profile</h3>
+              <button
+                onClick={() => setShowProfileModal(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* User Info */}
+            <div className="flex flex-col items-center mb-8">
+              <div className="w-24 h-24 rounded-full bg-[var(--color-primary)] flex items-center justify-center mb-4 overflow-hidden">
+                {user?.imageUrl ? (
+                  <img src={user.imageUrl} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-12 h-12 text-white" />
+                )}
+              </div>
+              <h4 className="text-xl font-bold text-white mb-1">
+                {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.firstName || 'User'}
+              </h4>
+              <p className="text-sm text-gray-400">{user?.primaryEmailAddress?.emailAddress}</p>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  setShowProfileModal(false);
+                  navigate('/customer/dashboard');
+                }}
+                className="w-full h-12 bg-[#2A2A2A] hover:bg-[#3A3A3A] text-white font-semibold rounded-2xl transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                <User className="w-5 h-5" />
+                Go to Dashboard
+              </button>
+              
+              <button
+                onClick={handleLogout}
+                className="w-full h-12 bg-red-500/10 hover:bg-red-500/20 text-red-500 font-semibold rounded-2xl transition-all duration-200 flex items-center justify-center gap-2 border border-red-500/20"
+              >
+                <LogOut className="w-5 h-5" />
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
