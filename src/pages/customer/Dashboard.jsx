@@ -255,13 +255,19 @@ const Dashboard = ({ initialSection = 'home' }) => {
           <div className="max-w-md mx-auto px-4">
             <div className="flex justify-between items-center py-5">
               <div className="flex items-center space-x-3">
-                <img
-                  src={branding?.logo_light_url }
-                  alt={branding?.display_name || 'Logo'}
-                  className="w-14 h-14 object-contain"
-                />
+                {branding?.logo_light_url ? (
+                  <img
+                    src={branding.logo_light_url}
+                    alt={branding?.display_name || 'Logo'}
+                    className="w-14 h-14 object-contain"
+                  />
+                ) : (
+                  <div className="w-14 h-14 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-xl flex items-center justify-center">
+                    <Building className="w-8 h-8 text-white" />
+                  </div>
+                )}
                 <div>
-                  <h1 className="text-base font-black text-[var(--color-primary)]">{branding?.display_name || ''}</h1>
+                  <h1 className="text-base font-black text-[var(--color-primary)]">{branding?.display_name || 'Barbershop'}</h1>
                   <p className="text-xs font-semibold text-[var(--color-primary)]">{branding?.display_name ? 'Branch' : 'Angeles'}</p>
                 </div>
               </div>
@@ -274,7 +280,7 @@ const Dashboard = ({ initialSection = 'home' }) => {
                   <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-full opacity-0 group-hover:opacity-100 blur-md transition-opacity duration-300" />
                   <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-[#1A1A1A] group-hover:ring-[var(--color-primary)]/50 transition-all duration-300">
                     <img
-                      src={(user && user.avatar) ? user.avatar : '/img/avatar_default.jpg'}
+                      src={user?.avatar || '/img/avatar_default.jpg'}
                       alt={user?.username || 'Profile'}
                       className="w-full h-full object-cover"
                     />

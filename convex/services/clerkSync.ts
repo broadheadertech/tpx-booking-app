@@ -164,3 +164,57 @@ export const manualSyncClerkUser = mutation({
     return await syncClerkUser(ctx, args);
   },
 });
+
+// Generate session token helper
+function generateSessionToken() {
+  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+}
+
+// Create session for Clerk-authenticated user
+export const createSessionForClerkUser = mutation({
+  args: {
+    clerkUserId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Find user by Clerk ID
+    const user = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("clerk_user_id"), args.clerkUserId))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found. Please register first.");
+    }
+
+    // Check if user is active
+    if (!user.is_active) {
+      throw new Error("Account is inactive. Please contact support.");
+    }
+
+    // Create session token
+    const sessionToken = generateSessionToken();
+    await ctx.db.insert("sessions", {
+      userId: user._id,
+      token: sessionToken,
+      expiresAt: Date.now() + (30 * 24 * 60 * 60 * 1000), // 30 days
+      createdAt: Date.now(),
+    });
+
+    // Return session data
+    return {
+      sessionToken,
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        nickname: user.nickname,
+        mobile_number: user.mobile_number,
+        role: user.role,
+        avatar: user.avatar,
+        is_active: user.is_active,
+        branch_id: user.branch_id,
+        page_access: user.page_access,
+      }
+    };
+  },
+});

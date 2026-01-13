@@ -5,20 +5,23 @@ import bannerImage from '../../assets/img/banner.jpg'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useBranding } from '../../context/BrandingContext'
+import { useAuth } from '../../context/AuthContext'
 import { APP_VERSION } from '../../config/version'
 
 function Register() {
   const [loading, setLoading] = useState(false)
-  const [synced, setSynced] = useState(false)
+  const [sessionCreated, setSessionCreated] = useState(false)
   const navigate = useNavigate()
   const { branding } = useBranding()
   const { user, isLoaded } = useUser()
+  const { isAuthenticated } = useAuth()
   const syncClerkUser = useMutation(api.services.clerkSync.manualSyncClerkUser)
+  const createSession = useMutation(api.services.clerkSync.createSessionForClerkUser)
 
-  // Auto-sync Clerk user to Convex after successful registration and email verification
+  // Auto-sync and create session after registration
   useEffect(() => {
-    const syncUser = async () => {
-      if (isLoaded && user && !synced) {
+    const setupUserAndSession = async () => {
+      if (isLoaded && user && !isAuthenticated && !sessionCreated) {
         try {
           setLoading(true)
           
@@ -30,7 +33,7 @@ function Register() {
           const phoneNumber = user.primaryPhoneNumber?.phoneNumber || ''
           const avatar = user.imageUrl || ''
 
-          // Sync to Convex
+          // Step 1: Sync to Convex (creates user if doesn't exist)
           await syncClerkUser({
             clerkUserId: user.id,
             email: email,
@@ -42,21 +45,29 @@ function Register() {
           })
 
           console.log('✅ User synced to Convex successfully')
-          setSynced(true)
-          
-          // Redirect to landing page
-          setTimeout(() => {
-            navigate('/landing')
-          }, 1500)
+
+          // Step 2: Create session for AuthContext
+          const result = await createSession({
+            clerkUserId: user.id
+          })
+
+          if (result && result.sessionToken) {
+            // Store session token in localStorage for AuthContext
+            localStorage.setItem('session_token', result.sessionToken)
+            setSessionCreated(true)
+            
+            // Reload to trigger AuthContext and redirect based on role
+            window.location.href = '/customer/dashboard'
+          }
         } catch (error) {
-          console.error('Failed to sync user to Convex:', error)
+          console.error('Failed to setup user session:', error)
           setLoading(false)
         }
       }
     }
 
-    syncUser()
-  }, [isLoaded, user, synced, syncClerkUser, navigate])
+    setupUserAndSession()
+  }, [isLoaded, user, isAuthenticated, sessionCreated, syncClerkUser, createSession])
 
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
@@ -130,8 +141,8 @@ function Register() {
                   }
                 }}
                 signInUrl="/auth/login"
-                afterSignUpUrl="/landing"
-                forceRedirectUrl="/landing"
+                routing="path"
+                path="/auth/register"
               />
             </div>
           </SignedOut>
@@ -142,18 +153,11 @@ function Register() {
               <div className="flex flex-col items-center gap-4">
                 <div className="text-center">
                   <h3 className="text-xl font-bold text-white mb-2">✓ Registration Complete!</h3>
-                  <p className="text-sm text-gray-400">
-                    {loading ? 'Setting up your profile...' : 'Redirecting to dashboard...'}
-                  </p>
+                  <p className="text-sm text-gray-400">Setting up your account...</p>
                 </div>
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mx-auto"></div>
-                  {loading && (
-                    <p className="text-xs text-gray-500 mt-3">Syncing your data to Convex...</p>
-                  )}
-                  {synced && (
-                    <p className="text-xs text-green-400 mt-3">✓ Profile synced successfully</p>
-                  )}
+                  <p className="text-xs text-gray-500 mt-3">Creating your profile and session...</p>
                 </div>
               </div>
             </div>

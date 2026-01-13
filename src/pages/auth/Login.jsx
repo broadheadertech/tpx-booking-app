@@ -1,48 +1,51 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SignIn, SignedIn, SignedOut, UserButton, useUser } from '@clerk/clerk-react'
-import { useQuery } from 'convex/react'
+import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import bannerImage from '../../assets/img/banner.jpg'
 import { useBranding } from '../../context/BrandingContext'
+import { useAuth } from '../../context/AuthContext'
 import { APP_VERSION } from '../../config/version'
 
 function Login() {
   const [loading, setLoading] = useState(false)
-  const [show2FA, setShow2FA] = useState(false)
+  const [sessionCreated, setSessionCreated] = useState(false)
   const navigate = useNavigate()
   const { branding } = useBranding()
   const { user: clerkUser, isLoaded } = useUser()
-  
-  // Query user data from Convex using Clerk ID
-  const convexUser = useQuery(
-    api.services.clerkSync.getUserByClerkId,
-    clerkUser?.id ? { clerkUserId: clerkUser.id } : "skip"
-  )
+  const { isAuthenticated } = useAuth()
+  const createSession = useMutation(api.services.clerkSync.createSessionForClerkUser)
 
-  // Role-based redirect after login
+  // Create AuthContext session after Clerk login
   useEffect(() => {
-    if (isLoaded && clerkUser && convexUser) {
-      // User is logged in and we have their role data
-      switch (convexUser.role) {
-        case 'super_admin':
-          navigate('/admin/dashboard', { replace: true })
-          break
-        case 'staff':
-        case 'admin':
-        case 'branch_admin':
-          navigate('/staff/dashboard', { replace: true })
-          break
-        case 'barber':
-          navigate('/barber/home', { replace: true })
-          break
-        case 'customer':
-        default:
-          navigate('/customer/dashboard', { replace: true })
-          break
+    const setupSession = async () => {
+      if (isLoaded && clerkUser && !isAuthenticated && !sessionCreated) {
+        try {
+          setLoading(true)
+          
+          // Create session in Convex
+          const result = await createSession({
+            clerkUserId: clerkUser.id
+          })
+
+          if (result && result.sessionToken) {
+            // Store session token in localStorage for AuthContext
+            localStorage.setItem('session_token', result.sessionToken)
+            setSessionCreated(true)
+            
+            // Reload the page to trigger AuthContext to pick up the session
+            window.location.href = '/customer/dashboard'
+          }
+        } catch (error) {
+          console.error('Failed to create session:', error)
+          setLoading(false)
+        }
       }
     }
-  }, [isLoaded, clerkUser, convexUser, navigate])
+
+    setupSession()
+  }, [isLoaded, clerkUser, isAuthenticated, sessionCreated, createSession])
 
   // Guest login handler
   const handleGuestLogin = () => {
@@ -128,8 +131,8 @@ function Login() {
                   }
                 }}
                 signUpUrl="/auth/register"
-                afterSignInUrl="/landing"
-                forceRedirectUrl="/landing"
+                routing="path"
+                path="/auth/login"
               />
               
               {/* Guest Button */}
@@ -149,19 +152,17 @@ function Login() {
             </div>
           </SignedOut>
 
-          {/* Signed In State */}
+          {/* Signed In State - Creating session */}
           <SignedIn>
             <div className="bg-[#1A1A1A] backdrop-blur-xl rounded-3xl shadow-2xl border border-[#2A2A2A]/50 p-8">
               <div className="flex flex-col items-center gap-4">
-                <div className="flex items-center justify-center gap-3 p-4 bg-[#2A2A2A] rounded-2xl w-full">
-                  <span className="text-sm text-gray-300">Signed in successfully</span>
-                  <UserButton afterSignOutUrl="/auth/login" />
+                <div className="text-center">
+                  <h3 className="text-xl font-bold text-white mb-2">✓ Login Successful!</h3>
+                  <p className="text-sm text-gray-400">Setting up your session...</p>
                 </div>
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mx-auto"></div>
-                  <p className="text-xs text-gray-500 mt-3">
-                    {convexUser ? 'Redirecting to your dashboard...' : 'Loading your profile...'}
-                  </p>
+                  <p className="text-xs text-gray-500 mt-3">Please wait...</p>
                 </div>
               </div>
             </div>

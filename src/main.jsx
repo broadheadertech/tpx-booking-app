@@ -13,7 +13,9 @@ import { BrandingProvider } from "./context/BrandingContext";
 import { ToastProvider } from "./components/common/ToastNotification";
 import { ClerkSync } from "./components/auth/ClerkSync";
 import ProtectedRoute from "./components/common/ProtectedRoute";
+import ClerkProtectedRoute from "./components/common/ClerkProtectedRoute";
 import AuthRedirect from "./components/common/AuthRedirect";
+import ClerkAuthRedirect from "./components/common/ClerkAuthRedirect";
 import Landing from "./pages/Landing";
 import PlatformSelection from "./pages/PlatformSelection";
 import Login from "./pages/auth/Login";
@@ -291,6 +293,7 @@ createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ClerkProvider 
       publishableKey={PUBLISHABLE_KEY}
+      routing="path"
       appearance={{
         elements: {
           // Global styling for all Clerk components
