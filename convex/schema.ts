@@ -100,7 +100,8 @@ export default defineSchema({
   users: defineTable({
     username: v.string(),
     email: v.string(),
-    password: v.string(), // In production, this should be hashed
+    password: v.string(), // In production, this should be hashed (empty for Clerk users)
+    clerk_user_id: v.optional(v.string()), // Clerk user ID for OAuth users
     nickname: v.optional(v.string()),
     mobile_number: v.string(),
     address: v.optional(v.string()),
@@ -131,7 +132,8 @@ export default defineSchema({
     .index("by_created_at", ["createdAt"])
     .index("by_branch", ["branch_id"])
     .index("by_role", ["role"])
-    .index("by_branch_role", ["branch_id", "role"]),
+    .index("by_branch_role", ["branch_id", "role"])
+    .index("by_clerk_id", ["clerk_user_id"]),
 
   // Barbers table
   barbers: defineTable({

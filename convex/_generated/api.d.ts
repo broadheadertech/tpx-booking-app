@@ -13,12 +13,14 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as clerk from "../clerk.js";
 import type * as services_auth from "../services/auth.js";
 import type * as services_barbers from "../services/barbers.js";
 import type * as services_bookingNotifications from "../services/bookingNotifications.js";
 import type * as services_bookings from "../services/bookings.js";
 import type * as services_branches from "../services/branches.js";
 import type * as services_branding from "../services/branding.js";
+import type * as services_clerkSync from "../services/clerkSync.js";
 import type * as services_customBookingForms from "../services/customBookingForms.js";
 import type * as services_customBookingSubmissions from "../services/customBookingSubmissions.js";
 import type * as services_emailMarketing from "../services/emailMarketing.js";
@@ -51,12 +53,14 @@ import type * as utils_sanitize from "../utils/sanitize.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  clerk: typeof clerk;
   "services/auth": typeof services_auth;
   "services/barbers": typeof services_barbers;
   "services/bookingNotifications": typeof services_bookingNotifications;
   "services/bookings": typeof services_bookings;
   "services/branches": typeof services_branches;
   "services/branding": typeof services_branding;
+  "services/clerkSync": typeof services_clerkSync;
   "services/customBookingForms": typeof services_customBookingForms;
   "services/customBookingSubmissions": typeof services_customBookingSubmissions;
   "services/emailMarketing": typeof services_emailMarketing;

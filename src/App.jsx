@@ -7,6 +7,7 @@ import {
 import { AuthProvider } from "./context/AuthContext";
 import { BrandingProvider } from "./context/BrandingContext";
 import { ToastProvider } from "./components/common/ToastNotification";
+import { ClerkSync } from "./components/auth/ClerkSync";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import AuthRedirect from "./components/common/AuthRedirect";
 import Landing from "./pages/Landing";
@@ -48,6 +49,7 @@ function App() {
       <ToastProvider>
         <BrandingProvider>
         <Router>
+          <ClerkSync />
           <div className="min-h-screen bg-[var(--color-bg)]">
             <Routes>
               <Route
@@ -106,6 +108,23 @@ function App() {
                 element={
                   <AuthRedirect>
                     <Register />
+                  </AuthRedirect>
+                }
+              />
+              {/* Clerk verification routes - catch-all for Clerk flows */}
+              <Route
+                path="/auth/register/*"
+                element={
+                  <AuthRedirect>
+                    <Register />
+                  </AuthRedirect>
+                }
+              />
+              <Route
+                path="/auth/login/*"
+                element={
+                  <AuthRedirect>
+                    <Login />
                   </AuthRedirect>
                 }
               />
