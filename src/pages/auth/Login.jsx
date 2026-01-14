@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SignIn, SignedIn, SignedOut, UserButton, useUser } from '@clerk/clerk-react'
-import { useMutation } from 'convex/react'
+import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import bannerImage from '../../assets/img/banner.jpg'
 import { useBranding } from '../../context/BrandingContext'
@@ -16,11 +16,17 @@ function Login() {
   const { user: clerkUser, isLoaded } = useUser()
   const { isAuthenticated } = useAuth()
   const createSession = useMutation(api.services.clerkSync.createSessionForClerkUser)
+  
+  // Query user data from Convex to get role
+  const convexUser = useQuery(
+    api.services.clerkSync.getUserByClerkId,
+    clerkUser?.id ? { clerkUserId: clerkUser.id } : "skip"
+  )
 
   // Create AuthContext session after Clerk login
   useEffect(() => {
     const setupSession = async () => {
-      if (isLoaded && clerkUser && !isAuthenticated && !sessionCreated) {
+      if (isLoaded && clerkUser && !isAuthenticated && !sessionCreated && convexUser) {
         try {
           setLoading(true)
           
@@ -34,8 +40,29 @@ function Login() {
             localStorage.setItem('session_token', result.sessionToken)
             setSessionCreated(true)
             
+            // Redirect based on user role
+            let redirectPath = '/customer/dashboard'
+            
+            switch (convexUser.role) {
+              case 'super_admin':
+                redirectPath = '/admin/dashboard'
+                break
+              case 'staff':
+              case 'admin':
+              case 'branch_admin':
+                redirectPath = '/staff/dashboard'
+                break
+              case 'barber':
+                redirectPath = '/barber/home'
+                break
+              case 'customer':
+              default:
+                redirectPath = '/customer/dashboard'
+                break
+            }
+            
             // Reload the page to trigger AuthContext to pick up the session
-            window.location.href = '/customer/dashboard'
+            window.location.href = redirectPath
           }
         } catch (error) {
           console.error('Failed to create session:', error)
@@ -45,7 +72,7 @@ function Login() {
     }
 
     setupSession()
-  }, [isLoaded, clerkUser, isAuthenticated, sessionCreated, createSession])
+  }, [isLoaded, clerkUser, isAuthenticated, sessionCreated, createSession, convexUser])
 
   // Guest login handler
   const handleGuestLogin = () => {
