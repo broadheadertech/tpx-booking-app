@@ -36,6 +36,7 @@ import type * as services_ratings from "../services/ratings.js";
 import type * as services_services from "../services/services.js";
 import type * as services_transactions from "../services/transactions.js";
 import type * as services_vouchers from "../services/vouchers.js";
+import type * as services_walkIn from "../services/walkIn.js";
 import type * as services_wallet from "../services/wallet.js";
 import type * as utils_errors from "../utils/errors.js";
 import type * as utils_password from "../utils/password.js";
@@ -74,6 +75,7 @@ declare const fullApi: ApiFromModules<{
   "services/services": typeof services_services;
   "services/transactions": typeof services_transactions;
   "services/vouchers": typeof services_vouchers;
+  "services/walkIn": typeof services_walkIn;
   "services/wallet": typeof services_wallet;
   "utils/errors": typeof utils_errors;
   "utils/password": typeof utils_password;

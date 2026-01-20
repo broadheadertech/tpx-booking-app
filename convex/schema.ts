@@ -284,6 +284,25 @@ export default defineSchema({
     .index("by_date_reminder", ["date", "reminder_sent"])
     .index("by_barber_date", ["barber", "date"]),
 
+  // Walk-ins table - for customers who come without booking
+  walkIns: defineTable({
+    name: v.string(),
+    number: v.string(),
+    assignedBarber: v.string(), // Barber's full name
+    barberId: v.id("barbers"), // Reference to the barber
+    branch_id: v.id("branches"),
+    notes: v.optional(v.string()),
+    status: v.string(), // 'active', 'completed', 'cancelled'
+    completedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_barber", ["barberId"])
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"])
+    .index("by_created_at", ["createdAt"])
+    .index("by_branch_status", ["branch_id", "status"]),
+
   // Vouchers table
   vouchers: defineTable({
     code: v.string(),

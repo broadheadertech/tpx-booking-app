@@ -19,6 +19,7 @@ import NotificationsManagement from "../../components/staff/NotificationsManagem
 import EmailMarketing from "../../components/staff/EmailMarketing";
 import PayrollManagement from "../../components/staff/PayrollManagement";
 import CustomBookingsManagement from "../../components/staff/CustomBookingsManagement";
+import WalkInSection from "../../components/staff/WalkInSection";
 import DashboardFooter from "../../components/common/DashboardFooter";
 import {
   NotificationModal,
@@ -209,8 +210,8 @@ function StaffDashboard() {
   const renderTabContent = () => {
     // Basic security check: if user doesn't have access to the tab, fall back to overview
     // Super admins bypass this check
-    // Always allow overview and custom_bookings tabs
-    if (user?.role !== "super_admin" && activeTab !== "overview" && activeTab !== "custom_bookings") {
+    // Always allow overview, custom_bookings, and walkins tabs
+    if (user?.role !== "super_admin" && activeTab !== "overview" && activeTab !== "custom_bookings" && activeTab !== "walkins") {
       if (
         user?.page_access &&
         user.page_access.length > 0 &&
@@ -229,6 +230,9 @@ function StaffDashboard() {
 
       case "calendar":
         return <CalendarManagement user={user} />;
+
+      case "walkins":
+        return <WalkInSection />;
 
       case "services":
         return (
@@ -346,6 +350,7 @@ function StaffDashboard() {
     { id: "bookings", label: "Bookings", icon: "calendar" },
     { id: "custom_bookings", label: "Custom Bookings", icon: "file-text" },
     { id: "calendar", label: "Calendar", icon: "calendar" },
+    { id: "walkins", label: "Walk-ins", icon: "user-plus" },
     { id: "services", label: "Services", icon: "scissors" },
     { id: "vouchers", label: "Vouchers", icon: "gift" },
     { id: "barbers", label: "Barbers", icon: "user" },
@@ -365,14 +370,14 @@ function StaffDashboard() {
       ? baseTabs
       : user?.page_access
         ? baseTabs.filter(
-          (t) => user.page_access.includes(t.id) || t.id === "overview" || t.id === "custom_bookings"
-        ) // Always include overview and custom_bookings
+          (t) => user.page_access.includes(t.id) || t.id === "overview" || t.id === "custom_bookings" || t.id === "walkins"
+        ) // Always include overview, custom_bookings, and walkins
         : baseTabs;
 
-  // Redirect if current active tab is not allowed (unless it's overview)
+  // Redirect if current active tab is not allowed (unless it's overview, custom_bookings, or walkins)
   useEffect(() => {
     const allowedTabIds = tabs.map((t) => t.id);
-    if (!allowedTabIds.includes(activeTab) && activeTab !== "overview") {
+    if (!allowedTabIds.includes(activeTab) && activeTab !== "overview" && activeTab !== "custom_bookings" && activeTab !== "walkins") {
       setActiveTab("overview");
     }
   }, [tabs, activeTab]);
