@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { UserPlus, Search, Filter, Plus, Clock, User, Phone, Calendar, CheckCircle, XCircle, Trash2 } from 'lucide-react'
+import { UserPlus, Search, Filter, Plus, Clock, User, Phone, Calendar, CheckCircle, XCircle, Trash2, Play } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import AddWalkInModal from './AddWalkInModal'
@@ -7,19 +7,25 @@ import AddWalkInModal from './AddWalkInModal'
 export default function WalkInSection() {
   const [searchTerm, setSearchTerm] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
-  const [dateFilter, setDateFilter] = useState('today') // 'today', 'tomorrow', 'custom'
+  const [dateFilter, setDateFilter] = useState('today')
   const [customDate, setCustomDate] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all') // 'all', 'active', 'completed', 'cancelled'
+  const [statusFilter, setStatusFilter] = useState('all')
   const [cleaningUp, setCleaningUp] = useState(false)
 
-  // Get walk-ins data from API with filters (temporarily without date range until Convex rebuilds)
+  // Get walk-ins data from API with filters
   const allWalkIns = useQuery(
     api.services.walkIn.getAllWalkIns,
     statusFilter === 'all' ? {} : { status: statusFilter }
   ) || []
 
+  // Mutations
+  const startWalkIn = useMutation(api.services.walkIn.startWalkIn)
+  const completeWalkIn = useMutation(api.services.walkIn.completeWalkIn)
+  const cancelWalkIn = useMutation(api.services.walkIn.cancelWalkIn)
+  const manualCleanup = useMutation(api.services.walkIn.manualCleanupOldWalkIns)
+
   // Filter by date on client side
-  const walkIns = useMemo(() => {
+  const filteredByDate = useMemo(() => {
     let startDate, endDate
 
     if (dateFilter === 'today') {
@@ -61,17 +67,13 @@ export default function WalkInSection() {
     })
   }, [allWalkIns, dateFilter, customDate])
 
-  // Mutations for completing and cancelling walk-ins
-  const completeWalkIn = useMutation(api.services.walkIn.completeWalkIn)
-  const cancelWalkIn = useMutation(api.services.walkIn.cancelWalkIn)
-  const manualCleanup = useMutation(api.services.walkIn.manualCleanupOldWalkIns)
-
-  const filteredWalkIns = walkIns
+  const filteredWalkIns = filteredByDate
     .filter(walkIn => {
       const matchesSearch =
         walkIn.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         walkIn.number?.includes(searchTerm) ||
-        walkIn.assignedBarber?.toLowerCase().includes(searchTerm.toLowerCase())
+        walkIn.assignedBarber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        walkIn.barber_name?.toLowerCase().includes(searchTerm.toLowerCase())
       return matchesSearch
     })
     .sort((a, b) => {
@@ -85,6 +87,7 @@ export default function WalkInSection() {
 
   const stats = {
     total: filteredWalkIns.length,
+    waiting: filteredWalkIns.filter(w => w.status === 'waiting').length,
     active: filteredWalkIns.filter(w => w.status === 'active').length,
     completed: filteredWalkIns.filter(w => w.status === 'completed').length,
     cancelled: filteredWalkIns.filter(w => w.status === 'cancelled').length
@@ -98,6 +101,15 @@ export default function WalkInSection() {
       hour: '2-digit',
       minute: '2-digit'
     })
+  }
+
+  const handleStartService = async (walkInId) => {
+    if (!confirm('Start serving this walk-in customer?')) return
+    try {
+      await startWalkIn({ walkInId })
+    } catch (error) {
+      alert(error.message || 'Failed to start service')
+    }
   }
 
   const handleComplete = async (walkInId) => {
@@ -120,11 +132,12 @@ export default function WalkInSection() {
 
   const getStatusBadge = (status) => {
     const badges = {
+      waiting: 'bg-yellow-400/20 text-yellow-400 border-yellow-400/30',
       active: 'bg-blue-400/20 text-blue-400 border-blue-400/30',
       completed: 'bg-green-400/20 text-green-400 border-green-400/30',
       cancelled: 'bg-red-400/20 text-red-400 border-red-400/30'
     }
-    return badges[status] || badges.active
+    return badges[status] || badges.waiting
   }
 
   const handleManualCleanup = async () => {
@@ -154,7 +167,7 @@ export default function WalkInSection() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -168,10 +181,20 @@ export default function WalkInSection() {
         <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
+              <p className="text-sm font-medium text-gray-300">Waiting</p>
+              <p className="text-2xl font-bold text-yellow-400">{stats.waiting}</p>
+            </div>
+            <Clock className="h-6 w-6 text-yellow-400 opacity-30" />
+          </div>
+        </div>
+
+        <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
               <p className="text-sm font-medium text-gray-300">Active</p>
               <p className="text-2xl font-bold text-blue-400">{stats.active}</p>
             </div>
-            <Clock className="h-6 w-6 text-blue-400 opacity-30" />
+            <Play className="h-6 w-6 text-blue-400 opacity-30" />
           </div>
         </div>
 
@@ -244,6 +267,7 @@ export default function WalkInSection() {
                 className="px-3 py-2 bg-[#1A1A1A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
               >
                 <option value="all">All Status</option>
+                <option value="waiting">Waiting</option>
                 <option value="active">Active</option>
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
@@ -357,6 +381,26 @@ export default function WalkInSection() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
+                      {walkIn.status === 'waiting' && (
+                        <>
+                          <button
+                            onClick={() => handleStartService(walkIn._id)}
+                            className="flex items-center space-x-1 px-3 py-1.5 bg-blue-400/20 text-blue-400 border border-blue-400/30 rounded-lg hover:bg-blue-400/30 transition-colors"
+                            title="Start serving this customer"
+                          >
+                            <Play className="h-4 w-4" />
+                            <span>Start</span>
+                          </button>
+                          <button
+                            onClick={() => handleCancel(walkIn._id)}
+                            className="flex items-center space-x-1 px-3 py-1.5 bg-red-400/20 text-red-400 border border-red-400/30 rounded-lg hover:bg-red-400/30 transition-colors"
+                            title="Cancel walk-in"
+                          >
+                            <XCircle className="h-4 w-4" />
+                            <span>Cancel</span>
+                          </button>
+                        </>
+                      )}
                       {walkIn.status === 'active' && (
                         <>
                           <button
@@ -377,10 +421,11 @@ export default function WalkInSection() {
                           </button>
                         </>
                       )}
-                      {walkIn.status !== 'active' && (
-                        <span className="text-gray-500 text-xs">
-                          {walkIn.status === 'completed' ? 'Completed' : 'Cancelled'}
-                        </span>
+                      {walkIn.status === 'completed' && (
+                        <span className="text-green-400 text-xs font-medium">Completed</span>
+                      )}
+                      {walkIn.status === 'cancelled' && (
+                        <span className="text-red-400 text-xs font-medium">Cancelled</span>
                       )}
                     </div>
                   </td>

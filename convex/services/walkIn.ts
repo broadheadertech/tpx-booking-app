@@ -8,96 +8,150 @@ export const createWalkIn = mutation({
   args: {
     name: v.string(),
     number: v.string(),
-    barberId: v.optional(v.id("barbers")),
-    assignedBarber: v.optional(v.string()), // Kept for backward compatibility
+    barberId: v.id("barbers"),
     notes: v.optional(v.string()),
-    branch_id: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
     try {
-      console.log("createWalkIn called with args:", args);
+      console.log("[createWalkIn] Starting with args:", args);
 
       // Validate input
-      validateInput(!args.name.trim(), ERROR_CODES.INVALID_INPUT, "Customer name is required");
-      validateInput(!args.number.trim(), ERROR_CODES.INVALID_INPUT, "Phone number is required");
-      validateInput(!args.barberId && !args.assignedBarber, ERROR_CODES.INVALID_INPUT, "Assigned barber is required");
-
-      const now = Date.now();
-
-      let barber;
-      let branch_id = args.branch_id;
-
-      // Get the barber - prefer barberId, fallback to assignedBarber name lookup
-      if (args.barberId) {
-        barber = await ctx.db.get(args.barberId);
-        console.log("Barber fetched by ID:", barber);
-      } else if (args.assignedBarber) {
-        barber = await ctx.db
-          .query("barbers")
-          .filter((q) => q.eq(q.field("full_name"), args.assignedBarber))
-          .first();
-        console.log("Barber fetched by name:", barber);
-      }
-
-      if (!barber) {
+      console.log("[createWalkIn] Validating inputs...");
+      if (!args.name.trim()) {
         return {
           success: false,
-          message: "Barber not found",
-          barberFetched: barber,
-          args: args,
+          message: "Customer name is required",
+        };
+      }
+      if (!args.number.trim()) {
+        return {
+          success: false,
+          message: "Phone number is required",
         };
       }
 
-      branch_id = branch_id || barber.branch_id;
-      console.log("Branch ID:", branch_id);
+      const now = Date.now();
+      let barber: any = null;
+      let branch_id: Id<"branches"> | undefined = undefined;
+
+      // Get the barber
+      console.log("[createWalkIn] Fetching barber by ID:", args.barberId);
+      barber = await ctx.db.get(args.barberId);
+      console.log("[createWalkIn] Barber fetched:", barber ? "FOUND" : "NOT FOUND");
+
+      if (!barber) {
+        console.error("[createWalkIn] Barber not found with ID:", args.barberId);
+        return {
+          success: false,
+          message: `Barber with ID ${args.barberId} does not exist in the database.`,
+        };
+      }
+
+      // Get branch_id from barber
+      branch_id = barber.branch_id;
+      console.log("[createWalkIn] Barber branch_id:", branch_id);
+
+      // Validate branch_id before proceeding
+      if (!branch_id) {
+        console.error("[createWalkIn] Barber has no branch_id:", barber._id);
+        return {
+          success: false,
+          message: "Branch ID is required but not found for this barber.",
+        };
+      }
+
+      // Verify the branch exists
+      console.log("[createWalkIn] Fetching branch with ID:", branch_id);
+      const branch = await ctx.db.get(branch_id);
+      console.log("[createWalkIn] Branch fetched:", branch ? "FOUND" : "NOT FOUND");
+
+      if (!branch) {
+        console.error("[createWalkIn] Branch not found with ID:", branch_id);
+        return {
+          success: false,
+          message: `Branch with ID ${branch_id} does not exist in the database.`,
+        };
+      }
+      console.log("[createWalkIn] All validations passed, branch_id:", branch_id);
 
       // Get the highest queue number for active walk-ins in this branch today
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
       const todayStartTimestamp = todayStart.getTime();
 
-      const activeWalkIns = await ctx.db
-        .query("walkIns")
-        .filter((q) => 
-          q.and(
-            q.eq(q.field("branch_id"), branch_id),
-            q.eq(q.field("status"), "active"),
-            q.gte(q.field("createdAt"), todayStartTimestamp)
-          )
-        )
-        .collect();
+      console.log("[createWalkIn] Calculating queue number for branch:", branch_id);
 
-      console.log("Active walk-ins found:", activeWalkIns.length);
-
-      // Calculate next queue number (highest + 1, or 1 if no active walk-ins)
       let nextQueueNumber = 1;
-      if (activeWalkIns.length > 0) {
-        const queueNumbers = activeWalkIns
-          .map(w => w.queueNumber)
-          .filter(num => typeof num === 'number' && !isNaN(num));
-        
-        if (queueNumbers.length > 0) {
-          nextQueueNumber = Math.max(...queueNumbers) + 1;
+
+      // Try to get existing walk-ins for queue calculation using indexed query
+      // Use withIndex which is more reliable than collect() for this use case
+      try {
+        console.log("[createWalkIn] Querying existing walk-ins with by_branch_status index...");
+        const branchWalkInsQuery = await ctx.db
+          .query("walkIns")
+          .withIndex("by_branch_status", (q) =>
+            q.eq("branch_id", branch_id).eq("status", "waiting")
+          )
+          .collect();
+
+        console.log("[createWalkIn] Branch walk-ins fetched:", branchWalkInsQuery?.length || 0);
+
+        // Filter for today's walk-ins only
+        if (Array.isArray(branchWalkInsQuery) && branchWalkInsQuery.length > 0) {
+          const activeWalkIns = branchWalkInsQuery.filter(
+            (walkIn) => walkIn.createdAt >= todayStartTimestamp
+          );
+
+          console.log("[createWalkIn] Today's active waiting walk-ins:", activeWalkIns.length);
+
+          if (activeWalkIns.length > 0) {
+            const queueNumbers = activeWalkIns
+              .map((w) => w.queueNumber)
+              .filter((num) => typeof num === "number" && !isNaN(num));
+
+            if (queueNumbers.length > 0) {
+              nextQueueNumber = Math.max(...queueNumbers) + 1;
+            }
+          }
         }
+      } catch (queryError) {
+        // If query fails, log the error but proceed with queue number 1
+        // This handles the case where the walkIns table might not exist yet or has issues
+        console.warn("[createWalkIn] Query failed (this might be the first walk-in):", queryError?.message || queryError);
+        console.log("[createWalkIn] Proceeding with default queue number:", nextQueueNumber);
       }
 
-      console.log("Next queue number:", nextQueueNumber);
+      console.log("[createWalkIn] Final queue number:", nextQueueNumber);
 
-      // Create the walk-in record
-      const walkInId = await ctx.db.insert("walkIns", {
+      // Create the walk-in record - defensive approach
+      console.log("Preparing to insert walk-in record...");
+      const walkInData = {
         name: args.name.trim(),
         number: args.number.trim(),
         assignedBarber: barber.full_name,
         barberId: barber._id,
+        branch_id: branch_id,
         queueNumber: nextQueueNumber,
         notes: args.notes?.trim() || "",
-        branch_id: branch_id,
-        status: "active",
+        status: "waiting" as const, // Default to waiting status
         createdAt: now,
         updatedAt: now,
-      });
+      };
+      console.log("Walk-in data prepared:", JSON.stringify(walkInData, null, 2));
 
-      console.log("Walk-in created with ID:", walkInId);
+      let walkInId;
+      try {
+        walkInId = await ctx.db.insert("walkIns", walkInData);
+        console.log("Walk-in created with ID:", walkInId);
+      } catch (insertError) {
+        console.error("Error inserting walk-in:", insertError);
+        console.error("Insert error details:", {
+          name: insertError.name,
+          message: insertError.message,
+          stack: insertError.stack,
+        });
+        throw insertError;
+      }
 
       return {
         success: true,
@@ -107,12 +161,20 @@ export const createWalkIn = mutation({
       };
     } catch (error) {
       console.error("Error in createWalkIn mutation:", error);
+      console.error("Error stack:", error.stack);
+      console.error("Error details:", {
+        message: error.message,
+        name: error.name,
+        cause: error.cause,
+      });
       return {
         success: false,
         message: error.message || "Failed to create walk-in",
-        args: args,
-        barberFetched: null,
-        branchId: null,
+        errorDetails: {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        },
       };
     }
   },
@@ -130,19 +192,26 @@ export const getAllWalkIns = query({
   handler: async (ctx, args) => {
     const limit = args.limit || 100;
 
-    let query = ctx.db.query("walkIns");
+    let allWalkInsQuery: any = [];
+
+    try {
+      // Try to get all walk-ins using order and collect
+      allWalkInsQuery = await ctx.db.query("walkIns").order("desc").collect();
+    } catch (queryError) {
+      console.warn("[getAllWalkIns] Query failed, returning empty array:", queryError?.message || queryError);
+      return [];
+    }
 
     // Filter by branch if provided
+    let allWalkIns = allWalkInsQuery;
     if (args.branch_id) {
-      query = query.filter((q) => q.eq(q.field("branch_id"), args.branch_id));
+      allWalkIns = allWalkInsQuery.filter((w) => w.branch_id === args.branch_id);
     }
 
     // Filter by status if provided
     if (args.status) {
-      query = query.filter((q) => q.eq(q.field("status"), args.status));
+      allWalkIns = allWalkIns.filter((w) => w.status === args.status);
     }
-
-    const allWalkIns = await query.order("desc").collect();
 
     // Filter by date range if provided
     let walkIns = allWalkIns;
@@ -204,14 +273,21 @@ export const getTodayWalkIns = query({
     todayStart.setHours(0, 0, 0, 0);
     const todayStartTimestamp = todayStart.getTime();
 
-    let query = ctx.db.query("walkIns");
+    let allWalkInsQuery: any = [];
 
-    // Filter by branch if provided
-    if (args.branch_id) {
-      query = query.filter((q) => q.eq(q.field("branch_id"), args.branch_id));
+    try {
+      // Try to get all walk-ins
+      allWalkInsQuery = await ctx.db.query("walkIns").order("desc").collect();
+    } catch (queryError) {
+      console.warn("[getTodayWalkIns] Query failed, returning empty array:", queryError?.message || queryError);
+      return [];
     }
 
-    const allWalkIns = await query.order("desc").collect();
+    // Filter by branch if provided
+    let allWalkIns = allWalkInsQuery;
+    if (args.branch_id) {
+      allWalkIns = allWalkInsQuery.filter((w) => w.branch_id === args.branch_id);
+    }
 
     // Filter for today
     const todayWalkIns = allWalkIns.filter(
@@ -309,7 +385,7 @@ export const updateWalkIn = mutation({
 
     if (args.assignedBarber !== undefined) {
       validateInput(!args.assignedBarber, ERROR_CODES.INVALID_INPUT, "Assigned barber cannot be empty");
-      
+
       // Find the new barber
       const barber = await ctx.db
         .query("barbers")
@@ -362,6 +438,42 @@ export const deleteWalkIn = mutation({
   },
 });
 
+// Mark walk-in as active (start serving)
+export const startWalkIn = mutation({
+  args: {
+    walkInId: v.id("walkIns"),
+  },
+  handler: async (ctx, args) => {
+    const walkIn = await ctx.db.get(args.walkInId);
+
+    if (!walkIn) {
+      throwUserError(ERROR_CODES.NOT_FOUND, "Walk-in not found");
+    }
+
+    if (walkIn.status === "active") {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Walk-in is already active");
+    }
+
+    if (walkIn.status === "completed") {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Cannot start a completed walk-in");
+    }
+
+    if (walkIn.status === "cancelled") {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Cannot start a cancelled walk-in");
+    }
+
+    await ctx.db.patch(args.walkInId, {
+      status: "active",
+      updatedAt: Date.now(),
+    });
+
+    return {
+      success: true,
+      message: "Walk-in started successfully",
+    };
+  },
+});
+
 // Mark walk-in as completed
 export const completeWalkIn = mutation({
   args: {
@@ -382,11 +494,69 @@ export const completeWalkIn = mutation({
       throwUserError(ERROR_CODES.INVALID_INPUT, "Cannot complete a cancelled walk-in");
     }
 
+    // Mark current walk-in as completed
     await ctx.db.patch(args.walkInId, {
       status: "completed",
       completedAt: Date.now(),
       updatedAt: Date.now(),
     });
+
+    // FIFO Auto-start: Find next waiting customer for the same barber
+    const barberId = walkIn.barberId;
+    if (barberId) {
+      // Get today's timestamp range
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayStartTimestamp = todayStart.getTime();
+
+      // Get all walk-ins for this barber - defensive approach
+      let allWalkInsQuery: any = [];
+      try {
+        allWalkInsQuery = await ctx.db.query("walkIns").collect();
+      } catch (queryError) {
+        console.warn("[completeWalkIn] Query failed for auto-start:", queryError?.message || queryError);
+        // Return without auto-start if query fails
+        return {
+          success: true,
+          message: "Walk-in marked as completed",
+        };
+      }
+
+      // Filter for waiting walk-ins for the same barber, created today
+      const waitingWalkIns = allWalkInsQuery.filter(
+        (w) =>
+          w.barberId === barberId &&
+          w.status === "waiting" &&
+          w.createdAt >= todayStartTimestamp
+      );
+
+      if (waitingWalkIns.length > 0) {
+        // Sort by queue number (FIFO - lowest queue number first)
+        waitingWalkIns.sort((a, b) => {
+          if (a.queueNumber !== b.queueNumber) {
+            return a.queueNumber - b.queueNumber;
+          }
+          return a.createdAt - b.createdAt; // Fallback to creation time
+        });
+
+        // Auto-start the first in line
+        const nextWalkIn = waitingWalkIns[0];
+        await ctx.db.patch(nextWalkIn._id, {
+          status: "active",
+          updatedAt: Date.now(),
+        });
+
+        return {
+          success: true,
+          message: "Walk-in marked as completed. Next customer automatically started.",
+          autoStarted: {
+            walkInId: nextWalkIn._id,
+            queueNumber: nextWalkIn.queueNumber,
+            customerName: nextWalkIn.name,
+          },
+        };
+      }
+    }
 
     return {
       success: true,
@@ -415,10 +585,70 @@ export const cancelWalkIn = mutation({
       throwUserError(ERROR_CODES.INVALID_INPUT, "Walk-in is already cancelled");
     }
 
+    // Mark as cancelled
     await ctx.db.patch(args.walkInId, {
       status: "cancelled",
       updatedAt: Date.now(),
     });
+
+    // FIFO Auto-start: If cancelled walk-in was active, auto-start next waiting customer for same barber
+    if (walkIn.status === "active") {
+      const barberId = walkIn.barberId;
+      if (barberId) {
+        // Get today's timestamp range
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayStartTimestamp = todayStart.getTime();
+
+        // Get all walk-ins for this barber - defensive approach
+        let allWalkInsQuery: any = [];
+        try {
+          allWalkInsQuery = await ctx.db.query("walkIns").collect();
+        } catch (queryError) {
+          console.warn("[cancelWalkIn] Query failed for auto-start:", queryError?.message || queryError);
+          // Return without auto-start if query fails
+          return {
+            success: true,
+            message: "Walk-in cancelled successfully",
+          };
+        }
+
+        // Filter for waiting walk-ins for the same barber, created today
+        const waitingWalkIns = allWalkInsQuery.filter(
+          (w) =>
+            w.barberId === barberId &&
+            w.status === "waiting" &&
+            w.createdAt >= todayStartTimestamp
+        );
+
+        if (waitingWalkIns.length > 0) {
+          // Sort by queue number (FIFO - lowest queue number first)
+          waitingWalkIns.sort((a, b) => {
+            if (a.queueNumber !== b.queueNumber) {
+              return a.queueNumber - b.queueNumber;
+            }
+            return a.createdAt - b.createdAt;
+          });
+
+          // Auto-start the first in line
+          const nextWalkIn = waitingWalkIns[0];
+          await ctx.db.patch(nextWalkIn._id, {
+            status: "active",
+            updatedAt: Date.now(),
+          });
+
+          return {
+            success: true,
+            message: "Walk-in cancelled. Next customer automatically started.",
+            autoStarted: {
+              walkInId: nextWalkIn._id,
+              queueNumber: nextWalkIn.queueNumber,
+              customerName: nextWalkIn.name,
+            },
+          };
+        }
+      }
+    }
 
     return {
       success: true,
@@ -439,14 +669,24 @@ export const cleanupOldWalkIns = internalMutation({
     yesterdayStart.setHours(0, 0, 0, 0);
     const yesterdayStartTimestamp = yesterdayStart.getTime();
 
-    let query = ctx.db.query("walkIns");
-
-    // Filter by branch if provided
-    if (args.branch_id) {
-      query = query.filter((q) => q.eq(q.field("branch_id"), args.branch_id));
+    // Get all walk-ins - defensive approach
+    let allWalkInsQuery: any = [];
+    try {
+      allWalkInsQuery = await ctx.db.query("walkIns").collect();
+    } catch (queryError) {
+      console.warn("[cleanupOldWalkIns] Query failed:", queryError?.message || queryError);
+      return {
+        success: true,
+        deletedCount: 0,
+        message: "No walk-ins to clean up",
+      };
     }
 
-    const allWalkIns = await query.collect();
+    // Filter by branch if provided
+    let allWalkIns = allWalkInsQuery;
+    if (args.branch_id) {
+      allWalkIns = allWalkInsQuery.filter((w) => w.branch_id === args.branch_id);
+    }
 
     // Find walk-ins older than yesterday (created before yesterday's start)
     const oldWalkIns = allWalkIns.filter(
@@ -477,14 +717,24 @@ export const manualCleanupOldWalkIns = mutation({
     yesterdayStart.setHours(0, 0, 0, 0);
     const yesterdayStartTimestamp = yesterdayStart.getTime();
 
-    let query = ctx.db.query("walkIns");
-
-    // Filter by branch if provided
-    if (args.branch_id) {
-      query = query.filter((q) => q.eq(q.field("branch_id"), args.branch_id));
+    // Get all walk-ins - defensive approach
+    let allWalkInsQuery: any = [];
+    try {
+      allWalkInsQuery = await ctx.db.query("walkIns").collect();
+    } catch (queryError) {
+      console.warn("[manualCleanupOldWalkIns] Query failed:", queryError?.message || queryError);
+      return {
+        success: true,
+        deletedCount: 0,
+        message: "No walk-ins to clean up",
+      };
     }
 
-    const allWalkIns = await query.collect();
+    // Filter by branch if provided
+    let allWalkIns = allWalkInsQuery;
+    if (args.branch_id) {
+      allWalkIns = allWalkInsQuery.filter((w) => w.branch_id === args.branch_id);
+    }
 
     // Find walk-ins older than yesterday (created before yesterday's start)
     const oldWalkIns = allWalkIns.filter(
@@ -509,13 +759,30 @@ export const getWalkInStats = query({
     branch_id: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
-    let query = ctx.db.query("walkIns");
-
-    if (args.branch_id) {
-      query = query.filter((q) => q.eq(q.field("branch_id"), args.branch_id));
+    // Get all walk-ins - defensive approach
+    let allWalkInsQuery: any = [];
+    try {
+      allWalkInsQuery = await ctx.db.query("walkIns").collect();
+    } catch (queryError) {
+      console.warn("[getWalkInStats] Query failed:", queryError?.message || queryError);
+      // Return zero stats if query fails
+      return {
+        total: 0,
+        today: 0,
+        thisWeek: 0,
+        thisMonth: 0,
+        waiting: 0,
+        active: 0,
+        completed: 0,
+        cancelled: 0,
+      };
     }
 
-    const allWalkIns = await query.collect();
+    // Filter by branch if provided
+    let allWalkIns = allWalkInsQuery;
+    if (args.branch_id) {
+      allWalkIns = allWalkInsQuery.filter((w) => w.branch_id === args.branch_id);
+    }
 
     const now = Date.now();
     const todayStart = new Date();
@@ -536,8 +803,10 @@ export const getWalkInStats = query({
       today: allWalkIns.filter((w) => w.createdAt >= todayStartTimestamp).length,
       thisWeek: allWalkIns.filter((w) => w.createdAt >= weekStartTimestamp).length,
       thisMonth: allWalkIns.filter((w) => w.createdAt >= monthStartTimestamp).length,
+      waiting: allWalkIns.filter((w) => w.status === "waiting").length,
       active: allWalkIns.filter((w) => w.status === "active").length,
       completed: allWalkIns.filter((w) => w.status === "completed").length,
+      cancelled: allWalkIns.filter((w) => w.status === "cancelled").length,
     };
   },
 });

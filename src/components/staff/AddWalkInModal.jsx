@@ -8,16 +8,16 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
     name: '',
     number: '',
-    barberId: '', // Changed from assignedBarber to barberId
+    barberId: '',
     notes: ''
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(null)
 
-  // Get barbers for the assigned barber dropdown
-  const barbers = useQuery(api.services.barbers.getAllBarbers) || []
-  
+  // Fetch barbers from Convex
+  const barbers = useQuery(api.services.barbers.getAllBarbers, { limit: 100 }) || []
+
   // Mutation to create walk-in
   const createWalkIn = useMutation(api.services.walkIn.createWalkIn)
 
@@ -57,41 +57,54 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
     setLoading(true)
     setError('')
     setSuccess(null)
+
     try {
-      // Find the selected barber to get the name
+      // Find the selected barber to verify it exists
       const selectedBarber = barbers.find(b => b._id === formData.barberId)
-      
+
+      if (!selectedBarber) {
+        setError('Selected barber not found. Please try again.')
+        setLoading(false)
+        return
+      }
+
+      console.log('Selected barber:', selectedBarber)
+      console.log('Barber branch_id:', selectedBarber.branch_id)
+
+      // Prepare payload for Convex mutation
       const payload = {
         name: formData.name.trim(),
         number: formData.number.trim(),
         barberId: formData.barberId,
-        assignedBarber: selectedBarber?.full_name || selectedBarber?.name || '', // Add this for backward compatibility
         notes: formData.notes?.trim() || undefined
       }
+
       console.log('Payload being sent to mutation:', payload)
-      
+
+      // Call the Convex mutation
       const result = await createWalkIn(payload)
       console.log('Walk-in creation result:', result)
-      
+
       // Check if the result indicates failure
       if (!result.success) {
-        setError(result.message || 'Failed to create walk-in. Please check barber name and try again.')
+        setError(result.message || 'Failed to create walk-in. Please try again.')
         setLoading(false)
         return
       }
-      
+
       // Show success message with queue number
       setSuccess({
         message: result.message || 'Walk-in added successfully',
         queueNumber: result.queueNumber
       })
+
       // Close modal after 2 seconds
       setTimeout(() => {
         onClose()
       }, 2000)
     } catch (error) {
       console.error('Error creating walk-in:', error)
-      setError(error.message || error.toString() || 'Failed to create walk-in. Please try again.')
+      setError(error.message || 'Failed to create walk-in. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -166,6 +179,7 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
                   placeholder="Enter customer name"
                   className="w-full pl-10 pr-4 py-2.5 bg-[#0A0A0A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
                   required
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -185,6 +199,7 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
                   placeholder="Enter phone number"
                   className="w-full pl-10 pr-4 py-2.5 bg-[#0A0A0A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
                   required
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -200,17 +215,23 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
                   name="barberId"
                   value={formData.barberId}
                   onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-2.5 bg-[#0A0A0A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm appearance-none cursor-pointer"
+                  className="w-full pl-10 pr-4 py-2.5 bg-[#0A0A0A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm appearance-none cursor-pointer disabled:opacity-50"
                   required
+                  disabled={loading}
                 >
                   <option value="">Select a barber</option>
                   {barbers.map((barber) => (
                     <option key={barber._id} value={barber._id}>
-                      {barber.name || barber.full_name}
+                      {barber.name || barber.full_name} {barber.branch_name ? `(${barber.branch_name})` : ''}
                     </option>
                   ))}
                 </select>
               </div>
+              {formData.barberId && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Branch: {barbers.find(b => b._id === formData.barberId)?.branch_name || 'Unknown'}
+                </p>
+              )}
             </div>
 
             {/* Notes */}
@@ -224,7 +245,8 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
                 onChange={handleInputChange}
                 placeholder="Additional notes (optional)"
                 rows="3"
-                className="w-full px-4 py-2.5 bg-[#0A0A0A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm resize-none"
+                className="w-full px-4 py-2.5 bg-[#0A0A0A] border border-[#444444] text-white placeholder-gray-500 rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm resize-none disabled:opacity-50"
+                disabled={loading}
               />
             </div>
 
@@ -233,7 +255,7 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
               <div className="flex items-center space-x-2 text-sm text-gray-400">
                 <Calendar className="h-4 w-4 text-[var(--color-primary)]" />
                 <Clock className="h-4 w-4 text-[var(--color-primary)]" />
-                <span>Walk-in will be recorded with current date & time</span>
+                <span>Walk-in will be recorded with current date & time and assigned to queue</span>
               </div>
             </div>
 
@@ -243,6 +265,7 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
                 type="button"
                 onClick={onClose}
                 className="px-6 py-2.5 border border-gray-500 text-gray-300 rounded-lg hover:bg-gray-500/20 transition-colors text-sm font-medium"
+                disabled={loading}
               >
                 {success ? 'Close' : 'Cancel'}
               </button>
@@ -265,7 +288,6 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
                   )}
                 </button>
               )}
-            
             </div>
           </form>
         </div>
