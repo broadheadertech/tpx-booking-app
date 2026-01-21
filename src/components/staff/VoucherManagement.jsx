@@ -31,8 +31,10 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useBranding } from "../../context/BrandingContext";
 import { useAuth } from "../../context/AuthContext";
+import CreateVoucherModal from "../staff/CreateVoucherModal";
 
 const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [sortBy, setSortBy] = useState("created_at");
@@ -518,19 +520,21 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
             <div className="flex items-center bg-[#1A1A1A] rounded-lg border border-[#444444] p-1">
               <button
                 onClick={() => setViewMode("card")}
-                className={`p-2 rounded-md transition-colors ${viewMode === "card"
-                  ? "bg-[var(--color-primary)] text-white"
-                  : "text-gray-400 hover:text-gray-300"
-                  }`}
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === "card"
+                    ? "bg-[var(--color-primary)] text-white"
+                    : "text-gray-400 hover:text-gray-300"
+                }`}
               >
                 <Grid className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setViewMode("table")}
-                className={`p-2 rounded-md transition-colors ${viewMode === "table"
-                  ? "bg-[var(--color-primary)] text-white"
-                  : "text-gray-400 hover:text-gray-300"
-                  }`}
+                className={`p-2 rounded-md transition-colors ${
+                  viewMode === "table"
+                    ? "bg-[var(--color-primary)] text-white"
+                    : "text-gray-400 hover:text-gray-300"
+                }`}
               >
                 <List className="h-4 w-4" />
               </button>
@@ -544,7 +548,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
               <span>Refresh</span>
             </button>
             <button
-              onClick={onCreateVoucher}
+              onClick={() => setShowCreateModal(true)}
               className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] transition-colors text-sm"
             >
               <Plus className="h-4 w-4" />
@@ -583,16 +587,17 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                   </div>
                   <div className="flex items-center space-x-2">
                     <div
-                      className={`flex items-center space-x-1 px-2 py-1 rounded-full ${statusConfig.status === "active"
-                        ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                        : statusConfig.status === "pending_approval"
-                          ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
-                          : statusConfig.status === "rejected"
-                            ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                            : statusConfig.status === "redeemed"
-                              ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                              : "bg-red-500/20 text-red-400 border border-red-500/30"
-                        }`}
+                      className={`flex items-center space-x-1 px-2 py-1 rounded-full ${
+                        statusConfig.status === "active"
+                          ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                          : statusConfig.status === "pending_approval"
+                            ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                            : statusConfig.status === "rejected"
+                              ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                              : statusConfig.status === "redeemed"
+                                ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                                : "bg-red-500/20 text-red-400 border border-red-500/30"
+                      }`}
                     >
                       <StatusIcon className="h-3 w-3" />
                       <span className="text-xs font-medium">
@@ -601,20 +606,21 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                     </div>
                     {(user?.role === "branch_admin" ||
                       user?.role === "super_admin") && (
-                        <button
-                          onClick={() => handleDelete(voucher)}
-                          className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded transition-colors"
-                          title="Delete Voucher"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => handleDelete(voucher)}
+                        className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded transition-colors"
+                        title="Delete Voucher"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
                 {voucher.status === "rejected" && voucher.rejection_reason && (
                   <div className="mb-3 p-2 bg-red-500/10 border border-red-500/20 rounded text-xs text-red-300">
-                    <strong>Rejection Reason:</strong> {voucher.rejection_reason}
+                    <strong>Rejection Reason:</strong>{" "}
+                    {voucher.rejection_reason}
                   </div>
                 )}
 
@@ -669,31 +675,34 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                   <button
                     onClick={() => setShowUsersModal(voucher)}
                     disabled={voucher.status !== "active"}
-                    className={`w-full mb-2 px-3 py-2 border rounded-lg transition-colors text-sm font-medium flex items-center justify-center ${voucher.status === "active"
-                      ? "bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30"
-                      : "bg-gray-500/10 text-gray-500 border-gray-500/20 cursor-not-allowed"
-                      }`}
+                    className={`w-full mb-2 px-3 py-2 border rounded-lg transition-colors text-sm font-medium flex items-center justify-center ${
+                      voucher.status === "active"
+                        ? "bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30"
+                        : "bg-gray-500/10 text-gray-500 border-gray-500/20 cursor-not-allowed"
+                    }`}
                   >
                     <Users className="h-4 w-4 mr-2" /> View Assigned Users
                   </button>
 
                   {/* Show action buttons only for active vouchers */}
-                  {!voucher.redeemed && voucher.expires_at >= Date.now() && voucher.status === "active" && (
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => setShowQRCode(voucher)}
-                        className="flex-1 px-3 py-2 bg-[#444444] text-gray-300 rounded-lg hover:bg-[#555555] transition-colors text-sm font-medium flex items-center justify-center"
-                      >
-                        <QrCode className="h-4 w-4 mr-2" /> View QR
-                      </button>
-                      <button
-                        onClick={() => setShowSendModal(voucher)}
-                        className="flex-1 px-3 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg hover:from-[var(--color-accent)] hover:brightness-110 transition-colors text-sm font-semibold flex items-center justify-center"
-                      >
-                        <Mail className="h-4 w-4 mr-2" /> Send Email
-                      </button>
-                    </div>
-                  )}
+                  {!voucher.redeemed &&
+                    voucher.expires_at >= Date.now() &&
+                    voucher.status === "active" && (
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => setShowQRCode(voucher)}
+                          className="flex-1 px-3 py-2 bg-[#444444] text-gray-300 rounded-lg hover:bg-[#555555] transition-colors text-sm font-medium flex items-center justify-center"
+                        >
+                          <QrCode className="h-4 w-4 mr-2" /> View QR
+                        </button>
+                        <button
+                          onClick={() => setShowSendModal(voucher)}
+                          className="flex-1 px-3 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg hover:from-[var(--color-accent)] hover:brightness-110 transition-colors text-sm font-semibold flex items-center justify-center"
+                        >
+                          <Mail className="h-4 w-4 mr-2" /> Send Email
+                        </button>
+                      </div>
+                    )}
                   {voucher.status === "pending_approval" && (
                     <div className="text-center py-2 text-xs text-yellow-500 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
                       Waiting for Admin Approval
@@ -703,6 +712,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
               </div>
             );
           })}
+
         </div>
       ) : (
         /* Table View */
@@ -782,27 +792,32 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div
-                          className={`flex items-center space-x-1 px-2 py-1 rounded-full w-fit ${statusConfig.status === "active"
-                            ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                            : statusConfig.status === "pending_approval"
-                              ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
-                              : statusConfig.status === "rejected"
-                                ? "bg-red-500/20 text-red-400 border border-red-500/30"
-                                : statusConfig.status === "redeemed"
-                                  ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                                  : "bg-red-500/20 text-red-400 border border-red-500/30"
-                            }`}
+                          className={`flex items-center space-x-1 px-2 py-1 rounded-full w-fit ${
+                            statusConfig.status === "active"
+                              ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                              : statusConfig.status === "pending_approval"
+                                ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                                : statusConfig.status === "rejected"
+                                  ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                                  : statusConfig.status === "redeemed"
+                                    ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                                    : "bg-red-500/20 text-red-400 border border-red-500/30"
+                          }`}
                         >
                           <StatusIcon className="h-3 w-3" />
                           <span className="text-xs font-medium">
                             {statusConfig.label}
                           </span>
                         </div>
-                        {voucher.status === "rejected" && voucher.rejection_reason && (
-                          <div className="text-[10px] text-red-400 mt-1 truncate max-w-[150px]" title={voucher.rejection_reason}>
-                            {voucher.rejection_reason}
-                          </div>
-                        )}
+                        {voucher.status === "rejected" &&
+                          voucher.rejection_reason && (
+                            <div
+                              className="text-[10px] text-red-400 mt-1 truncate max-w-[150px]"
+                              title={voucher.rejection_reason}
+                            >
+                              {voucher.rejection_reason}
+                            </div>
+                          )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div
@@ -816,16 +831,18 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                           <button
                             onClick={() => setShowUsersModal(voucher)}
                             disabled={voucher.status !== "active"}
-                            className={`p-2 rounded-lg transition-colors ${voucher.status === "active"
-                              ? "text-gray-400 hover:text-blue-400 hover:bg-[#444444]"
-                              : "text-gray-600 cursor-not-allowed"
-                              }`}
+                            className={`p-2 rounded-lg transition-colors ${
+                              voucher.status === "active"
+                                ? "text-gray-400 hover:text-blue-400 hover:bg-[#444444]"
+                                : "text-gray-600 cursor-not-allowed"
+                            }`}
                             title="View Users"
                           >
                             <Users className="h-4 w-4" />
                           </button>
                           {!voucher.redeemed &&
-                            voucher.expires_at >= Date.now() && voucher.status === "active" && (
+                            voucher.expires_at >= Date.now() &&
+                            voucher.status === "active" && (
                               <>
                                 <button
                                   onClick={() => setShowQRCode(voucher)}
@@ -845,14 +862,14 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
                             )}
                           {(user?.role === "branch_admin" ||
                             user?.role === "super_admin") && (
-                              <button
-                                onClick={() => handleDelete(voucher)}
-                                className="p-2 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded-lg transition-colors"
-                                title="Delete"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            )}
+                            <button
+                              onClick={() => handleDelete(voucher)}
+                              className="p-2 text-gray-400 hover:text-red-400 hover:bg-[#444444] rounded-lg transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -899,6 +916,17 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
         />
       )}
 
+       {showCreateModal && (
+            <CreateVoucherModal
+              isOpen={showCreateModal}
+              onClose={() => setShowCreateModal(false)}
+              onCreated={() => {
+                setShowCreateModal(false);
+                onRefresh(); // refresh vouchers after creation
+              }}
+            />
+          )}
+
       {/* Confirmation Modal */}
       <Modal
         isOpen={!!confirmModal}
@@ -924,10 +952,11 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
             <button
               onClick={confirmModal?.onConfirm}
               disabled={loading}
-              className={`flex-1 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${confirmModal?.type === "delete"
-                ? "bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
-                : "bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white disabled:opacity-50"
-                }`}
+              className={`flex-1 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
+                confirmModal?.type === "delete"
+                  ? "bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+                  : "bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white disabled:opacity-50"
+              }`}
             >
               {loading ? "Processing..." : "Confirm"}
             </button>
