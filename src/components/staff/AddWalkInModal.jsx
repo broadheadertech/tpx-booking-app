@@ -8,7 +8,7 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
     name: '',
     number: '',
-    assignedBarber: '',
+    barberId: '', // Changed from assignedBarber to barberId
     notes: ''
   })
   const [loading, setLoading] = useState(false)
@@ -21,13 +21,21 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
   // Mutation to create walk-in
   const createWalkIn = useMutation(api.services.walkIn.createWalkIn)
 
+  // Debug: Log barbers when they load
+  useEffect(() => {
+    if (barbers.length > 0) {
+      console.log('Barbers loaded:', barbers)
+      console.log('First barber structure:', barbers[0])
+    }
+  }, [barbers])
+
   // Reset form when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
       setFormData({
         name: '',
         number: '',
-        assignedBarber: '',
+        barberId: '',
         notes: ''
       })
       setError('')
@@ -38,22 +46,40 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    if (!formData.name.trim() || !formData.number.trim() || !formData.assignedBarber) {
+    if (!formData.name.trim() || !formData.number.trim() || !formData.barberId) {
       setError('Name, phone number, and assigned barber are required')
       return
     }
+
+    console.log('Form data before submission:', formData)
+    console.log('Selected barber ID:', formData.barberId)
 
     setLoading(true)
     setError('')
     setSuccess(null)
     try {
-      const result = await createWalkIn({
+      // Find the selected barber to get the name
+      const selectedBarber = barbers.find(b => b._id === formData.barberId)
+      
+      const payload = {
         name: formData.name.trim(),
         number: formData.number.trim(),
-        assignedBarber: formData.assignedBarber,
+        barberId: formData.barberId,
+        assignedBarber: selectedBarber?.full_name || selectedBarber?.name || '', // Add this for backward compatibility
         notes: formData.notes?.trim() || undefined
-      })
-      console.log('Walk-in created successfully:', result)
+      }
+      console.log('Payload being sent to mutation:', payload)
+      
+      const result = await createWalkIn(payload)
+      console.log('Walk-in creation result:', result)
+      
+      // Check if the result indicates failure
+      if (!result.success) {
+        setError(result.message || 'Failed to create walk-in. Please check barber name and try again.')
+        setLoading(false)
+        return
+      }
+      
       // Show success message with queue number
       setSuccess({
         message: result.message || 'Walk-in added successfully',
@@ -171,16 +197,16 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
               <div className="relative">
                 <Scissors className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none z-10" />
                 <select
-                  name="assignedBarber"
-                  value={formData.assignedBarber}
+                  name="barberId"
+                  value={formData.barberId}
                   onChange={handleInputChange}
                   className="w-full pl-10 pr-4 py-2.5 bg-[#0A0A0A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm appearance-none cursor-pointer"
                   required
                 >
                   <option value="">Select a barber</option>
                   {barbers.map((barber) => (
-                    <option key={barber._id} value={barber.name}>
-                      {barber.name}
+                    <option key={barber._id} value={barber._id}>
+                      {barber.name || barber.full_name}
                     </option>
                   ))}
                 </select>

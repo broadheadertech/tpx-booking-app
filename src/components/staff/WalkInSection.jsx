@@ -12,42 +12,54 @@ export default function WalkInSection() {
   const [statusFilter, setStatusFilter] = useState('all') // 'all', 'active', 'completed', 'cancelled'
   const [cleaningUp, setCleaningUp] = useState(false)
 
-  // Calculate date range for query
-  const dateRange = useMemo(() => {
+  // Get walk-ins data from API with filters (temporarily without date range until Convex rebuilds)
+  const allWalkIns = useQuery(
+    api.services.walkIn.getAllWalkIns,
+    statusFilter === 'all' ? {} : { status: statusFilter }
+  ) || []
+
+  // Filter by date on client side
+  const walkIns = useMemo(() => {
+    let startDate, endDate
+
     if (dateFilter === 'today') {
       const todayStart = new Date()
       todayStart.setHours(0, 0, 0, 0)
+      startDate = todayStart.getTime()
       const todayEnd = new Date()
       todayEnd.setHours(23, 59, 59, 999)
-      return { startDate: todayStart.getTime(), endDate: todayEnd.getTime() }
+      endDate = todayEnd.getTime()
     } else if (dateFilter === 'tomorrow') {
       const tomorrowStart = new Date()
       tomorrowStart.setDate(tomorrowStart.getDate() + 1)
       tomorrowStart.setHours(0, 0, 0, 0)
+      startDate = tomorrowStart.getTime()
       const tomorrowEnd = new Date()
       tomorrowEnd.setDate(tomorrowEnd.getDate() + 1)
       tomorrowEnd.setHours(23, 59, 59, 999)
-      return { startDate: tomorrowStart.getTime(), endDate: tomorrowEnd.getTime() }
+      endDate = tomorrowEnd.getTime()
     } else if (dateFilter === 'custom' && customDate) {
       const start = new Date(customDate)
       start.setHours(0, 0, 0, 0)
+      startDate = start.getTime()
       const end = new Date(customDate)
       end.setHours(23, 59, 59, 999)
-      return { startDate: start.getTime(), endDate: end.getTime() }
+      endDate = end.getTime()
+    } else {
+      // Default to today if no valid date selected
+      const todayStart = new Date()
+      todayStart.setHours(0, 0, 0, 0)
+      startDate = todayStart.getTime()
+      const todayEnd = new Date()
+      todayEnd.setHours(23, 59, 59, 999)
+      endDate = todayEnd.getTime()
     }
-    // Default to today if no valid date selected
-    const todayStart = new Date()
-    todayStart.setHours(0, 0, 0, 0)
-    const todayEnd = new Date()
-    todayEnd.setHours(23, 59, 59, 999)
-    return { startDate: todayStart.getTime(), endDate: todayEnd.getTime() }
-  }, [dateFilter, customDate])
 
-  // Get walk-ins data from API with filters
-  const walkIns = useQuery(
-    api.services.walkIn.getAllWalkIns,
-    statusFilter === 'all' ? dateRange : { ...dateRange, status: statusFilter }
-  ) || []
+    // Filter by date range
+    return allWalkIns.filter((walkIn) => {
+      return walkIn.createdAt >= startDate && walkIn.createdAt <= endDate
+    })
+  }, [allWalkIns, dateFilter, customDate])
 
   // Mutations for completing and cancelling walk-ins
   const completeWalkIn = useMutation(api.services.walkIn.completeWalkIn)
@@ -329,7 +341,7 @@ export default function WalkInSection() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-white">
-                      {walkIn.assignedBarber}
+                      {walkIn.barber_name || walkIn.assignedBarber || 'N/A'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

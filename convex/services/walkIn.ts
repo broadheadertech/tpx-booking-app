@@ -8,82 +8,124 @@ export const createWalkIn = mutation({
   args: {
     name: v.string(),
     number: v.string(),
-    assignedBarber: v.string(),
+    barberId: v.optional(v.id("barbers")),
+    assignedBarber: v.optional(v.string()), // Kept for backward compatibility
     notes: v.optional(v.string()),
     branch_id: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
-    // Validate input
-    validateInput(!args.name.trim(), ERROR_CODES.INVALID_INPUT, "Customer name is required");
-    validateInput(!args.number.trim(), ERROR_CODES.INVALID_INPUT, "Phone number is required");
-    validateInput(!args.assignedBarber, ERROR_CODES.INVALID_INPUT, "Assigned barber is required");
+    try {
+      console.log("createWalkIn called with args:", args);
 
-    const now = Date.now();
+      // Validate input
+      validateInput(!args.name.trim(), ERROR_CODES.INVALID_INPUT, "Customer name is required");
+      validateInput(!args.number.trim(), ERROR_CODES.INVALID_INPUT, "Phone number is required");
+      validateInput(!args.barberId && !args.assignedBarber, ERROR_CODES.INVALID_INPUT, "Assigned barber is required");
 
-    // Find the barber by name to get their ID
-    const barber = await ctx.db
-      .query("barbers")
-      .filter((q) => q.eq(q.field("full_name"), args.assignedBarber))
-      .first();
+      const now = Date.now();
 
-    if (!barber) {
-      throwUserError(ERROR_CODES.NOT_FOUND, "Barber not found");
-    }
+      let barber;
+      let branch_id = args.branch_id;
 
-    const branch_id = args.branch_id || barber.branch_id;
+      // Get the barber - prefer barberId, fallback to assignedBarber name lookup
+      if (args.barberId) {
+        barber = await ctx.db.get(args.barberId);
+        console.log("Barber fetched by ID:", barber);
+      } else if (args.assignedBarber) {
+        barber = await ctx.db
+          .query("barbers")
+          .filter((q) => q.eq(q.field("full_name"), args.assignedBarber))
+          .first();
+        console.log("Barber fetched by name:", barber);
+      }
 
-    // Get the highest queue number for active walk-ins in this branch today
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayStartTimestamp = todayStart.getTime();
+      if (!barber) {
+        return {
+          success: false,
+          message: "Barber not found",
+          barberFetched: barber,
+          args: args,
+        };
+      }
 
-    const activeWalkIns = await ctx.db
-      .query("walkIns")
-      .filter((q) => 
-        q.and(
-          q.eq(q.field("branch_id"), branch_id),
-          q.eq(q.field("status"), "active"),
-          q.gte(q.field("createdAt"), todayStartTimestamp)
+      branch_id = branch_id || barber.branch_id;
+      console.log("Branch ID:", branch_id);
+
+      // Get the highest queue number for active walk-ins in this branch today
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const todayStartTimestamp = todayStart.getTime();
+
+      const activeWalkIns = await ctx.db
+        .query("walkIns")
+        .filter((q) => 
+          q.and(
+            q.eq(q.field("branch_id"), branch_id),
+            q.eq(q.field("status"), "active"),
+            q.gte(q.field("createdAt"), todayStartTimestamp)
+          )
         )
-      )
-      .collect();
+        .collect();
 
-    // Calculate next queue number (highest + 1, or 1 if no active walk-ins)
-    const nextQueueNumber = activeWalkIns.length > 0
-      ? Math.max(...activeWalkIns.map(w => w.queueNumber || 0)) + 1
-      : 1;
+      console.log("Active walk-ins found:", activeWalkIns.length);
 
-    // Create the walk-in record
-    const walkInId = await ctx.db.insert("walkIns", {
-      name: args.name.trim(),
-      number: args.number.trim(),
-      assignedBarber: args.assignedBarber,
-      barberId: barber._id,
-      queueNumber: nextQueueNumber,
-      notes: args.notes?.trim() || "",
-      branch_id: branch_id,
-      status: "active",
-      createdAt: now,
-      updatedAt: now,
-    });
+      // Calculate next queue number (highest + 1, or 1 if no active walk-ins)
+      let nextQueueNumber = 1;
+      if (activeWalkIns.length > 0) {
+        const queueNumbers = activeWalkIns
+          .map(w => w.queueNumber)
+          .filter(num => typeof num === 'number' && !isNaN(num));
+        
+        if (queueNumbers.length > 0) {
+          nextQueueNumber = Math.max(...queueNumbers) + 1;
+        }
+      }
 
-    return {
-      success: true,
-      walkInId,
-      queueNumber: nextQueueNumber,
-      message: `Walk-in customer added successfully with queue number ${nextQueueNumber}`,
-    };
+      console.log("Next queue number:", nextQueueNumber);
+
+      // Create the walk-in record
+      const walkInId = await ctx.db.insert("walkIns", {
+        name: args.name.trim(),
+        number: args.number.trim(),
+        assignedBarber: barber.full_name,
+        barberId: barber._id,
+        queueNumber: nextQueueNumber,
+        notes: args.notes?.trim() || "",
+        branch_id: branch_id,
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      console.log("Walk-in created with ID:", walkInId);
+
+      return {
+        success: true,
+        walkInId,
+        queueNumber: nextQueueNumber,
+        message: `Walk-in customer added successfully with queue number ${nextQueueNumber}`,
+      };
+    } catch (error) {
+      console.error("Error in createWalkIn mutation:", error);
+      return {
+        success: false,
+        message: error.message || "Failed to create walk-in",
+        args: args,
+        barberFetched: null,
+        branchId: null,
+      };
+    }
   },
 });
 
-// Get all walk-ins with optional filtering
+// Get all walk-ins with optional filtering including date range
 export const getAllWalkIns = query({
   args: {
     branch_id: v.optional(v.id("branches")),
     limit: v.optional(v.number()),
     status: v.optional(v.string()),
-    startDate: v.optional(v.number()), // Timestamp for start of date range
-    endDate: v.optional(v.number()),   // Timestamp for end of date range
+    startDate: v.optional(v.number()),
+    endDate: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const limit = args.limit || 100;
