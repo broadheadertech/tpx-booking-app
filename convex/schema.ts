@@ -291,6 +291,7 @@ export default defineSchema({
     assignedBarber: v.string(), // Barber's full name
     barberId: v.id("barbers"), // Reference to the barber
     branch_id: v.id("branches"),
+    queueNumber: v.number(), // Auto-assigned queue number for FIFO ordering
     notes: v.optional(v.string()),
     status: v.string(), // 'active', 'completed', 'cancelled'
     completedAt: v.optional(v.number()),
@@ -301,7 +302,8 @@ export default defineSchema({
     .index("by_branch", ["branch_id"])
     .index("by_status", ["status"])
     .index("by_created_at", ["createdAt"])
-    .index("by_branch_status", ["branch_id", "status"]),
+    .index("by_branch_status", ["branch_id", "status"])
+    .index("by_queue_number", ["queueNumber"]),
 
   // Vouchers table
   vouchers: defineTable({
