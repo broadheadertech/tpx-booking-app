@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { LayoutDashboard, Users, Calendar, Scissors, Gift, BarChart3, UserCheck, CalendarDays, Package, Bell, ChevronDown, MoreHorizontal, Building, Settings, DollarSign, Mail, CreditCard, FileText } from 'lucide-react'
+import { LayoutDashboard, Users, Calendar, Scissors, Gift, BarChart3, UserCheck, CalendarDays, Package, Bell, ChevronDown, MoreHorizontal, Building, Settings, DollarSign, Mail, CreditCard, FileText, UserPlus } from 'lucide-react'
 
 const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount = 0 }) => {
   const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false)
@@ -38,13 +38,14 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
       payroll: DollarSign,
       email_marketing: Mail,
       pos: CreditCard,
-      custom_bookings: FileText
+      custom_bookings: FileText,
+      walkins: UserPlus
     }
     return iconMap[tabId] || LayoutDashboard
   }
 
   // Define primary tabs (most frequently used)
-  const primaryTabIds = ['overview', 'reports', 'bookings', 'custom_bookings', 'calendar', 'barbers', 'users', 'services', 'vouchers', 'payroll']
+  const primaryTabIds = ['overview', 'reports', 'bookings', 'custom_bookings', 'calendar', 'walkins', 'barbers', 'users', 'services', 'vouchers', 'payroll']
 
   // Helper to check if a tab is available in the current filtered tabs
   const isTabAvailable = (tabId) => tabs.some(t => t.id === tabId)
