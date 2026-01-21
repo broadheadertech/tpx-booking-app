@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { X, User, UserPlus, Phone, Scissors, Calendar, Clock, AlertCircle } from 'lucide-react'
+import { X, User, UserPlus, Phone, Scissors, Calendar, Clock, AlertCircle, CheckCircle } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { createPortal } from 'react-dom'
@@ -13,6 +13,7 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState(null)
 
   // Get barbers for the assigned barber dropdown
   const barbers = useQuery(api.services.barbers.getAllBarbers) || []
@@ -30,6 +31,7 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
         notes: ''
       })
       setError('')
+      setSuccess(null)
     }
   }, [isOpen])
 
@@ -42,17 +44,28 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
     }
 
     setLoading(true)
+    setError('')
+    setSuccess(null)
     try {
-      await createWalkIn({
-        name: formData.name,
-        number: formData.number,
+      const result = await createWalkIn({
+        name: formData.name.trim(),
+        number: formData.number.trim(),
         assignedBarber: formData.assignedBarber,
-        notes: formData.notes || undefined
+        notes: formData.notes?.trim() || undefined
       })
-      onClose()
+      console.log('Walk-in created successfully:', result)
+      // Show success message with queue number
+      setSuccess({
+        message: result.message || 'Walk-in added successfully',
+        queueNumber: result.queueNumber
+      })
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        onClose()
+      }, 2000)
     } catch (error) {
       console.error('Error creating walk-in:', error)
-      setError(error.message || 'Failed to create walk-in')
+      setError(error.message || error.toString() || 'Failed to create walk-in. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -93,6 +106,22 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
               <div className="p-3 bg-red-400/20 border border-red-400/30 rounded-lg flex items-center space-x-2">
                 <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
                 <p className="text-sm text-red-400">{error}</p>
+              </div>
+            )}
+
+            {success && (
+              <div className="p-4 bg-green-400/20 border border-green-400/30 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <CheckCircle className="h-5 w-5 text-green-400 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-green-400">{success.message}</p>
+                    {success.queueNumber && (
+                      <p className="text-lg font-bold text-green-300 mt-2">
+                        Queue Number: {success.queueNumber}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -189,25 +218,28 @@ const AddWalkInModal = ({ isOpen, onClose }) => {
                 onClick={onClose}
                 className="px-6 py-2.5 border border-gray-500 text-gray-300 rounded-lg hover:bg-gray-500/20 transition-colors text-sm font-medium"
               >
-                Cancel
+                {success ? 'Close' : 'Cancel'}
               </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex items-center space-x-2 px-6 py-2.5 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Adding...</span>
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="h-4 w-4" />
-                    <span>Add Walk-in</span>
-                  </>
-                )}
-              </button>
+              {!success && (
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex items-center space-x-2 px-6 py-2.5 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Adding...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="h-4 w-4" />
+                      <span>Add Walk-in</span>
+                    </>
+                  )}
+                </button>
+              )}
+            
             </div>
           </form>
         </div>

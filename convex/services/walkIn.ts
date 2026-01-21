@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "../_generated/server";
+import { mutation, query, internalMutation } from "../_generated/server";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import type { Id } from "../_generated/dataModel";
 
@@ -30,14 +30,38 @@ export const createWalkIn = mutation({
       throwUserError(ERROR_CODES.NOT_FOUND, "Barber not found");
     }
 
+    const branch_id = args.branch_id || barber.branch_id;
+
+    // Get the highest queue number for active walk-ins in this branch today
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayStartTimestamp = todayStart.getTime();
+
+    const activeWalkIns = await ctx.db
+      .query("walkIns")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("branch_id"), branch_id),
+          q.eq(q.field("status"), "active"),
+          q.gte(q.field("createdAt"), todayStartTimestamp)
+        )
+      )
+      .collect();
+
+    // Calculate next queue number (highest + 1, or 1 if no active walk-ins)
+    const nextQueueNumber = activeWalkIns.length > 0
+      ? Math.max(...activeWalkIns.map(w => w.queueNumber || 0)) + 1
+      : 1;
+
     // Create the walk-in record
     const walkInId = await ctx.db.insert("walkIns", {
       name: args.name.trim(),
       number: args.number.trim(),
       assignedBarber: args.assignedBarber,
       barberId: barber._id,
+      queueNumber: nextQueueNumber,
       notes: args.notes?.trim() || "",
-      branch_id: args.branch_id || barber.branch_id,
+      branch_id: branch_id,
       status: "active",
       createdAt: now,
       updatedAt: now,
@@ -46,7 +70,8 @@ export const createWalkIn = mutation({
     return {
       success: true,
       walkInId,
-      message: "Walk-in customer added successfully",
+      queueNumber: nextQueueNumber,
+      message: `Walk-in customer added successfully with queue number ${nextQueueNumber}`,
     };
   },
 });
@@ -57,6 +82,8 @@ export const getAllWalkIns = query({
     branch_id: v.optional(v.id("branches")),
     limit: v.optional(v.number()),
     status: v.optional(v.string()),
+    startDate: v.optional(v.number()), // Timestamp for start of date range
+    endDate: v.optional(v.number()),   // Timestamp for end of date range
   },
   handler: async (ctx, args) => {
     const limit = args.limit || 100;
@@ -73,7 +100,24 @@ export const getAllWalkIns = query({
       query = query.filter((q) => q.eq(q.field("status"), args.status));
     }
 
-    const walkIns = await query.order("desc").take(limit);
+    const allWalkIns = await query.order("desc").collect();
+
+    // Filter by date range if provided
+    let walkIns = allWalkIns;
+    if (args.startDate !== undefined || args.endDate !== undefined) {
+      walkIns = allWalkIns.filter((walkIn) => {
+        if (args.startDate !== undefined && walkIn.createdAt < args.startDate) {
+          return false;
+        }
+        if (args.endDate !== undefined && walkIn.createdAt > args.endDate) {
+          return false;
+        }
+        return true;
+      });
+    }
+
+    // Apply limit
+    walkIns = walkIns.slice(0, limit);
 
     // Enhance walk-ins with barber details
     const walkInsWithDetails = await Promise.all(
@@ -288,6 +332,14 @@ export const completeWalkIn = mutation({
       throwUserError(ERROR_CODES.NOT_FOUND, "Walk-in not found");
     }
 
+    if (walkIn.status === "completed") {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Walk-in is already completed");
+    }
+
+    if (walkIn.status === "cancelled") {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Cannot complete a cancelled walk-in");
+    }
+
     await ctx.db.patch(args.walkInId, {
       status: "completed",
       completedAt: Date.now(),
@@ -297,6 +349,114 @@ export const completeWalkIn = mutation({
     return {
       success: true,
       message: "Walk-in marked as completed",
+    };
+  },
+});
+
+// Cancel a walk-in
+export const cancelWalkIn = mutation({
+  args: {
+    walkInId: v.id("walkIns"),
+  },
+  handler: async (ctx, args) => {
+    const walkIn = await ctx.db.get(args.walkInId);
+
+    if (!walkIn) {
+      throwUserError(ERROR_CODES.NOT_FOUND, "Walk-in not found");
+    }
+
+    if (walkIn.status === "completed") {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Cannot cancel a completed walk-in");
+    }
+
+    if (walkIn.status === "cancelled") {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Walk-in is already cancelled");
+    }
+
+    await ctx.db.patch(args.walkInId, {
+      status: "cancelled",
+      updatedAt: Date.now(),
+    });
+
+    return {
+      success: true,
+      message: "Walk-in cancelled successfully",
+    };
+  },
+});
+
+// Clean up old walk-ins (yesterday and older) - Internal mutation for cron job
+export const cleanupOldWalkIns = internalMutation({
+  args: {
+    branch_id: v.optional(v.id("branches")),
+  },
+  handler: async (ctx, args) => {
+    // Calculate timestamp for start of yesterday
+    const yesterdayStart = new Date();
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    yesterdayStart.setHours(0, 0, 0, 0);
+    const yesterdayStartTimestamp = yesterdayStart.getTime();
+
+    let query = ctx.db.query("walkIns");
+
+    // Filter by branch if provided
+    if (args.branch_id) {
+      query = query.filter((q) => q.eq(q.field("branch_id"), args.branch_id));
+    }
+
+    const allWalkIns = await query.collect();
+
+    // Find walk-ins older than yesterday (created before yesterday's start)
+    const oldWalkIns = allWalkIns.filter(
+      (walkIn) => walkIn.createdAt < yesterdayStartTimestamp
+    );
+
+    // Delete old walk-ins
+    const deletePromises = oldWalkIns.map((walkIn) => ctx.db.delete(walkIn._id));
+    await Promise.all(deletePromises);
+
+    return {
+      success: true,
+      deletedCount: oldWalkIns.length,
+      message: `Cleaned up ${oldWalkIns.length} old walk-in(s)`,
+    };
+  },
+});
+
+// Manual cleanup trigger (for admins/staff to manually trigger cleanup)
+export const manualCleanupOldWalkIns = mutation({
+  args: {
+    branch_id: v.optional(v.id("branches")),
+  },
+  handler: async (ctx, args) => {
+    // Calculate timestamp for start of yesterday
+    const yesterdayStart = new Date();
+    yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+    yesterdayStart.setHours(0, 0, 0, 0);
+    const yesterdayStartTimestamp = yesterdayStart.getTime();
+
+    let query = ctx.db.query("walkIns");
+
+    // Filter by branch if provided
+    if (args.branch_id) {
+      query = query.filter((q) => q.eq(q.field("branch_id"), args.branch_id));
+    }
+
+    const allWalkIns = await query.collect();
+
+    // Find walk-ins older than yesterday (created before yesterday's start)
+    const oldWalkIns = allWalkIns.filter(
+      (walkIn) => walkIn.createdAt < yesterdayStartTimestamp
+    );
+
+    // Delete old walk-ins
+    const deletePromises = oldWalkIns.map((walkIn) => ctx.db.delete(walkIn._id));
+    await Promise.all(deletePromises);
+
+    return {
+      success: true,
+      deletedCount: oldWalkIns.length,
+      message: `Cleaned up ${oldWalkIns.length} old walk-in(s)`,
     };
   },
 });
