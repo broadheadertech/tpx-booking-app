@@ -1,0 +1,109 @@
+# Workflow Status Template
+
+# This tracks progress through BMM methodology Analysis, Planning, and Solutioning phases.
+# Implementation phase is tracked separately in sprint-status.yaml
+
+# STATUS DEFINITIONS:
+# ==================
+# Initial Status (before completion):
+#   - required: Must be completed to progress
+#   - optional: Can be completed but not required
+#   - recommended: Strongly suggested but not required
+#   - conditional: Required only if certain conditions met (e.g., if_has_ui)
+#
+# Completion Status:
+#   - {file-path}: File created/found (e.g., "docs/product-brief.md")
+#   - skipped: Optional/conditional workflow that was skipped
+
+generated: "2026-01-20"
+project: "tpx-booking-app"
+project_type: "brownfield"
+selected_track: "bmad-method"
+field_type: "brownfield"
+workflow_path: "_bmad/bmm/workflows/workflow-status/paths/method-brownfield.yaml"
+
+workflow_status:
+  # Phase 0: Documentation (Prerequisite for brownfield)
+  - phase: 0
+    name: "Documentation"
+    status: "required"
+    workflows:
+      - id: "document-project"
+        status: "required"
+        agent: "analyst"
+        command: "/bmad:bmm:workflows:document-project"
+        output: "Comprehensive project documentation"
+        purpose: "Understand existing codebase before planning"
+        note: "Prerequisite - Run this first to analyze existing tpx-booking-app codebase"
+
+  # Phase 1: Analysis (Optional - User selected brainstorming)
+  - phase: 1
+    name: "Analysis"
+    status: "optional"
+    workflows:
+      - id: "brainstorm-project"
+        status: "optional"
+        agent: "analyst"
+        command: "/bmad:bmm:workflows:brainstorming"
+        note: "User selected - Creative exploration for enhancement ideas"
+      - id: "research"
+        status: "skipped"
+        note: "Not selected by user"
+      - id: "product-brief"
+        status: "skipped"
+        note: "Not selected by user"
+
+  # Phase 2: Planning
+  - phase: 2
+    name: "Planning"
+    status: "required"
+    workflows:
+      - id: "prd"
+        status: "required"
+        agent: "pm"
+        command: "/bmad:bmm:workflows:create-prd"
+        output: "Product Requirements Document with FRs and NFRs"
+      - id: "create-ux-design"
+        status: "conditional"
+        agent: "ux-designer"
+        command: "/bmad:bmm:workflows:create-ux-design"
+        note: "Determined after PRD - user/agent decides if UI changes needed"
+
+  # Phase 3: Solutioning
+  - phase: 3
+    name: "Solutioning"
+    status: "required"
+    workflows:
+      - id: "create-architecture"
+        status: "required"
+        agent: "architect"
+        command: "/bmad:bmm:workflows:create-architecture"
+        output: "System architecture document"
+        note: "Solution design for brownfield enhancements"
+      - id: "create-epics-and-stories"
+        status: "required"
+        agent: "pm"
+        command: "/bmad:bmm:workflows:create-epics-and-stories"
+        note: "Break down PRD into implementable epics and stories with full context (PRD + UX + Architecture)"
+      - id: "test-design"
+        status: "optional"
+        agent: "tea"
+        command: "/bmad:bmm:workflows:test-design"
+        output: "System-level testability review"
+        note: "Testability assessment before gate check"
+      - id: "implementation-readiness"
+        status: "required"
+        agent: "architect"
+        command: "/bmad:bmm:workflows:implementation-readiness"
+        note: "Validates PRD + Architecture + Epics + UX (optional) before implementation"
+
+  # Phase 4: Implementation
+  - phase: 4
+    name: "Implementation"
+    status: "required"
+    workflows:
+      - id: "sprint-planning"
+        status: "required"
+        agent: "sm"
+        command: "/bmad:bmm:workflows:sprint-planning"
+        note: "Creates sprint plan - subsequent work tracked in sprint-status.yaml"
