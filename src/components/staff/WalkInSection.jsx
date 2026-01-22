@@ -344,17 +344,8 @@ export default function WalkInSection() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-lg bg-[var(--color-primary)]/20 flex items-center justify-center">
-                          <User className="h-5 w-5 text-[var(--color-primary)]" />
-                        </div>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-white">
-                          {walkIn.name}
-                        </div>
-                      </div>
+                    <div className="text-sm font-medium text-white">
+                      {walkIn.name}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
