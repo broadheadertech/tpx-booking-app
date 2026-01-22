@@ -74,7 +74,7 @@ export const createWalkIn = mutation({
       }
       console.log("[createWalkIn] All validations passed, branch_id:", branch_id);
 
-      // Get the highest queue number for active walk-ins in this branch today
+      // Get the highest queue number for ALL walk-ins in this branch today (regardless of status)
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
       const todayStartTimestamp = todayStart.getTime();
@@ -83,29 +83,26 @@ export const createWalkIn = mutation({
 
       let nextQueueNumber = 1;
 
-      // Try to get existing walk-ins for queue calculation using indexed query
-      // Use withIndex which is more reliable than collect() for this use case
+      // Query ALL walk-ins for this branch to get the max queue number today
+      // This ensures queue numbers continue incrementing regardless of status
       try {
-        console.log("[createWalkIn] Querying existing walk-ins with by_branch_status index...");
-        const branchWalkInsQuery = await ctx.db
-          .query("walkIns")
-          .withIndex("by_branch_status", (q) =>
-            q.eq("branch_id", branch_id).eq("status", "waiting")
-          )
-          .collect();
+        console.log("[createWalkIn] Querying all walk-ins for queue calculation...");
+        const allWalkInsQuery = await ctx.db.query("walkIns").collect();
 
-        console.log("[createWalkIn] Branch walk-ins fetched:", branchWalkInsQuery?.length || 0);
+        console.log("[createWalkIn] All walk-ins fetched:", allWalkInsQuery?.length || 0);
 
-        // Filter for today's walk-ins only
-        if (Array.isArray(branchWalkInsQuery) && branchWalkInsQuery.length > 0) {
-          const activeWalkIns = branchWalkInsQuery.filter(
-            (walkIn) => walkIn.createdAt >= todayStartTimestamp
+        // Filter for this branch and today's walk-ins only (all statuses)
+        if (Array.isArray(allWalkInsQuery) && allWalkInsQuery.length > 0) {
+          const todaysBranchWalkIns = allWalkInsQuery.filter(
+            (walkIn) =>
+              walkIn.branch_id === branch_id &&
+              walkIn.createdAt >= todayStartTimestamp
           );
 
-          console.log("[createWalkIn] Today's active waiting walk-ins:", activeWalkIns.length);
+          console.log("[createWalkIn] Today's walk-ins for this branch (all statuses):", todaysBranchWalkIns.length);
 
-          if (activeWalkIns.length > 0) {
-            const queueNumbers = activeWalkIns
+          if (todaysBranchWalkIns.length > 0) {
+            const queueNumbers = todaysBranchWalkIns
               .map((w) => w.queueNumber)
               .filter((num) => typeof num === "number" && !isNaN(num));
 
