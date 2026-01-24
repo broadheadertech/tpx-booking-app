@@ -13,6 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as crons from "../crons.js";
 import type * as services_auth from "../services/auth.js";
 import type * as services_barbers from "../services/barbers.js";
 import type * as services_bookingNotifications from "../services/bookingNotifications.js";
@@ -25,6 +26,7 @@ import type * as services_emailMarketing from "../services/emailMarketing.js";
 import type * as services_emailTemplates from "../services/emailTemplates.js";
 import type * as services_events from "../services/events.js";
 import type * as services_index from "../services/index.js";
+import type * as services_mainQueue from "../services/mainQueue.js";
 import type * as services_notificationScheduler from "../services/notificationScheduler.js";
 import type * as services_notifications from "../services/notifications.js";
 import type * as services_payments from "../services/payments.js";
@@ -36,6 +38,7 @@ import type * as services_ratings from "../services/ratings.js";
 import type * as services_services from "../services/services.js";
 import type * as services_transactions from "../services/transactions.js";
 import type * as services_vouchers from "../services/vouchers.js";
+import type * as services_walkIn from "../services/walkIn.js";
 import type * as services_wallet from "../services/wallet.js";
 import type * as utils_errors from "../utils/errors.js";
 import type * as utils_password from "../utils/password.js";
@@ -51,6 +54,7 @@ import type * as utils_sanitize from "../utils/sanitize.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  crons: typeof crons;
   "services/auth": typeof services_auth;
   "services/barbers": typeof services_barbers;
   "services/bookingNotifications": typeof services_bookingNotifications;
@@ -63,6 +67,7 @@ declare const fullApi: ApiFromModules<{
   "services/emailTemplates": typeof services_emailTemplates;
   "services/events": typeof services_events;
   "services/index": typeof services_index;
+  "services/mainQueue": typeof services_mainQueue;
   "services/notificationScheduler": typeof services_notificationScheduler;
   "services/notifications": typeof services_notifications;
   "services/payments": typeof services_payments;
@@ -74,6 +79,7 @@ declare const fullApi: ApiFromModules<{
   "services/services": typeof services_services;
   "services/transactions": typeof services_transactions;
   "services/vouchers": typeof services_vouchers;
+  "services/walkIn": typeof services_walkIn;
   "services/wallet": typeof services_wallet;
   "utils/errors": typeof utils_errors;
   "utils/password": typeof utils_password;

@@ -15,6 +15,8 @@ export const getAllBarbers = query({
       .order("desc")
       .take(limit);
 
+    console.log(`[getAllBarbers] Found ${barbers.length} barbers`);
+
     // Get associated user and branch data for each barber
     const barbersWithUsers = await Promise.all(
       barbers.map(async (barber) => {
@@ -23,8 +25,13 @@ export const getAllBarbers = query({
             barber.user ? ctx.db.get(barber.user) : null,
             barber.branch_id ? ctx.db.get(barber.branch_id) : null,
           ]);
+          
+          // Ensure services is an array
+          const services = Array.isArray(barber.services) ? barber.services : [];
+          
           return {
             ...barber,
+            services, // Ensure services is always an array
             name: barber.full_name,
             // Use user email first, fallback to barber's own email field
             email: user?.email || barber.email || '',
@@ -33,8 +40,13 @@ export const getAllBarbers = query({
             branch_name: branch?.name || 'Unknown Branch',
           };
         } catch (error) {
+          console.error(`[getAllBarbers] Error processing barber ${barber._id}:`, error);
+          // Ensure services is an array
+          const services = Array.isArray(barber.services) ? barber.services : [];
+          
           return {
             ...barber,
+            services, // Ensure services is always an array
             name: barber.full_name,
             // Fallback to barber's own email field if user lookup fails
             email: barber.email || '',
@@ -314,7 +326,7 @@ export const getBarbersByService = query({
   handler: async (ctx, args) => {
     const allBarbers = await ctx.db.query("barbers").collect();
     const barbers = allBarbers.filter(barber =>
-      barber.services.includes(args.serviceId)
+      barber.services && Array.isArray(barber.services) && barber.services.includes(args.serviceId)
     );
 
     // Get associated user data

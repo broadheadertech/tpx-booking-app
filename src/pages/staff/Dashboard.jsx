@@ -19,6 +19,8 @@ import NotificationsManagement from "../../components/staff/NotificationsManagem
 import EmailMarketing from "../../components/staff/EmailMarketing";
 import PayrollManagement from "../../components/staff/PayrollManagement";
 import CustomBookingsManagement from "../../components/staff/CustomBookingsManagement";
+import WalkInSection from "../../components/staff/WalkInSection";
+import QueueSection from "../../components/staff/QueueSection";
 import DashboardFooter from "../../components/common/DashboardFooter";
 import {
   NotificationModal,
@@ -108,11 +110,25 @@ function StaffDashboard() {
         })
         : undefined;
 
+  // Get walk-ins data for queue badge
+  const allWalkInsData = useQuery(api.services.walkIn.getAllWalkIns, {}) || [];
+
   // Calculate incomplete bookings count (pending, booked, confirmed - not completed or cancelled)
   const incompleteBookingsCount = bookings
     ? bookings.filter(
       (booking) =>
         booking.status !== "completed" && booking.status !== "cancelled"
+    ).length
+    : 0;
+
+  // Calculate waiting walk-ins count for queue badge (only today's waiting status)
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayStartTimestamp = todayStart.getTime();
+
+  const waitingWalkInsCount = allWalkInsData
+    ? allWalkInsData.filter(
+      (walkIn) => walkIn.status === "waiting" && walkIn.createdAt >= todayStartTimestamp
     ).length
     : 0;
 
@@ -209,8 +225,8 @@ function StaffDashboard() {
   const renderTabContent = () => {
     // Basic security check: if user doesn't have access to the tab, fall back to overview
     // Super admins bypass this check
-    // Always allow overview and custom_bookings tabs
-    if (user?.role !== "super_admin" && activeTab !== "overview" && activeTab !== "custom_bookings") {
+    // Always allow overview, custom_bookings, walkins, and queue tabs
+    if (user?.role !== "super_admin" && activeTab !== "overview" && activeTab !== "custom_bookings" && activeTab !== "walkins" && activeTab !== "queue") {
       if (
         user?.page_access &&
         user.page_access.length > 0 &&
@@ -229,6 +245,12 @@ function StaffDashboard() {
 
       case "calendar":
         return <CalendarManagement user={user} />;
+
+      case "walkins":
+        return <WalkInSection />;
+
+      case "queue":
+        return <QueueSection />;
 
       case "services":
         return (
@@ -346,6 +368,7 @@ function StaffDashboard() {
     { id: "bookings", label: "Bookings", icon: "calendar" },
     { id: "custom_bookings", label: "Custom Bookings", icon: "file-text" },
     { id: "calendar", label: "Calendar", icon: "calendar" },
+    { id: "walkins", label: "Walk-ins", icon: "user-plus" },
     { id: "services", label: "Services", icon: "scissors" },
     { id: "vouchers", label: "Vouchers", icon: "gift" },
     { id: "barbers", label: "Barbers", icon: "user" },
@@ -365,14 +388,14 @@ function StaffDashboard() {
       ? baseTabs
       : user?.page_access
         ? baseTabs.filter(
-          (t) => user.page_access.includes(t.id) || t.id === "overview" || t.id === "custom_bookings"
-        ) // Always include overview and custom_bookings
+          (t) => user.page_access.includes(t.id) || t.id === "overview" || t.id === "custom_bookings" || t.id === "walkins"
+        ) // Always include overview, custom_bookings, and walkins
         : baseTabs;
 
-  // Redirect if current active tab is not allowed (unless it's overview)
+  // Redirect if current active tab is not allowed (unless it's overview, custom_bookings, walkins, or queue)
   useEffect(() => {
     const allowedTabIds = tabs.map((t) => t.id);
-    if (!allowedTabIds.includes(activeTab) && activeTab !== "overview") {
+    if (!allowedTabIds.includes(activeTab) && activeTab !== "overview" && activeTab !== "custom_bookings" && activeTab !== "walkins" && activeTab !== "queue") {
       setActiveTab("overview");
     }
   }, [tabs, activeTab]);
@@ -412,6 +435,7 @@ function StaffDashboard() {
                 }
               }}
               incompleteBookingsCount={incompleteBookingsCount}
+              waitingWalkInsCount={waitingWalkInsCount}
             />
             <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl border border-[#2A2A2A]/50 p-3 sm:p-4 md:p-6 lg:p-8 xl:p-10 backdrop-blur-sm overflow-hidden">
               {renderTabContent()}

@@ -1,8 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { LayoutDashboard, Users, Calendar, Scissors, Gift, BarChart3, UserCheck, CalendarDays, Package, Bell, ChevronDown, MoreHorizontal, Building, Settings, DollarSign, Mail, CreditCard, FileText } from 'lucide-react'
+import { LayoutDashboard, Users, Calendar, Scissors, Gift, BarChart3, UserCheck, CalendarDays, Package, Bell, ChevronDown, MoreHorizontal, Building, Settings, DollarSign, Mail, CreditCard, FileText, UserPlus, Clock } from 'lucide-react'
 
-const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount = 0 }) => {
+const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount = 0, waitingWalkInsCount = 0 }) => {
   const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false)
+
+  // Dynamic badge color based on count severity
+  const getWalkInBadgeColor = (count) => {
+    if (count === 0) return 'hidden'
+    if (count <= 3) return 'bg-green-500' // Low queue - green
+    if (count <= 7) return 'bg-yellow-500' // Medium queue - yellow
+    return 'bg-red-500' // High queue - red
+  }
+
+  // Get badge animation class
+  const getWalkInBadgeAnimation = (count) => {
+    if (count > 7) return 'animate-pulse' // Pulse when queue is high
+    return ''
+  }
   const moreDropdownRef = useRef(null)
 
   // Close dropdown when clicking outside
@@ -38,13 +52,14 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
       payroll: DollarSign,
       email_marketing: Mail,
       pos: CreditCard,
-      custom_bookings: FileText
+      custom_bookings: FileText,
+      walkins: UserPlus
     }
     return iconMap[tabId] || LayoutDashboard
   }
 
   // Define primary tabs (most frequently used)
-  const primaryTabIds = ['overview', 'reports', 'bookings', 'custom_bookings', 'calendar', 'barbers', 'users', 'services', 'vouchers', 'payroll']
+  const primaryTabIds = ['overview', 'reports', 'bookings', 'custom_bookings', 'calendar', 'walkins', 'barbers', 'users', 'services', 'vouchers', 'payroll']
 
   // Helper to check if a tab is available in the current filtered tabs
   const isTabAvailable = (tabId) => tabs.some(t => t.id === tabId)
@@ -96,6 +111,13 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
                       {incompleteBookingsCount > 99 ? '99+' : incompleteBookingsCount}
                     </span>
                   )}
+
+                  {/* Badge for walkins queue - dynamic color based on count */}
+                  {tab.id === 'walkins' && (
+                    <span className={`absolute -top-1 -right-1 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5 ${getWalkInBadgeColor(waitingWalkInsCount)} ${getWalkInBadgeAnimation(waitingWalkInsCount)}`}>
+                      {waitingWalkInsCount > 99 ? '99+' : waitingWalkInsCount}
+                    </span>
+                  )}
                 </button>
               </div>
             )
@@ -137,6 +159,29 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
               {/* Dropdown Menu */}
               {isMoreDropdownOpen && (
                 <div className="absolute top-full left-0 mt-1.5 w-44 bg-[#050505]/95 backdrop-blur-xl rounded-lg shadow-2xl border border-[#1A1A1A]/50 py-1.5" style={{ zIndex: 10, position: 'absolute' }}>
+                  {/* Queue Option - Always at top */}
+                  <button
+                    onClick={() => handleTabClick('queue')}
+                    className={`w-full flex items-center space-x-2.5 px-3 py-2 text-left transition-all duration-200 ${activeTab === 'queue'
+                      ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white'
+                      : 'text-gray-400 hover:bg-[#1A1A1A]/40 hover:text-white'
+                      }`}
+                  >
+                    <div className={`flex items-center justify-center w-4 h-4 ${activeTab === 'queue' ? 'text-white' : 'text-gray-500'
+                      }`}>
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <span className="font-medium text-xs">Queue</span>
+                    {waitingWalkInsCount > 0 && (
+                      <span className={`ml-auto text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1 ${getWalkInBadgeColor(waitingWalkInsCount)}`}>
+                        {waitingWalkInsCount > 99 ? '99+' : waitingWalkInsCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Divider */}
+                  <div className="border-t border-[#2A2A2A] my-1" />
+
                   {secondaryTabs.map((tab) => {
                     const IconComponent = getIconComponent(tab.id)
                     return (
@@ -196,6 +241,13 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
                       {incompleteBookingsCount > 99 ? '99+' : incompleteBookingsCount}
                     </span>
                   )}
+
+                  {/* Badge for walkins queue - dynamic color based on count */}
+                  {tab.id === 'walkins' && (
+                    <span className={`absolute -top-1 -right-1 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1 ${getWalkInBadgeColor(waitingWalkInsCount)} ${getWalkInBadgeAnimation(waitingWalkInsCount)}`}>
+                      {waitingWalkInsCount > 99 ? '99+' : waitingWalkInsCount}
+                    </span>
+                  )}
                 </button>
               </div>
             )
@@ -230,6 +282,29 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
               {/* Mobile Dropdown */}
               {isMoreDropdownOpen && (
                 <div className="absolute top-full right-0 mt-2 w-48 sm:w-52 bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl shadow-2xl border border-[#2A2A2A]/50 py-2 z-50 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                  {/* Queue Option - Always at top */}
+                  <button
+                    onClick={() => handleTabClick('queue')}
+                    className={`w-full flex items-center space-x-3 px-4 py-2.5 sm:py-3 text-left transition-all duration-200 touch-manipulation active:scale-95 ${activeTab === 'queue'
+                      ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white'
+                      : 'text-gray-300 hover:bg-[#333333] hover:text-[var(--color-primary)]'
+                      }`}
+                  >
+                    <div className={`flex items-center justify-center w-5 h-5 flex-shrink-0 ${activeTab === 'queue' ? 'text-white' : 'text-gray-400'
+                      }`}>
+                      <Clock className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </div>
+                    <span className="font-semibold text-xs sm:text-sm">Queue</span>
+                    {waitingWalkInsCount > 0 && (
+                      <span className={`ml-auto text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1 ${getWalkInBadgeColor(waitingWalkInsCount)}`}>
+                        {waitingWalkInsCount > 99 ? '99+' : waitingWalkInsCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Divider */}
+                  <div className="border-t border-[#2A2A2A] my-1" />
+
                   {secondaryTabs.map((tab) => {
                     const IconComponent = getIconComponent(tab.id)
                     return (
@@ -281,6 +356,13 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
                       {tab.badge > 99 ? '99+' : tab.badge}
                     </span>
                   )}
+
+                  {/* Badge for walkins queue - dynamic color based on count */}
+                  {tab.id === 'walkins' && (
+                    <span className={`absolute -top-1 -right-1 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 ${getWalkInBadgeColor(waitingWalkInsCount)} ${getWalkInBadgeAnimation(waitingWalkInsCount)}`}>
+                      {waitingWalkInsCount > 99 ? '99+' : waitingWalkInsCount}
+                    </span>
+                  )}
                 </button>
               </div>
             )
@@ -316,6 +398,29 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
               {/* Tablet Dropdown */}
               {isMoreDropdownOpen && (
                 <div className="absolute top-full left-0 mt-2 w-44 bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl shadow-2xl border border-[#2A2A2A]/50 py-2" style={{ zIndex: 10, position: 'absolute' }}>
+                  {/* Queue Option - Always at top */}
+                  <button
+                    onClick={() => handleTabClick('queue')}
+                    className={`w-full flex items-center space-x-3 px-4 py-2.5 text-left transition-all duration-200 ${activeTab === 'queue'
+                      ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white'
+                      : 'text-gray-300 hover:bg-[#333333] hover:text-[var(--color-primary)]'
+                      }`}
+                  >
+                    <div className={`flex items-center justify-center w-4 h-4 ${activeTab === 'queue' ? 'text-white' : 'text-gray-400'
+                      }`}>
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <span className="font-semibold text-sm">Queue</span>
+                    {waitingWalkInsCount > 0 && (
+                      <span className={`ml-auto text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1 ${getWalkInBadgeColor(waitingWalkInsCount)}`}>
+                        {waitingWalkInsCount > 99 ? '99+' : waitingWalkInsCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Divider */}
+                  <div className="border-t border-[#2A2A2A] my-1" />
+
                   {secondaryTabs.map((tab) => {
                     const IconComponent = getIconComponent(tab.id)
                     return (
