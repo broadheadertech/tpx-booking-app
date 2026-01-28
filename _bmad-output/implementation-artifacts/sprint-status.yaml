@@ -1,0 +1,131 @@
+# generated: 2026-01-27
+# project: tpx-booking-app
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-01-27
+project: tpx-booking-app
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # ============================================================================
+  # ACCOUNTING FEATURE (epics.md) - COMPLETED
+  # ============================================================================
+
+  # Epic 1: Time & Attendance Tracking
+  # Barbers can track their work hours and Branch Admins can monitor attendance
+  epic-1: done
+  1-1-barber-clock-in: done
+  1-2-barber-clock-out: done
+  1-3-branch-admin-view-attendance: done
+  epic-1-retrospective: optional
+
+  # Epic 2: Central Product Catalog
+  # Super Admin can manage a centralized product catalog with optional price enforcement
+  epic-2: done
+  2-1-super-admin-add-product-to-catalog: done
+  2-2-super-admin-edit-and-remove-products: done
+  2-3-super-admin-price-enforcement-toggle: done
+  2-4-branch-staff-view-product-catalog: done
+  epic-2-retrospective: optional
+
+  # Epic 3: Branch Financial Reporting (P&L)
+  # Branch Admins can view their financial performance and export reports
+  epic-3: done
+  3-1-pl-dashboard-with-summary-cards: done
+  3-2-income-and-expense-breakdown: done
+  3-3-date-range-selection-for-pl: done
+  3-4-export-pl-to-csv-and-pdf: done
+  epic-3-retrospective: optional
+
+  # Epic 4: Cash Advance Workflow
+  # Barbers can request advances and Branch Admins can approve with automatic payroll integration
+  epic-4: done
+  4-1-barber-request-cash-advance: done
+  4-2-barber-view-advance-status: done
+  4-3-branch-admin-approve-or-reject-advance: done
+  4-4-payroll-integration-for-cash-advance: done
+  4-5-branch-admin-view-advance-history: done
+  epic-4-retrospective: optional
+
+  # Epic 5: Royalty Management System
+  # Super Admin can configure, track, and collect royalty payments from franchisees
+  epic-5: done
+  5-1-configure-royalty-rate-for-branch: done
+  5-2-system-calculate-and-create-royalty-payment: done
+  5-3-email-notification-for-royalty-due: done
+  5-4-super-admin-view-royalty-dashboard: done
+  5-5-mark-royalty-as-paid-with-official-receipt: done
+  5-6-branch-admin-view-royalty-history: done
+  epic-5-retrospective: optional
+
+  # ============================================================================
+  # PAYMONGO PAYMENT INTEGRATION (epics-paymongo.md) - NEW
+  # ============================================================================
+
+  # Epic 6: Branch Payment Configuration (PayMongo Epic 1)
+  # Branch admins can configure PayMongo payment processing for their branch
+  epic-6: done
+  6-1-create-payment-configuration-schema: done
+  6-2-create-encryption-library: done
+  6-3-build-paymongo-configuration-service: done
+  6-4-build-payment-settings-ui: done
+  epic-6-retrospective: optional
+
+  # Epic 7: Customer Online Payment Flow (PayMongo Epic 2)
+  # Customers can complete online payments via Pay Now, Pay Later, or Pay at Shop
+  epic-7: done
+  7-1-create-payment-audit-log-schema-and-booking-extensions: done
+  7-2-build-payment-link-creation-service: done
+  7-3-build-paymongo-webhook-handler: done
+  7-4-build-payment-options-modal: done
+  7-5-integrate-payment-flow-into-booking-components: done
+  7-6-build-payment-confirmation-and-status-display: done
+  epic-7-retrospective: optional
+
+  # Epic 8: POS Payment Collection (PayMongo Epic 3)
+  # Staff can view and collect remaining balances for Pay Later and Pay at Shop bookings
+  epic-8: done
+  8-1-display-payment-status-in-pos-booking-view: done
+  8-2-record-cash-payment-collection: done
+  8-3-mark-booking-as-completed: done
+  8-4-view-todays-bookings-with-payment-status: done
+  epic-8-retrospective: optional
+
+  # Epic 9: Payment Audit & Reporting (PayMongo Epic 4)
+  # Admins can view payment transaction history and audit logs
+  epic-9: done
+  9-1-implement-payment-audit-logging-functions: done
+  9-2-build-branch-admin-payment-history-view: done
+  9-3-build-super-admin-payment-history-view: done
+  epic-9-retrospective: optional

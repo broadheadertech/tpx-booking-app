@@ -261,6 +261,15 @@ function App() {
                 path="/booking/payment/failure"
                 element={<PaymentFailure />}
               />
+              {/* PayMongo payment redirect routes (Story 7.6) */}
+              <Route
+                path="/booking/payment-success"
+                element={<PaymentSuccess />}
+              />
+              <Route
+                path="/booking/payment-failed"
+                element={<PaymentFailure />}
+              />
               <Route path="/download-app" element={<DownloadApp />} />
               </Routes>
           </div>

@@ -58,6 +58,10 @@ export const getAllBookings = query({
             discount_amount: booking.discount_amount,
             voucher_id: booking.voucher_id,
             notes: booking.notes,
+            booking_fee: booking.booking_fee || 0,
+            convenience_fee_paid: booking.convenience_fee_paid || 0,
+            cash_collected: booking.cash_collected || 0,
+            late_fee: booking.late_fee || 0,
             createdAt: booking.createdAt || booking._creationTime,
             updatedAt: booking.updatedAt || booking._creationTime,
             customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
@@ -94,6 +98,10 @@ export const getAllBookings = query({
             discount_amount: booking.discount_amount,
             voucher_id: booking.voucher_id,
             notes: booking.notes,
+            booking_fee: booking.booking_fee || 0,
+            convenience_fee_paid: booking.convenience_fee_paid || 0,
+            cash_collected: booking.cash_collected || 0,
+            late_fee: booking.late_fee || 0,
             createdAt: booking.createdAt || booking._creationTime,
             updatedAt: booking.updatedAt || booking._creationTime,
             customer_name: booking.customer_name || 'Unknown',
@@ -169,6 +177,10 @@ export const getBookingsByBranch = query({
             discount_amount: booking.discount_amount,
             voucher_id: booking.voucher_id,
             notes: booking.notes,
+            booking_fee: booking.booking_fee || 0,
+            convenience_fee_paid: booking.convenience_fee_paid || 0,
+            cash_collected: booking.cash_collected || 0,
+            late_fee: booking.late_fee || 0,
             createdAt: booking.createdAt || booking._creationTime,
             updatedAt: booking.updatedAt || booking._creationTime,
             customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
@@ -204,6 +216,10 @@ export const getBookingsByBranch = query({
             discount_amount: booking.discount_amount,
             voucher_id: booking.voucher_id,
             notes: booking.notes,
+            booking_fee: booking.booking_fee || 0,
+            convenience_fee_paid: booking.convenience_fee_paid || 0,
+            cash_collected: booking.cash_collected || 0,
+            late_fee: booking.late_fee || 0,
             createdAt: booking.createdAt || booking._creationTime,
             updatedAt: booking.updatedAt || booking._creationTime,
             customer_name: booking.customer_name || 'Unknown',
@@ -462,6 +478,12 @@ export const createBooking = mutation({
     customer_phone: v.optional(v.string()),
     customer_email: v.optional(v.string()),
     booking_fee: v.optional(v.number()),
+    payment_status: v.optional(v.union(
+      v.literal("unpaid"),
+      v.literal("paid"),
+      v.literal("partial"),
+      v.literal("refunded")
+    )),
   },
   handler: async (ctx, args) => {
     // Get service details for price
@@ -580,7 +602,7 @@ export const createBooking = mutation({
       date: args.date,
       time: args.time,
       status: args.status || "pending",
-      payment_status: "unpaid",
+      payment_status: args.payment_status || "unpaid",
       price: originalPrice,
       voucher_id: args.voucher_id,
       booking_fee: args.booking_fee,
@@ -1060,6 +1082,10 @@ export const getBookingsByDateRange = query({
             discount_amount: booking.discount_amount,
             voucher_id: booking.voucher_id,
             notes: booking.notes,
+            booking_fee: booking.booking_fee || 0,
+            convenience_fee_paid: booking.convenience_fee_paid || 0,
+            cash_collected: booking.cash_collected || 0,
+            late_fee: booking.late_fee || 0,
             createdAt: booking.createdAt || booking._creationTime,
             updatedAt: booking.updatedAt || booking._creationTime,
             customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
@@ -1096,6 +1122,10 @@ export const getBookingsByDateRange = query({
             discount_amount: booking.discount_amount,
             voucher_id: booking.voucher_id,
             notes: booking.notes,
+            booking_fee: booking.booking_fee || 0,
+            convenience_fee_paid: booking.convenience_fee_paid || 0,
+            cash_collected: booking.cash_collected || 0,
+            late_fee: booking.late_fee || 0,
             createdAt: booking.createdAt || booking._creationTime,
             updatedAt: booking.updatedAt || booking._creationTime,
             customer_name: booking.customer_name || 'Unknown',
@@ -1647,5 +1677,240 @@ export const createWalkInBooking = mutation({
     }
 
     return bookingId;
+  },
+});
+
+// Record cash payment collection at POS (Story 8.2 - FR15)
+export const recordCashPayment = mutation({
+  args: {
+    booking_id: v.id("bookings"),
+    amount: v.number(),
+    payment_method: v.union(
+      v.literal("cash"),
+      v.literal("gcash_manual"),
+      v.literal("maya_manual"),
+      v.literal("card_manual")
+    ),
+    collected_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Get the booking
+    const booking = await ctx.db.get(args.booking_id);
+    if (!booking) {
+      throw new Error("Booking not found");
+    }
+
+    // Calculate remaining balance
+    // Note: Convenience fee is a separate reservation payment, NOT deducted from service price
+    const servicePrice = booking.service_price || booking.price || 0;
+    const convenienceFeePaid = booking.convenience_fee_paid || 0;
+    const cashAlreadyCollected = booking.cash_collected || 0;
+    const remainingBalance = servicePrice - cashAlreadyCollected;
+
+    // Determine new payment status based on total cash collected
+    let newPaymentStatus: "paid" | "partial" | "unpaid" = booking.payment_status || "unpaid";
+    const totalCashAfterPayment = cashAlreadyCollected + args.amount;
+    if (totalCashAfterPayment >= servicePrice) {
+      newPaymentStatus = "paid";
+    } else if (totalCashAfterPayment > 0) {
+      newPaymentStatus = "partial";
+    }
+
+    // Update booking payment_status
+    await ctx.db.patch(args.booking_id, {
+      payment_status: newPaymentStatus,
+      // Track total amount paid at branch
+      cash_collected: (booking.cash_collected || 0) + args.amount,
+    });
+
+    // Determine payment_for based on context
+    // If convenience fee was paid previously, this is remaining_balance
+    // If this covers full service price, it's full_cash
+    // Otherwise it's partial
+    let paymentFor: "remaining_balance" | "full_cash" | "partial" = "partial";
+    if (convenienceFeePaid > 0) {
+      paymentFor = "remaining_balance";
+    } else if (args.amount >= servicePrice) {
+      paymentFor = "full_cash";
+    }
+
+    // Log to paymentAuditLog
+    await ctx.db.insert("paymentAuditLog", {
+      booking_id: args.booking_id,
+      branch_id: booking.branch_id,
+      event_type: "cash_collected",
+      amount: args.amount,
+      payment_method: args.payment_method,
+      payment_for: paymentFor,
+      created_at: Date.now(),
+      created_by: args.collected_by,
+      raw_payload: {
+        booking_code: booking.booking_code,
+        service_price: servicePrice,
+        convenience_fee_paid: convenienceFeePaid,
+        previous_status: booking.payment_status || "unpaid",
+        new_status: newPaymentStatus,
+        remaining_after: remainingBalance - args.amount,
+      },
+    });
+
+    return {
+      success: true,
+      new_payment_status: newPaymentStatus,
+      amount_collected: args.amount,
+      remaining_balance: Math.max(0, remainingBalance - args.amount),
+    };
+  },
+});
+
+// Mark booking as completed (Story 8.3 - FR16)
+export const markBookingComplete = mutation({
+  args: {
+    booking_id: v.id("bookings"),
+    completed_by: v.id("users"),
+    force_complete: v.optional(v.boolean()), // Allow completion even with unpaid balance
+  },
+  handler: async (ctx, args) => {
+    // Get the booking
+    const booking = await ctx.db.get(args.booking_id);
+    if (!booking) {
+      throw new Error("Booking not found");
+    }
+
+    // Calculate remaining balance
+    const servicePrice = booking.service_price || booking.price || 0;
+    const convenienceFeePaid = booking.convenience_fee_paid || 0;
+    const cashCollected = booking.cash_collected || 0;
+    const remainingBalance = servicePrice - convenienceFeePaid - cashCollected;
+
+    // Skip balance check if payment_status is 'paid' (already paid via PayMongo)
+    const isFullyPaid = booking.payment_status === 'paid';
+
+    // Check if there's unpaid balance and force_complete is not set
+    // But skip this check if booking is already marked as fully paid
+    if (remainingBalance > 0 && !args.force_complete && !isFullyPaid) {
+      return {
+        success: false,
+        requires_confirmation: true,
+        unpaid_balance: remainingBalance,
+        message: `Customer has unpaid balance of ₱${remainingBalance.toLocaleString()}`,
+      };
+    }
+
+    // Update booking status to completed
+    await ctx.db.patch(args.booking_id, {
+      status: "completed",
+      completed_at: Date.now(),
+    });
+
+    // Log to paymentAuditLog
+    await ctx.db.insert("paymentAuditLog", {
+      booking_id: args.booking_id,
+      branch_id: booking.branch_id,
+      event_type: "booking_completed",
+      amount: 0,
+      payment_method: "system",
+      created_at: Date.now(),
+      created_by: args.completed_by,
+      raw_payload: {
+        booking_code: booking.booking_code,
+        service_price: servicePrice,
+        total_paid: convenienceFeePaid + cashCollected,
+        unpaid_balance: Math.max(0, remainingBalance),
+        forced_complete: args.force_complete || false,
+        payment_status: booking.payment_status || "unpaid",
+      },
+    });
+
+    return {
+      success: true,
+      booking_status: "completed",
+    };
+  },
+});
+
+// Get today's bookings with payment status (Story 8.4 - FR17)
+export const getTodaysBookingsWithPaymentStatus = query({
+  args: {
+    branch_id: v.id("branches"),
+    payment_status_filter: v.optional(v.union(
+      v.literal("all"),
+      v.literal("paid"),
+      v.literal("partial"),
+      v.literal("unpaid")
+    )),
+  },
+  handler: async (ctx, args) => {
+    // Get today's date range (start and end of day)
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
+
+    // Get today's date string for matching
+    const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+    // Query bookings for this branch
+    const bookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+
+    // Filter for today's bookings
+    const todaysBookings = bookings.filter((booking) => {
+      // Check if booking date matches today
+      if (booking.date === todayStr) {
+        return true;
+      }
+      // Also check created_at for walk-in bookings
+      if (booking.created_at && booking.created_at >= startOfDay && booking.created_at < endOfDay) {
+        return true;
+      }
+      return false;
+    });
+
+    // Apply payment status filter
+    let filteredBookings = todaysBookings;
+    if (args.payment_status_filter && args.payment_status_filter !== "all") {
+      filteredBookings = todaysBookings.filter(
+        (booking) => booking.payment_status === args.payment_status_filter
+      );
+    }
+
+    // Get barber and service names
+    const enrichedBookings = await Promise.all(
+      filteredBookings.map(async (booking) => {
+        const barber = booking.barber ? await ctx.db.get(booking.barber) : null;
+        const service = booking.service_id ? await ctx.db.get(booking.service_id) : null;
+
+        // Calculate amounts
+        const servicePrice = booking.service_price || booking.price || 0;
+        const convenienceFeePaid = booking.convenience_fee_paid || 0;
+        const cashCollected = booking.cash_collected || 0;
+        const remainingBalance = Math.max(0, servicePrice - convenienceFeePaid - cashCollected);
+
+        return {
+          _id: booking._id,
+          booking_code: booking.booking_code,
+          time: booking.time,
+          date: booking.date,
+          customer_name: booking.customer_name,
+          customer_phone: booking.customer_phone,
+          service_name: service?.name || booking.service_name || "Unknown Service",
+          barber_name: barber?.full_name || booking.barber_name || "Any Barber",
+          payment_status: booking.payment_status || "unpaid",
+          service_price: servicePrice,
+          convenience_fee_paid: convenienceFeePaid,
+          cash_collected: cashCollected,
+          remaining_balance: remainingBalance,
+          status: booking.status,
+        };
+      })
+    );
+
+    // Sort by time
+    return enrichedBookings.sort((a, b) => {
+      if (!a.time || !b.time) return 0;
+      return a.time.localeCompare(b.time);
+    });
   },
 });

@@ -57,7 +57,9 @@ import { useAuth } from "../../context/AuthContext";
 import BarberBookings from "./BarberBookings";
 import BarberProfile from "./BarberProfile";
 import TimeOffManager from "./TimeOffManager";
+import CashAdvanceSection from "./CashAdvanceSection";
 import LoadingSpinner from "../common/LoadingSpinner";
+import ClockButton from "../common/ClockButton";
 import { formatTime } from "../../utils/dateUtils";
 import { useBranding } from "../../context/BrandingContext";
 
@@ -344,6 +346,7 @@ const BarberDashboard = () => {
     bookings: "bookings",
     portfolio: "portfolio",
     earnings: "earnings",
+    advance: "cash_advance",
     schedule: "schedule",
     profile: "profile",
   };
@@ -426,6 +429,12 @@ const BarberDashboard = () => {
     currentBarber ? { barberId: currentBarber._id, limit: 10 } : "skip"
   );
 
+  // Get cash advance deductions for payroll view
+  const cashAdvanceDeductions = useQuery(
+    api.services.payroll.getCashAdvanceDeductions,
+    currentBarber ? { barber_id: currentBarber._id } : "skip"
+  );
+
   // Get portfolio items
   const portfolioItems = useQuery(
     api.services.portfolio.getBarberPortfolio,
@@ -473,12 +482,13 @@ const BarberDashboard = () => {
     { value: "all_time", label: "All" },
   ];
 
-  // Tab configuration - 5 tabs for bottom nav (Profile moved to header)
+  // Tab configuration - 6 tabs for bottom nav (Profile moved to header)
   const tabs = [
     { id: "overview", urlPath: "home", label: "Home", icon: Home },
     { id: "bookings", urlPath: "bookings", label: "Bookings", icon: Calendar },
-    { id: "portfolio", urlPath: "portfolio", label: "Portfolio", icon: Image },
     { id: "earnings", urlPath: "earnings", label: "Earnings", icon: Wallet },
+    { id: "cash_advance", urlPath: "advance", label: "Advance", icon: DollarSign },
+    { id: "portfolio", urlPath: "portfolio", label: "Portfolio", icon: Image },
     { id: "schedule", urlPath: "schedule", label: "Schedule", icon: Clock },
   ];
 
@@ -562,6 +572,19 @@ const BarberDashboard = () => {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Time Clock Section */}
+      <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
+        <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center">
+          <Clock className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+          Time Clock
+        </h3>
+        <ClockButton
+          barberId={currentBarber?._id}
+          barberName={currentBarber?.full_name}
+          branchId={currentBarber?.branch_id}
+        />
       </div>
 
       {/* Quick Actions */}
@@ -910,6 +933,50 @@ const BarberDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Cash Advance Deductions */}
+      {cashAdvanceDeductions && cashAdvanceDeductions.advances && cashAdvanceDeductions.advances.length > 0 && (
+        <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
+          <h3 className="text-sm font-medium text-white mb-3 flex items-center">
+            <DollarSign className="w-4 h-4 mr-2 text-red-400" />
+            Upcoming Deductions
+          </h3>
+          <div className="space-y-3">
+            {cashAdvanceDeductions.advances.map((advance, index) => (
+              <div key={index} className="bg-[#0D0D0D] rounded-xl p-3 border border-[#2A2A2A]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-400">Cash Advance</span>
+                  <span className="text-sm font-medium text-red-400">
+                    -₱{(advance.installment_amount || advance.amount).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>Total: ₱{advance.amount.toLocaleString()}</span>
+                  {advance.repayment_terms > 1 && (
+                    <span>Installment {(advance.installments_paid || 0) + 1} of {advance.repayment_terms}</span>
+                  )}
+                </div>
+                {advance.repayment_terms > 1 && (
+                  <div className="mt-2">
+                    <div className="h-1.5 bg-[#2A2A2A] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[var(--color-primary)] rounded-full transition-all"
+                        style={{ width: `${((advance.installments_paid || 0) / advance.repayment_terms) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            <div className="border-t border-[#2A2A2A] pt-3 flex items-center justify-between">
+              <span className="text-sm text-gray-400">Total Next Payroll Deduction</span>
+              <span className="text-sm font-bold text-red-400">
+                -₱{cashAdvanceDeductions.installmentTotal.toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Earnings Stats */}
       <div className="grid grid-cols-2 gap-3">
@@ -1524,6 +1591,7 @@ const BarberDashboard = () => {
       case "bookings": return <BarberBookings />;
       case "portfolio": return renderPortfolio();
       case "earnings": return renderEarnings();
+      case "cash_advance": return <CashAdvanceSection />;
       case "schedule": return renderSchedule();
       case "clients": return renderClients();
       case "profile": return <BarberProfile />;
@@ -1630,7 +1698,7 @@ const BarberDashboard = () => {
 
       {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0D0D0D] border-t border-[#1A1A1A] safe-area-inset-bottom">
-        <div className="grid grid-cols-5 p-1 pb-2">
+        <div className="grid grid-cols-6 p-1 pb-2">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;

@@ -21,6 +21,15 @@ import PayrollManagement from "../../components/staff/PayrollManagement";
 import CustomBookingsManagement from "../../components/staff/CustomBookingsManagement";
 import WalkInSection from "../../components/staff/WalkInSection";
 import QueueSection from "../../components/staff/QueueSection";
+import TimeAttendanceView from "../../components/staff/TimeAttendanceView";
+import BranchProductOrdering from "../../components/staff/BranchProductOrdering";
+import AccountingDashboard from "../../components/staff/AccountingDashboard";
+// ExpenseManagement removed - expenses now managed in P&L dashboard (AccountingDashboard)
+import BalanceSheetDashboard from "../../components/staff/BalanceSheetDashboard";
+import CashAdvanceApproval from "../../components/staff/CashAdvanceApproval";
+import BranchRoyaltyHistory from "../../components/staff/BranchRoyaltyHistory";
+import PaymentSettings from "../../components/staff/PaymentSettings";
+import PaymentHistory from "../../components/staff/PaymentHistory";
 import DashboardFooter from "../../components/common/DashboardFooter";
 import {
   NotificationModal,
@@ -112,6 +121,14 @@ function StaffDashboard() {
 
   // Get walk-ins data for queue badge
   const allWalkInsData = useQuery(api.services.walkIn.getAllWalkIns, {}) || [];
+
+  // Get pending cash advances count for badge (branch admins only)
+  const pendingAdvancesCount = useQuery(
+    api.services.cashAdvance.getPendingAdvancesCount,
+    user?.branch_id && (user?.role === "branch_admin" || user?.role === "super_admin")
+      ? { branch_id: user.branch_id }
+      : "skip"
+  ) || 0;
 
   // Calculate incomplete bookings count (pending, booked, confirmed - not completed or cancelled)
   const incompleteBookingsCount = bookings
@@ -319,6 +336,32 @@ function StaffDashboard() {
       case "custom_bookings":
         return <CustomBookingsManagement onRefresh={handleRefresh} user={user} />;
 
+      case "attendance":
+        return <TimeAttendanceView branchId={user?.branch_id} />;
+
+      case "order_products":
+        return <BranchProductOrdering user={user} onRefresh={handleRefresh} />;
+
+      case "accounting":
+        return <AccountingDashboard user={user} onRefresh={handleRefresh} />;
+
+      // expenses tab removed - now managed in AccountingDashboard (P&L)
+
+      case "balance_sheet":
+        return <BalanceSheetDashboard branchId={user?.branch_id} userId={user?._id} />;
+
+      case "cash_advances":
+        return <CashAdvanceApproval user={user} onRefresh={handleRefresh} />;
+
+      case "royalty":
+        return <BranchRoyaltyHistory />;
+
+      case "payments":
+        return <PaymentSettings onRefresh={handleRefresh} />;
+
+      case "payment_history":
+        return <PaymentHistory />;
+
       default:
         return renderOverview();
     }
@@ -363,23 +406,37 @@ function StaffDashboard() {
 
   // Tab configuration for staff
   const baseTabs = [
-    { id: "overview", label: "Overview", icon: "dashboard" },
-    { id: "reports", label: "Reports", icon: "chart" },
+    // Core Operations
+    { id: "overview", label: "Overview", icon: "layout-dashboard" },
+    { id: "reports", label: "Reports", icon: "bar-chart-3" },
     { id: "bookings", label: "Bookings", icon: "calendar" },
     { id: "custom_bookings", label: "Custom Bookings", icon: "file-text" },
-    { id: "calendar", label: "Calendar", icon: "calendar" },
+    { id: "calendar", label: "Calendar", icon: "calendar-days" },
     { id: "walkins", label: "Walk-ins", icon: "user-plus" },
-    { id: "services", label: "Services", icon: "scissors" },
-    { id: "vouchers", label: "Vouchers", icon: "gift" },
-    { id: "barbers", label: "Barbers", icon: "user" },
+    { id: "pos", label: "POS", icon: "credit-card" },
+    // Staff & Services
+    { id: "barbers", label: "Barbers", icon: "user-check" },
     { id: "users", label: "Users", icon: "users" },
+    { id: "services", label: "Services", icon: "scissors" },
     { id: "customers", label: "Customers", icon: "users" },
-    { id: "events", label: "Events", icon: "calendar" },
-    { id: "payroll", label: "Payroll", icon: "dollar-sign" },
+    // Products & Inventory
     { id: "products", label: "Products", icon: "package" },
+    { id: "order_products", label: "Order Products", icon: "shopping-cart" },
+    { id: "vouchers", label: "Vouchers", icon: "gift" },
+    // Finance & Accounting
+    { id: "payroll", label: "Payroll", icon: "dollar-sign" },
+    { id: "cash_advances", label: "Cash Advances", icon: "banknote" },
+    { id: "royalty", label: "Royalty", icon: "percent" },
+    { id: "accounting", label: "P&L", icon: "pie-chart" },
+    { id: "balance_sheet", label: "Balance Sheet", icon: "scale" },
+    { id: "payments", label: "Payments", icon: "credit-card" },
+    { id: "payment_history", label: "Payment History", icon: "receipt" },
+    // HR & Events
+    { id: "attendance", label: "Attendance", icon: "clock" },
+    { id: "events", label: "Events", icon: "calendar-days" },
+    // Communications
     { id: "notifications", label: "Notifications", icon: "bell" },
     { id: "email_marketing", label: "Email Marketing", icon: "mail" },
-    { id: "pos", label: "POS", icon: "credit-card" },
   ];
 
   // Filter tabs based on user page_access permissions
@@ -436,6 +493,7 @@ function StaffDashboard() {
               }}
               incompleteBookingsCount={incompleteBookingsCount}
               waitingWalkInsCount={waitingWalkInsCount}
+              pendingAdvancesCount={pendingAdvancesCount}
             />
             <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl border border-[#2A2A2A]/50 p-3 sm:p-4 md:p-6 lg:p-8 xl:p-10 backdrop-blur-sm overflow-hidden">
               {renderTabContent()}

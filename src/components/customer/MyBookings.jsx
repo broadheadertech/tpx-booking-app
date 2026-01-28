@@ -14,6 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
+  Banknote,
+  Store,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useQuery, useMutation } from 'convex/react'
@@ -499,6 +501,25 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                           >
                             {booking.status.toUpperCase()}
                           </span>
+                          {/* Payment Status Badge (Story 7.6) */}
+                          {booking.payment_status === 'paid' && (
+                            <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30 flex items-center gap-1">
+                              <Banknote className="w-3 h-3" />
+                              PAID
+                            </span>
+                          )}
+                          {booking.payment_status === 'partial' && (
+                            <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 flex items-center gap-1">
+                              <Banknote className="w-3 h-3" />
+                              PARTIAL
+                            </span>
+                          )}
+                          {booking.payment_status === 'unpaid' && (
+                            <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-1">
+                              <Store className="w-3 h-3" />
+                              PAY AT SHOP
+                            </span>
+                          )}
                         </div>
                         <div className="flex items-center gap-3 text-xs text-gray-400">
                           <span>#{booking.booking_code}</span>
@@ -554,6 +575,23 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                             ₱{service.price ? parseFloat(service.price).toLocaleString() : "--"}
                           </p>
                         </div>
+                        {/* Payment Breakdown (Story 7.6) */}
+                        {booking.payment_status === 'partial' && (
+                          <div className="text-right">
+                            <p className="text-xs text-gray-400">Paid</p>
+                            <p className="text-xs font-medium text-green-400">
+                              ₱{(booking.convenience_fee_paid || 0).toLocaleString()}
+                            </p>
+                          </div>
+                        )}
+                        {booking.payment_status && booking.payment_status !== 'paid' && (
+                          <div className="text-right">
+                            <p className="text-xs text-gray-400">Due</p>
+                            <p className="text-xs font-medium text-yellow-400">
+                              ₱{(booking.service_price || service.price || 0).toLocaleString()}
+                            </p>
+                          </div>
+                        )}
                         {(() => {
                           const voucherCode = booking.voucher_code || booking.voucherCode || booking.voucher?.code;
                           return voucherCode && (

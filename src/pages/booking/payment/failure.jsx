@@ -1,14 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { XCircle, ArrowLeft, RefreshCw } from 'lucide-react';
+import { XCircle, ArrowLeft, RefreshCw, Store, Loader2 } from 'lucide-react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../../convex/_generated/api';
 
 const PaymentFailure = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [paymentDetails, setPaymentDetails] = useState(null);
+  const [updatingToPayAtShop, setUpdatingToPayAtShop] = useState(false);
+
+  // PayMongo booking code from URL (Story 7.6)
+  const bookingCode = searchParams.get('booking');
+
+  // Query booking by code for PayMongo payments (Story 7.6)
+  const paymongoBooking = useQuery(
+    api.services.bookings.getBookingByCode,
+    bookingCode ? { bookingCode } : "skip"
+  );
+
+  // Mutation to update booking payment status
+  const updatePaymentStatus = useMutation(api.services.bookings.updatePaymentStatus);
 
   useEffect(() => {
-    // Extract payment details from URL parameters
+    // Extract payment details from URL parameters (existing payment system)
     const payment_request_id = searchParams.get('payment_request_id');
     const reference_id = searchParams.get('reference_id');
     const status = searchParams.get('status');
@@ -31,6 +46,26 @@ const PaymentFailure = () => {
   const handleTryAgain = () => {
     // Go back to booking page to retry payment
     navigate('/customer/dashboard?section=booking');
+  };
+
+  // Handle Pay at Shop fallback (Story 7.6 - FR22)
+  const handlePayAtShop = async () => {
+    if (!paymongoBooking?._id) return;
+
+    setUpdatingToPayAtShop(true);
+    try {
+      await updatePaymentStatus({
+        id: paymongoBooking._id,
+        payment_status: 'unpaid'
+      });
+      // Redirect to success page with booking code
+      navigate(`/booking/payment-success?booking=${bookingCode}`);
+    } catch (error) {
+      console.error('Error updating to Pay at Shop:', error);
+      alert('Failed to update booking. Please try again.');
+    } finally {
+      setUpdatingToPayAtShop(false);
+    }
   };
 
   return (
@@ -97,8 +132,56 @@ const PaymentFailure = () => {
             </ul>
           </div>
 
+          {/* PayMongo Booking Details (Story 7.6) */}
+          {paymongoBooking && (
+            <div className="bg-[#1A1A1A] rounded-xl p-4 mb-6 text-left">
+              <h3 className="text-sm font-semibold text-gray-300 mb-3">Booking Details</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Booking Code:</span>
+                  <span className="text-white font-mono font-bold">
+                    {paymongoBooking.booking_code}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Service:</span>
+                  <span className="text-white">
+                    {paymongoBooking.service_name}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-400">Amount:</span>
+                  <span className="text-white font-semibold">
+                    ₱{(paymongoBooking.service_price || 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="space-y-3">
+            {/* Pay at Shop fallback for PayMongo bookings (FR22) */}
+            {paymongoBooking && (
+              <button
+                onClick={handlePayAtShop}
+                disabled={updatingToPayAtShop}
+                className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl hover:brightness-110 transition-all duration-200 shadow-lg flex items-center justify-center space-x-2 disabled:opacity-50"
+              >
+                {updatingToPayAtShop ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Updating...</span>
+                  </>
+                ) : (
+                  <>
+                    <Store className="w-5 h-5" />
+                    <span>Pay at Shop Instead</span>
+                  </>
+                )}
+              </button>
+            )}
+
             <button
               onClick={handleTryAgain}
               className="w-full py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-semibold rounded-xl hover:from-[var(--color-accent)] hover:brightness-110 transition-all duration-200 shadow-lg flex items-center justify-center space-x-2"
@@ -106,7 +189,7 @@ const PaymentFailure = () => {
               <RefreshCw className="w-5 h-5" />
               <span>Try Again</span>
             </button>
-            
+
             <button
               onClick={handleBackToHome}
               className="w-full py-3 border border-[#555555] text-gray-300 font-semibold rounded-xl hover:bg-[#444444] transition-all duration-200 flex items-center justify-center space-x-2"

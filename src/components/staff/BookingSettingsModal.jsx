@@ -2,16 +2,22 @@ import React, { useState, useEffect } from 'react'
 import Modal from '../common/Modal'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { Settings, Save, AlertCircle, DollarSign, Loader2, Clock } from 'lucide-react'
+import { useAuth } from '../../context/AuthContext'
+import { Settings, Save, AlertCircle, DollarSign, Loader2, Clock, Percent, Wallet } from 'lucide-react'
 
 const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
+    const { user } = useAuth()
     const [formData, setFormData] = useState({
         enable_booking_fee: false,
         booking_fee_amount: 0,
         enable_late_fee: false,
         late_fee_amount: 0,
         booking_start_hour: 10,
-        booking_end_hour: 20
+        booking_end_hour: 20,
+        // Convenience fee settings
+        convenience_fee_type: 'percent',
+        convenience_fee_percent: 5,
+        convenience_fee_amount: 50
     })
     const [error, setError] = useState('')
     const [success, setSuccess] = useState('')
@@ -21,10 +27,15 @@ const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
     const branch = useQuery(api.services.branches.getBranchById, branchId ? { id: branchId } : 'skip')
     const updateBranch = useMutation(api.services.branches.updateBranch)
 
+    // Fetch payment config for convenience fee settings
+    const paymentConfig = useQuery(api.services.paymongo.getPaymentConfig, branchId ? { branch_id: branchId } : 'skip')
+    const updatePaymentSettings = useMutation(api.services.paymongo.updatePaymentSettings)
+
     // Initialize form data when branch data is loaded
     useEffect(() => {
         if (branch) {
-            setFormData({
+            setFormData(prev => ({
+                ...prev,
                 enable_booking_fee: branch.enable_booking_fee || false,
                 booking_fee_amount: branch.booking_fee_amount || 0,
                 booking_fee_type: branch.booking_fee_type || 'fixed',
@@ -34,9 +45,21 @@ const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
                 late_fee_grace_period: branch.late_fee_grace_period || 0,
                 booking_start_hour: branch.booking_start_hour || 10,
                 booking_end_hour: branch.booking_end_hour || 20
-            })
+            }))
         }
     }, [branch])
+
+    // Initialize convenience fee from payment config
+    useEffect(() => {
+        if (paymentConfig) {
+            setFormData(prev => ({
+                ...prev,
+                convenience_fee_type: paymentConfig.convenience_fee_type || 'percent',
+                convenience_fee_percent: paymentConfig.convenience_fee_percent ?? 5,
+                convenience_fee_amount: paymentConfig.convenience_fee_amount ?? 50
+            }))
+        }
+    }, [paymentConfig])
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target
@@ -57,6 +80,7 @@ const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
         setSuccess('')
 
         try {
+            // Update branch settings (booking fee, late fee, operating hours)
             await updateBranch({
                 id: branchId,
                 enable_booking_fee: formData.enable_booking_fee,
@@ -69,6 +93,21 @@ const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
                 booking_start_hour: parseInt(formData.booking_start_hour) || 10,
                 booking_end_hour: parseInt(formData.booking_end_hour) || 20
             })
+
+            // Update convenience fee settings in payment config (if config exists)
+            if (paymentConfig && user?._id) {
+                await updatePaymentSettings({
+                    branch_id: branchId,
+                    pay_now_enabled: paymentConfig.pay_now_enabled || false,
+                    pay_later_enabled: paymentConfig.pay_later_enabled || false,
+                    pay_at_shop_enabled: paymentConfig.pay_at_shop_enabled ?? true,
+                    convenience_fee_type: formData.convenience_fee_type,
+                    convenience_fee_percent: parseFloat(formData.convenience_fee_percent) || 5,
+                    convenience_fee_amount: parseFloat(formData.convenience_fee_amount) || 50,
+                    updated_by: user._id
+                })
+            }
+
             setSuccess('Booking settings updated successfully')
             setTimeout(() => {
                 onClose()
@@ -280,6 +319,103 @@ const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
                                         <p className="text-[10px] text-gray-500 mt-1">No fee charged if within this time</p>
                                     </div>
                                 </div>
+                            )}
+                        </div>
+
+                        {/* Convenience Fee Section */}
+                        <div className="bg-[#0F0F0F]/50 rounded-xl p-5 border border-[#333333]/50 space-y-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Percent className="w-5 h-5 text-[var(--color-primary)]" />
+                                <div>
+                                    <h4 className="text-base font-medium text-white">Convenience Fee</h4>
+                                    <p className="text-xs text-gray-400">Fee charged for "Pay Later" option</p>
+                                </div>
+                            </div>
+
+                            {!paymentConfig && (
+                                <div className="flex items-center gap-2 text-amber-500 text-xs bg-amber-500/10 p-2 rounded-lg">
+                                    <AlertCircle className="w-3 h-3" />
+                                    <span>Configure PayMongo API keys in Payment Settings to enable convenience fees.</span>
+                                </div>
+                            )}
+
+                            {paymentConfig && (
+                                <>
+                                    <div>
+                                        <label className="block text-xs font-medium text-gray-400 mb-1.5">Fee Type</label>
+                                        <div className="flex gap-2 p-1 bg-[#0A0A0A] rounded-xl border border-[#333333]">
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({ ...prev, convenience_fee_type: 'percent' }))}
+                                                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1 ${formData.convenience_fee_type === 'percent'
+                                                        ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                                                        : 'text-gray-400 hover:text-white'
+                                                    }`}
+                                            >
+                                                <Percent className="w-3 h-3" />
+                                                Percentage
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({ ...prev, convenience_fee_type: 'fixed' }))}
+                                                className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1 ${formData.convenience_fee_type === 'fixed'
+                                                        ? 'bg-[var(--color-primary)] text-white shadow-sm'
+                                                        : 'text-gray-400 hover:text-white'
+                                                    }`}
+                                            >
+                                                <Wallet className="w-3 h-3" />
+                                                Fixed Amount
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {formData.convenience_fee_type === 'percent' ? (
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                                                Fee Percentage
+                                            </label>
+                                            <div className="relative">
+                                                <input
+                                                    type="number"
+                                                    name="convenience_fee_percent"
+                                                    value={formData.convenience_fee_percent}
+                                                    onChange={handleChange}
+                                                    placeholder="5"
+                                                    step="0.1"
+                                                    min="0"
+                                                    max="100"
+                                                    className="w-full pr-8 pl-4 py-2.5 bg-[#0A0A0A] border border-[#333333] rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all"
+                                                />
+                                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                                    <span className="text-gray-500 text-sm">%</span>
+                                                </div>
+                                            </div>
+                                            <p className="text-[10px] text-gray-500 mt-1">Percentage of total booking charged as convenience fee</p>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-400 mb-1.5">
+                                                Fixed Fee Amount
+                                            </label>
+                                            <div className="relative">
+                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <span className="text-gray-500 sm:text-sm">₱</span>
+                                                </div>
+                                                <input
+                                                    type="number"
+                                                    name="convenience_fee_amount"
+                                                    value={formData.convenience_fee_amount}
+                                                    onChange={handleChange}
+                                                    placeholder="50"
+                                                    step="1"
+                                                    min="0"
+                                                    className="w-full pl-8 pr-4 py-2.5 bg-[#0A0A0A] border border-[#333333] rounded-xl text-white placeholder-gray-600 focus:outline-none focus:border-[var(--color-primary)] focus:ring-1 focus:ring-[var(--color-primary)] transition-all"
+                                                />
+                                            </div>
+                                            <p className="text-[10px] text-gray-500 mt-1">Fixed amount charged for all Pay Later bookings</p>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
 

@@ -26,15 +26,23 @@ workflow_status:
   # Phase 0: Documentation (Prerequisite for brownfield)
   - phase: 0
     name: "Documentation"
-    status: "required"
+    status: "completed"
     workflows:
       - id: "document-project"
-        status: "required"
+        status: "docs/index.md"
         agent: "analyst"
         command: "/bmad:bmm:workflows:document-project"
-        output: "Comprehensive project documentation"
+        output: "docs/index.md"
         purpose: "Understand existing codebase before planning"
-        note: "Prerequisite - Run this first to analyze existing tpx-booking-app codebase"
+        note: "COMPLETED - Deep scan performed: 99+ components, 150+ API endpoints, auth/security analyzed"
+        completed_at: "2026-01-25"
+        scan_level: "deep"
+        findings:
+          - "3 existing documentation files found and referenced"
+          - "99+ React components inventoried across 5 categories"
+          - "150+ Convex API functions documented (70+ queries, 80+ mutations)"
+          - "Authentication/security architecture analyzed (MEDIUM-HIGH readiness)"
+          - "Tech stack: React 19 + Vite 7 + TailwindCSS 4 + Convex + Capacitor"
 
   # Phase 1: Analysis (Optional - User selected brainstorming)
   - phase: 1
@@ -42,10 +50,19 @@ workflow_status:
     status: "optional"
     workflows:
       - id: "brainstorm-project"
-        status: "optional"
+        status: "_bmad-output/analysis/brainstorming-session-2026-01-25.md"
         agent: "analyst"
         command: "/bmad:bmm:workflows:brainstorming"
-        note: "User selected - Creative exploration for enhancement ideas"
+        output: "_bmad-output/analysis/brainstorming-session-2026-01-25.md"
+        note: "COMPLETED - 5 financial features brainstormed: Accounting, Royalty, Cash Advance, External Revenue, HQ Consolidated"
+        completed_at: "2026-01-25"
+        features_explored:
+          - "Branch-Level Accounting System (P&L, Balance Sheet)"
+          - "Royalty Pay System (percentage/fixed collection)"
+          - "Cash Advance System (payroll integration)"
+          - "External Revenue Tracking (shop visits, gigs)"
+          - "HQ Consolidated Accounting (multi-branch view)"
+        new_tables_proposed: 13
       - id: "research"
         status: "skipped"
         note: "Not selected by user"
@@ -56,35 +73,218 @@ workflow_status:
   # Phase 2: Planning
   - phase: 2
     name: "Planning"
-    status: "required"
+    status: "completed"
     workflows:
       - id: "prd"
-        status: "required"
+        status: "_bmad-output/planning-artifacts/prd.md"
         agent: "pm"
-        command: "/bmad:bmm:workflows:create-prd"
-        output: "Product Requirements Document with FRs and NFRs"
+        command: "/bmad:bmm:workflows:prd"
+        output: "_bmad-output/planning-artifacts/prd.md"
+        note: "COMPLETED - 44 FRs, 18 NFRs, 4 user journeys, 5 MVP features defined"
+        completed_at: "2026-01-25"
+        mvp_features:
+          - "Accounting (P&L dashboard, BIR export)"
+          - "Royalty Management (config, email, official receipts)"
+          - "Cash Advance (request, approval, payroll integration)"
+          - "Product Catalog (centralized CRUD, price enforcement)"
+          - "Time Tracking (barber attendance)"
+        functional_requirements: 44
+        non_functional_requirements: 18
+        target_timeline: "1 week"
+      - id: "prd-paymongo"
+        status: "_bmad-output/planning-artifacts/prd-paymongo.md"
+        agent: "pm"
+        command: "/bmad:bmm:workflows:prd"
+        output: "_bmad-output/planning-artifacts/prd-paymongo.md"
+        note: "COMPLETED - PayMongo Payment Integration PRD (31 FRs, 18 NFRs, 5 user journeys)"
+        completed_at: "2026-01-27"
+      - id: "prd-clerk-rbac"
+        status: "_bmad-output/planning-artifacts/prd-clerk-rbac.md"
+        agent: "pm"
+        command: "/bmad:bmm:workflows:prd"
+        output: "_bmad-output/planning-artifacts/prd-clerk-rbac.md"
+        note: "COMPLETED - Clerk Authentication + RBAC PRD (48 FRs, 18 NFRs, 6 user journeys)"
+        completed_at: "2026-01-28"
+        mvp_features:
+          - "Clerk Integration (replace custom auth)"
+          - "Clerk Organizations (branch mapping)"
+          - "6-Role RBAC System"
+          - "Page-Level + Action-Level Permissions"
+          - "Branch Data Scoping"
+          - "User Migration (dual strategy)"
+          - "Webhook Sync + Audit Trail"
+        functional_requirements: 48
+        non_functional_requirements: 18
+        user_journeys: 6
+        roles_defined:
+          - "Super Admin"
+          - "Admin Staff"
+          - "Branch Admin"
+          - "Staff"
+          - "Customer"
+          - "Barber"
+        implementation_phases:
+          - "1a - Foundation (Clerk setup, webhooks)"
+          - "1b - RBAC (role system, page_access)"
+          - "1c - Migration (user import, org sync)"
+          - "1d - Cutover (remove old auth)"
+        mvp_features:
+          - "Pay Now (full payment at booking)"
+          - "Pay Later (convenience fee upfront)"
+          - "Branch PayMongo Configuration (API keys, fees)"
+          - "POS Remaining Balance Collection"
+          - "Webhook Payment Status Sync"
+        functional_requirements: 31
+        non_functional_requirements: 18
+        user_journeys: 5
+        innovation_patterns:
+          - "Automated end-to-end payment (vs manual competitors)"
+          - "Commitment-based no-show prevention"
+          - "Branch autonomy with multi-tenant isolation"
+        rollout_strategy: "pilot_branch_first"
       - id: "create-ux-design"
-        status: "conditional"
+        status: "_bmad-output/planning-artifacts/ux-design-specification.md"
         agent: "ux-designer"
         command: "/bmad:bmm:workflows:create-ux-design"
-        note: "Determined after PRD - user/agent decides if UI changes needed"
+        output: "_bmad-output/planning-artifacts/ux-design-specification.md"
+        note: "COMPLETED - Comprehensive UX spec for 5 new features"
+        completed_at: "2026-01-25"
+        sections_completed:
+          - "Executive Summary & Target Users"
+          - "Core User Experience & Defining Experiences"
+          - "Emotional Response Design"
+          - "UX Pattern Analysis & Inspiration"
+          - "Design System Foundation (TailwindCSS 4 + shadcn/ui)"
+          - "Visual Design Foundation"
+          - "Design Direction Decision"
+          - "User Journey Flows (5 critical journeys)"
+          - "Component Strategy (5 custom components)"
+          - "UX Consistency Patterns"
+          - "Responsive Design & Accessibility (WCAG AA)"
+        custom_components:
+          - "MetricCard"
+          - "StatusBadge"
+          - "ClockButton"
+          - "ApprovalCard"
+          - "BranchStatusCard"
 
   # Phase 3: Solutioning
   - phase: 3
     name: "Solutioning"
-    status: "required"
+    status: "completed"
     workflows:
       - id: "create-architecture"
-        status: "required"
+        status: "_bmad-output/planning-artifacts/architecture.md"
         agent: "architect"
         command: "/bmad:bmm:workflows:create-architecture"
-        output: "System architecture document"
-        note: "Solution design for brownfield enhancements"
+        output: "_bmad-output/planning-artifacts/architecture.md"
+        note: "COMPLETED - 8 steps, comprehensive brownfield architecture"
+        completed_at: "2026-01-25"
+        architectural_decisions:
+          - "6 new tables (royaltyConfig, royaltyPayments, cashAdvances, officialReceipts, productCatalog, timeAttendance)"
+          - "5 new Convex services + 2 service extensions"
+          - "12 new React components across 4 role directories"
+          - "Real-time architecture via Convex subscriptions"
+          - "Cash advance integrated with existing payroll service"
+        validation_results:
+          coherence: "PASS - All decisions compatible"
+          coverage: "PASS - 44 FRs + 18 NFRs supported"
+          readiness: "PASS - Implementation patterns comprehensive"
+      - id: "create-architecture-paymongo"
+        status: "_bmad-output/planning-artifacts/architecture-paymongo.md"
+        agent: "architect"
+        command: "/bmad:bmm:workflows:create-architecture"
+        output: "_bmad-output/planning-artifacts/architecture-paymongo.md"
+        note: "COMPLETED - PayMongo Payment Integration architecture (8 steps)"
+        completed_at: "2026-01-27"
+        architectural_decisions:
+          - "2 new tables (branchPaymentConfig, paymentAuditLog)"
+          - "1 new Convex service (paymongo.ts)"
+          - "1 encryption library (convex/lib/encryption.ts)"
+          - "Webhook handler in http.ts"
+          - "5 new React components"
+        validation_results:
+          coherence: "PASS - All decisions compatible with existing architecture"
+          coverage: "PASS - 31 FRs + 18 NFRs supported"
+          readiness: "PASS - Implementation patterns comprehensive"
+        prd_reference: "prd-paymongo.md"
+      - id: "create-architecture-clerk-rbac"
+        status: "_bmad-output/planning-artifacts/architecture-clerk-rbac.md"
+        agent: "architect"
+        command: "/bmad:bmm:workflows:create-architecture"
+        output: "_bmad-output/planning-artifacts/architecture-clerk-rbac.md"
+        note: "COMPLETED - Clerk Authentication + RBAC architecture (8 steps)"
+        completed_at: "2026-01-28"
+        architectural_decisions:
+          - "Extend users table (clerk_user_id, clerk_org_ids, page_access)"
+          - "Extend branches table (clerk_org_id)"
+          - "1 new table (permissionAuditLog)"
+          - "2 new services (rbac.ts, clerkSync.ts)"
+          - "2 new lib helpers (clerkAuth.ts, roleUtils.ts)"
+          - "Webhook handler in http.ts"
+          - "5 new permission UI components"
+        validation_results:
+          coherence: "PASS - All decisions compatible with existing architecture"
+          coverage: "PASS - 48 FRs + 18 NFRs supported"
+          readiness: "PASS - Implementation patterns comprehensive"
+        prd_reference: "prd-clerk-rbac.md"
+        new_files: 9
+        modified_files: 5
+        roles_supported:
+          - "Super Admin"
+          - "Admin Staff"
+          - "Branch Admin"
+          - "Staff"
+          - "Customer"
+          - "Barber"
+        implementation_phases:
+          - "Schema changes (users, branches, permissionAuditLog)"
+          - "Clerk helpers (clerkAuth.ts, roleUtils.ts)"
+          - "RBAC service (rbac.ts)"
+          - "Webhook handler (http.ts)"
+          - "Clerk sync service (clerkSync.ts)"
+          - "Frontend provider (ClerkProvider)"
+          - "Permission components (5 components)"
+          - "Auth context migration"
+          - "User migration (invite + import)"
+          - "Legacy auth removal (cutover)"
+      - id: "generate-project-context"
+        status: "_bmad-output/planning-artifacts/project-context.md"
+        agent: "architect"
+        command: "/bmad:bmm:workflows:generate-project-context"
+        output: "_bmad-output/planning-artifacts/project-context.md"
+        note: "COMPLETED - 47 critical rules for AI agent consistency"
+        completed_at: "2026-01-25"
+        rule_categories:
+          - "Technology stack with exact versions"
+          - "Language-specific rules (TypeScript/Convex)"
+          - "Framework-specific rules (React 19, Convex, TailwindCSS 4)"
+          - "Naming conventions and file placement"
+          - "Security and branch isolation rules"
+          - "Anti-patterns and edge cases"
+        rule_count: 47
       - id: "create-epics-and-stories"
-        status: "required"
+        status: "_bmad-output/planning-artifacts/epics.md"
         agent: "pm"
         command: "/bmad:bmm:workflows:create-epics-and-stories"
-        note: "Break down PRD into implementable epics and stories with full context (PRD + UX + Architecture)"
+        output: "_bmad-output/planning-artifacts/epics.md"
+        note: "COMPLETED - 5 epics, 22 stories covering all 44 FRs"
+        completed_at: "2026-01-25"
+        epic_summary:
+          - "Epic 1: Time & Attendance (3 stories) - FR38-41"
+          - "Epic 2: Product Catalog (4 stories) - FR30-37"
+          - "Epic 3: P&L Reporting (4 stories) - FR1-9"
+          - "Epic 4: Cash Advance (5 stories) - FR20-29, FR43-44"
+          - "Epic 5: Royalty Management (6 stories) - FR10-19, FR42"
+        total_epics: 5
+        total_stories: 22
+        frs_covered: 44
+        validation_results:
+          fr_coverage: "PASS - All 44 FRs covered"
+          architecture_compliance: "PASS - Brownfield patterns followed"
+          story_quality: "PASS - All have acceptance criteria"
+          epic_structure: "PASS - User value focused"
+          dependency_validation: "PASS - No forward dependencies"
       - id: "test-design"
         status: "optional"
         agent: "tea"
@@ -92,18 +292,35 @@ workflow_status:
         output: "System-level testability review"
         note: "Testability assessment before gate check"
       - id: "implementation-readiness"
-        status: "required"
+        status: "_bmad-output/planning-artifacts/implementation-readiness-report-2026-01-25.md"
         agent: "architect"
         command: "/bmad:bmm:workflows:implementation-readiness"
-        note: "Validates PRD + Architecture + Epics + UX (optional) before implementation"
+        output: "_bmad-output/planning-artifacts/implementation-readiness-report-2026-01-25.md"
+        note: "COMPLETED - All 6 validation steps passed, 0 issues found"
+        completed_at: "2026-01-25"
+        validation_results:
+          document_discovery: "PASS - All 4 required + 1 optional documents found"
+          prd_analysis: "PASS - 44 FRs + 18 NFRs extracted"
+          epic_coverage: "PASS - 100% FR coverage (44/44)"
+          ux_alignment: "PASS - 9 UX requirements, 100% aligned"
+          epic_quality: "PASS - 5 epics, 22 stories, 0 violations"
+          overall_status: "READY FOR IMPLEMENTATION"
 
   # Phase 4: Implementation
   - phase: 4
     name: "Implementation"
-    status: "required"
+    status: "in_progress"
     workflows:
       - id: "sprint-planning"
-        status: "required"
+        status: "_bmad-output/implementation-artifacts/sprint-status.yaml"
         agent: "sm"
         command: "/bmad:bmm:workflows:sprint-planning"
-        note: "Creates sprint plan - subsequent work tracked in sprint-status.yaml"
+        output: "_bmad-output/implementation-artifacts/sprint-status.yaml"
+        note: "COMPLETED - Sprint tracking initialized with 5 epics, 22 stories"
+        completed_at: "2026-01-25"
+        sprint_summary:
+          total_epics: 5
+          total_stories: 22
+          epics_in_progress: 0
+          stories_done: 0
+          tracking_system: "file-system"

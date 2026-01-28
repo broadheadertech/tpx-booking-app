@@ -14,6 +14,7 @@ import {
   Banknote,
   Star,
   Receipt,
+  CreditCard,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from "convex/react";
@@ -22,6 +23,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useBranding } from "../../context/BrandingContext";
 import { formatTime } from "../../utils/dateUtils";
 import { sendCustomBookingConfirmation, sendBarberBookingNotification } from "../../services/emailService";
+import PaymentOptionsModal from "./PaymentOptionsModal";
 
 // Helper function to convert hex to rgba
 const hexToRgba = (hex, alpha) => {
@@ -101,7 +103,7 @@ const ServiceBooking = ({ onBack }) => {
   });
   const [selectedTime, setSelectedTime] = useState(null);
   const [selectedStaff, setSelectedStaff] = useState(null);
-  const [step, setStep] = useState(1); // 1: branch, 2: services, 3: date & time & staff, 4: confirmation, 5: success
+  const [step, setStep] = useState(1); // 1: branch, 2: services, 3: date & time & staff, 4: confirmation, 5: success, 6: confirmed, 7: custom form, 8: payment pending
   const [loading, setLoading] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -123,6 +125,15 @@ const ServiceBooking = ({ onBack }) => {
   const [customBookingSubmitting, setCustomBookingSubmitting] = useState(false);
   const [customBookingSuccess, setCustomBookingSuccess] = useState(null);
   const [isCustomBookingFlow, setIsCustomBookingFlow] = useState(false);
+
+  // PayMongo payment flow states (Story 7.5)
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+
+  // Pending payment polling states
+  const [pendingPaymentSessionId, setPendingPaymentSessionId] = useState(null);
+  const [paymentAmount, setPaymentAmount] = useState(0);
+  const [paymentTypeState, setPaymentTypeState] = useState(null);
 
   // Convex queries
   const branches = useQuery(api.services.branches.getActiveBranches);
@@ -159,10 +170,21 @@ const ServiceBooking = ({ onBack }) => {
     api.services.bookings.updatePaymentStatus
   );
 
+  // PayMongo payment link creation (Story 7.5)
+  const createPaymentLink = useAction(api.services.paymongo.createPaymentLink);
+  // Deferred booking flow - creates payment link without creating booking first
+  const createPaymentLinkDeferred = useAction(api.services.paymongo.createPaymentLinkDeferred);
+
   // Query to get booking details after creation
   const getBookingById = useQuery(
     api.services.bookings.getBookingById,
     createdBooking?._id ? { id: createdBooking._id } : "skip"
+  );
+
+  // Query to poll payment status for deferred booking flow
+  const paymentStatus = useQuery(
+    api.services.paymongo.getPaymentStatusByLink,
+    pendingPaymentSessionId ? { paymongo_link_id: pendingPaymentSessionId } : "skip"
   );
 
   // Query to get existing bookings for selected barber and date
@@ -173,6 +195,29 @@ const ServiceBooking = ({ onBack }) => {
       : "skip"
   );
   const redeemVoucher = useMutation(api.services.vouchers.redeemVoucher);
+
+  // Handle payment status changes (polling for deferred booking)
+  useEffect(() => {
+    if (paymentStatus?.status === 'completed' && paymentStatus?.booking) {
+      console.log('[ServiceBooking] Payment completed, booking created:', paymentStatus.booking);
+      // Payment completed and booking created - show success
+      setCreatedBooking({
+        _id: paymentStatus.booking._id,
+        booking_code: paymentStatus.booking.booking_code,
+        service: selectedService,
+        barber: selectedStaff,
+        date: paymentStatus.booking.date,
+        time: paymentStatus.booking.time,
+        status: "booked",
+        payment_status: paymentStatus.booking.payment_status,
+      });
+      // Clear pending payment state
+      setPendingPaymentSessionId(null);
+      localStorage.removeItem('pendingPaymongoSessionId');
+      // Go to success step
+      setStep(6);
+    }
+  }, [paymentStatus, selectedService, selectedStaff]);
 
   // Check for pre-selected service from AI assistant
   useEffect(() => {
@@ -894,6 +939,225 @@ const ServiceBooking = ({ onBack }) => {
     paymentMethod = null
   ) => {
     await handleCreateBooking(paymentType, paymentMethod);
+  };
+
+  /**
+   * Handle payment option selection from PaymentOptionsModal (Story 7.5)
+   * @param {string} paymentOption - "pay_now", "pay_later", or "pay_at_shop"
+   */
+  const handlePaymentOptionSelect = async (paymentOption) => {
+    setShowPaymentModal(false);
+    setPaymentProcessing(true);
+    setError(null);
+
+    try {
+      if (!selectedService || !selectedDate || !selectedTime) {
+        throw new Error("Please fill in all booking details");
+      }
+
+      // Format time to include seconds for API compatibility
+      const formattedTime = selectedTime.includes(":")
+        ? `${selectedTime}:00`
+        : selectedTime;
+
+      // Calculate booking fee
+      const bookingFee = (() => {
+        if (!selectedBranch?.enable_booking_fee) return 0;
+        const feeAmount = selectedBranch.booking_fee_amount || 0;
+        if (selectedBranch.booking_fee_type === 'percent') {
+          return (selectedService.price * feeAmount) / 100;
+        }
+        return feeAmount;
+      })();
+
+      // Handle payment based on selected option
+      if (paymentOption === "pay_at_shop") {
+        // ============================================================
+        // PAY AT SHOP: Create booking immediately (no payment required upfront)
+        // ============================================================
+        console.log("Pay at Shop selected - creating booking immediately");
+
+        const bookingData = {
+          customer: user._id,
+          service: selectedService._id,
+          barber: selectedStaff?._id || undefined,
+          branch_id: selectedBranch._id,
+          date: selectedDate,
+          time: formattedTime,
+          status: "booked",
+          notes: selectedVoucher
+            ? `Used voucher: ${selectedVoucher.code}`
+            : undefined,
+          voucher_id: selectedVoucher?._id || undefined,
+          discount_amount: selectedVoucher?.value || undefined,
+          customer_email: user.email,
+          customer_name: user.full_name || user.nickname || user.username,
+          payment_status: "unpaid",
+          booking_fee: bookingFee,
+        };
+
+        const bookingId = await createBooking(bookingData);
+
+        // Create initial booking object for UI
+        const booking = {
+          _id: bookingId,
+          booking_code: null,
+          service: selectedService,
+          barber: selectedStaff,
+          date: selectedDate,
+          time: formattedTime,
+          status: "booked",
+          voucher_code: selectedVoucher?.code,
+          payment_option: paymentOption,
+        };
+        setCreatedBooking(booking);
+
+        // Send email notification to barber
+        if (selectedStaff?.email) {
+          try {
+            await sendBarberBookingNotification({
+              barberEmail: selectedStaff.email,
+              barberName: selectedStaff.full_name || selectedStaff.name,
+              customerName: user.full_name || user.nickname || user.username,
+              customerPhone: user.mobile_number || user.phone,
+              customerEmail: user.email,
+              serviceName: selectedService?.name,
+              servicePrice: selectedService?.price,
+              bookingDate: selectedDate,
+              bookingTime: formattedTime,
+              branchName: selectedBranch?.name,
+              bookingCode: null,
+              bookingType: 'regular'
+            });
+          } catch (emailError) {
+            console.error('Failed to send barber notification email:', emailError);
+          }
+        }
+
+        // Redeem voucher if selected
+        if (selectedVoucher?.code) {
+          try {
+            await redeemVoucher({
+              code: selectedVoucher.code,
+              user_id: user._id,
+            });
+          } catch (voucherError) {
+            console.error("Voucher redemption error:", voucherError);
+          }
+        }
+
+        setStep(6); // Go to success step
+      } else {
+        // ============================================================
+        // PAY NOW / PAY LATER: Deferred booking - only create after payment succeeds
+        // Booking is NOT created until payment webhook confirms success
+        // ============================================================
+        console.log("Creating deferred payment link for:", paymentOption);
+
+        try {
+          // Create payment link with booking data (booking will be created after payment)
+          const result = await createPaymentLinkDeferred({
+            customer_id: user._id,
+            service_id: selectedService._id,
+            barber_id: selectedStaff?._id || undefined,
+            branch_id: selectedBranch._id,
+            date: selectedDate,
+            time: formattedTime,
+            notes: selectedVoucher
+              ? `Used voucher: ${selectedVoucher.code}`
+              : undefined,
+            voucher_id: selectedVoucher?._id || undefined,
+            discount_amount: selectedVoucher?.value || undefined,
+            customer_email: user.email,
+            customer_name: user.full_name || user.nickname || user.username,
+            booking_fee: bookingFee,
+            price: selectedService.price,
+            payment_type: paymentOption,
+            origin: window.location.origin,
+          });
+
+          console.log("Deferred payment link created:", result);
+
+          // DON'T redeem voucher yet - it will be redeemed when booking is created after payment
+          // DON'T create booking yet - it will be created by webhook after payment success
+
+          // Store session ID for polling
+          localStorage.setItem('pendingPaymongoSessionId', result.sessionId);
+
+          // Set pending payment state for polling
+          setPendingPaymentSessionId(result.sessionId);
+          setPaymentAmount(result.amount);
+          setPaymentTypeState(paymentOption);
+
+          // Open PayMongo checkout in new tab (don't redirect - stay here to poll)
+          window.open(result.checkoutUrl, '_blank');
+
+          // Go to payment waiting step
+          setStep(8);
+        } catch (paymentError) {
+          console.error("Payment link creation failed:", paymentError);
+
+          // Offer Pay at Shop fallback (FR22)
+          const fallbackConfirmed = window.confirm(
+            `Payment processing failed: ${paymentError.message || "Unknown error"}\n\nWould you like to proceed with "Pay at Shop" instead? You can pay the full amount when you arrive at the branch.`
+          );
+
+          if (fallbackConfirmed) {
+            // Create booking with pay_at_shop flow
+            const bookingData = {
+              customer: user._id,
+              service: selectedService._id,
+              barber: selectedStaff?._id || undefined,
+              branch_id: selectedBranch._id,
+              date: selectedDate,
+              time: formattedTime,
+              status: "booked",
+              notes: selectedVoucher
+                ? `Used voucher: ${selectedVoucher.code}`
+                : undefined,
+              voucher_id: selectedVoucher?._id || undefined,
+              discount_amount: selectedVoucher?.value || undefined,
+              customer_email: user.email,
+              customer_name: user.full_name || user.nickname || user.username,
+              payment_status: "unpaid",
+              booking_fee: bookingFee,
+            };
+
+            const bookingId = await createBooking(bookingData);
+            setCreatedBooking({
+              _id: bookingId,
+              service: selectedService,
+              barber: selectedStaff,
+              date: selectedDate,
+              time: formattedTime,
+              status: "booked",
+              payment_option: "pay_at_shop",
+            });
+
+            // Redeem voucher
+            if (selectedVoucher?.code) {
+              try {
+                await redeemVoucher({
+                  code: selectedVoucher.code,
+                  user_id: user._id,
+                });
+              } catch (voucherError) {
+                console.error("Voucher redemption error:", voucherError);
+              }
+            }
+
+            setStep(6);
+          } else {
+            throw paymentError;
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error in payment flow:", error);
+      setError(error.message || "Failed to process booking. Please try again.");
+    } finally {
+      setPaymentProcessing(false);
+    }
   };
 
   const getStepTitle = () => {
@@ -1730,16 +1994,16 @@ const ServiceBooking = ({ onBack }) => {
         {/* Action Buttons */}
         <div className="p-4 border-t border-[#2A2A2A] space-y-3">
           <button
-            onClick={() => handleConfirmBooking("pay_later")}
-            disabled={bookingLoading}
-            className={`w-full py-3.5 px-4 text-white font-bold rounded-xl transition-all duration-200 text-sm flex items-center justify-center gap-2 shadow-lg ${bookingLoading ? "opacity-75 cursor-not-allowed" : "hover:opacity-90"
+            onClick={() => setShowPaymentModal(true)}
+            disabled={bookingLoading || paymentProcessing}
+            className={`w-full py-3.5 px-4 text-white font-bold rounded-xl transition-all duration-200 text-sm flex items-center justify-center gap-2 shadow-lg ${bookingLoading || paymentProcessing ? "opacity-75 cursor-not-allowed" : "hover:opacity-90"
               }`}
             style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
           >
-            {bookingLoading ? (
+            {bookingLoading || paymentProcessing ? (
               <div className="flex items-center justify-center gap-2">
                 <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
-                <span>Booking...</span>
+                <span>{paymentProcessing ? "Processing Payment..." : "Booking..."}</span>
               </div>
             ) : (
               <>
@@ -1751,6 +2015,7 @@ const ServiceBooking = ({ onBack }) => {
 
           <button
             onClick={() => setStep(4)}
+            disabled={paymentProcessing}
             className="w-full py-3 px-4 border border-[#2A2A2A] text-gray-400 hover:bg-[#0F0F0F] hover:text-white font-semibold rounded-xl transition-all duration-200 text-sm flex items-center justify-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -1777,6 +2042,30 @@ const ServiceBooking = ({ onBack }) => {
           <p className="font-medium text-gray-300">
             Your appointment has been successfully booked
           </p>
+
+          {/* Payment Status Badge (Story 7.6) */}
+          {getBookingById?.payment_status && (
+            <div className="mt-4">
+              {getBookingById.payment_status === 'paid' && (
+                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-500/20 text-green-400 border border-green-500/30 text-sm font-semibold">
+                  <Banknote className="w-4 h-4" />
+                  Fully Paid
+                </span>
+              )}
+              {getBookingById.payment_status === 'partial' && (
+                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 text-sm font-semibold">
+                  <Banknote className="w-4 h-4" />
+                  Partially Paid - ₱{(getBookingById.convenience_fee_paid || 0).toLocaleString()} paid
+                </span>
+              )}
+              {getBookingById.payment_status === 'unpaid' && (
+                <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 text-sm font-semibold">
+                  <Receipt className="w-4 h-4" />
+                  Pay at Branch
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* QR Code */}
@@ -1922,6 +2211,26 @@ const ServiceBooking = ({ onBack }) => {
                   ).toLocaleString()}
               </span>
             </div>
+
+            {/* Payment Breakdown (Story 7.6) */}
+            {getBookingById?.payment_status && getBookingById.payment_status !== 'unpaid' && (
+              <div className="flex justify-between pt-2">
+                <span className="font-medium text-gray-300">Amount Paid:</span>
+                <span className="font-bold text-green-400">
+                  ₱{getBookingById.payment_status === 'paid'
+                    ? (getBookingById.service_price || 0).toLocaleString()
+                    : (getBookingById.convenience_fee_paid || 0).toLocaleString()}
+                </span>
+              </div>
+            )}
+            {getBookingById?.payment_status && getBookingById.payment_status !== 'paid' && (
+              <div className="flex justify-between pt-2">
+                <span className="font-medium text-gray-300">Due at Branch:</span>
+                <span className="font-bold text-yellow-400">
+                  ₱{(getBookingById.service_price || 0).toLocaleString()}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1958,6 +2267,119 @@ const ServiceBooking = ({ onBack }) => {
           </button>
         </div>
       </div >
+    );
+  };
+
+  // Render payment pending state (step 8)
+  const renderPaymentPending = () => {
+    const isPending = paymentStatus?.status === 'pending' || paymentStatus?.status === 'paid';
+    const pendingData = paymentStatus?.pendingPayment;
+
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <div
+            className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl"
+            style={{ backgroundColor: '#3B82F6' }}
+          >
+            {isPending ? (
+              <div className="animate-spin w-10 h-10 border-4 border-white border-t-transparent rounded-full"></div>
+            ) : (
+              <CreditCard className="w-10 h-10 text-white" />
+            )}
+          </div>
+          <h2 className="text-3xl font-light mb-2 text-white">
+            {isPending ? 'Waiting for Payment...' : 'Complete Your Payment'}
+          </h2>
+          <p className="font-light text-gray-300 text-sm">
+            {isPending
+              ? 'Please complete your payment in the PayMongo window'
+              : 'A new tab has opened for payment. Please complete it there.'}
+          </p>
+        </div>
+
+        {/* Payment Info Card */}
+        <div className="bg-[#1A1A1A] rounded-2xl p-6 border border-[#2A2A2A] shadow-lg">
+          <h3 className="text-lg font-light mb-4 text-white text-center">
+            Payment Details
+          </h3>
+
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <span className="font-light text-gray-400 text-sm">Service:</span>
+              <span className="font-normal text-white text-sm">{selectedService?.name}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-light text-gray-400 text-sm">Barber:</span>
+              <span className="font-normal text-white text-sm">{selectedStaff?.full_name || 'Any Available'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-light text-gray-400 text-sm">Date & Time:</span>
+              <span className="font-normal text-white text-sm">{selectedDate}, {selectedTime}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-light text-gray-400 text-sm">Payment Type:</span>
+              <span className="font-normal text-white text-sm">
+                {paymentTypeState === 'pay_now' ? 'Full Payment' : 'Convenience Fee'}
+              </span>
+            </div>
+            <div className="flex justify-between border-t pt-3 border-blue-500/30">
+              <span className="font-light text-white">Amount to Pay:</span>
+              <span className="font-normal text-lg text-blue-400">
+                ₱{paymentAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Status Card */}
+        <div className={`rounded-2xl p-4 border ${
+          isPending
+            ? 'bg-blue-500/10 border-blue-500/30'
+            : 'bg-yellow-500/10 border-yellow-500/30'
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className={`w-3 h-3 rounded-full animate-pulse ${isPending ? 'bg-blue-500' : 'bg-yellow-500'}`}></div>
+            <span className="text-sm text-white">
+              {isPending
+                ? 'Checking payment status...'
+                : 'Waiting for you to complete payment'}
+            </span>
+          </div>
+          {pendingPaymentSessionId && (
+            <p className="text-xs text-gray-500 mt-2 font-mono break-all">
+              Session: {pendingPaymentSessionId.substring(0, 20)}...
+            </p>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="space-y-3">
+          <button
+            onClick={() => {
+              window.alert('Please complete payment in the PayMongo tab that was opened. If you closed it, click "Cancel" and try again.');
+            }}
+            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
+          >
+            I've Completed Payment - Refresh Status
+          </button>
+          <button
+            onClick={() => {
+              // Cancel and go back to confirmation
+              setPendingPaymentSessionId(null);
+              localStorage.removeItem('pendingPaymongoSessionId');
+              setStep(5);
+            }}
+            className="w-full py-3 bg-transparent border border-[#333] hover:bg-[#1A1A1A] text-gray-400 font-medium rounded-2xl transition-all duration-200"
+          >
+            Cancel & Go Back
+          </button>
+        </div>
+
+        <p className="text-center text-xs text-gray-500">
+          This page will automatically update when your payment is confirmed.
+        </p>
+      </div>
     );
   };
 
@@ -2369,7 +2791,30 @@ const ServiceBooking = ({ onBack }) => {
         {step === 4 && renderTimeSelection()}
         {step === 5 && renderConfirmation()}
         {step === 6 && renderBookingSuccess()}
+        {step === 8 && renderPaymentPending()}
       </div>
+
+      {/* Payment Options Modal (Story 7.5) */}
+      <PaymentOptionsModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        branchId={selectedBranch?._id}
+        servicePrice={(() => {
+          const price = selectedService?.price || 0;
+          const discount = selectedVoucher?.value || 0;
+          let fee = 0;
+          if (selectedBranch?.enable_booking_fee) {
+            if (selectedBranch.booking_fee_type === 'percent') {
+              fee = (price * (selectedBranch.booking_fee_amount || 0)) / 100;
+            } else {
+              fee = selectedBranch.booking_fee_amount || 0;
+            }
+          }
+          return Math.max(0, price - discount) + fee;
+        })()}
+        serviceName={selectedService?.name || "Service"}
+        onSelect={handlePaymentOptionSelect}
+      />
     </div>
   );
 };

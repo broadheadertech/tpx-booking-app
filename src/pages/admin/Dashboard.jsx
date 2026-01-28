@@ -10,6 +10,12 @@ import GlobalSettings from '../../components/admin/GlobalSettings'
 import BrandingManagement from '../../components/admin/BrandingManagement'
 import EmailNotificationSettings from '../../components/admin/EmailNotificationSettings'
 import AdminVoucherManagement from '../../components/admin/VoucherManagement'
+import ProductCatalogManager from '../../components/admin/ProductCatalogManager'
+import RoyaltyManagement from '../../components/admin/RoyaltyManagement'
+import SuperAdminPLDashboard from '../../components/admin/SuperAdminPLDashboard'
+import SuperAdminBalanceSheet from '../../components/admin/SuperAdminBalanceSheet'
+import SuperAdminPaymentHistory from '../../components/admin/SuperAdminPaymentHistory'
+// SuperAdminExpenseManagement removed - expenses now managed in P&L dashboard
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAuth } from '../../context/AuthContext'
@@ -152,6 +158,41 @@ function AdminDashboard() {
       case 'vouchers':
         return <AdminVoucherManagement />
 
+      case 'catalog':
+        return user?.role === 'super_admin' ? (
+          <ProductCatalogManager />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to product catalog management.</div>
+        )
+
+      case 'royalty':
+        return user?.role === 'super_admin' ? (
+          <RoyaltyManagement />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to royalty management.</div>
+        )
+
+      case 'pl':
+        return user?.role === 'super_admin' ? (
+          <SuperAdminPLDashboard />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to P&L reports.</div>
+        )
+
+      case 'balance_sheet':
+        return user?.role === 'super_admin' ? (
+          <SuperAdminBalanceSheet />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to balance sheet.</div>
+        )
+
+      case 'payment_history':
+        return user?.role === 'super_admin' ? (
+          <SuperAdminPaymentHistory />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to payment history.</div>
+        )
+
       default:
         return renderOverview()
     }
@@ -170,6 +211,11 @@ function AdminDashboard() {
     ? [
       ...baseTabs.slice(0, 4),
       { id: 'vouchers', label: 'Vouchers', icon: 'ticket' }, // Added Vouchers tab
+      { id: 'catalog', label: 'Catalog', icon: 'package' }, // Central product catalog
+      { id: 'royalty', label: 'Royalty', icon: 'percent' }, // Royalty management
+      { id: 'pl', label: 'P&L', icon: 'pie-chart' }, // Consolidated P&L (includes expense management)
+      { id: 'balance_sheet', label: 'Balance Sheet', icon: 'scale' }, // Consolidated Balance Sheet
+      { id: 'payment_history', label: 'Payments', icon: 'file-text' }, // Payment history (FR31)
       { id: 'branding', label: 'Branding', icon: 'palette' },
       { id: 'emails', label: 'Emails', icon: 'mail' },
       ...baseTabs.slice(4),

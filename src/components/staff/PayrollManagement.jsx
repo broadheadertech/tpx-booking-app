@@ -22,6 +22,8 @@ import {
   FileText,
   Percent,
   Printer,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -115,7 +117,11 @@ const PayrollManagement = ({ onRefresh, user }) => {
     payout_day: 5, // Friday for weekly
     tax_rate: 0,
     include_booking_fee: false,
+    booking_fee_percentage: 100,
     include_late_fee: false,
+    late_fee_percentage: 100,
+    include_convenience_fee: false,
+    convenience_fee_percentage: 100,
   });
 
   // Convex queries - branch-scoped for staff
@@ -206,6 +212,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
     api.services.payroll.calculatePayrollForPeriod,
   );
   const markAsPaid = useMutation(api.services.payroll.markPayrollRecordAsPaid);
+  const lockPeriod = useMutation(api.services.payroll.lockPayrollPeriod);
+  const unlockPeriod = useMutation(api.services.payroll.unlockPayrollPeriod);
   const setBarberCommissionRate = useMutation(
     api.services.payroll.setBarberCommissionRate,
   );
@@ -243,7 +251,11 @@ const PayrollManagement = ({ onRefresh, user }) => {
         payout_day: payrollSettingsData.payout_day,
         tax_rate: payrollSettingsData.tax_rate || 0,
         include_booking_fee: payrollSettingsData.include_booking_fee || false,
+        booking_fee_percentage: payrollSettingsData.booking_fee_percentage ?? 100,
         include_late_fee: payrollSettingsData.include_late_fee || false,
+        late_fee_percentage: payrollSettingsData.late_fee_percentage ?? 100,
+        include_convenience_fee: payrollSettingsData.include_convenience_fee || false,
+        convenience_fee_percentage: payrollSettingsData.convenience_fee_percentage ?? 100,
       });
     }
   }, [payrollSettingsData]);
@@ -269,6 +281,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
       updated &&
       (updated.updatedAt !== selectedPeriod.updatedAt ||
         updated.status !== selectedPeriod.status ||
+        updated.is_locked !== selectedPeriod.is_locked ||
         updated.total_commissions !== selectedPeriod.total_commissions ||
         updated.total_earnings !== selectedPeriod.total_earnings ||
         updated.total_deductions !== selectedPeriod.total_deductions)
@@ -378,7 +391,11 @@ const PayrollManagement = ({ onRefresh, user }) => {
         payout_day: payrollSettings.payout_day,
         tax_rate: payrollSettings.tax_rate,
         include_booking_fee: payrollSettings.include_booking_fee,
+        booking_fee_percentage: payrollSettings.booking_fee_percentage,
         include_late_fee: payrollSettings.include_late_fee,
+        late_fee_percentage: payrollSettings.late_fee_percentage,
+        include_convenience_fee: payrollSettings.include_convenience_fee,
+        convenience_fee_percentage: payrollSettings.convenience_fee_percentage,
         created_by: user._id,
       });
       setShowSettings(false);
@@ -800,13 +817,24 @@ const PayrollManagement = ({ onRefresh, user }) => {
       // 2. Total pay = service pay + product commission (product is bonus on top)
       const dailyRate = record.daily_rate || 0;
       const dayServicePay = Math.max(dayServiceCommission, dailyRate);
-      // Calculate additional fees if enabled in settings
-      const bookingFees = (payrollSettingsData?.include_booking_fee || record.total_booking_fees > 0)
+
+      // Get fee percentages (barber's share)
+      const bookingFeePercentage = record.booking_fee_percentage ?? 100;
+      const lateFeePercentage = record.late_fee_percentage ?? 100;
+
+      // Calculate additional fees if enabled in settings, applying barber's percentage
+      const rawBookingFees = (payrollSettingsData?.include_booking_fee || record.total_booking_fees > 0)
         ? (dateBookings.reduce((sum, b) => sum + (b.booking_fee || 0), 0))
         : 0;
-      const lateFees = (payrollSettingsData?.include_late_fee || record.total_late_fees > 0)
+      const rawLateFees = (payrollSettingsData?.include_late_fee || record.total_late_fees > 0)
         ? (dateBookings.reduce((sum, b) => sum + (b.late_fee || 0), 0))
         : 0;
+
+      // Apply percentage to get barber's share
+      const bookingFees = (rawBookingFees * bookingFeePercentage) / 100;
+      const lateFees = (rawLateFees * lateFeePercentage) / 100;
+      // Note: Convenience fees are tracked at record level, not per booking in detail snapshot
+      // We'll add them to the grand total instead of per-day
 
       const dayTotalPay = dayServicePay + dayProductCommission + bookingFees + lateFees;
 
@@ -879,8 +907,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
             <div class="row"><span class="muted">Service Commission</span><span>${format(dayServiceCommission)}</span></div>
             ${payBasisNote}
             <div class="row"><span class="muted">Product Commission</span><span>${format(dayProductCommission)}</span></div>
-            ${bookingFees > 0 ? `<div class="row"><span class="muted">Booking Fees</span><span>${format(bookingFees)}</span></div>` : ''}
-            ${lateFees > 0 ? `<div class="row"><span class="muted">Late Fees</span><span>${format(lateFees)}</span></div>` : ''}
+            ${bookingFees > 0 ? `<div class="row"><span class="muted">Booking Fees (${bookingFeePercentage}%)</span><span style="color:#4ade80">+${format(bookingFees)}</span></div>` : ''}
+            ${lateFees > 0 ? `<div class="row"><span class="muted">Late Fees (${lateFeePercentage}%)</span><span style="color:#4ade80">+${format(lateFees)}</span></div>` : ''}
             <div class="row"><span class="muted">Final Daily Salary</span><span>${format(dayTotalPay)}</span></div>
             <hr/>
             <div class="row" style="font-weight:800"><span>Total</span><span class="accent">${format(dayTotalPay)}</span></div>
@@ -892,8 +920,24 @@ const PayrollManagement = ({ onRefresh, user }) => {
     }).join("\n");
 
     // Generate grand total card using calculated values to match daily breakdown
-    // This ensures that the sum of the daily cards matches the period summary
-    const calculatedNetPay = grandTotalDailySalary - (record.tax_deduction || 0) - (record.other_deductions || 0);
+    // Use barber's share of fees (with percentage applied)
+    const barberBookingFees = record.barber_booking_fees || 0;
+    const barberLateFees = record.barber_late_fees || 0;
+    const barberConvenienceFees = record.barber_convenience_fees || 0;
+
+    // Get percentages for display
+    const bookingFeePercentage = record.booking_fee_percentage ?? 100;
+    const lateFeePercentage = record.late_fee_percentage ?? 100;
+    const convenienceFeePercentage = record.convenience_fee_percentage ?? 100;
+
+    // Note: grandTotalDailySalary already includes booking fees and late fees (added per day above)
+    // Only add convenience fees here since they're tracked at record level, not per booking
+    const finalDailySalaryWithFees = grandTotalDailySalary + barberConvenienceFees;
+    const calculatedNetPay = finalDailySalaryWithFees - (record.tax_deduction || 0) - (record.other_deductions || 0) - (record.cash_advance_deduction || 0);
+
+    // For display, show total booking/late fees from daily breakdown
+    const totalBookingFeesFromDaily = barberBookingFees;
+    const totalLateFeesFromDaily = barberLateFees;
 
     const grandTotalCard = `
       <div class="card" style="background:#222; border:2px solid #ff8c42;">
@@ -908,9 +952,13 @@ const PayrollManagement = ({ onRefresh, user }) => {
         <div>
           <div class="row"><span class="muted">Total Service Commission</span><span>${format(grandTotalServiceCommission)}</span></div>
           <div class="row"><span class="muted">Total Product Commission</span><span>${format(grandTotalProductCommission)}</span></div>
-          <div class="row"><span class="muted">Total Final Daily Salary</span><span>${format(grandTotalDailySalary)}</span></div>
-          ${(record.tax_deduction || 0) > 0 ? `<div class="row"><span class="muted">Tax Deduction</span><span>-${format(record.tax_deduction)}</span></div>` : ''}
-          ${(record.other_deductions || 0) > 0 ? `<div class="row"><span class="muted">Other Deductions</span><span>-${format(record.other_deductions)}</span></div>` : ''}
+          ${totalBookingFeesFromDaily > 0 ? `<div class="row"><span class="muted">Total Booking Fees (${bookingFeePercentage}%)</span><span style="color:#4ade80">+${format(totalBookingFeesFromDaily)}</span></div>` : ''}
+          ${totalLateFeesFromDaily > 0 ? `<div class="row"><span class="muted">Total Late Fees (${lateFeePercentage}%)</span><span style="color:#4ade80">+${format(totalLateFeesFromDaily)}</span></div>` : ''}
+          ${barberConvenienceFees > 0 ? `<div class="row"><span class="muted">Convenience Fees (${convenienceFeePercentage}%)</span><span style="color:#4ade80">+${format(barberConvenienceFees)}</span></div>` : ''}
+          <div class="row"><span class="muted">Base Daily Salary (incl. fees)</span><span>${format(finalDailySalaryWithFees)}</span></div>
+          ${(record.tax_deduction || 0) > 0 ? `<div class="row"><span class="muted">Tax Deduction</span><span style="color:#d32f2f">-${format(record.tax_deduction)}</span></div>` : ''}
+          ${(record.other_deductions || 0) > 0 ? `<div class="row"><span class="muted">Other Deductions</span><span style="color:#d32f2f">-${format(record.other_deductions)}</span></div>` : ''}
+          ${(record.cash_advance_deduction || 0) > 0 ? `<div class="row"><span class="muted">Cash Advance Repayment</span><span style="color:#d32f2f">-${format(record.cash_advance_deduction)}</span></div>` : ''}
           <hr/>
           <div class="row" style="font-weight:800; font-size:18px"><span>GRAND TOTAL</span><span class="accent">${format(calculatedNetPay)}</span></div>
         </div>
@@ -1394,7 +1442,21 @@ const PayrollManagement = ({ onRefresh, user }) => {
       grandTotalDailySalary += dayTotalPay;
     });
 
-    const calculatedNetPay = grandTotalDailySalary - (record.tax_deduction || 0) - (record.other_deductions || 0);
+    // Add fees (booking, late, convenience) - use barber's share based on percentages
+    const barberBookingFees = record.barber_booking_fees || 0;
+    const barberLateFees = record.barber_late_fees || 0;
+    const barberConvenienceFees = record.barber_convenience_fees || 0;
+    const totalBarberFees = barberBookingFees + barberLateFees + barberConvenienceFees;
+
+    // Get percentages for display
+    const bookingFeePercentage = record.booking_fee_percentage ?? 100;
+    const lateFeePercentage = record.late_fee_percentage ?? 100;
+    const convenienceFeePercentage = record.convenience_fee_percentage ?? 100;
+
+    // Final daily salary includes the barber's share of fees
+    const finalDailySalaryWithFees = grandTotalDailySalary + totalBarberFees;
+
+    const calculatedNetPay = finalDailySalaryWithFees - (record.tax_deduction || 0) - (record.other_deductions || 0) - (record.cash_advance_deduction || 0);
 
     return `
       <div class="card" style="background:#fff; border:2px solid #ff8c42; color: #000; max-width: 600px; margin: 0 auto;">
@@ -1409,9 +1471,14 @@ const PayrollManagement = ({ onRefresh, user }) => {
         <div style="font-size: 14px;">
           <div class="row"><span style="color: #333;">Total Service Commission</span><span style="font-weight: 600;">${format(grandTotalServiceCommission)}</span></div>
           <div class="row"><span style="color: #333;">Total Product Commission</span><span style="font-weight: 600;">${format(grandTotalProductCommission)}</span></div>
-          <div class="row"><span style="color: #333;">Total Final Daily Salary</span><span style="font-weight: 600;">${format(grandTotalDailySalary)}</span></div>
+          <div class="row"><span style="color: #333;">Base Daily Salary</span><span style="font-weight: 600;">${format(grandTotalDailySalary)}</span></div>
+          ${barberBookingFees > 0 ? `<div class="row"><span style="color: #333;">Booking Fees (${bookingFeePercentage}%)</span><span style="font-weight: 600; color: #2e7d32;">+${format(barberBookingFees)}</span></div>` : ''}
+          ${barberLateFees > 0 ? `<div class="row"><span style="color: #333;">Late Fees (${lateFeePercentage}%)</span><span style="font-weight: 600; color: #2e7d32;">+${format(barberLateFees)}</span></div>` : ''}
+          ${barberConvenienceFees > 0 ? `<div class="row"><span style="color: #333;">Convenience Fees (${convenienceFeePercentage}%)</span><span style="font-weight: 600; color: #2e7d32;">+${format(barberConvenienceFees)}</span></div>` : ''}
+          ${totalBarberFees > 0 ? `<div class="row"><span style="color: #333;">Total Final Daily Salary</span><span style="font-weight: 600;">${format(finalDailySalaryWithFees)}</span></div>` : ''}
           ${(record.tax_deduction || 0) > 0 ? `<div class="row"><span style="color: #333;">Tax Deduction</span><span style="color: #d32f2f;">-${format(record.tax_deduction)}</span></div>` : ''}
           ${(record.other_deductions || 0) > 0 ? `<div class="row"><span style="color: #333;">Other Deductions</span><span style="color: #d32f2f;">-${format(record.other_deductions)}</span></div>` : ''}
+          ${(record.cash_advance_deduction || 0) > 0 ? `<div class="row"><span style="color: #333;">Cash Advance Repayment</span><span style="color: #d32f2f;">-${format(record.cash_advance_deduction)}</span></div>` : ''}
           <hr style="border-top: 2px solid #000; margin: 10px 0;"/>
           <div class="row" style="font-weight:800; font-size:16px; margin-top: 4px;"><span>GRAND TOTAL</span><span>${format(calculatedNetPay)}</span></div>
         </div>
@@ -1804,39 +1871,117 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   />
                 </div>
 
-                <div className="flex flex-col space-y-2 pt-2">
-                  <label className="flex items-center space-x-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={payrollSettings.include_booking_fee}
-                      onChange={(e) =>
-                        setPayrollSettings((prev) => ({
-                          ...prev,
-                          include_booking_fee: e.target.checked,
-                        }))
-                      }
-                      className="w-4 h-4 rounded border-[#2A2A2A] bg-[#1A1A1A] text-[var(--color-primary)] focus:ring-[var(--color-primary)] focus:ring-offset-0 transition-colors"
-                    />
-                    <span className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">
-                      Include Booking Fees in Payroll
-                    </span>
-                  </label>
-                  <label className="flex items-center space-x-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={payrollSettings.include_late_fee}
-                      onChange={(e) =>
-                        setPayrollSettings((prev) => ({
-                          ...prev,
-                          include_late_fee: e.target.checked,
-                        }))
-                      }
-                      className="w-4 h-4 rounded border-[#2A2A2A] bg-[#1A1A1A] text-[var(--color-primary)] focus:ring-[var(--color-primary)] focus:ring-offset-0 transition-colors"
-                    />
-                    <span className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">
-                      Include Late Fees in Payroll
-                    </span>
-                  </label>
+                <div className="flex flex-col space-y-3 pt-2">
+                  {/* Booking Fees */}
+                  <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-[#1A1A1A] border border-[#2A2A2A]">
+                    <label className="flex items-center space-x-3 cursor-pointer group flex-1">
+                      <input
+                        type="checkbox"
+                        checked={payrollSettings.include_booking_fee}
+                        onChange={(e) =>
+                          setPayrollSettings((prev) => ({
+                            ...prev,
+                            include_booking_fee: e.target.checked,
+                          }))
+                        }
+                        className="w-4 h-4 rounded border-[#2A2A2A] bg-[#1A1A1A] text-[var(--color-primary)] focus:ring-[var(--color-primary)] focus:ring-offset-0 transition-colors"
+                      />
+                      <span className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">
+                        Include Booking Fees
+                      </span>
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={payrollSettings.booking_fee_percentage}
+                        onChange={(e) =>
+                          setPayrollSettings((prev) => ({
+                            ...prev,
+                            booking_fee_percentage: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)),
+                          }))
+                        }
+                        disabled={!payrollSettings.include_booking_fee}
+                        className="w-16 px-2 py-1 text-sm bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                      <span className="text-sm text-gray-400">% to barber</span>
+                    </div>
+                  </div>
+
+                  {/* Late Fees */}
+                  <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-[#1A1A1A] border border-[#2A2A2A]">
+                    <label className="flex items-center space-x-3 cursor-pointer group flex-1">
+                      <input
+                        type="checkbox"
+                        checked={payrollSettings.include_late_fee}
+                        onChange={(e) =>
+                          setPayrollSettings((prev) => ({
+                            ...prev,
+                            include_late_fee: e.target.checked,
+                          }))
+                        }
+                        className="w-4 h-4 rounded border-[#2A2A2A] bg-[#1A1A1A] text-[var(--color-primary)] focus:ring-[var(--color-primary)] focus:ring-offset-0 transition-colors"
+                      />
+                      <span className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">
+                        Include Late Fees
+                      </span>
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={payrollSettings.late_fee_percentage}
+                        onChange={(e) =>
+                          setPayrollSettings((prev) => ({
+                            ...prev,
+                            late_fee_percentage: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)),
+                          }))
+                        }
+                        disabled={!payrollSettings.include_late_fee}
+                        className="w-16 px-2 py-1 text-sm bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                      <span className="text-sm text-gray-400">% to barber</span>
+                    </div>
+                  </div>
+
+                  {/* Convenience Fees */}
+                  <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-[#1A1A1A] border border-[#2A2A2A]">
+                    <label className="flex items-center space-x-3 cursor-pointer group flex-1">
+                      <input
+                        type="checkbox"
+                        checked={payrollSettings.include_convenience_fee}
+                        onChange={(e) =>
+                          setPayrollSettings((prev) => ({
+                            ...prev,
+                            include_convenience_fee: e.target.checked,
+                          }))
+                        }
+                        className="w-4 h-4 rounded border-[#2A2A2A] bg-[#1A1A1A] text-[var(--color-primary)] focus:ring-[var(--color-primary)] focus:ring-offset-0 transition-colors"
+                      />
+                      <span className="text-sm font-medium text-gray-300 group-hover:text-white transition-colors">
+                        Include Convenience Fees
+                      </span>
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={payrollSettings.convenience_fee_percentage}
+                        onChange={(e) =>
+                          setPayrollSettings((prev) => ({
+                            ...prev,
+                            convenience_fee_percentage: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)),
+                          }))
+                        }
+                        disabled={!payrollSettings.include_convenience_fee}
+                        className="w-16 px-2 py-1 text-sm bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                      <span className="text-sm text-gray-400">% to barber</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -3128,20 +3273,25 @@ const PayrollManagement = ({ onRefresh, user }) => {
                         </span>
                       </td>
                       <td className="py-4 px-4">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${period.status === "paid"
-                            ? "bg-green-500/20 text-green-400"
-                            : period.status === "calculated"
-                              ? "bg-yellow-500/20 text-yellow-400"
-                              : "bg-gray-500/20 text-gray-400"
-                            }`}
-                        >
-                          {period.status === "paid"
-                            ? "Paid"
-                            : period.status === "calculated"
-                              ? "Calculated"
-                              : "Draft"}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${period.status === "paid"
+                              ? "bg-green-500/20 text-green-400"
+                              : period.status === "calculated"
+                                ? "bg-yellow-500/20 text-yellow-400"
+                                : "bg-gray-500/20 text-gray-400"
+                              }`}
+                          >
+                            {period.status === "paid"
+                              ? "Paid"
+                              : period.status === "calculated"
+                                ? "Calculated"
+                                : "Draft"}
+                          </span>
+                          {period.is_locked && (
+                            <Lock className="h-3.5 w-3.5 text-yellow-400" title="Locked" />
+                          )}
+                        </div>
                       </td>
                       <td className="py-4 px-4 text-right">
                         <span className="text-[var(--color-primary)] font-bold">
@@ -3211,10 +3361,18 @@ const PayrollManagement = ({ onRefresh, user }) => {
         <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-lg font-semibold text-white">
-                Payroll Period: {formatDate(selectedPeriod.period_start)} -{" "}
-                {formatDate(selectedPeriod.period_end)}
-              </h3>
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-semibold text-white">
+                  Payroll Period: {formatDate(selectedPeriod.period_start)} -{" "}
+                  {formatDate(selectedPeriod.period_end)}
+                </h3>
+                {selectedPeriod.is_locked && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs font-medium rounded-full">
+                    <Lock className="h-3 w-3" />
+                    Locked
+                  </span>
+                )}
+              </div>
               <p className="text-sm text-gray-300">
                 {formatPeriodType(selectedPeriod.period_type)} payroll •{" "}
                 {selectedPeriod.status === "paid"
@@ -3225,7 +3383,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
               </p>
             </div>
             <div className="flex space-x-2">
-              {selectedPeriod.status !== "paid" && (
+              {/* Calculate/Recalculate Button - disabled when locked */}
+              {selectedPeriod.status !== "paid" && !selectedPeriod.is_locked && (
                 <button
                   onClick={() => handleCalculatePayroll(selectedPeriod)}
                   disabled={loading}
@@ -3238,6 +3397,52 @@ const PayrollManagement = ({ onRefresh, user }) => {
                       : "Calculate Payroll"}
                   </span>
                 </button>
+              )}
+              {/* Lock/Unlock Button */}
+              {selectedPeriod.status === "calculated" && (
+                selectedPeriod.is_locked ? (
+                  <button
+                    onClick={async () => {
+                      try {
+                        setLoading(true);
+                        await unlockPeriod({
+                          payroll_period_id: selectedPeriod._id,
+                          unlocked_by: user._id,
+                        });
+                      } catch (error) {
+                        setError(error.message || "Failed to unlock period");
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    disabled={loading}
+                    className="flex items-center space-x-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Unlock className="h-4 w-4" />
+                    <span>Unlock</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      try {
+                        setLoading(true);
+                        await lockPeriod({
+                          payroll_period_id: selectedPeriod._id,
+                          locked_by: user._id,
+                        });
+                      } catch (error) {
+                        setError(error.message || "Failed to lock period");
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    disabled={loading}
+                    className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/60 border border-[#2A2A2A] text-gray-200 rounded-lg hover:bg-[#2A2A2A] transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Lock className="h-4 w-4" />
+                    <span>Lock Period</span>
+                  </button>
+                )
               )}
               {Array.isArray(currentPeriodRecords) &&
                 currentPeriodRecords.length > 0 && (
@@ -3609,6 +3814,16 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                 -{formatCurrency(record.other_deductions)}
                               </span>
                             </div>
+                            {record.cash_advance_deduction > 0 && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">
+                                  Cash Advance Repayment:
+                                </span>
+                                <span className="text-red-400">
+                                  -{formatCurrency(record.cash_advance_deduction)}
+                                </span>
+                              </div>
+                            )}
                             <div className="flex justify-between font-medium pt-2 border-t border-[#2A2A2A]/50">
                               <span className="text-white">Net Pay:</span>
                               <span className="text-[var(--color-primary)] text-lg">

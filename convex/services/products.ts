@@ -301,3 +301,258 @@ export const deleteImage = mutation({
     return { success: true };
   },
 });
+
+// ============================================
+// Branch Inventory Queries (for Super Admin)
+// ============================================
+
+/**
+ * Get all products for a specific branch
+ */
+export const getProductsByBranch = query({
+  args: {
+    branch_id: v.id("branches"),
+  },
+  handler: async (ctx, args) => {
+    const products = await ctx.db
+      .query("products")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+
+    // Resolve image URLs
+    const productsWithImages = await Promise.all(
+      products.map(async (product) => {
+        let resolvedImageUrl = product.imageUrl;
+        if (product.imageStorageId) {
+          const storageUrl = await ctx.storage.getUrl(product.imageStorageId);
+          if (storageUrl) {
+            resolvedImageUrl = storageUrl;
+          }
+        }
+
+        // Determine stock status
+        let stockStatus: "in-stock" | "low-stock" | "out-of-stock" = "in-stock";
+        if (product.stock === 0) {
+          stockStatus = "out-of-stock";
+        } else if (product.stock <= product.minStock) {
+          stockStatus = "low-stock";
+        }
+
+        return {
+          ...product,
+          resolvedImageUrl,
+          stockStatus,
+        };
+      })
+    );
+
+    return productsWithImages;
+  },
+});
+
+/**
+ * Get low stock products for a specific branch
+ */
+export const getLowStockByBranch = query({
+  args: {
+    branch_id: v.id("branches"),
+  },
+  handler: async (ctx, args) => {
+    const products = await ctx.db
+      .query("products")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+
+    // Filter low stock products
+    const lowStockProducts = products.filter(
+      (p) => p.stock <= p.minStock
+    );
+
+    // Resolve image URLs
+    const productsWithImages = await Promise.all(
+      lowStockProducts.map(async (product) => {
+        let resolvedImageUrl = product.imageUrl;
+        if (product.imageStorageId) {
+          const storageUrl = await ctx.storage.getUrl(product.imageStorageId);
+          if (storageUrl) {
+            resolvedImageUrl = storageUrl;
+          }
+        }
+
+        const stockStatus = product.stock === 0 ? "out-of-stock" : "low-stock";
+
+        return {
+          ...product,
+          resolvedImageUrl,
+          stockStatus,
+        };
+      })
+    );
+
+    return productsWithImages;
+  },
+});
+
+/**
+ * Get inventory summary for all branches (for super admin dashboard)
+ */
+export const getAllBranchInventorySummary = query({
+  args: {},
+  handler: async (ctx) => {
+    // Get all branches
+    const branches = await ctx.db
+      .query("branches")
+      .withIndex("by_active", (q) => q.eq("is_active", true))
+      .collect();
+
+    // Get inventory summary for each branch
+    const branchSummaries = await Promise.all(
+      branches.map(async (branch) => {
+        const products = await ctx.db
+          .query("products")
+          .withIndex("by_branch", (q) => q.eq("branch_id", branch._id))
+          .collect();
+
+        const totalProducts = products.length;
+        const inStock = products.filter((p) => p.stock > p.minStock).length;
+        const lowStock = products.filter(
+          (p) => p.stock > 0 && p.stock <= p.minStock
+        ).length;
+        const outOfStock = products.filter((p) => p.stock === 0).length;
+        const totalValue = products.reduce(
+          (sum, p) => sum + p.price * p.stock,
+          0
+        );
+
+        return {
+          branch_id: branch._id,
+          branch_name: branch.name,
+          branch_code: branch.branch_code,
+          branch_phone: branch.phone,
+          branch_email: branch.email,
+          totalProducts,
+          inStock,
+          lowStock,
+          outOfStock,
+          totalValue,
+          hasLowStockAlert: lowStock > 0 || outOfStock > 0,
+        };
+      })
+    );
+
+    // Sort by low stock alerts first
+    branchSummaries.sort((a, b) => {
+      if (a.hasLowStockAlert && !b.hasLowStockAlert) return -1;
+      if (!a.hasLowStockAlert && b.hasLowStockAlert) return 1;
+      return a.branch_name.localeCompare(b.branch_name);
+    });
+
+    return branchSummaries;
+  },
+});
+
+/**
+ * Get all low stock products across all branches (for super admin alerts)
+ */
+export const getAllBranchLowStock = query({
+  args: {},
+  handler: async (ctx) => {
+    // Get all branches
+    const branches = await ctx.db
+      .query("branches")
+      .withIndex("by_active", (q) => q.eq("is_active", true))
+      .collect();
+
+    const branchMap = new Map(branches.map((b) => [b._id, b]));
+
+    // Get all products
+    const allProducts = await ctx.db.query("products").collect();
+
+    // Filter low stock products
+    const lowStockProducts = allProducts.filter(
+      (p) => p.stock <= p.minStock && p.branch_id
+    );
+
+    // Group by branch and enrich
+    const productsWithBranch = await Promise.all(
+      lowStockProducts.map(async (product) => {
+        const branch = product.branch_id ? branchMap.get(product.branch_id) : null;
+
+        let resolvedImageUrl = product.imageUrl;
+        if (product.imageStorageId) {
+          const storageUrl = await ctx.storage.getUrl(product.imageStorageId);
+          if (storageUrl) {
+            resolvedImageUrl = storageUrl;
+          }
+        }
+
+        const stockStatus = product.stock === 0 ? "out-of-stock" : "low-stock";
+
+        return {
+          ...product,
+          resolvedImageUrl,
+          stockStatus,
+          branch_name: branch?.name || "Unknown Branch",
+          branch_code: branch?.branch_code,
+          branch_phone: branch?.phone,
+          branch_email: branch?.email,
+        };
+      })
+    );
+
+    // Sort by stock level (most critical first)
+    productsWithBranch.sort((a, b) => a.stock - b.stock);
+
+    return productsWithBranch;
+  },
+});
+
+/**
+ * Get branch inventory with batches for FIFO view
+ */
+export const getBranchProductWithBatches = query({
+  args: {
+    product_id: v.id("products"),
+  },
+  handler: async (ctx, args) => {
+    const product = await ctx.db.get(args.product_id);
+    if (!product) return null;
+
+    // Get batches sorted by received_at (oldest first)
+    const batches = await ctx.db
+      .query("inventoryBatches")
+      .withIndex("by_product", (q) => q.eq("product_id", args.product_id))
+      .filter((q) => q.gt(q.field("quantity"), 0))
+      .collect();
+
+    // Sort by received_at ascending
+    batches.sort((a, b) => a.received_at - b.received_at);
+
+    let resolvedImageUrl = product.imageUrl;
+    if (product.imageStorageId) {
+      const storageUrl = await ctx.storage.getUrl(product.imageStorageId);
+      if (storageUrl) {
+        resolvedImageUrl = storageUrl;
+      }
+    }
+
+    // Determine stock status
+    let stockStatus: "in-stock" | "low-stock" | "out-of-stock" = "in-stock";
+    if (product.stock === 0) {
+      stockStatus = "out-of-stock";
+    } else if (product.stock <= product.minStock) {
+      stockStatus = "low-stock";
+    }
+
+    // Calculate oldest batch date
+    const oldestBatchDate = batches.length > 0 ? batches[0].received_at : null;
+
+    return {
+      ...product,
+      resolvedImageUrl,
+      stockStatus,
+      batches,
+      oldestBatchDate,
+    };
+  },
+});

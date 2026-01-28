@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode, CreditCard, Receipt, DollarSign, Eye, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Check, Ban, Settings } from 'lucide-react'
+import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode, CreditCard, Receipt, DollarSign, Eye, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Check, Ban, Settings, Banknote } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import QRCode from 'qrcode'
@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom'
 import CreateBookingModal from './CreateBookingModal'
 import Modal from '../common/Modal'
 import BookingSettingsModal from './BookingSettingsModal'
+import PaymentHistory from './PaymentHistory'
 
 const BookingsManagement = ({ onRefresh, user }) => {
   const [searchTerm, setSearchTerm] = useState('')
@@ -1241,6 +1242,10 @@ const BookingsManagement = ({ onRefresh, user }) => {
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="h-6 bg-[#2A2A2A] rounded-full w-20"></div>
       </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-5 bg-[#2A2A2A] rounded-full w-16 mb-1"></div>
+        <div className="h-3 bg-[#2A2A2A] rounded w-12"></div>
+      </td>
       <td className="px-6 py-4 whitespace-nowrap text-right">
         <div className="flex justify-end space-x-2">
           <div className="h-8 bg-[#2A2A2A] rounded w-16"></div>
@@ -1468,6 +1473,9 @@ const BookingsManagement = ({ onRefresh, user }) => {
                         Payment
                       </th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Online Payment
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
                         Action
                       </th>
                     </tr>
@@ -1506,6 +1514,25 @@ const BookingsManagement = ({ onRefresh, user }) => {
                             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${paymentStatusConfig.bg} ${paymentStatusConfig.text}`}>
                               {paymentStatusConfig.label}
                             </span>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-right">
+                            {booking.convenience_fee_paid > 0 ? (
+                              <div className="text-right">
+                                <span className="text-sm text-blue-400 font-medium">
+                                  ₱{booking.convenience_fee_paid.toLocaleString()}
+                                </span>
+                                <p className="text-xs text-gray-500">Conv. Fee</p>
+                              </div>
+                            ) : booking.booking_fee > 0 ? (
+                              <div className="text-right">
+                                <span className="text-sm text-green-400 font-medium">
+                                  ₱{((service?.price || 0) + booking.booking_fee).toLocaleString()}
+                                </span>
+                                <p className="text-xs text-gray-500">Full + Fee</p>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-gray-500">Pay at Shop</span>
+                            )}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap text-right">
                             <button
@@ -1562,6 +1589,80 @@ const BookingsManagement = ({ onRefresh, user }) => {
             <div>
               <p className="text-sm font-medium text-gray-400">Amount</p>
               <p className="text-sm font-bold text-green-400">₱{service?.price?.toFixed(2) || '0.00'}</p>
+            </div>
+          </div>
+
+          {/* Payment Details Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mt-4 pt-4 border-t border-[#444444]/30">
+            <div>
+              <p className="text-sm font-medium text-gray-400">Payment Status</p>
+              <p className={`text-sm font-bold ${
+                booking.payment_status === 'paid' ? 'text-green-400' :
+                booking.payment_status === 'partial' ? 'text-yellow-400' :
+                'text-red-400'
+              }`}>
+                {booking.payment_status === 'paid' ? 'Fully Paid' :
+                 booking.payment_status === 'partial' ? 'Partially Paid' :
+                 'Unpaid'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-400">Payment Type</p>
+              <p className="text-sm font-bold text-white">
+                {booking.convenience_fee_paid > 0 ? 'Pay Later' :
+                 booking.booking_fee > 0 ? 'Pay Now' :
+                 'Pay at Shop'}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-400">Booking Fee Paid</p>
+              {booking.booking_fee > 0 ? (
+                <p className="text-sm font-bold text-green-400">
+                  ₱{booking.booking_fee.toLocaleString()}
+                </p>
+              ) : (
+                <p className="text-sm font-bold text-gray-500">₱0</p>
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-400">Convenience Fee Paid</p>
+              {booking.convenience_fee_paid > 0 ? (
+                <p className="text-sm font-bold text-blue-400">
+                  ₱{booking.convenience_fee_paid.toLocaleString()}
+                </p>
+              ) : (
+                <p className="text-sm font-bold text-gray-500">₱0</p>
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-400">Total Online Paid</p>
+              {booking.convenience_fee_paid > 0 ? (
+                <p className="text-sm font-bold text-blue-400">
+                  ₱{booking.convenience_fee_paid.toLocaleString()}
+                </p>
+              ) : booking.booking_fee > 0 ? (
+                <div>
+                  <p className="text-sm font-bold text-green-400">
+                    ₱{((service?.price || 0) + booking.booking_fee).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    (Service + Fee)
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm font-bold text-gray-500">₱0</p>
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-400">Balance Due at Shop</p>
+              <p className={`text-sm font-bold ${
+                booking.payment_status === 'paid' ? 'text-green-400' : 'text-yellow-400'
+              }`}>
+                {booking.payment_status === 'paid' ? '₱0 (Paid)' :
+                 booking.convenience_fee_paid > 0 ? `₱${(service?.price || 0).toLocaleString()}` :
+                 booking.booking_fee > 0 ? '₱0 (Paid Online)' :
+                 `₱${((service?.price || 0) - (booking.cash_collected || 0)).toLocaleString()}`}
+              </p>
             </div>
           </div>
         </div>
@@ -1926,6 +2027,16 @@ const BookingsManagement = ({ onRefresh, user }) => {
             <Receipt className="w-3.5 h-3.5" />
             <span>Transaction</span>
           </button>
+          <button
+            onClick={() => setActiveTab('payments')}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-semibold transition-colors text-xs ${activeTab === 'payments'
+              ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md'
+              : 'text-gray-400 hover:bg-[#1A1A1A] hover:text-white'
+              }`}
+          >
+            <Banknote className="w-3.5 h-3.5" />
+            <span>Payment History</span>
+          </button>
         </div>
       </div>
 
@@ -1959,8 +2070,17 @@ const BookingsManagement = ({ onRefresh, user }) => {
                     <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                       Price
                     </th>
+                    <th className="px-4 py-2.5 text-right text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      Booking Fee
+                    </th>
+                    <th className="px-4 py-2.5 text-right text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      Conv. Fee
+                    </th>
                     <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                       Payment Status
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      Payment Type
                     </th>
                     <th className="px-4 py-2.5 text-right text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                       Actions
@@ -1975,7 +2095,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                     ))
                   ) : currentBookings.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-6 py-12 text-center">
+                      <td colSpan={12} className="px-6 py-12 text-center">
                         <Calendar className="mx-auto h-12 w-12 text-white mb-3" />
                         <h3 className="text-sm font-medium text-white mb-1">No bookings found</h3>
                         <p className="text-sm text-gray-400">
@@ -2079,6 +2199,24 @@ const BookingsManagement = ({ onRefresh, user }) => {
                               ₱{service ? parseFloat(service.price).toFixed(2) : '0.00'}
                             </div>
                           </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            {booking.booking_fee > 0 ? (
+                              <span className="text-sm font-bold text-green-400">
+                                ₱{booking.booking_fee.toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-gray-500">₱0</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            {booking.convenience_fee_paid > 0 ? (
+                              <span className="text-sm font-bold text-blue-400">
+                                ₱{booking.convenience_fee_paid.toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-gray-500">₱0</span>
+                            )}
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center space-x-2">
                               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${paymentStatusConfig.bg} ${paymentStatusConfig.text}`}>
@@ -2097,6 +2235,25 @@ const BookingsManagement = ({ onRefresh, user }) => {
                                 </button>
                               )}
                             </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {booking.convenience_fee_paid > 0 ? (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                                Pay Later
+                              </span>
+                            ) : booking.booking_fee > 0 ? (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+                                Pay Now
+                              </span>
+                            ) : booking.cash_collected > 0 ? (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                Cash
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/30">
+                                Pay at Shop
+                              </span>
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div className="flex items-center justify-end gap-2">
@@ -2327,8 +2484,10 @@ const BookingsManagement = ({ onRefresh, user }) => {
           )}
 
         </>
-      ) : (
+      ) : activeTab === 'transaction' ? (
         <TransactionTab />
+      ) : (
+        <PaymentHistory />
       )}
 
       {/* Transaction Details Modal */}

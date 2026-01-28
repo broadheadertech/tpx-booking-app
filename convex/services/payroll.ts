@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, action } from "../_generated/server";
 import { api } from "../_generated/api";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
+import { Id } from "../_generated/dataModel";
 
 // PAYROLL SETTINGS MANAGEMENT
 
@@ -32,7 +33,11 @@ export const createOrUpdatePayrollSettings = mutation({
     payout_day: v.number(),
     tax_rate: v.optional(v.number()),
     include_booking_fee: v.optional(v.boolean()),
+    booking_fee_percentage: v.optional(v.number()), // Percentage for barber (default 100%)
     include_late_fee: v.optional(v.boolean()),
+    late_fee_percentage: v.optional(v.number()), // Percentage for barber (default 100%)
+    include_convenience_fee: v.optional(v.boolean()),
+    convenience_fee_percentage: v.optional(v.number()), // Percentage for barber (default 100%)
     created_by: v.id("users"),
   },
   handler: async (ctx, args) => {
@@ -46,6 +51,19 @@ export const createOrUpdatePayrollSettings = mutation({
         "Commission rate must be between 0 and 100",
       );
     }
+
+    // Validate fee percentages (0-100)
+    const validatePercentage = (value: number | undefined, name: string) => {
+      if (value !== undefined && (value < 0 || value > 100)) {
+        throwUserError(
+          ERROR_CODES.INVALID_INPUT,
+          `${name} must be between 0 and 100`,
+        );
+      }
+    };
+    validatePercentage(args.booking_fee_percentage, "Booking fee percentage");
+    validatePercentage(args.late_fee_percentage, "Late fee percentage");
+    validatePercentage(args.convenience_fee_percentage, "Convenience fee percentage");
 
     // Validate payout day based on frequency
     if (
@@ -84,7 +102,11 @@ export const createOrUpdatePayrollSettings = mutation({
         payout_day: args.payout_day,
         tax_rate: args.tax_rate,
         include_booking_fee: args.include_booking_fee,
+        booking_fee_percentage: args.booking_fee_percentage,
         include_late_fee: args.include_late_fee,
+        late_fee_percentage: args.late_fee_percentage,
+        include_convenience_fee: args.include_convenience_fee,
+        convenience_fee_percentage: args.convenience_fee_percentage,
         updatedAt: timestamp,
       });
       return existingSettings._id;
@@ -96,7 +118,11 @@ export const createOrUpdatePayrollSettings = mutation({
         payout_day: args.payout_day,
         tax_rate: args.tax_rate || 0,
         include_booking_fee: args.include_booking_fee || false,
+        booking_fee_percentage: args.booking_fee_percentage ?? 100, // Default 100% to barber
         include_late_fee: args.include_late_fee || false,
+        late_fee_percentage: args.late_fee_percentage ?? 100, // Default 100% to barber
+        include_convenience_fee: args.include_convenience_fee || false,
+        convenience_fee_percentage: args.convenience_fee_percentage ?? 100, // Default 100% to barber
         is_active: true,
         created_by: args.created_by,
         createdAt: timestamp,
@@ -259,6 +285,7 @@ export const calculateBarberEarnings = query({
     let serviceCommission = 0;
     let totalBookingFees = 0;
     let totalLateFees = 0;
+    let totalConvenienceFees = 0;
     // We'll compute days worked from bookings (per request)
 
     // We'll fill bookingsInPeriod below; use it for totals
@@ -444,6 +471,7 @@ export const calculateBarberEarnings = query({
         totalServiceRevenue += b.price || 0;
         totalBookingFees += b.booking_fee || 0;
         totalLateFees += b.late_fee || 0;
+        totalConvenienceFees += b.convenience_fee_paid || 0;
 
         // Track commission per day for correct daily pay calculation
         const currentDayCommission = dailyCommissions.get(dateKey) || 0;
@@ -505,6 +533,15 @@ export const calculateBarberEarnings = query({
     ]);
 
     let finalSalary = 0;
+    // Track barber's share of fees (for display in payroll)
+    let barberBookingFees = 0;
+    let barberLateFees = 0;
+    let barberConvenienceFees = 0;
+    // Get fee percentages (default to 100% if not set)
+    const bookingFeePercentage = payrollSettings?.booking_fee_percentage ?? 100;
+    const lateFeePercentage = payrollSettings?.late_fee_percentage ?? 100;
+    const convenienceFeePercentage = payrollSettings?.convenience_fee_percentage ?? 100;
+
     if (totalServices > 0 || totalProducts > 0) {
       // Pre-sort daily rates to find the latest active one (retroactive rule)
       const currentRateDoc = barberDailyRates.slice().sort((a, b) => b.effective_from - a.effective_from)[0];
@@ -533,14 +570,21 @@ export const calculateBarberEarnings = query({
         );
       }
 
-      // Add booking and late fees if enabled
+      // Add booking, late, and convenience fees if enabled (with percentage)
       if (payrollSettings?.include_booking_fee) {
-        finalSalary += totalBookingFees;
-        console.log(`Added booking fees: ${totalBookingFees}`);
+        barberBookingFees = (totalBookingFees * bookingFeePercentage) / 100;
+        finalSalary += barberBookingFees;
+        console.log(`Added booking fees: ${totalBookingFees} x ${bookingFeePercentage}% = ${barberBookingFees}`);
       }
       if (payrollSettings?.include_late_fee) {
-        finalSalary += totalLateFees;
-        console.log(`Added late fees: ${totalLateFees}`);
+        barberLateFees = (totalLateFees * lateFeePercentage) / 100;
+        finalSalary += barberLateFees;
+        console.log(`Added late fees: ${totalLateFees} x ${lateFeePercentage}% = ${barberLateFees}`);
+      }
+      if (payrollSettings?.include_convenience_fee) {
+        barberConvenienceFees = (totalConvenienceFees * convenienceFeePercentage) / 100;
+        finalSalary += barberConvenienceFees;
+        console.log(`Added convenience fees: ${totalConvenienceFees} x ${convenienceFeePercentage}% = ${barberConvenienceFees}`);
       }
 
       console.log(`Total finalSalary = ${finalSalary}`);
@@ -587,9 +631,18 @@ export const calculateBarberEarnings = query({
       days_worked: daysWorked,
       daily_pay: finalSalary,
 
-      // Fees
+      // Fees (total amounts collected)
       total_booking_fees: totalBookingFees,
       total_late_fees: totalLateFees,
+      total_convenience_fees: totalConvenienceFees,
+      // Fee percentages for barber
+      booking_fee_percentage: bookingFeePercentage,
+      late_fee_percentage: lateFeePercentage,
+      convenience_fee_percentage: convenienceFeePercentage,
+      // Barber's calculated share of fees
+      barber_booking_fees: barberBookingFees,
+      barber_late_fees: barberLateFees,
+      barber_convenience_fees: barberConvenienceFees,
 
       // Totals
       gross_commission: grossCommission,
@@ -1078,6 +1131,47 @@ export const getCurrentPayrollPeriod = query({
   },
 });
 
+// Check for overlapping periods before creating
+export const checkPeriodOverlap = query({
+  args: {
+    branch_id: v.id("branches"),
+    period_start: v.number(),
+    period_end: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const existingPeriods = await ctx.db
+      .query("payroll_periods")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+
+    const overlappingPeriods = [];
+
+    for (const existing of existingPeriods) {
+      const hasOverlap =
+        args.period_start <= existing.period_end &&
+        args.period_end >= existing.period_start;
+
+      if (hasOverlap) {
+        overlappingPeriods.push({
+          id: existing._id,
+          period_start: existing.period_start,
+          period_end: existing.period_end,
+          status: existing.status,
+          period_type: existing.period_type,
+        });
+      }
+    }
+
+    return {
+      hasOverlap: overlappingPeriods.length > 0,
+      overlappingPeriods,
+      message: overlappingPeriods.length > 0
+        ? `This period overlaps with ${overlappingPeriods.length} existing period(s). Creating overlapping periods can result in double payments.`
+        : null,
+    };
+  },
+});
+
 // Create new payroll period
 export const createPayrollPeriod = mutation({
   args: {
@@ -1092,6 +1186,41 @@ export const createPayrollPeriod = mutation({
     created_by: v.id("users"),
   },
   handler: async (ctx, args) => {
+    // Validate that period_start is before period_end
+    if (args.period_start >= args.period_end) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Period start date must be before period end date.",
+      );
+    }
+
+    // Check for overlapping periods to prevent double-pay
+    // Two periods overlap if: new_start <= existing_end AND new_end >= existing_start
+    const existingPeriods = await ctx.db
+      .query("payroll_periods")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+
+    for (const existing of existingPeriods) {
+      const hasOverlap =
+        args.period_start <= existing.period_end &&
+        args.period_end >= existing.period_start;
+
+      if (hasOverlap) {
+        // Format dates for error message
+        const existingStartDate = new Date(existing.period_start).toLocaleDateString();
+        const existingEndDate = new Date(existing.period_end).toLocaleDateString();
+        const newStartDate = new Date(args.period_start).toLocaleDateString();
+        const newEndDate = new Date(args.period_end).toLocaleDateString();
+
+        throwUserError(
+          ERROR_CODES.INVALID_INPUT,
+          `Cannot create payroll period (${newStartDate} - ${newEndDate}) because it overlaps with an existing period (${existingStartDate} - ${existingEndDate}).`,
+          "Please choose dates that don't overlap with existing payroll periods to prevent double payments.",
+        );
+      }
+    }
+
     const timestamp = Date.now();
 
     return await ctx.db.insert("payroll_periods", {
@@ -1126,6 +1255,15 @@ export const calculatePayrollForPeriod = mutation({
         ERROR_CODES.INVALID_INPUT,
         "Cannot recalculate a payroll period that has already been paid.",
         "Create a new payroll period for additional adjustments.",
+      );
+    }
+
+    // Check if period is locked
+    if (period.is_locked) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Cannot recalculate a locked payroll period.",
+        "Unlock the period first if you need to make changes.",
       );
     }
 
@@ -1193,6 +1331,27 @@ export const calculatePayrollForPeriod = mutation({
         },
       );
 
+      // Get cash advance deductions for this barber
+      const cashAdvanceData = await ctx.runQuery(
+        api.services.payroll.getCashAdvanceDeductions,
+        { barber_id: barber._id },
+      );
+
+      // Calculate totals including cash advance (using installment amount for this period)
+      const cashAdvanceDeduction = cashAdvanceData.installmentTotal;
+      const totalDeductionsWithAdvance = earnings.total_deductions + cashAdvanceDeduction;
+      const netPayWithAdvance = earnings.daily_pay - totalDeductionsWithAdvance;
+
+      // Map cash advance details to schema-compatible format
+      // Using only base fields for backward compatibility with older schema versions
+      // The installment tracking is handled by the cashAdvances table directly
+      const cashAdvanceDetailsForSchema = cashAdvanceData.advances.map((adv: any) => ({
+        id: adv.id,
+        amount: adv.installment_amount || adv.amount, // Use installment amount for this period
+        requested_at: adv.requested_at,
+        paid_out_at: adv.paid_out_at,
+      }));
+
       const recordPayload: any = {
         total_services: earnings.total_services,
         total_service_revenue: earnings.total_service_revenue,
@@ -1211,10 +1370,21 @@ export const calculatePayrollForPeriod = mutation({
         daily_pay: earnings.daily_pay,
         total_booking_fees: earnings.total_booking_fees,
         total_late_fees: earnings.total_late_fees,
+        total_convenience_fees: earnings.total_convenience_fees,
+        // Fee percentages
+        booking_fee_percentage: earnings.booking_fee_percentage,
+        late_fee_percentage: earnings.late_fee_percentage,
+        convenience_fee_percentage: earnings.convenience_fee_percentage,
+        // Barber's share of fees
+        barber_booking_fees: earnings.barber_booking_fees,
+        barber_late_fees: earnings.barber_late_fees,
+        barber_convenience_fees: earnings.barber_convenience_fees,
         tax_deduction: earnings.tax_deduction,
+        cash_advance_deduction: cashAdvanceDeduction,
+        cash_advance_details: cashAdvanceDetailsForSchema,
         other_deductions: earnings.other_deductions,
-        total_deductions: earnings.total_deductions,
-        net_pay: earnings.net_pay,
+        total_deductions: totalDeductionsWithAdvance,
+        net_pay: netPayWithAdvance,
         status: "calculated" as const,
         updatedAt: timestamp,
       };
@@ -1298,7 +1468,7 @@ export const getPayrollRecordsByPeriod = query({
   },
 });
 
-// Delete a payroll period and all its related records (if not paid)
+// Delete a payroll period and all its related records (if not paid or locked)
 export const deletePayrollPeriod = mutation({
   args: { payroll_period_id: v.id("payroll_periods") },
   handler: async (ctx, args) => {
@@ -1310,6 +1480,12 @@ export const deletePayrollPeriod = mutation({
       throwUserError(
         ERROR_CODES.INVALID_INPUT,
         "Cannot delete a paid payroll period",
+      );
+    }
+    if (period.is_locked) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Cannot delete a locked payroll period",
       );
     }
 
@@ -1337,6 +1513,84 @@ export const deletePayrollPeriod = mutation({
 
     // Finally delete the period
     await ctx.db.delete(args.payroll_period_id);
+    return { success: true };
+  },
+});
+
+// Lock a payroll period to prevent recalculation
+export const lockPayrollPeriod = mutation({
+  args: {
+    payroll_period_id: v.id("payroll_periods"),
+    locked_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const period = await ctx.db.get(args.payroll_period_id);
+    if (!period) {
+      throwUserError(ERROR_CODES.PAYROLL_PERIOD_NOT_FOUND);
+    }
+
+    if (period.is_locked) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "This payroll period is already locked.",
+      );
+    }
+
+    // Only allow locking if period is calculated or paid
+    if (period.status === "draft") {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Cannot lock a draft payroll period. Calculate it first.",
+      );
+    }
+
+    const timestamp = Date.now();
+    await ctx.db.patch(args.payroll_period_id, {
+      is_locked: true,
+      locked_at: timestamp,
+      locked_by: args.locked_by,
+      updatedAt: timestamp,
+    });
+
+    return { success: true };
+  },
+});
+
+// Unlock a payroll period to allow recalculation (admin only)
+export const unlockPayrollPeriod = mutation({
+  args: {
+    payroll_period_id: v.id("payroll_periods"),
+    unlocked_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const period = await ctx.db.get(args.payroll_period_id);
+    if (!period) {
+      throwUserError(ERROR_CODES.PAYROLL_PERIOD_NOT_FOUND);
+    }
+
+    if (!period.is_locked) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "This payroll period is not locked.",
+      );
+    }
+
+    // Cannot unlock a paid period
+    if (period.status === "paid") {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Cannot unlock a paid payroll period.",
+      );
+    }
+
+    const timestamp = Date.now();
+    await ctx.db.patch(args.payroll_period_id, {
+      is_locked: false,
+      locked_at: undefined,
+      locked_by: undefined,
+      updatedAt: timestamp,
+    });
+
     return { success: true };
   },
 });
@@ -1400,6 +1654,7 @@ export const markPayrollRecordAsPaid = mutation({
 
     const timestamp = Date.now();
 
+    // Mark the payroll record as paid
     await ctx.db.patch(args.payroll_record_id, {
       status: "paid",
       payment_method: args.payment_method,
@@ -1409,6 +1664,48 @@ export const markPayrollRecordAsPaid = mutation({
       notes: args.notes,
       updatedAt: timestamp,
     });
+
+    // Process cash advance repayment if there was a deduction
+    if (record.cash_advance_deduction && record.cash_advance_deduction > 0) {
+      // Get the barber's user ID and process installment repayment
+      const barber = await ctx.db.get(record.barber_id);
+      if (barber?.user) {
+        // Get active advances (paid_out status) and update installments
+        const activeAdvances = await ctx.db
+          .query("cashAdvances")
+          .withIndex("by_barber", (q) => q.eq("barber_id", barber.user as Id<"users">))
+          .filter((q) => q.eq(q.field("status"), "paid_out"))
+          .collect();
+
+        for (const advance of activeAdvances) {
+          const repaymentTerms = advance.repayment_terms || 1;
+          const installmentsPaid = (advance.installments_paid || 0) + 1;
+          const totalRepaid = (advance.total_repaid || 0) + (advance.amount_per_installment || advance.amount);
+
+          // Check if all installments are paid
+          const isFullyRepaid = installmentsPaid >= repaymentTerms;
+
+          if (isFullyRepaid) {
+            // Mark as fully repaid
+            // Note: payroll_id field removed due to schema sync issues
+            await ctx.db.patch(advance._id, {
+              status: "repaid",
+              repaid_at: timestamp,
+              installments_paid: installmentsPaid,
+              total_repaid: advance.amount, // Set to full amount
+              updated_at: timestamp,
+            });
+          } else {
+            // Update installment progress (stay in paid_out status)
+            await ctx.db.patch(advance._id, {
+              installments_paid: installmentsPaid,
+              total_repaid: Math.min(totalRepaid, advance.amount), // Don't exceed total
+              updated_at: timestamp,
+            });
+          }
+        }
+      }
+    }
 
     return { success: true };
   },
@@ -1609,6 +1906,31 @@ export const generateNextPayrollPeriod = mutation({
         0,
       );
       periodEnd = endDate.getTime();
+    }
+
+    // Check for overlapping periods to prevent double-pay
+    const existingPeriods = await ctx.db
+      .query("payroll_periods")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+
+    for (const existing of existingPeriods) {
+      const hasOverlap =
+        periodStart <= existing.period_end &&
+        periodEnd >= existing.period_start;
+
+      if (hasOverlap) {
+        const existingStartDate = new Date(existing.period_start).toLocaleDateString();
+        const existingEndDate = new Date(existing.period_end).toLocaleDateString();
+        const newStartDate = new Date(periodStart).toLocaleDateString();
+        const newEndDate = new Date(periodEnd).toLocaleDateString();
+
+        throwUserError(
+          ERROR_CODES.INVALID_INPUT,
+          `Cannot generate payroll period (${newStartDate} - ${newEndDate}) because it overlaps with an existing period (${existingStartDate} - ${existingEndDate}).`,
+          "The auto-generated period conflicts with an existing one. Delete the conflicting period or manually create a period with different dates.",
+        );
+      }
     }
 
     const timestamp = Date.now();
@@ -1879,6 +2201,169 @@ export const getServiceCommissionSummary = action({
         quantity: totalQuantity,
         commission: totalCommission,
       },
+    };
+  },
+});
+
+// ============================================================================
+// CASH ADVANCE INTEGRATION FOR PAYROLL
+// ============================================================================
+
+/**
+ * Get active cash advances that should be deducted from payroll
+ * Returns advances that are in "paid_out" status (given to barber, awaiting repayment)
+ * Supports installment-based repayment (1, 2, or 3 installments)
+ */
+export const getCashAdvanceDeductions = query({
+  args: {
+    barber_id: v.id("barbers"),
+  },
+  handler: async (ctx, args) => {
+    // Get the barber to find their user ID
+    const barber = await ctx.db.get(args.barber_id);
+    if (!barber || !barber.user) {
+      return { advances: [], total: 0, installmentTotal: 0 };
+    }
+
+    // Get active advances (paid_out status means cash given, awaiting repayment)
+    const activeAdvances = await ctx.db
+      .query("cashAdvances")
+      .withIndex("by_barber", (q) => q.eq("barber_id", barber.user as Id<"users">))
+      .filter((q) => q.eq(q.field("status"), "paid_out"))
+      .collect();
+
+    // Calculate installment amount for this payroll period
+    let installmentTotal = 0;
+    const advancesWithInstallment = activeAdvances.map((adv) => {
+      const repaymentTerms = adv.repayment_terms || 1;
+      const installmentsPaid = adv.installments_paid || 0;
+      const remainingInstallments = repaymentTerms - installmentsPaid;
+
+      // Calculate amount for this installment
+      // For the last installment, use remaining amount to handle rounding
+      const totalRepaid = adv.total_repaid || 0;
+      const remainingAmount = adv.amount - totalRepaid;
+      let installmentAmount = adv.amount_per_installment || adv.amount;
+
+      // If this is the last installment, pay the remaining amount
+      if (remainingInstallments === 1) {
+        installmentAmount = remainingAmount;
+      }
+
+      // Don't exceed remaining amount
+      installmentAmount = Math.min(installmentAmount, remainingAmount);
+
+      if (remainingInstallments > 0) {
+        installmentTotal += installmentAmount;
+      }
+
+      return {
+        id: adv._id,
+        amount: adv.amount,
+        installment_amount: installmentAmount,
+        repayment_terms: repaymentTerms,
+        installments_paid: installmentsPaid,
+        remaining_installments: remainingInstallments,
+        total_repaid: totalRepaid,
+        remaining_amount: remainingAmount,
+        requested_at: adv.requested_at,
+        paid_out_at: adv.paid_out_at,
+      };
+    }).filter(adv => adv.remaining_installments > 0);
+
+    return {
+      advances: advancesWithInstallment,
+      total: activeAdvances.reduce((sum, adv) => sum + adv.amount, 0),
+      installmentTotal, // This is what should be deducted this payroll period
+    };
+  },
+});
+
+/**
+ * Calculate barber earnings with cash advance deduction included
+ * This extends the basic calculation to include cash advance in deductions
+ */
+export const calculateBarberEarningsWithAdvance = query({
+  args: {
+    barber_id: v.id("barbers"),
+    period_start: v.number(),
+    period_end: v.number(),
+  },
+  handler: async (ctx, args) => {
+    // Get basic earnings calculation
+    const earnings = await ctx.runQuery(
+      api.services.payroll.calculateBarberEarnings,
+      args
+    );
+
+    // Get cash advance deductions
+    const cashAdvanceData = await ctx.runQuery(
+      api.services.payroll.getCashAdvanceDeductions,
+      { barber_id: args.barber_id }
+    );
+
+    // Calculate new totals with cash advance deduction (using installment amount for this period)
+    const cashAdvanceDeduction = cashAdvanceData.installmentTotal;
+    const newTotalDeductions = earnings.total_deductions + cashAdvanceDeduction;
+    const newNetPay = earnings.daily_pay - newTotalDeductions;
+
+    return {
+      ...earnings,
+      // Cash advance specific
+      cash_advance_deduction: cashAdvanceDeduction,
+      cash_advance_details: cashAdvanceData.advances,
+      // Updated totals
+      total_deductions: newTotalDeductions,
+      net_pay: newNetPay,
+    };
+  },
+});
+
+/**
+ * Process cash advance repayment when payroll is paid
+ * Marks the cash advance as repaid and links it to the payroll record
+ */
+export const processCashAdvanceRepayment = mutation({
+  args: {
+    barber_id: v.id("barbers"),
+    payroll_record_id: v.optional(v.id("payroll_records")),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // Get the barber to find their user ID
+    const barber = await ctx.db.get(args.barber_id);
+    if (!barber || !barber.user) {
+      return { success: false, message: "Barber not found" };
+    }
+
+    // Get active advances (paid_out status)
+    const activeAdvances = await ctx.db
+      .query("cashAdvances")
+      .withIndex("by_barber", (q) => q.eq("barber_id", barber.user as Id<"users">))
+      .filter((q) => q.eq(q.field("status"), "paid_out"))
+      .collect();
+
+    if (activeAdvances.length === 0) {
+      return { success: true, message: "No active advances to repay", repaid: 0 };
+    }
+
+    // Mark all active advances as repaid
+    let totalRepaid = 0;
+    for (const advance of activeAdvances) {
+      await ctx.db.patch(advance._id, {
+        status: "repaid",
+        repaid_at: now,
+        updated_at: now,
+      });
+      totalRepaid += advance.amount;
+    }
+
+    return {
+      success: true,
+      message: `Repaid ${activeAdvances.length} advance(s)`,
+      repaid: totalRepaid,
+      count: activeAdvances.length,
     };
   },
 });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight, X, AlertCircle } from 'lucide-react'
+import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight, X, AlertCircle, Banknote, Store, Calendar, Clock, ChevronDown, ChevronUp, Filter } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext'
 import QRScannerModal from '../../components/staff/QRScannerModal'
 import AddCustomerModal from '../../components/staff/AddCustomerModal'
 import PaymentConfirmationModal from '../../components/staff/PaymentConfirmationModal'
+import CollectPaymentModal from '../../components/staff/CollectPaymentModal'
 import CustomerSelectionModal from '../../components/staff/CustomerSelectionModal'
 import ReceiptModal from '../../components/staff/ReceiptModal'
 import Modal from '../../components/common/Modal'
@@ -74,6 +75,11 @@ const POS = () => {
   const [newCustomerCredentials, setNewCustomerCredentials] = useState(null) // Store new customer credentials
   const [completedTransaction, setCompletedTransaction] = useState(null) // Store completed transaction for receipt
   const [alertModal, setAlertModal] = useState({ show: false, title: '', message: '', type: 'warning' }) // Alert modal state
+  const [showCollectPaymentModal, setShowCollectPaymentModal] = useState(false) // Collect Payment modal (Story 8.2)
+  const [showCompleteConfirmModal, setShowCompleteConfirmModal] = useState(false) // Mark Complete confirmation (Story 8.3)
+  const [unpaidBalanceWarning, setUnpaidBalanceWarning] = useState(null) // Unpaid balance warning data
+  const [showTodaysBookings, setShowTodaysBookings] = useState(false) // Today's Bookings section (Story 8.4)
+  const [todaysBookingsFilter, setTodaysBookingsFilter] = useState('all') // Payment status filter
 
   // Mobile-specific states
   const [showMobileCart, setShowMobileCart] = useState(false)
@@ -122,6 +128,13 @@ const POS = () => {
   const updateBookingPaymentStatus = useMutation(api.services.bookings.updatePaymentStatus)
   const updateBookingStatus = useMutation(api.services.bookings.updateBooking)
   const createUser = useMutation(api.services.auth.createUser)
+  const markBookingComplete = useMutation(api.services.bookings.markBookingComplete) // Story 8.3
+
+  // Query for today's bookings with payment status (Story 8.4 - FR17)
+  const todaysBookings = useQuery(
+    api.services.bookings.getTodaysBookingsWithPaymentStatus,
+    user?.branch_id ? { branch_id: user.branch_id, payment_status_filter: todaysBookingsFilter } : "skip"
+  ) || []
   const getVoucherByCode = useQuery(
     api.services.vouchers.getVoucherByCode,
     currentTransaction.voucher_applied && typeof currentTransaction.voucher_applied === 'string' && /[A-Z]/.test(currentTransaction.voucher_applied) && !/[a-z]/.test(currentTransaction.voucher_applied)
@@ -292,6 +305,70 @@ const POS = () => {
 
     console.log('Booking attachment canceled - converted to regular POS transaction')
     setActiveModal(null)
+  }
+
+  // Handle marking booking as complete (Story 8.3 - FR16)
+  const handleMarkComplete = async (forceComplete = false) => {
+    if (!currentBooking || !user?._id) return
+
+    try {
+      const result = await markBookingComplete({
+        booking_id: currentBooking._id,
+        completed_by: user._id,
+        force_complete: forceComplete,
+      })
+
+      if (result.requires_confirmation) {
+        // Show warning modal with unpaid balance
+        setUnpaidBalanceWarning({
+          amount: result.unpaid_balance,
+          message: result.message,
+        })
+        setShowCompleteConfirmModal(true)
+        return
+      }
+
+      if (result.success) {
+        // Update local booking state
+        setCurrentBooking(prev => ({ ...prev, status: 'completed' }))
+        setAlertModal({
+          show: true,
+          title: 'Booking Completed',
+          message: 'The booking has been marked as completed.',
+          type: 'success'
+        })
+        setShowCompleteConfirmModal(false)
+        setUnpaidBalanceWarning(null)
+      }
+    } catch (error) {
+      console.error('Failed to mark booking complete:', error)
+      setAlertModal({
+        show: true,
+        title: 'Error',
+        message: 'Failed to mark booking as complete. Please try again.',
+        type: 'error'
+      })
+    }
+  }
+
+  // Handle loading a booking from Today's Bookings list (Story 8.4)
+  const handleLoadBookingFromList = (booking) => {
+    setCurrentBooking({
+      _id: booking._id,
+      booking_code: booking.booking_code,
+      customer_name: booking.customer_name,
+      customer_phone: booking.customer_phone,
+      service_name: booking.service_name,
+      barber_name: booking.barber_name,
+      date: booking.date,
+      time: booking.time,
+      payment_status: booking.payment_status,
+      service_price: booking.service_price,
+      convenience_fee_paid: booking.convenience_fee_paid,
+      cash_collected: booking.cash_collected,
+      status: booking.status,
+    })
+    setShowTodaysBookings(false)
   }
 
   // Map service categories to standard categories
@@ -2111,46 +2188,90 @@ const POS = () => {
               )}
             </div>
 
-            {/* Booking Information Section */}
-            {currentBooking && (
-              <div className="mt-4">
-                <h3 className="text-lg font-bold text-white mb-3 flex items-center">
-                  <Receipt className="w-5 h-5 mr-2 text-[var(--color-primary)]" />
-                  Booking Information
-                </h3>
-                <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl shadow-lg border border-[#444444]/50 p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 rounded-lg flex items-center justify-center border-2 border-[var(--color-primary)]/30">
-                        <Receipt className="w-5 h-5 text-[var(--color-primary)]" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-white text-base">#{currentBooking.booking_code}</p>
-                        <p className="text-xs text-gray-400">Processing payment</p>
-                        <div className="flex items-center space-x-1 mt-1">
-                          <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></div>
-                          <span className="text-xs font-medium text-green-400">Active</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end space-y-2">
-                      <div className="inline-flex items-center px-2 py-1 bg-[var(--color-primary)]/20 border border-[var(--color-primary)]/30 rounded-md">
-                        <div className="w-1.5 h-1.5 bg-[var(--color-primary)] rounded-full animate-pulse mr-1.5"></div>
-                        <span className="text-xs font-medium text-[var(--color-primary)]">Processing</span>
-                      </div>
-                      <button
-                        onClick={handleCancelBookingAttachment}
-                        className="inline-flex items-center px-2 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 hover:border-red-500/50 rounded-lg transition-all duration-200 font-medium text-xs"
-                        title="Cancel booking attachment"
-                      >
-                        <X className="w-3 h-3 mr-1" />
-                        Cancel
-                      </button>
-                    </div>
+            {/* Today's Bookings Section (Story 8.4 - FR17) */}
+            <div className="mt-4">
+              <button
+                onClick={() => setShowTodaysBookings(!showTodaysBookings)}
+                className="w-full flex items-center justify-between p-3 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl shadow-lg border border-[#444444]/50 hover:border-[var(--color-primary)]/30 transition-all duration-200"
+              >
+                <div className="flex items-center space-x-2">
+                  <Calendar className="w-5 h-5 text-[var(--color-primary)]" />
+                  <span className="text-white font-semibold">Today's Bookings</span>
+                  <span className="px-2 py-0.5 bg-[var(--color-primary)]/20 text-[var(--color-primary)] text-xs font-bold rounded-full">
+                    {todaysBookings.length}
+                  </span>
+                </div>
+                {showTodaysBookings ? (
+                  <ChevronUp className="w-5 h-5 text-gray-400" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-gray-400" />
+                )}
+              </button>
+
+              {showTodaysBookings && (
+                <div className="mt-2 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl shadow-lg border border-[#444444]/50 p-4">
+                  {/* Filter */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <Filter className="w-4 h-4 text-gray-400" />
+                    <select
+                      value={todaysBookingsFilter}
+                      onChange={(e) => setTodaysBookingsFilter(e.target.value)}
+                      className="bg-[#1A1A1A] text-white text-sm rounded-lg border border-[#444444] px-3 py-1.5 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="paid">Paid</option>
+                      <option value="partial">Partially Paid</option>
+                      <option value="unpaid">Pay at Branch</option>
+                    </select>
+                  </div>
+
+                  {/* Bookings List */}
+                  <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar">
+                    {todaysBookings.length === 0 ? (
+                      <p className="text-gray-400 text-sm text-center py-4">No bookings found</p>
+                    ) : (
+                      todaysBookings.map((booking) => (
+                        <button
+                          key={booking._id}
+                          onClick={() => handleLoadBookingFromList(booking)}
+                          className="w-full p-3 bg-[#1A1A1A] rounded-lg border border-[#333333] hover:border-[var(--color-primary)]/50 transition-all duration-200 text-left"
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center space-x-2">
+                              <Clock className="w-4 h-4 text-gray-400" />
+                              <span className="text-white font-medium">{booking.time}</span>
+                            </div>
+                            {/* Payment Status Badge */}
+                            {booking.payment_status === 'paid' && (
+                              <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs font-bold rounded-full">PAID</span>
+                            )}
+                            {booking.payment_status === 'partial' && (
+                              <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs font-bold rounded-full">PARTIAL</span>
+                            )}
+                            {booking.payment_status === 'unpaid' && (
+                              <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-bold rounded-full">AT BRANCH</span>
+                            )}
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="text-sm text-white">{booking.customer_name}</p>
+                              <p className="text-xs text-gray-400">{booking.service_name} • {booking.barber_name}</p>
+                            </div>
+                            <div className="text-right">
+                              {booking.remaining_balance > 0 ? (
+                                <p className="text-sm font-semibold text-yellow-400">₱{booking.remaining_balance.toLocaleString()}</p>
+                              ) : (
+                                <p className="text-sm font-semibold text-green-400">₱0</p>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    )}
                   </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
             {/* Transaction Items */}
             <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
@@ -2262,6 +2383,55 @@ const POS = () => {
             <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
               <h3 className="text-lg font-bold text-white mb-4">Payment</h3>
 
+              {/* Booking Payment Details (if booking attached) */}
+              {currentBooking && currentBooking.payment_status && (
+                <div className="bg-[#1A1A1A] rounded-lg p-3 space-y-2 mb-4">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-400">Service Total:</span>
+                    <span className="text-white font-semibold">
+                      ₱{(currentBooking.service_price || currentBooking.total_amount || 0).toLocaleString()}
+                    </span>
+                  </div>
+
+                  {/* Amount Paid */}
+                  {currentBooking.payment_status === 'paid' && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-400">Amount Paid:</span>
+                      <span className="text-green-400 font-semibold">
+                        ₱{(currentBooking.service_price || currentBooking.total_amount || 0).toLocaleString()} via PayMongo
+                      </span>
+                    </div>
+                  )}
+                  {currentBooking.payment_status === 'partial' && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-400">Reservation Fee Paid:</span>
+                      <span className="text-green-400 font-semibold">
+                        ₱{(currentBooking.convenience_fee_paid || 0).toLocaleString()} via PayMongo
+                      </span>
+                    </div>
+                  )}
+                  {currentBooking.payment_status === 'unpaid' && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-400">Amount Paid:</span>
+                      <span className="text-gray-500 font-semibold">₱0</span>
+                    </div>
+                  )}
+
+                  {/* Remaining Balance */}
+                  {/* Note: Convenience fee is a separate reservation payment, not deducted from service price */}
+                  <div className="flex justify-between items-center text-sm pt-2 border-t border-[#333333]">
+                    <span className="text-white font-semibold">Balance Due:</span>
+                    {currentBooking.payment_status === 'paid' ? (
+                      <span className="text-green-400 font-bold">₱0 (Paid)</span>
+                    ) : (
+                      <span className="text-yellow-400 font-bold">
+                        ₱{((currentBooking.service_price || currentBooking.total_amount || 0) - (currentBooking.cash_collected || 0)).toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Totals */}
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-gray-400">
@@ -2353,14 +2523,26 @@ const POS = () => {
 
               {/* Action Buttons */}
               <div className="space-y-3">
-                <button
-                  onClick={openPaymentModal}
-                  disabled={!selectedBarber || (currentTransaction.services.length === 0 && currentTransaction.products.length === 0)}
-                  className="w-full py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-bold rounded-xl hover:from-[var(--color-accent)] hover:to-[var(--color-accent)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
-                >
-                  <CreditCard className="w-5 h-5" />
-                  <span>Process Payment</span>
-                </button>
+                {/* Show Complete button if booking is already paid, otherwise show Process Payment */}
+                {currentBooking?.payment_status === 'paid' ? (
+                  <button
+                    onClick={() => handleMarkComplete()}
+                    disabled={!selectedBarber}
+                    className="w-full py-3 bg-gradient-to-r from-green-600 to-green-500 text-white font-bold rounded-xl hover:from-green-500 hover:to-green-400 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
+                  >
+                    <CheckCircle className="w-5 h-5" />
+                    <span>Complete (Already Paid)</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={openPaymentModal}
+                    disabled={!selectedBarber || (currentTransaction.services.length === 0 && currentTransaction.products.length === 0)}
+                    className="w-full py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-bold rounded-xl hover:from-[var(--color-accent)] hover:to-[var(--color-accent)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
+                  >
+                    <CreditCard className="w-5 h-5" />
+                    <span>Process Payment</span>
+                  </button>
+                )}
 
                 <button
                   onClick={() => setAlertModal({
@@ -2601,6 +2783,74 @@ const POS = () => {
             >
               Continue with Transaction
             </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Collect Payment Modal (Story 8.2 - FR15) */}
+      <CollectPaymentModal
+        isOpen={showCollectPaymentModal}
+        onClose={() => setShowCollectPaymentModal(false)}
+        booking={currentBooking}
+        staffUserId={user?._id}
+        onPaymentCollected={() => {
+          setShowCollectPaymentModal(false)
+          // Refresh the booking data by re-triggering the scan
+          // The booking will be updated in the database
+          setAlertModal({
+            show: true,
+            title: 'Payment Collected',
+            message: 'Payment has been recorded successfully.',
+            type: 'success'
+          })
+        }}
+      />
+
+      {/* Mark Complete Confirmation Modal (Story 8.3 - FR16) */}
+      {showCompleteConfirmModal && unpaidBalanceWarning && (
+        <Modal
+          isOpen={true}
+          onClose={() => {
+            setShowCompleteConfirmModal(false)
+            setUnpaidBalanceWarning(null)
+          }}
+          title="Unpaid Balance Warning"
+          size="sm"
+        >
+          <div className="text-center py-4">
+            <div className="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-yellow-500/30">
+              <AlertCircle className="w-8 h-8 text-yellow-500" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Unpaid Balance</h3>
+            <p className="text-gray-600 mb-4">
+              {unpaidBalanceWarning.message}
+            </p>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+              <p className="text-yellow-800 font-semibold">
+                Amount Due: ₱{unpaidBalanceWarning.amount?.toLocaleString()}
+              </p>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">
+              Would you like to collect payment first or mark as complete anyway?
+            </p>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => {
+                  setShowCompleteConfirmModal(false)
+                  setUnpaidBalanceWarning(null)
+                  setShowCollectPaymentModal(true)
+                }}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium rounded-lg transition-all duration-200"
+              >
+                Collect Payment
+              </button>
+              <button
+                onClick={() => handleMarkComplete(true)}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-200"
+              >
+                Complete Anyway
+              </button>
+            </div>
           </div>
         </Modal>
       )}
