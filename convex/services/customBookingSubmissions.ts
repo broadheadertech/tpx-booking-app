@@ -1,17 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
-import type { Id } from "../_generated/dataModel";
-
-// Helper: get current user by session token
-async function getUserBySession(ctx: any, sessionToken: string) {
-  const session = await ctx.db
-    .query("sessions")
-    .withIndex("by_token", (q: any) => q.eq("token", sessionToken))
-    .first();
-  if (!session || session.expiresAt < Date.now()) return null;
-  const user = await ctx.db.get(session.userId);
-  return user || null;
-}
+import { requireAuthenticatedUser } from "../lib/unifiedAuth";
 
 // Generate booking code for reference
 function generateBookingCode() {
@@ -340,7 +329,7 @@ const STATUS_MESSAGES = {
 // Update submission status (staff action)
 export const updateStatus = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     id: v.id("custom_booking_submissions"),
     status: v.union(
       v.literal("pending"),
@@ -352,8 +341,8 @@ export const updateStatus = mutation({
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user) throw new Error("Unauthorized");
+    // Use unified auth (supports both Clerk and legacy)
+    const user = await requireAuthenticatedUser(ctx, args.sessionToken);
 
     const submission = await ctx.db.get(args.id);
     if (!submission) throw new Error("Submission not found");
@@ -462,13 +451,13 @@ export const updateStatus = mutation({
 // Add notes to submission
 export const addNotes = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     id: v.id("custom_booking_submissions"),
     notes: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user) throw new Error("Unauthorized");
+    // Use unified auth (supports both Clerk and legacy)
+    const user = await requireAuthenticatedUser(ctx, args.sessionToken);
 
     const submission = await ctx.db.get(args.id);
     if (!submission) throw new Error("Submission not found");
@@ -500,7 +489,7 @@ export const addNotes = mutation({
 // Convert submission to regular booking with confirmed details
 export const convertToBooking = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     id: v.id("custom_booking_submissions"),
     service_id: v.id("services"),
     date: v.string(),
@@ -508,8 +497,8 @@ export const convertToBooking = mutation({
     price: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user) throw new Error("Unauthorized");
+    // Use unified auth (supports both Clerk and legacy)
+    const user = await requireAuthenticatedUser(ctx, args.sessionToken);
 
     const submission = await ctx.db.get(args.id);
     if (!submission) throw new Error("Submission not found");
@@ -553,12 +542,12 @@ export const convertToBooking = mutation({
 // Delete submission
 export const deleteSubmission = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     id: v.id("custom_booking_submissions"),
   },
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user) throw new Error("Unauthorized");
+    // Use unified auth (supports both Clerk and legacy)
+    const user = await requireAuthenticatedUser(ctx, args.sessionToken);
 
     const submission = await ctx.db.get(args.id);
     if (!submission) throw new Error("Submission not found");
@@ -644,6 +633,7 @@ export const getStatistics = query({
       confirmed: submissions.filter((s) => s.status === "confirmed").length,
       completed: submissions.filter((s) => s.status === "completed").length,
       cancelled: submissions.filter((s) => s.status === "cancelled").length,
+      conversionRate: 0,
     };
 
     // Calculate conversion rate

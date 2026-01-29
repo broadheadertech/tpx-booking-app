@@ -2,13 +2,13 @@ import { useEffect, useRef } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useToast } from '../components/common/ToastNotification';
-import { useAuth } from '../context/AuthContext';
+import { useCurrentUser } from './useCurrentUser';
 
 const STORAGE_KEY = 'last_seen_notifications';
 
 // Hook to show toast notifications for new arrivals
 export const useRealtimeNotifications = () => {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const toast = useToast();
   const processedNotifications = useRef(new Set());
   const hasInitialized = useRef(false);

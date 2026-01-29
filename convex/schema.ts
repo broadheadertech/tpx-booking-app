@@ -1,7 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-// Schema version: 2026-01-27v2 - Added paymentAuditLog table and extended bookings with PayMongo fields
+// Schema version: 2026-01-28v1 - Story 10.1: Added Clerk RBAC fields, page_access_v2, permissionAuditLog table
 export default defineSchema({
   // Branches table for multi-branch support
   branches: defineTable({
@@ -21,12 +21,16 @@ export default defineSchema({
     late_fee_type: v.optional(v.string()), // 'fixed', 'per_minute', 'per_hour'
     late_fee_grace_period: v.optional(v.number()), // Grace period in minutes
     carousel_images: v.optional(v.array(v.string())), // Array of carousel image URLs
+    // Clerk RBAC field (Story 10.1)
+    clerk_org_id: v.optional(v.string()), // Clerk Organization ID for branch-org mapping
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_branch_code", ["branch_code"])
     .index("by_active", ["is_active"])
-    .index("by_created_at", ["createdAt"]),
+    .index("by_created_at", ["createdAt"])
+    // Clerk RBAC index (Story 10.1)
+    .index("by_clerk_org_id", ["clerk_org_id"]),
 
   // Branding / Whitelabel settings per branch
   branding: defineTable({
@@ -112,14 +116,67 @@ export default defineSchema({
       v.literal("admin"),
       v.literal("barber"),
       v.literal("super_admin"),
-      v.literal("branch_admin")
+      v.literal("branch_admin"),
+      v.literal("admin_staff") // Clerk RBAC: Cross-branch operations role
     ),
     branch_id: v.optional(v.id("branches")), // Optional for super_admin and customers, required for staff/barber/admin/branch_admin
     is_active: v.boolean(),
     avatar: v.optional(v.string()),
     bio: v.optional(v.string()),
     skills: v.array(v.string()),
-    page_access: v.optional(v.array(v.string())), // Array of page keys the user can access
+    page_access: v.optional(v.array(v.string())), // Array of page keys the user can access (legacy)
+
+    // ============================================================================
+    // CLERK AUTHENTICATION & RBAC FIELDS (Story 10.1)
+    // ============================================================================
+    clerk_user_id: v.optional(v.string()), // Clerk user ID for SSO linkage
+    clerk_org_ids: v.optional(v.array(v.string())), // Clerk Organization IDs for multi-org support
+    migration_status: v.optional(v.union(
+      v.literal("pending"),    // User not yet migrated to Clerk
+      v.literal("invited"),    // Invitation sent, awaiting Clerk signup
+      v.literal("completed"),  // Successfully migrated to Clerk
+      v.literal("failed")      // Migration attempt failed
+    )),
+    legacy_password_hash: v.optional(v.string()), // Preserved hash for rollback scenarios
+
+    // page_access_v2: Object-based permissions (30 pages × 5 actions)
+    // Always accessible pages (bypass check): overview, custom_bookings, walkins
+    page_access_v2: v.optional(v.object({
+      // Staff Dashboard Pages (25)
+      overview: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      reports: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      bookings: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      custom_bookings: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      calendar: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      walkins: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      pos: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      barbers: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      users: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      services: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      customers: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      products: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      order_products: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      vouchers: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      payroll: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      cash_advances: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      royalty: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      pl: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      balance_sheet: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      payments: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      payment_history: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      attendance: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      events: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      notifications: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      email_marketing: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      // Admin Dashboard Pages (5)
+      branches: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      catalog: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      branding: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      emails: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      settings: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+    })),
+    // ============================================================================
+
     isVerified: v.boolean(),
     // Password reset fields
     password_reset_token: v.optional(v.string()),
@@ -132,7 +189,10 @@ export default defineSchema({
     .index("by_created_at", ["createdAt"])
     .index("by_branch", ["branch_id"])
     .index("by_role", ["role"])
-    .index("by_branch_role", ["branch_id", "role"]),
+    .index("by_branch_role", ["branch_id", "role"])
+    // Clerk RBAC indexes (Story 10.1)
+    .index("by_clerk_user_id", ["clerk_user_id"])
+    .index("by_migration_status", ["migration_status"]),
 
   // Barbers table
   barbers: defineTable({
@@ -2114,4 +2174,29 @@ export default defineSchema({
     .index("by_branch", ["branch_id"])
     .index("by_status", ["status"])
     .index("by_expires_at", ["expires_at"]),
+
+  // ============================================================================
+  // PERMISSION AUDIT LOG (Story 10.1 - Clerk RBAC)
+  // ============================================================================
+  // Tracks all permission-related changes for audit, compliance, and debugging
+  // ============================================================================
+
+  permissionAuditLog: defineTable({
+    user_id: v.id("users"),                       // User whose permissions were changed
+    changed_by: v.id("users"),                    // Admin who made the change
+    change_type: v.union(
+      v.literal("role_changed"),                  // User role was changed
+      v.literal("page_access_changed"),           // Page permissions were modified
+      v.literal("branch_assigned"),               // User was assigned to a branch
+      v.literal("branch_removed"),                // User was removed from a branch
+      v.literal("user_created"),                  // New user was created
+      v.literal("user_deleted")                   // User was deactivated/deleted
+    ),
+    previous_value: v.optional(v.string()),       // JSON stringified previous state
+    new_value: v.string(),                        // JSON stringified new state
+    created_at: v.number(),                       // Timestamp of change
+  })
+    .index("by_user", ["user_id"])
+    .index("by_changed_by", ["changed_by"])
+    .index("by_created_at", ["created_at"]),
 });

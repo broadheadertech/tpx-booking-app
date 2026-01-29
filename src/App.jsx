@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { BrandingProvider } from "./context/BrandingContext";
+import { BranchProvider } from "./context/BranchContext";
 import { ToastProvider } from "./components/common/ToastNotification";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import AuthRedirect from "./components/common/AuthRedirect";
@@ -16,6 +17,9 @@ import Register from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import FacebookCallback from "./pages/auth/FacebookCallback";
+import ClerkLogin from "./pages/auth/ClerkLogin";
+import ClerkCallback from "./pages/auth/ClerkCallback";
+import SecuritySettings from "./pages/settings/Security";
 import StaffDashboard from "./pages/staff/Dashboard";
 import POS from "./pages/staff/POS";
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -47,6 +51,7 @@ function App() {
     <AuthProvider>
       <ToastProvider>
         <BrandingProvider>
+          <BranchProvider>
         <Router>
           <div className="min-h-screen bg-[var(--color-bg)]">
             <Routes>
@@ -73,13 +78,16 @@ function App() {
               <Route path="/privacy" element={<Policy />} />
               <Route path="/account-deletion" element={<AccountDeletion />} />
               <Route path="/email-test" element={<EmailTest />} />
+              {/* Primary Login - Clerk Authentication */}
+              {/* Clerk uses sub-routes for multi-step auth (factor-one, factor-two, etc.) */}
               <Route
-                path="/auth/login"
-                element={
-                  <AuthRedirect>
-                    <Login />
-                  </AuthRedirect>
-                }
+                path="/auth/login/*"
+                element={<ClerkLogin />}
+              />
+              {/* Legacy login redirect to Clerk */}
+              <Route
+                path="/auth/clerk-login/*"
+                element={<Navigate to="/auth/login" replace />}
               />
               <Route
                 path="/auth/forgot-password"
@@ -100,6 +108,19 @@ function App() {
               <Route
                 path="/auth/facebook/callback"
                 element={<FacebookCallback />}
+              />
+              <Route
+                path="/auth/clerk-callback"
+                element={<ClerkCallback />}
+              />
+              {/* Security Settings (Story 10-5: MFA) */}
+              <Route
+                path="/settings/security"
+                element={
+                  <ProtectedRoute>
+                    <SecuritySettings />
+                  </ProtectedRoute>
+                }
               />
               <Route
                 path="/auth/register"
@@ -274,6 +295,7 @@ function App() {
               </Routes>
           </div>
         </Router>
+          </BranchProvider>
         </BrandingProvider>
       </ToastProvider>
     </AuthProvider>

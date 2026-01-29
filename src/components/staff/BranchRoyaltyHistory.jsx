@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { useAuth } from '../../context/AuthContext';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 import {
   Building,
   DollarSign,
@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export default function BranchRoyaltyHistory() {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedReceipt, setSelectedReceipt] = useState(null);
 

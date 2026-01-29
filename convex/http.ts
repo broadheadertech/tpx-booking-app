@@ -1,12 +1,13 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { Webhook } from "svix";
 
 // ============================================================================
 // HTTP ROUTER FOR WEBHOOKS
 // ============================================================================
 // Story 7.3: Build PayMongo Webhook Handler
-// Handles incoming webhooks from PayMongo for payment status updates
+// Story 10.3: Build Clerk Webhook Handler
 // ============================================================================
 
 const http = httpRouter();
@@ -142,6 +143,236 @@ http.route({
     });
   }),
 });
+
+// ============================================================================
+// CLERK WEBHOOK HANDLER
+// ============================================================================
+// Story 10.3: Clerk Webhook Integration
+// Story 13.1: Organization sync for multi-tenant isolation
+//
+// Handles incoming webhooks from Clerk for user and organization sync:
+// - user.created: Create or link user with clerk_user_id
+// - user.updated: Update user email/name
+// - user.deleted: Soft delete user
+// - organization.created: Link Clerk org to branch
+// - organization.updated: Log organization updates
+// - organization.deleted: Unlink org from branch
+// - organizationMembership.created: Assign user to branch
+// - organizationMembership.deleted: Remove user from branch
+//
+// Security:
+// - Verifies svix signature headers using CLERK_WEBHOOK_SECRET
+// - Returns 401 on invalid signature
+// ============================================================================
+
+/**
+ * Clerk Webhook Handler
+ * Endpoint: POST /webhooks/clerk
+ *
+ * Processes user events from Clerk:
+ * - user.created: New user registered in Clerk
+ * - user.updated: User profile updated in Clerk
+ * - user.deleted: User deleted in Clerk
+ *
+ * Security (AC #2, #3):
+ * - Verifies svix-id, svix-timestamp, svix-signature headers
+ * - Returns 401 on invalid signature
+ */
+http.route({
+  path: "/webhooks/clerk",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    // 1. Extract Svix signature headers (AC #2)
+    const svix_id = request.headers.get("svix-id");
+    const svix_timestamp = request.headers.get("svix-timestamp");
+    const svix_signature = request.headers.get("svix-signature");
+
+    // 2. Get raw body for signature verification
+    const body = await request.text();
+
+    console.log("[Clerk Webhook] Received request:", {
+      has_svix_id: !!svix_id,
+      has_svix_timestamp: !!svix_timestamp,
+      has_svix_signature: !!svix_signature,
+      body_length: body.length,
+    });
+
+    // 3. Verify signature using Svix (AC #2)
+    const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      console.error("[Clerk Webhook] CLERK_WEBHOOK_SECRET not configured");
+      return new Response("Webhook secret not configured", { status: 500 });
+    }
+
+    const wh = new Webhook(webhookSecret);
+    let payload: ClerkWebhookPayload;
+
+    try {
+      // Verify the webhook signature
+      payload = wh.verify(body, {
+        "svix-id": svix_id || "",
+        "svix-timestamp": svix_timestamp || "",
+        "svix-signature": svix_signature || "",
+      }) as ClerkWebhookPayload;
+    } catch (err) {
+      // AC #3: Return 401 on invalid signature
+      console.error("[Clerk Webhook] Signature verification failed:", err);
+      return new Response("Invalid signature", { status: 401 });
+    }
+
+    // 4. Process based on event type (AC #4, #5, #6)
+    const eventType = payload.type;
+    console.log("[Clerk Webhook] Processing event:", eventType);
+
+    try {
+      switch (eventType) {
+        case "user.created":
+          // AC #4: Handle user.created event
+          await ctx.runMutation(internal.services.clerkSync.handleUserCreated, {
+            payload: payload.data,
+          });
+          break;
+
+        case "user.updated":
+          // AC #5: Handle user.updated event
+          await ctx.runMutation(internal.services.clerkSync.handleUserUpdated, {
+            payload: payload.data,
+          });
+          break;
+
+        case "user.deleted":
+          // AC #6: Handle user.deleted event
+          await ctx.runMutation(internal.services.clerkSync.handleUserDeleted, {
+            payload: {
+              id: payload.data.id,
+              deleted: true,
+            },
+          });
+          break;
+
+        // Story 13.1: Organization events for multi-tenant isolation
+        case "organization.created":
+          await ctx.runMutation(internal.services.clerkSync.handleOrgCreated, {
+            payload: {
+              id: payload.data.id,
+              name: payload.data.name || "",
+              slug: payload.data.slug || "",
+              created_at: payload.data.created_at || Date.now(),
+              updated_at: payload.data.updated_at || Date.now(),
+              members_count: payload.data.members_count,
+              public_metadata: payload.data.public_metadata,
+            },
+          });
+          break;
+
+        case "organization.updated":
+          await ctx.runMutation(internal.services.clerkSync.handleOrgUpdated, {
+            payload: {
+              id: payload.data.id,
+              name: payload.data.name || "",
+              slug: payload.data.slug || "",
+              created_at: payload.data.created_at || Date.now(),
+              updated_at: payload.data.updated_at || Date.now(),
+              members_count: payload.data.members_count,
+              public_metadata: payload.data.public_metadata,
+            },
+          });
+          break;
+
+        case "organization.deleted":
+          await ctx.runMutation(internal.services.clerkSync.handleOrgDeleted, {
+            payload: {
+              id: payload.data.id,
+              deleted: true,
+            },
+          });
+          break;
+
+        case "organizationMembership.created":
+          await ctx.runMutation(internal.services.clerkSync.handleOrgMembershipCreated, {
+            payload: {
+              id: payload.data.id,
+              organization: payload.data.organization,
+              public_user_data: payload.data.public_user_data,
+              role: payload.data.role || "member",
+              created_at: payload.data.created_at || Date.now(),
+              updated_at: payload.data.updated_at || Date.now(),
+            },
+          });
+          break;
+
+        case "organizationMembership.deleted":
+          await ctx.runMutation(internal.services.clerkSync.handleOrgMembershipDeleted, {
+            payload: {
+              id: payload.data.id,
+              organization: payload.data.organization,
+              public_user_data: payload.data.public_user_data,
+              role: payload.data.role || "member",
+              created_at: payload.data.created_at || Date.now(),
+              updated_at: payload.data.updated_at || Date.now(),
+            },
+          });
+          break;
+
+        default:
+          // Handle unknown event types gracefully - log and return 200
+          console.log("[Clerk Webhook] Unhandled event type:", eventType);
+      }
+    } catch (error) {
+      // Log mutation errors but still return 200 to prevent Clerk retries
+      // Only signature failures should return non-200
+      console.error("[Clerk Webhook] Error processing event:", error);
+    }
+
+    // 5. Return 200 OK
+    return new Response("OK", { status: 200 });
+  }),
+});
+
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
+
+// Type definitions for Clerk webhook payload
+// Supports both user and organization events
+interface ClerkWebhookPayload {
+  type: string; // e.g., "user.created", "organization.created", "organizationMembership.created"
+  data: {
+    // Common fields
+    id: string; // clerk_user_id, clerk_org_id, or membership_id
+    created_at: number;
+    updated_at: number;
+
+    // User-specific fields
+    email_addresses?: Array<{
+      email_address: string;
+      id: string;
+      verification?: { status: string };
+    }>;
+    first_name?: string | null;
+    last_name?: string | null;
+    image_url?: string | null;
+
+    // Organization-specific fields (organization.* events)
+    name?: string;
+    slug?: string;
+    members_count?: number;
+    public_metadata?: {
+      branch_id?: string;
+    };
+
+    // OrganizationMembership-specific fields (organizationMembership.* events)
+    organization?: {
+      id: string;
+      name: string;
+      slug: string;
+    };
+    public_user_data?: {
+      user_id: string;
+    };
+    role?: string;
+  };
+}
 
 // Type definitions for PayMongo webhook payload
 // Supports both Payment Links and Checkout Sessions

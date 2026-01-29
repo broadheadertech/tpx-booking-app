@@ -3,6 +3,7 @@ import { mutation, query, action } from "../_generated/server";
 // import { api } from "../_generated/api"; // Removed to break circular dependency
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { hashPassword, verifyPassword } from "../utils/password";
+import { requireAuthenticatedUser } from "../lib/unifiedAuth";
 
 import { Resend } from 'resend';
 
@@ -369,7 +370,7 @@ export const loginWithFacebookInternal = mutation({
 // Update user profile
 export const updateUserProfile = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     nickname: v.optional(v.string()),
     birthday: v.optional(v.string()),
     mobile_number: v.optional(v.string()),
@@ -379,21 +380,8 @@ export const updateUserProfile = mutation({
     skills: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
-    // Verify session
-    const session = await ctx.db
-      .query("sessions")
-      .withIndex("by_token", (q) => q.eq("token", args.sessionToken))
-      .first();
-
-    if (!session || session.expiresAt < Date.now()) {
-      throwUserError(ERROR_CODES.AUTH_SESSION_EXPIRED);
-    }
-
-    // Get current user to validate
-    const currentUser = await ctx.db.get(session.userId);
-    if (!currentUser) {
-      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "User not found", "Your user account could not be found in the system.");
-    }
+    // Use unified auth (supports both Clerk and legacy)
+    const currentUser = await requireAuthenticatedUser(ctx, args.sessionToken);
 
     // Validate inputs
     if (args.mobile_number !== undefined && args.mobile_number.length > 0) {
@@ -415,7 +403,7 @@ export const updateUserProfile = mutation({
     }
 
     // Update user
-    await ctx.db.patch(session.userId, {
+    await ctx.db.patch(currentUser._id, {
       ...(args.nickname !== undefined && { nickname: args.nickname }),
       ...(args.birthday !== undefined && { birthday: args.birthday }),
       ...(args.mobile_number !== undefined && { mobile_number: args.mobile_number }),
@@ -427,7 +415,7 @@ export const updateUserProfile = mutation({
     });
 
     // Return updated user
-    const user = await ctx.db.get(session.userId);
+    const user = await ctx.db.get(currentUser._id);
     return {
       _id: user?._id,
       id: user?._id,
@@ -1138,6 +1126,55 @@ export const getUsersByBranch = query({
       createdAt: user._creationTime,
       // Exclude heavy fields like avatar (if base64), bio, skills, password
     }));
+  },
+});
+
+// ============================================================================
+// CLERK AUTHENTICATION QUERIES (Story 10.4)
+// ============================================================================
+
+/**
+ * Get user by Clerk user ID
+ * Used by frontend to look up Convex user after Clerk authentication
+ *
+ * @param clerk_user_id - The Clerk user ID (e.g., "user_2abc123def")
+ * @returns User object or null if not found
+ */
+export const getUserByClerkId = query({
+  args: { clerk_user_id: v.string() },
+  handler: async (ctx, args) => {
+    if (!args.clerk_user_id) {
+      return null;
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_user_id", (q) => q.eq("clerk_user_id", args.clerk_user_id))
+      .first();
+
+    if (!user || !user.is_active) {
+      return null;
+    }
+
+    // Return user data without sensitive fields
+    return {
+      _id: user._id,
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      nickname: user.nickname,
+      mobile_number: user.mobile_number,
+      birthday: user.birthday,
+      role: user.role,
+      branch_id: user.branch_id,
+      is_active: user.is_active,
+      avatar: user.avatar,
+      bio: user.bio,
+      skills: user.skills,
+      isVerified: user.isVerified,
+      page_access: user.page_access,
+      clerk_user_id: user.clerk_user_id,
+    };
   },
 });
 

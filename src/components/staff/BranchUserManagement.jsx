@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
-import { User, UserPlus, Edit, Trash2, Building, Users, Search, Filter, X, AlertCircle } from 'lucide-react'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
+import { User, UserPlus, Edit, Trash2, Building, Users, Search, Filter, X, AlertCircle, Shield } from 'lucide-react'
 import UserFormModal from '../admin/UserFormModal'
+import PermissionConfigModal from '../admin/PermissionConfigModal'
 import { createPortal } from 'react-dom'
 
 // Delete User Modal Component
@@ -97,13 +98,15 @@ const DeleteUserModal = React.memo(({ isOpen, onClose, onConfirm, user, loading,
 })
 
 export default function BranchUserManagement() {
-  const { user } = useAuth()
+  const { user } = useCurrentUser()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRole, setFilterRole] = useState('all')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
+  const [selectedUserForPermissions, setSelectedUserForPermissions] = useState(null)
   const initialFormData = {
     username: '',
     email: '',
@@ -227,6 +230,11 @@ export default function BranchUserManagement() {
   const handleDelete = (user) => {
     setSelectedUser(user)
     setShowDeleteModal(true)
+  }
+
+  const handleConfigurePermissions = (user) => {
+    setSelectedUserForPermissions(user)
+    setShowPermissionsModal(true)
   }
 
   const handleSubmitEdit = async (e) => {
@@ -450,6 +458,16 @@ export default function BranchUserManagement() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
+                        {/* Configure Permissions - Story 12-3 */}
+                        {branchUser.role === 'staff' && (user?.role === 'branch_admin' || user?.role === 'super_admin' || user?.role === 'admin_staff') && (
+                          <button
+                            onClick={() => handleConfigurePermissions(branchUser)}
+                            className="text-[#FF8C42] hover:text-[#E67E3C] transition-colors"
+                            title="Configure permissions"
+                          >
+                            <Shield className="h-4 w-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => handleEdit(branchUser)}
                           className="text-blue-400 hover:text-blue-300 transition-colors"
@@ -544,6 +562,21 @@ export default function BranchUserManagement() {
         user={selectedUser}
         loading={loading}
         error={error}
+      />
+
+      {/* Permission Configuration Modal - Story 12-3 */}
+      <PermissionConfigModal
+        isOpen={showPermissionsModal}
+        onClose={() => {
+          setShowPermissionsModal(false)
+          setSelectedUserForPermissions(null)
+        }}
+        user={selectedUserForPermissions}
+        onSuccess={() => {
+          // Permissions updated successfully
+          setShowPermissionsModal(false)
+          setSelectedUserForPermissions(null)
+        }}
       />
     </div>
   )

@@ -3,7 +3,7 @@ import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, M
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 import QRScannerModal from '../../components/staff/QRScannerModal'
 import AddCustomerModal from '../../components/staff/AddCustomerModal'
 import PaymentConfirmationModal from '../../components/staff/PaymentConfirmationModal'
@@ -45,7 +45,7 @@ const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
 }
 
 const POS = () => {
-  const { user } = useAuth()
+  const { user, loading } = useCurrentUser()
   const [selectedBarber, setSelectedBarber] = useState(null)
   const [currentTransaction, setCurrentTransaction] = useState({
     customer: null,
@@ -984,12 +984,12 @@ const POS = () => {
   }
 
   // Show loading if user is not loaded yet
-  if (!user) {
+  if (loading || !user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#F5F5F5] to-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)] mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading POS system...</p>
+          <p className="text-gray-400">Loading POS system...</p>
         </div>
       </div>
     )

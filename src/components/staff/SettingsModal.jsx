@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { 
@@ -19,6 +20,7 @@ import {
 } from 'lucide-react'
 
 const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
+  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('general')
   const [settings, setSettings] = useState({
     emailNotifications: true,
@@ -171,6 +173,7 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'display', label: 'Display', icon: Palette },
     { id: 'carousel', label: 'Carousel', icon: ImageIcon },
+    { id: 'security', label: 'Security', icon: Shield, href: '/settings/security' },
   ]
 
   return createPortal(
@@ -201,7 +204,14 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentBranch, user }) => {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    if (tab.href) {
+                      onClose()
+                      navigate(tab.href)
+                    } else {
+                      setActiveTab(tab.id)
+                    }
+                  }}
                   className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
                     activeTab === tab.id
                       ? 'border-[var(--color-primary)] text-[var(--color-primary)]'

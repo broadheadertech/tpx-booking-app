@@ -2,7 +2,174 @@ import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 // import { api } from "../_generated/api"; // Removed to break circular dependency
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
+import { getCurrentUser } from "../lib/clerkAuth";
 import type { Id } from "../_generated/dataModel";
+
+// ============================================================================
+// SECURE CUSTOMER QUERIES (Story 13-7: Customer Booking Self-Service)
+// ============================================================================
+
+/**
+ * Get the current customer's bookings
+ * Automatically filters to only show bookings where the authenticated user is the customer
+ * No customerId parameter needed - uses the authenticated user
+ */
+export const getMyBookings = query({
+  args: {
+    status: v.optional(v.union(
+      v.literal("pending"),
+      v.literal("confirmed"),
+      v.literal("completed"),
+      v.literal("cancelled"),
+      v.literal("no_show")
+    )),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+
+    if (!user) {
+      return [];
+    }
+
+    const userEmail = user.email?.toLowerCase();
+    const limit = args.limit || 50;
+
+    // Get bookings by customer ID
+    let bookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_customer", (q) => q.eq("customer", user._id))
+      .order("desc")
+      .take(limit);
+
+    // Also get bookings by email (for custom bookings where customer ID is not set)
+    if (userEmail) {
+      const customBookings = await ctx.db
+        .query("bookings")
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("customer"), undefined),
+            q.eq(q.field("customer_email"), userEmail)
+          )
+        )
+        .take(limit);
+
+      // Merge and deduplicate
+      const bookingIds = new Set(bookings.map((b) => b._id.toString()));
+      bookings = [
+        ...bookings,
+        ...customBookings.filter((b) => !bookingIds.has(b._id.toString())),
+      ];
+    }
+
+    // Filter by status if provided
+    if (args.status) {
+      bookings = bookings.filter((b) => b.status === args.status);
+    }
+
+    // Get associated data
+    const bookingsWithData = await Promise.all(
+      bookings.map(async (booking) => {
+        const [service, barber, branch] = await Promise.all([
+          ctx.db.get(booking.service),
+          booking.barber ? ctx.db.get(booking.barber) : null,
+          ctx.db.get(booking.branch_id),
+        ]);
+
+        return {
+          _id: booking._id,
+          booking_code: booking.booking_code,
+          branch_id: booking.branch_id,
+          date: booking.date,
+          time: booking.time,
+          status: booking.status,
+          price: booking.price,
+          final_price: booking.final_price,
+          payment_status: booking.payment_status,
+          payment_type: booking.payment_type,
+          serviceName: service?.name || "Unknown Service",
+          serviceDuration: service?.duration_minutes || 30,
+          barberName: barber?.full_name || "Any Available",
+          branchName: branch?.name || "Unknown Branch",
+          branchPhone: branch?.phone,
+          createdAt: booking.createdAt,
+        };
+      })
+    );
+
+    // Sort by date descending
+    return bookingsWithData.sort((a, b) => {
+      const dateA = new Date(`${a.date} ${a.time}`).getTime();
+      const dateB = new Date(`${b.date} ${b.time}`).getTime();
+      return dateB - dateA;
+    });
+  },
+});
+
+/**
+ * Check if a booking can be cancelled (within cancellation window)
+ * Returns { canCancel: boolean, reason?: string }
+ */
+export const checkCancellationEligibility = query({
+  args: {
+    bookingId: v.id("bookings"),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+
+    if (!user) {
+      return { canCancel: false, reason: "Not authenticated" };
+    }
+
+    const booking = await ctx.db.get(args.bookingId);
+
+    if (!booking) {
+      return { canCancel: false, reason: "Booking not found" };
+    }
+
+    // Verify the booking belongs to this user
+    const userEmail = user.email?.toLowerCase();
+    const isOwner =
+      booking.customer === user._id ||
+      (booking.customer_email?.toLowerCase() === userEmail && !booking.customer);
+
+    if (!isOwner) {
+      return { canCancel: false, reason: "Not authorized" };
+    }
+
+    // Check if already cancelled
+    if (booking.status === "cancelled") {
+      return { canCancel: false, reason: "Booking is already cancelled" };
+    }
+
+    // Check if already completed
+    if (booking.status === "completed") {
+      return { canCancel: false, reason: "Booking is already completed" };
+    }
+
+    // Check cancellation window (default 2 hours)
+    const bookingDateTime = new Date(`${booking.date}T${booking.time}`);
+    const now = new Date();
+    const hoursUntilBooking = (bookingDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    // Get branch for custom cancellation window (if configured)
+    const branch = await ctx.db.get(booking.branch_id);
+    const cancellationWindowHours = 2; // Default 2 hours, could be configurable per branch
+
+    if (hoursUntilBooking < cancellationWindowHours) {
+      return {
+        canCancel: false,
+        reason: `Cancellations must be made at least ${cancellationWindowHours} hours before your appointment`,
+      };
+    }
+
+    return { canCancel: true };
+  },
+});
+
+// ============================================================================
+// EXISTING FUNCTIONS
+// ============================================================================
 
 // Generate booking code
 function generateBookingCode() {

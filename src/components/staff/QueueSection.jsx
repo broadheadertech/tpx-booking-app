@@ -2,10 +2,10 @@ import React, { useState } from 'react'
 import { Clock, User, Phone, MoreVertical, CheckCircle, Users } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 
 const QueueSection = () => {
-  const { user } = useAuth()
+  const { user } = useCurrentUser()
   const branchId = user?.branch_id
 
   // Fetch main queue data from backend

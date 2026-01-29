@@ -37,13 +37,14 @@ import {
 } from "../../components/common/NotificationSystem";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useAuth } from "../../context/AuthContext";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useNavigate } from "react-router-dom";
 import { useRealtimeNotifications } from "../../hooks/useRealtimeNotifications";
 import { useBookingNotificationListener } from "../../utils/bookingNotifications";
 
 function StaffDashboard() {
-  const { user, logout } = useAuth();
+  // Use unified hook that supports both Clerk and legacy auth
+  const { user, logout } = useCurrentUser();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(() => {
     // Restore active tab from localStorage on component mount
@@ -240,16 +241,26 @@ function StaffDashboard() {
 
   // Render different tab content based on Convex data
   const renderTabContent = () => {
-    // Basic security check: if user doesn't have access to the tab, fall back to overview
-    // Super admins bypass this check
-    // Always allow overview, custom_bookings, walkins, and queue tabs
-    if (user?.role !== "super_admin" && activeTab !== "overview" && activeTab !== "custom_bookings" && activeTab !== "walkins" && activeTab !== "queue") {
-      if (
-        user?.page_access &&
-        user.page_access.length > 0 &&
-        !user.page_access.includes(activeTab)
-      ) {
-        return renderOverview();
+    // Story 11-4: Permission check for tab content
+    // Super admins and admin_staff bypass all checks
+    if (user?.role !== "super_admin" && user?.role !== "admin_staff") {
+      // Always allow always-accessible tabs
+      if (!alwaysAccessiblePages.includes(activeTab)) {
+        // branch_admin has full staff dashboard access
+        if (user?.role !== "branch_admin") {
+          // Check page_access_v2 first
+          if (user?.page_access_v2) {
+            if (!user.page_access_v2[activeTab]?.view) {
+              return renderOverview();
+            }
+          }
+          // Fallback to legacy page_access
+          else if (user?.page_access && user.page_access.length > 0) {
+            if (!user.page_access.includes(activeTab)) {
+              return renderOverview();
+            }
+          }
+        }
       }
     }
 
@@ -439,20 +450,49 @@ function StaffDashboard() {
     { id: "email_marketing", label: "Email Marketing", icon: "mail" },
   ];
 
-  // Filter tabs based on user page_access permissions
-  const tabs =
-    user?.role === "super_admin"
-      ? baseTabs
-      : user?.page_access
-        ? baseTabs.filter(
-          (t) => user.page_access.includes(t.id) || t.id === "overview" || t.id === "custom_bookings" || t.id === "walkins"
-        ) // Always include overview, custom_bookings, and walkins
-        : baseTabs;
+  // Always accessible pages (bypass permission checks)
+  const alwaysAccessiblePages = ["overview", "custom_bookings", "walkins", "queue"];
 
-  // Redirect if current active tab is not allowed (unless it's overview, custom_bookings, walkins, or queue)
+  // Filter tabs based on user permissions (Story 11-4: Navigation Filtering)
+  // Priority: page_access_v2 (new) > page_access (legacy) > role defaults
+  const getFilteredTabs = () => {
+    // super_admin and admin_staff have full access
+    if (user?.role === "super_admin" || user?.role === "admin_staff") {
+      return baseTabs;
+    }
+
+    // branch_admin has full staff dashboard access
+    if (user?.role === "branch_admin") {
+      return baseTabs;
+    }
+
+    // Check page_access_v2 first (new RBAC system)
+    if (user?.page_access_v2) {
+      return baseTabs.filter((t) => {
+        // Always include always-accessible pages
+        if (alwaysAccessiblePages.includes(t.id)) return true;
+        // Check if view permission is granted
+        return user.page_access_v2[t.id]?.view === true;
+      });
+    }
+
+    // Fallback to legacy page_access array
+    if (user?.page_access && user.page_access.length > 0) {
+      return baseTabs.filter(
+        (t) => user.page_access.includes(t.id) || alwaysAccessiblePages.includes(t.id)
+      );
+    }
+
+    // Default: show all tabs for roles without explicit permissions
+    return baseTabs;
+  };
+
+  const tabs = getFilteredTabs();
+
+  // Redirect if current active tab is not allowed (Story 11-4: Navigation Filtering)
   useEffect(() => {
     const allowedTabIds = tabs.map((t) => t.id);
-    if (!allowedTabIds.includes(activeTab) && activeTab !== "overview" && activeTab !== "custom_bookings" && activeTab !== "walkins" && activeTab !== "queue") {
+    if (!allowedTabIds.includes(activeTab) && !alwaysAccessiblePages.includes(activeTab)) {
       setActiveTab("overview");
     }
   }, [tabs, activeTab]);
@@ -506,7 +546,7 @@ function StaffDashboard() {
 
       {/* Notification Modal */}
       <NotificationModal
-        userId={user._id}
+        userId={user?._id}
         isOpen={showNotifications}
         onClose={() => setShowNotifications(false)}
         userRole={user?.role}

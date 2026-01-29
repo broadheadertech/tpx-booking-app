@@ -10,6 +10,7 @@ import SettingsModal from './SettingsModal'
 import LogoutConfirmModal from './LogoutConfirmModal'
 import ProfileModal from './ProfileModal'
 import { NotificationBell } from '../common/NotificationSystem'
+import { BranchSelector } from '../common/BranchSelector'
 import { APP_VERSION } from '../../config/version'
 
 const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
@@ -77,16 +78,11 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
               </div>
               <div className="flex items-center space-x-1 sm:space-x-1.5 mt-0.5 flex-wrap">
                 <p className="text-[9px] sm:text-[10px] md:text-xs font-medium text-[var(--color-primary)] hidden sm:inline">Staff Dashboard</p>
-                {currentBranch && (
-                  <>
-                    <span className="text-gray-600 text-xs hidden md:inline">•</span>
-                    <div className="hidden md:flex items-center space-x-1">
-                      <Building className="w-2.5 h-2.5 text-[var(--color-primary)]" />
-                      <span className="text-[10px] font-medium text-gray-400 truncate max-w-[120px] lg:max-w-none">{currentBranch.name}</span>
-                      <span className="text-[10px] text-gray-500 hidden lg:inline">({currentBranch.branch_code})</span>
-                    </div>
-                  </>
-                )}
+                <span className="text-gray-600 text-xs hidden md:inline">•</span>
+                {/* Branch Selector - shows dropdown for admin_staff/super_admin, read-only for others */}
+                <div className="hidden md:block">
+                  <BranchSelector />
+                </div>
               </div>
             </div>
           </div>

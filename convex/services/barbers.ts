@@ -1,6 +1,192 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
+import { getCurrentUser } from "../lib/clerkAuth";
+
+// ============================================================================
+// SECURE BARBER QUERIES (Story 13-6: Barber Personal Data Isolation)
+// ============================================================================
+
+/**
+ * Get the current user's barber profile
+ * This query automatically returns only the authenticated user's barber profile
+ * without requiring a barberId parameter - ensures barbers can only see their own data
+ */
+export const getMyBarberProfile = query({
+  args: {},
+  handler: async (ctx) => {
+    const user = await getCurrentUser(ctx);
+
+    if (!user) {
+      return null;
+    }
+
+    // Find barber linked to this user
+    const barber = await ctx.db
+      .query("barbers")
+      .withIndex("by_user", (q) => q.eq("user", user._id))
+      .first();
+
+    if (!barber) {
+      return null;
+    }
+
+    // Get branch info
+    const branch = barber.branch_id ? await ctx.db.get(barber.branch_id) : null;
+
+    return {
+      ...barber,
+      name: barber.full_name,
+      email: user.email || barber.email || "",
+      phone: user.mobile_number || barber.phone || "",
+      avatarUrl: barber.avatar || "/img/avatar_default.jpg",
+      branch_name: branch?.name || "Unknown Branch",
+      user_id: user._id,
+    };
+  },
+});
+
+/**
+ * Get the current barber's bookings for a specific date
+ * Automatically filters to the authenticated user's barber profile
+ */
+export const getMyBookingsForDate = query({
+  args: {
+    date: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+
+    if (!user) {
+      return [];
+    }
+
+    // Find barber linked to this user
+    const barber = await ctx.db
+      .query("barbers")
+      .withIndex("by_user", (q) => q.eq("user", user._id))
+      .first();
+
+    if (!barber) {
+      return [];
+    }
+
+    // Get bookings for this barber on the specified date
+    const bookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_barber_date", (q) =>
+        q.eq("barber", barber._id).eq("date", args.date)
+      )
+      .collect();
+
+    // Get associated data
+    const bookingsWithData = await Promise.all(
+      bookings.map(async (booking) => {
+        const [customer, service] = await Promise.all([
+          booking.customer ? ctx.db.get(booking.customer) : null,
+          ctx.db.get(booking.service),
+        ]);
+
+        return {
+          ...booking,
+          customerName: customer?.nickname || customer?.username || "Guest",
+          customerPhone: customer?.mobile_number || "",
+          serviceName: service?.name || "Unknown Service",
+          servicePrice: service?.price || 0,
+          serviceDuration: service?.duration_minutes || 30,
+        };
+      })
+    );
+
+    return bookingsWithData;
+  },
+});
+
+/**
+ * Get the current barber's stats
+ * Automatically filters to the authenticated user's barber profile
+ */
+export const getMyStats = query({
+  args: {
+    period: v.optional(v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly"), v.literal("yearly"))),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+
+    if (!user) {
+      return null;
+    }
+
+    // Find barber linked to this user
+    const barber = await ctx.db
+      .query("barbers")
+      .withIndex("by_user", (q) => q.eq("user", user._id))
+      .first();
+
+    if (!barber) {
+      return null;
+    }
+
+    // Calculate date range based on period
+    const now = new Date();
+    let startDate: Date;
+    const period = args.period || "monthly";
+
+    switch (period) {
+      case "daily":
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case "weekly":
+        const dayOfWeek = now.getDay();
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - dayOfWeek);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case "yearly":
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      case "monthly":
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+    }
+
+    const startDateStr = startDate.toISOString().split("T")[0];
+
+    // Get completed bookings for this period
+    const bookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_barber", (q) => q.eq("barber", barber._id))
+      .filter((q) =>
+        q.and(
+          q.gte(q.field("date"), startDateStr),
+          q.eq(q.field("status"), "completed")
+        )
+      )
+      .collect();
+
+    // Calculate totals
+    let totalEarnings = 0;
+    let totalBookings = bookings.length;
+
+    for (const booking of bookings) {
+      const service = await ctx.db.get(booking.service);
+      totalEarnings += service?.price || 0;
+    }
+
+    return {
+      period,
+      totalBookings,
+      totalEarnings,
+      completedBookings: totalBookings,
+      barberId: barber._id,
+    };
+  },
+});
+
+// ============================================================================
+// EXISTING QUERIES
+// ============================================================================
 
 // Get all barbers (for super admin) - with pagination
 export const getAllBarbers = query({

@@ -14,15 +14,17 @@ import ProductCatalogManager from '../../components/admin/ProductCatalogManager'
 import RoyaltyManagement from '../../components/admin/RoyaltyManagement'
 import SuperAdminPLDashboard from '../../components/admin/SuperAdminPLDashboard'
 import SuperAdminBalanceSheet from '../../components/admin/SuperAdminBalanceSheet'
-import SuperAdminPaymentHistory from '../../components/admin/SuperAdminPaymentHistory'
+import AuditTrailViewer from '../../components/admin/AuditTrailViewer'
+// SuperAdminPaymentHistory removed - payments managed in staff dashboard
 // SuperAdminExpenseManagement removed - expenses now managed in P&L dashboard
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { useNavigate } from 'react-router-dom'
 
 function AdminDashboard() {
-  const { user, logout } = useAuth()
+  // Use unified hook that supports both Clerk and legacy auth
+  const { user, logout } = useCurrentUser()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('admin_dashboard_active_tab') || 'overview'
@@ -186,11 +188,11 @@ function AdminDashboard() {
           <div className="text-center text-gray-400">You do not have access to balance sheet.</div>
         )
 
-      case 'payment_history':
+      case 'audit_trail':
         return user?.role === 'super_admin' ? (
-          <SuperAdminPaymentHistory />
+          <AuditTrailViewer />
         ) : (
-          <div className="text-center text-gray-400">You do not have access to payment history.</div>
+          <div className="text-center text-gray-400">You do not have access to audit trail.</div>
         )
 
       default:
@@ -215,7 +217,7 @@ function AdminDashboard() {
       { id: 'royalty', label: 'Royalty', icon: 'percent' }, // Royalty management
       { id: 'pl', label: 'P&L', icon: 'pie-chart' }, // Consolidated P&L (includes expense management)
       { id: 'balance_sheet', label: 'Balance Sheet', icon: 'scale' }, // Consolidated Balance Sheet
-      { id: 'payment_history', label: 'Payments', icon: 'file-text' }, // Payment history (FR31)
+      { id: 'audit_trail', label: 'Audit Trail', icon: 'history' }, // Permission audit trail (Story 12-7)
       { id: 'branding', label: 'Branding', icon: 'palette' },
       { id: 'emails', label: 'Emails', icon: 'mail' },
       ...baseTabs.slice(4),

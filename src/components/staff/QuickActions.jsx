@@ -2,14 +2,14 @@ import React, { useState } from 'react'
 import { QrCode, UserPlus, Calendar, Gift, CreditCard } from 'lucide-react'
 import QRScannerModal from './QRScannerModal'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 
 import AddCustomerModal from './AddCustomerModal'
 import CreateBookingModal from './CreateBookingModal'
 import CreateVoucherModal from './CreateVoucherModal'
 
 const QuickActions = ({ onAddCustomer, onCreateBooking, onCreateVoucher, onVoucherScanned, onBookingScanned, activeModal, setActiveModal }) => {
-  const { user } = useAuth()
+  const { user } = useCurrentUser()
   const navigate = useNavigate()
   
   // Check permissions

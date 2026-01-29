@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { useAuth } from '../../context/AuthContext';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 import {
   Search,
   Filter,
@@ -24,7 +24,7 @@ import {
  * Branch admin view of payment transaction history
  */
 export default function PaymentHistory() {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const [searchTerm, setSearchTerm] = useState('');
   const [eventTypeFilter, setEventTypeFilter] = useState('all');
   const [dateRange, setDateRange] = useState('all'); // all, today, week, month, custom

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useAuth } from "../../context/AuthContext";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 import {
   CreditCard,
   Key,
@@ -84,7 +84,7 @@ const PasswordInput = ({ value, onChange, placeholder, disabled = false }) => {
 };
 
 const PaymentSettings = ({ onRefresh }) => {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
 
   // State for form fields
   const [publicKey, setPublicKey] = useState("");

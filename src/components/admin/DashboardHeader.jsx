@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
 import { LogOut, Crown, Shield, Building } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useBranding } from '../../context/BrandingContext'
 
 const DashboardHeader = ({ onLogout }) => {
-  const { user } = useAuth()
+  const { user } = useCurrentUser()
   const { branding } = useBranding()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   

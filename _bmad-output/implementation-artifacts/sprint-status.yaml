@@ -1,4 +1,4 @@
-# generated: 2026-01-27
+# generated: 2026-01-28
 # project: tpx-booking-app
 # tracking_system: file-system
 # story_location: _bmad-output/implementation-artifacts
@@ -32,7 +32,7 @@
 # - SM typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
-generated: 2026-01-27
+generated: 2026-01-28
 project: tpx-booking-app
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
@@ -90,7 +90,7 @@ development_status:
   epic-5-retrospective: optional
 
   # ============================================================================
-  # PAYMONGO PAYMENT INTEGRATION (epics-paymongo.md) - NEW
+  # PAYMONGO PAYMENT INTEGRATION (epics-paymongo.md) - COMPLETED
   # ============================================================================
 
   # Epic 6: Branch Payment Configuration (PayMongo Epic 1)
@@ -129,3 +129,67 @@ development_status:
   9-2-build-branch-admin-payment-history-view: done
   9-3-build-super-admin-payment-history-view: done
   epic-9-retrospective: optional
+
+  # ============================================================================
+  # CLERK AUTHENTICATION + RBAC (epics-clerk-rbac.md) - NEW BACKLOG
+  # ============================================================================
+
+  # Epic 10: Clerk Authentication Foundation (Clerk RBAC Epic 1)
+  # Users can securely log in using Clerk with SSO, MFA, password reset, and webhook sync
+  epic-10: done
+  10-1-schema-extension-for-clerk-integration: done
+  10-2-clerk-provider-and-auth-helpers-setup: done
+  10-3-clerk-webhook-integration: done
+  10-4-complete-login-experience: done
+  10-5-multi-factor-authentication-setup: done
+  10-6-password-reset-and-session-management: done
+  epic-10-retrospective: optional
+
+  # Epic 11: Role-Based Access Control (Clerk RBAC Epic 2)
+  # Staff users see only navigation items and actions appropriate to their role
+  epic-11: done
+  11-1-role-hierarchy-and-utility-functions: done
+  11-2-rbac-service-with-permission-checking: done
+  11-3-permission-aware-ui-components: done
+  11-4-navigation-filtering-by-permissions: done
+  11-5-access-denied-handling: done
+  11-6-real-time-permission-updates: done
+  epic-11-retrospective: optional
+
+  # Epic 12: User Administration & Audit Trail (Clerk RBAC Epic 3)
+  # Admins can create users, assign roles, configure permissions, and track changes
+  epic-12: done
+  12-1-super-admin-user-management: done
+  12-2-admin-staff-user-management: done
+  12-3-branch-admin-user-management: done
+  12-4-clerk-invite-integration: done
+  12-5-user-listing-with-branch-filter: done
+  12-6-permission-change-audit-logging: done
+  12-7-audit-trail-viewer-for-super-admin: done
+  epic-12-retrospective: optional
+
+  # Epic 13: Multi-Tenant Data Isolation (Clerk RBAC Epic 4)
+  # Branch data is properly isolated - staff see only their branch data
+  epic-13: done
+  13-1-branch-creation-with-clerk-organization: done
+  13-2-user-branch-assignment-and-org-sync: done
+  13-3-admin-staff-branch-context-switching: done
+  13-4-branch-admin-single-branch-enforcement: done
+  13-5-query-level-branch-filtering: done
+  13-6-barber-personal-data-isolation: done
+  13-7-customer-booking-self-service: done
+  13-8-barber-schedule-and-cash-advance: done
+  13-9-branch-admin-cash-advance-approval: done
+  epic-13-retrospective: optional
+
+  # Epic 14: Seamless User Migration (Clerk RBAC Epic 5)
+  # Existing users are migrated to Clerk without service disruption
+  epic-14: done
+  14-1-migration-status-tracking: done
+  14-2-invite-based-user-migration: done
+  14-3-automatic-bulk-import-migration: done
+  14-4-role-mapping-to-6-role-system: done
+  14-5-data-preservation-during-migration: done
+  14-6-page-access-structure-migration: done
+  14-7-dual-auth-system-for-transition: done
+  epic-14-retrospective: optional

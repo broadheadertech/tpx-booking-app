@@ -1,17 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
-import type { Id } from "../_generated/dataModel";
-
-// Helper: get current user by session token
-async function getUserBySession(ctx: any, sessionToken: string) {
-  const session = await ctx.db
-    .query("sessions")
-    .withIndex("by_token", (q: any) => q.eq("token", sessionToken))
-    .first();
-  if (!session || session.expiresAt < Date.now()) return null;
-  const user = await ctx.db.get(session.userId);
-  return user || null;
-}
+import { requireAuthenticatedUser } from "../lib/unifiedAuth";
 
 // Field type definition for validation
 const fieldTypeValidator = v.union(
@@ -154,7 +143,7 @@ export const getFormById = query({
 // Create custom booking form
 export const createForm = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     barber_id: v.id("barbers"),
     branch_id: v.id("branches"),
     title: v.string(),
@@ -162,8 +151,8 @@ export const createForm = mutation({
     fields: v.array(fieldValidator),
   },
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user) throw new Error("Unauthorized");
+    // Use unified auth (supports both Clerk and legacy)
+    const user = await requireAuthenticatedUser(ctx, args.sessionToken);
 
     // Check permissions
     const isSuperAdmin = user.role === "super_admin";
@@ -214,7 +203,7 @@ export const createForm = mutation({
 // Update custom booking form
 export const updateForm = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     id: v.id("custom_booking_forms"),
     title: v.optional(v.string()),
     description: v.optional(v.string()),
@@ -222,8 +211,8 @@ export const updateForm = mutation({
     status: v.optional(v.union(v.literal("active"), v.literal("inactive"))),
   },
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user) throw new Error("Unauthorized");
+    // Use unified auth (supports both Clerk and legacy)
+    const user = await requireAuthenticatedUser(ctx, args.sessionToken);
 
     const form = await ctx.db.get(args.id);
     if (!form) throw new Error("Form not found");
@@ -256,12 +245,12 @@ export const updateForm = mutation({
 // Delete custom booking form
 export const deleteForm = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     id: v.id("custom_booking_forms"),
   },
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user) throw new Error("Unauthorized");
+    // Use unified auth (supports both Clerk and legacy)
+    const user = await requireAuthenticatedUser(ctx, args.sessionToken);
 
     const form = await ctx.db.get(args.id);
     if (!form) throw new Error("Form not found");
@@ -293,12 +282,12 @@ export const deleteForm = mutation({
 // Toggle form status
 export const toggleFormStatus = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     id: v.id("custom_booking_forms"),
   },
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user) throw new Error("Unauthorized");
+    // Use unified auth (supports both Clerk and legacy)
+    const user = await requireAuthenticatedUser(ctx, args.sessionToken);
 
     const form = await ctx.db.get(args.id);
     if (!form) throw new Error("Form not found");
@@ -325,13 +314,13 @@ export const toggleFormStatus = mutation({
 // Duplicate form for another barber
 export const duplicateForm = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     source_form_id: v.id("custom_booking_forms"),
     target_barber_id: v.id("barbers"),
   },
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user) throw new Error("Unauthorized");
+    // Use unified auth (supports both Clerk and legacy)
+    const user = await requireAuthenticatedUser(ctx, args.sessionToken);
 
     const sourceForm = await ctx.db.get(args.source_form_id);
     if (!sourceForm) throw new Error("Source form not found");
