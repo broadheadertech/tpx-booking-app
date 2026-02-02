@@ -3,6 +3,7 @@ import { mutation, query } from "../_generated/server";
 import { Id } from "../_generated/dataModel";
 import { api } from "../_generated/api";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
+import { toStorageFormat } from "../lib/points";
 
 // Helper function to get or create a walk-in customer
 async function getOrCreateWalkInCustomer(ctx: any, branch_id: Id<"branches">, customerName?: string, customerPhone?: string): Promise<Id<"users"> | undefined> {
@@ -113,7 +114,9 @@ export const createTransaction = mutation({
       v.literal("cash"),
       v.literal("card"),
       v.literal("digital_wallet"),
-      v.literal("bank_transfer")
+      v.literal("bank_transfer"),
+      v.literal("wallet"), // Customer wallet payment
+      v.literal("combo") // Combination of points, wallet, and cash
     ),
     payment_status: v.union(
       v.literal("pending"),
@@ -124,6 +127,10 @@ export const createTransaction = mutation({
     notes: v.optional(v.string()),
     cash_received: v.optional(v.number()),
     change_amount: v.optional(v.number()),
+    // Combo payment fields (for payment_method = "combo")
+    points_redeemed: v.optional(v.number()), // Integer ×100 format (e.g., 20000 = 200 pts)
+    wallet_used: v.optional(v.number()), // Wallet amount (e.g., 150 = ₱150)
+    cash_collected: v.optional(v.number()), // Cash portion (e.g., 150 = ₱150)
     processed_by: v.id("users"),
     skip_booking_creation: v.optional(v.boolean()) // Flag to skip automatic booking creation
   },
@@ -152,6 +159,114 @@ export const createTransaction = mutation({
           throwUserError(ERROR_CODES.PRODUCT_OUT_OF_STOCK, `Insufficient stock for ${product.product_name}`, `Only ${productDoc.stock} items available.`);
         }
       }
+    }
+
+    // Process wallet payment if payment_method is "wallet"
+    // This must happen BEFORE creating the transaction to ensure atomicity
+    let walletDebitResult: { bonusUsed: number; mainUsed: number } | null = null;
+    if (args.payment_method === "wallet") {
+      // Wallet payment requires a registered customer
+      if (!args.customer) {
+        throwUserError(
+          ERROR_CODES.INVALID_INPUT,
+          "Customer required for wallet payment",
+          "Wallet payments require a registered customer account."
+        );
+      }
+
+      console.log("[TRANSACTION] Processing wallet payment:", {
+        customerId: args.customer,
+        amount: args.total_amount,
+      });
+
+      // Debit wallet - uses bonus first, then main balance
+      // This will throw if insufficient balance (atomic failure)
+      walletDebitResult = await ctx.runMutation(api.services.wallet.debitWallet, {
+        userId: args.customer,
+        amount: args.total_amount,
+        description: `Payment for services`,
+        reference_id: `TXN-${Date.now()}`, // Will be updated with actual transaction ID
+      });
+
+      console.log("[TRANSACTION] Wallet debit successful:", walletDebitResult);
+    }
+
+    // Process combo payment if payment_method is "combo"
+    // Deduction order: Points → Wallet → Cash
+    // This must happen BEFORE creating the transaction to ensure atomicity
+    let comboResult: {
+      pointsRedeemed: number;
+      walletUsed: number;
+      cashCollected: number;
+    } | null = null;
+
+    if (args.payment_method === "combo") {
+      // Combo payment requires a registered customer
+      if (!args.customer) {
+        throwUserError(
+          ERROR_CODES.INVALID_INPUT,
+          "Customer required for combo payment",
+          "Combo payments require a registered customer account."
+        );
+      }
+
+      const pointsToRedeem = args.points_redeemed || 0;
+      const walletToUse = args.wallet_used || 0;
+      const cashToCollect = args.cash_collected || 0;
+
+      console.log("[TRANSACTION] Processing combo payment:", {
+        customerId: args.customer,
+        totalAmount: args.total_amount,
+        pointsToRedeem,
+        walletToUse,
+        cashToCollect,
+      });
+
+      // Validate combo amounts add up to total
+      // Points are in ×100 format, so divide by 100 for peso value
+      const pointsValue = pointsToRedeem / 100;
+      const comboTotal = pointsValue + walletToUse + cashToCollect;
+      if (Math.abs(comboTotal - args.total_amount) > 0.01) {
+        throwUserError(
+          ERROR_CODES.INVALID_INPUT,
+          "Combo payment amounts don't match",
+          `Points (₱${pointsValue}) + Wallet (₱${walletToUse}) + Cash (₱${cashToCollect}) = ₱${comboTotal}, but total is ₱${args.total_amount}`
+        );
+      }
+
+      // Step 1: Redeem points if any
+      if (pointsToRedeem > 0) {
+        console.log("[TRANSACTION] Redeeming points:", pointsToRedeem);
+        await ctx.runMutation(api.services.points.redeemPoints, {
+          userId: args.customer,
+          amount: pointsToRedeem,
+          sourceId: `TXN-${Date.now()}`,
+          branchId: args.branch_id,
+          notes: `Redeemed for combo payment - ₱${pointsValue}`,
+        });
+        console.log("[TRANSACTION] Points redeemed successfully");
+      }
+
+      // Step 2: Debit wallet if any
+      if (walletToUse > 0) {
+        console.log("[TRANSACTION] Debiting wallet:", walletToUse);
+        walletDebitResult = await ctx.runMutation(api.services.wallet.debitWallet, {
+          userId: args.customer,
+          amount: walletToUse,
+          description: `Combo payment - wallet portion`,
+          reference_id: `TXN-${Date.now()}`,
+        });
+        console.log("[TRANSACTION] Wallet debit successful:", walletDebitResult);
+      }
+
+      // Step 3: Cash portion is just recorded for staff to collect
+      comboResult = {
+        pointsRedeemed: pointsToRedeem,
+        walletUsed: walletToUse,
+        cashCollected: cashToCollect,
+      };
+
+      console.log("[TRANSACTION] Combo payment processed:", comboResult);
     }
 
     // Generate unique transaction ID and receipt number
@@ -501,6 +616,98 @@ export const createTransaction = mutation({
     } else {
       // Log that notifications were skipped because no bookings were created
       console.log("Skipping notifications - no bookings created for this transaction");
+    }
+
+    // Award loyalty points on completed payment (Customer Experience feature)
+    // Points are earned at dynamic rates from loyalty_config (Story 19.1)
+    // - wallet_bonus_multiplier (default 1.5x) for wallet payments
+    // - base_earning_rate (default 1:1) for cash/card payments
+    // - Combo payments: wallet portion (multiplier) + cash portion (base) + points portion (0)
+    // (stored as ×100 integer format)
+    if (args.payment_status === "completed" && args.customer) {
+      try {
+        // Get dynamic config values with fallbacks (Story 19.1)
+        const WALLET_POINTS_MULTIPLIER = await ctx.runQuery(api.services.loyaltyConfig.getConfig, { key: "wallet_bonus_multiplier" }) || 1.5;
+        const BASE_EARNING_RATE = await ctx.runQuery(api.services.loyaltyConfig.getConfig, { key: "base_earning_rate" }) || 1.0;
+        const pointsEnabled = await ctx.runQuery(api.services.loyaltyConfig.getConfig, { key: "points_enabled" });
+
+        // Check if points system is enabled (default true)
+        if (pointsEnabled === false) {
+          console.log("[POINTS] Points system disabled via loyalty_config - skipping award");
+        } else {
+        const isWalletPayment = args.payment_method === "wallet";
+        const isComboPayment = args.payment_method === "combo";
+
+        let pointsAmount: number;
+        let sourceType: "payment" | "wallet_payment";
+        let notesMessage: string;
+
+        if (isComboPayment && comboResult) {
+          // Combo payment: calculate points from cash and wallet portions only
+          // Points redeemed portion earns 0 points
+          const cashPortion = comboResult.cashCollected || 0;
+          const walletPortion = comboResult.walletUsed || 0;
+
+          const cashPoints = cashPortion * BASE_EARNING_RATE;
+          const walletPoints = walletPortion * WALLET_POINTS_MULTIPLIER;
+          pointsAmount = cashPoints + walletPoints;
+          sourceType = walletPortion > 0 ? "wallet_payment" : "payment";
+
+          notesMessage = `Earned from combo payment - Cash: ₱${cashPortion}×${BASE_EARNING_RATE} = ${cashPoints} pts, Wallet: ₱${walletPortion}×${WALLET_POINTS_MULTIPLIER} = ${walletPoints} pts - Receipt: ${receiptNumber}`;
+
+          console.log("[POINTS] Combo payment points calculation:", {
+            cashPortion,
+            walletPortion,
+            cashPoints,
+            walletPoints,
+            totalPointsEarned: pointsAmount,
+          });
+        } else if (isWalletPayment) {
+          // Full wallet payment: wallet bonus multiplier
+          pointsAmount = args.total_amount * WALLET_POINTS_MULTIPLIER;
+          sourceType = "wallet_payment";
+          notesMessage = `Earned from wallet payment (${WALLET_POINTS_MULTIPLIER}x bonus) - Receipt: ${receiptNumber}`;
+        } else {
+          // Cash/card payment: base earning rate
+          pointsAmount = args.total_amount * BASE_EARNING_RATE;
+          sourceType = "payment";
+          notesMessage = `Earned from payment (${BASE_EARNING_RATE}x rate) - Receipt: ${receiptNumber}`;
+        }
+
+        const pointsToEarn = toStorageFormat(pointsAmount); // ×100 format
+
+        console.log("[POINTS] Awarding points for completed payment:", {
+          customerId: args.customer,
+          amount: args.total_amount,
+          paymentMethod: args.payment_method,
+          pointsAmount,
+          pointsToEarn,
+          transactionId,
+        });
+
+        // Only award points if there's something to earn
+        if (pointsToEarn > 0) {
+          await ctx.runMutation(api.services.points.earnPoints, {
+            userId: args.customer,
+            amount: pointsToEarn,
+            sourceType,
+            sourceId: transactionId,
+            branchId: args.branch_id,
+            notes: notesMessage,
+          });
+
+          console.log("[POINTS] Successfully awarded points to customer:", {
+            paymentMethod: args.payment_method,
+            pointsEarned: pointsAmount,
+          });
+        } else {
+          console.log("[POINTS] No points to earn (likely full points redemption)");
+        }
+        } // Close else block for pointsEnabled check
+      } catch (pointsError) {
+        // Log but don't fail the transaction if points awarding fails
+        console.error("[POINTS] Failed to award points:", pointsError);
+      }
     }
 
     return {

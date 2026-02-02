@@ -93,7 +93,6 @@ function ClerkLogin() {
                   alertText: "text-red-400",
                 },
               }}
-              afterSignInUrl="/auth/clerk-callback"
               forceRedirectUrl="/auth/clerk-callback"
               routing="path"
               path="/auth/login"
@@ -116,7 +115,7 @@ function ClerkLogin() {
           </div>
 
           {/* Help Link */}
-          <div className="text-center mt-6 pt-4 border-t border-[#2A2A2A]/30">
+          <div className="text-center mt-3">
             <span className="text-xs text-gray-500">
               Need help?{" "}
               <a

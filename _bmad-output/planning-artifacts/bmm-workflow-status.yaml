@@ -105,6 +105,24 @@ workflow_status:
         output: "_bmad-output/planning-artifacts/prd-clerk-rbac.md"
         note: "COMPLETED - Clerk Authentication + RBAC PRD (48 FRs, 18 NFRs, 6 user journeys)"
         completed_at: "2026-01-28"
+      - id: "prd-customer-experience"
+        status: "_bmad-output/planning-artifacts/prd-customer-experience.md"
+        agent: "pm"
+        command: "/bmad:bmm:workflows:prd"
+        output: "_bmad-output/planning-artifacts/prd-customer-experience.md"
+        note: "COMPLETED - Customer Experience PRD (44 FRs, 5 NFR categories, 4 user journeys, 4 phases)"
+        completed_at: "2026-01-29"
+        mvp_features:
+          - "Points Backend (peso value display, decimal precision)"
+          - "Wallet Enhancements (1.5x bonus, top-up tiers)"
+          - "Basic Tier System (Bronze → Platinum)"
+          - "VIP Recognition (badges, welcome back)"
+          - "Basic Analytics (wallet float dashboard)"
+        functional_requirements: 44
+        non_functional_requirements: 20
+        user_journeys: 4
+        phases_defined: 4
+        business_model: "Self-funding loyalty (wallet float covers redemptions)"
         mvp_features:
           - "Clerk Integration (replace custom auth)"
           - "Clerk Organizations (branch mapping)"
@@ -285,6 +303,102 @@ workflow_status:
           story_quality: "PASS - All have acceptance criteria"
           epic_structure: "PASS - User value focused"
           dependency_validation: "PASS - No forward dependencies"
+      - id: "create-epics-and-stories-clerk-rbac"
+        status: "_bmad-output/planning-artifacts/epics-clerk-rbac.md"
+        agent: "pm"
+        command: "/bmad:bmm:workflows:create-epics-and-stories"
+        output: "_bmad-output/planning-artifacts/epics-clerk-rbac.md"
+        note: "COMPLETED - 5 epics, 35 stories covering all 48 FRs for Clerk Auth + RBAC"
+        completed_at: "2026-01-28"
+        prd_reference: "prd-clerk-rbac.md"
+        architecture_reference: "architecture-clerk-rbac.md"
+        epic_summary:
+          - "Epic 1: Clerk Authentication Foundation (6 stories) - FR1-6, FR40-44"
+          - "Epic 2: Role-Based Access Control (6 stories) - FR14-19"
+          - "Epic 3: User Administration & Audit Trail (7 stories) - FR7-13, FR33-35"
+          - "Epic 4: Multi-Tenant Data Isolation (9 stories) - FR20-32, FR45-48"
+          - "Epic 5: Seamless User Migration (7 stories) - FR36-39"
+        total_epics: 5
+        total_stories: 35
+        frs_covered: 48
+        pages_in_rbac: 30
+        roles_supported: 6
+        validation_results:
+          fr_coverage: "PASS - All 48 FRs covered"
+          architecture_compliance: "PASS - Brownfield patterns followed"
+          story_quality: "PASS - All 35 stories have acceptance criteria"
+          epic_structure: "PASS - User value focused"
+          dependency_validation: "PASS - No forward dependencies"
+        key_features:
+          - "Object-based page_access with 5 actions per page"
+          - "30 pages (24 Staff + 6 Admin)"
+          - "Always-accessible pages: overview, custom_bookings, walkins"
+          - "Dual auth migration support with feature flags"
+          - "Immutable permission audit trail"
+      - id: "create-architecture-customer-experience"
+        status: "_bmad-output/planning-artifacts/architecture-customer-experience.md"
+        agent: "architect"
+        command: "/bmad:bmm:workflows:create-architecture"
+        output: "_bmad-output/planning-artifacts/architecture-customer-experience.md"
+        note: "COMPLETED - Customer Experience architecture (8 steps, 7 decisions)"
+        completed_at: "2026-01-29"
+        prd_reference: "prd-customer-experience.md"
+        architectural_decisions:
+          - "Integer ×100 points storage (avoid floating point)"
+          - "5 new tables (points_ledger, points_transactions, tiers, tier_benefits, loyalty_config)"
+          - "3 new services (points.ts, tiers.ts, loyaltyConfig.ts)"
+          - "2 extended services (payments.ts, wallets.ts)"
+          - "12 new React components"
+          - "Atomic transaction pattern (payment + points)"
+          - "Combo payment flow (Points → Wallet → Cash)"
+          - "Lifetime points for tier promotion (one-way)"
+        validation_results:
+          coherence: "PASS - All decisions compatible with existing architecture"
+          coverage: "PASS - 44 FRs + 5 NFR categories supported"
+          readiness: "PASS - 8 implementation patterns documented"
+        new_tables: 5
+        new_services: 3
+        new_components: 12
+        implementation_patterns: 8
+      - id: "create-epics-customer-experience"
+        status: "_bmad-output/planning-artifacts/epics-customer-experience.md"
+        agent: "pm"
+        command: "/bmad:bmm:workflows:create-epics-and-stories"
+        output: "_bmad-output/planning-artifacts/epics-customer-experience.md"
+        note: "COMPLETED - Customer Experience epics & stories (6 epics, 37 stories)"
+        completed_at: "2026-01-29"
+        prd_reference: "prd-customer-experience.md"
+        architecture_reference: "architecture-customer-experience.md"
+        epic_summary:
+          total_epics: 6
+          total_stories: 37
+          total_frs_covered: 44
+          phase_1_stories: 33
+          phase_2_stories: 4
+        epics:
+          - name: "Points Foundation & Display"
+            stories: 5
+            frs: "FR1-3, FR5-6"
+          - name: "Enhanced Wallet Payments"
+            stories: 6
+            frs: "FR4, FR7-12"
+          - name: "VIP Tier Progression"
+            stories: 6
+            frs: "FR13-18"
+          - name: "Customer VIP Recognition"
+            stories: 5
+            frs: "FR19-23"
+          - name: "Loyalty Administration & Analytics"
+            stories: 11
+            frs: "FR24-30, FR35-44"
+          - name: "Flash Promotions (Phase 2)"
+            stories: 4
+            frs: "FR31-34"
+        validation_results:
+          fr_coverage: "PASS - 44/44 FRs covered"
+          architecture_compliance: "PASS - All patterns documented"
+          story_quality: "PASS - Given/When/Then format"
+          dependency_flow: "PASS - No forward dependencies"
       - id: "test-design"
         status: "optional"
         agent: "tea"
@@ -324,3 +438,27 @@ workflow_status:
           epics_in_progress: 0
           stories_done: 0
           tracking_system: "file-system"
+      - id: "sprint-planning-customer-experience"
+        status: "_bmad-output/implementation-artifacts/sprint-status-customer-experience.yaml"
+        agent: "sm"
+        command: "/bmad:bmm:workflows:sprint-planning"
+        output: "_bmad-output/implementation-artifacts/sprint-status-customer-experience.yaml"
+        note: "COMPLETED - Sprint tracking for Customer Experience feature"
+        completed_at: "2026-01-29"
+        feature: "customer-experience"
+        epic_source: "epics-customer-experience.md"
+        sprint_summary:
+          total_epics: 6
+          total_stories: 37
+          phase_1_stories: 33
+          phase_2_stories: 4
+          epics_in_progress: 0
+          stories_done: 0
+          tracking_system: "file-system"
+        epics:
+          - "Epic 1: Points Foundation & Display (5 stories)"
+          - "Epic 2: Enhanced Wallet Payments (6 stories)"
+          - "Epic 3: VIP Tier Progression (6 stories)"
+          - "Epic 4: Customer VIP Recognition (5 stories)"
+          - "Epic 5: Loyalty Administration & Analytics (11 stories)"
+          - "Epic 6: Flash Promotions - Phase 2 (4 stories)"

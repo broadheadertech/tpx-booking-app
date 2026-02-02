@@ -15,6 +15,12 @@ import RoyaltyManagement from '../../components/admin/RoyaltyManagement'
 import SuperAdminPLDashboard from '../../components/admin/SuperAdminPLDashboard'
 import SuperAdminBalanceSheet from '../../components/admin/SuperAdminBalanceSheet'
 import AuditTrailViewer from '../../components/admin/AuditTrailViewer'
+import PointsConfigPanel from '../../components/admin/PointsConfigPanel'
+import FlashPromotionsPage from './FlashPromotionsPage'
+import WalletConfigPanel from '../../components/admin/WalletConfigPanel'
+import BranchWalletSettingsPanel from '../../components/admin/BranchWalletSettingsPanel'
+import SettlementApprovalQueue from '../../components/admin/SettlementApprovalQueue'
+import WalletOverviewDashboard from '../../components/admin/WalletOverviewDashboard'
 // SuperAdminPaymentHistory removed - payments managed in staff dashboard
 // SuperAdminExpenseManagement removed - expenses now managed in P&L dashboard
 import { useQuery } from 'convex/react'
@@ -195,6 +201,44 @@ function AdminDashboard() {
           <div className="text-center text-gray-400">You do not have access to audit trail.</div>
         )
 
+      case 'loyalty':
+        return user?.role === 'super_admin' ? (
+          <PointsConfigPanel />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to loyalty configuration.</div>
+        )
+
+      case 'promotions':
+        return user?.role === 'super_admin' ? (
+          <FlashPromotionsPage />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to promotions management.</div>
+        )
+
+      case 'wallet':
+        return user?.role === 'super_admin' ? (
+          <div className="space-y-8">
+            <WalletConfigPanel />
+            <BranchWalletSettingsPanel />
+          </div>
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to wallet configuration.</div>
+        )
+
+      case 'settlements':
+        return user?.role === 'super_admin' ? (
+          <SettlementApprovalQueue />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to settlement management.</div>
+        )
+
+      case 'wallet_analytics':
+        return user?.role === 'super_admin' ? (
+          <WalletOverviewDashboard />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to wallet analytics.</div>
+        )
+
       default:
         return renderOverview()
     }
@@ -215,6 +259,11 @@ function AdminDashboard() {
       { id: 'vouchers', label: 'Vouchers', icon: 'ticket' }, // Added Vouchers tab
       { id: 'catalog', label: 'Catalog', icon: 'package' }, // Central product catalog
       { id: 'royalty', label: 'Royalty', icon: 'percent' }, // Royalty management
+      { id: 'loyalty', label: 'Loyalty', icon: 'star' }, // Points configuration (Story 19.1)
+      { id: 'promotions', label: 'Promos', icon: 'zap' }, // Flash promotions (Epic 20)
+      { id: 'wallet', label: 'Wallet', icon: 'wallet' }, // Multi-Branch Wallet Config (Epic 21)
+      { id: 'settlements', label: 'Settlements', icon: 'banknote' }, // Settlement Queue (Epic 25)
+      { id: 'wallet_analytics', label: 'Wallet Analytics', icon: 'activity' }, // Wallet Overview Dashboard (Epic 26)
       { id: 'pl', label: 'P&L', icon: 'pie-chart' }, // Consolidated P&L (includes expense management)
       { id: 'balance_sheet', label: 'Balance Sheet', icon: 'scale' }, // Consolidated Balance Sheet
       { id: 'audit_trail', label: 'Audit Trail', icon: 'history' }, // Permission audit trail (Story 12-7)

@@ -1,314 +1,206 @@
-import React, { useState } from 'react'
-import { ArrowLeft, Star, Gift, Trophy, Crown, Zap, TrendingUp } from 'lucide-react'
+import React from 'react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowLeft, Star, Gift, Trophy, Crown, Zap, TrendingUp, Sparkles, ChevronRight } from 'lucide-react'
+import { useQuery } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
+import { useEnsureClerkUser } from '../../hooks/useEnsureClerkUser'
+import StarRewardsCard from '../common/StarRewardsCard'
 
 const LoyaltyPoints = ({ onBack }) => {
-  const [currentPoints] = useState(1250)
-  const [lifetimePoints] = useState(3480)
-  const [currentTier] = useState('Gold')
-  const [nextTier] = useState('Platinum')
-  const [pointsToNextTier] = useState(250)
+  const navigate = useNavigate()
 
-  const pointsHistory = [
-    {
-      id: 1,
-      date: '2024-01-15',
-      description: 'Premium Haircut',
-      points: 175,
-      type: 'earned'
-    },
-    {
-      id: 2,
-      date: '2024-01-10',
-      description: 'Redeemed Birthday Voucher',
-      points: -500,
-      type: 'redeemed'
-    },
-    {
-      id: 3,
-      date: '2024-01-08',
-      description: 'Beard Trim & Style',
-      points: 125,
-      type: 'earned'
-    },
-    {
-      id: 4,
-      date: '2024-01-05',
-      description: 'Bonus Points - Referral',
-      points: 200,
-      type: 'bonus'
-    },
-    {
-      id: 5,
-      date: '2024-01-03',
-      description: 'Classic Cut',
-      points: 100,
-      type: 'earned'
+  // Use the hook that ensures Clerk users have Convex records
+  const { user } = useEnsureClerkUser()
+
+  // Fetch real data from Convex
+  const ledger = useQuery(
+    api.services.points.getPointsLedger,
+    user?._id ? { userId: user._id } : 'skip'
+  )
+
+  const tierProgress = useQuery(
+    api.services.tiers.getTierProgress,
+    user?._id ? { userId: user._id } : 'skip'
+  )
+
+  const allTiers = useQuery(api.services.tiers.getTiers)
+
+  const pointsHistory = useQuery(
+    api.services.points.getPointsHistory,
+    user?._id ? { userId: user._id, limit: 10 } : 'skip'
+  )
+
+  // Calculate display values
+  const currentBalance = ledger?.current_balance ? ledger.current_balance / 100 : 0
+  const lifetimePoints = ledger?.lifetime_earned ? ledger.lifetime_earned / 100 : 0
+  const currentTier = tierProgress?.currentTier
+  const nextTier = tierProgress?.nextTier
+  const progressPercent = tierProgress?.progressPercent || 0
+  const pointsToNext = tierProgress?.pointsToNextTier ? tierProgress.pointsToNextTier / 100 : 0
+  const isMaxTier = tierProgress?.isMaxTier || false
+
+  // Tier icon mapping
+  const getTierIcon = (tierName) => {
+    const icons = {
+      'Bronze': '🥉',
+      'Silver': '🥈',
+      'Gold': '🥇',
+      'Platinum': '👑'
     }
-  ]
-
-  const rewards = [
-    {
-      id: 1,
-      name: 'Free Basic Haircut',
-      pointsCost: 500,
-      category: 'Services',
-      available: true,
-      icon: '✂️',
-      description: 'Get a complimentary basic haircut'
-    },
-    {
-      id: 2,
-      name: '₱500 Service Voucher',
-      pointsCost: 750,
-      category: 'Vouchers',
-      available: true,
-      icon: '🎫',
-      description: '₱500 off any service'
-    },
-    {
-      id: 3,
-      name: 'Premium Package Discount',
-      pointsCost: 1000,
-      category: 'Services',
-      available: true,
-      icon: '⭐',
-      description: '50% off complete grooming package'
-    },
-    {
-      id: 4,
-      name: 'VIP Priority Booking',
-      pointsCost: 300,
-      category: 'Perks',
-      available: true,
-      icon: '👑',
-      description: 'Skip the queue with priority booking'
-    },
-    {
-      id: 5,
-      name: '₱1,000 Cash Voucher',
-      pointsCost: 1500,
-      category: 'Vouchers',
-      available: false,
-      icon: '💰',
-      description: '₱1,000 cash voucher - Not enough points'
-    },
-    {
-      id: 6,
-      name: 'Platinum Membership',
-      pointsCost: 2000,
-      category: 'Membership',
-      available: false,
-      icon: '💎',
-      description: 'Upgrade to platinum tier - Not enough points'
-    }
-  ]
-
-  const tiers = [
-    { name: 'Bronze', min: 0, max: 499, color: 'from-amber-600 to-amber-700', icon: '🥉' },
-    { name: 'Silver', min: 500, max: 999, color: 'from-gray-400 to-gray-500', icon: '🥈' },
-    { name: 'Gold', min: 1000, max: 1499, color: 'from-yellow-400 to-yellow-500', icon: '🥇' },
-    { name: 'Platinum', min: 1500, max: 2499, color: 'from-purple-400 to-purple-500', icon: '💎' },
-    { name: 'Diamond', min: 2500, max: Infinity, color: 'from-blue-400 to-blue-500', icon: '💠' }
-  ]
-
-  const getCurrentTier = () => {
-    return tiers.find(tier => currentPoints >= tier.min && currentPoints <= tier.max)
+    return icons[tierName] || '⭐'
   }
 
-  const getNextTierInfo = () => {
-    const currentTierIndex = tiers.findIndex(tier => tier.name === currentTier)
-    if (currentTierIndex < tiers.length - 1) {
-      return tiers[currentTierIndex + 1]
+  // Tier color mapping
+  const getTierColor = (tierName) => {
+    const colors = {
+      'Bronze': 'from-amber-600 to-amber-700',
+      'Silver': 'from-gray-400 to-gray-500',
+      'Gold': 'from-yellow-500 to-yellow-600',
+      'Platinum': 'from-purple-500 to-purple-600'
     }
-    return null
+    return colors[tierName] || 'from-gray-400 to-gray-500'
   }
 
-  const getProgressPercentage = () => {
-    const currentTierInfo = getCurrentTier()
-    const nextTierInfo = getNextTierInfo()
-    
-    if (!nextTierInfo) return 100
-    
-    const progress = currentPoints - currentTierInfo.min
-    const total = nextTierInfo.min - currentTierInfo.min
-    
-    return (progress / total) * 100
-  }
-
-  const handleRedeemReward = (reward) => {
-    if (reward.available && currentPoints >= reward.pointsCost) {
-      if (window.confirm(`Redeem ${reward.name} for ${reward.pointsCost} points?`)) {
-        alert('Reward redeemed successfully! Check your vouchers.')
-      }
+  const handleBack = () => {
+    if (onBack) {
+      onBack()
+    } else {
+      navigate('/customer/dashboard')
     }
   }
 
-  const currentTierInfo = getCurrentTier()
-  const nextTierInfo = getNextTierInfo()
+  // Loading state
+  if (ledger === undefined || tierProgress === undefined) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)] mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading rewards...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-accent-cream to-white py-8">
+    <div className="min-h-screen bg-[#0A0A0A]">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 mb-8">
-        <button
-          onClick={onBack}
-          className="flex items-center space-x-2 px-4 py-3 text-gray-dark hover:text-primary-orange font-semibold rounded-2xl hover:bg-white/50 transition-all duration-200"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span>Back to Home</span>
-        </button>
-        <div className="text-right">
-          <p className="text-sm font-bold text-primary-black">Loyalty Rewards</p>
-          <p className="text-xs text-gray-dark">{currentTier} Member</p>
-        </div>
-      </div>
-
-      {/* Title */}
-      <div className="text-center mb-8 px-4">
-        <div className="w-20 h-20 bg-gradient-to-br from-primary-orange to-primary-orange-light rounded-full flex items-center justify-center mx-auto mb-4 shadow-2xl">
-          <Star className="w-10 h-10 text-white" />
-        </div>
-        <h1 className="text-3xl font-black text-primary-black mb-2">Loyalty Rewards</h1>
-        <p className="text-lg text-gray-dark font-medium">Earn points, unlock rewards</p>
-      </div>
-
-      <div className="space-y-8 px-4">
-        {/* Points Balance */}
-        <div className="bg-gradient-to-br from-primary-orange to-primary-orange-dark rounded-3xl p-8 shadow-2xl text-white">
-          <div className="text-center space-y-4">
-            <div className="text-6xl">{currentTierInfo?.icon}</div>
-            <div>
-              <h2 className="text-2xl font-black mb-2">{currentTier} Member</h2>
-              <div className="text-5xl font-black mb-2">{currentPoints.toLocaleString()}</div>
-              <p className="text-lg font-medium opacity-90">Available Points</p>
-            </div>
-            
-            {/* Progress to Next Tier */}
-            {nextTierInfo && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm font-medium">
-                  <span>{pointsToNextTier} points to {nextTier}</span>
-                  <span>{Math.round(getProgressPercentage())}%</span>
-                </div>
-                <div className="w-full bg-white/20 rounded-full h-3">
-                  <div 
-                    className="bg-white rounded-full h-3 transition-all duration-500"
-                    style={{ width: `${getProgressPercentage()}%` }}
-                  ></div>
-                </div>
-              </div>
-            )}
+      <div className="sticky top-0 z-40 bg-[#0A0A0A]/98 backdrop-blur-2xl border-b border-[#1A1A1A]">
+        <div className="max-w-md mx-auto px-4">
+          <div className="flex items-center justify-between py-4">
+            <button
+              onClick={handleBack}
+              className="flex items-center space-x-2 text-white"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm font-medium">Back</span>
+            </button>
+            <h1 className="text-lg font-bold text-white">Rewards</h1>
+            <div className="w-16" />
           </div>
         </div>
+      </div>
+
+      <div className="max-w-md mx-auto px-4 py-6 space-y-6 pb-24">
+        {/* Star Rewards Hero Card */}
+        <StarRewardsCard userId={user?._id} />
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white rounded-3xl p-6 shadow-xl border-2 border-gray-medium">
-            <div className="text-center">
-              <Trophy className="w-12 h-12 text-accent-coral mx-auto mb-3" />
-              <div className="text-2xl font-black text-primary-black mb-1">{lifetimePoints.toLocaleString()}</div>
-              <div className="text-sm font-semibold text-gray-dark">Lifetime Points</div>
-            </div>
-          </div>
-          <div className="bg-white rounded-3xl p-6 shadow-xl border-2 border-gray-medium">
-            <div className="text-center">
-              <TrendingUp className="w-12 h-12 text-primary-orange-light mx-auto mb-3" />
-              <div className="text-2xl font-black text-primary-black mb-1">12</div>
-              <div className="text-sm font-semibold text-gray-dark">Services Used</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Available Rewards */}
-        <div className="space-y-4">
-          <h2 className="text-2xl font-black text-primary-black flex items-center">
-            <Gift className="w-6 h-6 text-primary-orange mr-2" />
-            Available Rewards
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {rewards.map((reward) => (
-              <div
-                key={reward.id}
-                className={`bg-white rounded-3xl p-6 shadow-xl border-2 transition-all duration-300 ${
-                  reward.available && currentPoints >= reward.pointsCost
-                    ? 'border-green-200 hover:shadow-2xl hover:-translate-y-1 cursor-pointer'
-                    : reward.available
-                    ? 'border-yellow-200 opacity-75'
-                    : 'border-gray-200 opacity-50'
-                }`}
-                onClick={() => handleRedeemReward(reward)}
-              >
-                <div className="flex items-start space-x-4">
-                  <div className="text-4xl">{reward.icon}</div>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                        reward.available && currentPoints >= reward.pointsCost
-                          ? 'bg-green-100 text-green-700'
-                          : reward.available
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}>
-                        {reward.category}
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-black text-primary-black mb-2">{reward.name}</h3>
-                    <p className="text-sm text-gray-dark font-medium mb-3">{reward.description}</p>
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center space-x-1">
-                        <Star className="w-5 h-5 text-primary-orange" />
-                        <span className="text-lg font-black text-primary-orange">
-                          {reward.pointsCost.toLocaleString()}
-                        </span>
-                      </div>
-                      {reward.available && currentPoints >= reward.pointsCost && (
-                        <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                          AVAILABLE
-                        </span>
-                      )}
-                      {reward.available && currentPoints < reward.pointsCost && (
-                        <span className="text-xs font-bold text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full">
-                          {reward.pointsCost - currentPoints} MORE
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+          <div className="bg-[#1A1A1A] rounded-[20px] p-5 border border-[#2A2A2A]">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-[var(--color-gold)]/20 flex items-center justify-center">
+                <Star className="w-4 h-4 text-[var(--color-gold)]" />
               </div>
-            ))}
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Available</span>
+            </div>
+            <div className="text-2xl font-black text-white">{currentBalance.toLocaleString()}</div>
+            <div className="text-xs text-gray-500">Stars to redeem</div>
+          </div>
+
+          <div className="bg-[#1A1A1A] rounded-[20px] p-5 border border-[#2A2A2A]">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-green-400" />
+              </div>
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Lifetime</span>
+            </div>
+            <div className="text-2xl font-black text-white">{lifetimePoints.toLocaleString()}</div>
+            <div className="text-xs text-gray-500">Stars earned</div>
           </div>
         </div>
 
-        {/* Tier Benefits */}
-        <div className="space-y-4">
-          <h2 className="text-2xl font-black text-primary-black flex items-center">
-            <Crown className="w-6 h-6 text-primary-orange mr-2" />
+        {/* Membership Tiers */}
+        <div>
+          <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+            <Crown className="w-4 h-4 text-[var(--color-primary)]" />
             Membership Tiers
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tiers.map((tier, index) => {
-              const isCurrentTier = tier.name === currentTier
-              const isUnlocked = currentPoints >= tier.min
-              
+          </h3>
+          <div className="space-y-3">
+            {(allTiers || []).map((tier) => {
+              const isCurrentTier = currentTier?.name === tier.name
+              const isUnlocked = lifetimePoints >= (tier.min_points / 100)
+              const tierThreshold = tier.min_points / 100
+
               return (
                 <div
-                  key={tier.name}
-                  className={`bg-gradient-to-br ${tier.color} rounded-3xl p-6 shadow-xl text-white transition-all duration-300 ${
-                    isCurrentTier ? 'ring-4 ring-white shadow-2xl scale-105' : ''
-                  } ${!isUnlocked ? 'opacity-50' : ''}`}
+                  key={tier._id}
+                  className={`relative overflow-hidden rounded-[16px] p-4 border transition-all ${
+                    isCurrentTier
+                      ? 'border-[var(--color-primary)] bg-gradient-to-r from-[var(--color-primary)]/20 to-transparent'
+                      : isUnlocked
+                      ? 'border-[#2A2A2A] bg-[#1A1A1A]'
+                      : 'border-[#2A2A2A] bg-[#1A1A1A] opacity-50'
+                  }`}
                 >
-                  <div className="text-center">
-                    <div className="text-4xl mb-3">{tier.icon}</div>
-                    <h3 className="text-xl font-black mb-2">{tier.name}</h3>
-                    <p className="text-sm font-medium opacity-90 mb-2">
-                      {tier.min === 0 ? '0' : tier.min.toLocaleString()}{tier.max === Infinity ? '+' : ` - ${tier.max.toLocaleString()}`} points
-                    </p>
-                    {isCurrentTier && (
-                      <div className="bg-white/20 rounded-full px-3 py-1 text-xs font-bold">
-                        CURRENT TIER
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getTierColor(tier.name)} flex items-center justify-center`}>
+                        <span className="text-2xl">{getTierIcon(tier.name)}</span>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-white">{tier.name}</span>
+                          {isCurrentTier && (
+                            <span className="text-[10px] font-bold text-[var(--color-primary)] bg-[var(--color-primary)]/20 px-2 py-0.5 rounded-full">
+                              CURRENT
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {tierThreshold.toLocaleString()}+ lifetime stars
+                        </span>
+                      </div>
+                    </div>
+                    {isUnlocked ? (
+                      <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
+                        <svg className="w-3 h-3 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500">
+                        {(tierThreshold - lifetimePoints).toLocaleString()} more
                       </div>
                     )}
                   </div>
+
+                  {/* Benefits preview */}
+                  {tier.benefits && tier.benefits.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-[#2A2A2A]">
+                      <div className="flex flex-wrap gap-2">
+                        {tier.benefits.slice(0, 2).map((benefit, idx) => (
+                          <span key={idx} className="text-[10px] text-gray-400 bg-[#2A2A2A] px-2 py-1 rounded-full">
+                            {benefit}
+                          </span>
+                        ))}
+                        {tier.benefits.length > 2 && (
+                          <span className="text-[10px] text-gray-500">
+                            +{tier.benefits.length - 2} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -316,68 +208,112 @@ const LoyaltyPoints = ({ onBack }) => {
         </div>
 
         {/* Points History */}
-        <div className="space-y-4">
-          <h2 className="text-2xl font-black text-primary-black flex items-center">
-            <Zap className="w-6 h-6 text-primary-orange mr-2" />
+        <div>
+          <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+            <Zap className="w-4 h-4 text-[var(--color-primary)]" />
             Recent Activity
-          </h2>
-          <div className="bg-white rounded-3xl shadow-xl border-2 border-gray-medium divide-y divide-gray-medium">
-            {pointsHistory.map((entry) => (
-              <div key={entry.id} className="p-6 flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                    entry.type === 'earned' 
-                      ? 'bg-green-100' 
-                      : entry.type === 'bonus'
-                      ? 'bg-blue-100'
-                      : 'bg-red-100'
-                  }`}>
-                    {entry.type === 'earned' && <Star className="w-6 h-6 text-green-600" />}
-                    {entry.type === 'bonus' && <Gift className="w-6 h-6 text-blue-600" />}
-                    {entry.type === 'redeemed' && <Zap className="w-6 h-6 text-red-600" />}
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-primary-black">{entry.description}</h4>
-                    <p className="text-sm text-gray-dark font-medium">
-                      {new Date(entry.date).toLocaleDateString()}
-                    </p>
-                  </div>
+          </h3>
+          <div className="bg-[#1A1A1A] rounded-[20px] border border-[#2A2A2A] overflow-hidden">
+            {!pointsHistory || pointsHistory.length === 0 ? (
+              <div className="p-8 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-[#2A2A2A] flex items-center justify-center mx-auto mb-4">
+                  <Star className="w-7 h-7 text-gray-500" />
                 </div>
-                <div className={`text-lg font-black ${
-                  entry.points > 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {entry.points > 0 ? '+' : ''}{entry.points}
-                </div>
+                <p className="text-sm font-semibold text-gray-400">No activity yet</p>
+                <p className="text-xs text-gray-500 mt-1">Start earning stars with your next booking!</p>
               </div>
-            ))}
+            ) : (
+              <div className="divide-y divide-[#2A2A2A]">
+                {pointsHistory.map((entry) => {
+                  const points = entry.amount / 100
+                  const isPositive = entry.type === 'earn'
+
+                  // Generate display text based on source_type
+                  const getDescription = () => {
+                    if (entry.notes) return entry.notes
+                    switch (entry.source_type) {
+                      case 'payment': return 'Service Payment'
+                      case 'wallet_payment': return 'Wallet Payment Bonus'
+                      case 'top_up_bonus': return 'Top-up Bonus'
+                      case 'redemption': return 'Reward Redeemed'
+                      case 'manual_adjustment': return 'Points Adjustment'
+                      case 'expiry': return 'Points Expired'
+                      default: return entry.type
+                    }
+                  }
+
+                  return (
+                    <div key={entry._id} className="flex items-center justify-between p-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                          isPositive ? 'bg-green-500/20' : 'bg-red-500/20'
+                        }`}>
+                          {isPositive ? (
+                            <Star className="w-5 h-5 text-green-400" />
+                          ) : (
+                            <Gift className="w-5 h-5 text-red-400" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-white">{getDescription()}</p>
+                          <p className="text-xs text-gray-500">
+                            {new Date(entry.created_at).toLocaleDateString('en-PH', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className={`text-sm font-bold ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+                        {isPositive ? '+' : ''}{points.toLocaleString()} ★
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* How to Earn More Points */}
-        <div className="bg-gradient-to-br from-primary-orange to-primary-orange-dark rounded-3xl p-8 text-white">
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto">
-              <Star className="w-8 h-8" />
+        {/* How to Earn */}
+        <div className="relative overflow-hidden rounded-[20px] bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] p-6">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+
+          <div className="relative">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="w-5 h-5 text-white" />
+              <h3 className="text-lg font-bold text-white">How to Earn Stars</h3>
             </div>
-            <div>
-              <h3 className="text-2xl font-black mb-2">Earn More Points</h3>
-              <p className="text-lg font-medium opacity-90 mb-4">Every ₱1 spent = 1 point earned</p>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="font-bold mb-1">• Book Services</div>
-                  <div className="opacity-80">Earn 1 point per peso</div>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 bg-white/10 rounded-xl p-3">
+                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                  <span className="text-sm">✂️</span>
                 </div>
                 <div>
-                  <div className="font-bold mb-1">• Refer Friends</div>
-                  <div className="opacity-80">Get 200 bonus points</div>
+                  <p className="text-sm font-semibold text-white">Book Services</p>
+                  <p className="text-xs text-white/70">Earn 1 star per ₱1 spent</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 bg-white/10 rounded-xl p-3">
+                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                  <span className="text-sm">💳</span>
                 </div>
                 <div>
-                  <div className="font-bold mb-1">• Birthday Month</div>
-                  <div className="opacity-80">Double points all month</div>
+                  <p className="text-sm font-semibold text-white">Pay with Wallet</p>
+                  <p className="text-xs text-white/70">Get bonus stars on wallet payments</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 bg-white/10 rounded-xl p-3">
+                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                  <span className="text-sm">🎉</span>
                 </div>
                 <div>
-                  <div className="font-bold mb-1">• Complete Package</div>
-                  <div className="opacity-80">50% bonus points</div>
+                  <p className="text-sm font-semibold text-white">Flash Promos</p>
+                  <p className="text-xs text-white/70">Double stars during promotions</p>
                 </div>
               </div>
             </div>

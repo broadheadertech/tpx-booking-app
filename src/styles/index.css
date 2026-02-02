@@ -7,6 +7,12 @@
   --color-bg: #0A0A0A;
   --color-text: #FFFFFF;
   --color-muted: #333333;
+
+  /* Additional design tokens */
+  --color-card: #1A1A1A;
+  --color-card-hover: #242424;
+  --color-border: #2A2A2A;
+  --color-gold: #CBA258;
 }
 
 /* Custom scrollbar utilities */
@@ -19,7 +25,7 @@
   display: none;
 }
 
-/* Custom scrollbar for dark theme - matches project aesthetic */
+/* Custom scrollbar for dark theme */
 .custom-scrollbar::-webkit-scrollbar {
   width: 8px;
   height: 8px;

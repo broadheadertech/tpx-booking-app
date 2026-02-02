@@ -369,8 +369,8 @@ export const seedAll = mutation({
         created_at: now - (3 * 24 * 60 * 60 * 1000),
       });
 
-      // Create a customer user
-      await ctx.db.insert("users", {
+      // Create a customer user with wallet and points
+      const customerId = await ctx.db.insert("users", {
         username: "customer1",
         email: "customer@example.com",
         password: "password123",
@@ -384,6 +384,102 @@ export const seedAll = mutation({
         updatedAt: now,
       });
 
+      // Create wallet with ₱750 balance (₱500 real + ₱250 bonus)
+      await ctx.db.insert("wallets", {
+        user_id: customerId,
+        balance: 75000, // ₱750.00 in centavos
+        bonus_balance: 25000, // ₱250.00 bonus from top-ups
+        currency: "PHP",
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      // Create points ledger - 7500 points (integer ×100 format = 750000)
+      // This puts customer at Silver tier (threshold: 5000 points = 500000)
+      await ctx.db.insert("points_ledger", {
+        user_id: customerId,
+        current_balance: 750000, // 7500.00 points available
+        lifetime_earned: 850000, // 8500.00 points total earned
+        lifetime_redeemed: 100000, // 1000.00 points redeemed
+        last_activity_at: now,
+      });
+
+      // Add some points transaction history
+      await ctx.db.insert("points_transactions", {
+        user_id: customerId,
+        type: "earn",
+        amount: 500000, // 5000 points
+        balance_after: 500000,
+        source_type: "payment",
+        source_id: "initial-service-payment",
+        notes: "Points from service payment",
+        created_at: now - (7 * 24 * 60 * 60 * 1000), // 7 days ago
+      });
+
+      await ctx.db.insert("points_transactions", {
+        user_id: customerId,
+        type: "earn",
+        amount: 250000, // 2500 points
+        balance_after: 750000,
+        source_type: "wallet_payment",
+        source_id: "wallet-payment-1",
+        notes: "Bonus points from wallet payment (1.5x)",
+        created_at: now - (3 * 24 * 60 * 60 * 1000), // 3 days ago
+      });
+
+      await ctx.db.insert("points_transactions", {
+        user_id: customerId,
+        type: "earn",
+        amount: 100000, // 1000 points
+        balance_after: 850000,
+        source_type: "top_up_bonus",
+        source_id: "topup-bonus-1",
+        notes: "Bonus points from wallet top-up",
+        created_at: now - (1 * 24 * 60 * 60 * 1000), // 1 day ago
+      });
+
+      await ctx.db.insert("points_transactions", {
+        user_id: customerId,
+        type: "redeem",
+        amount: -100000, // -1000 points
+        balance_after: 750000,
+        source_type: "redemption",
+        source_id: "reward-redemption-1",
+        notes: "Redeemed for free haircut",
+        created_at: now - (12 * 60 * 60 * 1000), // 12 hours ago
+      });
+
+      // Create wallet transaction history
+      await ctx.db.insert("wallet_transactions", {
+        user_id: customerId,
+        type: "topup",
+        amount: 50000, // ₱500.00 top-up
+        status: "completed",
+        reference_id: "TOPUP-001",
+        description: "GCash top-up with ₱50 bonus",
+        createdAt: now - (5 * 24 * 60 * 60 * 1000), // 5 days ago
+      });
+
+      await ctx.db.insert("wallet_transactions", {
+        user_id: customerId,
+        type: "topup",
+        amount: 30000, // ₱300.00 top-up
+        status: "completed",
+        reference_id: "TOPUP-002",
+        description: "Maya top-up",
+        createdAt: now - (2 * 24 * 60 * 60 * 1000), // 2 days ago
+      });
+
+      await ctx.db.insert("wallet_transactions", {
+        user_id: customerId,
+        type: "payment",
+        amount: -5000, // ₱50.00 payment
+        status: "completed",
+        reference_id: "PAY-001",
+        description: "Haircut service payment",
+        createdAt: now - (1 * 24 * 60 * 60 * 1000), // 1 day ago
+      });
+
       return {
         success: true,
         message: "Seed data created successfully",
@@ -393,6 +489,13 @@ export const seedAll = mutation({
           users: 6,
           barbers: 3,
           timeAttendanceRecords: 10,
+          customer: {
+            email: "customer@example.com",
+            password: "password123",
+            wallet_balance: "₱750.00",
+            points_balance: "7,500 pts",
+            tier: "Silver (8,500 lifetime pts)",
+          },
         },
       };
     }
@@ -456,6 +559,30 @@ export const clearAndSeed = mutation({
     const attendanceRecords = await ctx.db.query("timeAttendance").collect();
     for (const record of attendanceRecords) {
       await ctx.db.delete(record._id);
+    }
+
+    // Clear wallets
+    const wallets = await ctx.db.query("wallets").collect();
+    for (const wallet of wallets) {
+      await ctx.db.delete(wallet._id);
+    }
+
+    // Clear wallet transactions
+    const walletTxns = await ctx.db.query("wallet_transactions").collect();
+    for (const txn of walletTxns) {
+      await ctx.db.delete(txn._id);
+    }
+
+    // Clear points ledger
+    const pointsLedgers = await ctx.db.query("points_ledger").collect();
+    for (const ledger of pointsLedgers) {
+      await ctx.db.delete(ledger._id);
+    }
+
+    // Clear points transactions
+    const pointsTxns = await ctx.db.query("points_transactions").collect();
+    for (const txn of pointsTxns) {
+      await ctx.db.delete(txn._id);
     }
 
     // Clear barbers
@@ -786,8 +913,8 @@ export const clearAndSeed = mutation({
       created_at: now - (3 * 24 * 60 * 60 * 1000),
     });
 
-    // Create a customer
-    await ctx.db.insert("users", {
+    // Create a customer with wallet and points
+    const customerId = await ctx.db.insert("users", {
       username: "customer1",
       email: "customer@example.com",
       password: "password123",
@@ -801,6 +928,102 @@ export const clearAndSeed = mutation({
       updatedAt: now,
     });
 
+    // Create wallet with ₱750 balance (₱500 real + ₱250 bonus)
+    await ctx.db.insert("wallets", {
+      user_id: customerId,
+      balance: 75000, // ₱750.00 in centavos
+      bonus_balance: 25000, // ₱250.00 bonus from top-ups
+      currency: "PHP",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create points ledger - 7500 points (integer ×100 format = 750000)
+    // This puts customer at Silver tier (threshold: 5000 points = 500000)
+    await ctx.db.insert("points_ledger", {
+      user_id: customerId,
+      current_balance: 750000, // 7500.00 points available
+      lifetime_earned: 850000, // 8500.00 points total earned
+      lifetime_redeemed: 100000, // 1000.00 points redeemed
+      last_activity_at: now,
+    });
+
+    // Add some points transaction history
+    await ctx.db.insert("points_transactions", {
+      user_id: customerId,
+      type: "earn",
+      amount: 500000, // 5000 points
+      balance_after: 500000,
+      source_type: "payment",
+      source_id: "initial-service-payment",
+      notes: "Points from service payment",
+      created_at: now - (7 * 24 * 60 * 60 * 1000), // 7 days ago
+    });
+
+    await ctx.db.insert("points_transactions", {
+      user_id: customerId,
+      type: "earn",
+      amount: 250000, // 2500 points
+      balance_after: 750000,
+      source_type: "wallet_payment",
+      source_id: "wallet-payment-1",
+      notes: "Bonus points from wallet payment (1.5x)",
+      created_at: now - (3 * 24 * 60 * 60 * 1000), // 3 days ago
+    });
+
+    await ctx.db.insert("points_transactions", {
+      user_id: customerId,
+      type: "earn",
+      amount: 100000, // 1000 points
+      balance_after: 850000,
+      source_type: "top_up_bonus",
+      source_id: "topup-bonus-1",
+      notes: "Bonus points from wallet top-up",
+      created_at: now - (1 * 24 * 60 * 60 * 1000), // 1 day ago
+    });
+
+    await ctx.db.insert("points_transactions", {
+      user_id: customerId,
+      type: "redeem",
+      amount: -100000, // -1000 points
+      balance_after: 750000,
+      source_type: "redemption",
+      source_id: "reward-redemption-1",
+      notes: "Redeemed for free haircut",
+      created_at: now - (12 * 60 * 60 * 1000), // 12 hours ago
+    });
+
+    // Create wallet transaction history
+    await ctx.db.insert("wallet_transactions", {
+      user_id: customerId,
+      type: "topup",
+      amount: 50000, // ₱500.00 top-up
+      status: "completed",
+      reference_id: "TOPUP-001",
+      description: "GCash top-up with ₱50 bonus",
+      createdAt: now - (5 * 24 * 60 * 60 * 1000), // 5 days ago
+    });
+
+    await ctx.db.insert("wallet_transactions", {
+      user_id: customerId,
+      type: "topup",
+      amount: 30000, // ₱300.00 top-up
+      status: "completed",
+      reference_id: "TOPUP-002",
+      description: "Maya top-up",
+      createdAt: now - (2 * 24 * 60 * 60 * 1000), // 2 days ago
+    });
+
+    await ctx.db.insert("wallet_transactions", {
+      user_id: customerId,
+      type: "payment",
+      amount: -5000, // ₱50.00 payment
+      status: "completed",
+      reference_id: "PAY-001",
+      description: "Haircut service payment",
+      createdAt: now - (1 * 24 * 60 * 60 * 1000), // 1 day ago
+    });
+
     return {
       success: true,
       message: "Data cleared and re-seeded successfully",
@@ -810,6 +1033,13 @@ export const clearAndSeed = mutation({
         users: 6,
         barbers: 3,
         timeAttendanceRecords: 11,
+        customer: {
+          email: "customer@example.com",
+          password: "password123",
+          wallet_balance: "₱750.00",
+          points_balance: "7,500 pts",
+          tier: "Silver (8,500 lifetime pts)",
+        },
       },
     };
   },
@@ -837,6 +1067,93 @@ export const getSeedStatus = query({
       bookings: bookings.length,
       branchList: branches.map(b => ({ id: b._id, name: b.name, code: b.branch_code })),
       barberList: barbers.map(b => ({ id: b._id, name: b.full_name, branch_id: b.branch_id })),
+      userList: users.map(u => ({
+        id: u._id,
+        email: u.email,
+        role: u.role,
+        clerk_user_id: u.clerk_user_id || null,
+      })),
+    };
+  },
+});
+
+/**
+ * List all wallets in the database (debug function)
+ */
+export const listAllWallets = query({
+  args: {},
+  handler: async (ctx) => {
+    const wallets = await ctx.db.query("wallets").collect();
+    const result = [];
+
+    for (const w of wallets) {
+      const user = await ctx.db.get(w.user_id);
+      result.push({
+        wallet_id: w._id,
+        user_id: w.user_id,
+        user_email: user?.email || "unknown",
+        balance: w.balance / 100,
+        bonus_balance: (w.bonus_balance || 0) / 100,
+        updatedAt: new Date(w.updatedAt).toISOString(),
+      });
+    }
+
+    return result;
+  },
+});
+
+/**
+ * Check wallet and points status for a user by email
+ */
+export const checkUserWallet = query({
+  args: {
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Find user by email
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+
+    if (!user) {
+      return { found: false, message: `User "${args.email}" not found` };
+    }
+
+    // Get wallet
+    const wallet = await ctx.db
+      .query("wallets")
+      .withIndex("by_user", (q) => q.eq("user_id", user._id))
+      .first();
+
+    // Get points ledger
+    const points = await ctx.db
+      .query("points_ledger")
+      .withIndex("by_user", (q) => q.eq("user_id", user._id))
+      .first();
+
+    return {
+      found: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        clerk_user_id: user.clerk_user_id,
+      },
+      wallet: wallet
+        ? {
+            balance: wallet.balance / 100, // Convert centavos to pesos
+            bonus_balance: (wallet.bonus_balance || 0) / 100,
+            currency: wallet.currency,
+          }
+        : null,
+      points: points
+        ? {
+            current_balance: points.current_balance / 100, // Convert ×100 to actual
+            lifetime_earned: points.lifetime_earned / 100,
+            lifetime_redeemed: points.lifetime_redeemed / 100,
+          }
+        : null,
     };
   },
 });
@@ -1067,6 +1384,677 @@ export const clearBookingsAndReseed = mutation({
     return {
       success: true,
       message: `Cleared ${existingBookings.length} bookings. Run seedBookingsAndEarnings to create new ones.`,
+    };
+  },
+});
+
+/**
+ * Add loyalty data (wallet + points) to an existing user by email
+ * Use this after signing up through Clerk to get test data
+ */
+export const addLoyaltyDataToUser = mutation({
+  args: {
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // Find user by email
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+
+    if (!user) {
+      return {
+        success: false,
+        message: `User with email "${args.email}" not found. Please sign up first.`,
+      };
+    }
+
+    // Check if user already has wallet
+    const existingWallet = await ctx.db
+      .query("wallets")
+      .withIndex("by_user", (q) => q.eq("user_id", user._id))
+      .first();
+
+    if (existingWallet) {
+      return {
+        success: false,
+        message: "User already has wallet data. No changes made.",
+      };
+    }
+
+    // Create wallet with ₱750 balance
+    await ctx.db.insert("wallets", {
+      user_id: user._id,
+      balance: 75000, // ₱750.00 in centavos
+      bonus_balance: 25000, // ₱250.00 bonus
+      currency: "PHP",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create points ledger - 7500 points (Silver tier)
+    await ctx.db.insert("points_ledger", {
+      user_id: user._id,
+      current_balance: 750000, // 7500.00 points
+      lifetime_earned: 850000, // 8500.00 points total
+      lifetime_redeemed: 100000, // 1000.00 points redeemed
+      last_activity_at: now,
+    });
+
+    // Add points transaction history
+    await ctx.db.insert("points_transactions", {
+      user_id: user._id,
+      type: "earn",
+      amount: 500000,
+      balance_after: 500000,
+      source_type: "payment",
+      source_id: "seeded-payment-1",
+      notes: "Points from service payment (seeded)",
+      created_at: now - (7 * 24 * 60 * 60 * 1000),
+    });
+
+    await ctx.db.insert("points_transactions", {
+      user_id: user._id,
+      type: "earn",
+      amount: 250000,
+      balance_after: 750000,
+      source_type: "wallet_payment",
+      source_id: "seeded-wallet-1",
+      notes: "Bonus points from wallet payment (seeded)",
+      created_at: now - (3 * 24 * 60 * 60 * 1000),
+    });
+
+    await ctx.db.insert("points_transactions", {
+      user_id: user._id,
+      type: "earn",
+      amount: 100000,
+      balance_after: 850000,
+      source_type: "top_up_bonus",
+      source_id: "seeded-topup-1",
+      notes: "Bonus points from wallet top-up (seeded)",
+      created_at: now - (1 * 24 * 60 * 60 * 1000),
+    });
+
+    await ctx.db.insert("points_transactions", {
+      user_id: user._id,
+      type: "redeem",
+      amount: -100000,
+      balance_after: 750000,
+      source_type: "redemption",
+      source_id: "seeded-redeem-1",
+      notes: "Redeemed for free haircut (seeded)",
+      created_at: now - (12 * 60 * 60 * 1000),
+    });
+
+    // Create wallet transaction history
+    await ctx.db.insert("wallet_transactions", {
+      user_id: user._id,
+      type: "topup",
+      amount: 50000,
+      status: "completed",
+      reference_id: "SEEDED-TOPUP-001",
+      description: "GCash top-up (seeded)",
+      createdAt: now - (5 * 24 * 60 * 60 * 1000),
+    });
+
+    await ctx.db.insert("wallet_transactions", {
+      user_id: user._id,
+      type: "topup",
+      amount: 30000,
+      status: "completed",
+      reference_id: "SEEDED-TOPUP-002",
+      description: "Maya top-up (seeded)",
+      createdAt: now - (2 * 24 * 60 * 60 * 1000),
+    });
+
+    return {
+      success: true,
+      message: "Loyalty data added successfully!",
+      data: {
+        email: args.email,
+        wallet_balance: "₱750.00",
+        points_balance: "7,500 pts",
+        tier: "Silver (8,500 lifetime pts)",
+      },
+    };
+  },
+});
+
+/**
+ * Link a Clerk user ID to an existing user by email
+ * Use this to connect your Clerk account to the seeded customer
+ */
+export const linkClerkToUser = mutation({
+  args: {
+    email: v.string(),
+    clerkUserId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Find user by email
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+
+    if (!user) {
+      return {
+        success: false,
+        message: `User with email "${args.email}" not found.`,
+      };
+    }
+
+    if (user.clerk_user_id) {
+      return {
+        success: false,
+        message: `User already has a Clerk ID linked: ${user.clerk_user_id}`,
+      };
+    }
+
+    // Update user with clerk_user_id
+    await ctx.db.patch(user._id, {
+      clerk_user_id: args.clerkUserId,
+      migration_status: "completed",
+      updatedAt: Date.now(),
+    });
+
+    return {
+      success: true,
+      message: `Successfully linked Clerk ID to ${args.email}`,
+      data: {
+        userId: user._id,
+        email: args.email,
+        clerkUserId: args.clerkUserId,
+        role: user.role,
+      },
+    };
+  },
+});
+
+/**
+ * Seed loyalty data to ALL customers who don't have wallet yet
+ * Run this after signing up through Clerk to auto-add test data
+ */
+export const seedAllCustomerLoyalty = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+
+    // Find all customers
+    const customers = await ctx.db
+      .query("users")
+      .withIndex("by_role", (q) => q.eq("role", "customer"))
+      .collect();
+
+    const results: { email: string; status: string }[] = [];
+
+    for (const customer of customers) {
+      // Check if customer already has wallet
+      const existingWallet = await ctx.db
+        .query("wallets")
+        .withIndex("by_user", (q) => q.eq("user_id", customer._id))
+        .first();
+
+      if (existingWallet) {
+        results.push({ email: customer.email, status: "skipped (has wallet)" });
+        continue;
+      }
+
+      // Create wallet with ₱750 balance
+      await ctx.db.insert("wallets", {
+        user_id: customer._id,
+        balance: 75000,
+        bonus_balance: 25000,
+        currency: "PHP",
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      // Create points ledger
+      await ctx.db.insert("points_ledger", {
+        user_id: customer._id,
+        current_balance: 750000,
+        lifetime_earned: 850000,
+        lifetime_redeemed: 100000,
+        last_activity_at: now,
+      });
+
+      // Add points transactions
+      await ctx.db.insert("points_transactions", {
+        user_id: customer._id,
+        type: "earn",
+        amount: 500000,
+        balance_after: 500000,
+        source_type: "payment",
+        source_id: "seeded-payment",
+        notes: "Seeded points from service payment",
+        created_at: now - (7 * 24 * 60 * 60 * 1000),
+      });
+
+      await ctx.db.insert("points_transactions", {
+        user_id: customer._id,
+        type: "earn",
+        amount: 250000,
+        balance_after: 750000,
+        source_type: "wallet_payment",
+        source_id: "seeded-wallet",
+        notes: "Seeded bonus points from wallet payment",
+        created_at: now - (3 * 24 * 60 * 60 * 1000),
+      });
+
+      await ctx.db.insert("points_transactions", {
+        user_id: customer._id,
+        type: "earn",
+        amount: 100000,
+        balance_after: 850000,
+        source_type: "top_up_bonus",
+        source_id: "seeded-topup",
+        notes: "Seeded bonus points from top-up",
+        created_at: now - (1 * 24 * 60 * 60 * 1000),
+      });
+
+      await ctx.db.insert("points_transactions", {
+        user_id: customer._id,
+        type: "redeem",
+        amount: -100000,
+        balance_after: 750000,
+        source_type: "redemption",
+        source_id: "seeded-redeem",
+        notes: "Seeded redemption",
+        created_at: now - (12 * 60 * 60 * 1000),
+      });
+
+      // Add wallet transactions
+      await ctx.db.insert("wallet_transactions", {
+        user_id: customer._id,
+        type: "topup",
+        amount: 50000,
+        status: "completed",
+        reference_id: `SEED-${customer._id.slice(-6)}`,
+        description: "Seeded top-up",
+        createdAt: now - (5 * 24 * 60 * 60 * 1000),
+      });
+
+      results.push({ email: customer.email, status: "added loyalty data" });
+    }
+
+    return {
+      success: true,
+      message: `Processed ${customers.length} customers`,
+      results,
+    };
+  },
+});
+
+/**
+ * Register a customer with Clerk ID and seed loyalty data
+ * USE THIS TO BYPASS WEBHOOK - manually register your Clerk account
+ *
+ * How to use:
+ * 1. Sign up/login through Clerk in the app
+ * 2. Get your Clerk user ID from Clerk Dashboard or browser console
+ * 3. Run this mutation with your email and clerk_user_id
+ * 4. Refresh the app - you should now be logged in with loyalty data!
+ */
+export const registerCustomerWithClerkId = mutation({
+  args: {
+    email: v.string(),
+    clerk_user_id: v.string(),
+    name: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // Check if clerk_user_id is already registered
+    const existingByClerkId = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_user_id", (q) => q.eq("clerk_user_id", args.clerk_user_id))
+      .first();
+
+    if (existingByClerkId) {
+      // User exists - check if they have loyalty data
+      const wallet = await ctx.db
+        .query("wallets")
+        .withIndex("by_user", (q) => q.eq("user_id", existingByClerkId._id))
+        .first();
+
+      if (wallet) {
+        return {
+          success: true,
+          message: "User already exists with loyalty data!",
+          data: {
+            userId: existingByClerkId._id,
+            email: existingByClerkId.email,
+            hasLoyaltyData: true,
+          },
+        };
+      }
+
+      // Add loyalty data to existing user
+      await seedLoyaltyData(ctx, existingByClerkId._id, args.clerk_user_id);
+
+      return {
+        success: true,
+        message: "Loyalty data added to existing user!",
+        data: {
+          userId: existingByClerkId._id,
+          email: existingByClerkId.email,
+          wallet: "₱750.00",
+          points: "7,500 pts",
+        },
+      };
+    }
+
+    // Check if email is already registered (link to existing user)
+    const existingByEmail = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+
+    if (existingByEmail) {
+      // Link clerk_user_id to existing user
+      await ctx.db.patch(existingByEmail._id, {
+        clerk_user_id: args.clerk_user_id,
+        migration_status: "completed",
+        updatedAt: now,
+      });
+
+      // Check if they have loyalty data
+      const wallet = await ctx.db
+        .query("wallets")
+        .withIndex("by_user", (q) => q.eq("user_id", existingByEmail._id))
+        .first();
+
+      if (!wallet) {
+        await seedLoyaltyData(ctx, existingByEmail._id, args.clerk_user_id);
+      }
+
+      return {
+        success: true,
+        message: "Clerk ID linked to existing user!",
+        data: {
+          userId: existingByEmail._id,
+          email: existingByEmail.email,
+          clerkUserId: args.clerk_user_id,
+          wallet: "₱750.00",
+          points: "7,500 pts",
+        },
+      };
+    }
+
+    // Create new user
+    const username = args.email.split("@")[0] + "_" + args.clerk_user_id.slice(-6);
+    const fullName = args.name || "Test Customer";
+
+    const userId = await ctx.db.insert("users", {
+      email: args.email,
+      username: username,
+      nickname: fullName,
+      password: "", // Clerk manages authentication
+      mobile_number: "",
+      role: "customer",
+      clerk_user_id: args.clerk_user_id,
+      migration_status: "completed",
+      is_active: true,
+      isVerified: true,
+      skills: [],
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Seed loyalty data
+    await seedLoyaltyData(ctx, userId, args.clerk_user_id);
+
+    return {
+      success: true,
+      message: "Customer registered with loyalty data!",
+      data: {
+        userId,
+        email: args.email,
+        clerkUserId: args.clerk_user_id,
+        wallet: "₱750.00",
+        bonus: "₱250.00",
+        points: "7,500 pts (Silver tier)",
+        tier: "Silver",
+      },
+    };
+  },
+});
+
+/**
+ * Helper function to seed loyalty data (wallet + points) for a user
+ */
+async function seedLoyaltyData(
+  ctx: { db: any },
+  userId: any,
+  clerkUserId: string
+) {
+  const now = Date.now();
+
+  // Create wallet with ₱750 balance + ₱250 bonus
+  await ctx.db.insert("wallets", {
+    user_id: userId,
+    balance: 75000, // ₱750.00 in centavos
+    bonus_balance: 25000, // ₱250.00 bonus
+    currency: "PHP",
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  // Create points ledger - 7,500 points (Silver tier threshold: 5,000)
+  await ctx.db.insert("points_ledger", {
+    user_id: userId,
+    current_balance: 750000, // 7,500.00 points (×100 format)
+    lifetime_earned: 850000, // 8,500.00 points total
+    lifetime_redeemed: 100000, // 1,000.00 points redeemed
+    last_activity_at: now,
+  });
+
+  // Add points transaction history
+  await ctx.db.insert("points_transactions", {
+    user_id: userId,
+    type: "earn",
+    amount: 500000,
+    balance_after: 500000,
+    source_type: "payment",
+    source_id: "welcome-bonus",
+    notes: "Welcome bonus points",
+    created_at: now - 7 * 24 * 60 * 60 * 1000,
+  });
+
+  await ctx.db.insert("points_transactions", {
+    user_id: userId,
+    type: "earn",
+    amount: 250000,
+    balance_after: 750000,
+    source_type: "wallet_payment",
+    source_id: "signup-wallet-bonus",
+    notes: "Signup wallet payment bonus",
+    created_at: now - 3 * 24 * 60 * 60 * 1000,
+  });
+
+  await ctx.db.insert("points_transactions", {
+    user_id: userId,
+    type: "earn",
+    amount: 100000,
+    balance_after: 850000,
+    source_type: "top_up_bonus",
+    source_id: "signup-topup-bonus",
+    notes: "Signup top-up bonus",
+    created_at: now - 1 * 24 * 60 * 60 * 1000,
+  });
+
+  await ctx.db.insert("points_transactions", {
+    user_id: userId,
+    type: "redeem",
+    amount: -100000,
+    balance_after: 750000,
+    source_type: "redemption",
+    source_id: "signup-redemption",
+    notes: "Signup redemption sample",
+    created_at: now - 12 * 60 * 60 * 1000,
+  });
+
+  // Add wallet transaction history
+  await ctx.db.insert("wallet_transactions", {
+    user_id: userId,
+    type: "topup",
+    amount: 50000,
+    status: "completed",
+    reference_id: `SIGNUP-${clerkUserId.slice(-6)}`,
+    description: "Welcome top-up bonus",
+    createdAt: now - 5 * 24 * 60 * 60 * 1000,
+    updatedAt: now - 5 * 24 * 60 * 60 * 1000,
+  });
+
+  await ctx.db.insert("wallet_transactions", {
+    user_id: userId,
+    type: "topup",
+    amount: 30000,
+    status: "completed",
+    reference_id: `WELCOME-${clerkUserId.slice(-6)}`,
+    description: "Welcome bonus credit",
+    createdAt: now - 2 * 24 * 60 * 60 * 1000,
+    updatedAt: now - 2 * 24 * 60 * 60 * 1000,
+  });
+}
+
+/**
+ * Seed a test customer with wallet and points
+ * Run via: npx convex run seed:seedTestCustomer
+ */
+export const seedTestCustomer = mutation({
+  args: {
+    email: v.optional(v.string()),
+    name: v.optional(v.string()),
+    walletBalance: v.optional(v.number()), // in pesos
+    points: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const email = args.email || "testcustomer@example.com";
+    const name = args.name || "Test Customer";
+    const walletBalanceCentavos = (args.walletBalance || 500) * 100; // Convert to centavos
+    const pointsX100 = (args.points || 5000) * 100; // Convert to x100 format
+
+    // Check if customer already exists
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
+
+    if (existingUser) {
+      // Update existing user's wallet and points
+      const wallet = await ctx.db
+        .query("wallets")
+        .withIndex("by_user", (q) => q.eq("user_id", existingUser._id))
+        .first();
+
+      if (wallet) {
+        await ctx.db.patch(wallet._id, {
+          balance: walletBalanceCentavos,
+          bonus_balance: Math.floor(walletBalanceCentavos * 0.1), // 10% bonus
+          updatedAt: now,
+        });
+      }
+
+      const pointsLedger = await ctx.db
+        .query("points_ledger")
+        .withIndex("by_user", (q) => q.eq("user_id", existingUser._id))
+        .first();
+
+      if (pointsLedger) {
+        await ctx.db.patch(pointsLedger._id, {
+          current_balance: pointsX100,
+          lifetime_earned: Math.floor(pointsX100 * 1.2),
+          last_activity_at: now,
+        });
+      }
+
+      return {
+        success: true,
+        action: "updated",
+        userId: existingUser._id,
+        email,
+        wallet: `₱${(walletBalanceCentavos / 100).toFixed(2)}`,
+        points: args.points || 5000,
+      };
+    }
+
+    // Create new test customer
+    const userId = await ctx.db.insert("users", {
+      email,
+      username: email.split("@")[0],
+      nickname: name,
+      password: "",
+      mobile_number: "+639123456789",
+      role: "customer",
+      is_active: true,
+      isVerified: true,
+      skills: [],
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create wallet with balance
+    await ctx.db.insert("wallets", {
+      user_id: userId,
+      balance: walletBalanceCentavos,
+      bonus_balance: Math.floor(walletBalanceCentavos * 0.1), // 10% bonus
+      currency: "PHP",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create points ledger
+    await ctx.db.insert("points_ledger", {
+      user_id: userId,
+      current_balance: pointsX100,
+      lifetime_earned: Math.floor(pointsX100 * 1.2),
+      lifetime_redeemed: Math.floor(pointsX100 * 0.2),
+      last_activity_at: now,
+    });
+
+    // Add some wallet transaction history
+    await ctx.db.insert("wallet_transactions", {
+      user_id: userId,
+      type: "topup",
+      amount: walletBalanceCentavos,
+      status: "completed",
+      reference_id: `SEED-${Date.now()}`,
+      description: "Initial top-up (seeded)",
+      createdAt: now - 3 * 24 * 60 * 60 * 1000,
+      updatedAt: now - 3 * 24 * 60 * 60 * 1000,
+    });
+
+    // Add some points transaction history
+    await ctx.db.insert("points_transactions", {
+      user_id: userId,
+      type: "earn",
+      amount: pointsX100,
+      balance_after: pointsX100,
+      source_type: "payment",
+      source_id: "seed-bonus",
+      notes: "Initial points (seeded)",
+      created_at: now - 3 * 24 * 60 * 60 * 1000,
+    });
+
+    console.log("[Seed] Created test customer:", {
+      userId,
+      email,
+      wallet: `₱${(walletBalanceCentavos / 100).toFixed(2)}`,
+      points: args.points || 5000,
+    });
+
+    return {
+      success: true,
+      action: "created",
+      userId,
+      email,
+      wallet: `₱${(walletBalanceCentavos / 100).toFixed(2)}`,
+      points: args.points || 5000,
     };
   },
 });

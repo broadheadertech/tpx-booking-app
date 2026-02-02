@@ -1,7 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-// Schema version: 2026-01-28v1 - Story 10.1: Added Clerk RBAC fields, page_access_v2, permissionAuditLog table
+// Schema version: 2026-01-29v2 - Story 19.1: Added loyalty_config and loyalty_config_audit tables for dynamic loyalty program settings
 export default defineSchema({
   // Branches table for multi-branch support
   branches: defineTable({
@@ -176,6 +176,10 @@ export default defineSchema({
       settings: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
     })),
     // ============================================================================
+
+    // VIP Tier (Customer Experience)
+    // References the tiers table - customers progress through Bronze→Silver→Gold→Platinum
+    current_tier_id: v.optional(v.id("tiers")), // null = Bronze (default), set on first points earn
 
     isVerified: v.boolean(),
     // Password reset fields
@@ -590,7 +594,9 @@ export default defineSchema({
       v.literal("cash"),
       v.literal("card"),
       v.literal("digital_wallet"),
-      v.literal("bank_transfer")
+      v.literal("bank_transfer"),
+      v.literal("wallet"), // Customer wallet payment
+      v.literal("combo") // Combination of points, wallet, and cash
     ),
     payment_status: v.union(
       v.literal("pending"),
@@ -601,6 +607,10 @@ export default defineSchema({
     notes: v.optional(v.string()),
     cash_received: v.optional(v.number()), // Amount of cash received for cash payments
     change_amount: v.optional(v.number()), // Change given back for cash payments
+    // Combo payment fields (for payment_method = "combo")
+    points_redeemed: v.optional(v.number()), // Integer ×100 format (e.g., 20000 = 200 pts = ₱200)
+    wallet_used: v.optional(v.number()), // Wallet amount deducted (e.g., 150 = ₱150)
+    cash_collected: v.optional(v.number()), // Cash portion collected (e.g., 150 = ₱150)
     receipt_number: v.string(),
     processed_by: v.id("users"), // Staff member who processed the transaction
     createdAt: v.number(),
@@ -1059,6 +1069,7 @@ export default defineSchema({
   wallets: defineTable({
     user_id: v.id("users"),
     balance: v.number(),
+    bonus_balance: v.optional(v.number()), // Bonus from top-ups (e.g., ₱500→₱550 gives ₱50 bonus)
     currency: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -1091,6 +1102,119 @@ export default defineSchema({
     .index("by_source", ["source_id"])
     .index("by_payment", ["payment_id"])
     .index("by_status", ["status"]),
+
+  // ============================================================================
+  // LOYALTY POINTS SYSTEM (Customer Experience)
+  // ============================================================================
+
+  // Points ledger - User balances and lifetime tracking (universal across branches)
+  // Integer ×100 storage pattern: 4575 = 45.75 points (avoids floating-point precision errors)
+  points_ledger: defineTable({
+    user_id: v.id("users"),
+    current_balance: v.number(), // Integer ×100 (4575 = 45.75 pts)
+    lifetime_earned: v.number(), // Integer ×100 - never decreases (used for tier promotion)
+    lifetime_redeemed: v.number(), // Integer ×100
+    last_activity_at: v.number(), // Unix timestamp (Date.now())
+  }).index("by_user", ["user_id"]),
+
+  // Points transactions - Full audit trail for all points operations
+  // Immutable records (no updates, only inserts) for complete audit history
+  points_transactions: defineTable({
+    user_id: v.id("users"),
+    branch_id: v.optional(v.id("branches")), // Optional for universal operations
+    type: v.union(
+      v.literal("earn"),
+      v.literal("redeem"),
+      v.literal("expire"),
+      v.literal("adjust")
+    ),
+    amount: v.number(), // Integer ×100 (positive for earn, negative for redeem)
+    balance_after: v.number(), // Integer ×100 - snapshot after transaction
+    source_type: v.union(
+      v.literal("payment"), // Points earned from service payment
+      v.literal("wallet_payment"), // Points earned from wallet (1.5x)
+      v.literal("redemption"), // Points redeemed for reward
+      v.literal("top_up_bonus"), // Bonus points from wallet top-up
+      v.literal("manual_adjustment"), // Admin adjustment
+      v.literal("expiry") // System expiry
+    ),
+    source_id: v.optional(v.string()), // ID of payment/redemption/etc
+    notes: v.optional(v.string()),
+    created_at: v.number(), // Unix timestamp
+  })
+    .index("by_user", ["user_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_type", ["type"])
+    .index("by_created_at", ["created_at"])
+    .index("by_user_created", ["user_id", "created_at"]),
+
+  // ============================================================================
+  // VIP TIER SYSTEM (Customer Experience)
+  // ============================================================================
+
+  // VIP Tiers - Bronze, Silver, Gold, Platinum
+  // Progression based on lifetime_earned points (not current balance)
+  tiers: defineTable({
+    name: v.string(), // "Bronze", "Silver", "Gold", "Platinum"
+    threshold: v.number(), // Minimum lifetime_earned points (×100 format): 0, 500000, 1500000, 5000000
+    display_order: v.number(), // 1, 2, 3, 4 for sorting
+    icon: v.string(), // Emoji or icon identifier
+    color: v.string(), // Hex color for badge display
+    is_active: v.optional(v.boolean()), // Allow disabling tiers
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_threshold", ["threshold"])
+    .index("by_name", ["name"])
+    .index("by_display_order", ["display_order"]),
+
+  // Tier Benefits - Perks for each tier level
+  tier_benefits: defineTable({
+    tier_id: v.id("tiers"),
+    benefit_type: v.union(
+      v.literal("points_multiplier"), // e.g., 1.05 for 5% bonus
+      v.literal("priority_booking"), // Access to priority slots
+      v.literal("free_service"), // Complimentary services
+      v.literal("discount"), // Percentage discount
+      v.literal("early_access"), // Early access to promos
+      v.literal("vip_line"), // Dedicated service line
+      v.literal("exclusive_event") // Member-only events
+    ),
+    benefit_value: v.number(), // Multiplier or percentage (e.g., 1.05 for 5% bonus)
+    description: v.string(), // Human-readable description
+    is_active: v.optional(v.boolean()),
+    created_at: v.number(),
+  })
+    .index("by_tier", ["tier_id"])
+    .index("by_type", ["benefit_type"]),
+
+  // Loyalty Configuration - Dynamic settings for loyalty program economics
+  // Super Admin configurable values that control points earning, multipliers, etc.
+  loyalty_config: defineTable({
+    config_key: v.string(), // Unique identifier: "base_earning_rate", "wallet_bonus_multiplier", etc.
+    config_value: v.string(), // JSON-encoded value for flexibility
+    config_type: v.union(
+      v.literal("number"),
+      v.literal("boolean"),
+      v.literal("string"),
+      v.literal("json")
+    ),
+    description: v.string(), // Human-readable description for admin UI
+    updated_at: v.number(),
+    updated_by: v.optional(v.id("users")), // Admin who last modified
+  }).index("by_key", ["config_key"]),
+
+  // Loyalty Config Audit Log - Track all configuration changes
+  loyalty_config_audit: defineTable({
+    config_key: v.string(),
+    old_value: v.optional(v.string()),
+    new_value: v.string(),
+    changed_by: v.id("users"),
+    changed_at: v.number(),
+    change_reason: v.optional(v.string()),
+  })
+    .index("by_key", ["config_key"])
+    .index("by_changed_at", ["changed_at"]),
 
   // Barber portfolio for Instagram-like gallery posts
   barber_portfolio: defineTable({
@@ -1129,6 +1253,49 @@ export default defineSchema({
     .index("by_barber", ["barber_id"])
     .index("by_type", ["achievement_type"])
     .index("by_created_at", ["createdAt"]),
+
+  // ============================================================================
+  // SOCIAL FEED POSTS (Instagram-style announcements & updates)
+  // ============================================================================
+  branch_posts: defineTable({
+    branch_id: v.id("branches"),
+    author_id: v.optional(v.id("users")), // Staff/Admin who created the post
+    barber_id: v.optional(v.id("barbers")), // If post is about a specific barber's work
+    post_type: v.union(
+      v.literal("announcement"), // General announcements
+      v.literal("showcase"), // Haircut showcase / portfolio
+      v.literal("promotion"), // Promo announcements
+      v.literal("event"), // Events like donation drives
+      v.literal("achievement"), // Barber achievements
+      v.literal("tip") // Grooming tips
+    ),
+    title: v.optional(v.string()),
+    content: v.string(), // Post caption/description
+    image_url: v.optional(v.string()), // Image URL
+    image_storage_id: v.optional(v.id("_storage")), // Or Convex storage
+    tags: v.optional(v.array(v.string())), // Hashtags
+    likes_count: v.number(),
+    is_pinned: v.optional(v.boolean()), // Pinned posts appear first
+    is_active: v.boolean(),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_type", ["post_type"])
+    .index("by_barber", ["barber_id"])
+    .index("by_pinned", ["is_pinned"])
+    .index("by_active_created", ["is_active", "created_at"])
+    .index("by_created", ["created_at"]),
+
+  // Post likes tracking
+  post_likes: defineTable({
+    post_id: v.id("branch_posts"),
+    user_id: v.id("users"),
+    created_at: v.number(),
+  })
+    .index("by_post", ["post_id"])
+    .index("by_user", ["user_id"])
+    .index("by_post_user", ["post_id", "user_id"]),
 
   // Email templates for customizable email content
   email_templates: defineTable({
@@ -2199,4 +2366,164 @@ export default defineSchema({
     .index("by_user", ["user_id"])
     .index("by_changed_by", ["changed_by"])
     .index("by_created_at", ["created_at"]),
+
+  // ============================================================================
+  // FLASH PROMOTIONS (Epic 20 - Customer Experience)
+  // ============================================================================
+  // Time-limited promotional events with bonus points, multipliers, etc.
+  // ============================================================================
+
+  flash_promotions: defineTable({
+    // Basic Info
+    name: v.string(),
+    description: v.optional(v.string()),
+
+    // Promo Type and Value
+    type: v.union(
+      v.literal("bonus_points"),    // Multiplier on points (e.g., 2x)
+      v.literal("flat_bonus"),      // Flat points added (e.g., +500)
+      v.literal("wallet_bonus")     // Extra wallet credit on top-up
+    ),
+    multiplier: v.optional(v.number()),    // For bonus_points type (e.g., 2.0 = 2x)
+    flat_amount: v.optional(v.number()),   // For flat_bonus/wallet_bonus (×100 format)
+
+    // Scope
+    branch_id: v.optional(v.id("branches")), // null = system-wide
+    is_template: v.optional(v.boolean()),    // Super Admin templates
+
+    // Eligibility Rules
+    tier_requirement: v.optional(v.union(
+      v.literal("bronze"),
+      v.literal("silver"),
+      v.literal("gold"),
+      v.literal("platinum")
+    )),
+    min_purchase: v.optional(v.number()),         // Minimum purchase amount
+    new_customers_only: v.optional(v.boolean()),  // Only for first-time customers
+    max_uses: v.optional(v.number()),             // Total uses allowed (null = unlimited)
+    max_uses_per_user: v.optional(v.number()),    // Per-user limit (default 1)
+
+    // Dates
+    start_at: v.number(),
+    end_at: v.number(),
+
+    // Status
+    status: v.union(
+      v.literal("draft"),
+      v.literal("scheduled"),
+      v.literal("active"),
+      v.literal("ended"),
+      v.literal("cancelled")
+    ),
+
+    // Usage Tracking
+    total_uses: v.number(),           // Counter for total uses
+
+    // Audit
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"])
+    .index("by_dates", ["start_at", "end_at"])
+    .index("by_branch_status", ["branch_id", "status"]),
+
+  // Promo Usage Tracking - tracks which customers used which promos
+  promo_usage: defineTable({
+    promo_id: v.id("flash_promotions"),
+    user_id: v.id("users"),
+    branch_id: v.optional(v.id("branches")),
+    transaction_id: v.optional(v.string()),   // Payment or transaction ID
+    points_earned: v.number(),                // Total points with promo (×100)
+    bonus_points: v.number(),                 // Extra points from promo (×100)
+    used_at: v.number(),
+  })
+    .index("by_promo", ["promo_id"])
+    .index("by_user", ["user_id"])
+    .index("by_promo_user", ["promo_id", "user_id"]),
+
+  // ============================================================================
+  // MULTI-BRANCH WALLET PAYMENT SYSTEM (Epic 21-26)
+  // Tables: walletConfig, branchWalletSettings, branchWalletEarnings, branchSettlements
+  // ============================================================================
+
+  // Super Admin Wallet Configuration - Central PayMongo settings
+  walletConfig: defineTable({
+    paymongo_public_key: v.string(),
+    paymongo_secret_key: v.string(), // Encrypted at service layer
+    paymongo_webhook_secret: v.string(), // Encrypted at service layer
+    is_test_mode: v.boolean(),
+    default_commission_percent: v.number(), // e.g., 5 = 5%
+    default_settlement_frequency: v.string(), // "daily" | "weekly" | "manual"
+    min_settlement_amount: v.number(), // Minimum payout threshold in whole pesos
+    // Story 23.3: Configurable bonus tiers for wallet top-ups
+    bonus_tiers: v.optional(v.array(v.object({
+      minAmount: v.number(), // Minimum top-up amount in pesos
+      bonus: v.number(),     // Bonus amount in pesos
+    }))),
+    created_at: v.number(),
+    updated_at: v.number(),
+  }),
+
+  // Branch-specific Wallet Settings - Payout preferences
+  branchWalletSettings: defineTable({
+    branch_id: v.id("branches"),
+    commission_override: v.optional(v.number()), // Branch-specific rate if different from default
+    settlement_frequency: v.optional(v.string()), // Override default frequency
+    payout_method: v.optional(v.string()), // "bank" | "gcash" | "maya" - optional until configured
+    payout_account_number: v.optional(v.string()), // Required when payout_method is set
+    payout_account_name: v.optional(v.string()), // Required when payout_method is set
+    payout_bank_name: v.optional(v.string()), // Required if payout_method is "bank"
+    created_at: v.number(),
+    updated_at: v.number(),
+  }).index("by_branch", ["branch_id"]),
+
+  // Branch Wallet Earnings - Individual transaction records
+  branchWalletEarnings: defineTable({
+    branch_id: v.id("branches"),
+    booking_id: v.id("bookings"),
+    customer_id: v.id("users"),
+    staff_id: v.optional(v.id("users")),
+    service_name: v.string(),
+    gross_amount: v.number(), // Full payment amount in whole pesos
+    commission_percent: v.number(), // Commission rate applied
+    commission_amount: v.number(), // SA commission in whole pesos
+    net_amount: v.number(), // Branch earnings after commission
+    settlement_id: v.optional(v.id("branchSettlements")), // Linked when settled
+    status: v.string(), // "pending" | "settled"
+    created_at: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_branch_status", ["branch_id", "status"])
+    .index("by_settlement", ["settlement_id"]),
+
+  // Branch Settlement Requests - Payout requests and processing
+  branchSettlements: defineTable({
+    branch_id: v.id("branches"),
+    requested_by: v.id("users"),
+    amount: v.number(), // Total settlement amount in whole pesos
+    earnings_count: v.number(), // Number of earnings included
+    payout_method: v.string(), // "bank" | "gcash" | "maya"
+    payout_account_number: v.string(),
+    payout_account_name: v.string(),
+    payout_bank_name: v.optional(v.string()),
+    status: v.string(), // "pending" | "approved" | "processing" | "completed" | "rejected"
+    approved_by: v.optional(v.id("users")),
+    approved_at: v.optional(v.number()),
+    processed_by: v.optional(v.id("users")), // Story 25.4: Track who marked as processing
+    processing_started_at: v.optional(v.number()), // Story 25.4: Track when processing started
+    rejected_by: v.optional(v.id("users")), // Story 25.3: Track who rejected
+    rejected_at: v.optional(v.number()), // Story 25.3: Track when rejected
+    completed_by: v.optional(v.id("users")), // Story 25.4: Track who completed
+    completed_at: v.optional(v.number()),
+    rejection_reason: v.optional(v.string()),
+    transfer_reference: v.optional(v.string()), // Bank/GCash reference number
+    notes: v.optional(v.string()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"])
+    .index("by_branch_status", ["branch_id", "status"]),
 });

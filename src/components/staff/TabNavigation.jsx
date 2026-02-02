@@ -25,7 +25,9 @@ import {
   PieChart,
   Scale,
   ShoppingCart,
-  ClipboardList
+  ClipboardList,
+  TrendingUp,
+  Wallet
 } from 'lucide-react'
 
 const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount = 0, waitingWalkInsCount = 0, pendingAdvancesCount = 0 }) => {
@@ -94,7 +96,9 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
       order_products: ShoppingCart,
       queue: ClipboardList,
       payments: CreditCard,
-      payment_history: FileText
+      payment_history: FileText,
+      branch_wallet: Wallet,
+      wallet_earnings: TrendingUp
     }
     return iconMap[tabId] || LayoutDashboard
   }

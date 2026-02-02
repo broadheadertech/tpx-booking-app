@@ -30,6 +30,8 @@ import CashAdvanceApproval from "../../components/staff/CashAdvanceApproval";
 import BranchRoyaltyHistory from "../../components/staff/BranchRoyaltyHistory";
 import PaymentSettings from "../../components/staff/PaymentSettings";
 import PaymentHistory from "../../components/staff/PaymentHistory";
+import BranchWalletView from "../../components/staff/BranchWalletView";
+import WalletEarningsDashboard from "../../components/staff/WalletEarningsDashboard";
 import DashboardFooter from "../../components/common/DashboardFooter";
 import {
   NotificationModal,
@@ -111,14 +113,12 @@ function StaffDashboard() {
           branch_id: user.branch_id,
         })
         : undefined;
-  const customers =
-    user?.role === "super_admin"
-      ? useQuery(api.services.auth.getAllUsers)
-      : user?.branch_id
-        ? useQuery(api.services.auth.getUsersByBranch, {
-          branch_id: user.branch_id,
-        })
-        : undefined;
+  // Customers are system-wide (not branch-specific), so always fetch all customers
+  // regardless of the logged-in user's role. The getAllUsers query supports role filtering.
+  const customers = useQuery(api.services.auth.getAllUsers, { roles: ["customer"] });
+
+  // Get customer wallets for wallet monitoring
+  const customerWallets = useQuery(api.services.wallet.getAllCustomerWallets, {});
 
   // Get walk-ins data for queue badge
   const allWalkInsData = useQuery(api.services.walkIn.getAllWalkIns, {}) || [];
@@ -311,11 +311,11 @@ function StaffDashboard() {
         return <BranchUserManagement onRefresh={handleRefresh} />;
 
       case "customers":
-        // Filter to only show customers (exclude staff, barbers, admins, etc.)
-        const customersOnly = (customers || []).filter(c => c.role === 'customer');
+        // Customers are already filtered by role in the query
         return (
           <CustomersManagement
-            customers={customersOnly}
+            customers={customers || []}
+            wallets={customerWallets || []}
             onRefresh={handleRefresh}
           />
         );
@@ -372,6 +372,12 @@ function StaffDashboard() {
 
       case "payment_history":
         return <PaymentHistory />;
+
+      case "branch_wallet":
+        return <BranchWalletView />;
+
+      case "wallet_earnings":
+        return <WalletEarningsDashboard />;
 
       default:
         return renderOverview();
@@ -442,6 +448,8 @@ function StaffDashboard() {
     { id: "balance_sheet", label: "Balance Sheet", icon: "scale" },
     { id: "payments", label: "Payments", icon: "credit-card" },
     { id: "payment_history", label: "Payment History", icon: "receipt" },
+    { id: "branch_wallet", label: "Wallet Settings", icon: "wallet" },
+    { id: "wallet_earnings", label: "Wallet Earnings", icon: "trending-up" },
     // HR & Events
     { id: "attendance", label: "Attendance", icon: "clock" },
     { id: "events", label: "Events", icon: "calendar-days" },

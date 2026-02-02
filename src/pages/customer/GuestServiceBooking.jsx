@@ -20,7 +20,7 @@ import {
 import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useAuth } from "../../context/AuthContext";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useBranding } from "../../context/BrandingContext";
 import { formatTime } from "../../utils/dateUtils";
 import { sendCustomBookingConfirmation, sendBarberBookingNotification } from "../../services/emailService";
@@ -105,7 +105,7 @@ const GuestServiceBooking = ({ onBack }) => {
   const [isSignedIn, setIsSignedIn] = useState(false);
   const createUser = useMutation(api.services.auth.createUser);
   const createGuestUser = useMutation(api.services.auth.createGuestUser);
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useCurrentUser();
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -145,6 +145,7 @@ const GuestServiceBooking = ({ onBack }) => {
   const [pendingPaymentSessionId, setPendingPaymentSessionId] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentType, setPaymentType] = useState(null);
+  const [checkingPaymentManually, setCheckingPaymentManually] = useState(false);
 
   // Convex queries
   const branches = useQuery(api.services.branches.getActiveBranches);
@@ -182,6 +183,8 @@ const GuestServiceBooking = ({ onBack }) => {
   const createPaymentLink = useAction(api.services.paymongo.createPaymentLink);
   // Deferred booking flow - creates payment link without creating booking first
   const createPaymentLinkDeferred = useAction(api.services.paymongo.createPaymentLinkDeferred);
+  // Manual payment status check (fallback when webhooks don't work)
+  const checkPaymentStatus = useAction(api.services.paymongo.checkAndProcessPaymentStatus);
 
   // Query to get booking details after creation
   const getBookingById = useQuery(
@@ -2735,17 +2738,59 @@ const GuestServiceBooking = ({ onBack }) => {
         {/* Action Buttons */}
         <div className="space-y-3">
           <button
-            onClick={() => {
-              // Re-open PayMongo checkout
-              const sessionId = pendingPaymentSessionId;
-              if (sessionId) {
-                // We don't have the checkout URL stored, but user can refresh
-                window.alert('Please complete payment in the PayMongo tab that was opened. If you closed it, click "Cancel" and try again.');
+            onClick={async () => {
+              if (!pendingPaymentSessionId || checkingPaymentManually) return;
+
+              setCheckingPaymentManually(true);
+              try {
+                console.log('[GuestServiceBooking] Manually checking payment status for:', pendingPaymentSessionId);
+                const result = await checkPaymentStatus({ sessionId: pendingPaymentSessionId });
+                console.log('[GuestServiceBooking] Manual check result:', result);
+
+                if (result.status === 'paid' || result.status === 'already_paid') {
+                  // Payment confirmed! Create booking state and go to success
+                  setCreatedBooking({
+                    _id: result.bookingId,
+                    booking_code: result.bookingCode,
+                    service: selectedService,
+                    barber: selectedStaff,
+                    date: selectedDate,
+                    time: selectedTime,
+                    status: "booked",
+                    payment_status: paymentType === 'pay_now' ? 'paid' : 'partial',
+                  });
+                  setPendingPaymentSessionId(null);
+                  localStorage.removeItem('pendingPaymongoSessionId');
+                  setStep(7); // Success step
+                } else if (result.status === 'pending') {
+                  // Still pending - inform user
+                  window.alert('Payment is still processing. Please complete the payment in the PayMongo window and try again.');
+                } else if (result.status === 'expired') {
+                  window.alert('Payment session has expired. Please start a new booking.');
+                  setPendingPaymentSessionId(null);
+                  localStorage.removeItem('pendingPaymongoSessionId');
+                  setStep(6);
+                } else {
+                  window.alert(result.error || 'Could not verify payment status. Please try again.');
+                }
+              } catch (err) {
+                console.error('[GuestServiceBooking] Manual check error:', err);
+                window.alert('Error checking payment: ' + (err.message || 'Unknown error'));
+              } finally {
+                setCheckingPaymentManually(false);
               }
             }}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
+            disabled={checkingPaymentManually}
+            className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg flex items-center justify-center gap-2"
           >
-            I've Completed Payment - Refresh Status
+            {checkingPaymentManually ? (
+              <>
+                <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
+                Checking Payment...
+              </>
+            ) : (
+              "I've Completed Payment - Check Status"
+            )}
           </button>
           <button
             onClick={() => {
@@ -2754,14 +2799,15 @@ const GuestServiceBooking = ({ onBack }) => {
               localStorage.removeItem('pendingPaymongoSessionId');
               setStep(6);
             }}
-            className="w-full py-3 bg-transparent border border-[#333] hover:bg-[#1A1A1A] text-gray-400 font-medium rounded-2xl transition-all duration-200"
+            disabled={checkingPaymentManually}
+            className="w-full py-3 bg-transparent border border-[#333] hover:bg-[#1A1A1A] text-gray-400 font-medium rounded-2xl transition-all duration-200 disabled:opacity-50"
           >
             Cancel & Go Back
           </button>
         </div>
 
         <p className="text-center text-xs text-gray-500">
-          This page will automatically update when your payment is confirmed.
+          Click the button above after completing payment in PayMongo to verify and confirm your booking.
         </p>
       </div>
     );

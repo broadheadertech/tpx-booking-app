@@ -18,6 +18,7 @@ import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import FacebookCallback from "./pages/auth/FacebookCallback";
 import ClerkLogin from "./pages/auth/ClerkLogin";
+import ClerkSignUp from "./pages/auth/ClerkSignUp";
 import ClerkCallback from "./pages/auth/ClerkCallback";
 import SecuritySettings from "./pages/settings/Security";
 import StaffDashboard from "./pages/staff/Dashboard";
@@ -89,6 +90,11 @@ function App() {
                 path="/auth/clerk-login/*"
                 element={<Navigate to="/auth/login" replace />}
               />
+              {/* Staff/Admin Login - Redirect to Clerk (universal login) */}
+              <Route
+                path="/auth/staff-login"
+                element={<Navigate to="/auth/login" replace />}
+              />
               <Route
                 path="/auth/forgot-password"
                 element={
@@ -122,13 +128,10 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              {/* Clerk uses sub-routes for multi-step signup (verification, etc.) */}
               <Route
-                path="/auth/register"
-                element={
-                  <AuthRedirect>
-                    <Register />
-                  </AuthRedirect>
-                }
+                path="/auth/register/*"
+                element={<ClerkSignUp />}
               />
               <Route
                 path="/admin"

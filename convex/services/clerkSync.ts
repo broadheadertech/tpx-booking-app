@@ -179,6 +179,7 @@ export const handleUserCreated = internalMutation({
     const baseUsername = primaryEmail?.split("@")[0] || clerk_user_id;
     const uniqueUsername = `${baseUsername}_${clerk_user_id.slice(-6)}`;
 
+    const now = Date.now();
     const userId = await ctx.db.insert("users", {
       email: primaryEmail || `${clerk_user_id}@clerk.local`,
       username: uniqueUsername,
@@ -191,8 +192,39 @@ export const handleUserCreated = internalMutation({
       is_active: true,
       isVerified: true, // Clerk users are pre-verified
       skills: [], // Empty skills array for customers
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // =========================================================================
+    // INITIALIZE LOYALTY DATA FOR NEW CUSTOMERS
+    // Creates wallet and points ledger with 0 balance (fresh start)
+    // =========================================================================
+
+    // Create wallet with 0 balance (fresh start for new customers)
+    await ctx.db.insert("wallets", {
+      user_id: userId,
+      balance: 0, // ₱0.00 in centavos
+      bonus_balance: 0, // ₱0.00 bonus
+      currency: "PHP",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create points ledger with 0 points (Bronze tier - starting tier)
+    await ctx.db.insert("points_ledger", {
+      user_id: userId,
+      current_balance: 0, // 0 points (×100 format)
+      lifetime_earned: 0, // 0 points total
+      lifetime_redeemed: 0, // 0 points redeemed
+      last_activity_at: now,
+    });
+
+    console.log("[ClerkSync] Initialized loyalty data for new customer:", {
+      userId,
+      wallet: "₱0.00",
+      points: "0 pts",
+      tier: "Bronze",
     });
 
     // Audit log: User created via Clerk webhook
@@ -201,11 +233,11 @@ export const handleUserCreated = internalMutation({
       clerk_user_id,
       email: primaryEmail,
       action: "user_created_via_clerk",
-      timestamp: Date.now(),
+      timestamp: now,
     });
 
     console.log("[ClerkSync] Created new user:", userId);
-    return { success: true, userId, action: "created" };
+    return { success: true, userId, action: "created", loyaltyInitialized: true };
   },
 });
 

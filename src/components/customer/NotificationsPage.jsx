@@ -176,16 +176,24 @@ const NotificationsPage = ({ onBack }) => {
   const [activeFilter, setActiveFilter] = useState('all');
   const [unreadOnly, setUnreadOnly] = useState(false);
   
-  // Fetch notifications
-  const notifications = useQuery(api.services.bookingNotifications.getRecentNotifications, {
-    userId: user?._id,
-    limit: 50,
-    type: activeFilter === 'all' ? undefined : activeFilter,
-    unreadOnly: unreadOnly,
-  });
+  // Fetch notifications - skip if user not loaded yet
+  const notifications = useQuery(
+    api.services.bookingNotifications.getRecentNotifications,
+    user?._id
+      ? {
+          userId: user._id,
+          limit: 50,
+          type: activeFilter === 'all' ? undefined : activeFilter,
+          unreadOnly: unreadOnly,
+        }
+      : "skip"
+  );
 
-  // Fetch notification stats
-  const stats = useQuery(api.services.bookingNotifications.getNotificationStats, { userId: user?._id });
+  // Fetch notification stats - skip if user not loaded yet
+  const stats = useQuery(
+    api.services.bookingNotifications.getNotificationStats,
+    user?._id ? { userId: user._id } : "skip"
+  );
 
   // Mutation hooks
   const markAsRead = useMutation(api.services.bookingNotifications.markNotificationsAsRead);

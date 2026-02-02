@@ -1,4 +1,4 @@
-# generated: 2026-01-28
+# generated: 2026-01-31
 # project: tpx-booking-app
 # tracking_system: file-system
 # story_location: _bmad-output/implementation-artifacts
@@ -32,7 +32,7 @@
 # - SM typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
-generated: 2026-01-28
+generated: 2026-01-31
 project: tpx-booking-app
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
@@ -131,7 +131,7 @@ development_status:
   epic-9-retrospective: optional
 
   # ============================================================================
-  # CLERK AUTHENTICATION + RBAC (epics-clerk-rbac.md) - NEW BACKLOG
+  # CLERK AUTHENTICATION + RBAC (epics-clerk-rbac.md) - COMPLETED
   # ============================================================================
 
   # Epic 10: Clerk Authentication Foundation (Clerk RBAC Epic 1)
@@ -193,3 +193,123 @@ development_status:
   14-6-page-access-structure-migration: done
   14-7-dual-auth-system-for-transition: done
   epic-14-retrospective: optional
+
+  # ============================================================================
+  # CUSTOMER EXPERIENCE (epics-customer-experience.md) - COMPLETED
+  # ============================================================================
+
+  # Epic 15: Loyalty Points Foundation (Customer Experience Epic 1)
+  # Customers earn and track loyalty points from payments
+  epic-15: done
+  15-1-schema-setup-for-points-system: done
+  15-2-points-display-helpers: done
+  15-3-points-balance-display: done
+  15-4-earn-points-on-payment: done
+  15-5-points-history-view: done
+  epic-15-retrospective: optional
+
+  # Epic 16: Enhanced Wallet Payments (Customer Experience Epic 2)
+  # Customers can use wallet for payments with bonuses
+  epic-16: done
+  16-1-real-time-wallet-balance-display: done
+  16-2-wallet-top-up-via-paymongo: done
+  16-3-top-up-bonus-application: done
+  16-4-pay-with-wallet-balance: done
+  16-5-bonus-points-for-wallet-payments: done
+  16-6-combo-payment-flow: done
+  epic-16-retrospective: optional
+
+  # Epic 17: VIP Tier Progression (Customer Experience Epic 3)
+  # Customers progress through VIP tiers based on spending
+  epic-17: done
+  17-1-vip-tier-schema-and-thresholds: done
+  17-2-auto-tier-calculation: done
+  17-3-tier-benefits-configuration: done
+  17-4-tier-progress-display: done
+  17-5-tier-change-notifications: done
+  epic-17-retrospective: optional
+
+  # Epic 18: Customer VIP Recognition (Customer Experience Epic 4)
+  # Staff can see and recognize VIP customers
+  epic-18: done
+  18-1-vip-badge-in-booking-queue: done
+  18-2-customer-profile-vip-display: done
+  18-3-vip-customer-alerts: done
+  18-4-service-history-in-profile: done
+  epic-18-retrospective: optional
+
+  # Epic 19: Loyalty Administration & Analytics (Customer Experience Epic 5)
+  # Admins can configure and monitor the loyalty program
+  epic-19: done
+  19-1-points-configuration-panel: done
+  19-2-tier-management-interface: done
+  19-3-loyalty-analytics-dashboard: done
+  19-4-manual-points-adjustment: done
+  19-5-points-expiry-management: done
+  epic-19-retrospective: optional
+
+  # Epic 20: Flash Promotions (Customer Experience Epic 6)
+  # Admins can create time-limited point multiplier events
+  epic-20: done
+  20-1-flash-promo-schema: done
+  20-2-create-flash-promotion: done
+  20-3-active-promo-display: done
+  20-4-promo-points-calculation: done
+  20-5-promo-performance-tracking: done
+  epic-20-retrospective: optional
+
+  # ============================================================================
+  # MULTI-BRANCH WALLET PAYMENT (epics-multi-branch-wallet.md) - NEW BACKLOG
+  # ============================================================================
+
+  # Epic 21: Super Admin Wallet Configuration
+  # Super Admin can set up and manage the centralized wallet payment system
+  epic-21: done
+  21-1-add-wallet-schema-tables: done
+  21-2-configure-sa-paymongo-for-wallet: done
+  21-3-configure-global-commission-rate: done
+  21-4-configure-branch-wallet-settings: done
+  21-5-configure-settlement-parameters: done
+  epic-21-retrospective: optional
+
+  # Epic 22: Branch Wallet Earnings
+  # Branch Managers can view their wallet earnings and track pending balances
+  epic-22: done
+  22-1-create-wallet-earning-records: done
+  22-2-branch-earnings-dashboard: done
+  22-3-earnings-transaction-list: done
+  22-4-export-earnings-to-csv: done
+  epic-22-retrospective: optional
+
+  # Epic 23: Customer Wallet Top-up Flow
+  # Customers can load money into their wallet via Super Admin PayMongo
+  epic-23: done
+  23-1-wallet-top-up-via-sa-paymongo: done
+  23-2-top-up-confirmation-notification: done
+  23-3-top-up-bonus-tiers: done
+  epic-23-retrospective: optional
+
+  # Epic 24: POS Wallet Payment
+  # Staff can accept wallet payments at the counter
+  epic-24: done
+  24-1-display-wallet-payment-option-at-pos: done
+  24-2-process-full-wallet-payment: done
+  24-3-process-combo-payment: done
+  epic-24-retrospective: optional
+
+  # Epic 25: Settlement Process
+  # Branches can request payouts, Super Admin can approve and complete transfers
+  epic-25: done
+  25-1-branch-requests-settlement: done
+  25-2-sa-settlement-queue: done
+  25-3-approve-or-reject-settlement: done
+  25-4-complete-settlement-transfer: done
+  25-5-settlement-history-receipts: done
+  epic-25-retrospective: optional
+
+  # Epic 26: Reporting & Analytics
+  # Super Admin can monitor overall wallet system health and financial metrics
+  epic-26: done
+  26-1-wallet-system-overview-dashboard: done
+  26-2-by-branch-breakdown-table: done
+  epic-26-retrospective: optional

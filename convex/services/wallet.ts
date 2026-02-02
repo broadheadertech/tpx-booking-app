@@ -1,5 +1,12 @@
-import { mutation, query, action } from "../_generated/server";
-import { v } from "convex/values";
+import { mutation, query, action, internalMutation, internalAction } from "../_generated/server";
+import { v, ConvexError } from "convex/values";
+import { api, internal } from "../_generated/api";
+import { calculateTopUpBonus, DEFAULT_BONUS_TIERS, type BonusTier } from "../lib/walletBonus";
+import { toStorageFormat } from "../lib/points";
+import { decryptApiKey } from "../lib/encryption";
+
+// Encryption key for SA wallet credentials
+const PAYMONGO_ENCRYPTION_KEY = process.env.PAYMONGO_ENCRYPTION_KEY || "";
 
 export const getWallet = query({
   args: { userId: v.id("users") },
@@ -50,30 +57,119 @@ export const creditWallet = mutation({
     amount: v.number(),
     description: v.optional(v.string()),
     reference_id: v.optional(v.string()),
+    applyBonus: v.optional(v.boolean()), // Whether to apply top-up bonus
+    branchId: v.optional(v.id("branches")), // For promo lookup
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+
+    // Story 23.3: Fetch configurable bonus tiers from walletConfig
+    let bonusTiers: BonusTier[] = DEFAULT_BONUS_TIERS;
+    const walletConfig = await ctx.db.query("walletConfig").first();
+    if (walletConfig?.bonus_tiers && walletConfig.bonus_tiers.length > 0) {
+      bonusTiers = walletConfig.bonus_tiers as BonusTier[];
+    }
+
+    // Calculate standard bonus if this is a top-up with bonus enabled
+    // Uses configured tiers from walletConfig or defaults
+    let bonus = args.applyBonus !== false ? calculateTopUpBonus(args.amount, bonusTiers) : 0;
+
+    // ========================================
+    // Story 20.4: Check for wallet_bonus promo
+    // ========================================
+    let appliedPromo = null;
+    let promoBonus = 0;
+
+    // Get user for tier check
+    const user = await ctx.db.get(args.userId);
+    const userTier = user?.current_tier_id
+      ? await ctx.db.get(user.current_tier_id)
+      : null;
+    const tierRank: Record<string, number> = { bronze: 1, silver: 2, gold: 3, platinum: 4 };
+    const userRank = tierRank[userTier?.name?.toLowerCase() || "bronze"] || 1;
+
+    // Get active wallet_bonus promotions
+    let promotions = await ctx.db
+      .query("flash_promotions")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .collect();
+
+    // Filter to wallet_bonus type, within date range, matching branch
+    promotions = promotions.filter(
+      (p) =>
+        p.type === "wallet_bonus" &&
+        p.start_at <= now &&
+        p.end_at >= now &&
+        !p.is_template &&
+        (!p.branch_id || p.branch_id === args.branchId)
+    );
+
+    // Find best applicable promo
+    for (const promo of promotions) {
+      // Check tier requirement
+      if (promo.tier_requirement) {
+        const requiredRank = tierRank[promo.tier_requirement] || 1;
+        if (userRank < requiredRank) continue;
+      }
+
+      // Check min purchase (min top-up amount)
+      if (promo.min_purchase && args.amount < promo.min_purchase) continue;
+
+      // Check max uses
+      if (promo.max_uses && promo.total_uses >= promo.max_uses) continue;
+
+      // Check per-user limit
+      if (promo.max_uses_per_user) {
+        const userUsage = await ctx.db
+          .query("promo_usage")
+          .withIndex("by_promo_user", (q) =>
+            q.eq("promo_id", promo._id).eq("user_id", args.userId)
+          )
+          .collect();
+        if (userUsage.length >= promo.max_uses_per_user) continue;
+      }
+
+      // Calculate promo bonus (flat_amount is in pesos × 100, convert to pesos)
+      const thisPromoBonus = promo.flat_amount ? promo.flat_amount / 100 : 0;
+
+      if (thisPromoBonus > promoBonus) {
+        promoBonus = thisPromoBonus;
+        appliedPromo = promo;
+      }
+    }
+
+    // Add promo bonus to total bonus
+    bonus += promoBonus;
+
     const wallet = await ctx.db
       .query("wallets")
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
       .first();
+
     if (!wallet) {
+      // Create wallet with initial balance and bonus
       await ctx.db.insert("wallets", {
         user_id: args.userId,
-        balance: 0,
+        balance: args.amount,
+        bonus_balance: bonus,
         currency: "PHP",
         createdAt: now,
         updatedAt: now,
       });
+    } else {
+      // Update existing wallet
+      await ctx.db.patch(wallet._id, {
+        balance: wallet.balance + args.amount,
+        bonus_balance: (wallet.bonus_balance || 0) + bonus,
+        updatedAt: now,
+      });
     }
-    const current = wallet || (await ctx.db
-      .query("wallets")
-      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .first());
-    await ctx.db.patch(current!._id, {
-      balance: current!.balance + args.amount,
-      updatedAt: now,
-    });
+
+    // Record main top-up transaction
+    const description = appliedPromo
+      ? `Wallet Top-up ₱${args.amount} [PROMO: ${appliedPromo.name}]`
+      : args.description || `Wallet Top-up ₱${args.amount}`;
+
     await ctx.db.insert("wallet_transactions", {
       user_id: args.userId,
       type: "topup",
@@ -83,13 +179,68 @@ export const creditWallet = mutation({
       reference_id: args.reference_id,
       createdAt: now,
       updatedAt: now,
-      description: args.description,
+      description,
     });
-    return { success: true };
+
+    // If bonus was applied, award bonus points
+    if (bonus > 0) {
+      try {
+        // Award points for the bonus (1:1 ratio)
+        const bonusPoints = toStorageFormat(bonus);
+        await ctx.runMutation(api.services.points.earnPoints, {
+          userId: args.userId,
+          amount: bonusPoints,
+          sourceType: "top_up_bonus",
+          sourceId: args.reference_id,
+          notes: appliedPromo
+            ? `Bonus from ₱${args.amount} wallet top-up [PROMO: ${appliedPromo.name}]`
+            : `Bonus from ₱${args.amount} wallet top-up`,
+        });
+        console.log("[WALLET] Bonus points awarded:", { bonus, bonusPoints });
+      } catch (error) {
+        // Log but don't fail the transaction if points fail
+        console.error("[WALLET] Failed to award bonus points:", error);
+      }
+    }
+
+    // Record promo usage if a promo was applied
+    if (appliedPromo) {
+      await ctx.db.insert("promo_usage", {
+        promo_id: appliedPromo._id,
+        user_id: args.userId,
+        branch_id: args.branchId,
+        transaction_id: args.reference_id,
+        points_earned: 0, // This is wallet bonus, not points
+        bonus_points: toStorageFormat(promoBonus),
+        used_at: now,
+      });
+
+      // Increment promo total_uses
+      await ctx.db.patch(appliedPromo._id, {
+        total_uses: appliedPromo.total_uses + 1,
+        updated_at: now,
+      });
+
+      console.log("[WALLET] Promo applied to top-up:", {
+        promoName: appliedPromo.name,
+        promoBonus,
+        totalBonus: bonus,
+      });
+    }
+
+    return {
+      success: true,
+      bonus,
+      promoBonus,
+      total: args.amount + bonus,
+      promoApplied: appliedPromo
+        ? { name: appliedPromo.name, bonus: promoBonus }
+        : null,
+    };
   },
 });
 
-export const createPendingTransaction = mutation({
+export const createPendingTransaction = internalMutation({
   args: {
     userId: v.id("users"),
     amount: v.number(),
@@ -127,7 +278,7 @@ export const getTransactionBySource = query({
   },
 });
 
-export const updateTransactionStatus = mutation({
+export const updateTransactionStatus = internalMutation({
   args: {
     transactionId: v.id("wallet_transactions"),
     status: v.union(v.literal("pending"), v.literal("completed"), v.literal("failed")),
@@ -170,5 +321,881 @@ export const creditWalletBalance = mutation({
       });
     }
     return { success: true };
+  },
+});
+
+/**
+ * Debit wallet for payment - uses bonus balance first, then main balance
+ * This mutation is called atomically with transaction creation for wallet payments
+ */
+export const debitWallet = mutation({
+  args: {
+    userId: v.id("users"),
+    amount: v.number(),
+    description: v.optional(v.string()),
+    reference_id: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // Validate amount is positive
+    if (args.amount <= 0) {
+      throw new Error("Debit amount must be positive");
+    }
+
+    // Get user's wallet
+    const wallet = await ctx.db
+      .query("wallets")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    if (!wallet) {
+      throw new Error("Wallet not found. Please top up your wallet first.");
+    }
+
+    const mainBalance = wallet.balance || 0;
+    const bonusBalance = wallet.bonus_balance || 0;
+    const totalAvailable = mainBalance + bonusBalance;
+
+    // Server-side validation: check sufficient balance
+    if (totalAvailable < args.amount) {
+      throw new Error(
+        `Insufficient wallet balance. Available: ₱${totalAvailable.toFixed(2)}, Required: ₱${args.amount.toFixed(2)}`
+      );
+    }
+
+    // Calculate deduction: bonus first, then main
+    const bonusUsed = Math.min(bonusBalance, args.amount);
+    const remainingAmount = args.amount - bonusUsed;
+    const mainUsed = Math.min(mainBalance, remainingAmount);
+
+    // Update wallet balances
+    const newBonusBalance = bonusBalance - bonusUsed;
+    const newMainBalance = mainBalance - mainUsed;
+
+    await ctx.db.patch(wallet._id, {
+      balance: newMainBalance,
+      bonus_balance: newBonusBalance,
+      updatedAt: now,
+    });
+
+    // Record wallet payment transaction
+    await ctx.db.insert("wallet_transactions", {
+      user_id: args.userId,
+      type: "payment",
+      amount: -args.amount, // Negative for debit
+      status: "completed",
+      provider: "wallet",
+      reference_id: args.reference_id,
+      createdAt: now,
+      updatedAt: now,
+      description: args.description || `Wallet Payment ₱${args.amount}`,
+    });
+
+    console.log("[WALLET] Debit successful:", {
+      userId: args.userId,
+      amount: args.amount,
+      bonusUsed,
+      mainUsed,
+      newBonusBalance,
+      newMainBalance,
+    });
+
+    return {
+      success: true,
+      bonusUsed,
+      mainUsed,
+      totalDeducted: bonusUsed + mainUsed,
+      remainingBonus: newBonusBalance,
+      remainingMain: newMainBalance,
+      remainingTotal: newBonusBalance + newMainBalance,
+    };
+  },
+});
+
+/**
+ * Check if user has sufficient wallet balance for a payment
+ * Used for UI to show/hide wallet payment option
+ */
+export const checkWalletBalance = query({
+  args: {
+    userId: v.id("users"),
+    amount: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const wallet = await ctx.db
+      .query("wallets")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    if (!wallet) {
+      return {
+        hasWallet: false,
+        hasSufficientBalance: false,
+        mainBalance: 0,
+        bonusBalance: 0,
+        totalBalance: 0,
+        shortfall: args.amount,
+      };
+    }
+
+    const mainBalance = wallet.balance || 0;
+    const bonusBalance = wallet.bonus_balance || 0;
+    const totalBalance = mainBalance + bonusBalance;
+    const hasSufficientBalance = totalBalance >= args.amount;
+
+    return {
+      hasWallet: true,
+      hasSufficientBalance,
+      mainBalance,
+      bonusBalance,
+      totalBalance,
+      shortfall: hasSufficientBalance ? 0 : args.amount - totalBalance,
+    };
+  },
+});
+
+// ============================================================================
+// STAFF WALLET QUERIES (Customer Wallet Monitoring)
+// ============================================================================
+
+/**
+ * Get all customer wallets with user info (for staff dashboard)
+ * Returns wallet data joined with user info for display in customers table
+ */
+export const getAllCustomerWallets = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 500;
+
+    // Get all wallets
+    const wallets = await ctx.db.query("wallets").take(limit);
+
+    // Get user info for each wallet
+    const walletsWithUsers = await Promise.all(
+      wallets.map(async (wallet) => {
+        const user = await ctx.db.get(wallet.user_id);
+        if (!user || user.role !== "customer") return null;
+
+        return {
+          walletId: wallet._id,
+          userId: wallet.user_id,
+          balance: wallet.balance || 0,
+          bonusBalance: wallet.bonus_balance || 0,
+          totalBalance: (wallet.balance || 0) + (wallet.bonus_balance || 0),
+          currency: wallet.currency || "PHP",
+          userName: user.nickname || user.username || "Unknown",
+          userEmail: user.email,
+        };
+      })
+    );
+
+    return walletsWithUsers.filter(Boolean);
+  },
+});
+
+/**
+ * Get wallet for a specific customer (for staff to view customer wallet details)
+ */
+export const getCustomerWalletByUserId = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const wallet = await ctx.db
+      .query("wallets")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    if (!wallet) {
+      return null;
+    }
+
+    // Get recent transactions
+    const transactions = await ctx.db
+      .query("wallet_transactions")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .order("desc")
+      .take(10);
+
+    // Get user info
+    const user = await ctx.db.get(args.userId);
+
+    return {
+      wallet: {
+        _id: wallet._id,
+        balance: wallet.balance || 0,
+        bonusBalance: wallet.bonus_balance || 0,
+        totalBalance: (wallet.balance || 0) + (wallet.bonus_balance || 0),
+        currency: wallet.currency || "PHP",
+        createdAt: wallet.createdAt,
+        updatedAt: wallet.updatedAt,
+      },
+      transactions: transactions.map((t) => ({
+        _id: t._id,
+        type: t.type,
+        amount: t.amount,
+        status: t.status,
+        description: t.description,
+        createdAt: t.createdAt,
+      })),
+      user: user
+        ? {
+            name: user.nickname || user.username,
+            email: user.email,
+            phone: user.mobile_number,
+          }
+        : null,
+    };
+  },
+});
+
+// ============================================================================
+// BOOKING WALLET PAYMENT WITH POINTS (Customer Experience)
+// ============================================================================
+
+/**
+ * Pay for a booking using wallet balance and earn points
+ * This is an atomic operation that:
+ * 1. Debits the wallet
+ * 2. Awards points (with promo check)
+ * 3. Returns the result for booking update
+ *
+ * @param userId - Customer user ID
+ * @param amount - Payment amount in pesos (will be converted to centavos internally)
+ * @param bookingId - Booking ID for reference
+ * @param branchId - Branch ID for promo matching
+ * @returns Wallet debit result + points earned info
+ */
+export const payBookingWithWallet = mutation({
+  args: {
+    userId: v.id("users"),
+    amount: v.number(), // In pesos
+    bookingId: v.optional(v.id("bookings")),
+    branchId: v.optional(v.id("branches")),
+    serviceName: v.optional(v.string()),
+    staffId: v.optional(v.id("users")), // Staff who processed payment (POS flow)
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    console.log("[WALLET_PAY] Starting wallet payment:", {
+      userId: args.userId,
+      amountPesos: args.amount,
+      bookingId: args.bookingId,
+    });
+
+    // Step 1: Debit the wallet (amount in pesos - wallet stores pesos)
+    const debitResult = await ctx.runMutation(api.services.wallet.debitWallet, {
+      userId: args.userId,
+      amount: args.amount,
+      description: args.serviceName
+        ? `Payment for ${args.serviceName}`
+        : `Booking payment`,
+      reference_id: args.bookingId
+        ? `BOOKING-${args.bookingId}`
+        : `WALLET-PAY-${now}`,
+    });
+
+    console.log("[WALLET_PAY] Wallet debit successful:", debitResult);
+
+    // Step 2: Award points (1 peso = 1 point base rate, with promo multipliers)
+    // Points are stored in ×100 format (e.g., 500 pesos = 50000 points storage = 500 display)
+    const basePoints = Math.floor(args.amount); // 1 peso = 1 point
+    const pointsStorageFormat = basePoints * 100; // Convert to ×100 storage format
+
+    let pointsResult = null;
+    try {
+      // Use awardPointsWithPromo to check for active promotions
+      pointsResult = await ctx.runMutation(api.services.points.awardPointsWithPromo, {
+        userId: args.userId,
+        baseAmount: args.amount, // Pass peso amount - function handles conversion
+        branchId: args.branchId,
+        sourceType: "wallet_payment",
+        sourceId: args.bookingId
+          ? `BOOKING-${args.bookingId}`
+          : `WALLET-PAY-${now}`,
+      });
+
+      console.log("[WALLET_PAY] Points awarded:", pointsResult);
+    } catch (error) {
+      // Log but don't fail the payment if points award fails
+      console.error("[WALLET_PAY] Failed to award points:", error);
+
+      // Fallback: try basic earnPoints without promo
+      try {
+        pointsResult = await ctx.runMutation(api.services.points.earnPoints, {
+          userId: args.userId,
+          amount: pointsStorageFormat,
+          sourceType: "wallet_payment",
+          sourceId: args.bookingId
+            ? `BOOKING-${args.bookingId}`
+            : `WALLET-PAY-${now}`,
+          branchId: args.branchId,
+          notes: `Payment for booking - ₱${args.amount}`,
+        });
+        console.log("[WALLET_PAY] Fallback points awarded:", pointsResult);
+      } catch (fallbackError) {
+        console.error("[WALLET_PAY] Fallback points also failed:", fallbackError);
+      }
+    }
+
+    // Step 3: Update booking payment status if bookingId provided
+    if (args.bookingId) {
+      try {
+        const booking = await ctx.db.get(args.bookingId);
+        if (booking) {
+          await ctx.db.patch(args.bookingId, {
+            payment_status: "paid",
+            payment_method: "wallet",
+            updatedAt: now,
+          });
+          console.log("[WALLET_PAY] Booking payment status updated");
+        }
+      } catch (error) {
+        console.error("[WALLET_PAY] Failed to update booking:", error);
+      }
+    }
+
+    // Step 4: Create branch earning record (Story 22.1)
+    // Records wallet payment to branch ledger for settlement tracking
+    let earningRecord = null;
+    if (args.branchId && args.bookingId) {
+      try {
+        // Amount in pesos (whole pesos, not centavos) per project-context.md
+        earningRecord = await ctx.runMutation(
+          api.services.branchEarnings.createEarningRecord,
+          {
+            branch_id: args.branchId,
+            booking_id: args.bookingId,
+            customer_id: args.userId,
+            staff_id: args.staffId, // Staff who processed (POS) or undefined (self-service)
+            service_name: args.serviceName || "Booking Payment",
+            gross_amount: args.amount, // In whole pesos
+          }
+        );
+        console.log("[WALLET_PAY] Branch earning record created:", {
+          recordId: earningRecord.recordId,
+          net: earningRecord.netAmount,
+          commission: earningRecord.commissionAmount,
+        });
+      } catch (error) {
+        // Log but don't fail the payment if earning record fails
+        console.error("[WALLET_PAY] Failed to create earning record:", error);
+      }
+    }
+
+    return {
+      success: true,
+      walletDebit: {
+        bonusUsed: debitResult.bonusUsed,
+        mainUsed: debitResult.mainUsed,
+        totalDeducted: debitResult.totalDeducted,
+        remainingBalance: debitResult.remainingTotal,
+      },
+      pointsEarned: pointsResult
+        ? {
+            basePoints: basePoints,
+            bonusPoints: pointsResult.bonusPoints || 0,
+            totalPoints: pointsResult.totalPoints || basePoints,
+            promoApplied: pointsResult.promoApplied || null,
+            tierPromotion: pointsResult.tierPromotion || null,
+          }
+        : {
+            basePoints: 0,
+            bonusPoints: 0,
+            totalPoints: 0,
+            promoApplied: null,
+            tierPromotion: null,
+          },
+      message: `Payment successful! Earned ${pointsResult?.totalPoints || basePoints} points.`,
+      // Story 22.1: Include branch earning info if created
+      branchEarning: earningRecord
+        ? {
+            recordId: earningRecord.recordId,
+            grossAmount: earningRecord.grossAmount,
+            commissionAmount: earningRecord.commissionAmount,
+            netAmount: earningRecord.netAmount,
+            commissionPercent: earningRecord.commissionPercent,
+          }
+        : null,
+    };
+  },
+});
+
+// ============================================================================
+// SUPER ADMIN WALLET TOP-UP (Multi-Branch Wallet - Story 23.1)
+// ============================================================================
+
+/**
+ * Helper function for base64 encoding (used for PayMongo auth)
+ */
+function base64EncodeAscii(input: string): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+  let output = "";
+  let i = 0;
+  while (i < input.length) {
+    const a = input.charCodeAt(i++);
+    const b = i < input.length ? input.charCodeAt(i++) : NaN;
+    const c = i < input.length ? input.charCodeAt(i++) : NaN;
+    const b1 = a >> 2;
+    const b2 = ((a & 3) << 4) | (isNaN(b) ? 0 : (b >> 4));
+    const b3 = isNaN(b) ? 64 : (((b & 15) << 2) | (isNaN(c) ? 0 : (c >> 6)));
+    const b4 = isNaN(c) ? 64 : (c & 63);
+    output += chars[b1] + chars[b2] + chars[b3] + chars[b4];
+  }
+  return output;
+}
+
+/**
+ * Check if wallet top-up is enabled (SA config exists and has valid credentials)
+ * Story 23.1 - Task 4: Used by frontend to show/hide top-up functionality
+ *
+ * @returns { enabled: boolean, reason?: string }
+ */
+export const isWalletTopupEnabled = query({
+  args: {},
+  handler: async (ctx) => {
+    // Get SA wallet config
+    const config = await ctx.db.query("walletConfig").first();
+
+    if (!config) {
+      return {
+        enabled: false,
+        reason: "Wallet configuration not set up by administrator",
+      };
+    }
+
+    // Check if credentials are configured
+    if (!config.paymongo_public_key || !config.paymongo_secret_key) {
+      return {
+        enabled: false,
+        reason: "PayMongo credentials not configured",
+      };
+    }
+
+    return {
+      enabled: true,
+      isTestMode: config.is_test_mode,
+    };
+  },
+});
+
+/**
+ * Create wallet top-up using Super Admin PayMongo credentials
+ * Story 23.1 - Task 1: Main action for centralized wallet top-ups
+ *
+ * This creates a PayMongo checkout session using SA credentials,
+ * enabling all wallet deposits to flow through a central account.
+ *
+ * @param userId - Customer user ID
+ * @param amount - Top-up amount in pesos
+ * @param origin - Frontend origin for redirect URLs
+ * @returns { checkoutUrl, sessionId, amount }
+ */
+export const createWalletTopupWithSACredentials = action({
+  args: {
+    userId: v.id("users"),
+    amount: v.number(),
+    origin: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Validate amount (PayMongo minimum is ₱100 for e-wallet transactions)
+    const PAYMONGO_MIN_AMOUNT = 100;
+    if (args.amount <= 0) {
+      throw new ConvexError({
+        code: "VALIDATION_ERROR",
+        message: "Top-up amount must be greater than zero",
+      });
+    }
+    if (args.amount < PAYMONGO_MIN_AMOUNT) {
+      throw new ConvexError({
+        code: "VALIDATION_ERROR",
+        message: `Minimum top-up amount is ₱${PAYMONGO_MIN_AMOUNT}`,
+      });
+    }
+
+    // Get SA wallet config
+    const config = await ctx.runQuery(api.services.walletConfig.getDecryptedWalletConfig);
+
+    if (!config) {
+      throw new ConvexError({
+        code: "CONFIG_NOT_FOUND",
+        message: "Wallet top-up is currently unavailable. Please try again later.",
+      });
+    }
+
+    // Check encryption key
+    if (!PAYMONGO_ENCRYPTION_KEY || PAYMONGO_ENCRYPTION_KEY.length !== 64) {
+      console.error("[WALLET_TOPUP] PAYMONGO_ENCRYPTION_KEY not configured");
+      throw new ConvexError({
+        code: "CONFIG_ERROR",
+        message: "Wallet top-up is currently unavailable. Please try again later.",
+      });
+    }
+
+    // Decrypt secret key
+    // Format: "iv:encrypted" stored in single field
+    const [iv, encrypted] = config.paymongo_secret_key.split(":");
+    if (!iv || !encrypted) {
+      console.error("[WALLET_TOPUP] Invalid encrypted key format");
+      throw new ConvexError({
+        code: "CONFIG_ERROR",
+        message: "Wallet top-up is currently unavailable. Please try again later.",
+      });
+    }
+
+    let secretKey: string;
+    try {
+      secretKey = await decryptApiKey(encrypted, iv, PAYMONGO_ENCRYPTION_KEY);
+    } catch (error) {
+      console.error("[WALLET_TOPUP] Failed to decrypt secret key:", error);
+      throw new ConvexError({
+        code: "CONFIG_ERROR",
+        message: "Wallet top-up is currently unavailable. Please try again later.",
+      });
+    }
+
+    // Build auth header
+    const authToken = base64EncodeAscii(secretKey + ":");
+    const authHeaderValue = `Basic ${authToken}`;
+
+    // Build redirect URLs (origin is required from frontend)
+    if (!args.origin) {
+      throw new ConvexError({
+        code: "VALIDATION_ERROR",
+        message: "Origin URL is required for payment redirect",
+      });
+    }
+    const successUrl = `${args.origin}/customer/wallet?topup=success`;
+    const cancelUrl = `${args.origin}/customer/wallet?topup=cancelled`;
+
+    // Convert to centavos (PayMongo uses centavos)
+    const amountInCentavos = Math.round(args.amount * 100);
+
+    console.log("[WALLET_TOPUP] Creating checkout session:", {
+      userId: args.userId,
+      amount: args.amount,
+      amountCentavos: amountInCentavos,
+      testMode: config.is_test_mode,
+    });
+
+    // Create PayMongo checkout session
+    const payload = {
+      data: {
+        attributes: {
+          line_items: [
+            {
+              name: "Wallet Top-up",
+              quantity: 1,
+              amount: amountInCentavos,
+              currency: "PHP",
+            },
+          ],
+          payment_method_types: ["gcash", "paymaya", "card", "grab_pay"],
+          success_url: successUrl,
+          cancel_url: cancelUrl,
+          description: `Wallet Top-up ₱${args.amount}`,
+          metadata: {
+            user_id: args.userId,
+            type: "sa_wallet_topup",
+            amount: args.amount.toString(),
+          },
+        },
+      },
+    };
+
+    const response = await fetch("https://api.paymongo.com/v1/checkout_sessions", {
+      method: "POST",
+      headers: {
+        Authorization: authHeaderValue,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await response.json();
+
+    console.log("[WALLET_TOPUP] PayMongo response:", {
+      ok: response.ok,
+      status: response.status,
+      sessionId: data?.data?.id,
+      errors: data?.errors,
+    });
+
+    if (!response.ok) {
+      console.error("[WALLET_TOPUP] PayMongo API error:", data?.errors);
+      throw new ConvexError({
+        code: "PAYMONGO_ERROR",
+        message: data?.errors?.[0]?.detail || "Failed to create payment session. Please try again.",
+      });
+    }
+
+    const sessionId = data.data.id;
+    const checkoutUrl = data.data.attributes.checkout_url;
+
+    // Store pending wallet transaction (reuse existing mutation)
+    await ctx.runMutation(internal.services.wallet.createPendingTransaction, {
+      userId: args.userId,
+      amount: args.amount,
+      description: `Wallet Top-up ₱${args.amount}`,
+      source_id: sessionId,
+      status: "pending",
+    });
+
+    return {
+      success: true,
+      sessionId,
+      checkoutUrl,
+      amount: args.amount,
+    };
+  },
+});
+
+/**
+ * Process SA wallet top-up webhook
+ * Story 23.1 - Task 3: Called from http.ts webhook handler
+ *
+ * Handles checkout_session.payment.paid events for SA wallet top-ups.
+ * Credits the user wallet and creates transaction record.
+ *
+ * @param sessionId - PayMongo checkout session ID
+ * @param paymentId - PayMongo payment ID
+ * @param amount - Payment amount in pesos
+ * @returns { success, userId, credited }
+ */
+export const processSAWalletTopupWebhook = internalAction({
+  args: {
+    sessionId: v.string(),
+    paymentId: v.string(),
+    amount: v.number(),
+    rawPayload: v.optional(v.any()),
+  },
+  handler: async (ctx, args) => {
+    console.log("[SA_WALLET_WEBHOOK] Processing top-up:", {
+      sessionId: args.sessionId,
+      paymentId: args.paymentId,
+      amount: args.amount,
+    });
+
+    // Get pending transaction by source_id (session ID)
+    const pending = await ctx.runQuery(api.services.wallet.getTransactionBySource, {
+      sourceId: args.sessionId,
+    });
+
+    if (!pending) {
+      console.error("[SA_WALLET_WEBHOOK] No pending transaction found for session:", args.sessionId);
+      return { success: false, error: "Pending transaction not found" };
+    }
+
+    // Check idempotency - already processed?
+    if (pending.status === "completed") {
+      console.log("[SA_WALLET_WEBHOOK] Transaction already processed:", args.sessionId);
+      return { success: true, alreadyProcessed: true, userId: pending.user_id };
+    }
+
+    // Credit the wallet
+    const creditResult = await ctx.runMutation(api.services.wallet.creditWallet, {
+      userId: pending.user_id,
+      amount: pending.amount,
+      description: `Wallet Top-up ₱${pending.amount}`,
+      reference_id: args.paymentId,
+      applyBonus: true,
+    });
+
+    // Update transaction status
+    await ctx.runMutation(internal.services.wallet.updateTransactionStatus, {
+      transactionId: pending._id,
+      status: "completed",
+      payment_id: args.paymentId,
+    });
+
+    // Story 23.2 - AC#2: Create notification for successful top-up
+    try {
+      const totalCredited = pending.amount + (creditResult.bonus || 0);
+      const bonusMessage = creditResult.bonus > 0
+        ? ` (+₱${creditResult.bonus.toLocaleString()} bonus!)`
+        : "";
+
+      await ctx.runMutation(api.services.notifications.createNotification, {
+        title: "Wallet Top-up Successful",
+        message: `Wallet topped up: ₱${pending.amount.toLocaleString()}${bonusMessage}`,
+        type: "payment",
+        priority: "medium",
+        recipient_id: pending.user_id,
+        recipient_type: "customer",
+        action_url: "/customer/wallet",
+        action_label: "View Wallet",
+        metadata: {
+          transaction_type: "wallet_topup",
+          amount: pending.amount,
+          bonus: creditResult.bonus || 0,
+          total: totalCredited,
+          reference: args.paymentId,
+        },
+      });
+      console.log("[SA_WALLET_WEBHOOK] Notification created for user:", pending.user_id);
+    } catch (notifError) {
+      // Log but don't fail the webhook if notification creation fails
+      console.error("[SA_WALLET_WEBHOOK] Failed to create notification:", notifError);
+    }
+
+    console.log("[SA_WALLET_WEBHOOK] Wallet credited:", {
+      userId: pending.user_id,
+      amount: pending.amount,
+      bonus: creditResult.bonus,
+      total: creditResult.total,
+    });
+
+    return {
+      success: true,
+      userId: pending.user_id,
+      credited: pending.amount,
+      bonus: creditResult.bonus,
+      total: creditResult.total,
+    };
+  },
+});
+
+// ============================================================================
+// POS WALLET PAYMENT QUERIES (Story 24.1)
+// ============================================================================
+
+/**
+ * Get customer wallet balance for POS display
+ * Story 24.1 - Task 1: Query for staff to view customer wallet at POS
+ *
+ * @param user_id - Optional customer user ID (null for guests)
+ * @returns Wallet balance info or null for guests
+ */
+export const getCustomerWalletBalance = query({
+  args: { user_id: v.optional(v.id("users")) },
+  handler: async (ctx, args) => {
+    // AC #5: Return null for guests (no user_id)
+    if (!args.user_id) {
+      return null;
+    }
+
+    // Get wallet from wallets table
+    const wallet = await ctx.db
+      .query("wallets")
+      .withIndex("by_user", (q) => q.eq("user_id", args.user_id!))
+      .first();
+
+    if (!wallet) {
+      return {
+        hasWallet: false,
+        balance: 0,
+        bonusBalance: 0,
+        totalBalance: 0,
+      };
+    }
+
+    const balance = wallet.balance || 0;
+    const bonusBalance = wallet.bonus_balance || 0;
+
+    return {
+      hasWallet: true,
+      balance,
+      bonusBalance,
+      totalBalance: balance + bonusBalance,
+    };
+  },
+});
+
+/**
+ * Verify SA wallet webhook signature
+ * Story 23.1 - Task 3.2: Signature verification using SA webhook secret
+ *
+ * @param signature - PayMongo-Signature header value
+ * @param rawBody - Raw request body
+ * @returns { valid: boolean }
+ */
+export const verifySAWalletWebhookSignature = internalAction({
+  args: {
+    signature: v.string(),
+    rawBody: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Get SA wallet config
+    const config = await ctx.runQuery(api.services.walletConfig.getDecryptedWalletConfig);
+
+    if (!config) {
+      return { valid: false, error: "SA wallet config not found" };
+    }
+
+    // Check encryption key
+    if (!PAYMONGO_ENCRYPTION_KEY || PAYMONGO_ENCRYPTION_KEY.length !== 64) {
+      return { valid: false, error: "Encryption key not configured" };
+    }
+
+    // Decrypt webhook secret
+    const [iv, encrypted] = config.paymongo_webhook_secret.split(":");
+    if (!iv || !encrypted) {
+      return { valid: false, error: "Invalid webhook secret format" };
+    }
+
+    let webhookSecret: string;
+    try {
+      webhookSecret = await decryptApiKey(encrypted, iv, PAYMONGO_ENCRYPTION_KEY);
+    } catch (error) {
+      console.error("[SA_WALLET_WEBHOOK] Failed to decrypt webhook secret:", error);
+      return { valid: false, error: "Failed to decrypt webhook secret" };
+    }
+
+    // Parse signature components
+    // Format: t=timestamp,te=test_signature,li=live_signature
+    const parts = args.signature.split(",");
+    let timestamp = "";
+    let testSignature = "";
+    let liveSignature = "";
+
+    for (const part of parts) {
+      const [key, value] = part.split("=");
+      if (key === "t") timestamp = value;
+      if (key === "te") testSignature = value;
+      if (key === "li") liveSignature = value;
+    }
+
+    if (!timestamp) {
+      return { valid: false, error: "Missing timestamp in signature" };
+    }
+
+    // Construct payload to verify
+    const payloadToSign = `${timestamp}.${args.rawBody}`;
+    const expectedSignature = liveSignature || testSignature;
+
+    if (!expectedSignature) {
+      return { valid: false, error: "Missing signature value" };
+    }
+
+    // Compute HMAC-SHA256 using Web Crypto API
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(webhookSecret);
+    const payloadData = encoder.encode(payloadToSign);
+
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw",
+      keyData,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+
+    const signatureBuffer = await crypto.subtle.sign("HMAC", cryptoKey, payloadData);
+    const computedSignature = Array.from(new Uint8Array(signatureBuffer))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+
+    const valid = computedSignature === expectedSignature;
+
+    console.log("[SA_WALLET_WEBHOOK] Signature verification:", {
+      valid,
+      timestamp,
+      hasTestSig: !!testSignature,
+      hasLiveSig: !!liveSignature,
+    });
+
+    return { valid };
   },
 });

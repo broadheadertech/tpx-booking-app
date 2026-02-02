@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
+import { DEFAULT_TIERS } from "./tiers";
 
 /**
  * Main Queue Service
@@ -139,7 +140,7 @@ export const getMainQueue = query({
       })
     );
 
-    // Get service details for bookings
+    // Get service details for bookings with tier information
     const bookingsWithServices = await Promise.all(
       todaysBookings.map(async (booking) => {
         let serviceName = "Service";
@@ -157,13 +158,67 @@ export const getMainQueue = query({
           console.warn("[getMainQueue] Failed to fetch service:", error);
         }
 
+        // Get tier information for signed-in customers
+        let tierInfo = null;
+        let lifetimePoints = 0;
+        let memberSince = null;
+
+        if (booking.customer) {
+          try {
+            const user = await ctx.db.get(booking.customer);
+            if (user) {
+              memberSince = user.createdAt || user._creationTime;
+
+              // Get tier info
+              if (user.current_tier_id) {
+                const tier = await ctx.db.get(user.current_tier_id);
+                if (tier) {
+                  tierInfo = {
+                    name: tier.name,
+                    icon: tier.icon,
+                    color: tier.color,
+                    display_order: tier.display_order,
+                  };
+                }
+              }
+
+              // If no tier set, use Bronze as default
+              if (!tierInfo) {
+                const bronzeDefault = DEFAULT_TIERS[0];
+                tierInfo = {
+                  name: bronzeDefault.name,
+                  icon: bronzeDefault.icon,
+                  color: bronzeDefault.color,
+                  display_order: bronzeDefault.display_order,
+                };
+              }
+
+              // Get lifetime points
+              const ledger = await ctx.db
+                .query("points_ledger")
+                .withIndex("by_user", (q) => q.eq("user_id", booking.customer!))
+                .unique();
+
+              if (ledger) {
+                lifetimePoints = ledger.lifetime_earned;
+              }
+            }
+          } catch (error) {
+            console.warn("[getMainQueue] Failed to fetch user tier info:", error);
+          }
+        }
+
         return {
           ...booking,
           serviceName,
           serviceDuration,
           servicePrice,
           isWalkIn: false,
-          hasAccount: true,
+          hasAccount: !!booking.customer,
+          userId: booking.customer || null, // Include user ID for welcome card
+          tierInfo,
+          lifetimePoints,
+          memberSince,
         };
       })
     );
@@ -187,6 +242,16 @@ export const getMainQueue = query({
         hasAccount: w.hasAccount,
         createdAt: w.createdAt,
         type: "walkin" as const,
+        // Walk-ins don't have tier info or userId
+        tierInfo: null as {
+          name: string;
+          icon: string;
+          color: string;
+          display_order: number;
+        } | null,
+        lifetimePoints: 0,
+        memberSince: null as number | null,
+        userId: null as string | null,
       })),
       ...bookingsWithServices.map((b) => ({
         id: b._id,
@@ -205,6 +270,12 @@ export const getMainQueue = query({
         hasAccount: b.hasAccount,
         createdAt: b.createdAt || b._creationTime,
         type: "booking" as const,
+        // Include tier information for signed-in customers
+        tierInfo: b.tierInfo,
+        lifetimePoints: b.lifetimePoints,
+        // Include user ID for welcome card
+        userId: b.userId,
+        memberSince: b.memberSince,
       })),
     ];
 

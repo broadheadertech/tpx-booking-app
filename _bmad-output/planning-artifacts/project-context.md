@@ -1,10 +1,10 @@
 ---
 project_name: 'tpx-booking-app'
 user_name: 'MASTERPAINTER'
-date: '2026-01-25'
-sections_completed: ['technology_stack', 'language_rules', 'framework_rules', 'testing_rules', 'quality_rules', 'workflow_rules', 'anti_patterns']
+date: '2026-01-30'
+sections_completed: ['technology_stack', 'language_rules', 'framework_rules', 'testing_rules', 'quality_rules', 'workflow_rules', 'anti_patterns', 'wallet_patterns']
 status: 'complete'
-rule_count: 47
+rule_count: 59
 optimized_for_llm: true
 ---
 
@@ -221,7 +221,136 @@ export function FeatureName({ branchId }) {
 
 ---
 
-## Existing Database Tables (24)
+## Multi-branch Wallet Payment Patterns
+
+### Commission Calculation (MANDATORY)
+
+**ALL agents MUST use this exact pattern for commission calculations:**
+
+```typescript
+// convex/lib/walletUtils.ts - Import and use this function
+function calculateCommission(grossAmount: number, commissionPercent: number) {
+  const commissionAmount = Math.round(grossAmount * (commissionPercent / 100));
+  const netAmount = grossAmount - commissionAmount;
+  return { commissionAmount, netAmount };
+}
+
+// Usage in mutations:
+const { commissionAmount, netAmount } = calculateCommission(
+  args.gross_amount,
+  config.default_commission_percent
+);
+```
+
+**Currency Rules (Wallet-Specific):**
+- Store as integers: `500` = ₱500
+- Display with `toLocaleString()`: `₱500.00`
+- Never use floats for money calculations
+- All wallet amounts use whole pesos
+
+### Settlement State Machine (CRITICAL)
+
+**Valid State Transitions:**
+```typescript
+const SETTLEMENT_TRANSITIONS = {
+  pending: ["approved", "rejected"],
+  approved: ["processing", "rejected"],
+  processing: ["completed", "rejected"],
+  completed: [],
+  rejected: [],
+} as const;
+```
+
+**State Change Mutation Pattern:**
+```typescript
+// ALWAYS validate transition before update
+export const approveSettlement = mutation({
+  handler: async (ctx, args) => {
+    const settlement = await ctx.db.get(args.settlement_id);
+    if (settlement.status !== "pending") {
+      throw new ConvexError({
+        code: "INVALID_TRANSITION",
+        message: `Cannot approve from ${settlement.status} state`,
+      });
+    }
+    // Proceed with update only after validation
+    await ctx.db.patch(args.settlement_id, { status: "approved", ... });
+  },
+});
+```
+
+### Wallet-Specific Error Codes
+
+| Code | When | Message Pattern |
+|------|------|-----------------|
+| `INSUFFICIENT_BALANCE` | Wallet balance < payment amount | "Insufficient wallet balance" |
+| `INVALID_TRANSITION` | Invalid settlement state change | "Cannot {action} from {state} state" |
+| `SETTLEMENT_PENDING` | Duplicate settlement request | "Settlement already pending for this branch" |
+| `MINIMUM_NOT_MET` | Below min settlement amount | "Minimum settlement amount is ₱{amount}" |
+| `CONFIG_NOT_FOUND` | Missing SA wallet config | "Wallet configuration not set up" |
+
+### Wallet Query Patterns
+
+**Branch-Isolated Earnings Queries:**
+```typescript
+// ALWAYS include branch_id and use index
+export const getBranchEarnings = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("branchWalletEarnings")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+  },
+});
+```
+
+**Super Admin Cross-Branch Queries:**
+```typescript
+// Use getAll* prefix for SA queries
+export const getAllPendingSettlements = query({
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("branchSettlements")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .collect();
+  },
+});
+```
+
+### Wallet Access Control Matrix
+
+| Resource | super_admin | branch_admin | staff | customer |
+|----------|-------------|--------------|-------|----------|
+| Wallet Config | Read/Write | - | - | - |
+| Branch Earnings | All branches | Own branch only | - | - |
+| Settlements | Approve all | Request own branch | - | - |
+| Commission Settings | Configure | View only | - | - |
+| Wallet Top-up | - | - | - | Own wallet |
+| POS Wallet Payment | - | Process | Process | - |
+
+### Wallet Anti-Patterns (AVOID)
+
+- ❌ Using floats for currency: `amount: 500.00`
+- ❌ Skipping state validation: Direct status update without checking current state
+- ❌ Missing branch filter: Querying earnings without `branch_id`
+- ❌ Wrong credentials: Using branch PayMongo keys for wallet top-ups (use SA config)
+- ❌ Direct field mutation: `settlement.status = "approved"` instead of proper mutation
+- ❌ Calculating commission at read time: Always store pre-calculated values
+
+### Wallet Service Files
+
+| Service | File | Purpose |
+|---------|------|---------|
+| Wallet Config | `convex/services/walletConfig.ts` | Super Admin PayMongo settings |
+| Branch Earnings | `convex/services/branchEarnings.ts` | Branch ledger management |
+| Settlements | `convex/services/settlements.ts` | Settlement request/approval flow |
+| Analytics | `convex/services/walletAnalytics.ts` | SA overview dashboard queries |
+| Utilities | `convex/lib/walletUtils.ts` | Commission calculation helper |
+
+---
+
+## Existing Database Tables (28)
 
 Do NOT create duplicates of these existing tables:
 - `branches`, `branding`, `branding_global`, `branding_history`
@@ -233,6 +362,7 @@ Do NOT create duplicates of these existing tables:
 - `email_campaigns`, `email_campaign_logs`, `wallets`, `wallet_transactions`
 - `barber_portfolio`, `barber_achievements`, `email_templates`
 - `custom_booking_forms`, `custom_booking_submissions`
+- `walletConfig`, `branchWalletSettings`, `branchWalletEarnings`, `branchSettlements` *(Multi-branch Wallet)*
 
 ---
 
@@ -253,4 +383,4 @@ Do NOT create duplicates of these existing tables:
 
 ---
 
-Last Updated: 2026-01-25
+Last Updated: 2026-01-30

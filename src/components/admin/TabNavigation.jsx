@@ -16,7 +16,12 @@ import {
   Receipt,
   FileText,
   ChevronDown,
-  MoreHorizontal
+  MoreHorizontal,
+  Star,
+  Zap,
+  Wallet,
+  Banknote,
+  History
 } from 'lucide-react'
 
 const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
@@ -59,6 +64,11 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
       expenses: Receipt,
       balance_sheet: Scale,
       payment_history: FileText,
+      loyalty: Star,
+      promotions: Zap,
+      wallet: Wallet,
+      settlements: Banknote,
+      audit_trail: History,
     }
     return iconMap[tabId] || LayoutDashboard
   }

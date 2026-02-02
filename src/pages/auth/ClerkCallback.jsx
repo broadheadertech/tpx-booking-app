@@ -6,10 +6,10 @@
  * Waits for webhook to create Convex user, then redirects to role-appropriate dashboard.
  */
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
-import { useConvex } from "convex/react";
+import { useConvex, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { getRoleRedirectPath } from "../../utils/roleRedirect";
 import { useBranding } from "../../context/BrandingContext";
@@ -20,11 +20,15 @@ function ClerkCallback() {
   const convex = useConvex();
   const { branding } = useBranding();
 
-  const [status, setStatus] = useState("loading"); // loading, polling, error, redirecting
+  const [status, setStatus] = useState("loading"); // loading, polling, creating, error, redirecting
   const [error, setError] = useState(null);
   const [pollCount, setPollCount] = useState(0);
+  const isCreatingRef = useRef(false);
 
-  const MAX_POLLS = 10; // 10 polls * 500ms = 5 seconds
+  // Mutation to create user if webhook hasn't processed yet
+  const ensureUserFromClerk = useMutation(api.services.auth.ensureUserFromClerk);
+
+  const MAX_POLLS = 3; // Reduced - we'll create user if not found after 3 polls
   const POLL_INTERVAL = 500;
 
   // Poll for user with retry logic
@@ -42,6 +46,32 @@ function ClerkCallback() {
     }
   }, [clerkUser?.id, convex]);
 
+  // Create user directly using ensureUserFromClerk mutation
+  const createUserDirectly = useCallback(async () => {
+    if (!clerkUser?.id || isCreatingRef.current) return null;
+
+    isCreatingRef.current = true;
+    setStatus("creating");
+
+    try {
+      console.log("[ClerkCallback] Creating user directly via ensureUserFromClerk...");
+      const user = await ensureUserFromClerk({
+        clerk_user_id: clerkUser.id,
+        email: clerkUser.primaryEmailAddress?.emailAddress || `${clerkUser.id}@clerk.local`,
+        first_name: clerkUser.firstName || undefined,
+        last_name: clerkUser.lastName || undefined,
+        image_url: clerkUser.imageUrl || undefined,
+      });
+      console.log("[ClerkCallback] User created successfully:", user);
+      return user;
+    } catch (err) {
+      console.error("[ClerkCallback] Error creating user:", err);
+      return null;
+    } finally {
+      isCreatingRef.current = false;
+    }
+  }, [clerkUser, ensureUserFromClerk]);
+
   useEffect(() => {
     // Wait for Clerk to load
     if (!clerkLoaded) {
@@ -51,7 +81,7 @@ function ClerkCallback() {
 
     // If not signed in, redirect to login
     if (!isSignedIn) {
-      navigate("/auth/clerk-login", { replace: true });
+      navigate("/auth/login", { replace: true });
       return;
     }
 
@@ -80,11 +110,23 @@ function ClerkCallback() {
         const newCount = prev + 1;
 
         if (newCount >= MAX_POLLS) {
-          // Timeout - show error
-          setStatus("error");
-          setError(
-            "Your account is being set up. Please wait a moment and try again."
-          );
+          // Webhook hasn't processed yet - create user directly
+          console.log("[ClerkCallback] User not found after polling, creating directly...");
+
+          createUserDirectly().then((createdUser) => {
+            if (createdUser) {
+              setStatus("redirecting");
+              const redirectPath = getRoleRedirectPath(createdUser.role || "customer");
+              console.log("[ClerkCallback] User created, redirecting to:", redirectPath);
+              navigate(redirectPath, { replace: true });
+            } else {
+              setStatus("error");
+              setError(
+                "Unable to set up your account. Please try again."
+              );
+            }
+          });
+
           return newCount;
         }
 
@@ -95,7 +137,7 @@ function ClerkCallback() {
     };
 
     poll();
-  }, [clerkLoaded, isSignedIn, clerkUser?.id, navigate, pollForUser]);
+  }, [clerkLoaded, isSignedIn, clerkUser?.id, navigate, pollForUser, createUserDirectly]);
 
   // Handle retry
   const handleRetry = () => {
@@ -106,7 +148,7 @@ function ClerkCallback() {
 
   // Handle go to login
   const handleGoToLogin = () => {
-    navigate("/auth/clerk-login", { replace: true });
+    navigate("/auth/login", { replace: true });
   };
 
   return (
@@ -124,7 +166,7 @@ function ClerkCallback() {
         {/* Status Card */}
         <div className="bg-[#1A1A1A] rounded-3xl shadow-2xl border border-[#2A2A2A]/50 p-8">
           {/* Loading State */}
-          {(status === "loading" || status === "polling") && (
+          {(status === "loading" || status === "polling" || status === "creating") && (
             <div className="text-center">
               {/* Spinner */}
               <div className="flex justify-center mb-6">
@@ -132,29 +174,26 @@ function ClerkCallback() {
               </div>
 
               <h2 className="text-xl font-semibold text-white mb-2">
-                {status === "loading" ? "Loading..." : "Setting up your account"}
+                {status === "loading" ? "Loading..." :
+                 status === "creating" ? "Creating your account..." :
+                 "Setting up your account"}
               </h2>
 
               <p className="text-gray-400 text-sm">
-                {status === "polling" && (
+                {(status === "polling" || status === "creating") && (
                   <>
                     Please wait while we prepare your dashboard
-                    {pollCount > 3 && (
-                      <span className="block mt-2 text-gray-500">
-                        This may take a few moments...
-                      </span>
-                    )}
                   </>
                 )}
               </p>
 
               {/* Progress indicator */}
-              {status === "polling" && (
+              {(status === "polling" || status === "creating") && (
                 <div className="mt-6">
                   <div className="w-full bg-[#2A2A2A] rounded-full h-1.5">
                     <div
                       className="bg-[#FF8C42] h-1.5 rounded-full transition-all duration-300"
-                      style={{ width: `${(pollCount / MAX_POLLS) * 100}%` }}
+                      style={{ width: status === "creating" ? "100%" : `${(pollCount / MAX_POLLS) * 100}%` }}
                     ></div>
                   </div>
                 </div>
@@ -243,8 +282,8 @@ function ClerkCallback() {
         {/* Help text */}
         <p className="text-center text-xs text-gray-600 mt-6">
           Having trouble?{" "}
-          <a href="/auth/login" className="text-[#FF8C42] hover:text-[#E67E3C]">
-            Try legacy login
+          <a href="mailto:support@tipunox.com" className="text-[#FF8C42] hover:text-[#E67E3C]">
+            Contact support
           </a>
         </p>
       </div>

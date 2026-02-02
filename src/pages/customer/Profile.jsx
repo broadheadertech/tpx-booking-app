@@ -1,52 +1,51 @@
-import React, { useState, useEffect } from 'react'
-import { User, Mail, Phone, Calendar, MapPin, Edit2, LogOut, Save, X, ArrowLeft, RotateCcw, AlertCircle, CheckCircle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { User, Edit2, LogOut, ArrowLeft, Settings, ChevronRight, Shield, Bell, HelpCircle, Star, Sparkles } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { useUser, useClerk } from '@clerk/clerk-react'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { useEnsureClerkUser } from '../../hooks/useEnsureClerkUser'
 import { useNavigate } from 'react-router-dom'
 import { APP_VERSION } from '../../config/version'
 import { useBranding } from '../../context/BrandingContext'
+import StarRewardsCard from '../../components/common/StarRewardsCard'
 
 const Profile = ({ onBack }) => {
-  const { user, logout, loading: authLoading, sessionToken } = useAuth()
+  const { logout: authLogout, sessionToken } = useAuth()
+  const { user: clerkUser, isLoaded: clerkLoaded } = useUser()
+  const { signOut } = useClerk()
   const navigate = useNavigate()
   const updateUserProfileMutation = useMutation(api.services.auth.updateUserProfile)
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-   const { branding } = useBranding()
+  const { branding } = useBranding()
+
+  // Use the hook that ensures Clerk users have Convex records
+  const { user, isLoading: userLoading, isClerkAuth } = useEnsureClerkUser()
+
   const [profileData, setProfileData] = useState({
     username: '',
     email: '',
     nickname: '',
     mobile_number: '',
-    birthday: '',
-    preferences: {
-      notifications: true,
-      emailUpdates: true,
-      smsReminders: true
-    }
+    birthday: ''
   })
 
   useEffect(() => {
     loadProfileData()
-  }, [user])
+  }, [user, clerkUser])
 
   const loadProfileData = async () => {
     try {
       if (user) {
         setProfileData({
-          username: user.username || '',
-          email: user.email || '',
-          nickname: user.nickname || '',
-          mobile_number: user.mobile_number || '',
-          birthday: user.birthday || '',
-          preferences: {
-            notifications: true,
-            emailUpdates: true,
-            smsReminders: true
-          }
+          username: user.username || user.first_name || '',
+          email: user.email || clerkUser?.primaryEmailAddress?.emailAddress || '',
+          nickname: user.nickname || user.first_name || '',
+          mobile_number: user.mobile_number || clerkUser?.primaryPhoneNumber?.phoneNumber || '',
+          birthday: user.birthday || ''
         })
       }
     } catch (error) {
@@ -61,50 +60,37 @@ const Profile = ({ onBack }) => {
     }))
   }
 
-  const handlePreferenceChange = (preference, value) => {
-    setProfileData(prev => ({
-      ...prev,
-      preferences: {
-        ...prev.preferences,
-        [preference]: value
-      }
-    }))
-  }
-
   const handleSave = async () => {
     try {
       setLoading(true)
       setError('')
       setSuccess('')
-      
-      // Validate inputs
+
       if (profileData.nickname && profileData.nickname.length > 100) {
         throw new Error('Nickname must be less than 100 characters')
       }
       if (profileData.mobile_number && profileData.mobile_number.length > 0) {
         if (!/^\+?[0-9\s\-\(\)]{7,}$/.test(profileData.mobile_number)) {
-          throw new Error('Please enter a valid phone number with at least 7 digits')
+          throw new Error('Please enter a valid phone number')
         }
       }
-      
-      // Call backend mutation
+
       const result = await updateUserProfileMutation({
         sessionToken: sessionToken || '',
         nickname: profileData.nickname || undefined,
-        email: undefined, // Email should not be changed
+        email: undefined,
         mobile_number: profileData.mobile_number || undefined,
         birthday: profileData.birthday || undefined,
       })
-      
+
       if (result) {
-        setSuccess('Profile updated successfully!')
+        setSuccess('Profile updated!')
         setIsEditing(false)
         setTimeout(() => setSuccess(''), 3000)
       }
     } catch (error) {
       console.error('Error saving profile:', error)
-      const errorMessage = error?.message || 'Failed to update profile. Please try again.'
-      setError(errorMessage)
+      setError(error?.message || 'Failed to update profile')
     } finally {
       setLoading(false)
     }
@@ -112,24 +98,17 @@ const Profile = ({ onBack }) => {
 
   const handleLogout = async () => {
     try {
-      console.log('Logging out...')
-      await logout()
-      console.log('Logout successful, navigating to login...')
-      // Use window.location for a hard redirect to ensure clean state
-      window.location.href = '/auth/login'
+      if (isClerkAuth) {
+        await signOut()
+        window.location.href = '/auth/clerk-login'
+      } else {
+        await authLogout()
+        window.location.href = '/auth/login'
+      }
     } catch (error) {
       console.error('Logout error:', error)
-      // Even if there's an error, redirect to login
       window.location.href = '/auth/login'
     }
-  }
-
-  const handleResetOnboarding = () => {
-    // Clear the onboarding completion flag from session storage
-    sessionStorage.removeItem('onboarding_completed')
-    
-    // Show confirmation message
-    alert('Onboarding has been reset! You will see the welcome tour on your next visit to the dashboard.')
   }
 
   const handleBack = () => {
@@ -140,7 +119,8 @@ const Profile = ({ onBack }) => {
     }
   }
 
-  if (authLoading || !user) {
+  // Loading state
+  if (userLoading || (!user && !clerkUser)) {
     return (
       <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
         <div className="text-center">
@@ -151,221 +131,248 @@ const Profile = ({ onBack }) => {
     )
   }
 
+  // Get display name
+  const displayName = profileData.nickname || profileData.username || clerkUser?.firstName || 'User'
+  const avatarUrl = user?.avatar || clerkUser?.imageUrl || '/img/avatar_default.jpg'
+
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
-      {/* Header with Back Button */}
-      <div className="sticky top-0 z-40 bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#1A1A1A]">
+      {/* Header */}
+      <div className="sticky top-0 z-40 bg-[#0A0A0A]/98 backdrop-blur-2xl border-b border-[#1A1A1A]">
         <div className="max-w-md mx-auto px-4">
-          <div className="flex justify-between items-center py-4">
+          <div className="flex items-center justify-between py-4">
             <button
               onClick={handleBack}
-              className="flex items-center space-x-2 text-gray-300 hover:text-white transition-colors"
+              className="flex items-center space-x-2 text-white"
             >
               <ArrowLeft className="w-5 h-5" />
               <span className="text-sm font-medium">Back</span>
             </button>
-            <h1 className="text-lg font-bold text-white">Profile</h1>
-            <button
-              onClick={handleLogout}
-              className="px-3 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-colors text-sm shadow-lg"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            <h1 className="text-lg font-bold text-white">Account</h1>
+            <div className="w-16" />
           </div>
         </div>
       </div>
 
-      {/* Profile Content */}
-      <div className="relative z-10 max-w-md mx-auto px-4 py-6 pb-20">
+      <div className="max-w-md mx-auto px-4 py-6 space-y-6 pb-24">
         {/* Profile Header Card */}
-        <div className="bg-[#1A1A1A] rounded-2xl shadow-lg border border-[#2A2A2A] mb-6 overflow-hidden">
-          <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] px-6 py-6">
-            <div className="text-center">
-              <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-3 ring-4 ring-white/30">
-                <img
-                  src={user?.avatar || '/img/avatar_default.jpg'}
-                  alt={profileData.nickname || profileData.username || 'User'}
-                  className="w-full h-full object-cover"
-                />
+        <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)]">
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+
+          <div className="relative z-10 p-6">
+            <div className="flex items-center gap-4">
+              {/* Avatar */}
+              <div className="relative">
+                <div className="w-20 h-20 rounded-2xl overflow-hidden ring-4 ring-white/20">
+                  <img
+                    src={avatarUrl}
+                    alt={displayName}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                {isClerkAuth && (
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center ring-2 ring-[var(--color-primary)]">
+                    <Shield className="w-3 h-3 text-white" />
+                  </div>
+                )}
               </div>
-              <h2 className="text-xl font-bold text-white mb-1">
-                {profileData.nickname || profileData.username || 'User'}
-              </h2>
-              <p className="text-white/90 text-sm">{profileData.email}</p>
-              <div className="mt-3 px-4 py-1.5 bg-white/20 rounded-full inline-block">
-                <span className="text-white text-xs font-medium uppercase tracking-wide">
-                  {user?.role === 'staff' ? 'Staff Member' : 'Customer'}
-                </span>
+
+              {/* User Info */}
+              <div className="flex-1">
+                <h2 className="text-xl font-black text-white mb-1">{displayName}</h2>
+                <p className="text-sm text-white/80 mb-2">{profileData.email}</p>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/20 rounded-full">
+                  <Star className="w-3 h-3 text-white" />
+                  <span className="text-xs font-bold text-white">
+                    {user?.role === 'staff' ? 'Staff' : 'Member'}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Error/Success Messages */}
+        {/* Star Rewards Card */}
+        {user?._id && (
+          <div>
+            <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-[var(--color-primary)]" />
+              Your Rewards
+            </h3>
+            <StarRewardsCard userId={user._id} />
+          </div>
+        )}
+
+        {/* Messages */}
         {error && (
-          <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 mb-4 flex items-center space-x-2">
-            <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+          <div className="bg-red-500/20 border border-red-500/30 rounded-2xl p-4">
             <p className="text-sm text-red-300">{error}</p>
           </div>
         )}
         {success && (
-          <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-3 mb-4 flex items-center space-x-2">
-            <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+          <div className="bg-green-500/20 border border-green-500/30 rounded-2xl p-4">
             <p className="text-sm text-green-300">{success}</p>
           </div>
         )}
 
-        {/* Personal Information Card */}
-        <div className="bg-[#1A1A1A] rounded-2xl shadow-lg border border-[#2A2A2A] mb-4">
-          <div className="px-4 py-4 border-b border-[#2A2A2A]">
-            <h3 className="text-lg font-semibold text-white">Personal Information</h3>
+        {/* Personal Information */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <User className="w-4 h-4 text-[var(--color-primary)]" />
+              Personal Information
+            </h3>
+            {!isEditing && (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="text-xs font-semibold text-[var(--color-primary)] flex items-center gap-1"
+              >
+                <Edit2 className="w-3 h-3" />
+                Edit
+              </button>
+            )}
           </div>
-          <div className="p-4 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">
-                <User className="w-4 h-4 inline mr-2" />
-                Username
-              </label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={profileData.username}
-                  onChange={(e) => handleInputChange('username', e.target.value)}
-                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                />
-              ) : (
-                <p className="px-4 py-3 bg-[#0A0A0A] text-white rounded-xl">{profileData.username}</p>
-              )}
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">
-                <Mail className="w-4 h-4 inline mr-2" />
-                Email Address
-              </label>
-              {isEditing ? (
-                <input
-                  type="email"
-                  value={profileData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
-                />
-              ) : (
-                <p className="px-4 py-3 bg-[#0A0A0A] text-white rounded-xl">{profileData.email}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">
-                <User className="w-4 h-4 inline mr-2" />
-                Nickname
-              </label>
+          <div className="bg-[#1A1A1A] rounded-[20px] border border-[#2A2A2A] overflow-hidden">
+            {/* Nickname */}
+            <div className="p-4 border-b border-[#2A2A2A]">
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 block">Nickname</label>
               {isEditing ? (
                 <input
                   type="text"
                   value={profileData.nickname}
                   onChange={(e) => handleInputChange('nickname', e.target.value)}
-                  placeholder="Enter your preferred name"
-                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                  placeholder="Your preferred name"
+                  className="w-full bg-[#0A0A0A] text-white rounded-xl px-4 py-3 border border-[#2A2A2A] focus:border-[var(--color-primary)] focus:outline-none"
                 />
               ) : (
-                <p className="px-4 py-3 bg-[#0A0A0A] text-gray-300 rounded-xl">{profileData.nickname || 'Not set'}</p>
+                <p className="text-white font-medium">{profileData.nickname || 'Not set'}</p>
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">
-                <Phone className="w-4 h-4 inline mr-2" />
-                Mobile Number
-              </label>
+            {/* Email */}
+            <div className="p-4 border-b border-[#2A2A2A]">
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 block">Email</label>
+              <p className="text-white font-medium">{profileData.email}</p>
+              {isClerkAuth && (
+                <p className="text-xs text-gray-500 mt-1">Managed by Clerk</p>
+              )}
+            </div>
+
+            {/* Phone */}
+            <div className="p-4 border-b border-[#2A2A2A]">
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 block">Phone</label>
               {isEditing ? (
                 <input
                   type="tel"
                   value={profileData.mobile_number}
                   onChange={(e) => handleInputChange('mobile_number', e.target.value)}
-                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                  placeholder="+63 XXX XXX XXXX"
+                  className="w-full bg-[#0A0A0A] text-white rounded-xl px-4 py-3 border border-[#2A2A2A] focus:border-[var(--color-primary)] focus:outline-none"
                 />
               ) : (
-                <p className="px-4 py-3 bg-[#0A0A0A] text-gray-300 rounded-xl">{profileData.mobile_number}</p>
+                <p className="text-white font-medium">{profileData.mobile_number || 'Not set'}</p>
               )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-2">
-                <Calendar className="w-4 h-4 inline mr-2" />
-                Birthday
-              </label>
+            {/* Birthday */}
+            <div className="p-4">
+              <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 block">Birthday</label>
               {isEditing ? (
                 <input
                   type="date"
                   value={profileData.birthday}
                   onChange={(e) => handleInputChange('birthday', e.target.value)}
-                  className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                  className="w-full bg-[#0A0A0A] text-white rounded-xl px-4 py-3 border border-[#2A2A2A] focus:border-[var(--color-primary)] focus:outline-none"
                 />
               ) : (
-                <p className="px-4 py-3 bg-[#0A0A0A] text-gray-300 rounded-xl">
-                  {profileData.birthday ? new Date(profileData.birthday).toLocaleDateString('en-PH') : 'Not set'}
+                <p className="text-white font-medium">
+                  {profileData.birthday ? new Date(profileData.birthday).toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Not set'}
                 </p>
               )}
             </div>
           </div>
-        </div>
 
-        {/* Account Statistics */}
-        <div className="bg-[#1A1A1A] rounded-2xl shadow-lg border border-[#2A2A2A] mb-6">
-          <div className="px-4 py-4 border-b border-[#2A2A2A]">
-            <h3 className="text-lg font-semibold text-white">Account Summary</h3>
-          </div>
-          <div className="p-4 space-y-4">
-            <div className="text-center p-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-xl">
-              <div className="text-white text-sm font-medium">Member since</div>
-              <div className="text-white text-lg font-bold">
-                {new Date().toLocaleDateString('en-PH', { month: 'long', year: 'numeric' })}
-              </div>
+          {/* Save/Cancel for edit mode */}
+          {isEditing && (
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => {
+                  setIsEditing(false)
+                  loadProfileData()
+                }}
+                className="flex-1 py-3 bg-[#1A1A1A] text-white font-semibold rounded-2xl border border-[#2A2A2A] active:scale-[0.98] transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={loading}
+                className="flex-1 py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-semibold rounded-2xl active:scale-[0.98] transition-all disabled:opacity-50"
+              >
+                {loading ? 'Saving...' : 'Save'}
+              </button>
             </div>
+          )}
+        </div>
+
+        {/* Quick Links */}
+        <div>
+          <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+            <Settings className="w-4 h-4 text-[var(--color-primary)]" />
+            Settings
+          </h3>
+          <div className="bg-[#1A1A1A] rounded-[20px] border border-[#2A2A2A] divide-y divide-[#2A2A2A]">
+            <button
+              onClick={() => navigate('/customer/notifications')}
+              className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors first:rounded-t-[20px]"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                  <Bell className="w-5 h-5 text-blue-400" />
+                </div>
+                <span className="text-sm font-medium text-white">Notifications</span>
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-500" />
+            </button>
+
+            <button className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                  <HelpCircle className="w-5 h-5 text-purple-400" />
+                </div>
+                <span className="text-sm font-medium text-white">Help & Support</span>
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-500" />
+            </button>
+
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors last:rounded-b-[20px]"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
+                  <LogOut className="w-5 h-5 text-red-400" />
+                </div>
+                <span className="text-sm font-medium text-red-400">Sign Out</span>
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-500" />
+            </button>
           </div>
         </div>
 
-        {/* Version Display */}
-        <div className="text-center mb-6">
-          <p className="text-xs text-gray-500">v{APP_VERSION}</p>
-          <p className="text-xs text-gray-600">{branding?.display_name}</p>
+        {/* App Info */}
+        <div className="text-center pt-4">
+          <p className="text-xs text-gray-500">{branding?.display_name || 'TPX Booking'}</p>
+          <p className="text-xs text-gray-600 mt-1">Version {APP_VERSION}</p>
+          {isClerkAuth && (
+            <p className="text-xs text-[var(--color-primary)] mt-2 flex items-center justify-center gap-1">
+              <Shield className="w-3 h-3" />
+              Secured by Clerk
+            </p>
+          )}
         </div>
-
-        {/* Edit Button */}
-        {!isEditing && (
-          <button
-            onClick={() => setIsEditing(true)}
-            className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-xl hover:shadow-xl transition-all duration-300 transform hover:scale-105 shadow-lg mb-4"
-          >
-            <Edit2 className="w-4 h-4" />
-            <span>Edit Profile</span>
-          </button>
-        )}
-
-        {/* Save/Cancel Buttons */}
-        {isEditing && (
-          <div className="flex space-x-3 mb-4">
-            <button
-              onClick={() => {
-                setIsEditing(false)
-                loadProfileData() // Reset data
-              }}
-              className="flex-1 px-4 py-3 bg-[#1A1A1A] border border-[#2A2A2A] text-gray-300 rounded-xl hover:bg-[#2A2A2A] transition-colors"
-            >
-              <X className="w-4 h-4 inline mr-2" />
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={loading}
-              className="flex-1 flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-xl hover:shadow-xl transition-all duration-300 disabled:opacity-50"
-            >
-              <Save className="w-4 h-4" />
-              <span>{loading ? 'Saving...' : 'Save Changes'}</span>
-            </button>
-          </div>
-        )}
       </div>
     </div>
   )

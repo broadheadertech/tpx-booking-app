@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard, Wallet, Store, AlertCircle, Loader2, ChevronRight } from 'lucide-react';
+import { X, CreditCard, Wallet, Store, AlertCircle, Loader2, ChevronRight, Star, Sparkles } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { createPortal } from 'react-dom';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 
 /**
- * PaymentOptionsModal - Story 7.4
+ * PaymentOptionsModal - Story 7.4 + Customer Experience (Wallet Payments with Points)
  *
  * Displays available payment options based on branch configuration:
+ * - Pay with Wallet: Use wallet balance (earns points) - shown first if sufficient balance
  * - Pay Now: Full service amount via PayMongo (if enabled)
  * - Pay Later: Convenience fee now, service amount at branch (if enabled)
  * - Pay at Shop: No payment now, pay full amount at branch (if enabled)
@@ -18,7 +20,7 @@ import { createPortal } from 'react-dom';
  * - branchId: Id<"branches"> - Branch to get payment config for
  * - servicePrice: number - Full service price in pesos
  * - serviceName: string - Service name for display
- * - onSelect: (option: "pay_now" | "pay_later" | "pay_at_shop") => void - Selection callback
+ * - onSelect: (option: "wallet" | "pay_now" | "pay_later" | "pay_at_shop") => void - Selection callback
  */
 const PaymentOptionsModal = ({
   isOpen,
@@ -31,10 +33,20 @@ const PaymentOptionsModal = ({
   const [selectedOption, setSelectedOption] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Get current user for wallet balance check
+  const { user } = useCurrentUser();
+
   // Fetch branch payment configuration (FR25 - branch isolation)
   const paymentConfig = useQuery(
     api.services.paymongo.getPaymentConfig,
     branchId ? { branch_id: branchId } : "skip"
+  );
+
+  // Check wallet balance for wallet payment option
+  // Convert servicePrice to centavos for the query (API expects centavos)
+  const walletCheck = useQuery(
+    api.services.wallet.checkWalletBalance,
+    user?._id ? { userId: user._id, amount: servicePrice * 100 } : "skip"
   );
 
   // Reset selection when modal opens
@@ -50,6 +62,15 @@ const PaymentOptionsModal = ({
   const convenienceFeePercent = paymentConfig?.convenience_fee_percent || 5;
   const convenienceFeeAmount = paymentConfig?.convenience_fee_amount || 50;
 
+  // Debug: Log payment config convenience fee settings
+  console.log('[PaymentOptionsModal] Convenience fee config:', {
+    type: paymentConfig?.convenience_fee_type,
+    resolvedType: convenienceFeeType,
+    percent: convenienceFeePercent,
+    amount: convenienceFeeAmount,
+    fullConfig: paymentConfig
+  });
+
   // Calculate the actual fee based on type
   const convenienceFee = convenienceFeeType === "fixed"
     ? convenienceFeeAmount
@@ -60,9 +81,29 @@ const PaymentOptionsModal = ({
     ? `Pay ₱${convenienceFeeAmount} convenience fee now`
     : `Pay ${convenienceFeePercent}% convenience fee now`;
 
+  // Calculate points to be earned (1 peso = 1 point, stored as ×100)
+  // This is the base rate - promotions may add bonus points
+  const basePointsEarned = Math.floor(servicePrice);
+
   // Determine available options based on branch config
   const hasPayMongoConfig = paymentConfig?.has_public_key && paymentConfig?.has_secret_key;
   const options = [];
+
+  // Wallet Payment option - shown first if user has sufficient balance
+  if (user && walletCheck?.hasSufficientBalance) {
+    options.push({
+      id: 'wallet',
+      label: 'Pay with Wallet',
+      icon: Wallet,
+      description: 'Use your wallet balance',
+      payNow: servicePrice,
+      dueAtBranch: 0,
+      color: 'purple',
+      walletBalance: walletCheck.totalBalance / 100, // Convert from centavos to pesos
+      pointsEarned: basePointsEarned,
+      recommended: true,
+    });
+  }
 
   // Pay Now option (AC1, AC3)
   if (paymentConfig?.pay_now_enabled && hasPayMongoConfig) {
@@ -74,6 +115,7 @@ const PaymentOptionsModal = ({
       payNow: servicePrice,
       dueAtBranch: 0,
       color: 'green',
+      pointsEarned: basePointsEarned,
     });
   }
 
@@ -82,11 +124,12 @@ const PaymentOptionsModal = ({
     options.push({
       id: 'pay_later',
       label: 'Pay Later',
-      icon: Wallet,
+      icon: CreditCard,
       description: convenienceFeeDescription,
       payNow: convenienceFee,
       dueAtBranch: servicePrice,
       color: 'yellow',
+      pointsEarned: basePointsEarned, // Points earned on full service price at branch
     });
   }
 
@@ -100,6 +143,7 @@ const PaymentOptionsModal = ({
       payNow: 0,
       dueAtBranch: servicePrice,
       color: 'blue',
+      pointsEarned: basePointsEarned,
     });
   }
 
@@ -113,6 +157,7 @@ const PaymentOptionsModal = ({
       payNow: 0,
       dueAtBranch: servicePrice,
       color: 'blue',
+      pointsEarned: basePointsEarned,
     });
   }
 
@@ -132,23 +177,33 @@ const PaymentOptionsModal = ({
 
   const getColorClasses = (color, isSelected) => {
     const colors = {
+      purple: {
+        border: isSelected ? 'border-purple-500' : 'border-[#444444]',
+        bg: isSelected ? 'bg-purple-500/10' : 'bg-[#0A0A0A]',
+        icon: 'text-purple-400',
+        ring: 'ring-purple-500',
+        dot: 'bg-purple-500',
+      },
       green: {
         border: isSelected ? 'border-green-500' : 'border-[#444444]',
         bg: isSelected ? 'bg-green-500/10' : 'bg-[#0A0A0A]',
         icon: 'text-green-400',
         ring: 'ring-green-500',
+        dot: 'bg-green-500',
       },
       yellow: {
         border: isSelected ? 'border-yellow-500' : 'border-[#444444]',
         bg: isSelected ? 'bg-yellow-500/10' : 'bg-[#0A0A0A]',
         icon: 'text-yellow-400',
         ring: 'ring-yellow-500',
+        dot: 'bg-yellow-500',
       },
       blue: {
         border: isSelected ? 'border-blue-500' : 'border-[#444444]',
         bg: isSelected ? 'bg-blue-500/10' : 'bg-[#0A0A0A]',
         icon: 'text-blue-400',
         ring: 'ring-blue-500',
+        dot: 'bg-blue-500',
       },
     };
     return colors[color] || colors.blue;
@@ -220,7 +275,7 @@ const PaymentOptionsModal = ({
                           {/* Radio indicator */}
                           <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center ${isSelected ? `${colorClasses.border} ${colorClasses.bg}` : 'border-gray-500'}`}>
                             {isSelected && (
-                              <div className={`w-2.5 h-2.5 rounded-full ${option.color === 'green' ? 'bg-green-500' : option.color === 'yellow' ? 'bg-yellow-500' : 'bg-blue-500'}`} />
+                              <div className={`w-2.5 h-2.5 rounded-full ${colorClasses.dot}`} />
                             )}
                           </div>
 
@@ -229,8 +284,20 @@ const PaymentOptionsModal = ({
                             <div className="flex items-center space-x-2">
                               <Icon className={`h-5 w-5 ${colorClasses.icon}`} />
                               <span className="font-semibold text-white">{option.label}</span>
+                              {option.recommended && (
+                                <span className="px-2 py-0.5 text-xs font-medium bg-purple-500/20 text-purple-300 rounded-full">
+                                  Recommended
+                                </span>
+                              )}
                             </div>
                             <p className="text-sm text-gray-400 mt-1">{option.description}</p>
+
+                            {/* Wallet balance display */}
+                            {option.walletBalance !== undefined && (
+                              <p className="text-xs text-purple-300 mt-1">
+                                Wallet: {formatCurrency(option.walletBalance)} available
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -249,10 +316,37 @@ const PaymentOptionsModal = ({
                             {formatCurrency(option.dueAtBranch)}
                           </span>
                         </div>
+
+                        {/* Points earning display */}
+                        {option.pointsEarned > 0 && (
+                          <div className="flex justify-between text-sm mt-2 pt-2 border-t border-[#444444]/20">
+                            <span className="text-gray-400 flex items-center">
+                              <Star className="h-3.5 w-3.5 text-amber-400 mr-1" />
+                              Points earned:
+                            </span>
+                            <span className="font-medium text-amber-400">
+                              +{option.pointsEarned} ★
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </button>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Info note for Wallet Payment */}
+            {selectedOption === 'wallet' && (
+              <div className="mt-4 p-3 bg-purple-400/10 border border-purple-400/30 rounded-lg">
+                <div className="flex items-start space-x-2">
+                  <Sparkles className="h-4 w-4 text-purple-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-purple-300">
+                      Instant payment from your wallet balance. You'll earn <strong>{basePointsEarned} points</strong> for this booking!
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -270,6 +364,29 @@ const PaymentOptionsModal = ({
               <div className="mt-4 p-3 bg-yellow-400/10 border border-yellow-400/30 rounded-lg">
                 <p className="text-sm text-yellow-300">
                   Pay the {formatCurrency(convenienceFee)} convenience fee now to reserve your slot. The remaining {formatCurrency(servicePrice)} is due at the branch.
+                </p>
+              </div>
+            )}
+
+            {/* Info note for Pay Now */}
+            {selectedOption === 'pay_now' && (
+              <div className="mt-4 p-3 bg-green-400/10 border border-green-400/30 rounded-lg">
+                <div className="flex items-start space-x-2">
+                  <Star className="h-4 w-4 text-amber-400 mt-0.5" />
+                  <p className="text-sm text-green-300">
+                    Pay the full amount now and earn <strong>{basePointsEarned} points</strong> when payment completes!
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Show wallet balance if user has wallet but insufficient balance */}
+            {user && walletCheck && !walletCheck.hasSufficientBalance && walletCheck.hasWallet && (
+              <div className="mt-4 p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
+                <p className="text-sm text-gray-400">
+                  <Wallet className="h-4 w-4 inline mr-1" />
+                  Wallet balance: {formatCurrency(walletCheck.totalBalance / 100)}
+                  <span className="text-gray-500"> (₱{((servicePrice * 100 - walletCheck.totalBalance) / 100).toFixed(2)} short)</span>
                 </p>
               </div>
             )}
@@ -298,7 +415,11 @@ const PaymentOptionsModal = ({
                 </>
               ) : (
                 <>
-                  <span>{selectedOption === 'pay_at_shop' ? 'Confirm Booking' : 'Proceed to Payment'}</span>
+                  <span>
+                    {selectedOption === 'pay_at_shop' ? 'Confirm Booking' :
+                     selectedOption === 'wallet' ? 'Pay with Wallet' :
+                     'Proceed to Payment'}
+                  </span>
                   <ChevronRight className="h-4 w-4" />
                 </>
               )}

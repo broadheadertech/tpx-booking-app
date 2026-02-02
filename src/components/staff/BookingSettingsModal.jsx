@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Modal from '../common/Modal'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { Settings, Save, AlertCircle, DollarSign, Loader2, Clock, Percent, Wallet } from 'lucide-react'
 
 const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
-    const { user } = useAuth()
+    const { user } = useCurrentUser()
     const [formData, setFormData] = useState({
         enable_booking_fee: false,
         booking_fee_amount: 0,
@@ -23,6 +23,10 @@ const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
     const [success, setSuccess] = useState('')
     const [loading, setLoading] = useState(false)
 
+    // Track if we've initialized to prevent overwriting user changes
+    const hasInitializedBranch = useRef(false)
+    const hasInitializedPayment = useRef(false)
+
     // Fetch branch details
     const branch = useQuery(api.services.branches.getBranchById, branchId ? { id: branchId } : 'skip')
     const updateBranch = useMutation(api.services.branches.updateBranch)
@@ -31,9 +35,18 @@ const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
     const paymentConfig = useQuery(api.services.paymongo.getPaymentConfig, branchId ? { branch_id: branchId } : 'skip')
     const updatePaymentSettings = useMutation(api.services.paymongo.updatePaymentSettings)
 
-    // Initialize form data when branch data is loaded
+    // Reset initialization flags when modal opens/closes
     useEffect(() => {
-        if (branch) {
+        if (isOpen) {
+            hasInitializedBranch.current = false
+            hasInitializedPayment.current = false
+        }
+    }, [isOpen])
+
+    // Initialize form data when branch data is loaded (only once per modal open)
+    useEffect(() => {
+        if (branch && !hasInitializedBranch.current) {
+            hasInitializedBranch.current = true
             setFormData(prev => ({
                 ...prev,
                 enable_booking_fee: branch.enable_booking_fee || false,
@@ -49,9 +62,15 @@ const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
         }
     }, [branch])
 
-    // Initialize convenience fee from payment config
+    // Initialize convenience fee from payment config (only once per modal open)
     useEffect(() => {
-        if (paymentConfig) {
+        if (paymentConfig && !hasInitializedPayment.current) {
+            hasInitializedPayment.current = true
+            console.log('[BookingSettingsModal] Loading from DB:', {
+                type: paymentConfig.convenience_fee_type,
+                percent: paymentConfig.convenience_fee_percent,
+                amount: paymentConfig.convenience_fee_amount
+            })
             setFormData(prev => ({
                 ...prev,
                 convenience_fee_type: paymentConfig.convenience_fee_type || 'percent',
@@ -79,6 +98,11 @@ const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
         setError('')
         setSuccess('')
 
+        // Debug: Log what we're about to save
+        console.log('[BookingSettingsModal] === FORM SUBMIT ===');
+        console.log('[BookingSettingsModal] Current formData.convenience_fee_type:', formData.convenience_fee_type);
+        console.log('[BookingSettingsModal] Full formData:', JSON.stringify(formData, null, 2));
+
         try {
             // Update branch settings (booking fee, late fee, operating hours)
             await updateBranch({
@@ -95,8 +119,21 @@ const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
             })
 
             // Update convenience fee settings in payment config (if config exists)
-            if (paymentConfig && user?._id) {
-                await updatePaymentSettings({
+            // Debug: Log full user object to see what's available
+            console.log('[BookingSettingsModal] User object:', user);
+            console.log('[BookingSettingsModal] Checking save conditions:', {
+                hasPaymentConfig: !!paymentConfig,
+                hasUserId: !!user?._id,
+                userId: user?._id,
+                userIdAlt: user?.id,
+                willSave: !!(paymentConfig && (user?._id || user?.id))
+            });
+
+            // Use either _id or id (for compatibility)
+            const userId = user?._id || user?.id;
+
+            if (paymentConfig && userId) {
+                const feeData = {
                     branch_id: branchId,
                     pay_now_enabled: paymentConfig.pay_now_enabled || false,
                     pay_later_enabled: paymentConfig.pay_later_enabled || false,
@@ -104,8 +141,15 @@ const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
                     convenience_fee_type: formData.convenience_fee_type,
                     convenience_fee_percent: parseFloat(formData.convenience_fee_percent) || 5,
                     convenience_fee_amount: parseFloat(formData.convenience_fee_amount) || 50,
-                    updated_by: user._id
-                })
+                    updated_by: userId
+                };
+                console.log('[BookingSettingsModal] Saving convenience fee config:', feeData);
+                await updatePaymentSettings(feeData);
+                console.log('[BookingSettingsModal] Convenience fee saved successfully');
+            } else {
+                console.log('[BookingSettingsModal] ⚠️ SKIPPED saving convenience fee - missing paymentConfig or userId');
+                console.log('[BookingSettingsModal] paymentConfig:', paymentConfig);
+                console.log('[BookingSettingsModal] userId:', userId);
             }
 
             setSuccess('Booking settings updated successfully')
@@ -346,7 +390,10 @@ const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
                                         <div className="flex gap-2 p-1 bg-[#0A0A0A] rounded-xl border border-[#333333]">
                                             <button
                                                 type="button"
-                                                onClick={() => setFormData(prev => ({ ...prev, convenience_fee_type: 'percent' }))}
+                                                onClick={() => {
+                                                    console.log('[BookingSettingsModal] Clicked PERCENT button');
+                                                    setFormData(prev => ({ ...prev, convenience_fee_type: 'percent' }));
+                                                }}
                                                 className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1 ${formData.convenience_fee_type === 'percent'
                                                         ? 'bg-[var(--color-primary)] text-white shadow-sm'
                                                         : 'text-gray-400 hover:text-white'
@@ -357,7 +404,10 @@ const BookingSettingsModal = ({ isOpen, onClose, branchId }) => {
                                             </button>
                                             <button
                                                 type="button"
-                                                onClick={() => setFormData(prev => ({ ...prev, convenience_fee_type: 'fixed' }))}
+                                                onClick={() => {
+                                                    console.log('[BookingSettingsModal] Clicked FIXED button');
+                                                    setFormData(prev => ({ ...prev, convenience_fee_type: 'fixed' }));
+                                                }}
                                                 className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-1 ${formData.convenience_fee_type === 'fixed'
                                                         ? 'bg-[var(--color-primary)] text-white shadow-sm'
                                                         : 'text-gray-400 hover:text-white'

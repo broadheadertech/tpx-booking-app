@@ -367,6 +367,14 @@ export const updatePaymentSettings = mutation({
     updated_by: v.id("users"),
   },
   handler: async (ctx, args) => {
+    // Debug: Log received args
+    console.log('[updatePaymentSettings] Received args:', {
+      branch_id: args.branch_id,
+      convenience_fee_type: args.convenience_fee_type,
+      convenience_fee_percent: args.convenience_fee_percent,
+      convenience_fee_amount: args.convenience_fee_amount,
+    });
+
     // Validate at least one payment option is enabled
     if (!args.pay_now_enabled && !args.pay_later_enabled && !args.pay_at_shop_enabled) {
       throw new Error("At least one payment option must be enabled");
@@ -404,8 +412,8 @@ export const updatePaymentSettings = mutation({
 
     const now = Date.now();
 
-    // Update only the settings, not the API keys
-    await ctx.db.patch(existingConfig._id, {
+    // Prepare the update object
+    const updateData = {
       pay_now_enabled: args.pay_now_enabled,
       pay_later_enabled: args.pay_later_enabled,
       pay_at_shop_enabled: args.pay_at_shop_enabled,
@@ -414,7 +422,15 @@ export const updatePaymentSettings = mutation({
       convenience_fee_amount: args.convenience_fee_amount,
       updated_at: now,
       updated_by: args.updated_by,
-    });
+    };
+
+    console.log('[updatePaymentSettings] About to patch with:', JSON.stringify(updateData));
+    console.log('[updatePaymentSettings] Config ID:', existingConfig._id);
+
+    // Update only the settings, not the API keys
+    await ctx.db.patch(existingConfig._id, updateData);
+
+    console.log('[updatePaymentSettings] Patch completed successfully');
 
     return { success: true, configId: existingConfig._id };
   },
@@ -438,6 +454,13 @@ export const getPaymentConfig = query({
     if (!config) {
       return null;
     }
+
+    // Debug: Log what's in the database
+    console.log('[getPaymentConfig] Raw database value:', {
+      convenience_fee_type: config.convenience_fee_type,
+      convenience_fee_percent: config.convenience_fee_percent,
+      convenience_fee_amount: config.convenience_fee_amount,
+    });
 
     // Return config WITHOUT decrypted keys
     // Only return metadata about whether keys are configured
@@ -1667,6 +1690,200 @@ export const updateBookingPaymentStatus = mutation({
     }
 
     await ctx.db.patch(args.booking_id, updates);
-    return { success: true, statusUpgraded: booking?.status === "pending" };
+
+    // =========================================================================
+    // AWARD POINTS ON SUCCESSFUL PAYMENT (Customer Experience)
+    // Only award points for full payment ("paid"), not partial ("partial")
+    // =========================================================================
+    let pointsResult = null;
+    if (args.payment_status === "paid" && booking?.customer) {
+      try {
+        // Get the payment amount from booking price or final_price
+        const paymentAmount = booking.final_price || booking.price || 0;
+
+        if (paymentAmount > 0) {
+          console.log("[PAYMONGO] Awarding points for successful payment:", {
+            bookingId: args.booking_id,
+            customerId: booking.customer,
+            amount: paymentAmount,
+          });
+
+          // Award points with promo check
+          pointsResult = await ctx.runMutation(api.services.points.awardPointsWithPromo, {
+            userId: booking.customer,
+            baseAmount: paymentAmount, // Payment amount in pesos
+            branchId: booking.branch_id,
+            sourceType: "payment",
+            sourceId: `BOOKING-${args.booking_id}`,
+            notes: `Payment for booking ${booking.booking_code || args.booking_id}`,
+          });
+
+          console.log("[PAYMONGO] Points awarded:", {
+            bookingId: args.booking_id,
+            basePoints: pointsResult.basePoints,
+            bonusPoints: pointsResult.bonusPoints,
+            totalPoints: pointsResult.totalPoints,
+            promoApplied: pointsResult.promoApplied?.promoName || null,
+          });
+        }
+      } catch (error) {
+        // Log but don't fail the payment update if points award fails
+        console.error("[PAYMONGO] Failed to award points:", error);
+      }
+    }
+
+    return {
+      success: true,
+      statusUpgraded: booking?.status === "pending",
+      pointsAwarded: pointsResult
+        ? {
+            basePoints: pointsResult.basePoints,
+            bonusPoints: pointsResult.bonusPoints,
+            totalPoints: pointsResult.totalPoints,
+            promoApplied: pointsResult.promoApplied?.promoName || null,
+          }
+        : null,
+    };
+  },
+});
+
+// ============================================================================
+// MANUAL PAYMENT STATUS CHECK
+// ============================================================================
+// Fallback for when webhooks aren't configured or aren't reaching the server
+// This action polls PayMongo directly to check if a checkout session was paid
+// ============================================================================
+
+/**
+ * Manually check and process payment status from PayMongo
+ * Use this as a fallback when webhooks aren't working
+ */
+export const checkAndProcessPaymentStatus = action({
+  args: {
+    sessionId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    console.log("[checkAndProcessPaymentStatus] Checking session:", args.sessionId);
+
+    // 1. Get the pending payment record
+    const pendingPayment = await ctx.runQuery(internal.services.paymongo.getPendingPaymentByLink, {
+      paymongo_link_id: args.sessionId,
+    });
+
+    if (!pendingPayment) {
+      return { success: false, error: "Pending payment not found", status: "not_found" };
+    }
+
+    // Already processed?
+    if (pendingPayment.status === "paid") {
+      // Check if booking exists
+      const existingBooking = await ctx.runQuery(internal.services.paymongo.getBookingByPaymongoLink, {
+        paymongo_link_id: args.sessionId,
+      });
+      return {
+        success: true,
+        status: "already_paid",
+        bookingId: existingBooking?._id,
+        bookingCode: existingBooking?.booking_code,
+      };
+    }
+
+    // 2. Get branch payment config to get the secret key
+    const config = await ctx.runAction(internal.services.paymongo.getDecryptedConfigInternal, {
+      branch_id: pendingPayment.branch_id,
+    });
+
+    if (!config) {
+      return { success: false, error: "Payment config not found", status: "error" };
+    }
+
+    // 3. Poll PayMongo to get checkout session status
+    const authToken = base64EncodeAscii(config.secret_key + ":");
+    const authHeaderValue = `Basic ${authToken}`;
+
+    const response = await fetch(`https://api.paymongo.com/v1/checkout_sessions/${args.sessionId}`, {
+      method: "GET",
+      headers: {
+        Authorization: authHeaderValue,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await response.json();
+
+    console.log("[checkAndProcessPaymentStatus] PayMongo response:", {
+      ok: response.ok,
+      status: response.status,
+      sessionStatus: data?.data?.attributes?.status,
+      paymentIntentStatus: data?.data?.attributes?.payment_intent?.attributes?.status,
+    });
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data?.errors?.[0]?.detail || "Failed to check payment status",
+        status: "error",
+      };
+    }
+
+    const sessionData = data.data;
+    const sessionStatus = sessionData?.attributes?.status;
+    const paymentIntent = sessionData?.attributes?.payment_intent;
+    const paymentIntentStatus = paymentIntent?.attributes?.status;
+
+    // Check if payment was successful
+    // Checkout session status: "active", "expired", "paid"
+    // Payment intent status: "awaiting_payment_method", "processing", "succeeded"
+    if (sessionStatus === "paid" || paymentIntentStatus === "succeeded") {
+      console.log("[checkAndProcessPaymentStatus] Payment confirmed! Creating booking...");
+
+      // Extract payment details
+      const payments = paymentIntent?.attributes?.payments || [];
+      const paymentId = payments[0]?.id || `manual_${Date.now()}`;
+      const amount = paymentIntent?.attributes?.amount ? paymentIntent.attributes.amount / 100 : pendingPayment.amount_to_pay;
+
+      // 4. Create the booking (same as webhook flow)
+      const bookingResult = await ctx.runMutation(internal.services.paymongo.createBookingFromPending, {
+        pending_payment_id: pendingPayment._id,
+        paymongo_payment_id: paymentId,
+        paymongo_link_id: args.sessionId,
+        payment_type: pendingPayment.payment_type,
+        amount_paid: amount,
+      });
+
+      // 5. Log payment completed
+      await ctx.runMutation(internal.services.paymongo.logPaymentEvent, {
+        branch_id: pendingPayment.branch_id,
+        booking_id: bookingResult.bookingId,
+        paymongo_link_id: args.sessionId,
+        paymongo_payment_id: paymentId,
+        event_type: "payment_completed",
+        amount: amount,
+        payment_method: "manual_check",
+        payment_for: pendingPayment.payment_type === "pay_now" ? "full_service" : "convenience_fee",
+      });
+
+      return {
+        success: true,
+        status: "paid",
+        bookingId: bookingResult.bookingId,
+        bookingCode: bookingResult.bookingCode,
+        alreadyProcessed: bookingResult.alreadyProcessed,
+      };
+    } else if (sessionStatus === "expired") {
+      return {
+        success: false,
+        status: "expired",
+        error: "Payment session has expired",
+      };
+    } else {
+      // Still pending
+      return {
+        success: true,
+        status: "pending",
+        sessionStatus,
+        paymentIntentStatus,
+      };
+    }
   },
 });

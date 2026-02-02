@@ -145,6 +145,144 @@ http.route({
 });
 
 // ============================================================================
+// SA WALLET TOP-UP WEBHOOK HANDLER
+// ============================================================================
+// Story 23.1: Wallet Top-up via Super Admin PayMongo
+// Processes checkout_session.payment.paid events for SA wallet top-ups
+// ============================================================================
+
+/**
+ * SA Wallet Webhook Handler
+ * Endpoint: POST /webhooks/sa-wallet
+ *
+ * Processes payment events for centralized wallet top-ups:
+ * - checkout_session.payment.paid: Wallet top-up completed
+ *
+ * Security:
+ * - Verifies PayMongo signature using SA webhook secret
+ * - Returns 401 on invalid signature
+ *
+ * Idempotency:
+ * - Duplicate webhooks are handled gracefully (no double-credit)
+ */
+http.route({
+  path: "/webhooks/sa-wallet",
+  method: "POST",
+  handler: httpAction(async (ctx, request) => {
+    const body = await request.text();
+
+    // Extract headers
+    const signature = request.headers.get("Paymongo-Signature") || "";
+
+    // Get client IP for logging
+    const ipAddress =
+      request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim() ||
+      request.headers.get("CF-Connecting-IP") ||
+      "unknown";
+
+    // Parse the webhook payload
+    let payload: WebhookPayload;
+    try {
+      payload = JSON.parse(body);
+    } catch {
+      console.error("[SA-Wallet Webhook] Invalid JSON payload");
+      return new Response(JSON.stringify({ error: "Invalid JSON payload" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Extract event data
+    const eventType = payload?.data?.attributes?.type;
+    const eventData = payload?.data?.attributes?.data;
+
+    console.log("[SA-Wallet Webhook] Received event:", {
+      eventType,
+      eventDataId: eventData?.id,
+      ipAddress,
+    });
+
+    // Only process checkout_session.payment.paid events
+    if (eventType !== "checkout_session.payment.paid") {
+      console.log("[SA-Wallet Webhook] Ignoring event type:", eventType);
+      return new Response(JSON.stringify({ success: true, message: `Event ${eventType} acknowledged` }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Extract session ID and payment details
+    const sessionId = eventData?.id || "";
+    const metadata = eventData?.attributes?.metadata || {};
+
+    // Verify this is a SA wallet top-up
+    if (metadata?.type !== "sa_wallet_topup") {
+      console.log("[SA-Wallet Webhook] Not a SA wallet top-up, ignoring");
+      return new Response(JSON.stringify({ success: true, message: "Not a SA wallet event" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Get payment amount from payment_intent
+    const paymentIntent = eventData?.attributes?.payment_intent;
+    const amountCentavos = paymentIntent?.attributes?.amount || 0;
+    const amount = amountCentavos / 100; // Convert to pesos
+
+    const payments = paymentIntent?.attributes?.payments || [];
+    const paymentId = payments[0]?.id || `webhook_${Date.now()}`;
+
+    console.log("[SA-Wallet Webhook] Processing top-up:", {
+      sessionId,
+      paymentId,
+      amount,
+      userId: metadata?.user_id,
+    });
+
+    // Verify webhook signature
+    const signatureResult = await ctx.runAction(internal.services.wallet.verifySAWalletWebhookSignature, {
+      signature,
+      rawBody: body,
+    });
+
+    if (!signatureResult.valid) {
+      console.error("[SA-Wallet Webhook] Invalid signature:", signatureResult.error);
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Process the top-up
+    const result = await ctx.runAction(internal.services.wallet.processSAWalletTopupWebhook, {
+      sessionId,
+      paymentId,
+      amount,
+      rawPayload: payload,
+    });
+
+    if (!result.success) {
+      console.error("[SA-Wallet Webhook] Processing failed:", result.error);
+      return new Response(JSON.stringify({ error: result.error }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    console.log("[SA-Wallet Webhook] Top-up processed successfully:", {
+      userId: result.userId,
+      credited: result.credited,
+      bonus: result.bonus,
+    });
+
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }),
+});
+
+// ============================================================================
 // CLERK WEBHOOK HANDLER
 // ============================================================================
 // Story 10.3: Clerk Webhook Integration

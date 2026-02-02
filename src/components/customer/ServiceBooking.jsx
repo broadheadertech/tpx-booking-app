@@ -19,7 +19,7 @@ import {
 import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useAuth } from "../../context/AuthContext";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useBranding } from "../../context/BrandingContext";
 import { formatTime } from "../../utils/dateUtils";
 import { sendCustomBookingConfirmation, sendBarberBookingNotification } from "../../services/emailService";
@@ -94,7 +94,7 @@ const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
 
 const ServiceBooking = ({ onBack }) => {
   const { branding } = useBranding();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useCurrentUser();
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -134,6 +134,7 @@ const ServiceBooking = ({ onBack }) => {
   const [pendingPaymentSessionId, setPendingPaymentSessionId] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState(0);
   const [paymentTypeState, setPaymentTypeState] = useState(null);
+  const [checkingPaymentManually, setCheckingPaymentManually] = useState(false);
 
   // Convex queries
   const branches = useQuery(api.services.branches.getActiveBranches);
@@ -174,6 +175,8 @@ const ServiceBooking = ({ onBack }) => {
   const createPaymentLink = useAction(api.services.paymongo.createPaymentLink);
   // Deferred booking flow - creates payment link without creating booking first
   const createPaymentLinkDeferred = useAction(api.services.paymongo.createPaymentLinkDeferred);
+  // Manual payment status check (fallback when webhooks don't work)
+  const checkPaymentStatus = useAction(api.services.paymongo.checkAndProcessPaymentStatus);
 
   // Query to get booking details after creation
   const getBookingById = useQuery(
@@ -195,6 +198,9 @@ const ServiceBooking = ({ onBack }) => {
       : "skip"
   );
   const redeemVoucher = useMutation(api.services.vouchers.redeemVoucher);
+
+  // Wallet payment mutation - pays for booking using wallet balance and earns points
+  const payBookingWithWallet = useMutation(api.services.wallet.payBookingWithWallet);
 
   // Handle payment status changes (polling for deferred booking)
   useEffect(() => {
@@ -971,7 +977,103 @@ const ServiceBooking = ({ onBack }) => {
       })();
 
       // Handle payment based on selected option
-      if (paymentOption === "pay_at_shop") {
+      if (paymentOption === "wallet") {
+        // ============================================================
+        // WALLET PAYMENT: Debit wallet, earn points, create booking (Customer Experience)
+        // ============================================================
+        console.log("Wallet payment selected - processing wallet payment");
+
+        // Create booking first
+        const bookingData = {
+          customer: user._id,
+          service: selectedService._id,
+          barber: selectedStaff?._id || undefined,
+          branch_id: selectedBranch._id,
+          date: selectedDate,
+          time: formattedTime,
+          status: "booked",
+          notes: selectedVoucher
+            ? `Used voucher: ${selectedVoucher.code}`
+            : undefined,
+          voucher_id: selectedVoucher?._id || undefined,
+          discount_amount: selectedVoucher?.value || undefined,
+          customer_email: user.email,
+          customer_name: user.full_name || user.nickname || user.username,
+          payment_status: "pending", // Will be updated to "paid" by wallet mutation
+          booking_fee: bookingFee,
+        };
+
+        const bookingId = await createBooking(bookingData);
+        console.log("Booking created:", bookingId);
+
+        // Calculate final price (service price - voucher discount)
+        const finalPrice = selectedVoucher?.value
+          ? selectedService.price - selectedVoucher.value
+          : selectedService.price;
+
+        // Process wallet payment (debit wallet + earn points)
+        const walletResult = await payBookingWithWallet({
+          userId: user._id,
+          amount: finalPrice,
+          bookingId: bookingId,
+          branchId: selectedBranch._id,
+          serviceName: selectedService.name,
+        });
+
+        console.log("Wallet payment result:", walletResult);
+
+        // Create booking object for UI
+        const booking = {
+          _id: bookingId,
+          booking_code: null, // Will be populated by query
+          service: selectedService,
+          barber: selectedStaff,
+          date: selectedDate,
+          time: formattedTime,
+          status: "booked",
+          voucher_code: selectedVoucher?.code,
+          payment_option: paymentOption,
+          wallet_payment: true,
+          points_earned: walletResult.pointsEarned?.totalPoints || 0,
+        };
+        setCreatedBooking(booking);
+
+        // Send email notification to barber
+        if (selectedStaff?.email) {
+          try {
+            await sendBarberBookingNotification({
+              barberEmail: selectedStaff.email,
+              barberName: selectedStaff.full_name || selectedStaff.name,
+              customerName: user.full_name || user.nickname || user.username,
+              customerPhone: user.mobile_number || user.phone,
+              customerEmail: user.email,
+              serviceName: selectedService?.name,
+              servicePrice: selectedService?.price,
+              bookingDate: selectedDate,
+              bookingTime: formattedTime,
+              branchName: selectedBranch?.name,
+              bookingCode: null,
+              bookingType: 'regular'
+            });
+          } catch (emailError) {
+            console.error('Failed to send barber notification email:', emailError);
+          }
+        }
+
+        // Redeem voucher if selected
+        if (selectedVoucher?.code) {
+          try {
+            await redeemVoucher({
+              code: selectedVoucher.code,
+              user_id: user._id,
+            });
+          } catch (voucherError) {
+            console.error("Voucher redemption error:", voucherError);
+          }
+        }
+
+        setStep(6); // Go to success step
+      } else if (paymentOption === "pay_at_shop") {
         // ============================================================
         // PAY AT SHOP: Create booking immediately (no payment required upfront)
         // ============================================================
@@ -2356,12 +2458,59 @@ const ServiceBooking = ({ onBack }) => {
         {/* Action Buttons */}
         <div className="space-y-3">
           <button
-            onClick={() => {
-              window.alert('Please complete payment in the PayMongo tab that was opened. If you closed it, click "Cancel" and try again.');
+            onClick={async () => {
+              if (!pendingPaymentSessionId || checkingPaymentManually) return;
+
+              setCheckingPaymentManually(true);
+              try {
+                console.log('[ServiceBooking] Manually checking payment status for:', pendingPaymentSessionId);
+                const result = await checkPaymentStatus({ sessionId: pendingPaymentSessionId });
+                console.log('[ServiceBooking] Manual check result:', result);
+
+                if (result.status === 'paid' || result.status === 'already_paid') {
+                  // Payment confirmed! Create booking state and go to success
+                  setCreatedBooking({
+                    _id: result.bookingId,
+                    booking_code: result.bookingCode,
+                    service: selectedService,
+                    barber: selectedStaff,
+                    date: selectedDate,
+                    time: selectedTime,
+                    status: "booked",
+                    payment_status: paymentTypeState === 'pay_now' ? 'paid' : 'partial',
+                  });
+                  setPendingPaymentSessionId(null);
+                  localStorage.removeItem('pendingPaymongoSessionId');
+                  setStep(6); // Success step
+                } else if (result.status === 'pending') {
+                  // Still pending - inform user
+                  window.alert('Payment is still processing. Please complete the payment in the PayMongo window and try again.');
+                } else if (result.status === 'expired') {
+                  window.alert('Payment session has expired. Please start a new booking.');
+                  setPendingPaymentSessionId(null);
+                  localStorage.removeItem('pendingPaymongoSessionId');
+                  setStep(5);
+                } else {
+                  window.alert(result.error || 'Could not verify payment status. Please try again.');
+                }
+              } catch (err) {
+                console.error('[ServiceBooking] Manual check error:', err);
+                window.alert('Error checking payment: ' + (err.message || 'Unknown error'));
+              } finally {
+                setCheckingPaymentManually(false);
+              }
             }}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg"
+            disabled={checkingPaymentManually}
+            className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg flex items-center justify-center gap-2"
           >
-            I've Completed Payment - Refresh Status
+            {checkingPaymentManually ? (
+              <>
+                <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
+                Checking Payment...
+              </>
+            ) : (
+              "I've Completed Payment - Check Status"
+            )}
           </button>
           <button
             onClick={() => {
@@ -2370,14 +2519,15 @@ const ServiceBooking = ({ onBack }) => {
               localStorage.removeItem('pendingPaymongoSessionId');
               setStep(5);
             }}
-            className="w-full py-3 bg-transparent border border-[#333] hover:bg-[#1A1A1A] text-gray-400 font-medium rounded-2xl transition-all duration-200"
+            disabled={checkingPaymentManually}
+            className="w-full py-3 bg-transparent border border-[#333] hover:bg-[#1A1A1A] text-gray-400 font-medium rounded-2xl transition-all duration-200 disabled:opacity-50"
           >
             Cancel & Go Back
           </button>
         </div>
 
         <p className="text-center text-xs text-gray-500">
-          This page will automatically update when your payment is confirmed.
+          Click the button above after completing payment in PayMongo to verify and confirm your booking.
         </p>
       </div>
     );

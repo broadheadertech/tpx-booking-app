@@ -71,12 +71,15 @@ export const NotificationDashboard: React.FC<NotificationDashboardProps> = ({ us
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   
-  const notifications = useQuery(api.services.notifications.getUserNotifications, {
-    userId,
-    limit: 100,
-  });
-  
-  const stats = useQuery(api.services.bookingNotifications.getNotificationStats, { userId });
+  const notifications = useQuery(
+    api.services.notifications.getUserNotifications,
+    userId ? { userId, limit: 100 } : "skip"
+  );
+
+  const stats = useQuery(
+    api.services.bookingNotifications.getNotificationStats,
+    userId ? { userId } : "skip"
+  );
   
   const markAsRead = useMutation(api.services.notifications.markAsRead);
   const markAllAsRead = useMutation(api.services.notifications.markAllAsRead);

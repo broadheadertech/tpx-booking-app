@@ -1,17 +1,35 @@
 import React, { useState } from 'react'
-import { Clock, User, Phone, MoreVertical, CheckCircle, Users } from 'lucide-react'
+import { Clock, User, Phone, MoreVertical, CheckCircle, Users, X } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
+import WelcomeBackCard from './WelcomeBackCard'
+import ServiceHistoryCard from './ServiceHistoryCard'
+import POSWalletPayment from './POSWalletPayment'
+import WalletPaymentConfirmDialog from './WalletPaymentConfirmDialog'
+import ComboPaymentDialog from './ComboPaymentDialog'
 
 const QueueSection = () => {
   const { user } = useCurrentUser()
   const branchId = user?.branch_id
+  const [selectedCustomer, setSelectedCustomer] = useState(null)
+  // Story 24-2: Wallet payment confirmation dialog state
+  const [showWalletConfirm, setShowWalletConfirm] = useState(false)
+  const [walletPaymentData, setWalletPaymentData] = useState(null)
+  // Story 24-3: Combo payment dialog state
+  const [showComboPayment, setShowComboPayment] = useState(false)
+  const [comboPaymentData, setComboPaymentData] = useState(null)
 
   // Fetch main queue data from backend
   const mainQueueData = useQuery(
     api.services.mainQueue.getMainQueue,
     branchId ? { branch_id: branchId } : 'skip'
+  )
+
+  // Story 24-2: Fetch wallet balance for selected customer (for confirmation dialog)
+  const selectedCustomerWallet = useQuery(
+    api.services.wallet.getCustomerWalletBalance,
+    selectedCustomer?.userId ? { user_id: selectedCustomer.userId } : 'skip'
   )
 
   // Loading state
@@ -107,6 +125,50 @@ const QueueSection = () => {
       </span>
     }
     return null
+  }
+
+  /**
+   * Get VIP tier badge for customer
+   * Shows tier icon and name with appropriate styling
+   */
+  const getVipBadge = (customer) => {
+    // For walk-ins without accounts, show "New" badge
+    if (!customer.hasAccount || !customer.tierInfo) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-gray-400 bg-gray-400/20">
+          New
+        </span>
+      )
+    }
+
+    const { name, icon, color } = customer.tierInfo
+
+    // Special styling for Gold and Platinum
+    const isVip = name === 'Gold' || name === 'Platinum'
+
+    return (
+      <span
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+          isVip ? 'ring-1' : ''
+        }`}
+        style={{
+          color: color,
+          backgroundColor: `${color}20`,
+          borderColor: isVip ? color : 'transparent',
+          boxShadow: isVip ? `0 0 6px ${color}40` : 'none',
+        }}
+      >
+        <span>{icon}</span>
+        <span>{name}</span>
+      </span>
+    )
+  }
+
+  /**
+   * Check if customer is VIP (Gold or Platinum)
+   */
+  const isVipCustomer = (customer) => {
+    return customer.tierInfo && (customer.tierInfo.name === 'Gold' || customer.tierInfo.name === 'Platinum')
   }
 
   const formatTime = (timeString) => {
@@ -240,7 +302,16 @@ const QueueSection = () => {
                     {customers.map((customer) => (
                       <div
                         key={customer.id}
-                        className={`bg-[#1A1A1A] rounded-lg p-4 border ${customer.hasTimeConflict ? 'border-red-500/50' : 'border-[#444444]/30'} hover:bg-[#333333]/50 transition-all`}
+                        onClick={() => customer.hasAccount && setSelectedCustomer(customer)}
+                        className={`bg-[#1A1A1A] rounded-lg p-4 border ${
+                          customer.hasTimeConflict
+                            ? 'border-red-500/50'
+                            : isVipCustomer(customer)
+                            ? 'border-amber-500/40 ring-1 ring-amber-500/20'
+                            : 'border-[#444444]/30'
+                        } hover:bg-[#333333]/50 transition-all ${
+                          isVipCustomer(customer) ? 'bg-gradient-to-br from-amber-500/5 to-transparent' : ''
+                        } ${customer.hasAccount ? 'cursor-pointer' : ''}`}
                       >
                         {customer.hasTimeConflict && (
                           <div className="mb-2 text-xs text-red-400 font-medium">
@@ -255,8 +326,9 @@ const QueueSection = () => {
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
                                 <h5 className="text-sm font-medium text-white truncate">{customer.name}</h5>
+                                {getVipBadge(customer)}
                                 {getCustomerTypeLabel(customer)}
                               </div>
                               <p className="text-sm text-gray-400 truncate">{customer.service}</p>
@@ -322,6 +394,229 @@ const QueueSection = () => {
         <div className="bg-yellow-400/10 border border-yellow-400/30 rounded-lg p-4 text-center">
           <p className="text-yellow-400">No branch assigned. Please assign a branch to view the queue.</p>
         </div>
+      )}
+
+      {/* Customer Details Modal */}
+      {selectedCustomer && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={() => setSelectedCustomer(null)}
+        >
+          <div
+            className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-[#2A2A2A]">
+              <h3 className="text-lg font-semibold text-white">Customer Details</h3>
+              <button
+                onClick={() => setSelectedCustomer(null)}
+                className="p-2 rounded-lg hover:bg-gray-800 transition-colors text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-4 space-y-4">
+              {/* Customer Basic Info */}
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center text-[var(--color-primary)] font-bold text-lg">
+                  {selectedCustomer.name?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'C'}
+                </div>
+                <div>
+                  <h4 className="text-lg font-semibold text-white">{selectedCustomer.name}</h4>
+                  <p className="text-sm text-gray-400">{selectedCustomer.service}</p>
+                </div>
+              </div>
+
+              {/* VIP Badge & Type */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {getVipBadge(selectedCustomer)}
+                {getCustomerTypeLabel(selectedCustomer)}
+                {getStatusBadge(selectedCustomer.status)}
+              </div>
+
+              {/* Welcome Back Card (for signed-in customers) */}
+              {selectedCustomer.hasAccount && selectedCustomer.userId && (
+                <WelcomeBackCard
+                  userId={selectedCustomer.userId}
+                  className="mt-4"
+                />
+              )}
+
+              {/* Service History (for signed-in customers) */}
+              {selectedCustomer.hasAccount && selectedCustomer.userId && (
+                <ServiceHistoryCard
+                  userId={selectedCustomer.userId}
+                  className="mt-4"
+                />
+              )}
+
+              {/* Contact Info */}
+              {selectedCustomer.phone && (
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-[#0A0A0A] border border-[#2A2A2A]">
+                  <Phone className="w-5 h-5 text-gray-500" />
+                  <div>
+                    <p className="text-sm text-gray-400">Phone</p>
+                    <p className="text-white">{selectedCustomer.phone}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Appointment Time */}
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-[#0A0A0A] border border-[#2A2A2A]">
+                <Clock className="w-5 h-5 text-gray-500" />
+                <div>
+                  <p className="text-sm text-gray-400">Scheduled Time</p>
+                  <p className="text-white">{selectedCustomer.startTime || 'Waiting'}</p>
+                </div>
+              </div>
+
+              {/* Service Price */}
+              {selectedCustomer.servicePrice > 0 && (
+                <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30">
+                  <span className="text-gray-300">Service Price</span>
+                  <span className="text-[var(--color-primary)] font-bold text-lg">
+                    ₱{selectedCustomer.servicePrice.toFixed(2)}
+                  </span>
+                </div>
+              )}
+
+              {/* Story 24.1: Wallet Payment Option at POS */}
+              {/* Only show for customers with accounts and when there's a service price */}
+              {selectedCustomer.hasAccount && selectedCustomer.servicePrice > 0 && (
+                <POSWalletPayment
+                  customerId={selectedCustomer.userId || null}
+                  totalAmount={selectedCustomer.servicePrice}
+                  onPayWithWallet={() => {
+                    // Story 24.2: Show wallet payment confirmation dialog
+                    console.log('[POS] Pay with wallet clicked:', {
+                      customerId: selectedCustomer.userId,
+                      amount: selectedCustomer.servicePrice,
+                    });
+                    setWalletPaymentData({
+                      customerId: selectedCustomer.userId,
+                      customerName: selectedCustomer.name,
+                      amount: selectedCustomer.servicePrice,
+                      serviceName: selectedCustomer.service,
+                      bookingId: selectedCustomer.bookingId,
+                    });
+                    setShowWalletConfirm(true);
+                  }}
+                  onComboPayment={(walletAmount) => {
+                    // Story 24.3: Show combo payment dialog
+                    console.log('[POS] Combo payment clicked:', {
+                      customerId: selectedCustomer.userId,
+                      walletAmount,
+                      remainder: selectedCustomer.servicePrice - walletAmount,
+                    });
+                    setComboPaymentData({
+                      customerId: selectedCustomer.userId,
+                      customerName: selectedCustomer.name,
+                      totalAmount: selectedCustomer.servicePrice,
+                      walletAmount: walletAmount,
+                      serviceName: selectedCustomer.service,
+                      bookingId: selectedCustomer.bookingId,
+                    });
+                    setShowComboPayment(true);
+                  }}
+                />
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-[#2A2A2A]">
+              <button
+                onClick={() => setSelectedCustomer(null)}
+                className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium hover:opacity-90 transition-opacity"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Story 24-2: Wallet Payment Confirmation Dialog */}
+      {walletPaymentData && (
+        <WalletPaymentConfirmDialog
+          isOpen={showWalletConfirm}
+          onClose={() => {
+            setShowWalletConfirm(false);
+            setWalletPaymentData(null);
+          }}
+          onSuccess={(result) => {
+            console.log('[POS_WALLET_PAYMENT] Payment successful:', result);
+            // Close the confirmation dialog
+            setShowWalletConfirm(false);
+            setWalletPaymentData(null);
+            // Close the customer details modal
+            setSelectedCustomer(null);
+            // Show success toast/alert with new balance
+            const newBalance = result?.walletDebit?.remainingBalance || 0;
+            const pointsEarned = result?.pointsEarned?.totalPoints || Math.floor(walletPaymentData.amount);
+            alert(`✅ Payment successful!\n\nPaid: ₱${walletPaymentData.amount.toLocaleString()}\nPoints earned: +${pointsEarned}\n\nNew wallet balance: ₱${newBalance.toLocaleString()}`);
+          }}
+          onInsufficientBalance={() => {
+            // Handle insufficient balance - offer combo payment (Story 24.3)
+            console.log('[POS_WALLET_PAYMENT] Insufficient balance, opening combo payment');
+            setShowWalletConfirm(false);
+            // Open combo payment dialog with wallet data
+            setComboPaymentData({
+              customerId: walletPaymentData.customerId,
+              customerName: walletPaymentData.customerName,
+              totalAmount: walletPaymentData.amount,
+              walletAmount: selectedCustomerWallet?.totalBalance || 0,
+              serviceName: walletPaymentData.serviceName,
+              bookingId: walletPaymentData.bookingId,
+            });
+            setShowComboPayment(true);
+            setWalletPaymentData(null);
+          }}
+          customerId={walletPaymentData.customerId}
+          customerName={walletPaymentData.customerName}
+          amount={walletPaymentData.amount}
+          walletBalance={selectedCustomerWallet?.totalBalance || 0}
+          serviceName={walletPaymentData.serviceName}
+          branchId={branchId}
+          bookingId={walletPaymentData.bookingId}
+          staffId={user?._id}
+        />
+      )}
+
+      {/* Story 24-3: Combo Payment Dialog */}
+      {comboPaymentData && (
+        <ComboPaymentDialog
+          isOpen={showComboPayment}
+          onClose={() => {
+            setShowComboPayment(false);
+            setComboPaymentData(null);
+          }}
+          onSuccess={(result) => {
+            console.log('[POS_COMBO_PAYMENT] Combo payment successful:', result);
+            // Close the combo payment dialog
+            setShowComboPayment(false);
+            setComboPaymentData(null);
+            // Close the customer details modal
+            setSelectedCustomer(null);
+            // Show success toast/alert with payment breakdown
+            const walletPart = result?.walletPortion?.amount || 0;
+            const remainderPart = result?.remainderPortion?.amount || 0;
+            const remainderMethod = result?.remainderPortion?.method?.toUpperCase() || 'CASH';
+            const pointsEarned = result?.pointsEarned || Math.floor(walletPart);
+            alert(`✅ Combo payment successful!\n\nWallet: ₱${walletPart.toLocaleString()}\n${remainderMethod}: ₱${remainderPart.toLocaleString()}\nTotal: ₱${(walletPart + remainderPart).toLocaleString()}\n\nPoints earned: +${pointsEarned}`);
+          }}
+          customerId={comboPaymentData.customerId}
+          customerName={comboPaymentData.customerName}
+          totalAmount={comboPaymentData.totalAmount}
+          walletBalance={selectedCustomerWallet?.totalBalance || 0}
+          serviceName={comboPaymentData.serviceName}
+          branchId={branchId}
+          bookingId={comboPaymentData.bookingId}
+          staffId={user?._id}
+          initialWalletAmount={comboPaymentData.walletAmount}
+        />
       )}
     </div>
   )

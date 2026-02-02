@@ -1134,6 +1134,165 @@ export const getUsersByBranch = query({
 // ============================================================================
 
 /**
+ * Ensure user exists in Convex from Clerk authentication
+ *
+ * This is a fallback mechanism for when the Clerk webhook hasn't processed yet.
+ * Called from the client side when a Clerk-authenticated user doesn't have
+ * a corresponding Convex user. This ensures robust registration sync.
+ *
+ * @param clerk_user_id - The Clerk user ID
+ * @param email - Primary email from Clerk
+ * @param first_name - First name from Clerk
+ * @param last_name - Last name from Clerk
+ * @param image_url - Profile image URL from Clerk
+ * @returns Created or existing user object
+ */
+export const ensureUserFromClerk = mutation({
+  args: {
+    clerk_user_id: v.string(),
+    email: v.string(),
+    first_name: v.optional(v.string()),
+    last_name: v.optional(v.string()),
+    image_url: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { clerk_user_id, email, first_name, last_name, image_url } = args;
+
+    // 1. Check if user already exists by clerk_user_id (idempotent)
+    const existingByClerkId = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_user_id", (q) => q.eq("clerk_user_id", clerk_user_id))
+      .first();
+
+    if (existingByClerkId) {
+      console.log("[EnsureUser] User already exists with clerk_user_id:", existingByClerkId._id);
+      return {
+        _id: existingByClerkId._id,
+        id: existingByClerkId._id,
+        username: existingByClerkId.username,
+        email: existingByClerkId.email,
+        nickname: existingByClerkId.nickname,
+        mobile_number: existingByClerkId.mobile_number,
+        birthday: existingByClerkId.birthday,
+        role: existingByClerkId.role,
+        branch_id: existingByClerkId.branch_id,
+        is_active: existingByClerkId.is_active,
+        avatar: existingByClerkId.avatar,
+        isVerified: existingByClerkId.isVerified,
+        clerk_user_id: existingByClerkId.clerk_user_id,
+        action: "exists",
+      };
+    }
+
+    // 2. Check if user exists by email but no clerk_user_id (migration case)
+    const existingByEmail = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
+
+    if (existingByEmail && !existingByEmail.clerk_user_id) {
+      console.log("[EnsureUser] Linking existing user by email:", existingByEmail._id);
+      await ctx.db.patch(existingByEmail._id, {
+        clerk_user_id,
+        migration_status: "completed",
+        updatedAt: Date.now(),
+      });
+      return {
+        _id: existingByEmail._id,
+        id: existingByEmail._id,
+        username: existingByEmail.username,
+        email: existingByEmail.email,
+        nickname: existingByEmail.nickname,
+        mobile_number: existingByEmail.mobile_number,
+        birthday: existingByEmail.birthday,
+        role: existingByEmail.role,
+        branch_id: existingByEmail.branch_id,
+        is_active: existingByEmail.is_active,
+        avatar: existingByEmail.avatar,
+        isVerified: existingByEmail.isVerified,
+        clerk_user_id,
+        action: "linked",
+      };
+    }
+
+    // 3. Create new user with role "customer" by default
+    const firstName = first_name || "";
+    const lastName = last_name || "";
+    const fullName = [firstName, lastName].filter(Boolean).join(" ") || "User";
+    const baseUsername = email.split("@")[0] || clerk_user_id;
+    const uniqueUsername = `${baseUsername}_${clerk_user_id.slice(-6)}`;
+
+    const now = Date.now();
+    const userId = await ctx.db.insert("users", {
+      email,
+      username: uniqueUsername,
+      nickname: fullName,
+      password: "", // Clerk manages authentication
+      mobile_number: "",
+      role: "customer",
+      clerk_user_id,
+      migration_status: "completed",
+      is_active: true,
+      isVerified: true,
+      avatar: image_url,
+      skills: [],
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // =========================================================================
+    // INITIALIZE LOYALTY DATA FOR NEW CUSTOMERS
+    // Creates wallet and points ledger with 0 balance (fresh start)
+    // =========================================================================
+
+    // Create wallet with 0 balance
+    await ctx.db.insert("wallets", {
+      user_id: userId,
+      balance: 0, // ₱0.00 in centavos
+      bonus_balance: 0, // ₱0.00 bonus
+      currency: "PHP",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create points ledger with 0 balance
+    await ctx.db.insert("points_ledger", {
+      user_id: userId,
+      current_balance: 0, // 0 points (×100 format)
+      lifetime_earned: 0, // 0 points total
+      lifetime_redeemed: 0, // 0 points redeemed
+      last_activity_at: now,
+    });
+
+    console.log("[EnsureUser] Created new user with fresh loyalty data:", {
+      userId,
+      clerk_user_id,
+      email,
+      wallet: "₱0.00",
+      points: "0 pts",
+    });
+
+    const user = await ctx.db.get(userId);
+    return {
+      _id: userId,
+      id: userId,
+      username: user?.username,
+      email: user?.email,
+      nickname: user?.nickname,
+      mobile_number: user?.mobile_number,
+      birthday: user?.birthday,
+      role: user?.role,
+      branch_id: user?.branch_id,
+      is_active: user?.is_active,
+      avatar: user?.avatar,
+      isVerified: user?.isVerified,
+      clerk_user_id,
+      action: "created",
+    };
+  },
+});
+
+/**
  * Get user by Clerk user ID
  * Used by frontend to look up Convex user after Clerk authentication
  *
@@ -1818,5 +1977,164 @@ export const sendBookingConfirmationEmail = action({
       // Don't throw error - email failure shouldn't block booking
       return { success: false, error: error.message };
     }
+  },
+});
+
+// ============================================================================
+// TEST DATA SEEDING
+// ============================================================================
+
+/**
+ * Seed a test customer with wallet and points
+ * Run via: npx convex run services/auth:seedTestCustomer
+ */
+export const seedTestCustomer = mutation({
+  args: {
+    email: v.optional(v.string()),
+    name: v.optional(v.string()),
+    walletBalance: v.optional(v.number()), // in pesos
+    points: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const email = args.email || "testcustomer@example.com";
+    const name = args.name || "Test Customer";
+    const walletBalanceCentavos = (args.walletBalance || 500) * 100;
+    const pointsX100 = (args.points || 5000) * 100;
+
+    // Check if customer already exists
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
+
+    if (existingUser) {
+      // Update existing user's wallet and points
+      const wallet = await ctx.db
+        .query("wallets")
+        .withIndex("by_user", (q) => q.eq("user_id", existingUser._id))
+        .first();
+
+      if (wallet) {
+        await ctx.db.patch(wallet._id, {
+          balance: walletBalanceCentavos,
+          bonus_balance: Math.floor(walletBalanceCentavos * 0.1),
+          updatedAt: now,
+        });
+      } else {
+        await ctx.db.insert("wallets", {
+          user_id: existingUser._id,
+          balance: walletBalanceCentavos,
+          bonus_balance: Math.floor(walletBalanceCentavos * 0.1),
+          currency: "PHP",
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+
+      const pointsLedger = await ctx.db
+        .query("points_ledger")
+        .withIndex("by_user", (q) => q.eq("user_id", existingUser._id))
+        .first();
+
+      if (pointsLedger) {
+        await ctx.db.patch(pointsLedger._id, {
+          current_balance: pointsX100,
+          lifetime_earned: Math.floor(pointsX100 * 1.2),
+          last_activity_at: now,
+        });
+      } else {
+        await ctx.db.insert("points_ledger", {
+          user_id: existingUser._id,
+          current_balance: pointsX100,
+          lifetime_earned: Math.floor(pointsX100 * 1.2),
+          lifetime_redeemed: 0,
+          last_activity_at: now,
+        });
+      }
+
+      return {
+        success: true,
+        action: "updated",
+        userId: existingUser._id,
+        email,
+        wallet: `₱${(walletBalanceCentavos / 100).toFixed(2)}`,
+        points: args.points || 5000,
+      };
+    }
+
+    // Create new test customer
+    const userId = await ctx.db.insert("users", {
+      email,
+      username: email.split("@")[0],
+      nickname: name,
+      password: "",
+      mobile_number: "+639123456789",
+      role: "customer",
+      is_active: true,
+      isVerified: true,
+      skills: [],
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create wallet with balance
+    await ctx.db.insert("wallets", {
+      user_id: userId,
+      balance: walletBalanceCentavos,
+      bonus_balance: Math.floor(walletBalanceCentavos * 0.1),
+      currency: "PHP",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create points ledger
+    await ctx.db.insert("points_ledger", {
+      user_id: userId,
+      current_balance: pointsX100,
+      lifetime_earned: Math.floor(pointsX100 * 1.2),
+      lifetime_redeemed: Math.floor(pointsX100 * 0.2),
+      last_activity_at: now,
+    });
+
+    // Add wallet transaction history
+    await ctx.db.insert("wallet_transactions", {
+      user_id: userId,
+      type: "topup",
+      amount: walletBalanceCentavos,
+      status: "completed",
+      reference_id: `SEED-${Date.now()}`,
+      description: "Initial top-up (seeded)",
+      createdAt: now - 3 * 24 * 60 * 60 * 1000,
+      updatedAt: now - 3 * 24 * 60 * 60 * 1000,
+    });
+
+    // Add points transaction history
+    await ctx.db.insert("points_transactions", {
+      user_id: userId,
+      type: "earn",
+      amount: pointsX100,
+      balance_after: pointsX100,
+      source_type: "payment",
+      source_id: "seed-bonus",
+      notes: "Initial points (seeded)",
+      created_at: now - 3 * 24 * 60 * 60 * 1000,
+    });
+
+    console.log("[Seed] Created test customer:", {
+      userId,
+      email,
+      wallet: `₱${(walletBalanceCentavos / 100).toFixed(2)}`,
+      points: args.points || 5000,
+    });
+
+    return {
+      success: true,
+      action: "created",
+      userId,
+      email,
+      wallet: `₱${(walletBalanceCentavos / 100).toFixed(2)}`,
+      points: args.points || 5000,
+    };
   },
 });

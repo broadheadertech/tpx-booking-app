@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User, Bot, Bell, Wallet, Building } from 'lucide-react'
+import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User, Bot, Bell, Wallet, Building, Scissors, Sparkles, ChevronRight } from 'lucide-react'
+import { useUser } from '@clerk/clerk-react'
 import ServiceBooking from '../../components/customer/ServiceBooking'
 import CustomerProfile from '../../components/customer/CustomerProfile'
 import VoucherManagement from '../../components/customer/VoucherManagement'
@@ -12,20 +13,27 @@ import Profile from './Profile'
 import Carousel from '../../components/customer/Carousel'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useEnsureClerkUser } from '../../hooks/useEnsureClerkUser'
 import { useBranding } from '../../context/BrandingContext'
 import { useRealtimeNotifications } from '../../hooks/useRealtimeNotifications'
 import { useBookingNotificationListener } from '../../utils/bookingNotifications'
 import { NotificationBell } from '../../components/common/NotificationSystem'
 import NotificationsPage from '../../components/customer/NotificationsPage'
+import ActivePromoBanner from '../../components/common/ActivePromoBanner'
+import StarRewardsCard from '../../components/common/StarRewardsCard'
+import SocialFeed from '../../components/common/SocialFeed'
 
 const Dashboard = ({ initialSection = 'home' }) => {
-  const { user, isAuthenticated } = useAuth()
+  // Use the hook that ensures Clerk users have Convex records
+  const { user, isClerkAuth, clerkUser } = useEnsureClerkUser()
   const { branding } = useBranding()
   const location = useLocation()
   const navigate = useNavigate()
   const [activeSection, setActiveSection] = useState(initialSection)
   const [showOnboarding, setShowOnboarding] = useState(false)
+
+  // Determine authentication status
+  const isAuthenticated = !!user
 
   // Hook for real-time notifications with toast alerts
   const { unreadCount } = useRealtimeNotifications()
@@ -68,10 +76,28 @@ const Dashboard = ({ initialSection = 'home' }) => {
   // Convex queries with error handling
   const services = useQuery(api.services.services.getActiveServices)
   const barbers = useQuery(api.services.barbers.getActiveBarbers)
-  const bookings = user?._id ? useQuery(api.services.bookings.getBookingsByCustomer, { customerId: user._id }) : undefined
-  const vouchers = user?._id ? useQuery(api.services.vouchers.getVouchersByUser, { userId: user._id }) : undefined
+  const bookings = useQuery(
+    api.services.bookings.getBookingsByCustomer,
+    user?._id ? { customerId: user._id } : 'skip'
+  )
+  const vouchers = useQuery(
+    api.services.vouchers.getVouchersByUser,
+    user?._id ? { userId: user._id } : 'skip'
+  )
   const branches = useQuery(api.services.branches.getAllBranches)
   const currentBranch = branches?.find(b => b.is_active) || branches?.[0]
+
+  // Wallet balance query for quick card
+  const wallet = useQuery(
+    api.services.wallet.getWallet,
+    user?._id ? { userId: user._id } : 'skip'
+  )
+
+  // Recent points transactions for activity feed
+  const recentPoints = useQuery(
+    api.services.points.getPointsLedger,
+    user?._id ? { userId: user._id } : 'skip'
+  )
 
   // Handle query errors
   useEffect(() => {
@@ -89,12 +115,13 @@ const Dashboard = ({ initialSection = 'home' }) => {
     }
   }, [services, barbers, bookings, vouchers, user])
 
+  // Starbucks-style navigation
   const sections = [
     { id: 'home', label: 'Home', icon: Home },
-    { id: 'bookings', label: 'Bookings', icon: History },
-    { id: 'wallet', label: 'Wallet', icon: Wallet },
-    { id: 'vouchers', label: 'Vouchers', icon: Gift },
-    { id: 'ai-assistant', label: 'AI', icon: Bot }
+    { id: 'booking', label: 'Book', icon: Scissors },
+    { id: 'wallet', label: 'Pay', icon: Wallet },
+    { id: 'loyalty', label: 'Rewards', icon: Star },
+    { id: 'profile', label: 'Account', icon: User }
   ]
 
   // Calculate dashboard stats from Convex data
@@ -152,91 +179,89 @@ const Dashboard = ({ initialSection = 'home' }) => {
         return <NotificationsPage onBack={() => navigate('/customer/dashboard')} />
       default:
         return (
-          <div className="space-y-6">
-            {/* Hero Section - Premium Carousel */}
-            <div className="px-4 mb-8">
-              <div className="relative overflow-hidden rounded-[28px] shadow-2xl">
-                <Carousel
-                  images={currentBranch?.carousel_images || []}
-                  autoPlay={true}
-                  interval={5000}
+          <div className="space-y-6 pt-4">
+            {/* Hero Star Rewards Card - Compact */}
+            <div className="px-4">
+              <StarRewardsCard userId={user?._id} />
+            </div>
+
+            {/* Quick Actions - Horizontal Scroll */}
+            <div className="px-4">
+              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                {/* Wallet Card */}
+                <button
+                  onClick={() => navigate('/customer/wallet')}
+                  className="flex-shrink-0 bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] hover:border-[var(--color-primary)]/50 active:scale-[0.98] transition-all min-w-[140px]"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/20 flex items-center justify-center mb-2">
+                    <Wallet className="w-5 h-5 text-[var(--color-primary)]" />
+                  </div>
+                  <div className="text-lg font-black text-white">
+                    ₱{((wallet?.balance || 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  </div>
+                  <div className="text-xs text-gray-500">Wallet</div>
+                </button>
+
+                {/* Book Card */}
+                <button
+                  onClick={() => setActiveSection('booking')}
+                  className="flex-shrink-0 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-2xl p-4 active:scale-[0.98] transition-all min-w-[140px]"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center mb-2">
+                    <Scissors className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="text-lg font-black text-white">Book Now</div>
+                  <div className="text-xs text-white/70">Find a slot</div>
+                </button>
+
+                {/* Bookings Card */}
+                <button
+                  onClick={() => navigate('/customer/bookings')}
+                  className="flex-shrink-0 bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] hover:border-blue-500/50 active:scale-[0.98] transition-all min-w-[140px]"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center mb-2">
+                    <Calendar className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div className="text-lg font-black text-white">{stats.totalBookings}</div>
+                  <div className="text-xs text-gray-500">Bookings</div>
+                </button>
+
+                {/* Vouchers Card */}
+                <button
+                  onClick={() => navigate('/customer/vouchers')}
+                  className="flex-shrink-0 bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] hover:border-purple-500/50 active:scale-[0.98] transition-all min-w-[140px]"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center mb-2">
+                    <Gift className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div className="text-lg font-black text-white">{stats.activeVouchers}</div>
+                  <div className="text-xs text-gray-500">Vouchers</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Active Promotions Banner */}
+            {user?._id && currentBranch?._id && (
+              <div className="px-4">
+                <ActivePromoBanner userId={user._id} branchId={currentBranch._id} />
+              </div>
+            )}
+
+            {/* Social Feed - Instagram Style */}
+            {currentBranch?._id && (
+              <div className="px-4 pb-4">
+                <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-[var(--color-primary)]" />
+                  Latest Updates
+                </h3>
+                <SocialFeed
+                  branchId={currentBranch._id}
+                  userId={user?._id}
+                  limit={10}
+                  showFilters={true}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
-
-                {/* Welcome Text Overlay */}
-                <div className="absolute bottom-0 left-0 right-0 p-6 z-10">
-                  <h2 className="text-2xl font-black text-white mb-1">Welcome Back</h2>
-                  <p className="text-sm text-white/80 font-medium">Your next grooming experience awaits</p>
-                </div>
               </div>
-            </div>
-
-            {/* Quick Stats - Premium Design */}
-            <div className="px-4 mb-8">
-              <div className="grid grid-cols-2 gap-4">
-                {quickStats.map((stat) => {
-                  return (
-                    <div
-                      key={stat.label}
-                      className="relative bg-[var(--color-bg)] rounded-[24px] p-6 border-2 border-[var(--color-primary)]/40 hover:border-[var(--color-primary)] active:scale-[0.98] transition-all duration-200 group"
-                    >
-                      {/* Subtle gradient background */}
-                      <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)]/5 to-transparent rounded-[24px] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
-                      {/* Content */}
-                      <div className="relative">
-                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{stat.label}</div>
-                        <div className="text-5xl font-black text-white">{stat.value}</div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Primary CTA - Premium Design */}
-            <div className="px-4 mb-8">
-              <button
-                onClick={() => setActiveSection('booking')}
-                className="w-full relative rounded-[24px] overflow-hidden group active:scale-[0.98] transition-all duration-300"
-              >
-                {/* Dark background with gradient border effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-accent)] to-[var(--color-primary)] bg-[length:200%_100%] animate-gradient p-[2px] rounded-[24px]">
-                  <div className="w-full h-full bg-[var(--color-bg)] rounded-[22px]" />
-                </div>
-
-                {/* Glow effect on hover */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[var(--color-primary)]/0 via-[var(--color-primary)]/20 to-[var(--color-primary)]/0 opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-500" />
-
-                {/* Content */}
-                <div className="relative z-10 p-6 flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    {/* Icon with gradient background */}
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-2xl blur-md opacity-60" />
-                      <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center">
-                        <Calendar className="w-7 h-7 text-white" />
-                      </div>
-                    </div>
-
-                    {/* Text */}
-                    <div className="text-left">
-                      <div className="text-xl font-black text-white mb-0.5">Book Appointment</div>
-                      <div className="text-sm text-gray-400 font-medium">Schedule your next visit</div>
-                    </div>
-                  </div>
-
-                  {/* Arrow with orange gradient */}
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </div>
-              </button>
-            </div>
-
-
+            )}
           </div>
         )
     }
@@ -249,30 +274,33 @@ const Dashboard = ({ initialSection = 'home' }) => {
         <PremiumOnboarding onComplete={handleOnboardingComplete} />
       )}
 
-      {/* Header - Premium Design */}
+      {/* Header - Starbucks Style */}
       {!['booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
         <div className="sticky top-0 z-40 bg-[var(--color-bg)]/98 backdrop-blur-2xl border-b border-[#1A1A1A]">
           <div className="max-w-md mx-auto px-4">
-            <div className="flex justify-between items-center py-5">
+            <div className="flex justify-between items-center py-4">
+              {/* Left - Logo and Greeting */}
               <div className="flex items-center space-x-3">
                 <img
-                  src={branding?.logo_light_url }
+                  src={branding?.logo_light_url}
                   alt={branding?.display_name || 'Logo'}
-                  className="w-14 h-14 object-contain"
+                  className="w-10 h-10 object-contain"
                 />
                 <div>
-                  <h1 className="text-base font-black text-[var(--color-primary)]">{branding?.display_name || ''}</h1>
-                  <p className="text-xs font-semibold text-[var(--color-primary)]">{branding?.display_name ? 'Branch' : 'Angeles'}</p>
+                  <p className="text-xs font-medium text-gray-400">Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'},</p>
+                  <h1 className="text-base font-bold text-white">{user?.first_name || user?.username || 'Guest'} ☀️</h1>
                 </div>
               </div>
-              <div className="flex items-center space-x-3">
+
+              {/* Right - Actions */}
+              <div className="flex items-center space-x-2">
                 <NotificationBell userId={user?._id} onOpenModal={() => navigate('/customer/notifications')} />
                 <button
                   onClick={() => navigate('/customer/profile')}
                   className="relative group"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-full opacity-0 group-hover:opacity-100 blur-md transition-opacity duration-300" />
-                  <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-[#1A1A1A] group-hover:ring-[var(--color-primary)]/50 transition-all duration-300">
+                  <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-[var(--color-primary)]/30 group-hover:ring-[var(--color-primary)]/50 transition-all duration-300">
                     <img
                       src={(user && user.avatar) ? user.avatar : '/img/avatar_default.jpg'}
                       alt={user?.username || 'Profile'}
@@ -306,14 +334,14 @@ const Dashboard = ({ initialSection = 'home' }) => {
                       onClick={() => {
                         if (section.id === 'home') {
                           navigate('/customer/dashboard')
+                        } else if (section.id === 'booking') {
+                          setActiveSection('booking')
                         } else if (section.id === 'wallet') {
                           navigate('/customer/wallet')
-                        } else if (section.id === 'bookings') {
-                          navigate('/customer/bookings')
-                        } else if (section.id === 'vouchers') {
-                          navigate('/customer/vouchers')
-                        } else if (section.id === 'ai-assistant') {
-                          navigate('/customer/ai-assistant')
+                        } else if (section.id === 'loyalty') {
+                          navigate('/customer/loyalty')
+                        } else if (section.id === 'profile') {
+                          navigate('/customer/profile')
                         } else {
                           setActiveSection(section.id)
                         }
