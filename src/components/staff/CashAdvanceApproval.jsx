@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useAuth } from "../../context/AuthContext";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 import {
   DollarSign,
   Clock,
@@ -301,7 +301,7 @@ const HistoryRow = ({ advance, onMarkAsPaidOut, isProcessing }) => {
 // MAIN COMPONENT
 // ============================================================================
 const CashAdvanceApproval = ({ user, onRefresh }) => {
-  const { user: authUser } = useAuth();
+  const { user: authUser } = useCurrentUser();
   const currentUser = user || authUser;
 
   const [activeView, setActiveView] = useState("pending");

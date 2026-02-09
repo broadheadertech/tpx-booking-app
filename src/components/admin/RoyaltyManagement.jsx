@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { useAuth } from '../../context/AuthContext';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 import {
   Building,
   Percent,
@@ -30,7 +30,7 @@ import {
 import { formatErrorForDisplay } from '../../utils/errorHandler';
 
 export default function RoyaltyManagement() {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,6 +75,7 @@ export default function RoyaltyManagement() {
   const markAsPaid = useMutation(api.services.royalty.markRoyaltyAsPaid);
   const waivePayment = useMutation(api.services.royalty.waiveRoyaltyPayment);
   const sendReceiptEmail = useAction(api.services.royalty.sendReceiptEmail);
+  const cleanOrphanedData = useMutation(api.services.royalty.cleanOrphanedRoyaltyData);
 
   // Filter branches by search
   const filteredBranches = branches.filter(
@@ -919,10 +920,29 @@ export default function RoyaltyManagement() {
 
             {/* Existing Configurations List */}
             <div className="bg-gradient-to-br from-[#2A2A2A] to-[#1E1E1E] rounded-xl p-6 border border-[#333]">
-              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <Building className="w-5 h-5 text-blue-400" />
-                Configured Branches
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <Building className="w-5 h-5 text-blue-400" />
+                  Configured Branches
+                </h3>
+                {allRoyaltyConfigs.some(c => c.branch_name === 'Unknown Branch') && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const result = await cleanOrphanedData();
+                        setSuccess(`Cleaned ${result.deletedConfigs} orphaned configs and ${result.deletedPayments} orphaned payments`);
+                        setTimeout(() => setSuccess(''), 3000);
+                      } catch (err) {
+                        setError('Failed to clean orphaned data');
+                      }
+                    }}
+                    className="text-xs px-3 py-1.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Clean Orphaned
+                  </button>
+                )}
+              </div>
 
               {allRoyaltyConfigs.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">

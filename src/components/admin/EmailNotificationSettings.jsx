@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
 import { useBranding } from '../../context/BrandingContext'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { 
@@ -102,9 +101,7 @@ const TextAreaInput = ({ label, value, onChange, disabled, placeholder, rows = 4
 
 export default function EmailNotificationSettings() {
   // Use unified auth hook for user data (supports both Clerk and legacy auth)
-  const { user: currentUser, isAuthenticated } = useCurrentUser()
-  // Get sessionToken from legacy auth (optional - backend now supports Clerk auth)
-  const { sessionToken } = useAuth()
+  const { user: currentUser, isAuthenticated, sessionToken } = useCurrentUser()
   const { branding } = useBranding()
 
   const isSuperAdmin = currentUser?.role === 'super_admin'

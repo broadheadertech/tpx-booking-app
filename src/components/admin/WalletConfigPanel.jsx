@@ -65,6 +65,8 @@ const WalletConfigPanel = () => {
     default_commission_percent: 5,
     default_settlement_frequency: 'weekly',
     min_settlement_amount: 500,
+    // Story 23.4: Monthly bonus cap (0 = unlimited)
+    monthly_bonus_cap: 0,
   })
 
   // Update form when config loads
@@ -78,11 +80,17 @@ const WalletConfigPanel = () => {
         default_commission_percent: config.default_commission_percent,
         default_settlement_frequency: config.default_settlement_frequency,
         min_settlement_amount: config.min_settlement_amount,
+        // Story 23.4: Monthly bonus cap
+        monthly_bonus_cap: config.monthly_bonus_cap || 0,
       }))
 
-      // Story 23.3: Load bonus tiers from config
+      // Story 23.3: Load bonus tiers from config (add IDs if missing)
       if (config.bonus_tiers && config.bonus_tiers.length > 0) {
-        setBonusTiers(config.bonus_tiers)
+        const tiersWithIds = config.bonus_tiers.map((tier, idx) => ({
+          ...tier,
+          id: tier.id || Date.now() + idx // Ensure each tier has a unique ID
+        }))
+        setBonusTiers(tiersWithIds)
       }
     }
   }, [config])
@@ -121,19 +129,23 @@ const WalletConfigPanel = () => {
     while (existingAmounts.includes(newAmount)) {
       newAmount += 500
     }
-    setBonusTiers([...bonusTiers, { minAmount: newAmount, bonus: 0 }])
+    // Add unique ID to track tiers properly (fixes input sync bug)
+    const newTier = { id: Date.now(), minAmount: newAmount, bonus: 0 }
+    setBonusTiers([...bonusTiers, newTier])
     setBonusTierError('')
   }
 
-  const updateBonusTier = (index, field, value) => {
-    const updated = [...bonusTiers]
-    updated[index] = { ...updated[index], [field]: Number(value) }
+  const updateBonusTier = (tierId, field, value) => {
+    // Update by ID instead of index to avoid sorted array issues
+    const updated = bonusTiers.map(tier =>
+      tier.id === tierId ? { ...tier, [field]: Number(value) } : tier
+    )
     setBonusTiers(updated)
     setBonusTierError('')
   }
 
-  const removeBonusTier = (index) => {
-    const updated = bonusTiers.filter((_, i) => i !== index)
+  const removeBonusTier = (tierId) => {
+    const updated = bonusTiers.filter(tier => tier.id !== tierId)
     setBonusTiers(updated)
     setBonusTierError('')
   }
@@ -211,6 +223,9 @@ const WalletConfigPanel = () => {
     setMessage({ type: '', text: '' })
 
     try {
+      // Strip internal 'id' field from tiers before sending to backend
+      const tiersForBackend = bonusTiers.map(({ id, ...tier }) => tier)
+
       const result = await updateConfigMutation({
         public_key: formValues.public_key,
         secret_key: formValues.secret_key || '___UNCHANGED___', // Marker for unchanged
@@ -219,8 +234,10 @@ const WalletConfigPanel = () => {
         default_commission_percent: formValues.default_commission_percent,
         default_settlement_frequency: formValues.default_settlement_frequency,
         min_settlement_amount: formValues.min_settlement_amount,
-        // Story 23.3: Include bonus tiers
-        bonus_tiers: bonusTiers,
+        // Story 23.3: Include bonus tiers (without internal id field)
+        bonus_tiers: tiersForBackend,
+        // Story 23.4: Monthly bonus cap
+        monthly_bonus_cap: formValues.monthly_bonus_cap,
       })
 
       setMessage({
@@ -571,6 +588,34 @@ const WalletConfigPanel = () => {
             </button>
           </div>
 
+          {/* Story 23.4: Monthly Bonus Cap */}
+          <div className="mb-4 p-3 bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]">
+            <label className="text-sm text-gray-400 mb-2 flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              Monthly Bonus Cap
+            </label>
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-bold text-[#FF8C42]">₱</span>
+              <input
+                type="number"
+                min="0"
+                value={formValues.monthly_bonus_cap}
+                onChange={(e) => handleValueChange('monthly_bonus_cap', Number(e.target.value))}
+                className="w-32 px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-white text-lg font-semibold focus:border-[#FF8C42] focus:outline-none"
+                placeholder="0"
+              />
+              <span className="text-sm text-gray-400">/ month</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Maximum top-up amount eligible for bonus per user per month. Set to 0 for unlimited.
+            </p>
+            {formValues.monthly_bonus_cap > 0 && (
+              <p className="text-xs text-green-400 mt-1">
+                Each customer can earn bonus on their first ₱{formValues.monthly_bonus_cap.toLocaleString()} of top-ups each month
+              </p>
+            )}
+          </div>
+
           {/* Bonus Tiers Error */}
           {bonusTierError && (
             <div className="mb-3 p-2 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2 text-red-400 text-sm">
@@ -588,11 +633,11 @@ const WalletConfigPanel = () => {
                 <p className="text-xs text-gray-600 mt-1">Add tiers to reward larger top-ups</p>
               </div>
             ) : (
-              bonusTiers
+              [...bonusTiers]
                 .sort((a, b) => a.minAmount - b.minAmount)
-                .map((tier, index) => (
+                .map((tier) => (
                   <div
-                    key={index}
+                    key={tier.id}
                     className="flex items-center gap-3 p-3 bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]"
                   >
                     <div className="flex-1 grid grid-cols-2 gap-3">
@@ -605,7 +650,7 @@ const WalletConfigPanel = () => {
                             type="number"
                             min="1"
                             value={tier.minAmount}
-                            onChange={(e) => updateBonusTier(index, 'minAmount', e.target.value)}
+                            onChange={(e) => updateBonusTier(tier.id, 'minAmount', e.target.value)}
                             className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white text-sm focus:border-[#FF8C42] focus:outline-none"
                           />
                         </div>
@@ -619,7 +664,7 @@ const WalletConfigPanel = () => {
                             type="number"
                             min="0"
                             value={tier.bonus}
-                            onChange={(e) => updateBonusTier(index, 'bonus', e.target.value)}
+                            onChange={(e) => updateBonusTier(tier.id, 'bonus', e.target.value)}
                             className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white text-sm focus:border-[#FF8C42] focus:outline-none"
                           />
                         </div>
@@ -635,7 +680,7 @@ const WalletConfigPanel = () => {
                     {/* Remove Button */}
                     <button
                       type="button"
-                      onClick={() => removeBonusTier(index)}
+                      onClick={() => removeBonusTier(tier.id)}
                       className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                       title="Remove tier"
                     >

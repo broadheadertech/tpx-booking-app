@@ -4,7 +4,7 @@ import { User, Settings, LogOut, Monitor, CreditCard, Building, Menu, X } from '
 import { Link } from 'react-router-dom'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { useBranding } from '../../context/BrandingContext'
 import SettingsModal from './SettingsModal'
 import LogoutConfirmModal from './LogoutConfirmModal'
@@ -14,7 +14,7 @@ import { BranchSelector } from '../common/BranchSelector'
 import { APP_VERSION } from '../../config/version'
 
 const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
-  const { sessionToken } = useAuth()
+  const { sessionToken } = useCurrentUser()
   const { branding } = useBranding()
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)

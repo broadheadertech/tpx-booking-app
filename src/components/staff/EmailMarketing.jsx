@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useCallback, memo } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 import {
   Mail,
   Send,
@@ -189,7 +189,7 @@ TemplateCard.displayName = 'TemplateCard'
 const DEFAULT_FROM_EMAIL = 'noreply@tpxbarber.com' // Will be handled by EmailJS
 
 const EmailMarketing = memo(({ onRefresh }) => {
-  const { user } = useAuth()
+  const { user } = useCurrentUser()
   const [activeTab, setActiveTab] = useState('campaigns')
   const [showCreate, setShowCreate] = useState(false)
   const [showTemplate, setShowTemplate] = useState(false)

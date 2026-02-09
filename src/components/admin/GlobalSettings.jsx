@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { Settings, Save, Database, Shield, Mail, Bell, Globe, Server, User, Lock, AlertCircle, CheckCircle, LogOut } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { APP_VERSION } from '../../config/version'
 
 const GlobalSettings = ({ onRefresh }) => {
-  const { user, logout } = useAuth()
+  const { user, logout } = useCurrentUser()
   const updateUserProfile = useMutation(api.services.auth.updateUserProfile)
   
   const [activeTab, setActiveTab] = useState('profile')

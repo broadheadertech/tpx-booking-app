@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { StatusBadge } from "../common/StatusBadge";
 import Skeleton from "../common/Skeleton";
-import { Calendar, Clock, Users, X, Download, Table, LayoutList } from "lucide-react";
+import { Calendar, Clock, Users, X, Download, Table, LayoutList, CheckCircle, XCircle, LogIn, LogOut, Hourglass, Loader2 } from "lucide-react";
 
 // Philippines timezone offset: UTC+8
 const PHT_OFFSET_MS = 8 * 60 * 60 * 1000;
@@ -288,13 +288,49 @@ function exportToCSV(attendance, hoursByBarber, filterLabel) {
  * - CSV export functionality
  * - Branch isolation (NFR6)
  */
-export function TimeAttendanceView({ branchId }) {
+export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
   const [activeFilter, setActiveFilter] = useState("today");
   const [showCustomPicker, setShowCustomPicker] = useState(false);
   const [viewMode, setViewMode] = useState("table"); // "table" or "cards"
+  const [approvingId, setApprovingId] = useState(null);
+  const [rejectingId, setRejectingId] = useState(null);
   // Custom date states - default to today
   const [customStartDate, setCustomStartDate] = useState(formatDateForInput(new Date()));
   const [customEndDate, setCustomEndDate] = useState(formatDateForInput(new Date()));
+
+  // Approval mutations
+  const approveAttendance = useMutation(api.services.timeAttendance.approveAttendance);
+  const rejectAttendance = useMutation(api.services.timeAttendance.rejectAttendance);
+
+  // Query pending requests
+  const pendingRequests = useQuery(
+    api.services.timeAttendance.getPendingRequests,
+    branchId ? { branch_id: branchId } : "skip"
+  );
+
+  // Handle approve
+  const handleApprove = async (recordId) => {
+    setApprovingId(recordId);
+    try {
+      await approveAttendance({ recordId, reviewerName: staffName });
+    } catch (err) {
+      console.error("Approve failed:", err);
+    } finally {
+      setApprovingId(null);
+    }
+  };
+
+  // Handle reject
+  const handleReject = async (recordId) => {
+    setRejectingId(recordId);
+    try {
+      await rejectAttendance({ recordId, reviewerName: staffName });
+    } catch (err) {
+      console.error("Reject failed:", err);
+    } finally {
+      setRejectingId(null);
+    }
+  };
 
   // Calculate date range based on active filter
   const dateRange = useMemo(() => {
@@ -443,6 +479,90 @@ export function TimeAttendanceView({ branchId }) {
         </div>
       </div>
 
+      {/* Pending Approvals Section */}
+      {pendingRequests && pendingRequests.length > 0 && (
+        <div className="bg-amber-500/5 rounded-xl border border-amber-500/20 overflow-hidden">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-amber-500/20">
+            <Hourglass className="w-5 h-5 text-amber-400" />
+            <h3 className="text-base font-medium text-amber-400">Pending Approvals</h3>
+            <span className="ml-auto bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+              {pendingRequests.length}
+            </span>
+          </div>
+
+          <div className="divide-y divide-amber-500/10">
+            {pendingRequests.map((request) => (
+              <div key={request._id} className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-3">
+                  {/* Avatar */}
+                  {request.barber_avatar ? (
+                    <img
+                      src={request.barber_avatar}
+                      alt={request.barber_name}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-[#2A2A2A] flex items-center justify-center">
+                      <span className="text-gray-400 text-sm font-medium">
+                        {request.barber_name?.charAt(0) || "?"}
+                      </span>
+                    </div>
+                  )}
+
+                  <div>
+                    <span className="text-white font-medium text-sm">{request.barber_name}</span>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {request.status === "pending_in" ? (
+                        <>
+                          <LogIn className="w-3 h-3 text-amber-400" />
+                          <span className="text-xs text-amber-400">Clock In Request</span>
+                        </>
+                      ) : (
+                        <>
+                          <LogOut className="w-3 h-3 text-amber-400" />
+                          <span className="text-xs text-amber-400">Clock Out Request</span>
+                        </>
+                      )}
+                      <span className="text-xs text-gray-500">
+                        · {formatTime(request.status === "pending_in" ? request.clock_in : request.clock_out)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleApprove(request._id)}
+                    disabled={approvingId === request._id || rejectingId === request._id}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-green-500/20 text-green-400 text-xs font-medium rounded-lg hover:bg-green-500/30 transition-all disabled:opacity-50"
+                  >
+                    {approvingId === request._id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <CheckCircle className="w-3.5 h-3.5" />
+                    )}
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleReject(request._id)}
+                    disabled={approvingId === request._id || rejectingId === request._id}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-red-500/20 text-red-400 text-xs font-medium rounded-lg hover:bg-red-500/30 transition-all disabled:opacity-50"
+                  >
+                    {rejectingId === request._id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <XCircle className="w-3.5 h-3.5" />
+                    )}
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Date Filter Buttons */}
       <div className="flex gap-2 overflow-x-auto pb-2">
         {DATE_FILTERS.map((filter) => (
@@ -571,7 +691,14 @@ export function TimeAttendanceView({ branchId }) {
                   <span className="text-white font-medium">{barber.barber_name}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <StatusBadge status={barber.isClockedIn} size="sm" />
+                  {barber.isPending ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-400">
+                      <Hourglass className="w-3 h-3" />
+                      Pending
+                    </span>
+                  ) : (
+                    <StatusBadge status={barber.isClockedIn} size="sm" />
+                  )}
                   {barber.isClockedIn && barber.clockInTime && (
                     <span className="text-xs text-gray-400">
                       Since {formatTime(barber.clockInTime)}

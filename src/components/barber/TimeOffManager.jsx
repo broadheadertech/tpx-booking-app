@@ -110,7 +110,7 @@ const TimeOffManager = ({ barber }) => {
   const upcomingPeriods = sortedPeriods.filter(p => p.date >= todayString)
 
   return (
-    <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 mt-4">
+    <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] p-4 mt-4">
       <div className="flex justify-between items-center mb-4">
         <div>
           <h3 className="text-sm font-bold text-white">Time Off & Unavailability</h3>
@@ -119,7 +119,7 @@ const TimeOffManager = ({ barber }) => {
         {!showAddForm && (
           <button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center space-x-1 px-3 py-1.5 bg-[#2A2A2A] hover:bg-[#333333] text-[var(--color-primary)] rounded-lg text-xs font-medium transition-colors border border-[#333333]"
+            className="flex items-center space-x-1 px-3 py-1.5 bg-[#2A2A2A] hover:bg-[#2A2A2A] text-[var(--color-primary)] rounded-lg text-xs font-medium transition-colors border border-[#2A2A2A]"
           >
             <Plus className="w-3 h-3" />
             <span>Add Time Off</span>
@@ -128,7 +128,7 @@ const TimeOffManager = ({ barber }) => {
       </div>
 
       {showAddForm && (
-        <div className="bg-[#222222] rounded-lg p-4 mb-4 border border-[#333333]">
+        <div className="bg-[#222222] rounded-lg p-4 mb-4 border border-[#2A2A2A]">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div>
               <label className="block text-xs text-gray-400 mb-1">Date</label>
@@ -137,7 +137,7 @@ const TimeOffManager = ({ barber }) => {
                 value={formData.date}
                 min={getPhilippineDateString()}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full bg-[#1A1A1A] border border-[#333333] rounded-lg px-3 py-2 text-white text-sm focus:border-[var(--color-primary)] outline-none"
+                className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm focus:border-[var(--color-primary)] outline-none"
               />
             </div>
             <div>
@@ -173,7 +173,7 @@ const TimeOffManager = ({ barber }) => {
                   type="time"
                   value={formData.startTime}
                   onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                  className="w-full bg-[#1A1A1A] border border-[#333333] rounded-lg px-3 py-2 text-white text-sm focus:border-[var(--color-primary)] outline-none"
+                  className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm focus:border-[var(--color-primary)] outline-none"
                 />
               </div>
               <div>
@@ -182,7 +182,7 @@ const TimeOffManager = ({ barber }) => {
                   type="time"
                   value={formData.endTime}
                   onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                  className="w-full bg-[#1A1A1A] border border-[#333333] rounded-lg px-3 py-2 text-white text-sm focus:border-[var(--color-primary)] outline-none"
+                  className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm focus:border-[var(--color-primary)] outline-none"
                 />
               </div>
             </div>
@@ -195,7 +195,7 @@ const TimeOffManager = ({ barber }) => {
               value={formData.reason}
               onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
               placeholder="e.g., Doctor appointment, Personal leave"
-              className="w-full bg-[#1A1A1A] border border-[#333333] rounded-lg px-3 py-2 text-white text-sm focus:border-[var(--color-primary)] outline-none"
+              className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-3 py-2 text-white text-sm focus:border-[var(--color-primary)] outline-none"
             />
           </div>
 
@@ -218,7 +218,7 @@ const TimeOffManager = ({ barber }) => {
       )}
 
       {upcomingPeriods.length === 0 ? (
-        <div className="text-center py-6 bg-[#1A1A1A] rounded-lg border border-[#333333] border-dashed">
+        <div className="text-center py-6 bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] border-dashed">
           <Calendar className="w-8 h-8 text-gray-600 mx-auto mb-2" />
           <p className="text-gray-500 text-xs">No upcoming time off scheduled</p>
         </div>
@@ -235,9 +235,9 @@ const TimeOffManager = ({ barber }) => {
             const dateDisplay = format(periodDate, 'MMM d, yyyy (EEE)')
 
             return (
-              <div key={index} className="flex items-center justify-between p-3 bg-[#222222] rounded-lg border border-[#333333] group">
+              <div key={index} className="flex items-center justify-between p-3 bg-[#222222] rounded-lg border border-[#2A2A2A] group">
                 <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-lg bg-[#333333] flex flex-col items-center justify-center border border-[#444444]">
+                  <div className="w-10 h-10 rounded-lg bg-[#2A2A2A] flex flex-col items-center justify-center border border-[#444444]">
                     <span className="text-[10px] text-gray-400 uppercase">{format(periodDate, 'MMM')}</span>
                     <span className="text-sm font-bold text-white">{format(periodDate, 'd')}</span>
                   </div>

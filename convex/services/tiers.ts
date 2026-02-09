@@ -1078,7 +1078,7 @@ export const countEligibleForPromotion = query({
     // Group by tier transition
     const summary: Record<string, number> = {};
     for (const p of promotions) {
-      const key = `${p.fromTier} → ${p.toTier}`;
+      const key = `${p.fromTier} to ${p.toTier}`;
       summary[key] = (summary[key] || 0) + 1;
     }
 

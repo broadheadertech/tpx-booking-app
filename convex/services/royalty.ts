@@ -12,6 +12,37 @@ const resend = new Resend(process.env.RESEND_API_KEY || "missing_key");
 // Super Admin configures rates per branch; system calculates dues
 // ============================================================================
 
+// Clean up orphaned royalty configs/payments (branch was deleted/re-seeded)
+export const cleanOrphanedRoyaltyData = mutation({
+  args: {},
+  handler: async (ctx) => {
+    let deletedConfigs = 0;
+    let deletedPayments = 0;
+
+    // Clean orphaned configs
+    const configs = await ctx.db.query("royaltyConfig").collect();
+    for (const config of configs) {
+      const branch = await ctx.db.get(config.branch_id);
+      if (!branch) {
+        await ctx.db.delete(config._id);
+        deletedConfigs++;
+      }
+    }
+
+    // Clean orphaned payments
+    const payments = await ctx.db.query("royaltyPayments").collect();
+    for (const payment of payments) {
+      const branch = await ctx.db.get(payment.branch_id);
+      if (!branch) {
+        await ctx.db.delete(payment._id);
+        deletedPayments++;
+      }
+    }
+
+    return { deletedConfigs, deletedPayments };
+  },
+});
+
 // Set or update royalty configuration for a branch
 export const setRoyaltyConfig = mutation({
   args: {

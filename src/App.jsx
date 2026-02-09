@@ -7,6 +7,7 @@ import {
 import { AuthProvider } from "./context/AuthContext";
 import { BrandingProvider } from "./context/BrandingContext";
 import { BranchProvider } from "./context/BranchContext";
+import { CartProvider } from "./context/CartContext";
 import { ToastProvider } from "./components/common/ToastNotification";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import AuthRedirect from "./components/common/AuthRedirect";
@@ -31,9 +32,11 @@ import TrackBooking from "./pages/customer/TrackBooking.jsx";
 import Wallet from "./pages/customer/Wallet.jsx";
 import WalletTopUp from "./pages/customer/WalletTopUp.jsx";
 import CustomerProfile from "./pages/customer/Profile.jsx";
+import Shop from "./pages/customer/Shop.jsx";
 import BarberDashboard from "./components/barber/BarberDashboard";
 import BarbersList from "./pages/barbers/BarbersList";
 import BarberProfile from "./pages/barbers/BarberProfile";
+import BranchProfile from "./pages/b/BranchProfile";
 import Kiosk from "./pages/Kiosk";
 import PaymentSuccess from "./pages/booking/payment/success.jsx";
 import PaymentFailure from "./pages/booking/payment/failure.jsx";
@@ -53,6 +56,7 @@ function App() {
       <ToastProvider>
         <BrandingProvider>
           <BranchProvider>
+            <CartProvider>
         <Router>
           <div className="min-h-screen bg-[var(--color-bg)]">
             <Routes>
@@ -72,6 +76,8 @@ function App() {
               <Route path="/track/:bookingCode" element={<TrackBooking />} />
               <Route path="/barbers" element={<BarbersList />} />
               <Route path="/barbers/:barberSlug" element={<BarberProfile />} />
+              {/* Public Branch Profile */}
+              <Route path="/b/:slug" element={<BranchProfile />} />
               <Route
                 path="/platform-selection"
                 element={<PlatformSelection />}
@@ -270,6 +276,14 @@ function App() {
                 }
               />
               <Route
+                path="/customer/shop"
+                element={
+                  <ProtectedRoute>
+                    <Shop />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/kiosk"
                 element={
                   <ErrorBoundary>
@@ -298,6 +312,7 @@ function App() {
               </Routes>
           </div>
         </Router>
+            </CartProvider>
           </BranchProvider>
         </BrandingProvider>
       </ToastProvider>

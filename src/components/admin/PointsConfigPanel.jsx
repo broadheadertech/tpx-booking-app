@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Settings, Save, Coins, Wallet, Award, AlertCircle, CheckCircle, History, RefreshCw } from 'lucide-react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 import TierManagementPanel from './TierManagementPanel'
 import LoyaltyAnalyticsDashboard from './LoyaltyAnalyticsDashboard'
 import ManualPointsAdjustment from './ManualPointsAdjustment'
@@ -20,7 +20,7 @@ import PointsExpiryPanel from './PointsExpiryPanel'
  * Story 19.1: Points Configuration Panel
  */
 const PointsConfigPanel = () => {
-  const { user } = useAuth()
+  const { user } = useCurrentUser()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
   const [showPreview, setShowPreview] = useState(false)

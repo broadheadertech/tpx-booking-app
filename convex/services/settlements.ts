@@ -246,12 +246,17 @@ export const approveSettlement = mutation({
     // Create notifications for branch admins
     for (const admin of branchAdmins) {
       await ctx.db.insert("notifications", {
-        user_id: admin._id,
+        recipient_id: admin._id,
+        recipient_type: "admin",
         title: "Settlement Approved",
         message: `Your settlement request for ₱${settlement.amount.toLocaleString()} has been approved and will be processed shortly.`,
-        type: "success",
+        type: "payment",
+        priority: "medium",
         is_read: false,
-        created_at: now,
+        is_archived: false,
+        branch_id: settlement.branch_id,
+        createdAt: now,
+        updatedAt: now,
       });
     }
 
@@ -351,12 +356,17 @@ export const rejectSettlement = mutation({
     // Create notifications for branch admins
     for (const admin of branchAdmins) {
       await ctx.db.insert("notifications", {
-        user_id: admin._id,
+        recipient_id: admin._id,
+        recipient_type: "admin",
         title: "Settlement Rejected",
         message: `Your settlement request for ₱${settlement.amount.toLocaleString()} was rejected. Reason: ${args.rejection_reason}`,
-        type: "error",
+        type: "alert",
+        priority: "high",
         is_read: false,
-        created_at: now,
+        is_archived: false,
+        branch_id: settlement.branch_id,
+        createdAt: now,
+        updatedAt: now,
       });
     }
 
@@ -792,12 +802,17 @@ export const markAsProcessing = mutation({
 
     for (const admin of branchAdmins) {
       await ctx.db.insert("notifications", {
-        user_id: admin._id,
+        recipient_id: admin._id,
+        recipient_type: "admin",
         title: "Settlement Processing",
         message: `Your settlement of ₱${settlement.amount.toLocaleString()} is now being processed. Transfer will be completed shortly.`,
-        type: "info",
+        type: "payment",
+        priority: "medium",
         is_read: false,
-        created_at: now,
+        is_archived: false,
+        branch_id: settlement.branch_id,
+        createdAt: now,
+        updatedAt: now,
       });
     }
 
@@ -888,12 +903,17 @@ export const completeSettlement = mutation({
 
     for (const admin of branchAdmins) {
       await ctx.db.insert("notifications", {
-        user_id: admin._id,
+        recipient_id: admin._id,
+        recipient_type: "admin",
         title: "Settlement Completed",
         message: `Your settlement of ₱${settlement.amount.toLocaleString()} has been transferred. Reference: ${args.transfer_reference.trim()}`,
-        type: "success",
+        type: "payment",
+        priority: "medium",
         is_read: false,
-        created_at: now,
+        is_archived: false,
+        branch_id: settlement.branch_id,
+        createdAt: now,
+        updatedAt: now,
       });
     }
 

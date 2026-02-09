@@ -16,7 +16,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { fromStorageFormat } from '../../../convex/lib/points';
-import { useAuth } from '../../context/AuthContext';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { Clock, AlertTriangle, Calendar, Users, Play, Settings, CheckCircle } from 'lucide-react';
 
 /**
@@ -28,7 +28,7 @@ const formatPoints = (points) => {
 };
 
 export default function PointsExpiryPanel() {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
 
   // Local state for form
   const [expiryEnabled, setExpiryEnabled] = useState(null);

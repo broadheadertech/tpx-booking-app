@@ -5,10 +5,10 @@ import {
 } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 
 const BarberProfile = () => {
-  const { user, logout } = useAuth()
+  const { user, logout } = useCurrentUser()
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
@@ -345,9 +345,9 @@ const BarberProfile = () => {
                   <span className="text-white font-medium">{currentBarber.rating || 0}</span>
                   <span className="text-gray-500">/5</span>
                 </div>
-                <span className="text-gray-600">•</span>
+                <span className="text-gray-600">&bull;</span>
                 <span className="text-gray-400">{currentBarber.totalBookings || 0} bookings</span>
-                <span className="text-gray-600">•</span>
+                <span className="text-gray-600">&bull;</span>
                 <div className="flex items-center space-x-1">
                   <div className={`w-1.5 h-1.5 rounded-full ${currentBarber.is_active ? 'bg-green-500' : 'bg-gray-500'}`}></div>
                   <span className="text-gray-400">{currentBarber.is_active ? 'Active' : 'Inactive'}</span>
@@ -384,7 +384,7 @@ const BarberProfile = () => {
             <p className="text-xs text-gray-500">Rating</p>
           </div>
           <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] text-center">
-            <p className="text-xl font-bold text-white">₱{(currentBarber.monthlyRevenue || 0).toLocaleString()}</p>
+            <p className="text-xl font-bold text-white">&#8369;{(currentBarber.monthlyRevenue || 0).toLocaleString()}</p>
             <p className="text-xs text-gray-500">This Month</p>
           </div>
         </div>

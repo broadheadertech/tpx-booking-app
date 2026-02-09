@@ -26,8 +26,8 @@ import Modal from '../common/Modal'
 // Product image component for catalog items
 const CatalogProductImage = ({ imageUrl, imageStorageId, productName, className }) => {
   const imageUrlFromStorage = useQuery(
-    imageStorageId ? api.services.productCatalog.getImageUrl : undefined,
-    imageStorageId ? { storageId: imageStorageId } : undefined
+    api.services.productCatalog.getImageUrl,
+    imageStorageId ? { storageId: imageStorageId } : 'skip'
   )
 
   const [imageError, setImageError] = useState(false)

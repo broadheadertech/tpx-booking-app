@@ -27,7 +27,10 @@ import {
   ShoppingCart,
   ClipboardList,
   TrendingUp,
-  Wallet
+  Wallet,
+  Target,
+  MessageSquare,
+  Megaphone
 } from 'lucide-react'
 
 const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount = 0, waitingWalkInsCount = 0, pendingAdvancesCount = 0 }) => {
@@ -70,22 +73,28 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
 
   const getIconComponent = (tabId) => {
     const iconMap = {
+      // Main navigation (consolidated)
       overview: LayoutDashboard,
-      customers: Users,
+      reports: BarChart3,
       bookings: Calendar,
+      pos: CreditCard,
+      team: Users,
+      customers: UserCheck,
+      products: Package,
+      finance: DollarSign,
+      marketing: Megaphone,
+      settings: Settings,
+      // Legacy mappings (for backwards compatibility)
       services: Scissors,
       vouchers: Gift,
-      reports: BarChart3,
       barbers: UserCheck,
       users: Users,
       events: CalendarDays,
       calendar: CalendarDays,
-      products: Package,
       notifications: Bell,
       branches: Building,
       payroll: DollarSign,
       email_marketing: Mail,
-      pos: CreditCard,
       custom_bookings: FileText,
       walkins: UserPlus,
       cash_advances: Banknote,
@@ -98,13 +107,15 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
       payments: CreditCard,
       payment_history: FileText,
       branch_wallet: Wallet,
-      wallet_earnings: TrendingUp
+      wallet_earnings: TrendingUp,
+      customer_analytics: Target,
+      post_moderation: MessageSquare,
     }
     return iconMap[tabId] || LayoutDashboard
   }
 
-  // Define primary tabs (most frequently used) - limited to prevent overflow
-  const primaryTabIds = ['overview', 'reports', 'bookings', 'custom_bookings', 'calendar', 'walkins', 'pos', 'barbers', 'services', 'payroll', 'accounting']
+  // All tabs are now primary since navigation is consolidated
+  const primaryTabIds = ['overview', 'reports', 'bookings', 'pos', 'team', 'customers', 'products', 'finance', 'marketing', 'settings']
 
   // Helper to check if a tab is available in the current filtered tabs
   const isTabAvailable = (tabId) => tabs.some(t => t.id === tabId)

@@ -8,9 +8,19 @@
 import { v } from "convex/values";
 import { query, mutation } from "../_generated/server";
 
+// Helper to create URL-friendly slug from name
+const slugify = (name: string) => {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+};
+
 /**
  * Get feed posts for a branch (public feed)
- * Returns active posts sorted by pinned first, then by creation date
+ * Returns published posts sorted by pinned first, then by creation date
  */
 export const getFeedPosts = query({
   args: {
@@ -20,67 +30,130 @@ export const getFeedPosts = query({
       v.union(
         v.literal("announcement"),
         v.literal("showcase"),
-        v.literal("promotion"),
-        v.literal("event"),
-        v.literal("achievement"),
-        v.literal("tip")
+        v.literal("promo"),
+        v.literal("availability"),
+        v.literal("tip"),
+        v.literal("vacation")
       )
     ),
   },
   handler: async (ctx, args) => {
     const limit = args.limit || 20;
 
-    let postsQuery = ctx.db
-      .query("branch_posts")
-      .withIndex("by_active_created", (q) => q.eq("is_active", true))
-      .order("desc");
+    let posts;
 
-    const posts = await postsQuery.collect();
-
-    // Filter by branch and type if specified
-    let filteredPosts = posts;
+    // Use appropriate index based on whether branchId is provided
     if (args.branchId) {
-      filteredPosts = filteredPosts.filter((p) => p.branch_id === args.branchId);
+      // Use by_branch_status index for branch-specific queries
+      posts = await ctx.db
+        .query("branch_posts")
+        .withIndex("by_branch_status", (q) =>
+          q.eq("branch_id", args.branchId).eq("status", "published")
+        )
+        .order("desc")
+        .collect();
+    } else {
+      // Get all published posts and sort by createdAt
+      posts = await ctx.db
+        .query("branch_posts")
+        .withIndex("by_created_at")
+        .order("desc")
+        .collect();
+
+      // Filter to only published posts
+      posts = posts.filter((p) => p.status === "published");
     }
+
+    // Filter by type if specified
     if (args.postType) {
-      filteredPosts = filteredPosts.filter((p) => p.post_type === args.postType);
+      posts = posts.filter((p) => p.post_type === args.postType);
     }
 
     // Sort: pinned first, then by date
-    filteredPosts.sort((a, b) => {
-      if (a.is_pinned && !b.is_pinned) return -1;
-      if (!a.is_pinned && b.is_pinned) return 1;
-      return b.created_at - a.created_at;
+    posts.sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+      return b.createdAt - a.createdAt;
     });
 
     // Limit results
-    const limitedPosts = filteredPosts.slice(0, limit);
+    const limitedPosts = posts.slice(0, limit);
 
-    // Enrich with barber info if available
+    // Enrich with author info (including barber_id for booking)
     const enrichedPosts = await Promise.all(
       limitedPosts.map(async (post) => {
-        let barber = null;
-        if (post.barber_id) {
-          barber = await ctx.db.get(post.barber_id);
+        const author = await ctx.db.get(post.author_id);
+
+        // Get barber info if author is a barber (for Quick Book feature)
+        let barberInfo = null;
+        if (author && author.role === "barber") {
+          barberInfo = await ctx.db
+            .query("barbers")
+            .withIndex("by_user", (q) => q.eq("user", author._id))
+            .first();
         }
 
-        // Get image URL from storage if using storage ID
-        let imageUrl = post.image_url;
-        if (post.image_storage_id) {
-          imageUrl = await ctx.storage.getUrl(post.image_storage_id);
+        // Get barber avatar URL (from storage if available)
+        let barberAvatarUrl = barberInfo?.avatar;
+        if (barberInfo?.avatarStorageId) {
+          barberAvatarUrl = await ctx.storage.getUrl(barberInfo.avatarStorageId);
+        }
+
+        // Resolve storage IDs to URLs for post images
+        const imageUrls = await Promise.all(
+          (post.images || []).map(async (img: string) => {
+            try {
+              const url = await ctx.storage.getUrl(img as any);
+              return url || img;
+            } catch {
+              return img;
+            }
+          })
+        );
+
+        // For admin posts, use branch name and branding logo
+        const isAdminPost = post.author_type === "branch_admin" || post.author_type === "super_admin";
+        let authorName = barberInfo?.full_name || author?.nickname || author?.username;
+        let authorAvatar = barberAvatarUrl || author?.avatar_url;
+        let authorSlug = barberInfo?.full_name ? slugify(barberInfo.full_name) : null;
+        let isBranchPost = false;
+
+        if (isAdminPost) {
+          const branch = await ctx.db.get(post.branch_id);
+          authorName = branch?.name || "Unknown Branch";
+          isBranchPost = true;
+          authorSlug = branch?.slug || null;
+
+          // Get branding logo for branch avatar
+          const branding = await ctx.db
+            .query("branding")
+            .withIndex("by_branch", (q: any) => q.eq("branch_id", post.branch_id))
+            .first();
+
+          if (branding?.logo_dark_url) {
+            authorAvatar = branding.logo_dark_url;
+          } else if (branding?.logo_light_url) {
+            authorAvatar = branding.logo_light_url;
+          } else if (branch?.logo_dark_url) {
+            authorAvatar = branch.logo_dark_url;
+          } else if (branch?.logo_light_url) {
+            authorAvatar = branch.logo_light_url;
+          }
         }
 
         return {
           ...post,
-          barber: barber
+          images: imageUrls,
+          author: author
             ? {
-                _id: barber._id,
-                first_name: barber.first_name,
-                last_name: barber.last_name,
-                avatar_url: barber.avatar_url,
+                _id: author._id,
+                name: authorName,
+                avatar: authorAvatar,
+                barberId: barberInfo?._id || null,
+                slug: authorSlug,
+                isBranch: isBranchPost,
               }
             : null,
-          imageUrl,
         };
       })
     );
@@ -98,27 +171,30 @@ export const getPost = query({
     const post = await ctx.db.get(args.postId);
     if (!post) return null;
 
-    let barber = null;
-    if (post.barber_id) {
-      barber = await ctx.db.get(post.barber_id);
-    }
+    const author = await ctx.db.get(post.author_id);
 
-    let imageUrl = post.image_url;
-    if (post.image_storage_id) {
-      imageUrl = await ctx.storage.getUrl(post.image_storage_id);
-    }
+    // Resolve storage IDs to URLs for post images
+    const imageUrls = await Promise.all(
+      (post.images || []).map(async (img: string) => {
+        try {
+          const url = await ctx.storage.getUrl(img as any);
+          return url || img;
+        } catch {
+          return img;
+        }
+      })
+    );
 
     return {
       ...post,
-      barber: barber
+      images: imageUrls,
+      author: author
         ? {
-            _id: barber._id,
-            first_name: barber.first_name,
-            last_name: barber.last_name,
-            avatar_url: barber.avatar_url,
+            _id: author._id,
+            name: author.nickname || author.username,
+            avatar: author.avatar_url,
           }
         : null,
-      imageUrl,
     };
   },
 });
@@ -189,26 +265,27 @@ export const toggleLike = mutation({
 
 /**
  * Create a new post (admin/staff only)
+ * Note: For full post creation with moderation, use branchPosts.createPost instead
  */
 export const createPost = mutation({
   args: {
     branchId: v.id("branches"),
-    authorId: v.optional(v.id("users")),
-    barberId: v.optional(v.id("barbers")),
+    authorId: v.id("users"),
+    authorType: v.union(
+      v.literal("barber"),
+      v.literal("branch_admin"),
+      v.literal("super_admin")
+    ),
     postType: v.union(
-      v.literal("announcement"),
       v.literal("showcase"),
-      v.literal("promotion"),
-      v.literal("event"),
-      v.literal("achievement"),
+      v.literal("promo"),
+      v.literal("availability"),
+      v.literal("announcement"),
       v.literal("tip")
     ),
-    title: v.optional(v.string()),
     content: v.string(),
-    imageUrl: v.optional(v.string()),
-    imageStorageId: v.optional(v.id("_storage")),
-    tags: v.optional(v.array(v.string())),
-    isPinned: v.optional(v.boolean()),
+    images: v.optional(v.array(v.string())),
+    pinned: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -216,18 +293,15 @@ export const createPost = mutation({
     const postId = await ctx.db.insert("branch_posts", {
       branch_id: args.branchId,
       author_id: args.authorId,
-      barber_id: args.barberId,
+      author_type: args.authorType,
       post_type: args.postType,
-      title: args.title,
       content: args.content,
-      image_url: args.imageUrl,
-      image_storage_id: args.imageStorageId,
-      tags: args.tags,
-      likes_count: 0,
-      is_pinned: args.isPinned || false,
-      is_active: true,
-      created_at: now,
-      updated_at: now,
+      images: args.images,
+      status: "published", // Direct publish for admins
+      pinned: args.pinned || false,
+      view_count: 0,
+      createdAt: now,
+      updatedAt: now,
     });
 
     return postId;
@@ -236,103 +310,153 @@ export const createPost = mutation({
 
 /**
  * Seed sample posts for testing
+ * Note: Use seed.ts seedBranchPosts for complete seeding with proper schema
  */
 export const seedSamplePosts = mutation({
-  args: { branchId: v.id("branches") },
+  args: {
+    branchId: v.id("branches"),
+    authorId: v.id("users"),
+  },
   handler: async (ctx, args) => {
     const now = Date.now();
     const dayMs = 24 * 60 * 60 * 1000;
 
-    // Get a barber for showcase posts
-    const barber = await ctx.db.query("barbers").first();
-
     const samplePosts = [
       {
         post_type: "announcement" as const,
-        title: "Holiday Hours Update 🎄",
         content:
-          "We'll be closed on December 25 & January 1. Book your appointments early to look fresh for the holidays! Walk-ins welcome on all other days.",
-        image_url: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800",
-        is_pinned: true,
-        tags: ["holiday", "announcement"],
-        created_at: now - dayMs * 1,
+          "Holiday Hours Update! We'll be closed on December 25 & January 1. Book your appointments early to look fresh for the holidays!",
+        images: ["https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800"],
+        pinned: true,
+        createdAt: now - dayMs * 1,
       },
       {
         post_type: "showcase" as const,
-        title: "Fresh Fade Friday ✂️",
         content:
           "Check out this clean mid fade with textured top! Our barbers are ready to give you that fresh look. Book now!",
-        image_url: "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=800",
-        barber_id: barber?._id,
-        tags: ["fade", "haircut", "fresh"],
-        created_at: now - dayMs * 2,
+        images: ["https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=800"],
+        pinned: false,
+        createdAt: now - dayMs * 2,
       },
       {
-        post_type: "event" as const,
-        title: "Community Donation Drive 🤝",
+        post_type: "promo" as const,
         content:
-          "Join us this Saturday for our annual school supplies donation drive! For every haircut booked, we'll donate ₱50 to local schools. Let's give back together!",
-        image_url: "https://images.unsplash.com/photo-1532629345422-7515f3d16bb6?w=800",
-        is_pinned: true,
-        tags: ["donation", "community", "event"],
-        created_at: now - dayMs * 3,
-      },
-      {
-        post_type: "promotion" as const,
-        title: "Double Stars Week! ⭐⭐",
-        content:
-          "This week only - earn DOUBLE loyalty stars on all services! The more you groom, the more you earn. Don't miss out!",
-        image_url: "https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=800",
-        tags: ["promo", "loyalty", "stars"],
-        created_at: now - dayMs * 4,
-      },
-      {
-        post_type: "showcase" as const,
-        title: "Beard Game Strong 🧔",
-        content:
-          "Nothing beats a well-groomed beard. Our beard trim & shape service includes hot towel treatment for that premium experience.",
-        image_url: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=800",
-        barber_id: barber?._id,
-        tags: ["beard", "grooming", "style"],
-        created_at: now - dayMs * 5,
+          "Double Stars Week! This week only - earn DOUBLE loyalty stars on all services! The more you groom, the more you earn.",
+        images: ["https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=800"],
+        pinned: false,
+        createdAt: now - dayMs * 3,
       },
       {
         post_type: "tip" as const,
-        title: "Pro Tip: Post-Haircut Care 💡",
         content:
-          "Keep your fresh cut looking sharp longer! Use a light pomade for styling, and schedule your next trim in 3-4 weeks to maintain the shape.",
-        image_url: "https://images.unsplash.com/photo-1493256338651-d82f7acb2b38?w=800",
-        tags: ["tip", "haircare", "grooming"],
-        created_at: now - dayMs * 6,
-      },
-      {
-        post_type: "achievement" as const,
-        title: "1000+ Happy Customers! 🎉",
-        content:
-          "We just hit a huge milestone - over 1000 satisfied customers! Thank you for trusting us with your grooming needs. Here's to many more!",
-        image_url: "https://images.unsplash.com/photo-1560264280-88b68371db39?w=800",
-        tags: ["milestone", "thankyou", "community"],
-        created_at: now - dayMs * 7,
+          "Pro Tip: Keep your fresh cut looking sharp longer! Use a light pomade for styling, and schedule your next trim in 3-4 weeks.",
+        images: ["https://images.unsplash.com/photo-1493256338651-d82f7acb2b38?w=800"],
+        pinned: false,
+        createdAt: now - dayMs * 4,
       },
     ];
 
     for (const post of samplePosts) {
       await ctx.db.insert("branch_posts", {
         branch_id: args.branchId,
+        author_id: args.authorId,
+        author_type: "branch_admin",
         post_type: post.post_type,
-        title: post.title,
         content: post.content,
-        image_url: post.image_url,
-        barber_id: post.barber_id,
-        tags: post.tags,
-        likes_count: Math.floor(Math.random() * 50) + 10,
-        is_pinned: post.is_pinned || false,
-        is_active: true,
-        created_at: post.created_at,
-        updated_at: post.created_at,
+        images: post.images,
+        status: "published",
+        pinned: post.pinned,
+        view_count: Math.floor(Math.random() * 50) + 10,
+        createdAt: post.createdAt,
+        updatedAt: post.createdAt,
       });
     }
 
     return { success: true, postsCreated: samplePosts.length };
+  },
+});
+
+/**
+ * Get branches with recent posts (for Stories carousel)
+ * Returns branches with posts from the last 24 hours
+ * Only shows posts from branch admins and super admins (not barbers)
+ */
+export const getBarbersWithRecentPosts = query({
+  args: {},
+  handler: async (ctx) => {
+    const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
+
+    // Get all published posts from the last 24 hours
+    const recentPosts = await ctx.db
+      .query("branch_posts")
+      .withIndex("by_created_at")
+      .order("desc")
+      .collect();
+
+    // Filter to recent published posts from branch admins only (not barbers)
+    // Stories are only available for branch-level posting
+    const filteredPosts = recentPosts.filter(
+      (p) => p.status === "published" &&
+             p.createdAt >= twentyFourHoursAgo &&
+             (p.author_type === "branch_admin" || p.author_type === "super_admin")
+    );
+
+    // Group posts by branch (since stories are branch-level now)
+    const postsByBranch: Record<string, typeof filteredPosts> = {};
+    for (const post of filteredPosts) {
+      const branchId = post.branch_id.toString();
+      if (!postsByBranch[branchId]) {
+        postsByBranch[branchId] = [];
+      }
+      postsByBranch[branchId].push(post);
+    }
+
+    // Get branch details and build result
+    const branchesWithPosts = await Promise.all(
+      Object.entries(postsByBranch).map(async ([branchId, posts]) => {
+        const branch = await ctx.db.get(posts[0].branch_id);
+        if (!branch) return null;
+
+        // Get branch logo/image if available
+        let branchImage = branch.image_url;
+        if (branch.imageStorageId) {
+          branchImage = await ctx.storage.getUrl(branch.imageStorageId);
+        }
+
+        return {
+          _id: branch._id,
+          name: branch.name || "Branch",
+          avatar: branchImage || null,
+          role: "branch", // Indicate this is a branch story
+          recentPosts: await Promise.all(posts.slice(0, 5).map(async (p) => {
+            const postImageUrls = await Promise.all(
+              (p.images || []).map(async (img: string) => {
+                try {
+                  const url = await ctx.storage.getUrl(img as any);
+                  return url || img;
+                } catch {
+                  return img;
+                }
+              })
+            );
+            return {
+              _id: p._id,
+              content: p.content,
+              images: postImageUrls,
+              post_type: p.post_type,
+              createdAt: p.createdAt,
+              likes_count: p.likes_count || 0,
+            };
+          })),
+          postCount: posts.length,
+          latestPostAt: posts[0]?.createdAt || 0,
+        };
+      })
+    );
+
+    // Filter out nulls and sort by latest post
+    return branchesWithPosts
+      .filter((b): b is NonNullable<typeof b> => b !== null)
+      .sort((a, b) => b.latestPostAt - a.latestPostAt);
   },
 });

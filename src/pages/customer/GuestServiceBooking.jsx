@@ -25,6 +25,14 @@ import { useBranding } from "../../context/BrandingContext";
 import { formatTime } from "../../utils/dateUtils";
 import { sendCustomBookingConfirmation, sendBarberBookingNotification } from "../../services/emailService";
 import PaymentOptionsModal from "../../components/customer/PaymentOptionsModal";
+import {
+  // Phase 1: Quick Wins
+  CalendarStrip, TimeSlotPills, StepProgressDots, SuccessConfetti,
+  // Phase 2: Core Upgrades
+  ServiceCard, ServiceCardGrid, ServiceCategoryTabs,
+  BarberCard, BarberCardCompact, BarberCardGrid,
+  SmartRecommendations, QuickBookBanner
+} from "../../components/customer/booking";
 
 // Helper function to convert hex to rgba
 const hexToRgba = (hex, alpha) => {
@@ -247,6 +255,53 @@ const GuestServiceBooking = ({ onBack }) => {
       setStep(7);
     }
   }, [paymentStatus, selectedService, selectedStaff]);
+
+  // Automatic payment status polling - checks every 5 seconds when waiting for payment
+  useEffect(() => {
+    if (!pendingPaymentSessionId) return;
+
+    console.log('[GuestServiceBooking] Starting automatic payment status polling for:', pendingPaymentSessionId);
+
+    const pollInterval = setInterval(async () => {
+      try {
+        console.log('[GuestServiceBooking] Auto-polling payment status...');
+        const result = await checkPaymentStatus({ sessionId: pendingPaymentSessionId });
+        console.log('[GuestServiceBooking] Auto-poll result:', result);
+
+        if (result.status === 'paid' || result.status === 'already_paid') {
+          console.log('[GuestServiceBooking] Payment confirmed via auto-poll!');
+          // Payment confirmed! Create booking state and go to success
+          setCreatedBooking({
+            _id: result.bookingId,
+            booking_code: result.bookingCode,
+            service: selectedService,
+            barber: selectedStaff,
+            date: selectedDate,
+            time: selectedTime,
+            status: "booked",
+            payment_status: paymentType === 'pay_now' ? 'paid' : 'partial',
+          });
+          setPendingPaymentSessionId(null);
+          localStorage.removeItem('pendingPaymongoSessionId');
+          setStep(7); // Success step
+        } else if (result.status === 'expired') {
+          console.log('[GuestServiceBooking] Payment session expired');
+          setPendingPaymentSessionId(null);
+          localStorage.removeItem('pendingPaymongoSessionId');
+        }
+        // If status is 'pending', continue polling
+      } catch (err) {
+        console.error('[GuestServiceBooking] Auto-poll error:', err);
+        // Don't stop polling on error, just log it
+      }
+    }, 5000); // Poll every 5 seconds
+
+    // Cleanup interval on unmount or when session changes
+    return () => {
+      console.log('[GuestServiceBooking] Stopping automatic payment status polling');
+      clearInterval(pollInterval);
+    };
+  }, [pendingPaymentSessionId, checkPaymentStatus, selectedService, selectedStaff, selectedDate, selectedTime, paymentType]);
 
   // Check for pre-selected service from AI assistant
   useEffect(() => {
@@ -471,14 +526,23 @@ const GuestServiceBooking = ({ onBack }) => {
     // Check barber's schedule for this day
     const barberSchedule = selectedStaff.schedule?.[dayOfWeek];
 
-    // If barber doesn't have schedule or is not available this day, return empty
-    if (!barberSchedule || !barberSchedule.available) {
-      return [];
-    }
+    let startHour, startMin, endHour, endMin;
 
-    // Use barber's scheduled hours instead of branch hours
-    let [startHour, startMin] = barberSchedule.start.split(":").map(Number);
-    let [endHour, endMin] = barberSchedule.end.split(":").map(Number);
+    // If barber has schedule data, use it; otherwise fall back to branch hours
+    if (barberSchedule) {
+      if (!barberSchedule.available) {
+        return []; // Barber explicitly not available this day
+      }
+      // Use barber's scheduled hours
+      [startHour, startMin] = barberSchedule.start.split(":").map(Number);
+      [endHour, endMin] = barberSchedule.end.split(":").map(Number);
+    } else {
+      // No barber schedule data - fall back to branch hours
+      startHour = selectedBranch?.booking_start_hour ?? 10;
+      startMin = 0;
+      endHour = selectedBranch?.booking_end_hour ?? 20;
+      endMin = 0;
+    }
 
     // Apply Branch Operating Hours Constraints
     // Ensure that even if a barber sets availability outside branch hours, 
@@ -1271,44 +1335,38 @@ const GuestServiceBooking = ({ onBack }) => {
   const renderStepIndicator = () => {
     // For custom booking flow, show only 3 steps: Branch -> Barber -> Custom Form
     const totalSteps = isCustomBookingFlow ? 3 : 7;
-    const stepsArray = isCustomBookingFlow ? [1, 2, 3] : [1, 2, 3, 4, 5, 6, 7];
 
     // Hide step indicator on success page
     if (customBookingSuccess && isCustomBookingFlow) {
       return null;
     }
 
+    // Define steps with labels for the modern component
+    const guestSteps = isCustomBookingFlow
+      ? [
+          { label: 'Branch' },
+          { label: 'Barber' },
+          { label: 'Details' }
+        ]
+      : [
+          { label: 'Branch' },
+          { label: 'Service' },
+          { label: 'Barber' },
+          { label: 'Schedule' },
+          { label: 'Info' },
+          { label: 'Confirm' },
+          { label: 'Done' }
+        ];
+
     return (
-      <div className="flex justify-center mb-4 px-4 py-2">
-        <div className="flex items-center space-x-2">
-          {stepsArray.map((stepNumber) => (
-            <div key={stepNumber} className="flex items-center">
-              <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${step >= stepNumber ? "text-white shadow-md" : "text-gray-500"
-                  }`}
-                style={{
-                  backgroundColor:
-                    step >= stepNumber
-                      ? branding?.primary_color || "#F68B24"
-                      : branding?.muted_color || "#E0E0E0",
-                }}
-              >
-                {step > stepNumber ? "✓" : stepNumber}
-              </div>
-              {stepNumber < totalSteps && (
-                <div
-                  className={`w-4 h-0.5 mx-1 rounded transition-all duration-300`}
-                  style={{
-                    backgroundColor:
-                      step > stepNumber
-                        ? branding?.primary_color || "#F68B24"
-                        : branding?.muted_color || "#E0E0E0",
-                  }}
-                ></div>
-              )}
-            </div>
-          ))}
-        </div>
+      <div className="mb-4 px-4 py-2">
+        <StepProgressDots
+          currentStep={step}
+          totalSteps={totalSteps}
+          steps={guestSteps}
+          showLabels={false}
+          size="small"
+        />
       </div>
     );
   };
@@ -1492,8 +1550,60 @@ const GuestServiceBooking = ({ onBack }) => {
       return acc;
     }, {});
 
+    // Get unique categories
+    const categoryNames = Object.keys(categories);
+
+    // Filter services based on search and category
+    const getFilteredServices = () => {
+      let filtered = servicesToDisplay;
+
+      // Filter by search term
+      if (serviceSearchTerm) {
+        const searchLower = serviceSearchTerm.toLowerCase();
+        filtered = filtered.filter(service =>
+          service.name.toLowerCase().includes(searchLower) ||
+          (service.description && service.description.toLowerCase().includes(searchLower))
+        );
+      }
+
+      // Filter by category if one is selected
+      if (openCategory) {
+        filtered = filtered.filter(service =>
+          mapServiceCategory(service.category) === openCategory
+        );
+      }
+
+      return filtered;
+    };
+
+    const filteredServices = getFilteredServices();
+
+    // Calculate barbers per service
+    const barbersByService = {};
+    servicesToDisplay.forEach(service => {
+      barbersByService[service._id] = barbers
+        ? barbers.filter(
+          barber =>
+            barber.is_active &&
+            barber.services &&
+            Array.isArray(barber.services) &&
+            barber.services.includes(service._id)
+        ).length
+        : 0;
+    });
+
+    // Get service counts per category
+    const serviceCounts = {};
+    categoryNames.forEach(cat => {
+      serviceCounts[cat] = (categories[cat] || []).length;
+    });
+
+    // Mock popular services (first 2 services)
+    const popularServices = servicesToDisplay.slice(0, 2).map(s => s._id);
+
     return (
       <div className="px-4 pb-6 max-w-2xl mx-auto">
+        {/* Header */}
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-white mb-1">Choose Service</h2>
           <p className="text-sm text-gray-400">
@@ -1512,7 +1622,7 @@ const GuestServiceBooking = ({ onBack }) => {
             placeholder="Search services..."
             value={serviceSearchTerm}
             onChange={(e) => setServiceSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-10 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-lg focus:outline-none focus:border-[var(--color-primary)] transition-colors text-sm"
+            className="w-full pl-10 pr-10 py-2.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white placeholder-gray-500 rounded-xl focus:outline-none focus:border-[var(--color-primary)] transition-colors text-sm"
           />
           {serviceSearchTerm && (
             <button
@@ -1524,274 +1634,163 @@ const GuestServiceBooking = ({ onBack }) => {
           )}
         </div>
 
-        {/* Category Dropdowns */}
-        <div className="space-y-3">
-          {["Haircut", "Package", "Other Services"].map((categoryName) => {
-            const categoryServices = categories[categoryName] || [];
-
-            // Filter services within this category based on search term
-            const filteredServices = categoryServices.filter((service) => {
-              const searchLower = serviceSearchTerm.toLowerCase();
-              return (
-                service.name.toLowerCase().includes(searchLower) ||
-                (service.description &&
-                  service.description.toLowerCase().includes(searchLower)) ||
-                service.price.toString().includes(searchLower)
-              );
-            });
-
-            if (filteredServices.length === 0) return null;
-
-            const isOpen = openCategory === categoryName;
-
-            return (
-              <div
-                key={categoryName}
-                className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]"
-              >
-                <button
-                  onClick={() => setOpenCategory(isOpen ? null : categoryName)}
-                  className="w-full text-left px-4 py-3 flex justify-between items-center text-white font-semibold"
-                >
-                  <span>{categoryName}</span>
-                  <span>{isOpen ? "−" : "+"}</span>
-                </button>
-
-                {isOpen && (
-                  <div className="space-y-2 px-4 pb-4">
-                    {filteredServices.map((service) => {
-                      const availableBarbers = barbers
-                        ? barbers.filter(
-                          (barber) =>
-                            barber.is_active &&
-                            barber.services &&
-                            Array.isArray(barber.services) &&
-                            barber.services.some(
-                              (serviceId) => serviceId === service._id
-                            )
-                        ).length
-                        : 0;
-
-                      return (
-                        <button
-                          key={service._id}
-                          onClick={() => handleServiceSelect(service)}
-                          className="w-full bg-[#2A2A2A] hover:bg-[#333333] border border-[#444444] hover:border-[var(--color-primary)]/50 rounded-xl p-4 text-left transition-all duration-200 flex justify-between items-center group"
-                        >
-                          <div className="flex-1 min-w-0">
-                            {/* Service Name - Bold and prominent */}
-                            <h3 className="text-lg font-bold text-white mb-1 truncate">
-                              {service.name}
-                            </h3>
-
-                            {/* Optional subtitle/tag - like the "TEST" in the image */}
-                            {service.description && (
-                              <p className="text-sm text-gray-400 mb-2 line-clamp-1">
-                                {service.description}
-                              </p>
-                            )}
-
-                            {/* Price - Orange and prominent like in the image */}
-                            <div className="text-[var(--color-primary)] font-bold text-base">
-                              {service.hide_price
-                                ? "Price may vary"
-                                : `₱${parseFloat(
-                                  service.price || 0
-                                ).toLocaleString()}`}
-                            </div>
-
-                            {/* Availability warning */}
-                            {availableBarbers === 0 && (
-                              <p
-                                className="text-[10px] mt-1"
-                                style={{
-                                  color: branding?.primary_color || "#f59e0b",
-                                }}
-                              >
-                                Limited availability
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Right Arrow - Clean and modern */}
-                          <div className="self-center text-gray-400 group-hover:text-[var(--color-primary)] transition-colors duration-200 ml-4">
-                            <ChevronRight className="w-6 h-6" />
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        {/* Category Tabs */}
+        <div className="mb-4">
+          <ServiceCategoryTabs
+            categories={categoryNames}
+            activeCategory={openCategory}
+            onCategoryChange={setOpenCategory}
+            serviceCounts={serviceCounts}
+          />
         </div>
+
+        {/* Service Cards */}
+        <ServiceCardGrid
+          services={filteredServices}
+          selectedService={selectedService}
+          onSelect={handleServiceSelect}
+          popularServices={popularServices}
+          barbersByService={barbersByService}
+          loading={loading}
+        />
+
+        {/* Empty State */}
+        {filteredServices.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <div className="text-4xl mb-3">🔍</div>
+            <p className="text-gray-400 text-sm">No services found</p>
+            <button
+              onClick={() => {
+                setServiceSearchTerm("");
+                setOpenCategory(null);
+              }}
+              className="mt-3 text-[var(--color-primary)] text-sm font-medium"
+            >
+              Clear filters
+            </button>
+          </div>
+        )}
       </div>
     );
   };
 
-  const renderTimeSelection = () => (
-    <div className="px-4 pb-6 max-w-2xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="mb-2 text-center">
-        <h2 className="text-2xl font-bold text-white mb-1">
-          Select Date & Time
-        </h2>
-        <p className="text-sm text-gray-400">
-          Choose a schedule for your appointment
-        </p>
-      </div>
+  const renderTimeSelection = () => {
+    // Transform time slots for the modern TimeSlotPills component
+    const transformedSlots = timeSlots.map(slot => ({
+      time: slot.time,
+      available: slot.available,
+      popular: slot.time === '10:00' || slot.time === '14:00' || slot.time === '11:00'
+    }));
 
-      {/* Selected Service Summary */}
-      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="text-xl">{selectedService?.image}</div>
-          <div>
-            <h3 className="text-base font-semibold text-white">
-              {selectedService?.name}
-            </h3>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-[var(--color-primary)] font-semibold">
-                {selectedService?.hide_price
-                  ? "Price may vary"
-                  : `₱${selectedService?.price.toLocaleString()}`}
-                <p className="text-grey-400 whitespace-pre-line w-full">
-                  {selectedService?.description}
-                </p>
+    return (
+      <div className="px-4 pb-6 max-w-2xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="mb-2 text-center">
+          <h2 className="text-2xl font-bold text-white mb-1">
+            Select Date & Time
+          </h2>
+          <p className="text-sm text-gray-400">
+            Choose a schedule for your appointment
+          </p>
+        </div>
+
+        {/* Selected Service Summary */}
+        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="text-xl">{selectedService?.image}</div>
+            <div>
+              <h3 className="text-base font-semibold text-white">
+                {selectedService?.name}
+              </h3>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-[var(--color-primary)] font-semibold">
+                  {selectedService?.hide_price
+                    ? "Price may vary"
+                    : `₱${selectedService?.price.toLocaleString()}`}
+                </span>
+                <span className="text-gray-400">{selectedService?.duration}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Modern Calendar Strip */}
+        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4">
+          <CalendarStrip
+            selectedDate={selectedDate}
+            onDateSelect={(date) => {
+              setSelectedDate(date);
+              setSelectedTime(null);
+              // Validation
+              const phToday = getPhilippineDateString();
+              if (date < phToday) {
+                setDateError("Dates in the past cannot be selected.");
+              } else {
+                setDateError(null);
+              }
+            }}
+            minDate={getPhilippineDateString()}
+            maxMonthsAhead={12}
+          />
+        </div>
+
+        {/* Date Error Message */}
+        {dateError && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
+            <p className="text-red-400 text-sm font-medium">{dateError}</p>
+          </div>
+        )}
+
+        {/* Modern Time Slot Pills */}
+        {selectedDate && (
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-white">Available Times</h3>
+              <span className="text-xs text-gray-400 bg-[#2A2A2A] px-2 py-1 rounded-full">
+                {new Date(selectedDate).toLocaleDateString("en-PH", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                })}
               </span>
-
-              <span className="text-gray-400">{selectedService?.duration}</span>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Date Selection */}
-      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
-        <h3 className="text-lg font-bold text-white mb-3">Select Date</h3>
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => {
-            const newDate = e.target.value;
-            setSelectedDate(newDate);
-            setSelectedTime(null);
-
-            // Immediate validation listener
-            const phToday = getPhilippineDateString();
-            if (newDate < phToday) {
-              setDateError("Dates in the past cannot be selected.");
-            } else {
-              setDateError(null);
-            }
-          }}
-          min={getPhilippineDateString()}
-          max={(() => {
-            const phDate = getPhilippineDate();
-            phDate.setFullYear(phDate.getFullYear() + 1);
-            const year = phDate.getFullYear();
-            const month = String(phDate.getMonth() + 1).padStart(2, "0");
-            const day = String(phDate.getDate()).padStart(2, "0");
-            return `${year}-${month}-${day}`;
-          })()}
-          className="w-full px-3 py-2.5 rounded-lg bg-[#121212] border border-[#2A2A2A] text-gray-200 text-sm focus:outline-none focus:border-[var(--color-primary)] transition-colors"
-        />
-      </div>
-
-      {/* Date Error Message */}
-      {dateError && (
-        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
-          <p className="text-red-400 text-sm font-medium">{dateError}</p>
-        </div>
-      )}
-
-      {/* Time Slots */}
-      {selectedDate && (
-        <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-lg font-bold text-white">Available Times</h3>
-            <span className="text-xs text-gray-400">
-              {new Date(selectedDate).toLocaleDateString("en-PH", {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-              })}
-            </span>
-          </div>
-
-          {loadingTimeSlots || existingBookings === undefined ? (
-            <div className="flex justify-center items-center py-6 space-x-2">
-              <div className="animate-spin w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full"></div>
-              <span className="text-gray-400 text-sm">Loading times...</span>
-            </div>
-          ) : timeSlots.length === 0 ? (
-            <div className="text-center py-6">
-              <Calendar className="w-6 h-6 text-[var(--color-primary)] mx-auto mb-2" />
-              <p className="text-sm text-[var(--color-primary)] font-medium">
-                No available times
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                Please select a different date
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-3 gap-2 mb-3">
-                {timeSlots.map((slot) => (
-                  <button
-                    key={slot.time}
-                    onClick={() => slot.available && setSelectedTime(slot.time)}
-                    disabled={!slot.available}
-                    className={`p-2 text-sm rounded-lg border transition-all duration-200 ${slot.available
-                      ? selectedTime === slot.time
-                        ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                        : "bg-[#1F1F1F] text-gray-200 border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
-                      : "bg-[#111111] text-gray-500 border-[#1F1F1F] cursor-not-allowed"
-                      }`}
-                  >
-                    {slot.displayTime}
-                  </button>
-                ))}
+            {loadingTimeSlots || existingBookings === undefined ? (
+              <div className="flex justify-center items-center py-8 space-x-2">
+                <div className="animate-spin w-6 h-6 border-2 border-[var(--color-primary)] border-t-transparent rounded-full"></div>
+                <span className="text-gray-400 text-sm">Loading times...</span>
               </div>
+            ) : (
+              <TimeSlotPills
+                slots={transformedSlots}
+                selectedTime={selectedTime}
+                onTimeSelect={setSelectedTime}
+                showFilters={true}
+              />
+            )}
+          </div>
+        )}
 
-              <div className="flex justify-center gap-4 text-xs text-gray-400">
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-[#1F1F1F] border border-[#2A2A2A] rounded"></div>
-                  <span>Available</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-[var(--color-primary)] rounded"></div>
-                  <span>Selected</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-[#111111] rounded"></div>
-                  <span>Booked</span>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Continue Button */}
-      {selectedDate && selectedTime && (
-        <button
-          onClick={() => setStep(5)}
-          disabled={!!dateError || !selectedTime}
-          className={`w-full py-3 font-bold rounded-lg transition-all duration-200 ${!dateError && selectedTime
-            ? "bg-[var(--color-primary)] text-white hover:bg-[var(--color-accent)]"
-            : "bg-[#1A1A1A] text-gray-500 border border-[#2A2A2A] cursor-not-allowed"
-            }`}
-        >
-          Continue to Your Information
-        </button>
-      )}
-    </div>
-  );
+        {/* Continue Button */}
+        {selectedDate && selectedTime && (
+          <button
+            onClick={() => setStep(5)}
+            disabled={!!dateError || !selectedTime}
+            className={`w-full py-4 font-bold rounded-xl transition-all duration-200 ${!dateError && selectedTime
+              ? "bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+              : "bg-[#1A1A1A] text-gray-500 border border-[#2A2A2A] cursor-not-allowed"
+              }`}
+          >
+            Continue to Your Information
+          </button>
+        )}
+      </div>
+    );
+  };
 
   const renderStaffSelection = () => (
-    <div className="pb-6 px-4">
+    <div className="pb-6 px-4 max-w-2xl mx-auto">
       {/* Header */}
       <div className="text-center mb-6">
         <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
@@ -1802,77 +1801,17 @@ const GuestServiceBooking = ({ onBack }) => {
         </p>
       </div>
 
-      {/* Barber Grid - Responsive */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        {getAvailableBarbers().map((barber) => {
-          const isAvailable = barber.is_accepting_bookings !== false; // Default true if undefined
-
-          return (
-            <button
-              key={barber._id}
-              onClick={() => isAvailable && handleStaffSelect(barber)}
-              disabled={!isAvailable}
-              className={`group rounded-2xl p-4 sm:p-5 transition-all duration-300 border-2 hover:shadow-lg flex flex-col items-center text-center ${selectedStaff?._id === barber._id
-                ? "bg-[var(--color-primary)]/15 border-[var(--color-primary)]"
-                : !isAvailable
-                  ? "bg-[#1A1A1A] border-[#2A2A2A] opacity-60 cursor-not-allowed"
-                  : "bg-[#1A1A1A] border-[#2A2A2A] hover:border-[var(--color-primary)]/50"
-                }`}
-            >
-              {/* Avatar Container */}
-              <div className="relative mb-3">
-                <div
-                  className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden ring-2 ring-[#2A2A2A] ${isAvailable ? "group-hover:ring-[var(--color-primary)]/50" : "grayscale"} transition-all duration-300`}
-                >
-                  <BarberAvatar barber={barber} className="w-full h-full" />
-                </div>
-                {selectedStaff?._id === barber._id && (
-                  <div className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-[#1A1A1A] shadow-lg">
-                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
-                  </div>
-                )}
-                {!isAvailable && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full">
-                    <div className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm">
-                      Busy
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Barber Name */}
-              <h3 className="text-base sm:text-lg font-bold text-white mb-1 line-clamp-2 group-hover:text-[var(--color-primary)] transition-colors duration-200">
-                {barber.full_name || barber.name}
-              </h3>
-
-              {/* Title Badge */}
-              {isAvailable ? (
-                <div className="px-2 py-0.5 bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-full text-xs font-semibold mb-2 inline-block">
-                  Professional
-                </div>
-              ) : (
-                <div className="px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full text-xs font-semibold mb-2 inline-block">
-                  Not Available
-                </div>
-              )}
-
-              {/* Experience */}
-              <p className="text-xs text-gray-400 mb-2 line-clamp-1">
-                Experienced professional
-              </p>
-
-              {/* Rating */}
-              <div className="flex items-center justify-center gap-1">
-                <div className="flex text-yellow-400 text-sm">★★★★★</div>
-                <span className="text-xs font-semibold text-gray-300">5.0</span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
+      {/* Modern Barber Cards */}
+      <BarberCardGrid
+        barbers={getAvailableBarbers()}
+        selectedBarber={selectedStaff}
+        onSelect={handleStaffSelect}
+        compact={false}
+        loading={!barbers}
+      />
 
       {/* Empty State */}
-      {(!barbers || getAvailableBarbers().length === 0) && (
+      {barbers && getAvailableBarbers().length === 0 && (
         <div className="text-center py-12">
           <User className="w-12 h-12 text-gray-500 mx-auto mb-3 opacity-50" />
           <p className="text-gray-400">No barbers available at this branch</p>
@@ -2450,24 +2389,18 @@ const GuestServiceBooking = ({ onBack }) => {
   );
 
   const renderBookingSuccess = () => {
-    return (
-      <div className="space-y-6 px-4">
-        <div className="text-center">
-          <div
-            className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl"
-            style={{ backgroundColor: branding?.primary_color || "#F68B24" }}
-          >
-            <CheckCircle className="w-10 h-10 text-white" />
-          </div>
-          <h2 className="text-3xl font-light mb-2 text-white">
-            Booking Confirmed!
-          </h2>
-          <p className="font-light text-gray-300 text-sm">
-            Your appointment has been successfully booked
-          </p>
-        </div>
+    // Calculate estimated points for guest (based on service price)
+    const estimatedPoints = Math.floor((selectedService?.price || 0) / 10);
 
-        {/* QR Code */}
+    return (
+      <SuccessConfetti
+        show={step === 7}
+        title="You're all set!"
+        subtitle="Your booking has been confirmed"
+        pointsEarned={0} // Guests don't earn points
+      >
+        <div className="space-y-6 px-4">
+          {/* QR Code */}
         <div className="bg-[#1A1A1A] rounded-2xl p-8 border border-[#2A2A2A] shadow-lg text-center">
           <h3 className="text-lg font-light mb-4 text-white">
             Your Booking QR Code
@@ -2648,6 +2581,7 @@ const GuestServiceBooking = ({ onBack }) => {
           </button>
         </div>
       </div>
+      </SuccessConfetti>
     );
   };
 
@@ -2675,7 +2609,7 @@ const GuestServiceBooking = ({ onBack }) => {
           </h2>
           <p className="font-light text-gray-300 text-sm">
             {isPending
-              ? 'Please complete your payment in the PayMongo window'
+              ? 'Please complete your payment in the payment window'
               : 'A new tab has opened for payment. Please complete it there.'}
           </p>
         </div>
@@ -2764,7 +2698,7 @@ const GuestServiceBooking = ({ onBack }) => {
                   setStep(7); // Success step
                 } else if (result.status === 'pending') {
                   // Still pending - inform user
-                  window.alert('Payment is still processing. Please complete the payment in the PayMongo window and try again.');
+                  window.alert('Payment is still processing. Please complete the payment in the payment window and try again.');
                 } else if (result.status === 'expired') {
                   window.alert('Payment session has expired. Please start a new booking.');
                   setPendingPaymentSessionId(null);
@@ -2807,7 +2741,7 @@ const GuestServiceBooking = ({ onBack }) => {
         </div>
 
         <p className="text-center text-xs text-gray-500">
-          Click the button above after completing payment in PayMongo to verify and confirm your booking.
+          Click the button above after completing your online payment to verify and confirm your booking.
         </p>
       </div>
     );

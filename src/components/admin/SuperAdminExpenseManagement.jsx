@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import ReactDOM from "react-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useAuth } from "../../context/AuthContext";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 import {
   Plus,
   Edit2,
@@ -453,7 +453,7 @@ const exportToCSV = (expenses, summary, period) => {
 // Main SuperAdminExpenseManagement Component
 // ============================================================================
 const SuperAdminExpenseManagement = () => {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [filter, setFilter] = useState("all"); // all, fixed, operating

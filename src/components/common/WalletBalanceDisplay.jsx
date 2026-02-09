@@ -36,8 +36,9 @@ function WalletBalanceDisplay({
   }
 
   // No wallet yet - treat as 0 balance
-  const mainBalance = wallet?.balance ?? 0;
-  const bonusBalance = wallet?.bonus_balance ?? 0;
+  // Wallet stores balances in centavos (₱1 = 100 centavos) - convert to pesos for display
+  const mainBalance = (wallet?.balance ?? 0) / 100;
+  const bonusBalance = (wallet?.bonus_balance ?? 0) / 100;
   const totalBalance = mainBalance + bonusBalance;
   const hasBalance = totalBalance > 0;
   const hasBonus = bonusBalance > 0;

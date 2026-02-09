@@ -2,11 +2,11 @@ import React, { useState } from 'react'
 import { Gift, Calendar, DollarSign, CheckCircle, Clock, QrCode } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 import QRCode from 'qrcode'
 
 const CustomerVouchers = () => {
-  const { user } = useAuth()
+  const { user } = useCurrentUser()
   const [selectedVoucher, setSelectedVoucher] = useState(null)
   const [qrCodeUrl, setQrCodeUrl] = useState('')
   const [showQRModal, setShowQRModal] = useState(false)

@@ -326,17 +326,29 @@ export const getRevenueByBarber = query({
     > = {};
 
     for (const t of completedTransactions) {
-      const barberId = t.barber as string;
+      // Handle retail transactions (no barber) separately
+      const barberId = t.barber ? (t.barber as string) : "retail_sales";
 
       if (!barberRevenue[barberId]) {
-        const barber = await ctx.db.get(t.barber);
-        barberRevenue[barberId] = {
-          barber_id: barberId,
-          barber_name: barber?.full_name || "Unknown Barber",
-          service_revenue: 0,
-          product_revenue: 0,
-          transaction_count: 0,
-        };
+        if (t.barber) {
+          const barber = await ctx.db.get(t.barber);
+          barberRevenue[barberId] = {
+            barber_id: barberId,
+            barber_name: barber?.full_name || "Unknown Barber",
+            service_revenue: 0,
+            product_revenue: 0,
+            transaction_count: 0,
+          };
+        } else {
+          // Retail sales (no barber)
+          barberRevenue[barberId] = {
+            barber_id: "retail_sales",
+            barber_name: "Retail Sales",
+            service_revenue: 0,
+            product_revenue: 0,
+            transaction_count: 0,
+          };
+        }
       }
 
       // Add service revenue
@@ -2350,14 +2362,21 @@ async function calculateSuperAdminPeriodSnapshot(
     .filter((q: any) => q.eq(q.field("is_active"), true))
     .collect();
 
-  let currentAssets = totalSalesCash + royaltyReceivables + orderReceivables;
+  // Separate manual assets by type (excluding cash which we'll calculate)
+  let manualCurrentAssets = 0;
+  let manualCash = 0;
   let fixedAssets = 0;
   let intangibleAssets = 0;
 
   for (const asset of assets) {
     const value = asset.current_value || 0;
     if (asset.asset_type === "current") {
-      currentAssets += value;
+      // Track manual cash separately
+      if (asset.category === "cash" || asset.category === "bank_accounts") {
+        manualCash += value;
+      } else {
+        manualCurrentAssets += value;
+      }
     } else if (asset.asset_type === "fixed") {
       fixedAssets += value;
     } else {
@@ -2383,6 +2402,8 @@ async function calculateSuperAdminPeriodSnapshot(
     }
   }
 
+  const totalLiabilities = currentLiabilities + longTermLiabilities;
+
   // --- EQUITY ---
   const equityEntries = await ctx.db.query("superAdminEquity").collect();
   const relevantEquity = equityEntries.filter((e: any) => e.transaction_date <= endDate);
@@ -2392,7 +2413,7 @@ async function calculateSuperAdminPeriodSnapshot(
     manualEquity += entry.amount || 0;
   }
 
-  // --- RETAINED EARNINGS ---
+  // --- RETAINED EARNINGS (cumulative profits up to period end) ---
   const allRoyaltyIncome = royaltyPayments
     .filter((r: any) => r.status === "paid" && r.paid_at && r.paid_at <= endDate)
     .reduce((sum: number, r: any) => sum + (r.amount || 0), 0);
@@ -2430,9 +2451,26 @@ async function calculateSuperAdminPeriodSnapshot(
   const totalRevenue = royaltyCashReceived + productOrderCashReceived + periodManualRevenue;
   const netIncome = totalRevenue - periodExpenses;
 
+  // --- BALANCE SHEET BALANCING ---
+  // The accounting equation: Assets = Liabilities + Equity
+  //
+  // When revenue is earned, it increases both:
+  // 1. Retained Earnings (Equity side) - which we calculated
+  // 2. Cash or Receivables (Asset side) - which must balance
+  //
+  // Non-cash assets = Fixed + Intangible + Manual Current (excl. cash) + Receivables
+  const nonCashAssets = fixedAssets + intangibleAssets + manualCurrentAssets +
+                        royaltyReceivables + orderReceivables;
+
+  // Cash & Equivalents = (Liabilities + Equity) - Non-Cash Assets
+  // This ensures the balance sheet always balances
+  const cashAndEquivalents = (totalLiabilities + totalEquity) - nonCashAssets;
+
+  // Current Assets = Non-cash current assets + Receivables + Cash & Equivalents
+  const currentAssets = manualCurrentAssets + royaltyReceivables + orderReceivables + cashAndEquivalents;
+
   // --- TOTALS & RATIOS ---
   const totalAssets = currentAssets + fixedAssets + intangibleAssets;
-  const totalLiabilities = currentLiabilities + longTermLiabilities;
 
   const currentRatio = currentLiabilities > 0 ? currentAssets / currentLiabilities : undefined;
   const debtToEquityRatio = totalEquity > 0 ? totalLiabilities / totalEquity : undefined;
@@ -2448,6 +2486,7 @@ async function calculateSuperAdminPeriodSnapshot(
     current_liabilities: currentLiabilities,
     long_term_liabilities: longTermLiabilities,
     retained_earnings: retainedEarnings,
+    cash_and_equivalents: cashAndEquivalents,
     royalty_cash_received: royaltyCashReceived,
     product_order_cash_received: productOrderCashReceived,
     total_sales_cash: totalSalesCash,
@@ -2533,6 +2572,7 @@ export const closeSuperAdminAccountingPeriod = mutation({
       intangible_assets: snapshot.intangible_assets,
       current_liabilities: snapshot.current_liabilities,
       long_term_liabilities: snapshot.long_term_liabilities,
+      cash_and_equivalents: snapshot.cash_and_equivalents,
       royalty_cash_received: snapshot.royalty_cash_received,
       product_order_cash_received: snapshot.product_order_cash_received,
       total_sales_cash: snapshot.total_sales_cash,
@@ -2638,33 +2678,116 @@ export const compareSuperAdminPeriods = query({
     const s1 = period1.snapshot;
     const s2 = period2.snapshot;
 
-    const calculateChange = (current: number, previous: number) => {
-      if (previous === 0) return current === 0 ? 0 : 100;
-      return ((current - previous) / Math.abs(previous)) * 100;
-    };
+    // Calculate changes with full detail (matching BA format)
+    const calculateChange = (v1: number, v2: number) => ({
+      value_1: v1,
+      value_2: v2,
+      change: v2 - v1,
+      change_percent: v1 !== 0 ? ((v2 - v1) / Math.abs(v1)) * 100 : null,
+    });
 
     return {
       period_1: {
+        id: period1._id,
         name: period1.period_name,
         start_date: period1.start_date,
         end_date: period1.end_date,
-        snapshot: s1,
       },
       period_2: {
+        id: period2._id,
         name: period2.period_name,
         start_date: period2.start_date,
         end_date: period2.end_date,
-        snapshot: s2,
       },
-      changes: {
+      comparison: {
         total_assets: calculateChange(s1.total_assets, s2.total_assets),
         total_liabilities: calculateChange(s1.total_liabilities, s2.total_liabilities),
         total_equity: calculateChange(s1.total_equity, s2.total_equity),
-        total_revenue: calculateChange(s1.total_revenue, s2.total_revenue),
-        total_expenses: calculateChange(s1.total_expenses, s2.total_expenses),
+        revenue: calculateChange(s1.total_revenue, s2.total_revenue),
+        expenses: calculateChange(s1.total_expenses, s2.total_expenses),
         net_income: calculateChange(s1.net_income, s2.net_income),
         working_capital: calculateChange(s1.working_capital, s2.working_capital),
       },
     };
+  },
+});
+
+// Generate suggested periods for Super Admin (helper for UI)
+export const getSuggestedPeriodsForSuperAdmin = query({
+  args: {
+    year: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const existingPeriods = await ctx.db
+      .query("superAdminAccountingPeriods")
+      .collect();
+
+    const months = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    const suggestions = [];
+
+    // Monthly periods
+    for (let i = 0; i < 12; i++) {
+      const startDate = new Date(args.year, i, 1).getTime();
+      const endDate = new Date(args.year, i + 1, 0, 23, 59, 59, 999).getTime();
+
+      const exists = existingPeriods.some(
+        (p) => p.start_date === startDate && p.end_date === endDate
+      );
+
+      suggestions.push({
+        period_name: `${months[i]} ${args.year}`,
+        period_type: "monthly" as const,
+        start_date: startDate,
+        end_date: endDate,
+        exists,
+      });
+    }
+
+    // Quarterly periods
+    const quarters = [
+      { name: "Q1", months: [0, 2] },
+      { name: "Q2", months: [3, 5] },
+      { name: "Q3", months: [6, 8] },
+      { name: "Q4", months: [9, 11] },
+    ];
+
+    for (const q of quarters) {
+      const startDate = new Date(args.year, q.months[0], 1).getTime();
+      const endDate = new Date(args.year, q.months[1] + 1, 0, 23, 59, 59, 999).getTime();
+
+      const exists = existingPeriods.some(
+        (p) => p.start_date === startDate && p.end_date === endDate
+      );
+
+      suggestions.push({
+        period_name: `${q.name} ${args.year}`,
+        period_type: "quarterly" as const,
+        start_date: startDate,
+        end_date: endDate,
+        exists,
+      });
+    }
+
+    // Yearly period
+    const yearStart = new Date(args.year, 0, 1).getTime();
+    const yearEnd = new Date(args.year, 11, 31, 23, 59, 59, 999).getTime();
+
+    const yearExists = existingPeriods.some(
+      (p) => p.start_date === yearStart && p.end_date === yearEnd
+    );
+
+    suggestions.push({
+      period_name: `FY ${args.year}`,
+      period_type: "yearly" as const,
+      start_date: yearStart,
+      end_date: yearEnd,
+      exists: yearExists,
+    });
+
+    return suggestions;
   },
 });

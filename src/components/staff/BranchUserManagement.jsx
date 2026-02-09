@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useQuery, useMutation } from 'convex/react'
+import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { User, UserPlus, Edit, Trash2, Building, Users, Search, Filter, X, AlertCircle, Shield } from 'lucide-react'
@@ -131,7 +131,7 @@ export default function BranchUserManagement() {
   const currentBranch = branches.find(b => b._id === user?.branch_id)
 
   // Mutations
-  const createUser = useMutation(api.services.auth.createUser)
+  const createUser = useAction(api.services.auth.createUserWithClerk)
   const updateUser = useMutation(api.services.auth.updateUser)
   const deleteUser = useMutation(api.services.auth.deleteUser)
 

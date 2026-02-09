@@ -5,10 +5,10 @@ import { Gift, User, QrCode } from 'lucide-react'
 import QRCode from 'qrcode'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 
 const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
-  const { user } = useAuth()
+  const { user } = useCurrentUser()
   const [formData, setFormData] = useState({
     code: '',
     value: '',

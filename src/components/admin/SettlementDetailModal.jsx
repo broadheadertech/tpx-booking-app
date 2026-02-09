@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
@@ -23,6 +23,97 @@ import {
   PlayCircle,
   Send
 } from 'lucide-react';
+
+/**
+ * Complete Settlement Dialog Component
+ * Extracted to prevent re-creation on parent re-render (fixes focus loss)
+ */
+function CompleteSettlementDialog({
+  settlement,
+  transferReference,
+  setTransferReference,
+  isSubmitting,
+  error,
+  onClose,
+  onComplete,
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[10000] p-4">
+      <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl max-w-md w-full border border-[#333333] shadow-2xl">
+        <div className="p-5 border-b border-[#333333]">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-500/20 rounded-lg">
+              <Send className="w-5 h-5 text-green-400" />
+            </div>
+            <h4 className="text-lg font-bold text-white">Complete Settlement</h4>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <p className="text-gray-300">
+            Confirm completion of the{' '}
+            <span className="text-green-400 font-bold">₱{settlement?.amount?.toLocaleString()}</span>{' '}
+            transfer to <span className="text-white font-medium">{settlement?.branch_name}</span>.
+          </p>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">
+              Transfer Reference Number <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text"
+              value={transferReference}
+              onChange={(e) => setTransferReference(e.target.value)}
+              placeholder="e.g., TRF-2026-0001 or bank ref number"
+              className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#333333] rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-transparent font-mono"
+              disabled={isSubmitting}
+              required
+              autoFocus
+            />
+            <p className="text-gray-500 text-xs mt-1">
+              Enter the bank transfer reference or receipt number for tracking.
+            </p>
+          </div>
+
+          <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+            <p className="text-green-400 text-sm">
+              This will mark {settlement?.earnings?.length || 0} earnings as settled and notify the branch.
+            </p>
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="p-5 border-t border-[#333333] flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="flex-1 px-4 py-3 bg-[#333333] hover:bg-[#444444] text-white font-medium rounded-lg transition-colors disabled:opacity-50 min-h-[48px]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onComplete}
+            disabled={isSubmitting || !transferReference.trim()}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 min-h-[48px]"
+          >
+            {isSubmitting ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Send className="w-5 h-5" />
+            )}
+            {isSubmitting ? 'Completing...' : 'Complete Transfer'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /**
  * SettlementDetailModal Component (Story 25.2 + 25.3 + 25.4)
@@ -455,86 +546,12 @@ export default function SettlementDetailModal({ settlementId, onClose }) {
     </div>
   );
 
-  // Complete Settlement Dialog (Story 25.4)
-  const CompleteDialog = () => (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[10000] p-4">
-      <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl max-w-md w-full border border-[#333333] shadow-2xl">
-        <div className="p-5 border-b border-[#333333]">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-500/20 rounded-lg">
-              <Send className="w-5 h-5 text-green-400" />
-            </div>
-            <h4 className="text-lg font-bold text-white">Complete Settlement</h4>
-          </div>
-        </div>
-
-        <div className="p-5 space-y-4">
-          <p className="text-gray-300">
-            Confirm completion of the{' '}
-            <span className="text-green-400 font-bold">₱{settlement?.amount?.toLocaleString()}</span>{' '}
-            transfer to <span className="text-white font-medium">{settlement?.branch_name}</span>.
-          </p>
-
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">
-              Transfer Reference Number <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="text"
-              value={transferReference}
-              onChange={(e) => setTransferReference(e.target.value)}
-              placeholder="e.g., TRF-2026-0001 or bank ref number"
-              className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#333333] rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-transparent font-mono"
-              disabled={isSubmitting}
-              required
-            />
-            <p className="text-gray-500 text-xs mt-1">
-              Enter the bank transfer reference or receipt number for tracking.
-            </p>
-          </div>
-
-          <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-            <p className="text-green-400 text-sm">
-              This will mark {settlement?.earnings?.length || 0} earnings as settled and notify the branch.
-            </p>
-          </div>
-
-          {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
-              <p className="text-red-400 text-sm">{error}</p>
-            </div>
-          )}
-        </div>
-
-        <div className="p-5 border-t border-[#333333] flex gap-3">
-          <button
-            onClick={() => {
-              setShowCompleteDialog(false);
-              setTransferReference('');
-              setError(null);
-            }}
-            disabled={isSubmitting}
-            className="flex-1 px-4 py-3 bg-[#333333] hover:bg-[#444444] text-white font-medium rounded-lg transition-colors disabled:opacity-50 min-h-[48px]"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleComplete}
-            disabled={isSubmitting || !transferReference.trim()}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 min-h-[48px]"
-          >
-            {isSubmitting ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Send className="w-5 h-5" />
-            )}
-            {isSubmitting ? 'Completing...' : 'Complete Transfer'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  // Close handler for CompleteSettlementDialog
+  const handleCloseCompleteDialog = useCallback(() => {
+    setShowCompleteDialog(false);
+    setTransferReference('');
+    setError(null);
+  }, []);
 
   const modalContent = (
     <div
@@ -902,7 +919,17 @@ export default function SettlementDetailModal({ settlementId, onClose }) {
       {showApproveDialog && <ApproveDialog />}
       {showRejectDialog && <RejectDialog />}
       {showProcessingDialog && <ProcessingDialog />}
-      {showCompleteDialog && <CompleteDialog />}
+      {showCompleteDialog && (
+        <CompleteSettlementDialog
+          settlement={settlement}
+          transferReference={transferReference}
+          setTransferReference={setTransferReference}
+          isSubmitting={isSubmitting}
+          error={error}
+          onClose={handleCloseCompleteDialog}
+          onComplete={handleComplete}
+        />
+      )}
     </div>
   );
 

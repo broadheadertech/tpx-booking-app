@@ -26,22 +26,66 @@ const UserFormModal = ({
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const AVAILABLE_PAGES = [
+    // Primary hub tabs
     { id: 'overview', label: 'Overview' },
+    { id: 'reports', label: 'Reports' },
     { id: 'bookings', label: 'Bookings' },
-    { id: 'calendar', label: 'Calendar' },
+    { id: 'pos', label: 'POS' },
+    { id: 'team', label: 'Team' },
+    { id: 'customers', label: 'Customers' },
+    { id: 'products', label: 'Products' },
+    { id: 'finance', label: 'Finance' },
+    { id: 'marketing', label: 'Marketing' },
+    { id: 'settings', label: 'Settings' },
+    // Sub-tabs / additional pages
     { id: 'services', label: 'Services' },
     { id: 'vouchers', label: 'Vouchers' },
     { id: 'barbers', label: 'Barbers' },
     { id: 'users', label: 'User Management' },
-    { id: 'customers', label: 'Customers' },
     { id: 'events', label: 'Events' },
-    { id: 'reports', label: 'Reports' },
-    { id: 'payroll', label: 'Payroll' },
-    { id: 'products', label: 'Products' },
+    { id: 'calendar', label: 'Calendar' },
     { id: 'notifications', label: 'Notifications' },
+    { id: 'payroll', label: 'Payroll' },
     { id: 'email_marketing', label: 'Email Marketing' },
-    { id: 'pos', label: 'POS' }
+    { id: 'custom_bookings', label: 'Custom Bookings' },
+    { id: 'walkins', label: 'Walk-ins' },
+    { id: 'cash_advances', label: 'Cash Advances' },
+    { id: 'royalty', label: 'Royalty' },
+    { id: 'accounting', label: 'Accounting' },
+    { id: 'balance_sheet', label: 'Balance Sheet' },
+    { id: 'attendance', label: 'Attendance' },
+    { id: 'order_products', label: 'Order Products' },
+    { id: 'queue', label: 'Queue' },
+    { id: 'payments', label: 'Payments' },
+    { id: 'payment_history', label: 'Payment History' },
+    { id: 'branch_wallet', label: 'Branch Wallet' },
+    { id: 'wallet_earnings', label: 'Wallet Earnings' },
+    { id: 'customer_analytics', label: 'Customer Analytics' },
+    { id: 'post_moderation', label: 'Post Moderation' },
   ]
+
+  // Default page access presets per role
+  const ROLE_PAGE_DEFAULTS = {
+    branch_admin: AVAILABLE_PAGES.map(p => p.id), // All pages
+    staff: [
+      'overview', 'bookings', 'pos', 'customers', 'products',
+      'services', 'barbers', 'calendar', 'notifications',
+      'queue', 'walkins', 'payments', 'payment_history', 'attendance',
+    ],
+    super_admin: [],
+  }
+
+  // Auto-set default page access when role changes or modal opens (new users only)
+  useEffect(() => {
+    if (isOpen && !isEditMode && formData.role && ROLE_PAGE_DEFAULTS[formData.role]) {
+      onInputChange({
+        target: {
+          name: 'page_access',
+          value: ROLE_PAGE_DEFAULTS[formData.role]
+        }
+      })
+    }
+  }, [formData.role, isOpen])
 
   // Reset validation errors when modal opens/closes
   useEffect(() => {

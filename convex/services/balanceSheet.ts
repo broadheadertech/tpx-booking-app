@@ -681,7 +681,7 @@ export const getCalculatedRetainedEarnings = query({
       },
       transaction_count: completedTransactions.length,
       expense_count: allExpenses.length,
-      payroll_period_count: paidPeriods.length,
+      payroll_period_count: payrollPeriods.length,
       calculated_at: Date.now(),
     };
   },
@@ -1403,14 +1403,21 @@ async function calculatePeriodSnapshot(
     .filter((q: any) => q.eq(q.field("is_active"), true))
     .collect();
 
-  let currentAssets = 0;
+  // Separate manual assets by type (excluding cash which we'll calculate)
+  let manualCurrentAssets = 0;
+  let manualCash = 0;
   let fixedAssets = 0;
   let intangibleAssets = 0;
 
   for (const asset of assets) {
-    if (asset.category === "inventory") continue; // Skip manual inventory
+    if (asset.category === "inventory") continue; // Skip manual inventory - use calculated
     if (asset.asset_type === "current") {
-      currentAssets += asset.current_value;
+      // Track manual cash separately
+      if (asset.category === "cash" || asset.category === "bank_accounts") {
+        manualCash += asset.current_value;
+      } else {
+        manualCurrentAssets += asset.current_value;
+      }
     } else if (asset.asset_type === "fixed") {
       fixedAssets += asset.current_value;
     } else {
@@ -1429,9 +1436,6 @@ async function calculatePeriodSnapshot(
   for (const product of products) {
     inventoryValue += product.stock * product.cost;
   }
-
-  currentAssets += inventoryValue;
-  const totalAssets = currentAssets + fixedAssets + intangibleAssets;
 
   // Liabilities
   const liabilities = await ctx.db
@@ -1525,6 +1529,27 @@ async function calculatePeriodSnapshot(
 
   const totalEquity = manualEquity + retainedEarnings;
 
+  // ========================================
+  // BALANCE SHEET BALANCING
+  // ========================================
+  // The accounting equation: Assets = Liabilities + Equity
+  //
+  // When revenue is earned, it increases both:
+  // 1. Retained Earnings (Equity side) - which we calculated
+  // 2. Cash or Receivables (Asset side) - which must balance
+  //
+  // Non-cash assets = Fixed + Intangible + Manual Current (excl. cash) + Inventory
+  const nonCashAssets = fixedAssets + intangibleAssets + manualCurrentAssets + inventoryValue;
+
+  // Cash & Equivalents = (Liabilities + Equity) - Non-Cash Assets
+  // This ensures the balance sheet always balances
+  const cashAndEquivalents = (totalLiabilities + totalEquity) - nonCashAssets;
+
+  // Current Assets = Non-cash current assets + Inventory + Cash & Equivalents
+  const currentAssets = manualCurrentAssets + inventoryValue + cashAndEquivalents;
+
+  const totalAssets = currentAssets + fixedAssets + intangibleAssets;
+
   // Ratios
   const workingCapital = currentAssets - currentLiabilities;
   const currentRatio =
@@ -1542,6 +1567,7 @@ async function calculatePeriodSnapshot(
     current_liabilities: currentLiabilities,
     long_term_liabilities: longTermLiabilities,
     retained_earnings: retainedEarnings,
+    cash_and_equivalents: cashAndEquivalents,
     inventory_value: inventoryValue,
     revenue: totalRevenue,
     expenses: totalExpenses,
@@ -1600,6 +1626,7 @@ export const closeAccountingPeriod = mutation({
       intangible_assets: snapshot.intangible_assets,
       current_liabilities: snapshot.current_liabilities,
       long_term_liabilities: snapshot.long_term_liabilities,
+      cash_and_equivalents: snapshot.cash_and_equivalents,
       working_capital: snapshot.working_capital,
       current_ratio: snapshot.current_ratio,
       debt_to_equity_ratio: snapshot.debt_to_equity_ratio,

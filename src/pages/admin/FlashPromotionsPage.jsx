@@ -11,7 +11,7 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { useAuth } from '../../context/AuthContext';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 import PromotionForm from '../../components/admin/PromotionForm';
 import PromotionCard from '../../components/admin/PromotionCard';
 import { Plus, Zap, Filter, RefreshCw, BarChart3 } from 'lucide-react';
@@ -26,7 +26,7 @@ const STATUS_FILTERS = [
 ];
 
 export default function FlashPromotionsPage() {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const [statusFilter, setStatusFilter] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingPromo, setEditingPromo] = useState(null);

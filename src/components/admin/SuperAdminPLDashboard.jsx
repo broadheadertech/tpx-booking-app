@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useAuth } from "../../context/AuthContext";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 import {
   DollarSign,
   TrendingUp,
@@ -633,7 +633,7 @@ const exportToPDF = (data, period) => {
 
 // Main Component
 const SuperAdminPLDashboard = () => {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const [selectedRange, setSelectedRange] = useState("this_month");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");

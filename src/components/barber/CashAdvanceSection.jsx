@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useAuth } from "../../context/AuthContext";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 import {
   DollarSign,
   Clock,
@@ -290,7 +290,7 @@ const RequestModal = ({ isOpen, onClose, maxAmount, userId, branchId }) => {
 
 // Main Component
 const CashAdvanceSection = () => {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 

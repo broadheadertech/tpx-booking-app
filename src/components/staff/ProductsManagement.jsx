@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Package, DollarSign, TrendingUp, TrendingDown, Plus, Edit, Trash2, Search, Filter, RefreshCw, Save, X, AlertCircle, Image, ShoppingCart, BarChart3, Upload, Camera } from 'lucide-react'
+import { Package, DollarSign, TrendingUp, TrendingDown, Plus, Edit, Trash2, Search, Filter, RefreshCw, Save, X, AlertCircle, Image, ShoppingCart, BarChart3, Upload, Camera, History, Clock, ChevronUp, ChevronDown } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import Modal from '../common/Modal'
@@ -8,8 +8,8 @@ import Button from '../common/Button'
 // Component to handle product image display from Convex storage or URL
 const ProductImage = ({ imageUrl, imageStorageId, productName, className }) => {
   const imageUrlFromStorage = useQuery(
-    imageStorageId ? api.services.products.getImageUrl : undefined,
-    imageStorageId ? { storageId: imageStorageId } : undefined
+    api.services.products.getImageUrl,
+    imageStorageId ? { storageId: imageStorageId } : 'skip'
   )
 
   const [imageError, setImageError] = useState(false)
@@ -65,6 +65,13 @@ const ProductsManagement = ({ onRefresh, user }) => {
   const deleteProductMutation = useMutation(api.services.products.deleteProduct)
   const generateUploadUrl = useMutation(api.services.products.generateUploadUrl)
   const deleteImage = useMutation(api.services.products.deleteImage)
+
+  // Product transaction history
+  const productTransactionHistory = useQuery(
+    api.services.transactions.getProductTransactionHistory,
+    user?.branch_id ? { branch_id: user.branch_id, limit: 20 } : "skip"
+  ) || []
+  const [showProductHistory, setShowProductHistory] = useState(false)
 
   // File upload state
   const [selectedImage, setSelectedImage] = useState(null)
@@ -216,8 +223,15 @@ const ProductsManagement = ({ onRefresh, user }) => {
           ...productData
         })
       } else {
-        // Create new product
-        await createProductMutation(productData)
+        // Create new product - include branch_id
+        if (!user?.branch_id) {
+          setFormErrors({ submit: 'User branch not found. Please ensure you are assigned to a branch.' })
+          return
+        }
+        await createProductMutation({
+          ...productData,
+          branch_id: user.branch_id
+        })
       }
 
       handleCloseModal()
@@ -428,6 +442,107 @@ const ProductsManagement = ({ onRefresh, user }) => {
             <ShoppingCart className="h-8 w-8 text-[var(--color-primary)] opacity-50" />
           </div>
         </div>
+      </div>
+
+      {/* Product Sales History */}
+      <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm overflow-hidden">
+        <button
+          onClick={() => setShowProductHistory(!showProductHistory)}
+          className="w-full flex items-center justify-between p-4 hover:bg-[#222222] transition-colors"
+        >
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-blue-500/20 rounded-lg">
+              <History className="h-5 w-5 text-blue-400" />
+            </div>
+            <div className="text-left">
+              <h3 className="text-white font-semibold">Product Sales History</h3>
+              <p className="text-sm text-gray-400">Recent product transactions</p>
+            </div>
+            <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs font-bold rounded-full">
+              {productTransactionHistory.length}
+            </span>
+          </div>
+          {showProductHistory ? (
+            <ChevronUp className="h-5 w-5 text-gray-400" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-gray-400" />
+          )}
+        </button>
+
+        {showProductHistory && (
+          <div className="border-t border-[#2A2A2A]/50">
+            <div className="p-4">
+              {productTransactionHistory.length === 0 ? (
+                <div className="text-center py-8">
+                  <ShoppingCart className="h-12 w-12 text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-400">No product sales yet</p>
+                  <p className="text-sm text-gray-500 mt-1">Product transactions will appear here</p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {productTransactionHistory.map((tx) => (
+                    <div
+                      key={tx._id}
+                      className={`p-4 rounded-lg border ${
+                        tx.transaction_type === 'retail'
+                          ? 'bg-green-500/10 border-green-500/20'
+                          : 'bg-[#222222] border-[#333333]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-2">
+                            <Clock className="h-4 w-4 text-gray-400" />
+                            <span className="text-white font-medium">
+                              {new Date(tx.createdAt).toLocaleDateString('en-PH', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                          {tx.transaction_type === 'retail' ? (
+                            <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs font-bold rounded-full">
+                              RETAIL
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-bold rounded-full">
+                              SERVICE + PRODUCT
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-lg font-bold text-green-400">
+                          ₱{tx.product_total.toFixed(2)}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <p className="text-sm text-white mb-1">{tx.customer_name}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {tx.products.map((product, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center px-2 py-1 bg-[#333333] rounded text-xs text-gray-300"
+                              >
+                                {product.product_name} <span className="text-gray-500 ml-1">x{product.quantity}</span>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="text-right ml-4">
+                          <p className="text-xs text-gray-500">Processed by</p>
+                          <p className="text-sm text-gray-400">{tx.processed_by_name}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Controls */}

@@ -21,7 +21,7 @@ import { api } from '../../convex/_generated/api';
  */
 export function useCurrentUser() {
   // Legacy auth
-  const { user: legacyUser, loading: legacyLoading, isAuthenticated: legacyAuthenticated, logout: legacyLogout } = useAuth();
+  const { user: legacyUser, loading: legacyLoading, isAuthenticated: legacyAuthenticated, logout: legacyLogout, sessionToken: legacySessionToken } = useAuth();
 
   // Clerk auth
   const { user: clerkUser, isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useUser();
@@ -67,6 +67,8 @@ export function useCurrentUser() {
     isAuthenticated,
     authMethod,
     logout,
+    // Session token from legacy auth (used for API calls)
+    sessionToken: legacySessionToken,
     // Clerk-specific data if needed
     clerkUser: clerkSignedIn ? clerkUser : null,
     // Expose signOut separately if needed for Clerk-only logout

@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
-import { getAuthenticatedUser, requireSuperAdmin } from "../lib/unifiedAuth";
+import { getAuthenticatedUser, requireSuperAdmin, requireRole } from "../lib/unifiedAuth";
 
 // Validation helpers
 function isValidColor(color: string): boolean {
@@ -374,27 +374,29 @@ export const importBranding = mutation({
 });
 
 // Upload image mutation - stores file and returns storage ID
+// Allows branch_admin and above to upload images for their branch
 export const generateUploadUrl = mutation({
   args: {
     sessionToken: v.optional(v.string()), // Optional for backwards compatibility
   },
   handler: async (ctx, args) => {
-    // Use unified auth (supports both Clerk and legacy)
-    await requireSuperAdmin(ctx, args.sessionToken);
+    // Use unified auth - allow branch_admin and above
+    await requireRole(ctx, "branch_admin", args.sessionToken);
 
     return await ctx.storage.generateUploadUrl();
   },
 });
 
 // Get URL for uploaded file
+// Allows branch_admin and above to get image URLs
 export const getImageUrl = mutation({
   args: {
     sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     storageId: v.string(),
   },
   handler: async (ctx, args) => {
-    // Use unified auth (supports both Clerk and legacy)
-    await requireSuperAdmin(ctx, args.sessionToken);
+    // Use unified auth - allow branch_admin and above
+    await requireRole(ctx, "branch_admin", args.sessionToken);
 
     const url = await ctx.storage.getUrl(args.storageId as any);
     return url;

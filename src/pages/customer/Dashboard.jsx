@@ -1,16 +1,12 @@
-import React, { useState, useEffect } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { Home, Calendar, Gift, Star, Clock, MapPin, Phone, History, User, Bot, Bell, Wallet, Building, Scissors, Sparkles, ChevronRight } from 'lucide-react'
-import { useUser } from '@clerk/clerk-react'
-import ServiceBooking from '../../components/customer/ServiceBooking'
-import CustomerProfile from '../../components/customer/CustomerProfile'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Home, ShoppingBag, User, Wallet, Scissors } from 'lucide-react'
 import VoucherManagement from '../../components/customer/VoucherManagement'
 import LoyaltyPoints from '../../components/customer/LoyaltyPoints'
 import MyBookings from '../../components/customer/MyBookings'
 import PremiumOnboarding from '../../components/customer/PremiumOnboarding'
 import AIBarberAssistant from '../../components/customer/AIBarberAssistant'
 import Profile from './Profile'
-import Carousel from '../../components/customer/Carousel'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useEnsureClerkUser } from '../../hooks/useEnsureClerkUser'
@@ -20,23 +16,30 @@ import { useBookingNotificationListener } from '../../utils/bookingNotifications
 import { NotificationBell } from '../../components/common/NotificationSystem'
 import NotificationsPage from '../../components/customer/NotificationsPage'
 import ActivePromoBanner from '../../components/common/ActivePromoBanner'
-import StarRewardsCard from '../../components/common/StarRewardsCard'
 import SocialFeed from '../../components/common/SocialFeed'
+import SmartGreeting from '../../components/customer/SmartGreeting'
+import StoriesCarousel from '../../components/customer/StoriesCarousel'
+import StickyAppointmentCard from '../../components/customer/StickyAppointmentCard'
 
 const Dashboard = ({ initialSection = 'home' }) => {
   // Use the hook that ensures Clerk users have Convex records
-  const { user, isClerkAuth, clerkUser } = useEnsureClerkUser()
+  const { user } = useEnsureClerkUser()
   const { branding } = useBranding()
-  const location = useLocation()
   const navigate = useNavigate()
   const [activeSection, setActiveSection] = useState(initialSection)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [isViewingStory, setIsViewingStory] = useState(false)
+  const [isNavHidden, setIsNavHidden] = useState(false)
+  const [showStickyAppointment, setShowStickyAppointment] = useState(false)
+  const lastScrollY = useRef(0)
+  const scrollThreshold = 10 // Minimum scroll distance to trigger hide/show
+  const stickyCardThreshold = 200 // Show sticky card after scrolling this far
 
   // Determine authentication status
   const isAuthenticated = !!user
 
   // Hook for real-time notifications with toast alerts
-  const { unreadCount } = useRealtimeNotifications()
+  useRealtimeNotifications()
 
   // Hook for booking notification events
   useBookingNotificationListener()
@@ -69,107 +72,91 @@ const Dashboard = ({ initialSection = 'home' }) => {
     }
   }, [])
 
+  // Scroll-aware navigation - hide on scroll down, show on scroll up
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+
+      // Show sticky appointment card after scrolling past greeting
+      setShowStickyAppointment(currentScrollY > stickyCardThreshold)
+
+      // Only trigger nav hide/show after threshold
+      if (Math.abs(currentScrollY - lastScrollY.current) < scrollThreshold) {
+        return
+      }
+
+      // At the very top, always show nav
+      if (currentScrollY < 50) {
+        setIsNavHidden(false)
+      } else if (currentScrollY > lastScrollY.current) {
+        // Scrolling down - hide nav
+        setIsNavHidden(true)
+      } else {
+        // Scrolling up - show nav
+        setIsNavHidden(false)
+      }
+
+      lastScrollY.current = currentScrollY
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
   const handleOnboardingComplete = () => {
     setShowOnboarding(false)
   }
 
-  // Convex queries with error handling
-  const services = useQuery(api.services.services.getActiveServices)
-  const barbers = useQuery(api.services.barbers.getActiveBarbers)
-  const bookings = useQuery(
-    api.services.bookings.getBookingsByCustomer,
-    user?._id ? { customerId: user._id } : 'skip'
-  )
-  const vouchers = useQuery(
-    api.services.vouchers.getVouchersByUser,
-    user?._id ? { userId: user._id } : 'skip'
-  )
+  // Handle booking from feed post (Quick Book CTA)
+  const handleBookWithBarber = (author) => {
+    // If we have barber data, store it for pre-selection
+    if (author?.barberId) {
+      // Store pre-selected barber info for ServiceBooking to pick up
+      // Use the post's branch (author.branchId) so booking is on the correct branch
+      sessionStorage.setItem('preSelectedBarber', JSON.stringify({
+        branchId: author.branchId || currentBranch?._id,
+        barberId: author.barberId
+      }))
+    } else {
+      // Clear any stale pre-selection data
+      sessionStorage.removeItem('preSelectedBarber')
+    }
+
+    // Always navigate to booking flow (even without barber pre-selection)
+    navigate('/customer/booking?action=book')
+  }
+
+  // Get current branch for feed
   const branches = useQuery(api.services.branches.getAllBranches)
   const currentBranch = branches?.find(b => b.is_active) || branches?.[0]
 
-  // Wallet balance query for quick card
-  const wallet = useQuery(
-    api.services.wallet.getWallet,
-    user?._id ? { userId: user._id } : 'skip'
-  )
-
-  // Recent points transactions for activity feed
-  const recentPoints = useQuery(
-    api.services.points.getPointsLedger,
-    user?._id ? { userId: user._id } : 'skip'
-  )
-
-  // Handle query errors
-  useEffect(() => {
-    if (services === null) {
-      console.error('Failed to load services')
-    }
-    if (barbers === null) {
-      console.error('Failed to load barbers')
-    }
-    if (user?._id && bookings === null) {
-      console.error('Failed to load bookings')
-    }
-    if (user?._id && vouchers === null) {
-      console.error('Failed to load vouchers')
-    }
-  }, [services, barbers, bookings, vouchers, user])
-
-  // Starbucks-style navigation
+  // Navigation sections
   const sections = [
     { id: 'home', label: 'Home', icon: Home },
     { id: 'booking', label: 'Book', icon: Scissors },
     { id: 'wallet', label: 'Pay', icon: Wallet },
-    { id: 'loyalty', label: 'Rewards', icon: Star },
+    { id: 'shop', label: 'Shop', icon: ShoppingBag },
     { id: 'profile', label: 'Account', icon: User }
-  ]
-
-  // Calculate dashboard stats from Convex data
-  const calculateStats = () => {
-    const totalBookings = bookings ? bookings.filter(b => b.status !== 'cancelled').length : 0
-
-    // Count active vouchers (assigned and not expired)
-    const activeVouchers = vouchers ? vouchers.filter(v =>
-      v.status === 'assigned' && !v.isExpired
-    ).length : 0
-
-    return {
-      totalBookings,
-      activeVouchers
-    }
-  }
-
-  const stats = calculateStats()
-
-  const quickStats = [
-    {
-      label: 'Total Bookings',
-      value: stats.totalBookings.toString(),
-      icon: Clock
-    },
-    {
-      label: 'Active Vouchers',
-      value: stats.activeVouchers.toString(),
-      icon: Gift
-    }
   ]
 
   const renderContent = () => {
     switch (activeSection) {
       case 'booking':
-        return <ServiceBooking onBack={(section) => setActiveSection(section || 'home')} />
+        // Redirect to new BookingHub
+        navigate('/customer/booking')
+        return null
       case 'bookings':
         return <MyBookings onBack={() => navigate('/customer/dashboard')} />
       case 'vouchers':
         return <VoucherManagement onBack={() => navigate('/customer/dashboard')} />
       case 'ai-assistant':
         return <AIBarberAssistant onNavigateToBooking={(selectedService) => {
-          // Navigate to booking with pre-selected service
-          setActiveSection('booking')
-          // You can store the selected service in state if needed
+          // Store pre-selected service if provided
           if (selectedService) {
             sessionStorage.setItem('preSelectedService', JSON.stringify(selectedService))
           }
+          // Navigate to booking hub
+          navigate('/customer/booking?action=book')
         }} />
       case 'profile':
         return <Profile onBack={() => navigate('/customer/dashboard')} />
@@ -179,89 +166,39 @@ const Dashboard = ({ initialSection = 'home' }) => {
         return <NotificationsPage onBack={() => navigate('/customer/dashboard')} />
       default:
         return (
-          <div className="space-y-6 pt-4">
-            {/* Hero Star Rewards Card - Compact */}
+          <div className="space-y-4 pt-4">
+            {/* Smart Greeting Card */}
             <div className="px-4">
-              <StarRewardsCard userId={user?._id} />
+              <SmartGreeting
+                user={user}
+                onBookNow={() => navigate('/customer/booking?action=book')}
+              />
             </div>
 
-            {/* Quick Actions - Horizontal Scroll */}
+            {/* Stories Carousel - Instagram Style */}
             <div className="px-4">
-              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                {/* Wallet Card */}
-                <button
-                  onClick={() => navigate('/customer/wallet')}
-                  className="flex-shrink-0 bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] hover:border-[var(--color-primary)]/50 active:scale-[0.98] transition-all min-w-[140px]"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/20 flex items-center justify-center mb-2">
-                    <Wallet className="w-5 h-5 text-[var(--color-primary)]" />
-                  </div>
-                  <div className="text-lg font-black text-white">
-                    ₱{((wallet?.balance || 0) / 100).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                  </div>
-                  <div className="text-xs text-gray-500">Wallet</div>
-                </button>
-
-                {/* Book Card */}
-                <button
-                  onClick={() => setActiveSection('booking')}
-                  className="flex-shrink-0 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] rounded-2xl p-4 active:scale-[0.98] transition-all min-w-[140px]"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center mb-2">
-                    <Scissors className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="text-lg font-black text-white">Book Now</div>
-                  <div className="text-xs text-white/70">Find a slot</div>
-                </button>
-
-                {/* Bookings Card */}
-                <button
-                  onClick={() => navigate('/customer/bookings')}
-                  className="flex-shrink-0 bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] hover:border-blue-500/50 active:scale-[0.98] transition-all min-w-[140px]"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center mb-2">
-                    <Calendar className="w-5 h-5 text-blue-400" />
-                  </div>
-                  <div className="text-lg font-black text-white">{stats.totalBookings}</div>
-                  <div className="text-xs text-gray-500">Bookings</div>
-                </button>
-
-                {/* Vouchers Card */}
-                <button
-                  onClick={() => navigate('/customer/vouchers')}
-                  className="flex-shrink-0 bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] hover:border-purple-500/50 active:scale-[0.98] transition-all min-w-[140px]"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center mb-2">
-                    <Gift className="w-5 h-5 text-purple-400" />
-                  </div>
-                  <div className="text-lg font-black text-white">{stats.activeVouchers}</div>
-                  <div className="text-xs text-gray-500">Vouchers</div>
-                </button>
-              </div>
+              <StoriesCarousel
+                onStoryOpen={() => setIsViewingStory(true)}
+                onStoryClose={() => setIsViewingStory(false)}
+              />
             </div>
 
-            {/* Active Promotions Banner */}
+            {/* Active Promotions Banner - Compact */}
             {user?._id && currentBranch?._id && (
               <div className="px-4">
                 <ActivePromoBanner userId={user._id} branchId={currentBranch._id} />
               </div>
             )}
 
-            {/* Social Feed - Instagram Style */}
-            {currentBranch?._id && (
-              <div className="px-4 pb-4">
-                <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-[var(--color-primary)]" />
-                  Latest Updates
-                </h3>
-                <SocialFeed
-                  branchId={currentBranch._id}
-                  userId={user?._id}
-                  limit={10}
-                  showFilters={true}
-                />
-              </div>
-            )}
+            {/* Social Feed - Feed Dominant Layout (all branches) */}
+            <div className="px-4 pb-4">
+              <SocialFeed
+                userId={user?._id}
+                limit={20}
+                showFilters={true}
+                onBookWithBarber={handleBookWithBarber}
+              />
+            </div>
           </div>
         )
     }
@@ -274,22 +211,23 @@ const Dashboard = ({ initialSection = 'home' }) => {
         <PremiumOnboarding onComplete={handleOnboardingComplete} />
       )}
 
-      {/* Header - Starbucks Style */}
-      {!['booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
-        <div className="sticky top-0 z-40 bg-[var(--color-bg)]/98 backdrop-blur-2xl border-b border-[#1A1A1A]">
+      {/* Header - Starbucks Style with scroll animation */}
+      {!isViewingStory && !['booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
+        <div
+          className={`sticky top-0 z-40 bg-[var(--color-bg)]/98 backdrop-blur-2xl border-b border-[#1A1A1A] transition-transform duration-300 ease-in-out ${
+            isNavHidden ? '-translate-y-full' : 'translate-y-0'
+          }`}
+        >
           <div className="max-w-md mx-auto px-4">
             <div className="flex justify-between items-center py-4">
-              {/* Left - Logo and Greeting */}
+              {/* Left - Logo */}
               <div className="flex items-center space-x-3">
                 <img
                   src={branding?.logo_light_url}
                   alt={branding?.display_name || 'Logo'}
                   className="w-10 h-10 object-contain"
                 />
-                <div>
-                  <p className="text-xs font-medium text-gray-400">Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'},</p>
-                  <h1 className="text-base font-bold text-white">{user?.first_name || user?.username || 'Guest'} ☀️</h1>
-                </div>
+                <span className="text-lg font-bold text-white">{branding?.display_name || 'TPX'}</span>
               </div>
 
               {/* Right - Actions */}
@@ -319,55 +257,54 @@ const Dashboard = ({ initialSection = 'home' }) => {
         {renderContent()}
       </div>
 
-      {/* Bottom Navigation - Premium Floating Bar */}
-      {!showOnboarding && !['booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 pb-safe">
-          <div className="max-w-md mx-auto px-4 pb-6">
-            <div className="bg-[var(--color-bg)]/95 backdrop-blur-2xl rounded-[28px] border border-[#1A1A1A] shadow-2xl p-2">
-              <div role="navigation" aria-label="Primary" className="grid grid-cols-5 gap-1">
-                {sections.map((section) => {
-                  const IconComponent = section.icon
-                  const isActive = activeSection === section.id
-                  return (
-                    <button
-                      key={section.id}
-                      onClick={() => {
-                        if (section.id === 'home') {
-                          navigate('/customer/dashboard')
-                        } else if (section.id === 'booking') {
-                          setActiveSection('booking')
-                        } else if (section.id === 'wallet') {
-                          navigate('/customer/wallet')
-                        } else if (section.id === 'loyalty') {
-                          navigate('/customer/loyalty')
-                        } else if (section.id === 'profile') {
-                          navigate('/customer/profile')
-                        } else {
-                          setActiveSection(section.id)
-                        }
-                      }}
-                      className={`flex flex-col items-center justify-center py-3 px-2 rounded-[20px] transition-all duration-300 relative active:scale-95 ${isActive
-                          ? 'bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)]'
-                          : 'hover:bg-white/5'
-                        }`}
-                      aria-current={isActive ? 'page' : undefined}
-                    >
-                      {/* Active indicator - minimal line */}
-                      {isActive && (
-                        <div className="absolute top-1 w-6 h-0.5 rounded-full bg-white/60" />
-                      )}
+      {/* Sticky Appointment Card - Shows at top when nav is hidden */}
+      {!showOnboarding && !isViewingStory && activeSection === 'home' && user?._id && (
+        <StickyAppointmentCard
+          userId={user._id}
+          isVisible={isNavHidden}
+        />
+      )}
 
-                      <IconComponent className={`w-6 h-6 mb-1 transition-all ${isActive ? 'text-white' : 'text-gray-500'
-                        }`} />
-
-                      <span className={`text-[10px] font-semibold transition-all ${isActive ? 'text-white' : 'text-gray-500'
-                        }`}>
-                        {section.label}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
+      {/* Bottom Navigation */}
+      {!showOnboarding && !isViewingStory && !['booking', 'vouchers', 'ai-assistant', 'loyalty', 'bookings', 'profile'].includes(activeSection) && (
+        <div
+          className={`fixed bottom-0 left-0 right-0 z-50 bg-[#0D0D0D] border-t border-[#1A1A1A] safe-area-inset-bottom transition-transform duration-300 ease-in-out ${
+            isNavHidden ? 'translate-y-full' : 'translate-y-0'
+          }`}
+        >
+          <div className="max-w-4xl mx-auto">
+            <div className="grid grid-cols-5 p-1 pb-2 md:p-2 md:pb-3">
+              {sections.map((section) => {
+                const IconComponent = section.icon
+                const isActive = activeSection === section.id
+                return (
+                  <button
+                    key={section.id}
+                    onClick={() => {
+                      if (section.id === 'home') {
+                        navigate('/customer/dashboard')
+                        window.scrollTo({ top: 0, behavior: 'smooth' })
+                      } else if (section.id === 'booking') {
+                        navigate('/customer/booking')
+                      } else if (section.id === 'wallet') {
+                        navigate('/customer/wallet')
+                      } else if (section.id === 'shop') {
+                        navigate('/customer/shop')
+                      } else if (section.id === 'profile') {
+                        navigate('/customer/profile')
+                      } else {
+                        setActiveSection(section.id)
+                      }
+                    }}
+                    className={`flex flex-col items-center justify-center py-2 md:py-3 transition-colors ${
+                      isActive ? 'text-[var(--color-primary)]' : 'text-gray-600 hover:text-gray-400'
+                    }`}
+                  >
+                    <IconComponent className="w-5 h-5 md:w-6 md:h-6" />
+                    <span className="text-[10px] md:text-xs mt-1 font-medium">{section.label}</span>
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>

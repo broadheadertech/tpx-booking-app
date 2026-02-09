@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle, ArrowLeft, Calendar, QrCode, CreditCard, Store, Loader2 } from 'lucide-react';
+import { CheckCircle, ArrowLeft, Calendar, QrCode, CreditCard, Store, Loader2, X } from 'lucide-react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
 import QRCode from 'qrcode';
@@ -11,6 +11,8 @@ const PaymentSuccess = () => {
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [bookingUpdated, setBookingUpdated] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState(null);
+  const [autoCloseCountdown, setAutoCloseCountdown] = useState(5);
+  const [shouldAutoClose, setShouldAutoClose] = useState(false);
 
   // PayMongo booking code from URL (Story 7.6)
   const bookingCode = searchParams.get('booking');
@@ -90,6 +92,38 @@ const PaymentSuccess = () => {
       });
     }
   }, [searchParams]);
+
+  // Auto-close tab functionality for deferred booking flow
+  // Start auto-close when payment is confirmed (paymentStatusByLink?.status === 'completed')
+  useEffect(() => {
+    // Only trigger auto-close for completed deferred payments (when paymongoLinkId exists)
+    if (paymongoLinkId && paymentStatusByLink?.status === 'completed') {
+      console.log('[PaymentSuccess] Payment confirmed - starting auto-close countdown');
+      setShouldAutoClose(true);
+    }
+  }, [paymongoLinkId, paymentStatusByLink?.status]);
+
+  // Countdown timer for auto-close
+  useEffect(() => {
+    if (!shouldAutoClose) return;
+
+    // If countdown reached 0, close the tab
+    if (autoCloseCountdown <= 0) {
+      console.log('[PaymentSuccess] Auto-closing tab...');
+      // Try to close the tab - this works if the tab was opened via JavaScript
+      window.close();
+      // If window.close() doesn't work (e.g., tab wasn't opened by script),
+      // the user will still see the countdown message explaining what happened
+      return;
+    }
+
+    // Decrement countdown every second
+    const timer = setTimeout(() => {
+      setAutoCloseCountdown(prev => prev - 1);
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [shouldAutoClose, autoCloseCountdown]);
 
   // Generate QR code for PayMongo booking (Story 7.6 - FR6)
   // Handles both direct booking code and deferred booking flow
@@ -318,6 +352,36 @@ const PaymentSuccess = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] flex items-center justify-center p-4">
       <div className="max-w-md w-full">
+        {/* Auto-close Banner */}
+        {shouldAutoClose && (
+          <div className="bg-gradient-to-r from-blue-600 to-blue-500 rounded-xl px-4 py-3 mb-4 flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                <X className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <p className="text-white text-sm font-semibold">
+                  {autoCloseCountdown > 0
+                    ? `This tab will close in ${autoCloseCountdown}s...`
+                    : 'You can close this tab now'}
+                </p>
+                <p className="text-white/70 text-xs">
+                  Return to your booking app to see your QR code
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setShouldAutoClose(false);
+                setAutoCloseCountdown(5);
+              }}
+              className="text-white/80 hover:text-white text-xs underline"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
         {/* Success Card */}
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-xl border border-[#444444]/50 p-8 text-center">
           {/* Success Icon */}

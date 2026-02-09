@@ -4,34 +4,15 @@ import QuickActions from "../../components/staff/QuickActions";
 import StatsCards from "../../components/staff/StatsCards";
 import RecentActivity from "../../components/staff/RecentActivity";
 import TabNavigation from "../../components/staff/TabNavigation";
-import ManagementSection from "../../components/staff/ManagementSection";
-import VoucherManagement from "../../components/staff/VoucherManagement";
-import ServicesManagement from "../../components/staff/ServicesManagement";
-import BookingsManagement from "../../components/staff/BookingsManagement";
-import CalendarManagement from "../../components/staff/CalendarManagement";
-import BarbersManagement from "../../components/staff/BarbersManagement";
-import BranchUserManagement from "../../components/staff/BranchUserManagement";
-import CustomersManagement from "../../components/staff/CustomersManagement";
 import ReportsManagement from "../../components/staff/ReportsManagement";
-import EventsManagement from "../../components/staff/EventsManagement";
-import ProductsManagement from "../../components/staff/ProductsManagement";
-import NotificationsManagement from "../../components/staff/NotificationsManagement";
-import EmailMarketing from "../../components/staff/EmailMarketing";
-import PayrollManagement from "../../components/staff/PayrollManagement";
-import CustomBookingsManagement from "../../components/staff/CustomBookingsManagement";
-import WalkInSection from "../../components/staff/WalkInSection";
-import QueueSection from "../../components/staff/QueueSection";
-import TimeAttendanceView from "../../components/staff/TimeAttendanceView";
-import BranchProductOrdering from "../../components/staff/BranchProductOrdering";
-import AccountingDashboard from "../../components/staff/AccountingDashboard";
-// ExpenseManagement removed - expenses now managed in P&L dashboard (AccountingDashboard)
-import BalanceSheetDashboard from "../../components/staff/BalanceSheetDashboard";
-import CashAdvanceApproval from "../../components/staff/CashAdvanceApproval";
-import BranchRoyaltyHistory from "../../components/staff/BranchRoyaltyHistory";
-import PaymentSettings from "../../components/staff/PaymentSettings";
-import PaymentHistory from "../../components/staff/PaymentHistory";
-import BranchWalletView from "../../components/staff/BranchWalletView";
-import WalletEarningsDashboard from "../../components/staff/WalletEarningsDashboard";
+// Hub components - consolidated navigation
+import BookingsHub from "../../components/staff/hubs/BookingsHub";
+import TeamHub from "../../components/staff/hubs/TeamHub";
+import CustomersHub from "../../components/staff/hubs/CustomersHub";
+import ProductsHub from "../../components/staff/hubs/ProductsHub";
+import FinanceHub from "../../components/staff/hubs/FinanceHub";
+import MarketingHub from "../../components/staff/hubs/MarketingHub";
+import BranchSettings from "../../components/staff/BranchSettings";
 import DashboardFooter from "../../components/common/DashboardFooter";
 import {
   NotificationModal,
@@ -268,116 +249,69 @@ function StaffDashboard() {
       case "overview":
         return renderOverview();
 
+      case "reports":
+        return <ReportsManagement onRefresh={handleRefresh} user={user} />;
+
       case "bookings":
-        return <BookingsManagement onRefresh={handleRefresh} user={user} />;
-
-      case "calendar":
-        return <CalendarManagement user={user} />;
-
-      case "walkins":
-        return <WalkInSection />;
-
-      case "queue":
-        return <QueueSection />;
-
-      case "services":
         return (
-          <ServicesManagement
-            services={services || []}
-            onRefresh={handleRefresh}
+          <BookingsHub
             user={user}
-          />
-        );
-
-      case "vouchers":
-        return (
-          <VoucherManagement
-            vouchers={vouchers || []}
             onRefresh={handleRefresh}
-            onCreateVoucher={() => setActiveModal("voucher")}
+            incompleteBookingsCount={incompleteBookingsCount}
+            waitingWalkInsCount={waitingWalkInsCount}
           />
         );
 
-      case "barbers":
+      case "team":
         return (
-          <BarbersManagement
+          <TeamHub
+            user={user}
             barbers={barbers || []}
             onRefresh={handleRefresh}
-            user={user}
           />
         );
 
-      case "users":
-        return <BranchUserManagement onRefresh={handleRefresh} />;
-
       case "customers":
-        // Customers are already filtered by role in the query
         return (
-          <CustomersManagement
+          <CustomersHub
+            user={user}
             customers={customers || []}
             wallets={customerWallets || []}
             onRefresh={handleRefresh}
           />
         );
 
-      case "events":
+      case "products":
         return (
-          <EventsManagement
-            events={events || []}
-            onRefresh={handleRefresh}
+          <ProductsHub
             user={user}
+            services={services || []}
+            vouchers={vouchers || []}
+            onRefresh={handleRefresh}
+            onCreateVoucher={() => setActiveModal("voucher")}
           />
         );
 
-      case "reports":
-        return <ReportsManagement onRefresh={handleRefresh} user={user} />;
+      case "finance":
+        return (
+          <FinanceHub
+            user={user}
+            onRefresh={handleRefresh}
+            pendingAdvancesCount={pendingAdvancesCount}
+          />
+        );
 
-      case "products":
-        return <ProductsManagement onRefresh={handleRefresh} user={user} />;
+      case "marketing":
+        return (
+          <MarketingHub
+            user={user}
+            events={events || []}
+            onRefresh={handleRefresh}
+          />
+        );
 
-      case "notifications":
-        return <NotificationsManagement onRefresh={handleRefresh} />;
-
-      case "payroll":
-        return <PayrollManagement onRefresh={handleRefresh} user={user} />;
-
-      case "email_marketing":
-        return <EmailMarketing onRefresh={handleRefresh} />;
-
-      case "custom_bookings":
-        return <CustomBookingsManagement onRefresh={handleRefresh} user={user} />;
-
-      case "attendance":
-        return <TimeAttendanceView branchId={user?.branch_id} />;
-
-      case "order_products":
-        return <BranchProductOrdering user={user} onRefresh={handleRefresh} />;
-
-      case "accounting":
-        return <AccountingDashboard user={user} onRefresh={handleRefresh} />;
-
-      // expenses tab removed - now managed in AccountingDashboard (P&L)
-
-      case "balance_sheet":
-        return <BalanceSheetDashboard branchId={user?.branch_id} userId={user?._id} />;
-
-      case "cash_advances":
-        return <CashAdvanceApproval user={user} onRefresh={handleRefresh} />;
-
-      case "royalty":
-        return <BranchRoyaltyHistory />;
-
-      case "payments":
-        return <PaymentSettings onRefresh={handleRefresh} />;
-
-      case "payment_history":
-        return <PaymentHistory />;
-
-      case "branch_wallet":
-        return <BranchWalletView />;
-
-      case "wallet_earnings":
-        return <WalletEarningsDashboard />;
+      case "settings":
+        return <BranchSettings user={user} onRefresh={handleRefresh} />;
 
       default:
         return renderOverview();
@@ -421,45 +355,22 @@ function StaffDashboard() {
     }
   };
 
-  // Tab configuration for staff
+  // Tab configuration for staff - Consolidated navigation
   const baseTabs = [
-    // Core Operations
     { id: "overview", label: "Overview", icon: "layout-dashboard" },
     { id: "reports", label: "Reports", icon: "bar-chart-3" },
     { id: "bookings", label: "Bookings", icon: "calendar" },
-    { id: "custom_bookings", label: "Custom Bookings", icon: "file-text" },
-    { id: "calendar", label: "Calendar", icon: "calendar-days" },
-    { id: "walkins", label: "Walk-ins", icon: "user-plus" },
     { id: "pos", label: "POS", icon: "credit-card" },
-    // Staff & Services
-    { id: "barbers", label: "Barbers", icon: "user-check" },
-    { id: "users", label: "Users", icon: "users" },
-    { id: "services", label: "Services", icon: "scissors" },
-    { id: "customers", label: "Customers", icon: "users" },
-    // Products & Inventory
+    { id: "team", label: "Team", icon: "users" },
+    { id: "customers", label: "Customers", icon: "user-check" },
     { id: "products", label: "Products", icon: "package" },
-    { id: "order_products", label: "Order Products", icon: "shopping-cart" },
-    { id: "vouchers", label: "Vouchers", icon: "gift" },
-    // Finance & Accounting
-    { id: "payroll", label: "Payroll", icon: "dollar-sign" },
-    { id: "cash_advances", label: "Cash Advances", icon: "banknote" },
-    { id: "royalty", label: "Royalty", icon: "percent" },
-    { id: "accounting", label: "P&L", icon: "pie-chart" },
-    { id: "balance_sheet", label: "Balance Sheet", icon: "scale" },
-    { id: "payments", label: "Payments", icon: "credit-card" },
-    { id: "payment_history", label: "Payment History", icon: "receipt" },
-    { id: "branch_wallet", label: "Wallet Settings", icon: "wallet" },
-    { id: "wallet_earnings", label: "Wallet Earnings", icon: "trending-up" },
-    // HR & Events
-    { id: "attendance", label: "Attendance", icon: "clock" },
-    { id: "events", label: "Events", icon: "calendar-days" },
-    // Communications
-    { id: "notifications", label: "Notifications", icon: "bell" },
-    { id: "email_marketing", label: "Email Marketing", icon: "mail" },
+    { id: "finance", label: "Finance", icon: "dollar-sign" },
+    { id: "marketing", label: "Marketing", icon: "megaphone" },
+    { id: "settings", label: "Settings", icon: "settings" },
   ];
 
   // Always accessible pages (bypass permission checks)
-  const alwaysAccessiblePages = ["overview", "custom_bookings", "walkins", "queue"];
+  const alwaysAccessiblePages = ["overview", "bookings"];
 
   // Filter tabs based on user permissions (Story 11-4: Navigation Filtering)
   // Priority: page_access_v2 (new) > page_access (legacy) > role defaults

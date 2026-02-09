@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, CreditCard, Wallet, Store, AlertCircle, Loader2, ChevronRight, Star, Sparkles } from 'lucide-react';
+import { X, CreditCard, Wallet, Store, AlertCircle, Loader2, ChevronRight, Star, Sparkles, LogIn, ArrowRight, Plus } from 'lucide-react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { createPortal } from 'react-dom';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
+import { useNavigate } from 'react-router-dom';
 
 /**
  * PaymentOptionsModal - Story 7.4 + Customer Experience (Wallet Payments with Points)
@@ -32,9 +33,10 @@ const PaymentOptionsModal = ({
 }) => {
   const [selectedOption, setSelectedOption] = useState(null);
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   // Get current user for wallet balance check
-  const { user } = useCurrentUser();
+  const { user, isAuthenticated } = useCurrentUser();
 
   // Fetch branch payment configuration (FR25 - branch isolation)
   const paymentConfig = useQuery(
@@ -43,10 +45,10 @@ const PaymentOptionsModal = ({
   );
 
   // Check wallet balance for wallet payment option
-  // Convert servicePrice to centavos for the query (API expects centavos)
+  // API expects amount in pesos - it handles centavos conversion internally
   const walletCheck = useQuery(
     api.services.wallet.checkWalletBalance,
-    user?._id ? { userId: user._id, amount: servicePrice * 100 } : "skip"
+    user?._id ? { userId: user._id, amount: servicePrice } : "skip"
   );
 
   // Reset selection when modal opens
@@ -61,15 +63,6 @@ const PaymentOptionsModal = ({
   const convenienceFeeType = paymentConfig?.convenience_fee_type || "percent";
   const convenienceFeePercent = paymentConfig?.convenience_fee_percent || 5;
   const convenienceFeeAmount = paymentConfig?.convenience_fee_amount || 50;
-
-  // Debug: Log payment config convenience fee settings
-  console.log('[PaymentOptionsModal] Convenience fee config:', {
-    type: paymentConfig?.convenience_fee_type,
-    resolvedType: convenienceFeeType,
-    percent: convenienceFeePercent,
-    amount: convenienceFeeAmount,
-    fullConfig: paymentConfig
-  });
 
   // Calculate the actual fee based on type
   const convenienceFee = convenienceFeeType === "fixed"
@@ -99,9 +92,35 @@ const PaymentOptionsModal = ({
       payNow: servicePrice,
       dueAtBranch: 0,
       color: 'purple',
-      walletBalance: walletCheck.totalBalance / 100, // Convert from centavos to pesos
+      walletBalance: walletCheck.totalBalance, // Already in pesos from API
       pointsEarned: basePointsEarned,
       recommended: true,
+    });
+  }
+
+  // Combo Payment option - wallet + online payment (when user has partial balance)
+  // Only show if: user is logged in, has wallet with some balance, but not enough for full payment
+  // AND the online portion is at least ₱100 (PayMongo minimum for e-wallet/card transactions)
+  const PAYMONGO_MIN_AMOUNT = 100; // PayMongo minimum is ₱100 for GCash, Maya, Card
+  const walletBalancePesos = walletCheck?.totalBalance || 0; // Already in pesos from API
+  const hasPartialBalance = user && walletCheck?.hasWallet && walletBalancePesos > 0 && !walletCheck.hasSufficientBalance;
+  const onlinePortionAmount = hasPartialBalance ? servicePrice - walletBalancePesos : 0;
+  const onlinePortionMeetsMinimum = onlinePortionAmount >= PAYMONGO_MIN_AMOUNT;
+
+  if (hasPartialBalance && hasPayMongoConfig && paymentConfig?.pay_now_enabled && onlinePortionMeetsMinimum) {
+    options.push({
+      id: 'combo_wallet_online',
+      label: 'Wallet + Pay Online',
+      icon: Wallet,
+      description: `Use ₱${walletBalancePesos.toLocaleString('en-PH')} from wallet`,
+      payNow: servicePrice,
+      dueAtBranch: 0,
+      color: 'purple',
+      walletBalance: walletBalancePesos,
+      walletPortion: walletBalancePesos,
+      onlinePortion: onlinePortionAmount,
+      pointsEarned: basePointsEarned,
+      isCombo: true,
     });
   }
 
@@ -241,6 +260,33 @@ const PaymentOptionsModal = ({
 
           {/* Modal Body */}
           <div className="p-6">
+            {/* Login prompt for guest users */}
+            {!isAuthenticated && (
+              <div className="mb-4 p-4 bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/30 rounded-xl">
+                <div className="flex items-start space-x-3">
+                  <div className="p-2 bg-purple-500/20 rounded-lg">
+                    <LogIn className="h-5 w-5 text-purple-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-white">Have an account?</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Log in to pay with your wallet balance and earn loyalty points!
+                    </p>
+                    <button
+                      onClick={() => {
+                        onClose();
+                        navigate('/login', { state: { returnTo: window.location.pathname + window.location.search } });
+                      }}
+                      className="mt-2 flex items-center space-x-1 text-sm font-medium text-purple-400 hover:text-purple-300 transition-colors"
+                    >
+                      <span>Log in now</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {isLoadingConfig ? (
               // Loading state (AC4.2)
               <div className="flex flex-col items-center justify-center py-8">
@@ -304,18 +350,51 @@ const PaymentOptionsModal = ({
 
                       {/* Payment breakdown (AC2 - FR4) */}
                       <div className="mt-3 pt-3 border-t border-[#444444]/30">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-400">Pay now:</span>
-                          <span className={`font-medium ${option.payNow > 0 ? 'text-white' : 'text-gray-500'}`}>
-                            {formatCurrency(option.payNow)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm mt-1">
-                          <span className="text-gray-400">Due at branch:</span>
-                          <span className={`font-medium ${option.dueAtBranch > 0 ? 'text-white' : 'text-gray-500'}`}>
-                            {formatCurrency(option.dueAtBranch)}
-                          </span>
-                        </div>
+                        {option.isCombo ? (
+                          // Combo payment breakdown
+                          <>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-400 flex items-center">
+                                <Wallet className="h-3 w-3 mr-1" />
+                                From wallet:
+                              </span>
+                              <span className="font-medium text-purple-400">
+                                {formatCurrency(option.walletPortion)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-sm mt-1">
+                              <span className="text-gray-400 flex items-center">
+                                <CreditCard className="h-3 w-3 mr-1" />
+                                Pay online:
+                              </span>
+                              <span className="font-medium text-green-400">
+                                {formatCurrency(option.onlinePortion)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-sm mt-1 pt-1 border-t border-[#444444]/20">
+                              <span className="text-gray-400">Total:</span>
+                              <span className="font-medium text-white">
+                                {formatCurrency(option.payNow)}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          // Standard payment breakdown
+                          <>
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-400">Pay now:</span>
+                              <span className={`font-medium ${option.payNow > 0 ? 'text-white' : 'text-gray-500'}`}>
+                                {formatCurrency(option.payNow)}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-sm mt-1">
+                              <span className="text-gray-400">Due at branch:</span>
+                              <span className={`font-medium ${option.dueAtBranch > 0 ? 'text-white' : 'text-gray-500'}`}>
+                                {formatCurrency(option.dueAtBranch)}
+                              </span>
+                            </div>
+                          </>
+                        )}
 
                         {/* Points earning display */}
                         {option.pointsEarned > 0 && (
@@ -380,14 +459,50 @@ const PaymentOptionsModal = ({
               </div>
             )}
 
-            {/* Show wallet balance if user has wallet but insufficient balance */}
-            {user && walletCheck && !walletCheck.hasSufficientBalance && walletCheck.hasWallet && (
-              <div className="mt-4 p-3 bg-gray-800/50 border border-gray-700 rounded-lg">
-                <p className="text-sm text-gray-400">
-                  <Wallet className="h-4 w-4 inline mr-1" />
-                  Wallet balance: {formatCurrency(walletCheck.totalBalance / 100)}
-                  <span className="text-gray-500"> (₱{((servicePrice * 100 - walletCheck.totalBalance) / 100).toFixed(2)} short)</span>
-                </p>
+            {/* Info note for Combo Payment */}
+            {selectedOption === 'combo_wallet_online' && (
+              <div className="mt-4 p-3 bg-purple-400/10 border border-purple-400/30 rounded-lg">
+                <div className="flex items-start space-x-2">
+                  <Sparkles className="h-4 w-4 text-purple-400 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-purple-300">
+                      Use your <strong>{formatCurrency(walletBalancePesos)}</strong> wallet balance and pay the remaining <strong>{formatCurrency(onlinePortionAmount)}</strong> online.
+                    </p>
+                    <p className="text-xs text-purple-300/70 mt-1">
+                      You'll earn <strong>{basePointsEarned} points</strong> for this booking!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Show wallet balance if user has wallet but insufficient balance and no combo option selected */}
+            {user && walletCheck && !walletCheck.hasSufficientBalance && walletCheck.hasWallet && selectedOption !== 'combo_wallet_online' && (
+              <div className="mt-4 p-3 bg-gradient-to-r from-purple-500/10 to-green-500/10 border border-purple-500/30 rounded-lg">
+                <div className="flex items-start space-x-2">
+                  <Wallet className="h-4 w-4 text-purple-400 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-300">
+                      Wallet balance: <span className="text-purple-400 font-medium">{formatCurrency(walletCheck.totalBalance)}</span>
+                      <span className="text-gray-500"> ({formatCurrency(servicePrice - walletCheck.totalBalance)} short)</span>
+                    </p>
+                    {hasPayMongoConfig && paymentConfig?.pay_now_enabled && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Select "Wallet + Pay Online" above to use your balance!
+                      </p>
+                    )}
+                    <button
+                      onClick={() => {
+                        onClose();
+                        navigate('/customer/wallet');
+                      }}
+                      className="mt-2 flex items-center space-x-1 text-xs font-medium text-purple-400 hover:text-purple-300 transition-colors"
+                    >
+                      <Plus className="h-3 w-3" />
+                      <span>Top up wallet</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -418,6 +533,7 @@ const PaymentOptionsModal = ({
                   <span>
                     {selectedOption === 'pay_at_shop' ? 'Confirm Booking' :
                      selectedOption === 'wallet' ? 'Pay with Wallet' :
+                     selectedOption === 'combo_wallet_online' ? 'Use Wallet + Pay Online' :
                      'Proceed to Payment'}
                   </span>
                   <ChevronRight className="h-4 w-4" />

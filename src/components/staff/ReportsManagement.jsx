@@ -4,7 +4,8 @@ import {
   Download, RefreshCw, Scissors, Clock, Award, AlertCircle,
   ChevronRight, Star, Package, CreditCard, ArrowUp, ArrowDown,
   BarChart3, PieChart, LineChart, Target, ShoppingCart, UserCheck,
-  AlertTriangle, Bell, Zap, Brain, TrendingUpDown, Activity, XCircle
+  AlertTriangle, Bell, Zap, Brain, TrendingUpDown, Activity, XCircle,
+  Lightbulb, CheckCircle2, Sparkles
 } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
@@ -70,6 +71,46 @@ const ReportsManagement = ({ onRefresh, user }) => {
       : []
 
   const products = useQuery(api.services.products.getAllProducts)
+
+  // AI Analytics Queries (integrated into DDPP tabs)
+  const now = new Date()
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
+  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59).getTime()
+
+  const aiSummary = useQuery(
+    api.services.aiAnalytics.generatePLSummary,
+    user?.branch_id ? { branch_id: user.branch_id, start_date: startOfMonth, end_date: endOfDay } : 'skip'
+  )
+
+  const aiHealthScore = useQuery(
+    api.services.aiAnalytics.getBranchHealthScore,
+    user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+  )
+
+  const aiAnomalies = useQuery(
+    api.services.aiAnalytics.detectAnomalies,
+    user?.branch_id ? { branch_id: user.branch_id, days: 30 } : 'skip'
+  )
+
+  const aiForecast = useQuery(
+    api.services.aiAnalytics.getSalesForecast,
+    user?.branch_id ? { branch_id: user.branch_id, forecast_days: 7 } : 'skip'
+  )
+
+  const aiReorderAlerts = useQuery(
+    api.services.aiAnalytics.getReorderAlerts,
+    user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+  )
+
+  const aiCustomerInsights = useQuery(
+    api.services.aiAnalytics.getCustomerInsights,
+    user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+  )
+
+  const aiMarketingStrategies = useQuery(
+    api.services.aiAnalytics.getMarketingStrategies,
+    user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+  )
 
   // Helper functions (defined before useMemo to avoid initialization errors)
   const formatCurrency = (amount) => {
@@ -693,7 +734,7 @@ const ReportsManagement = ({ onRefresh, user }) => {
         </div>
       </div>
 
-      {/* Tab Navigation */}
+      {/* Tab Navigation - DDPP Analytics with integrated AI */}
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-1">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-1">
           <button
@@ -743,12 +784,14 @@ const ReportsManagement = ({ onRefresh, user }) => {
         </div>
       </div>
 
-      {/* Tab Content */}
+      {/* Tab Content with Integrated AI */}
       {activeTab === 'descriptive' && (
         <DescriptiveAnalytics
           analytics={analytics}
           formatCurrency={formatCurrency}
           formatTime={formatTime}
+          aiSummary={aiSummary}
+          aiHealthScore={aiHealthScore}
         />
       )}
 
@@ -757,6 +800,8 @@ const ReportsManagement = ({ onRefresh, user }) => {
           analytics={analytics}
           formatCurrency={formatCurrency}
           formatTime={formatTime}
+          aiAnomalies={aiAnomalies}
+          aiHealthScore={aiHealthScore}
         />
       )}
 
@@ -765,6 +810,8 @@ const ReportsManagement = ({ onRefresh, user }) => {
           analytics={analytics}
           formatCurrency={formatCurrency}
           formatTime={formatTime}
+          aiForecast={aiForecast}
+          aiCustomerInsights={aiCustomerInsights}
         />
       )}
 
@@ -773,6 +820,10 @@ const ReportsManagement = ({ onRefresh, user }) => {
           analytics={analytics}
           formatCurrency={formatCurrency}
           formatTime={formatTime}
+          aiReorderAlerts={aiReorderAlerts}
+          aiCustomerInsights={aiCustomerInsights}
+          aiHealthScore={aiHealthScore}
+          aiMarketingStrategies={aiMarketingStrategies}
         />
       )}
     </div>
@@ -780,8 +831,78 @@ const ReportsManagement = ({ onRefresh, user }) => {
 }
 
 // DESCRIPTIVE ANALYTICS TAB: What happened?
-const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
+const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime, aiSummary, aiHealthScore }) => (
   <div className="space-y-4">
+    {/* AI Insights Banner */}
+    {aiSummary && (
+      <div className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-500/30 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Brain className="h-5 w-5 text-purple-400" />
+          <h3 className="text-sm font-semibold text-white">AI Insights</h3>
+          <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">FREE</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {aiSummary.insights?.slice(0, 4).map((insight, idx) => (
+            <div key={idx} className="bg-black/30 rounded-lg px-3 py-2 text-sm text-gray-300">
+              {insight}
+            </div>
+          ))}
+        </div>
+        {aiSummary.top_performers?.service && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <span className="bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full text-xs">
+              ⭐ Top: {aiSummary.top_performers.service.name}
+            </span>
+            {aiSummary.top_performers?.product && (
+              <span className="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-xs">
+                🏆 Best Seller: {aiSummary.top_performers.product.name}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* Branch Health Score */}
+    {aiHealthScore && (
+      <div className={`rounded-xl p-4 border ${
+        aiHealthScore.health_score >= 80 ? 'bg-green-900/20 border-green-500/30' :
+        aiHealthScore.health_score >= 60 ? 'bg-blue-900/20 border-blue-500/30' :
+        aiHealthScore.health_score >= 40 ? 'bg-yellow-900/20 border-yellow-500/30' :
+        'bg-red-900/20 border-red-500/30'
+      }`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center border-2 ${
+              aiHealthScore.health_score >= 80 ? 'bg-green-500/20 border-green-500 text-green-400' :
+              aiHealthScore.health_score >= 60 ? 'bg-blue-500/20 border-blue-500 text-blue-400' :
+              aiHealthScore.health_score >= 40 ? 'bg-yellow-500/20 border-yellow-500 text-yellow-400' :
+              'bg-red-500/20 border-red-500 text-red-400'
+            }`}>
+              <span className="text-xl font-bold">{aiHealthScore.health_score}</span>
+            </div>
+            <div>
+              <h4 className="text-white font-semibold">Branch Health Score</h4>
+              <p className={`text-sm ${
+                aiHealthScore.health_score >= 80 ? 'text-green-400' :
+                aiHealthScore.health_score >= 60 ? 'text-blue-400' :
+                aiHealthScore.health_score >= 40 ? 'text-yellow-400' :
+                'text-red-400'
+              }`}>{aiHealthScore.status}</p>
+            </div>
+          </div>
+          <div className="hidden md:flex gap-2">
+            {Object.entries(aiHealthScore.breakdown || {}).slice(0, 3).map(([key, data]) => (
+              <div key={key} className="bg-black/30 rounded-lg px-3 py-2 text-center">
+                <div className="text-lg font-bold text-white">{Math.round(data.score)}</div>
+                <div className="text-xs text-gray-400 capitalize">{key}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )}
+
     {/* Key Metrics */}
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       <MetricCard
@@ -1022,8 +1143,78 @@ const DescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
 )
 
 // DIAGNOSTIC ANALYTICS TAB: Why did it happen?
-const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime }) => (
+const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime, aiAnomalies, aiHealthScore }) => (
   <div className="space-y-4">
+    {/* AI Anomaly Detection */}
+    {aiAnomalies && !aiAnomalies.message && (
+      <div className="bg-gradient-to-r from-yellow-900/20 to-orange-900/20 border border-yellow-500/30 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <AlertTriangle className="h-5 w-5 text-yellow-400" />
+          <h3 className="text-sm font-semibold text-white">AI Anomaly Detection</h3>
+          {(aiAnomalies.transaction_anomalies?.length > 0 || aiAnomalies.volume_anomalies?.length > 0) && (
+            <span className="bg-yellow-500/20 text-yellow-400 text-xs px-2 py-0.5 rounded-full">
+              {(aiAnomalies.transaction_anomalies?.length || 0) + (aiAnomalies.volume_anomalies?.length || 0)} detected
+            </span>
+          )}
+        </div>
+
+        {/* Statistics */}
+        <div className="grid grid-cols-3 gap-3 mb-3">
+          <div className="bg-black/30 rounded-lg p-2 text-center">
+            <div className="text-lg font-bold text-white">{formatCurrency(aiAnomalies.statistics?.mean_transaction || 0)}</div>
+            <div className="text-xs text-gray-400">Avg Transaction</div>
+          </div>
+          <div className="bg-black/30 rounded-lg p-2 text-center">
+            <div className="text-lg font-bold text-white">{aiAnomalies.statistics?.total_analyzed || 0}</div>
+            <div className="text-xs text-gray-400">Analyzed</div>
+          </div>
+          <div className="bg-black/30 rounded-lg p-2 text-center">
+            <div className="text-lg font-bold text-white">{aiAnomalies.statistics?.anomaly_count || 0}</div>
+            <div className="text-xs text-gray-400">Anomalies</div>
+          </div>
+        </div>
+
+        {/* Anomaly List */}
+        {aiAnomalies.transaction_anomalies?.length > 0 ? (
+          <div className="space-y-2 max-h-40 overflow-y-auto">
+            {aiAnomalies.transaction_anomalies.slice(0, 5).map((anom, idx) => (
+              <div key={idx} className={`rounded-lg px-3 py-2 text-sm ${
+                anom.type === 'unusually_high' ? 'bg-green-500/10 text-green-300' : 'bg-red-500/10 text-red-300'
+              }`}>
+                <div className="flex justify-between">
+                  <span>{formatCurrency(anom.amount)}</span>
+                  <span className="text-xs text-gray-400">{new Date(anom.date).toLocaleDateString()}</span>
+                </div>
+                <div className="text-xs text-gray-400">{anom.reason}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-2 text-gray-400 text-sm">
+            <CheckCircle2 className="w-5 h-5 mx-auto mb-1 text-green-400" />
+            All transactions within normal range
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* Health Score Breakdown */}
+    {aiHealthScore?.alerts?.length > 0 && (
+      <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <AlertCircle className="h-5 w-5 text-red-400" />
+          <h3 className="text-sm font-semibold text-white">Issues Detected</h3>
+        </div>
+        <div className="space-y-2">
+          {aiHealthScore.alerts.map((alert, idx) => (
+            <div key={idx} className="bg-black/30 rounded-lg px-3 py-2 text-sm text-red-300">
+              {alert}
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
     {/* Peak Hours Analysis */}
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
       <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
@@ -1222,8 +1413,93 @@ const DiagnosticAnalytics = ({ analytics, formatCurrency, formatTime }) => (
 )
 
 // PREDICTIVE ANALYTICS TAB: What will happen?
-const PredictiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
+const PredictiveAnalytics = ({ analytics, formatCurrency, formatTime, aiForecast, aiCustomerInsights }) => (
   <div className="space-y-4">
+    {/* AI Sales Forecast */}
+    {aiForecast && (
+      <div className="bg-gradient-to-r from-blue-900/20 to-cyan-900/20 border border-blue-500/30 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-blue-400" />
+            <h3 className="text-sm font-semibold text-white">AI 7-Day Forecast</h3>
+            <span className={`text-xs px-2 py-0.5 rounded-full ${
+              aiForecast.statistics?.trend === 'upward' ? 'bg-green-500/20 text-green-400' :
+              aiForecast.statistics?.trend === 'downward' ? 'bg-red-500/20 text-red-400' :
+              'bg-gray-500/20 text-gray-400'
+            }`}>
+              {aiForecast.statistics?.trend} trend
+            </span>
+          </div>
+          <div className="text-right">
+            <div className="text-xl font-bold text-blue-400">{formatCurrency(aiForecast.total_forecast)}</div>
+            <div className="text-xs text-gray-400">Predicted Revenue</div>
+          </div>
+        </div>
+
+        {/* Daily Forecast */}
+        <div className="grid grid-cols-7 gap-1 mb-3">
+          {aiForecast.forecast?.map((day, idx) => (
+            <div key={idx} className="bg-black/30 rounded-lg p-2 text-center">
+              <div className="text-xs text-gray-400">{day.day_of_week}</div>
+              <div className="text-sm font-semibold text-white">{formatCurrency(day.predicted_revenue)}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Best Days */}
+        <div className="flex flex-wrap gap-2">
+          <span className="text-xs text-gray-400">Best days:</span>
+          {aiForecast.day_patterns?.sort((a, b) => b.average_revenue - a.average_revenue).slice(0, 3).map((day, idx) => (
+            <span key={idx} className="bg-green-500/20 text-green-300 px-2 py-0.5 rounded-full text-xs">
+              {day.day}: {formatCurrency(day.average_revenue)}
+            </span>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {/* AI Customer Segments */}
+    {aiCustomerInsights && (
+      <div className="bg-gradient-to-r from-cyan-900/20 to-teal-900/20 border border-cyan-500/30 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Users className="h-5 w-5 text-cyan-400" />
+          <h3 className="text-sm font-semibold text-white">Customer Segmentation</h3>
+          <span className="text-xs bg-cyan-500/20 text-cyan-400 px-2 py-0.5 rounded-full">
+            {aiCustomerInsights.total_customers} customers
+          </span>
+        </div>
+        <div className="grid grid-cols-5 gap-2 mb-3">
+          {aiCustomerInsights.segments?.map((seg, idx) => (
+            <div key={idx} className={`rounded-lg p-2 text-center ${
+              seg.segment === 'vip' ? 'bg-purple-500/20' :
+              seg.segment === 'loyal' ? 'bg-green-500/20' :
+              seg.segment === 'regular' ? 'bg-blue-500/20' :
+              seg.segment === 'at_risk' ? 'bg-red-500/20' :
+              'bg-cyan-500/20'
+            }`}>
+              <div className={`text-xl font-bold ${
+                seg.segment === 'vip' ? 'text-purple-400' :
+                seg.segment === 'loyal' ? 'text-green-400' :
+                seg.segment === 'regular' ? 'text-blue-400' :
+                seg.segment === 'at_risk' ? 'text-red-400' :
+                'text-cyan-400'
+              }`}>{seg.count}</div>
+              <div className="text-xs text-gray-400 capitalize">{seg.segment.replace('_', ' ')}</div>
+            </div>
+          ))}
+        </div>
+        {aiCustomerInsights.insights?.length > 0 && (
+          <div className="space-y-1">
+            {aiCustomerInsights.insights.slice(0, 2).map((insight, idx) => (
+              <div key={idx} className="bg-black/30 rounded-lg px-3 py-1.5 text-xs text-gray-300">
+                {insight}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+
     {/* Revenue Forecast */}
     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
       <h3 className="text-sm font-semibold text-white mb-4 flex items-center">
@@ -1381,8 +1657,312 @@ const PredictiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
 )
 
 // PRESCRIPTIVE ANALYTICS TAB: What should be done?
-const PrescriptiveAnalytics = ({ analytics, formatCurrency, formatTime }) => (
+const PrescriptiveAnalytics = ({ analytics, formatCurrency, formatTime, aiReorderAlerts, aiCustomerInsights, aiHealthScore, aiMarketingStrategies }) => (
   <div className="space-y-4">
+    {/* AI Product Reorder Alerts */}
+    {aiReorderAlerts && (aiReorderAlerts.summary?.out_of_stock > 0 || aiReorderAlerts.summary?.critical > 0 || aiReorderAlerts.summary?.low_stock > 0) && (
+      <div className="bg-gradient-to-r from-orange-900/20 to-red-900/20 border border-orange-500/30 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Package className="h-5 w-5 text-orange-400" />
+            <h3 className="text-sm font-semibold text-white">AI Inventory Alerts</h3>
+            {aiReorderAlerts.summary?.out_of_stock + aiReorderAlerts.summary?.critical > 0 && (
+              <span className="bg-red-500/20 text-red-400 text-xs px-2 py-0.5 rounded-full">
+                {aiReorderAlerts.summary.out_of_stock + aiReorderAlerts.summary.critical} urgent
+              </span>
+            )}
+          </div>
+          <div className="text-sm text-gray-400">
+            Health: {aiReorderAlerts.inventory_health}
+          </div>
+        </div>
+
+        {/* Summary Cards */}
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          <div className="bg-red-500/20 rounded-lg p-2 text-center">
+            <div className="text-xl font-bold text-red-400">{aiReorderAlerts.summary?.out_of_stock || 0}</div>
+            <div className="text-xs text-gray-400">Out of Stock</div>
+          </div>
+          <div className="bg-orange-500/20 rounded-lg p-2 text-center">
+            <div className="text-xl font-bold text-orange-400">{aiReorderAlerts.summary?.critical || 0}</div>
+            <div className="text-xs text-gray-400">Critical</div>
+          </div>
+          <div className="bg-yellow-500/20 rounded-lg p-2 text-center">
+            <div className="text-xl font-bold text-yellow-400">{aiReorderAlerts.summary?.low_stock || 0}</div>
+            <div className="text-xs text-gray-400">Low Stock</div>
+          </div>
+          <div className="bg-green-500/20 rounded-lg p-2 text-center">
+            <div className="text-xl font-bold text-green-400">{aiReorderAlerts.summary?.adequate || 0}</div>
+            <div className="text-xs text-gray-400">Adequate</div>
+          </div>
+        </div>
+
+        {/* Reorder List */}
+        {aiReorderAlerts.alerts?.length > 0 && (
+          <div className="space-y-2 max-h-40 overflow-y-auto">
+            {aiReorderAlerts.alerts.slice(0, 5).map((alert, idx) => (
+              <div key={idx} className={`flex items-center justify-between rounded-lg px-3 py-2 ${
+                alert.urgency === 'critical' ? 'bg-red-500/10 border border-red-500/30' :
+                alert.urgency === 'high' ? 'bg-orange-500/10 border border-orange-500/30' :
+                'bg-yellow-500/10 border border-yellow-500/30'
+              }`}>
+                <div>
+                  <div className="text-sm font-medium text-white">{alert.product_name}</div>
+                  <div className="text-xs text-gray-400">{alert.reason}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-gray-400">Stock: {alert.current_stock}</div>
+                  <div className="text-sm text-green-400">Order: {alert.suggested_order}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* AI Marketing Strategy Summary */}
+    {aiMarketingStrategies && (
+      <div className="bg-gradient-to-r from-pink-900/20 to-rose-900/20 border border-pink-500/30 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-pink-400" />
+            <h3 className="text-sm font-semibold text-white">AI Marketing Strategy</h3>
+            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">FREE AI</span>
+          </div>
+          <div className="flex gap-3 text-xs">
+            <span className="text-gray-400">
+              <span className="text-pink-400 font-bold">{aiMarketingStrategies.summary?.total_campaigns || 0}</span> campaigns
+            </span>
+            <span className="text-gray-400">
+              <span className="text-red-400 font-bold">{aiMarketingStrategies.summary?.high_priority || 0}</span> high priority
+            </span>
+            <span className="text-gray-400">
+              <span className="text-cyan-400 font-bold">{aiMarketingStrategies.summary?.customers_to_target || 0}</span> to target
+            </span>
+          </div>
+        </div>
+
+        {/* Revenue Trend Alert */}
+        {aiMarketingStrategies.summary?.revenue_trend !== undefined && (
+          <div className={`mb-4 p-3 rounded-lg ${
+            aiMarketingStrategies.summary.revenue_trend >= 0
+              ? 'bg-green-500/10 border border-green-500/30'
+              : 'bg-red-500/10 border border-red-500/30'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {aiMarketingStrategies.summary.revenue_trend >= 0 ? (
+                  <TrendingUp className="w-5 h-5 text-green-400" />
+                ) : (
+                  <TrendingDown className="w-5 h-5 text-red-400" />
+                )}
+                <span className="text-sm text-white">
+                  Revenue {aiMarketingStrategies.summary.revenue_trend >= 0 ? 'up' : 'down'} {Math.abs(aiMarketingStrategies.summary.revenue_trend).toFixed(1)}% vs last period
+                </span>
+              </div>
+              <span className="text-sm text-gray-400">
+                Avg ticket: {formatCurrency(aiMarketingStrategies.summary.avg_ticket)}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* AI Marketing Campaigns */}
+    {aiMarketingStrategies?.promotions?.length > 0 && (
+      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Zap className="h-5 w-5 text-yellow-400" />
+          <h3 className="text-sm font-semibold text-white">AI Campaign Suggestions</h3>
+        </div>
+        <div className="space-y-3">
+          {aiMarketingStrategies.promotions.map((promo, idx) => (
+            <div key={idx} className={`p-4 rounded-lg border ${
+              promo.priority === 'high' ? 'bg-red-900/10 border-red-500/30' :
+              promo.priority === 'medium' ? 'bg-yellow-900/10 border-yellow-500/30' :
+              'bg-gray-900/10 border-gray-500/30'
+            }`}>
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium uppercase ${
+                      promo.priority === 'high' ? 'bg-red-500/20 text-red-400' :
+                      promo.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                      'bg-gray-500/20 text-gray-400'
+                    }`}>
+                      {promo.priority}
+                    </span>
+                    <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">{promo.type}</span>
+                  </div>
+                  <h4 className="text-white font-semibold">{promo.title}</h4>
+                </div>
+              </div>
+              <p className="text-gray-300 text-sm mb-3">{promo.description}</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                <div className="bg-black/30 rounded-lg p-2">
+                  <div className="text-gray-500">Target</div>
+                  <div className="text-white">{promo.target_audience}</div>
+                </div>
+                <div className="bg-black/30 rounded-lg p-2">
+                  <div className="text-gray-500">Discount</div>
+                  <div className="text-green-400">{promo.suggested_discount}</div>
+                </div>
+                <div className="bg-black/30 rounded-lg p-2">
+                  <div className="text-gray-500">Best Time</div>
+                  <div className="text-blue-400">{promo.best_timing}</div>
+                </div>
+                <div className="bg-black/30 rounded-lg p-2">
+                  <div className="text-gray-500">Impact</div>
+                  <div className="text-purple-400">{promo.expected_impact}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {/* AI Customer Targeting Strategies */}
+    {aiMarketingStrategies?.targeting_strategies?.length > 0 && (
+      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Users className="h-5 w-5 text-cyan-400" />
+          <h3 className="text-sm font-semibold text-white">Customer Targeting Strategies</h3>
+        </div>
+        <div className="space-y-3">
+          {aiMarketingStrategies.targeting_strategies.map((strategy, idx) => (
+            <div key={idx} className={`p-4 rounded-lg border ${
+              strategy.urgency === 'immediate' ? 'bg-red-900/10 border-red-500/30' :
+              strategy.urgency === 'this_week' ? 'bg-orange-900/10 border-orange-500/30' :
+              'bg-blue-900/10 border-blue-500/30'
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                    strategy.urgency === 'immediate' ? 'bg-red-500/20 text-red-400' :
+                    strategy.urgency === 'this_week' ? 'bg-orange-500/20 text-orange-400' :
+                    'bg-blue-500/20 text-blue-400'
+                  }`}>
+                    {strategy.urgency.replace('_', ' ')}
+                  </span>
+                  <h4 className="text-white font-semibold">{strategy.segment}</h4>
+                </div>
+                <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">{strategy.channel}</span>
+              </div>
+              <p className="text-sm text-gray-400 mb-2">
+                <span className="text-cyan-400">{strategy.strategy}</span> — {strategy.action}
+              </p>
+              <div className="bg-black/30 rounded-lg p-3 border-l-2 border-cyan-500">
+                <div className="text-xs text-gray-500 mb-1">Suggested Message:</div>
+                <p className="text-sm text-gray-200 italic">"{strategy.message_template}"</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {/* AI Pricing Insights */}
+    {aiMarketingStrategies?.pricing_insights?.length > 0 && (
+      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <DollarSign className="h-5 w-5 text-green-400" />
+          <h3 className="text-sm font-semibold text-white">Pricing Optimization</h3>
+        </div>
+        <div className="space-y-2">
+          {aiMarketingStrategies.pricing_insights.map((insight, idx) => (
+            <div key={idx} className="p-3 bg-green-900/10 border border-green-500/20 rounded-lg">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs text-gray-500 bg-gray-800 px-2 py-0.5 rounded">{insight.type}</span>
+                    <h4 className="text-white font-medium text-sm">{insight.suggestion}</h4>
+                  </div>
+                  <p className="text-gray-400 text-xs">{insight.rationale}</p>
+                </div>
+                <span className="text-green-400 text-xs font-semibold whitespace-nowrap ml-2">
+                  {insight.potential_impact}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {/* AI Timing Recommendations */}
+    {aiMarketingStrategies?.timing_recommendations?.length > 0 && (
+      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Clock className="h-5 w-5 text-blue-400" />
+          <h3 className="text-sm font-semibold text-white">Optimal Timing</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {aiMarketingStrategies.timing_recommendations.map((timing, idx) => (
+            <div key={idx} className="p-3 bg-blue-900/10 border border-blue-500/20 rounded-lg">
+              <div className="text-blue-400 text-xs font-semibold mb-1">{timing.insight}</div>
+              <div className="text-white text-sm font-medium mb-1">{timing.recommendation}</div>
+              <div className="text-gray-400 text-xs">{timing.action}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {/* AI Cross-Sell Matrix */}
+    {aiMarketingStrategies?.cross_sell_matrix?.length > 0 && (
+      <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <ShoppingCart className="h-5 w-5 text-purple-400" />
+          <h3 className="text-sm font-semibold text-white">Cross-Sell & Upsell Opportunities</h3>
+        </div>
+        <div className="space-y-2">
+          {aiMarketingStrategies.cross_sell_matrix.map((item, idx) => (
+            <div key={idx} className="flex items-center gap-3 p-3 bg-purple-900/10 border border-purple-500/20 rounded-lg">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-gray-400">If customer buys</span>
+                  <span className="text-white font-medium">{item.if_customer_buys}</span>
+                  <span className="text-gray-400">→</span>
+                  <span className="text-purple-400 font-medium">Recommend: {item.recommend}</span>
+                </div>
+                <div className="text-xs text-gray-500 mt-1">{item.reason}</div>
+              </div>
+              <span className="text-xs text-green-400 bg-green-500/10 px-2 py-1 rounded whitespace-nowrap">
+                {item.success_rate}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {/* AI Recommendations */}
+    {(aiHealthScore?.alerts?.length > 0 || aiCustomerInsights?.recommendations?.length > 0) && (
+      <div className="bg-gradient-to-r from-purple-900/20 to-pink-900/20 border border-purple-500/30 rounded-xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <Lightbulb className="h-5 w-5 text-purple-400" />
+          <h3 className="text-sm font-semibold text-white">Additional Recommendations</h3>
+        </div>
+        <div className="space-y-2">
+          {aiHealthScore?.alerts?.map((alert, idx) => (
+            <div key={`health-${idx}`} className="flex items-start gap-2 bg-black/30 rounded-lg px-3 py-2">
+              <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
+              <span className="text-sm text-gray-300">{alert}</span>
+            </div>
+          ))}
+          {aiCustomerInsights?.recommendations?.map((rec, idx) => (
+            <div key={`cust-${idx}`} className="flex items-start gap-2 bg-black/30 rounded-lg px-3 py-2">
+              <Target className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
+              <span className="text-sm text-gray-300">{rec}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
     {/* Promotion Suggestions */}
     <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg p-4">
       <h3 className="text-sm font-semibold text-white mb-4 flex items-center">

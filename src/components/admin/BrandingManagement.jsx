@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { Palette, RefreshCw, Eye, Undo2, Sparkles, Image as ImageIcon, ToggleLeft, ShieldCheck, Clock3, History, Download, Upload, AlertCircle, X } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
 import { useBranding } from '../../context/BrandingContext'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import ConfirmDialog from '../common/ConfirmDialog'
@@ -215,9 +214,7 @@ const formatTimestamp = (timestamp) => {
 
 export default function BrandingManagement() {
   // Use unified auth hook for user data (supports both Clerk and legacy auth)
-  const { user: currentUser, authMethod, isAuthenticated } = useCurrentUser()
-  // Get sessionToken from legacy auth (optional - backend now supports Clerk auth)
-  const { sessionToken } = useAuth()
+  const { user: currentUser, authMethod, isAuthenticated, sessionToken } = useCurrentUser()
   const { branding: activeBranding, loading: brandingLoading, error: brandingError, refresh: refreshBranding } = useBranding()
 
   // Define canEdit - requires super_admin role (backend now supports both Clerk and legacy auth)

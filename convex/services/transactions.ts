@@ -90,15 +90,19 @@ export const createTransaction = mutation({
     customer_email: v.optional(v.string()),
     customer_address: v.optional(v.string()),
     branch_id: v.id("branches"),
-    barber: v.id("barbers"),
-    services: v.array(v.object({
+    barber: v.optional(v.id("barbers")), // Optional for retail transactions
+    services: v.optional(v.array(v.object({
       service_id: v.id("services"),
       service_name: v.string(),
       price: v.number(),
       quantity: v.number()
-    })),
+    }))),
+    transaction_type: v.optional(v.union(
+      v.literal("service"),
+      v.literal("retail")
+    )), // "service" = barber+services required, "retail" = products only
     products: v.optional(v.array(v.object({
-      product_id: v.id("products"),
+      product_id: v.union(v.id("products"), v.id("productCatalog")), // Support both branch and catalog products
       product_name: v.string(),
       price: v.number(),
       quantity: v.number()
@@ -132,7 +136,29 @@ export const createTransaction = mutation({
     wallet_used: v.optional(v.number()), // Wallet amount (e.g., 150 = ₱150)
     cash_collected: v.optional(v.number()), // Cash portion (e.g., 150 = ₱150)
     processed_by: v.id("users"),
-    skip_booking_creation: v.optional(v.boolean()) // Flag to skip automatic booking creation
+    skip_booking_creation: v.optional(v.boolean()), // Flag to skip automatic booking creation
+    // Delivery fields
+    fulfillment_type: v.optional(v.literal("delivery")),
+    delivery_address: v.optional(v.object({
+      street_address: v.string(),
+      barangay: v.optional(v.string()),
+      city: v.string(),
+      province: v.string(),
+      zip_code: v.string(),
+      landmark: v.optional(v.string()),
+      contact_name: v.string(),
+      contact_phone: v.string(),
+      notes: v.optional(v.string()),
+    })),
+    delivery_fee: v.optional(v.number()),
+    delivery_status: v.optional(v.union(
+      v.literal("pending"),
+      v.literal("preparing"),
+      v.literal("out_for_delivery"),
+      v.literal("delivered"),
+      v.literal("cancelled")
+    )),
+    estimated_delivery: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     console.log('[TRANSACTION] Starting transaction creation with args:', args);
@@ -158,6 +184,25 @@ export const createTransaction = mutation({
         if (productDoc.stock < product.quantity) {
           throwUserError(ERROR_CODES.PRODUCT_OUT_OF_STOCK, `Insufficient stock for ${product.product_name}`, `Only ${productDoc.stock} items available.`);
         }
+      }
+    }
+
+    // Determine transaction type (default to 'service' for backward compatibility)
+    const txType = args.transaction_type || 'service';
+
+    // Validate based on transaction type
+    if (txType === 'service') {
+      // Service transactions require barber and services
+      if (!args.barber) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Barber required", "Please select a barber for service transactions.");
+      }
+      if (!args.services || args.services.length === 0) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Service required", "At least one service is required for service transactions.");
+      }
+    } else if (txType === 'retail') {
+      // Retail transactions require products
+      if (!args.products || args.products.length === 0) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Product required", "At least one product is required for retail transactions.");
       }
     }
 
@@ -277,12 +322,24 @@ export const createTransaction = mutation({
     console.log('[TRANSACTION] Generated IDs:', { transactionId, receiptNumber });
 
     // Extract control flags that shouldn't be stored in the database
-    const { skip_booking_creation, ...transactionFields } = args;
+    // Delivery fields are included in transactionFields and will be stored
+    const { skip_booking_creation, transaction_type, ...transactionFields } = args;
+
+    // Set default delivery status for delivery orders
+    if (transactionFields.fulfillment_type === 'delivery' && !transactionFields.delivery_status) {
+      (transactionFields as Record<string, unknown>).delivery_status = 'pending';
+    }
 
     const transactionData = {
       transaction_id: transactionId,
       receipt_number: receiptNumber,
       ...transactionFields,
+      // Explicitly set transaction_type (default to 'service' for backward compatibility)
+      transaction_type: txType,
+      // Ensure services is always an array (empty for retail)
+      services: args.services || [],
+      // barber can be undefined for retail transactions
+      barber: args.barber || undefined,
       createdAt: timestamp,
       updatedAt: timestamp,
     };
@@ -301,15 +358,17 @@ export const createTransaction = mutation({
     // Track created booking IDs for notifications
     const createdBookingIds: Id<"bookings">[] = [];
 
-    // Create booking records for services performed in POS (skip if it's a booking payment)
+    // Create booking records for services performed in POS (skip if it's a booking payment or retail transaction)
     console.log('[BOOKING CREATION] Checking if bookings should be created:', {
+      transactionType: txType,
       hasServices: !!args.services,
       servicesCount: args.services?.length || 0,
       skip_booking_creation: skip_booking_creation,
-      willCreateBookings: args.services && args.services.length > 0 && !skip_booking_creation
+      willCreateBookings: txType === 'service' && args.services && args.services.length > 0 && !skip_booking_creation
     });
 
-    if (args.services && args.services.length > 0 && !skip_booking_creation) {
+    // Only create bookings for service transactions with services (not retail)
+    if (txType === 'service' && args.services && args.services.length > 0 && !skip_booking_creation) {
       console.log('[BOOKING CREATION] Starting booking creation for', args.services.length, 'services');
 
       for (const serviceItem of args.services) {
@@ -469,13 +528,24 @@ export const createTransaction = mutation({
     // Update product stock if products were sold
     if (args.products) {
       for (const product of args.products) {
-        const productDoc = await ctx.db.get(product.product_id);
+        const productDoc = await ctx.db.get(product.product_id) as Record<string, unknown> | null;
         if (productDoc) {
-          await ctx.db.patch(product.product_id, {
-            stock: Math.max(0, productDoc.stock - product.quantity),
-            soldThisMonth: productDoc.soldThisMonth + product.quantity,
-            updatedAt: timestamp
-          });
+          // Check if this is a branch product (has branch_id) or catalog product (has created_by)
+          const isBranchProduct = 'branch_id' in productDoc;
+
+          if (isBranchProduct) {
+            // Branch products have soldThisMonth and updatedAt
+            await ctx.db.patch(product.product_id, {
+              stock: Math.max(0, (productDoc.stock as number) - product.quantity),
+              soldThisMonth: ((productDoc.soldThisMonth as number) || 0) + product.quantity,
+              updatedAt: timestamp
+            });
+          } else {
+            // Catalog products only have stock field
+            await ctx.db.patch(product.product_id, {
+              stock: Math.max(0, (productDoc.stock as number) - product.quantity),
+            });
+          }
         }
       }
     }
@@ -899,7 +969,9 @@ export const getTransactionByReceiptNumber = query({
     const customer = transaction.customer
       ? await ctx.db.get(transaction.customer)
       : null;
-    const barber = await ctx.db.get(transaction.barber);
+    const barber = transaction.barber
+      ? await ctx.db.get(transaction.barber)
+      : null;
     const processedBy = await ctx.db.get(transaction.processed_by);
     const voucher = transaction.voucher_applied
       ? await ctx.db.get(transaction.voucher_applied)
@@ -1033,13 +1105,24 @@ export const refundTransaction = mutation({
     // Restore product stock if products were sold
     if (transaction.products) {
       for (const product of transaction.products) {
-        const productDoc = await ctx.db.get(product.product_id);
+        const productDoc = await ctx.db.get(product.product_id) as Record<string, unknown> | null;
         if (productDoc) {
-          await ctx.db.patch(product.product_id, {
-            stock: productDoc.stock + product.quantity,
-            soldThisMonth: Math.max(0, productDoc.soldThisMonth - product.quantity),
-            updatedAt: timestamp
-          });
+          // Check if this is a branch product (has branch_id) or catalog product (has created_by)
+          const isBranchProduct = 'branch_id' in productDoc;
+
+          if (isBranchProduct) {
+            // Branch products have soldThisMonth and updatedAt
+            await ctx.db.patch(product.product_id, {
+              stock: (productDoc.stock as number) + product.quantity,
+              soldThisMonth: Math.max(0, ((productDoc.soldThisMonth as number) || 0) - product.quantity),
+              updatedAt: timestamp
+            });
+          } else {
+            // Catalog products only have stock field
+            await ctx.db.patch(product.product_id, {
+              stock: (productDoc.stock as number) + product.quantity,
+            });
+          }
         }
       }
     }
@@ -1055,5 +1138,243 @@ export const refundTransaction = mutation({
     }
 
     return { success: true };
+  },
+});
+
+// Get product/retail transaction history
+export const getProductTransactionHistory = query({
+  args: {
+    branch_id: v.id("branches"),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 20;
+
+    // Get all transactions for the branch
+    const transactions = await ctx.db
+      .query("transactions")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .order("desc")
+      .collect();
+
+    // Filter to only include transactions with products
+    const productTransactions = transactions
+      .filter((t) => t.products && t.products.length > 0 && t.payment_status === "completed")
+      .slice(0, limit);
+
+    // Populate related data
+    const populatedTransactions = await Promise.all(
+      productTransactions.map(async (transaction) => {
+        try {
+          const [customer, processedBy] = await Promise.all([
+            transaction.customer ? ctx.db.get(transaction.customer) : null,
+            transaction.processed_by ? ctx.db.get(transaction.processed_by) : null,
+          ]);
+
+          // Calculate product total for this transaction
+          const productTotal = (transaction.products || []).reduce(
+            (sum, p) => sum + (p.price * p.quantity), 0
+          );
+
+          return {
+            _id: transaction._id,
+            receipt_number: transaction.receipt_number,
+            transaction_type: transaction.transaction_type || 'service',
+            customer_name: customer?.username || transaction.customer_name || 'Walk-in Customer',
+            processed_by_name: processedBy?.username || 'Staff',
+            products: transaction.products,
+            product_total: productTotal,
+            total_amount: transaction.total_amount,
+            payment_method: transaction.payment_method,
+            createdAt: transaction.createdAt,
+          };
+        } catch (error) {
+          return {
+            _id: transaction._id,
+            receipt_number: transaction.receipt_number,
+            transaction_type: transaction.transaction_type || 'service',
+            customer_name: transaction.customer_name || 'Walk-in Customer',
+            processed_by_name: 'Staff',
+            products: transaction.products,
+            product_total: (transaction.products || []).reduce(
+              (sum, p) => sum + (p.price * p.quantity), 0
+            ),
+            total_amount: transaction.total_amount,
+            payment_method: transaction.payment_method,
+            createdAt: transaction.createdAt,
+          };
+        }
+      })
+    );
+
+    return populatedTransactions;
+  },
+});
+
+// Get customer's retail transaction history (for Shop order history)
+export const getCustomerRetailTransactions = query({
+  args: {
+    customerId: v.id("users"),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const transactions = await ctx.db
+      .query("transactions")
+      .withIndex("by_customer", (q) => q.eq("customer", args.customerId))
+      .order("desc")
+      .take(args.limit || 50);
+
+    // Filter to only retail transactions (products only, no services)
+    const retailTransactions = transactions.filter(
+      (t) => t.transaction_type === "retail" ||
+             (t.products && t.products.length > 0 && (!t.services || t.services.length === 0))
+    );
+
+    // Populate with branch info
+    const populatedTransactions = await Promise.all(
+      retailTransactions.map(async (transaction) => {
+        const branch = await ctx.db.get(transaction.branch_id);
+        return {
+          _id: transaction._id,
+          transaction_id: transaction.transaction_id,
+          receipt_number: transaction.receipt_number,
+          products: transaction.products || [],
+          total_amount: transaction.total_amount,
+          payment_method: transaction.payment_method,
+          payment_status: transaction.payment_status,
+          createdAt: transaction.createdAt,
+          branch_name: branch?.name || "Unknown Branch",
+          branch_address: branch?.address || "",
+          item_count: (transaction.products || []).reduce((sum, p) => sum + p.quantity, 0),
+          // Delivery fields
+          fulfillment_type: transaction.fulfillment_type || "pickup",
+          delivery_address: transaction.delivery_address || null,
+          delivery_status: transaction.delivery_status || null,
+          delivery_fee: transaction.delivery_fee || 0,
+        };
+      })
+    );
+
+    return populatedTransactions;
+  },
+});
+
+// Get all delivery orders (for Super Admin)
+export const getDeliveryOrders = query({
+  args: {
+    status: v.optional(v.union(
+      v.literal("pending"),
+      v.literal("preparing"),
+      v.literal("out_for_delivery"),
+      v.literal("delivered"),
+      v.literal("cancelled"),
+      v.literal("all")
+    )),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 100;
+
+    // Get all transactions
+    const transactions = await ctx.db
+      .query("transactions")
+      .order("desc")
+      .take(limit * 2); // Take extra to filter
+
+    // Filter to delivery orders only
+    let deliveryOrders = transactions.filter(
+      (t) => t.fulfillment_type === "delivery"
+    );
+
+    // Filter by status if specified
+    if (args.status && args.status !== "all") {
+      deliveryOrders = deliveryOrders.filter(
+        (t) => t.delivery_status === args.status
+      );
+    }
+
+    // Limit results
+    deliveryOrders = deliveryOrders.slice(0, limit);
+
+    // Populate with customer and branch info
+    const populatedOrders = await Promise.all(
+      deliveryOrders.map(async (order) => {
+        const [customer, branch] = await Promise.all([
+          order.customer ? ctx.db.get(order.customer) : null,
+          ctx.db.get(order.branch_id),
+        ]);
+
+        return {
+          _id: order._id,
+          transaction_id: order.transaction_id,
+          receipt_number: order.receipt_number,
+          customer_name: customer?.username || order.customer_name || "Guest",
+          customer_email: customer?.email || order.customer_email,
+          customer_phone: customer?.mobile_number || order.customer_phone,
+          products: order.products || [],
+          total_amount: order.total_amount,
+          delivery_fee: order.delivery_fee || 0,
+          delivery_address: order.delivery_address,
+          delivery_status: order.delivery_status || "pending",
+          estimated_delivery: order.estimated_delivery,
+          payment_method: order.payment_method,
+          payment_status: order.payment_status,
+          branch_name: branch?.name || "Unknown Branch",
+          branch_id: order.branch_id,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+          notes: order.notes,
+          item_count: (order.products || []).reduce((sum, p) => sum + p.quantity, 0),
+        };
+      })
+    );
+
+    return populatedOrders;
+  },
+});
+
+// Update delivery status (for Super Admin / Staff)
+export const updateDeliveryStatus = mutation({
+  args: {
+    transactionId: v.id("transactions"),
+    delivery_status: v.union(
+      v.literal("pending"),
+      v.literal("preparing"),
+      v.literal("out_for_delivery"),
+      v.literal("delivered"),
+      v.literal("cancelled")
+    ),
+    notes: v.optional(v.string()),
+    estimated_delivery: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const transaction = await ctx.db.get(args.transactionId);
+    if (!transaction) {
+      throwUserError(ERROR_CODES.TRANSACTION_NOT_FOUND, "Transaction not found", "The transaction you are trying to update does not exist.");
+    }
+
+    if (transaction.fulfillment_type !== "delivery") {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Not a delivery order", "This transaction is not a delivery order.");
+    }
+
+    const timestamp = Date.now();
+    const updates: Record<string, unknown> = {
+      delivery_status: args.delivery_status,
+      updatedAt: timestamp,
+    };
+
+    if (args.notes) {
+      updates.notes = transaction.notes
+        ? `${transaction.notes}\n[${new Date(timestamp).toLocaleString()}] Status: ${args.delivery_status} - ${args.notes}`
+        : `[${new Date(timestamp).toLocaleString()}] Status: ${args.delivery_status} - ${args.notes}`;
+    }
+
+    if (args.estimated_delivery) {
+      updates.estimated_delivery = args.estimated_delivery;
+    }
+
+    await ctx.db.patch(args.transactionId, updates);
+
+    return { success: true, delivery_status: args.delivery_status };
   },
 });

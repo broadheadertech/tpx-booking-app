@@ -23,6 +23,21 @@ export default defineSchema({
     carousel_images: v.optional(v.array(v.string())), // Array of carousel image URLs
     // Clerk RBAC field (Story 10.1)
     clerk_org_id: v.optional(v.string()), // Clerk Organization ID for branch-org mapping
+    // Branch Profile fields (public-facing storefront)
+    slug: v.optional(v.string()), // URL-friendly name: "kapitolyo-branch"
+    description: v.optional(v.string()), // About this branch (shown on public profile)
+    profile_photo: v.optional(v.string()), // Profile picture/logo URL
+    cover_photo: v.optional(v.string()), // Cover/banner image URL
+    social_links: v.optional(
+      v.object({
+        facebook: v.optional(v.string()),
+        instagram: v.optional(v.string()),
+        tiktok: v.optional(v.string()),
+        twitter: v.optional(v.string()), // X/Twitter
+        youtube: v.optional(v.string()),
+        website: v.optional(v.string()),
+      })
+    ),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -30,7 +45,9 @@ export default defineSchema({
     .index("by_active", ["is_active"])
     .index("by_created_at", ["createdAt"])
     // Clerk RBAC index (Story 10.1)
-    .index("by_clerk_org_id", ["clerk_org_id"]),
+    .index("by_clerk_org_id", ["clerk_org_id"])
+    // Branch Profile index
+    .index("by_slug", ["slug"]),
 
   // Branding / Whitelabel settings per branch
   branding: defineTable({
@@ -101,6 +118,98 @@ export default defineSchema({
     .index("by_version", ["version"])
     .index("by_created_at", ["createdAt"]),
 
+  // Branch Posts - Social-style posts by barbers and admins for branch profiles
+  branch_posts: defineTable({
+    // Core relationship
+    branch_id: v.id("branches"),
+    author_id: v.id("users"),
+    author_type: v.union(
+      v.literal("barber"),
+      v.literal("branch_admin"),
+      v.literal("super_admin")
+    ),
+
+    // Content
+    post_type: v.union(
+      v.literal("showcase"), // Work photos/videos
+      v.literal("promo"), // Promotional offers
+      v.literal("availability"), // Open slots announcement
+      v.literal("announcement"), // General news
+      v.literal("tip"), // Hair care tips
+      v.literal("vacation") // Vacation/closure notice
+    ),
+    content: v.string(),
+    images: v.optional(v.array(v.string())), // Array of image URLs
+
+    // Vacation/closure date range (for vacation post type)
+    vacation_start: v.optional(v.number()), // Start timestamp
+    vacation_end: v.optional(v.number()), // End timestamp
+
+    // BT3: Shoppable Posts - Product tagging
+    tagged_products: v.optional(v.array(v.object({
+      product_id: v.id("products"),
+      position: v.optional(v.object({  // Position on image (for tap-to-shop)
+        x: v.number(),  // 0-100 percentage
+        y: v.number(),  // 0-100 percentage
+      })),
+      note: v.optional(v.string()),  // "Used for styling" etc.
+    }))),
+    is_shoppable: v.optional(v.boolean()),  // Quick filter flag
+
+    // Moderation
+    status: v.union(
+      v.literal("pending"), // Awaiting approval
+      v.literal("published"), // Live
+      v.literal("archived"), // Hidden but not deleted
+      v.literal("rejected") // Rejected by admin
+    ),
+    rejection_reason: v.optional(v.string()),
+
+    // Features
+    pinned: v.optional(v.boolean()), // Pin to top of feed
+    expires_at: v.optional(v.number()), // For time-limited promos
+
+    // Engagement tracking
+    view_count: v.optional(v.number()),
+    likes_count: v.optional(v.number()),
+    // BT3: Product engagement
+    product_clicks: v.optional(v.number()),  // Times products were clicked
+    product_purchases: v.optional(v.number()),  // Purchases from this post
+
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_branch_status", ["branch_id", "status"])
+    .index("by_author", ["author_id"])
+    .index("by_branch_type", ["branch_id", "post_type"])
+    .index("by_branch_pinned", ["branch_id", "pinned"])
+    .index("by_created_at", ["createdAt"])
+    .index("by_branch_shoppable", ["branch_id", "is_shoppable"]),
+
+  // BT3: Post-Product Purchase Tracking
+  post_product_purchases: defineTable({
+    post_id: v.id("branch_posts"),
+    product_id: v.id("products"),
+    user_id: v.optional(v.id("users")),  // May be guest purchase
+    transaction_id: v.optional(v.id("transactions")),
+    quantity: v.number(),
+    unit_price: v.number(),
+    total_price: v.number(),
+    source: v.union(
+      v.literal("feed_quick_buy"),    // Quick purchase from feed
+      v.literal("feed_add_to_cart"),  // Added to cart from feed
+      v.literal("product_modal")       // From product detail modal
+    ),
+    createdAt: v.number(),
+  })
+    .index("by_post", ["post_id"])
+    .index("by_product", ["product_id"])
+    .index("by_user", ["user_id"])
+    .index("by_transaction", ["transaction_id"])
+    .index("by_created", ["createdAt"]),
+
   // Users table for authentication
   users: defineTable({
     username: v.string(),
@@ -121,6 +230,7 @@ export default defineSchema({
     ),
     branch_id: v.optional(v.id("branches")), // Optional for super_admin and customers, required for staff/barber/admin/branch_admin
     is_active: v.boolean(),
+    is_guest: v.optional(v.boolean()), // true for guest bookings (anonymous customers)
     avatar: v.optional(v.string()),
     bio: v.optional(v.string()),
     skills: v.array(v.string()),
@@ -185,6 +295,15 @@ export default defineSchema({
     // Password reset fields
     password_reset_token: v.optional(v.string()),
     password_reset_expires: v.optional(v.number()),
+
+    // ============================================================================
+    // CUSTOMER ANALYTICS FIELDS (AI Email Marketing - Epic 27)
+    // ============================================================================
+    // These fields are used for RFM segmentation, churn risk analysis, and AI campaigns
+    lastBookingDate: v.optional(v.number()), // Timestamp of last booking/visit
+    totalBookings: v.optional(v.number()),   // Total number of bookings
+    totalSpent: v.optional(v.number()),      // Total amount spent (in centavos)
+
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -210,6 +329,7 @@ export default defineSchema({
     phone: v.optional(v.string()),
     avatar: v.optional(v.string()),
     avatarStorageId: v.optional(v.id("_storage")),
+    coverPhotoStorageId: v.optional(v.id("_storage")),
     bio: v.optional(v.string()),
     experience: v.string(),
     rating: v.number(),
@@ -279,6 +399,43 @@ export default defineSchema({
     // Custom booking feature - allows barbers to have a custom form instead of regular booking
     custom_booking_enabled: v.optional(v.boolean()),
     custom_booking_form_id: v.optional(v.id("custom_booking_forms")),
+
+    // ============================================================================
+    // BARBER MATCHER PROFILE (Help Me Choose Feature - Phase 3)
+    // ============================================================================
+    // Style vibes the barber excels at (used for matching)
+    style_vibes: v.optional(v.array(v.union(
+      v.literal("classic"),    // Traditional, clean cuts
+      v.literal("trendy"),     // Modern, fashion-forward
+      v.literal("edgy"),       // Bold, experimental
+      v.literal("clean")       // Minimalist, precise
+    ))),
+    // Conversation style during cuts
+    conversation_style: v.optional(v.union(
+      v.literal("chatty"),     // Loves to talk, social
+      v.literal("balanced"),   // Responsive but not pushy
+      v.literal("quiet")       // Focused, minimal small talk
+    )),
+    // Work pace/speed
+    work_speed: v.optional(v.union(
+      v.literal("fast"),       // Efficient, quick service
+      v.literal("moderate"),   // Standard pace
+      v.literal("detailed")    // Takes time for precision
+    )),
+    // Price positioning
+    price_tier: v.optional(v.union(
+      v.literal("budget"),     // Entry-level pricing
+      v.literal("mid"),        // Average market rate
+      v.literal("premium")     // Top-tier pricing
+    )),
+    // Showcase images for matcher swipe (best work samples)
+    showcase_images: v.optional(v.array(v.string())),
+    // Barber's own tagline/intro
+    matcher_tagline: v.optional(v.string()),
+
+    // Weekly earnings goal (set by barber)
+    weekly_goal: v.optional(v.number()),
+
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -336,6 +493,11 @@ export default defineSchema({
     paymongo_link_id: v.optional(v.string()),      // PayMongo payment link ID
     paymongo_payment_id: v.optional(v.string()),   // PayMongo payment ID
     convenience_fee_paid: v.optional(v.number()),  // Amount of convenience fee paid for Pay Later
+    payment_method: v.optional(v.string()),        // Payment method: "paymongo", "wallet", "cash", "combo"
+    // Combo payment fields (wallet + PayMongo)
+    is_combo_payment: v.optional(v.boolean()),     // True if paid with wallet + PayMongo
+    wallet_portion: v.optional(v.number()),        // Amount paid from wallet
+    wallet_debit_failed: v.optional(v.boolean()),  // True if wallet debit failed after PayMongo success
     price: v.number(),
     voucher_id: v.optional(v.id("vouchers")), // Link to voucher if used
     discount_amount: v.optional(v.number()), // Discount applied
@@ -564,19 +726,21 @@ export default defineSchema({
     customer_phone: v.optional(v.string()), // For walk-in customers
     customer_email: v.optional(v.string()), // For walk-in customers
     customer_address: v.optional(v.string()), // For walk-in customers
-    barber: v.id("barbers"),
-    services: v.array(
-      v.object({
-        service_id: v.id("services"),
-        service_name: v.string(),
-        price: v.number(),
-        quantity: v.number(),
-      })
+    barber: v.optional(v.id("barbers")), // Optional for retail-only transactions
+    services: v.optional(
+      v.array(
+        v.object({
+          service_id: v.id("services"),
+          service_name: v.string(),
+          price: v.number(),
+          quantity: v.number(),
+        })
+      )
     ),
     products: v.optional(
       v.array(
         v.object({
-          product_id: v.id("products"),
+          product_id: v.union(v.id("products"), v.id("productCatalog")), // Support both branch and catalog products
           product_name: v.string(),
           price: v.number(),
           quantity: v.number(),
@@ -604,6 +768,12 @@ export default defineSchema({
       v.literal("failed"),
       v.literal("refunded")
     ),
+    transaction_type: v.optional(
+      v.union(
+        v.literal("service"),
+        v.literal("retail")
+      )
+    ), // "service" = barber+services required, "retail" = products only
     notes: v.optional(v.string()),
     cash_received: v.optional(v.number()), // Amount of cash received for cash payments
     change_amount: v.optional(v.number()), // Change given back for cash payments
@@ -611,6 +781,28 @@ export default defineSchema({
     points_redeemed: v.optional(v.number()), // Integer ×100 format (e.g., 20000 = 200 pts = ₱200)
     wallet_used: v.optional(v.number()), // Wallet amount deducted (e.g., 150 = ₱150)
     cash_collected: v.optional(v.number()), // Cash portion collected (e.g., 150 = ₱150)
+    // Delivery fields
+    fulfillment_type: v.optional(v.literal("delivery")), // Delivery only
+    delivery_address: v.optional(v.object({
+      street_address: v.string(),
+      barangay: v.optional(v.string()),
+      city: v.string(),
+      province: v.string(),
+      zip_code: v.string(),
+      landmark: v.optional(v.string()),
+      contact_name: v.string(),
+      contact_phone: v.string(),
+      notes: v.optional(v.string()),
+    })),
+    delivery_fee: v.optional(v.number()), // Delivery fee in pesos
+    delivery_status: v.optional(v.union(
+      v.literal("pending"),
+      v.literal("preparing"),
+      v.literal("out_for_delivery"),
+      v.literal("delivered"),
+      v.literal("cancelled")
+    )),
+    estimated_delivery: v.optional(v.string()), // e.g., "30-45 mins" or timestamp
     receipt_number: v.string(),
     processed_by: v.id("users"), // Staff member who processed the transaction
     createdAt: v.number(),
@@ -651,7 +843,7 @@ export default defineSchema({
         products: v.optional(
           v.array(
             v.object({
-              product_id: v.id("products"),
+              product_id: v.union(v.id("products"), v.id("productCatalog")), // Support both branch and catalog products
               product_name: v.string(),
               price: v.number(),
               quantity: v.number(),
@@ -1071,6 +1263,9 @@ export default defineSchema({
     balance: v.number(),
     bonus_balance: v.optional(v.number()), // Bonus from top-ups (e.g., ₱500→₱550 gives ₱50 bonus)
     currency: v.optional(v.string()),
+    // Story 23.4: Monthly bonus cap tracking
+    bonus_topup_this_month: v.optional(v.number()), // Cumulative top-up amount that received bonus this month (pesos)
+    bonus_month_started: v.optional(v.number()),    // Timestamp when current bonus month started
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_user", ["user_id"]),
@@ -1084,6 +1279,7 @@ export default defineSchema({
       v.literal("refund")
     ),
     amount: v.number(),
+    bonus_amount: v.optional(v.number()), // Bonus amount given for this top-up (in pesos)
     status: v.union(
       v.literal("pending"),
       v.literal("completed"),
@@ -1147,6 +1343,59 @@ export default defineSchema({
     .index("by_type", ["type"])
     .index("by_created_at", ["created_at"])
     .index("by_user_created", ["user_id", "created_at"]),
+
+  // ============================================================================
+  // CUSTOMER-BRANCH ACTIVITY TRACKING (Marketing, Promotions, Churn)
+  // ============================================================================
+
+  // Tracks customer activity per branch for marketing and churn prevention
+  // Pre-computed metrics updated after each booking and via daily cron job
+  // Status thresholds: active (0-12 days), at_risk (13-30 days), churned (31+ days)
+  customer_branch_activity: defineTable({
+    // Core relationship
+    customer_id: v.id("users"),
+    branch_id: v.id("branches"),
+
+    // Activity metrics
+    first_visit_date: v.number(),        // Timestamp of first completed booking
+    last_visit_date: v.number(),         // Timestamp of last completed booking
+    total_bookings: v.number(),          // Completed bookings count
+    total_spent: v.number(),             // Total revenue from customer (pesos)
+
+    // Engagement status
+    // - new: Registered but no completed booking yet
+    // - active: Visited within 12 days (normal haircut cycle)
+    // - at_risk: 13-30 days since last visit (overdue, needs reminder)
+    // - churned: 31+ days since last visit (lost customer)
+    // - win_back: Was churned, has now returned
+    status: v.union(
+      v.literal("new"),
+      v.literal("active"),
+      v.literal("at_risk"),
+      v.literal("churned"),
+      v.literal("win_back")
+    ),
+    days_since_last_visit: v.optional(v.number()),
+
+    // Marketing preferences
+    opted_in_marketing: v.boolean(),
+    preferred_contact: v.optional(v.union(
+      v.literal("sms"),
+      v.literal("email"),
+      v.literal("push"),
+      v.literal("none")
+    )),
+
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_customer", ["customer_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_customer_branch", ["customer_id", "branch_id"])
+    .index("by_branch_status", ["branch_id", "status"])
+    .index("by_branch_last_visit", ["branch_id", "last_visit_date"])
+    .index("by_branch_total_spent", ["branch_id", "total_spent"]),
 
   // ============================================================================
   // VIP TIER SYSTEM (Customer Experience)
@@ -1254,40 +1503,7 @@ export default defineSchema({
     .index("by_type", ["achievement_type"])
     .index("by_created_at", ["createdAt"]),
 
-  // ============================================================================
-  // SOCIAL FEED POSTS (Instagram-style announcements & updates)
-  // ============================================================================
-  branch_posts: defineTable({
-    branch_id: v.id("branches"),
-    author_id: v.optional(v.id("users")), // Staff/Admin who created the post
-    barber_id: v.optional(v.id("barbers")), // If post is about a specific barber's work
-    post_type: v.union(
-      v.literal("announcement"), // General announcements
-      v.literal("showcase"), // Haircut showcase / portfolio
-      v.literal("promotion"), // Promo announcements
-      v.literal("event"), // Events like donation drives
-      v.literal("achievement"), // Barber achievements
-      v.literal("tip") // Grooming tips
-    ),
-    title: v.optional(v.string()),
-    content: v.string(), // Post caption/description
-    image_url: v.optional(v.string()), // Image URL
-    image_storage_id: v.optional(v.id("_storage")), // Or Convex storage
-    tags: v.optional(v.array(v.string())), // Hashtags
-    likes_count: v.number(),
-    is_pinned: v.optional(v.boolean()), // Pinned posts appear first
-    is_active: v.boolean(),
-    created_at: v.number(),
-    updated_at: v.number(),
-  })
-    .index("by_branch", ["branch_id"])
-    .index("by_type", ["post_type"])
-    .index("by_barber", ["barber_id"])
-    .index("by_pinned", ["is_pinned"])
-    .index("by_active_created", ["is_active", "created_at"])
-    .index("by_created", ["created_at"]),
-
-  // Post likes tracking
+  // Post likes tracking (for branch_posts)
   post_likes: defineTable({
     post_id: v.id("branch_posts"),
     user_id: v.id("users"),
@@ -1401,18 +1617,41 @@ export default defineSchema({
     branch_id: v.id("branches"),
     clock_in: v.number(), // Unix timestamp (ms)
     clock_out: v.optional(v.number()), // null until clocked out
+    status: v.optional(v.string()), // "pending_in" | "approved_in" | "pending_out" | "approved_out" | "rejected"
+    reviewed_by: v.optional(v.string()), // staff user name who approved/rejected
+    reviewed_at: v.optional(v.number()), // timestamp of approval/rejection
     created_at: v.number(),
   })
     .index("by_barber", ["barber_id"])
     .index("by_branch", ["branch_id"])
     .index("by_date", ["clock_in"])
-    .index("by_barber_date", ["barber_id", "clock_in"]),
+    .index("by_barber_date", ["barber_id", "clock_in"])
+    .index("by_branch_status", ["branch_id", "status"]),
+
+  // Default service templates managed by Super Admin
+  // Copied to new branches on creation
+  defaultServices: defineTable({
+    name: v.string(),
+    description: v.string(),
+    price: v.number(),
+    duration_minutes: v.number(),
+    category: v.string(),
+    is_active: v.boolean(),
+    hide_price: v.optional(v.boolean()),
+    image: v.optional(v.string()),
+    sort_order: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_category", ["category"])
+    .index("by_active", ["is_active"]),
 
   // Central product catalog managed by Super Admin (Central Warehouse Inventory)
   productCatalog: defineTable({
     name: v.string(),
     description: v.optional(v.string()),
-    price: v.number(), // Whole pesos (e.g., 500 = ₱500)
+    price: v.number(), // Whole pesos (e.g., 500 = ₱500) - this is the SALE price when discount is active
+    original_price: v.optional(v.number()), // Original price before discount (shown with strikethrough)
     cost: v.optional(v.number()), // Cost per unit for profit tracking
     category: v.string(),
     brand: v.optional(v.string()), // Product brand
@@ -1424,13 +1663,22 @@ export default defineSchema({
     minStock: v.number(), // Low stock threshold
     is_active: v.boolean(),
     price_enforced: v.boolean(), // If true, branches cannot change price
+    // Promotional/Discount fields
+    discount_percent: v.optional(v.number()), // Discount percentage (e.g., 37 for 37% off)
+    promo_label: v.optional(v.string()), // e.g., "Flash Sale", "Hot Deal", "Limited"
+    promo_start: v.optional(v.number()), // Promo start timestamp
+    promo_end: v.optional(v.number()), // Promo end timestamp
+    promo_quantity_limit: v.optional(v.number()), // Max items at promo price (e.g., "Only 50 items!")
+    promo_quantity_sold: v.optional(v.number()), // Tracks how many sold at promo price
+    is_featured: v.optional(v.boolean()), // Featured in flash sales
     created_at: v.number(),
     created_by: v.id("users"),
   })
     .index("by_category", ["category"])
     .index("by_is_active", ["is_active"])
     .index("by_stock", ["stock"])
-    .index("by_sku", ["sku"]),
+    .index("by_sku", ["sku"])
+    .index("by_featured", ["is_featured"]),
 
   // Inventory batches for FIFO tracking (First In, First Out)
   inventoryBatches: defineTable({
@@ -1713,6 +1961,7 @@ export default defineSchema({
     intangible_assets: v.number(),
     current_liabilities: v.number(),
     long_term_liabilities: v.number(),
+    cash_and_equivalents: v.optional(v.number()), // Balancing entry for Assets = Liabilities + Equity
     // Calculated metrics
     working_capital: v.number(),          // Current Assets - Current Liabilities
     debt_to_equity_ratio: v.optional(v.number()),
@@ -1752,6 +2001,7 @@ export default defineSchema({
       current_liabilities: v.number(),
       long_term_liabilities: v.number(),
       retained_earnings: v.number(),
+      cash_and_equivalents: v.optional(v.number()), // Balancing entry for Assets = Liabilities + Equity
       inventory_value: v.number(),
       revenue: v.number(),
       expenses: v.number(),
@@ -2108,13 +2358,14 @@ export default defineSchema({
       current_liabilities: v.number(),
       long_term_liabilities: v.number(),
       retained_earnings: v.number(),
+      cash_and_equivalents: v.optional(v.number()), // Balancing entry for Assets = Liabilities + Equity
       // Automated cash tracking
       royalty_cash_received: v.number(),
       product_order_cash_received: v.number(),
       total_sales_cash: v.number(),
       // Receivables
-      royalty_receivables: v.number(),
-      order_receivables: v.number(),
+      royalty_receivables: v.optional(v.number()),
+      order_receivables: v.optional(v.number()),
       // P&L data
       total_revenue: v.number(),
       total_expenses: v.number(),
@@ -2147,6 +2398,7 @@ export default defineSchema({
     intangible_assets: v.number(),
     current_liabilities: v.number(),
     long_term_liabilities: v.number(),
+    cash_and_equivalents: v.optional(v.number()), // Balancing entry for Assets = Liabilities + Equity
     royalty_cash_received: v.optional(v.number()),
     product_order_cash_received: v.optional(v.number()),
     total_sales_cash: v.optional(v.number()),
@@ -2317,6 +2569,10 @@ export default defineSchema({
     booking_fee: v.optional(v.number()),
     price: v.number(),                          // Service price
 
+    // Combo payment info (wallet + PayMongo)
+    is_combo_payment: v.optional(v.boolean()),  // True if paying with wallet + PayMongo
+    wallet_portion: v.optional(v.number()),     // Amount paid from wallet
+
     // Payment info
     payment_type: v.union(v.literal("pay_now"), v.literal("pay_later")),
     paymongo_link_id: v.optional(v.string()),   // PayMongo link ID
@@ -2462,6 +2718,20 @@ export default defineSchema({
       minAmount: v.number(), // Minimum top-up amount in pesos
       bonus: v.number(),     // Bonus amount in pesos
     }))),
+    // Story 23.4: Monthly bonus cap - limits bonus-eligible top-ups per user per month
+    monthly_bonus_cap: v.optional(v.number()), // Max top-up amount that can receive bonus per month (pesos), 0 = unlimited
+    created_at: v.number(),
+    updated_at: v.number(),
+  }),
+
+  // Shop Configuration - Global settings for e-commerce shop
+  shopConfig: defineTable({
+    delivery_fee: v.number(), // Flat delivery fee in pesos (e.g., 50)
+    free_delivery_threshold: v.optional(v.number()), // Min order amount for free delivery (0 = disabled)
+    min_order_amount: v.optional(v.number()), // Minimum order amount (0 = no minimum)
+    enable_delivery: v.boolean(), // Toggle delivery option
+    enable_pickup: v.boolean(), // Toggle pickup option
+    estimated_delivery_days: v.optional(v.number()), // Estimated delivery time in days
     created_at: v.number(),
     updated_at: v.number(),
   }),
@@ -2526,4 +2796,244 @@ export default defineSchema({
     .index("by_branch", ["branch_id"])
     .index("by_status", ["status"])
     .index("by_branch_status", ["branch_id", "status"]),
+
+  // ============================================================================
+  // BARBER MATCHER TABLES (Help Me Choose Feature - Phase 3)
+  // ============================================================================
+
+  // User Style Preferences - Stored quiz results for personalization
+  user_style_preferences: defineTable({
+    user_id: v.id("users"),
+    // Quiz results
+    preferred_vibes: v.optional(v.array(v.union(
+      v.literal("classic"),
+      v.literal("trendy"),
+      v.literal("edgy"),
+      v.literal("clean")
+    ))),
+    preferred_conversation: v.optional(v.union(
+      v.literal("chatty"),
+      v.literal("balanced"),
+      v.literal("quiet")
+    )),
+    preferred_speed: v.optional(v.union(
+      v.literal("fast"),
+      v.literal("moderate"),
+      v.literal("detailed")
+    )),
+    budget_preference: v.optional(v.union(
+      v.literal("budget"),
+      v.literal("mid"),
+      v.literal("premium"),
+      v.literal("any")
+    )),
+    time_preference: v.optional(v.union(
+      v.literal("weekday_am"),
+      v.literal("weekday_pm"),
+      v.literal("weekend"),
+      v.literal("flexible")
+    )),
+    // Last match results for "Find Similar" feature
+    last_matched_barber_id: v.optional(v.id("barbers")),
+    last_match_score: v.optional(v.number()),
+    // Learning data
+    swipe_count: v.optional(v.number()),
+    quiz_completed_at: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_last_matched", ["last_matched_barber_id"]),
+
+  // Style Swipe History - Track user's swipe preferences for learning
+  style_swipe_history: defineTable({
+    user_id: v.id("users"),
+    image_url: v.string(),        // The haircut image shown
+    barber_id: v.optional(v.id("barbers")), // If from a specific barber's portfolio
+    liked: v.boolean(),           // true = swiped right, false = swiped left
+    style_tags: v.optional(v.array(v.string())), // Tags associated with this image
+    createdAt: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_liked", ["user_id", "liked"])
+    .index("by_barber", ["barber_id"]),
+
+  // Barber Match History - Track successful matches for analytics
+  barber_match_history: defineTable({
+    user_id: v.id("users"),
+    barber_id: v.id("barbers"),
+    match_score: v.number(),      // 0-100 percentage
+    match_reasons: v.array(v.string()), // ["style_match", "conversation_match", etc.]
+    resulted_in_booking: v.optional(v.boolean()),
+    booking_id: v.optional(v.id("bookings")),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_barber", ["barber_id"])
+    .index("by_user_barber", ["user_id", "barber_id"])
+    .index("by_resulted_booking", ["resulted_in_booking"]),
+
+  // ============================================================
+  // BT2: PERSONALIZED FEED ALGORITHM TABLES
+  // ============================================================
+
+  // Feed Interactions - Track individual user engagement with posts
+  feed_interactions: defineTable({
+    user_id: v.id("users"),
+    post_id: v.id("branch_posts"),
+    interaction_type: v.union(
+      v.literal("view"),           // Viewed the post
+      v.literal("view_long"),      // Viewed > 5 seconds (dwell time)
+      v.literal("like"),           // Fire reaction
+      v.literal("bookmark"),       // Saved post
+      v.literal("book"),           // Booked from this post
+      v.literal("skip")            // Scrolled past quickly (< 1 sec)
+    ),
+    // Context data
+    barber_id: v.optional(v.id("barbers")), // Barber associated with post
+    post_type: v.optional(v.string()),      // showcase, promo, etc.
+    style_vibes: v.optional(v.array(v.string())), // Vibes from barber's profile
+    // Metadata
+    view_duration_ms: v.optional(v.number()), // How long they viewed
+    resulted_in_booking: v.optional(v.boolean()),
+    booking_id: v.optional(v.id("bookings")),
+    createdAt: v.number(),
+    // Decay tracking
+    expires_at: v.optional(v.number()),      // When signal should decay
+  })
+    .index("by_user", ["user_id"])
+    .index("by_post", ["post_id"])
+    .index("by_user_post", ["user_id", "post_id"])
+    .index("by_user_type", ["user_id", "interaction_type"])
+    .index("by_barber", ["barber_id"])
+    .index("by_created", ["createdAt"])
+    .index("by_expires", ["expires_at"]),
+
+  // User Feed Profile - Aggregated preferences for fast lookups
+  user_feed_profile: defineTable({
+    user_id: v.id("users"),
+    // Barber affinity scores (denormalized for performance)
+    barber_affinities: v.optional(v.array(v.object({
+      barber_id: v.id("barbers"),
+      score: v.number(),           // 0-100 affinity score
+      last_interaction: v.number(), // Timestamp
+      booking_count: v.number(),    // Times booked
+      like_count: v.number(),       // Times liked their posts
+    }))),
+    // Style preferences (from Matcher + learned from feed)
+    preferred_vibes: v.optional(v.array(v.union(
+      v.literal("classic"),
+      v.literal("trendy"),
+      v.literal("edgy"),
+      v.literal("clean")
+    ))),
+    vibe_scores: v.optional(v.object({
+      classic: v.optional(v.number()),
+      trendy: v.optional(v.number()),
+      edgy: v.optional(v.number()),
+      clean: v.optional(v.number()),
+    })),
+    // Content type preferences
+    preferred_post_types: v.optional(v.array(v.string())),
+    // Learning stats
+    total_interactions: v.number(),
+    last_feed_view: v.optional(v.number()),
+    profile_version: v.number(),   // For cache invalidation
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_updated", ["updatedAt"]),
+
+  // Post Bookmarks - Dedicated table for saved posts
+  post_bookmarks: defineTable({
+    user_id: v.id("users"),
+    post_id: v.id("branch_posts"),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_post", ["post_id"])
+    .index("by_user_post", ["user_id", "post_id"])
+    .index("by_created", ["createdAt"]),
+
+  // Product Wishlists - Customer saved products for later
+  wishlists: defineTable({
+    user_id: v.id("users"),
+    product_id: v.union(v.id("products"), v.id("productCatalog")), // Support both branch and catalog products
+    createdAt: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_product", ["product_id"])
+    .index("by_user_product", ["user_id", "product_id"])
+    .index("by_created", ["createdAt"]),
+
+  // ============================================================================
+  // USER ADDRESSES (Delivery Support)
+  // ============================================================================
+  user_addresses: defineTable({
+    user_id: v.id("users"),
+    label: v.string(), // "Home", "Work", "Other"
+    // Address components
+    street_address: v.string(), // House/Unit No., Street, Subdivision
+    barangay: v.optional(v.string()),
+    city: v.string(),
+    province: v.string(),
+    zip_code: v.string(),
+    landmark: v.optional(v.string()),
+    // Contact info
+    contact_name: v.string(),
+    contact_phone: v.string(),
+    is_default: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_default", ["user_id", "is_default"]),
+
+  // ============================================================================
+  // SHOP BANNERS - Promotional carousel for customer shop
+  // ============================================================================
+  shopBanners: defineTable({
+    // Banner type: product_promo, custom_ad, external_link
+    type: v.union(
+      v.literal("product_promo"),  // Auto-generated from product discount
+      v.literal("custom_ad"),       // Manual image upload (internal promotion)
+      v.literal("external_link")    // External website/partner ads
+    ),
+    // Display content
+    title: v.string(),              // e.g., "MEGA SALE", "NEW ARRIVALS"
+    subtitle: v.optional(v.string()), // e.g., "Up to 50% OFF"
+    badge: v.optional(v.string()),  // e.g., "Sale", "New", "Hot", "Partner"
+    // Image (either storage ID or external URL)
+    image_storage_id: v.optional(v.id("_storage")),
+    image_url: v.optional(v.string()),
+    // Link/action configuration
+    link_type: v.union(
+      v.literal("product"),         // Navigate to product detail
+      v.literal("category"),        // Filter by category
+      v.literal("external"),        // Open external URL
+      v.literal("none")             // No action (display only)
+    ),
+    link_url: v.optional(v.string()),       // External URL or category slug
+    product_id: v.optional(v.id("productCatalog")), // Link to specific product
+    // Styling
+    gradient: v.optional(v.string()), // e.g., "from-orange-500 to-red-600"
+    text_color: v.optional(v.string()), // "white" or "dark"
+    // Scheduling & visibility
+    is_active: v.boolean(),
+    sort_order: v.number(),         // Display order (lower = first)
+    start_date: v.optional(v.number()), // Promo start timestamp
+    end_date: v.optional(v.number()),   // Promo end timestamp
+    // Tracking
+    click_count: v.optional(v.number()),
+    impression_count: v.optional(v.number()),
+    // Metadata
+    created_by: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_active", ["is_active"])
+    .index("by_type", ["type"])
+    .index("by_sort_order", ["sort_order"])
+    .index("by_active_sort", ["is_active", "sort_order"]),
 });

@@ -9,11 +9,11 @@ import {
 } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { sendCustomBookingStatusUpdate } from '../../services/emailService'
 
 const CustomBookingsManagement = ({ onRefresh, user }) => {
-  const { sessionToken } = useAuth()
+  const { sessionToken } = useCurrentUser()
   const [activeTab, setActiveTab] = useState('submissions') // 'submissions' | 'forms'
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')

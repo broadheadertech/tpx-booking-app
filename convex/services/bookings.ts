@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
-// import { api } from "../_generated/api"; // Removed to break circular dependency
+import { api } from "../_generated/api";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { getCurrentUser } from "../lib/clerkAuth";
 import type { Id } from "../_generated/dataModel";
@@ -86,13 +86,29 @@ export const getMyBookings = query({
           price: booking.price,
           final_price: booking.final_price,
           payment_status: booking.payment_status,
+          payment_method: booking.payment_method,
           payment_type: booking.payment_type,
+          booking_fee: booking.booking_fee || 0,
+          service_price: service?.price || booking.price || 0,
           serviceName: service?.name || "Unknown Service",
           serviceDuration: service?.duration_minutes || 30,
           barberName: barber?.full_name || "Any Available",
           branchName: branch?.name || "Unknown Branch",
           branchPhone: branch?.phone,
           createdAt: booking.createdAt,
+          // Include full objects for rebook functionality
+          service: service ? {
+            _id: service._id,
+            name: service.name,
+            price: service.price,
+            duration: service.duration_minutes || 30,
+          } : null,
+          barber: barber ? barber._id : null,
+          branch: branch ? {
+            _id: branch._id,
+            name: branch.name,
+            phone: branch.phone,
+          } : null,
         };
       })
     );
@@ -220,6 +236,7 @@ export const getAllBookings = query({
             time: booking.time,
             status: booking.status,
             payment_status: booking.payment_status,
+            payment_method: booking.payment_method,
             price: booking.price,
             final_price: booking.final_price,
             discount_amount: booking.discount_amount,
@@ -260,6 +277,7 @@ export const getAllBookings = query({
             time: booking.time,
             status: booking.status,
             payment_status: booking.payment_status,
+            payment_method: booking.payment_method,
             price: booking.price,
             final_price: booking.final_price,
             discount_amount: booking.discount_amount,
@@ -339,6 +357,7 @@ export const getBookingsByBranch = query({
             time: booking.time,
             status: booking.status,
             payment_status: booking.payment_status,
+            payment_method: booking.payment_method,
             price: booking.price,
             final_price: booking.final_price,
             discount_amount: booking.discount_amount,
@@ -378,6 +397,7 @@ export const getBookingsByBranch = query({
             time: booking.time,
             status: booking.status,
             payment_status: booking.payment_status,
+            payment_method: booking.payment_method,
             price: booking.price,
             final_price: booking.final_price,
             discount_amount: booking.discount_amount,
@@ -471,6 +491,7 @@ export const getBookingsByCustomer = query({
           time: booking.time,
           status: booking.status,
           payment_status: booking.payment_status,
+          payment_method: booking.payment_method,
           price: booking.price,
           final_price: booking.final_price,
           discount_amount: booking.discount_amount,
@@ -485,6 +506,12 @@ export const getBookingsByCustomer = query({
           formattedDate: new Date(booking.date).toLocaleDateString(),
           formattedTime: formatTime(booking.time),
           is_custom_booking: isCustomBooking,
+          // Payment/fee fields
+          booking_fee: booking.booking_fee || 0,
+          convenience_fee_paid: booking.convenience_fee_paid || 0,
+          total_amount: booking.final_price || booking.price || 0,
+          amount_paid: booking.amount_paid || 0,
+          amount_due: booking.amount_due || 0,
         };
       })
     );
@@ -521,6 +548,7 @@ export const getBookingsByBarber = query({
           time: booking.time,
           status: booking.status,
           payment_status: booking.payment_status,
+          payment_method: booking.payment_method,
           price: booking.price,
           final_price: booking.final_price,
           discount_amount: booking.discount_amount,
@@ -570,11 +598,13 @@ export const getBookingById = query({
       time: booking.time,
       status: booking.status,
       payment_status: booking.payment_status,
+      payment_method: booking.payment_method,
       price: booking.price,
       final_price: booking.final_price,
       discount_amount: booking.discount_amount,
       voucher_id: booking.voucher_id,
       notes: booking.notes,
+      booking_fee: booking.booking_fee || 0,
       createdAt: booking._creationTime,
       customer_name: customer?.username || booking.customer_name || 'Unknown',
       customer_email: customer?.email || booking.customer_email || '',
@@ -1989,6 +2019,22 @@ export const markBookingComplete = mutation({
       },
     });
 
+    // Update customer-branch activity for marketing/churn tracking
+    // Only if customer has an account (not walk-in without account)
+    if (booking.customer) {
+      try {
+        await ctx.runMutation(api.services.customerBranchActivity.upsertActivity, {
+          customerId: booking.customer,
+          branchId: booking.branch_id,
+          bookingAmount: servicePrice,
+          bookingDate: Date.now(),
+        });
+      } catch (error) {
+        // Log but don't fail booking completion if activity tracking fails
+        console.error("[markBookingComplete] Failed to update customer branch activity:", error);
+      }
+    }
+
     return {
       success: true,
       booking_status: "completed",
@@ -2079,5 +2125,54 @@ export const getTodaysBookingsWithPaymentStatus = query({
       if (!a.time || !b.time) return 0;
       return a.time.localeCompare(b.time);
     });
+  },
+});
+
+// Get customer's last completed booking with a specific barber
+export const getCustomerLastVisit = query({
+  args: {
+    barberId: v.id("barbers"),
+    customerIds: v.array(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    if (args.customerIds.length === 0) return {};
+
+    const result: Record<string, { service_name: string; date: string; days_ago: number }> = {};
+
+    for (const customerId of args.customerIds) {
+      const bookings = await ctx.db
+        .query("bookings")
+        .withIndex("by_customer", (q) => q.eq("customer", customerId))
+        .collect();
+
+      // Filter for completed bookings with this barber, excluding today
+      const today = new Date().toISOString().split("T")[0];
+      const pastBookings = bookings
+        .filter(
+          (b) =>
+            b.barber === args.barberId &&
+            b.status === "completed" &&
+            b.date !== today
+        )
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+      if (pastBookings.length > 0) {
+        const last = pastBookings[0];
+        const service = await ctx.db.get(last.service);
+        const lastDate = new Date(last.date);
+        const now = new Date();
+        const daysAgo = Math.floor(
+          (now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        result[customerId] = {
+          service_name: service?.name || "Unknown",
+          date: last.date,
+          days_ago: daysAgo,
+        };
+      }
+    }
+
+    return result;
   },
 });

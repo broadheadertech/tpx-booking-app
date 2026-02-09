@@ -11,7 +11,7 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
-import { useAuth } from '../../context/AuthContext';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { X, Zap, Gift, Wallet, Calendar, Users, Info } from 'lucide-react';
 
 const PROMO_TYPES = [
@@ -47,7 +47,7 @@ const TIER_OPTIONS = [
 ];
 
 export default function PromotionForm({ promotion, onClose, onSuccess }) {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const isEditing = !!promotion;
 
   // Form state
@@ -74,7 +74,7 @@ export default function PromotionForm({ promotion, onClose, onSuccess }) {
   const [saving, setSaving] = useState(false);
 
   // Queries
-  const branches = useQuery(api.services.branches.listBranches);
+  const branches = useQuery(api.services.branches.getAllBranches);
 
   // Mutations
   const createPromotion = useMutation(api.services.promotions.createPromotion);

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import ReactDOM from "react-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useAuth } from "../../context/AuthContext";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 import {
   DollarSign,
   TrendingUp,
@@ -17,6 +17,8 @@ import {
   Percent,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Plus,
   Edit2,
   Trash2,
@@ -1016,77 +1018,47 @@ const EquityModal = ({ isOpen, onClose, entry, userId }) => {
 
 // Add/Edit Period Modal
 const PeriodModal = ({ isOpen, onClose, userId }) => {
-  const getInitialData = () => {
-    const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    return {
-      period_name: `${now.toLocaleString('default', { month: 'long' })} ${now.getFullYear()}`,
-      period_type: "monthly",
-      start_date: firstDay.toISOString().split("T")[0],
-      end_date: lastDay.toISOString().split("T")[0],
-      notes: "",
-    };
-  };
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [customMode, setCustomMode] = useState(false);
+  const [formData, setFormData] = useState({
+    period_name: "",
+    period_type: "monthly",
+    start_date: Date.now(),
+    end_date: Date.now(),
+    notes: "",
+  });
 
-  const [formData, setFormData] = useState(getInitialData());
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setFormData(getInitialData());
-    }
-  }, [isOpen]);
+  const suggestedPeriods = useQuery(
+    api.services.accounting.getSuggestedPeriodsForSuperAdmin,
+    { year: selectedYear }
+  );
 
   const createPeriod = useMutation(api.services.accounting.createSuperAdminAccountingPeriod);
 
-  // Update period name based on type and dates
-  const updatePeriodName = (type, startDate) => {
-    const date = new Date(startDate);
-    let name = "";
-    if (type === "monthly") {
-      name = `${date.toLocaleString('default', { month: 'long' })} ${date.getFullYear()}`;
-    } else if (type === "quarterly") {
-      const quarter = Math.floor(date.getMonth() / 3) + 1;
-      name = `Q${quarter} ${date.getFullYear()}`;
-    } else if (type === "yearly") {
-      name = `FY ${date.getFullYear()}`;
+  const handleCreateSuggested = async (suggestion) => {
+    try {
+      await createPeriod({
+        period_name: suggestion.period_name,
+        period_type: suggestion.period_type,
+        start_date: suggestion.start_date,
+        end_date: suggestion.end_date,
+        created_by: userId,
+      });
+      onClose();
+    } catch (error) {
+      console.error("Error creating period:", error);
+      alert(error.message || "Failed to create period");
     }
-    return name;
   };
 
-  const handleTypeChange = (type) => {
-    const startDate = new Date(formData.start_date);
-    let endDate;
-    if (type === "monthly") {
-      endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
-    } else if (type === "quarterly") {
-      const quarterStart = Math.floor(startDate.getMonth() / 3) * 3;
-      startDate.setMonth(quarterStart);
-      startDate.setDate(1);
-      endDate = new Date(startDate.getFullYear(), quarterStart + 3, 0);
-    } else if (type === "yearly") {
-      startDate.setMonth(0);
-      startDate.setDate(1);
-      endDate = new Date(startDate.getFullYear(), 11, 31);
-    }
-    setFormData({
-      ...formData,
-      period_type: type,
-      start_date: startDate.toISOString().split("T")[0],
-      end_date: endDate.toISOString().split("T")[0],
-      period_name: updatePeriodName(type, startDate),
-    });
-  };
-
-  const handleSubmit = async (e) => {
+  const handleCreateCustom = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
     try {
       await createPeriod({
         period_name: formData.period_name,
         period_type: formData.period_type,
-        start_date: new Date(formData.start_date).getTime(),
+        start_date: formData.start_date,
         end_date: new Date(formData.end_date).setHours(23, 59, 59, 999),
         notes: formData.notes || undefined,
         created_by: userId,
@@ -1094,9 +1066,7 @@ const PeriodModal = ({ isOpen, onClose, userId }) => {
       onClose();
     } catch (error) {
       console.error("Error creating period:", error);
-      alert("Error: " + error.message);
-    } finally {
-      setIsSubmitting(false);
+      alert(error.message || "Failed to create period");
     }
   };
 
@@ -1104,7 +1074,7 @@ const PeriodModal = ({ isOpen, onClose, userId }) => {
 
   return ReactDOM.createPortal(
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
-      <div className="bg-[#1A1A1A] rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border border-[#333333]">
+      <div className="bg-[#1A1A1A] rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-[#333333]">
         <div className="p-4 border-b border-[#333333] flex items-center justify-between">
           <h3 className="text-lg font-semibold text-white">Create Accounting Period</h3>
           <button onClick={onClose} className="p-1 hover:bg-[#333333] rounded text-gray-400">
@@ -1112,96 +1082,208 @@ const PeriodModal = ({ isOpen, onClose, userId }) => {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">Period Type</label>
-            <select
-              value={formData.period_type}
-              onChange={(e) => handleTypeChange(e.target.value)}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
-            >
-              <option value="monthly">Monthly</option>
-              <option value="quarterly">Quarterly</option>
-              <option value="yearly">Yearly</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">Period Name</label>
-            <input
-              type="text"
-              value={formData.period_name}
-              onChange={(e) => setFormData({ ...formData, period_name: e.target.value })}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
-              placeholder="e.g., January 2026"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">Start Date</label>
-              <input
-                type="date"
-                value={formData.start_date}
-                onChange={(e) => {
-                  const newName = updatePeriodName(formData.period_type, e.target.value);
-                  setFormData({ ...formData, start_date: e.target.value, period_name: newName });
-                }}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">End Date</label>
-              <input
-                type="date"
-                value={formData.end_date}
-                onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">Notes (Optional)</label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none resize-none"
-              rows={2}
-              placeholder="Additional notes..."
-            />
-          </div>
-
-          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-            <div className="flex items-start gap-2">
-              <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
-              <p className="text-blue-400 text-sm">
-                New periods are created as "Open". You can close them later to lock financial data and create a snapshot of the balance sheet at that point in time.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-2 pt-4">
+        <div className="p-4">
+          {/* Mode Toggle */}
+          <div className="flex gap-2 mb-4">
             <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 border border-[#333333] rounded-lg text-gray-300 hover:bg-[#333333] transition-colors"
+              onClick={() => setCustomMode(false)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!customMode ? "bg-[#FF8C42] text-white" : "bg-[#333333] text-gray-400 hover:text-white"}`}
             >
-              Cancel
+              Quick Select
             </button>
             <button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex-1 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#E67A32] transition-colors disabled:opacity-50"
+              onClick={() => setCustomMode(true)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${customMode ? "bg-[#FF8C42] text-white" : "bg-[#333333] text-gray-400 hover:text-white"}`}
             >
-              {isSubmitting ? "Creating..." : "Create Period"}
+              Custom Period
             </button>
           </div>
-        </form>
+
+          {!customMode ? (
+            <>
+              {/* Year Selector */}
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  onClick={() => setSelectedYear((y) => y - 1)}
+                  className="p-2 hover:bg-[#333333] rounded-lg text-gray-400"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+                <span className="text-lg font-semibold text-white">{selectedYear}</span>
+                <button
+                  onClick={() => setSelectedYear((y) => y + 1)}
+                  className="p-2 hover:bg-[#333333] rounded-lg text-gray-400"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              </div>
+
+              {/* Suggested Periods */}
+              {suggestedPeriods && (
+                <div className="space-y-4">
+                  {/* Monthly */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-400 mb-2">Monthly Periods</h4>
+                    <div className="grid grid-cols-4 gap-2">
+                      {suggestedPeriods
+                        .filter((p) => p.period_type === "monthly")
+                        .map((suggestion, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => !suggestion.exists && handleCreateSuggested(suggestion)}
+                            disabled={suggestion.exists}
+                            className={`p-2 rounded-lg text-sm border transition-colors ${
+                              suggestion.exists
+                                ? "bg-[#0A0A0A] text-gray-600 cursor-not-allowed border-[#333333]"
+                                : "bg-[#0A0A0A] text-gray-300 hover:bg-[#FF8C42]/20 hover:border-[#FF8C42]/50 border-[#333333]"
+                            }`}
+                          >
+                            {suggestion.period_name.split(" ")[0].substring(0, 3)}
+                            {suggestion.exists && <span className="ml-1 text-xs text-green-500">✓</span>}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+
+                  {/* Quarterly */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-400 mb-2">Quarterly Periods</h4>
+                    <div className="grid grid-cols-4 gap-2">
+                      {suggestedPeriods
+                        .filter((p) => p.period_type === "quarterly")
+                        .map((suggestion, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => !suggestion.exists && handleCreateSuggested(suggestion)}
+                            disabled={suggestion.exists}
+                            className={`p-2 rounded-lg text-sm border transition-colors ${
+                              suggestion.exists
+                                ? "bg-[#0A0A0A] text-gray-600 cursor-not-allowed border-[#333333]"
+                                : "bg-[#0A0A0A] text-gray-300 hover:bg-[#FF8C42]/20 hover:border-[#FF8C42]/50 border-[#333333]"
+                            }`}
+                          >
+                            {suggestion.period_name}
+                            {suggestion.exists && <span className="ml-1 text-xs text-green-500">✓</span>}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+
+                  {/* Yearly */}
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-400 mb-2">Fiscal Year</h4>
+                    <div className="grid grid-cols-4 gap-2">
+                      {suggestedPeriods
+                        .filter((p) => p.period_type === "yearly")
+                        .map((suggestion, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => !suggestion.exists && handleCreateSuggested(suggestion)}
+                            disabled={suggestion.exists}
+                            className={`p-2 rounded-lg text-sm border transition-colors ${
+                              suggestion.exists
+                                ? "bg-[#0A0A0A] text-gray-600 cursor-not-allowed border-[#333333]"
+                                : "bg-[#0A0A0A] text-gray-300 hover:bg-[#FF8C42]/20 hover:border-[#FF8C42]/50 border-[#333333]"
+                            }`}
+                          >
+                            {suggestion.period_name}
+                            {suggestion.exists && <span className="ml-1 text-xs text-green-500">✓</span>}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            /* Custom Period Form */
+            <form onSubmit={handleCreateCustom} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Period Name</label>
+                <input
+                  type="text"
+                  value={formData.period_name}
+                  onChange={(e) => setFormData({ ...formData, period_name: e.target.value })}
+                  className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                  placeholder="e.g., January 2026, Q1 2026"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Period Type</label>
+                <select
+                  value={formData.period_type}
+                  onChange={(e) => setFormData({ ...formData, period_type: e.target.value })}
+                  className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                >
+                  <option value="monthly">Monthly</option>
+                  <option value="quarterly">Quarterly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    value={formData.start_date ? new Date(formData.start_date).toISOString().split("T")[0] : ""}
+                    onChange={(e) => setFormData({ ...formData, start_date: new Date(e.target.value).getTime() })}
+                    className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-400 mb-1">End Date</label>
+                  <input
+                    type="date"
+                    value={formData.end_date ? new Date(formData.end_date).toISOString().split("T")[0] : ""}
+                    onChange={(e) => setFormData({ ...formData, end_date: new Date(e.target.value).getTime() })}
+                    className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-400 mb-1">Notes (Optional)</label>
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none resize-none"
+                  rows={2}
+                  placeholder="Additional notes..."
+                />
+              </div>
+
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <Info className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-blue-400 text-sm">
+                    New periods are created as "Open". You can close them later to lock financial data and create a snapshot of the balance sheet at that point in time.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 px-4 py-2 border border-[#333333] rounded-lg text-gray-300 hover:bg-[#333333] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/80 transition-colors"
+                >
+                  Create Period
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
       </div>
     </div>,
     document.body
@@ -1420,15 +1502,303 @@ const exportToCSV = (data, assets, liabilities, filename) => {
   link.click();
 };
 
+// Close Period Modal
+const ClosePeriodModal = ({ isOpen, onClose, period, userId, closePeriodMutation }) => {
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleClose = async () => {
+    setIsClosing(true);
+    try {
+      await closePeriodMutation({ period_id: period._id, closed_by: userId });
+      onClose();
+    } catch (error) {
+      console.error("Error closing period:", error);
+      alert(error.message || "Failed to close period");
+    } finally {
+      setIsClosing(false);
+    }
+  };
+
+  if (!isOpen || !period) return null;
+
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+      <div className="bg-[#1A1A1A] rounded-xl w-full max-w-md border border-[#333333]">
+        <div className="p-4 border-b border-[#333333]">
+          <h3 className="text-lg font-semibold text-white">Close Accounting Period</h3>
+        </div>
+
+        <div className="p-4 space-y-4">
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="text-amber-400 mt-0.5" size={20} />
+              <div>
+                <h4 className="font-medium text-amber-400">Warning</h4>
+                <p className="text-sm text-amber-400/80 mt-1">
+                  Closing this period will lock all transactions within the date range.
+                  This action can be undone by reopening the period.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-[#0A0A0A] rounded-lg p-3 border border-[#333333]">
+            <p className="text-sm text-gray-400">Period to close:</p>
+            <p className="text-white font-medium mt-1">{period.period_name}</p>
+            <p className="text-sm text-gray-400 mt-2">
+              {formatDate(period.start_date)} - {formatDate(period.end_date)}
+            </p>
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <button
+              onClick={onClose}
+              disabled={isClosing}
+              className="flex-1 px-4 py-2 border border-[#333333] rounded-lg text-gray-300 hover:bg-[#333333] transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleClose}
+              disabled={isClosing}
+              className="flex-1 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/80 flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+            >
+              <Lock size={16} />
+              {isClosing ? "Closing..." : "Close Period"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+// Reopen Period Modal
+const ReopenPeriodModal = ({ isOpen, onClose, period, userId, reopenPeriodMutation }) => {
+  const [reason, setReason] = useState("");
+  const [isReopening, setIsReopening] = useState(false);
+
+  const handleReopen = async () => {
+    if (!reason.trim()) {
+      alert("Please provide a reason for reopening");
+      return;
+    }
+
+    setIsReopening(true);
+    try {
+      await reopenPeriodMutation({
+        period_id: period._id,
+        reason: reason.trim(),
+        reopened_by: userId,
+      });
+      setReason("");
+      onClose();
+    } catch (error) {
+      console.error("Error reopening period:", error);
+      alert(error.message || "Failed to reopen period");
+    } finally {
+      setIsReopening(false);
+    }
+  };
+
+  if (!isOpen || !period) return null;
+
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+      <div className="bg-[#1A1A1A] rounded-xl w-full max-w-md border border-[#333333]">
+        <div className="p-4 border-b border-[#333333]">
+          <h3 className="text-lg font-semibold text-white">Reopen Accounting Period</h3>
+        </div>
+
+        <div className="p-4 space-y-4">
+          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="text-red-400 mt-0.5" size={20} />
+              <div>
+                <h4 className="font-medium text-red-400">Warning</h4>
+                <p className="text-sm text-red-400/80 mt-1">
+                  Reopening a closed period should only be done for corrections.
+                  This action will be logged and audited.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-[#0A0A0A] rounded-lg p-3 border border-[#333333]">
+            <p className="text-sm text-gray-400">Period to reopen:</p>
+            <p className="text-white font-medium mt-1">{period.period_name}</p>
+            <p className="text-sm text-gray-400 mt-2">
+              {formatDate(period.start_date)} - {formatDate(period.end_date)}
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-1">
+              Reason for Reopening <span className="text-red-400">*</span>
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none resize-none"
+              rows={3}
+              placeholder="Explain why this period needs to be reopened..."
+              required
+            />
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <button
+              onClick={onClose}
+              disabled={isReopening}
+              className="flex-1 px-4 py-2 border border-[#333333] rounded-lg text-gray-300 hover:bg-[#333333] transition-colors disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleReopen}
+              disabled={isReopening || !reason.trim()}
+              className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+            >
+              <Unlock size={16} />
+              {isReopening ? "Reopening..." : "Reopen Period"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+// Period Comparison Modal for Super Admin
+const PeriodComparisonModal = ({ isOpen, onClose, period }) => {
+  const [compareToPeriodId, setCompareToPeriodId] = useState(null);
+
+  const allPeriods = useQuery(
+    api.services.accounting.getSuperAdminAccountingPeriods,
+    {}
+  );
+
+  const comparison = useQuery(
+    api.services.accounting.compareSuperAdminPeriods,
+    compareToPeriodId && period
+      ? { period_id_1: compareToPeriodId, period_id_2: period._id }
+      : "skip"
+  );
+
+  // Filter to only closed periods and exclude current period
+  const closedPeriods = allPeriods?.filter((p) => p.status === "closed" && p._id !== period?._id) || [];
+
+  const renderChange = (change) => {
+    if (!change) return null;
+    const isPositive = change.change >= 0;
+    const percentStr = change.change_percent !== null
+      ? `(${isPositive ? "+" : ""}${change.change_percent.toFixed(1)}%)`
+      : "";
+
+    return (
+      <div className={`text-sm ${isPositive ? "text-green-400" : "text-red-400"}`}>
+        {isPositive ? "+" : ""}{formatCurrency(change.change)} {percentStr}
+      </div>
+    );
+  };
+
+  if (!isOpen || !period) return null;
+
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
+      <div className="bg-[#1A1A1A] rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto border border-[#333333]">
+        <div className="p-4 border-b border-[#333333] flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-white">Compare Periods</h3>
+          <button onClick={onClose} className="p-1 hover:bg-[#333333] rounded text-gray-400">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {/* Period Selector */}
+          <div>
+            <label className="block text-sm font-medium text-gray-400 mb-2">
+              Compare "{period.period_name}" with:
+            </label>
+            <select
+              value={compareToPeriodId || ""}
+              onChange={(e) => setCompareToPeriodId(e.target.value || null)}
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+            >
+              <option value="">Select a period to compare</option>
+              {closedPeriods.map((p) => (
+                <option key={p._id} value={p._id}>
+                  {p.period_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {comparison && (
+            <div className="space-y-4">
+              {/* Period Headers */}
+              <div className="grid grid-cols-3 gap-4 text-sm font-medium">
+                <div></div>
+                <div className="text-center text-gray-400">{comparison.period_1.name}</div>
+                <div className="text-center text-[#FF8C42]">{comparison.period_2.name}</div>
+              </div>
+
+              {/* Comparison Rows */}
+              <div className="space-y-2">
+                {[
+                  { label: "Total Assets", key: "total_assets", color: "green" },
+                  { label: "Total Liabilities", key: "total_liabilities", color: "red" },
+                  { label: "Total Equity", key: "total_equity", color: "purple" },
+                  { label: "Revenue", key: "revenue", color: "green" },
+                  { label: "Expenses", key: "expenses", color: "red" },
+                  { label: "Net Income", key: "net_income", color: "blue" },
+                  { label: "Working Capital", key: "working_capital", color: "blue" },
+                ].map(({ label, key }) => {
+                  const data = comparison.comparison[key];
+                  if (!data) return null;
+
+                  return (
+                    <div key={key} className="grid grid-cols-3 gap-4 py-2 border-b border-[#333333]">
+                      <div className="text-sm text-gray-500">{label}</div>
+                      <div className="text-center font-medium text-gray-300">{formatCurrency(data.value_1)}</div>
+                      <div className="text-center">
+                        <div className="font-medium text-white">{formatCurrency(data.value_2)}</div>
+                        {renderChange(data)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {!compareToPeriodId && closedPeriods.length === 0 && (
+            <div className="text-center py-8 text-gray-500">
+              No other closed periods available for comparison.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
 // Main Component
 const SuperAdminBalanceSheet = () => {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const [activeTab, setActiveTab] = useState("overview");
   const [assetModal, setAssetModal] = useState({ open: false, asset: null });
   const [liabilityModal, setLiabilityModal] = useState({ open: false, liability: null });
   const [equityModal, setEquityModal] = useState({ open: false, entry: null });
   const [periodModal, setPeriodModal] = useState({ open: false });
   const [isClosingPeriod, setIsClosingPeriod] = useState(false);
+  const [expandedPeriod, setExpandedPeriod] = useState(null);
+  const [closePeriodModal, setClosePeriodModal] = useState({ open: false, period: null });
+  const [reopenPeriodModal, setReopenPeriodModal] = useState({ open: false, period: null });
+  const [comparisonModal, setComparisonModal] = useState({ open: false, period: null });
 
   // Query consolidated balance sheet data
   const balanceSheet = useQuery(api.services.accounting.getConsolidatedBalanceSheet, {});
@@ -2012,191 +2382,160 @@ const SuperAdminBalanceSheet = () => {
 
           {/* Period List */}
           <div className="space-y-3">
-            {accountingPeriods.map((period) => (
-              <div
-                key={period._id}
-                className={`bg-[#1A1A1A] rounded-xl border p-4 ${
-                  period.status === "closed"
-                    ? "border-green-500/30"
-                    : period.status === "closing"
-                    ? "border-amber-500/30"
-                    : "border-[#333333]"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`p-2 rounded-lg ${
-                        period.status === "closed"
-                          ? "bg-green-500/20 text-green-400"
-                          : period.status === "closing"
-                          ? "bg-amber-500/20 text-amber-400"
-                          : "bg-blue-500/20 text-blue-400"
-                      }`}
-                    >
-                      {period.status === "closed" ? (
-                        <Lock size={18} />
-                      ) : period.status === "closing" ? (
-                        <AlertCircle size={18} />
-                      ) : (
-                        <Unlock size={18} />
-                      )}
-                    </div>
-                    <div>
-                      <div className="font-medium text-white">{period.period_name}</div>
-                      <div className="text-xs text-gray-500">
-                        {formatDate(period.start_date)} - {formatDate(period.end_date)}
+            {accountingPeriods.map((period) => {
+              const isExpanded = expandedPeriod === period._id;
+              return (
+                <div
+                  key={period._id}
+                  className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[#FF8C42]/30 transition-all"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${period.status === "closed" ? "bg-gray-500/20 text-gray-400" : "bg-blue-500/20 text-blue-400"}`}>
+                        <Calendar size={18} />
+                      </div>
+                      <div>
+                        <div className="font-medium text-white">{period.period_name}</div>
+                        <div className="text-xs text-gray-500">
+                          {formatDate(period.start_date)} - {formatDate(period.end_date)}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs ${
-                        period.status === "closed"
+                    <div className="flex items-center gap-2">
+                      {/* Status Badge */}
+                      <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                        period.status === "open"
                           ? "bg-green-500/20 text-green-400"
                           : period.status === "closing"
                           ? "bg-amber-500/20 text-amber-400"
-                          : "bg-blue-500/20 text-blue-400"
-                      }`}
-                    >
-                      {period.status === "closed" ? "Locked" : period.status === "closing" ? "Under Review" : "Open"}
-                    </span>
-                    <div className="flex gap-1">
-                      {period.status === "open" && (
-                        <>
+                          : "bg-gray-500/20 text-gray-400"
+                      }`}>
+                        {period.status === "open" && <Unlock size={12} />}
+                        {period.status === "closing" && <Clock size={12} />}
+                        {period.status === "closed" && <Lock size={12} />}
+                        {period.status === "open" ? "Open" : period.status === "closing" ? "Closing" : "Closed"}
+                      </span>
+                      <button
+                        onClick={() => setExpandedPeriod(isExpanded ? null : period._id)}
+                        className="p-1 hover:bg-[#333333] rounded text-gray-400"
+                      >
+                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="mt-4 pt-4 border-t border-[#333333]">
+                      {period.snapshot ? (
+                        <div className="space-y-4">
+                          {/* Snapshot Summary */}
+                          <div className="grid grid-cols-3 gap-4 text-sm">
+                            <div className="bg-green-500/10 rounded-lg p-3 border border-green-500/20">
+                              <div className="text-green-400 text-xs">Assets</div>
+                              <div className="font-bold text-green-400">{formatCurrency(period.snapshot.total_assets)}</div>
+                            </div>
+                            <div className="bg-red-500/10 rounded-lg p-3 border border-red-500/20">
+                              <div className="text-red-400 text-xs">Liabilities</div>
+                              <div className="font-bold text-red-400">{formatCurrency(period.snapshot.total_liabilities)}</div>
+                            </div>
+                            <div className="bg-purple-500/10 rounded-lg p-3 border border-purple-500/20">
+                              <div className="text-purple-400 text-xs">Equity</div>
+                              <div className="font-bold text-purple-400">{formatCurrency(period.snapshot.total_equity)}</div>
+                            </div>
+                          </div>
+
+                          {/* P&L for Period */}
+                          <div className="bg-[#0A0A0A] rounded-lg p-3 border border-[#333333]">
+                            <div className="text-xs text-gray-500 mb-2">Period P&L</div>
+                            <div className="grid grid-cols-3 gap-4 text-sm">
+                              <div>
+                                <span className="text-gray-500">Revenue:</span>
+                                <span className="ml-2 font-medium text-green-400">{formatCurrency(period.snapshot.total_revenue || 0)}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Expenses:</span>
+                                <span className="ml-2 font-medium text-red-400">{formatCurrency(period.snapshot.total_expenses || 0)}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Net Income:</span>
+                                <span className={`ml-2 font-bold ${(period.snapshot.net_income || 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                                  {formatCurrency(period.snapshot.net_income || 0)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {period.closed_at && (
+                            <div className="text-xs text-gray-600">
+                              Closed on {formatDate(period.closed_at)}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-500">
+                          Period is still open. Close to capture snapshot data.
+                        </div>
+                      )}
+
+                      {period.notes && (
+                        <div className="mt-3 text-sm">
+                          <span className="text-gray-500">Notes:</span>
+                          <p className="text-gray-400 mt-1">{period.notes}</p>
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      <div className="flex gap-2 mt-4">
+                        {period.status === "open" && (
                           <button
-                            onClick={async () => {
-                              try {
-                                await markPeriodClosing({ id: period._id });
-                              } catch (error) {
-                                console.error("Error marking period as closing:", error);
-                                alert("Error: " + error.message);
-                              }
-                            }}
-                            className="p-1.5 hover:bg-amber-500/20 rounded text-gray-400 hover:text-amber-400"
-                            title="Mark for Review"
+                            onClick={() => setClosePeriodModal({ open: true, period })}
+                            className="flex items-center gap-1 px-3 py-1.5 text-sm bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/80 transition-colors"
                           >
-                            <AlertCircle size={16} />
+                            <Lock size={14} />
+                            Close Period
                           </button>
-                          <button
-                            onClick={async () => {
-                              if (!confirm("Are you sure you want to close this period? This will lock all transactions within this period.")) return;
-                              setIsClosingPeriod(true);
-                              try {
-                                await closePeriod({ id: period._id });
-                              } catch (error) {
-                                console.error("Error closing period:", error);
-                                alert("Error: " + error.message);
-                              } finally {
-                                setIsClosingPeriod(false);
-                              }
-                            }}
-                            disabled={isClosingPeriod}
-                            className="p-1.5 hover:bg-green-500/20 rounded text-gray-400 hover:text-green-400 disabled:opacity-50"
-                            title="Close Period"
-                          >
-                            <Lock size={16} />
-                          </button>
+                        )}
+                        {period.status === "closed" && (
+                          <>
+                            <button
+                              onClick={() => setReopenPeriodModal({ open: true, period })}
+                              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 transition-colors"
+                            >
+                              <Unlock size={14} />
+                              Reopen
+                            </button>
+                            <button
+                              onClick={() => setComparisonModal({ open: true, period })}
+                              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 transition-colors"
+                            >
+                              <TrendingUp size={14} />
+                              Compare
+                            </button>
+                          </>
+                        )}
+                        {period.status !== "closed" && (
                           <button
                             onClick={async () => {
                               if (!confirm("Are you sure you want to delete this period?")) return;
                               try {
-                                await deletePeriod({ id: period._id });
+                                await deletePeriod({ period_id: period._id });
                               } catch (error) {
                                 console.error("Error deleting period:", error);
                                 alert("Error: " + error.message);
                               }
                             }}
-                            className="p-1.5 hover:bg-red-500/20 rounded text-gray-400 hover:text-red-400"
-                            title="Delete Period"
+                            className="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={14} />
+                            Delete
                           </button>
-                        </>
-                      )}
-                      {period.status === "closing" && (
-                        <>
-                          <button
-                            onClick={async () => {
-                              if (!confirm("Are you sure you want to close this period? This will lock all transactions within this period.")) return;
-                              setIsClosingPeriod(true);
-                              try {
-                                await closePeriod({ id: period._id });
-                              } catch (error) {
-                                console.error("Error closing period:", error);
-                                alert("Error: " + error.message);
-                              } finally {
-                                setIsClosingPeriod(false);
-                              }
-                            }}
-                            disabled={isClosingPeriod}
-                            className="p-1.5 hover:bg-green-500/20 rounded text-gray-400 hover:text-green-400 disabled:opacity-50"
-                            title="Close Period"
-                          >
-                            <Lock size={16} />
-                          </button>
-                        </>
-                      )}
-                      {period.status === "closed" && (
-                        <>
-                          <button
-                            onClick={async () => {
-                              if (!confirm("Are you sure you want to reopen this period? This will allow changes to transactions within this period.")) return;
-                              try {
-                                await reopenPeriod({ id: period._id });
-                              } catch (error) {
-                                console.error("Error reopening period:", error);
-                                alert("Error: " + error.message);
-                              }
-                            }}
-                            className="p-1.5 hover:bg-blue-500/20 rounded text-gray-400 hover:text-blue-400"
-                            title="Reopen Period"
-                          >
-                            <Unlock size={16} />
-                          </button>
-                          {period.snapshot && (
-                            <button
-                              onClick={() => {
-                                alert(
-                                  `Period Snapshot:\n\nTotal Assets: ${formatCurrency(period.snapshot.total_assets)}\nTotal Liabilities: ${formatCurrency(period.snapshot.total_liabilities)}\nTotal Equity: ${formatCurrency(period.snapshot.total_equity)}\n\nClosed: ${formatDate(period.closed_at)}`
-                                );
-                              }}
-                              className="p-1.5 hover:bg-purple-500/20 rounded text-gray-400 hover:text-purple-400"
-                              title="View Snapshot"
-                            >
-                              <History size={16} />
-                            </button>
-                          )}
-                        </>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
-                {period.notes && (
-                  <div className="mt-3 pt-3 border-t border-[#333333]">
-                    <p className="text-gray-400 text-sm">{period.notes}</p>
-                  </div>
-                )}
-                {period.status === "closed" && period.snapshot && (
-                  <div className="mt-3 pt-3 border-t border-[#333333]">
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-500">Assets at Close</p>
-                        <p className="text-blue-400 font-medium">{formatCurrency(period.snapshot.total_assets)}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Liabilities at Close</p>
-                        <p className="text-red-400 font-medium">{formatCurrency(period.snapshot.total_liabilities)}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500">Equity at Close</p>
-                        <p className="text-purple-400 font-medium">{formatCurrency(period.snapshot.total_equity)}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
             {accountingPeriods.length === 0 && (
               <div className="text-center py-12 text-gray-400">
                 <Calendar size={48} className="mx-auto mb-4 opacity-50" />
@@ -2251,6 +2590,25 @@ const SuperAdminBalanceSheet = () => {
         isOpen={periodModal.open}
         onClose={() => setPeriodModal({ open: false })}
         userId={user?._id}
+      />
+      <ClosePeriodModal
+        isOpen={closePeriodModal.open}
+        onClose={() => setClosePeriodModal({ open: false, period: null })}
+        period={closePeriodModal.period}
+        userId={user?._id}
+        closePeriodMutation={closePeriod}
+      />
+      <ReopenPeriodModal
+        isOpen={reopenPeriodModal.open}
+        onClose={() => setReopenPeriodModal({ open: false, period: null })}
+        period={reopenPeriodModal.period}
+        userId={user?._id}
+        reopenPeriodMutation={reopenPeriod}
+      />
+      <PeriodComparisonModal
+        isOpen={comparisonModal.open}
+        onClose={() => setComparisonModal({ open: false, period: null })}
+        period={comparisonModal.period}
       />
     </div>
   );

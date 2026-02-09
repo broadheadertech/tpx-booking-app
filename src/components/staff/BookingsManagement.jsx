@@ -1519,7 +1519,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                             {booking.convenience_fee_paid > 0 ? (
                               <div className="text-right">
                                 <span className="text-sm text-blue-400 font-medium">
-                                  ₱{booking.convenience_fee_paid.toLocaleString()}
+                                  ₱{(booking.convenience_fee_paid || 0).toLocaleString()}
                                 </span>
                                 <p className="text-xs text-gray-500">Conv. Fee</p>
                               </div>
@@ -1608,11 +1608,25 @@ const BookingsManagement = ({ onRefresh, user }) => {
             </div>
             <div>
               <p className="text-sm font-medium text-gray-400">Payment Type</p>
-              <p className="text-sm font-bold text-white">
-                {booking.convenience_fee_paid > 0 ? 'Pay Later' :
-                 booking.booking_fee > 0 ? 'Pay Now' :
-                 'Pay at Shop'}
-              </p>
+              <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold ${
+                booking.payment_status === 'unpaid' || (!booking.payment_status)
+                  ? 'bg-blue-500/20 text-blue-400'
+                  : booking.payment_method === 'wallet'
+                    ? 'bg-purple-500/20 text-purple-400'
+                    : booking.payment_method === 'combo'
+                      ? 'bg-cyan-500/20 text-cyan-400'
+                      : 'bg-green-500/20 text-green-400'
+              }`}>
+                {booking.payment_status === 'unpaid' || (!booking.payment_status)
+                  ? '💵 Pay at Shop'
+                  : booking.payment_method === 'wallet'
+                    ? '👛 Wallet Pay'
+                    : booking.payment_method === 'combo'
+                      ? '🔄 Combo'
+                      : booking.payment_status === 'partial'
+                        ? '💳 Fee Paid (Online)'
+                        : '💳 Online Pay'}
+              </span>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-400">Booking Fee Paid</p>
@@ -1628,7 +1642,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
               <p className="text-sm font-medium text-gray-400">Convenience Fee Paid</p>
               {booking.convenience_fee_paid > 0 ? (
                 <p className="text-sm font-bold text-blue-400">
-                  ₱{booking.convenience_fee_paid.toLocaleString()}
+                  ₱{(booking.convenience_fee_paid || 0).toLocaleString()}
                 </p>
               ) : (
                 <p className="text-sm font-bold text-gray-500">₱0</p>
@@ -1638,7 +1652,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
               <p className="text-sm font-medium text-gray-400">Total Online Paid</p>
               {booking.convenience_fee_paid > 0 ? (
                 <p className="text-sm font-bold text-blue-400">
-                  ₱{booking.convenience_fee_paid.toLocaleString()}
+                  ₱{(booking.convenience_fee_paid || 0).toLocaleString()}
                 </p>
               ) : booking.booking_fee > 0 ? (
                 <div>
@@ -2211,7 +2225,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
                           <td className="px-6 py-4 whitespace-nowrap text-right">
                             {booking.convenience_fee_paid > 0 ? (
                               <span className="text-sm font-bold text-blue-400">
-                                ₱{booking.convenience_fee_paid.toLocaleString()}
+                                ₱{(booking.convenience_fee_paid || 0).toLocaleString()}
                               </span>
                             ) : (
                               <span className="text-sm text-gray-500">₱0</span>
@@ -2237,23 +2251,48 @@ const BookingsManagement = ({ onRefresh, user }) => {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            {booking.convenience_fee_paid > 0 ? (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                                Pay Later
-                              </span>
-                            ) : booking.booking_fee > 0 ? (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
-                                Pay Now
-                              </span>
-                            ) : booking.cash_collected > 0 ? (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                                Cash
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-500/20 text-gray-400 border border-gray-500/30">
-                                Pay at Shop
-                              </span>
-                            )}
+                            {(() => {
+                              // Determine payment type based on payment_method and status
+                              if (booking.payment_status === 'paid') {
+                                if (booking.payment_method === 'wallet') {
+                                  return (
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/20 text-purple-400 border border-purple-500/30">
+                                      👛 Wallet
+                                    </span>
+                                  )
+                                } else if (booking.payment_method === 'combo') {
+                                  return (
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                                      🔄 Combo
+                                    </span>
+                                  )
+                                } else {
+                                  return (
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+                                      💳 Online
+                                    </span>
+                                  )
+                                }
+                              } else if (booking.payment_status === 'partial' || booking.convenience_fee_paid > 0) {
+                                return (
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                                    💳 Fee Paid
+                                  </span>
+                                )
+                              } else if (booking.cash_collected > 0) {
+                                return (
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                    💵 Cash
+                                  </span>
+                                )
+                              } else {
+                                return (
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                                    💵 Pay at Shop
+                                  </span>
+                                )
+                              }
+                            })()}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div className="flex items-center justify-end gap-2">

@@ -543,6 +543,24 @@ export const clearAndSeed = mutation({
       await ctx.db.delete(config._id);
     }
 
+    // Clear royalty configs
+    const royaltyConfigs = await ctx.db.query("royaltyConfig").collect();
+    for (const config of royaltyConfigs) {
+      await ctx.db.delete(config._id);
+    }
+
+    // Clear royalty payments
+    const royaltyPayments = await ctx.db.query("royaltyPayments").collect();
+    for (const payment of royaltyPayments) {
+      await ctx.db.delete(payment._id);
+    }
+
+    // Clear official receipts
+    const receipts = await ctx.db.query("officialReceipts").collect();
+    for (const receipt of receipts) {
+      await ctx.db.delete(receipt._id);
+    }
+
     // Clear cash advances
     const cashAdvances = await ctx.db.query("cashAdvances").collect();
     for (const advance of cashAdvances) {
@@ -2055,6 +2073,1347 @@ export const seedTestCustomer = mutation({
       email,
       wallet: `₱${(walletBalanceCentavos / 100).toFixed(2)}`,
       points: args.points || 5000,
+    };
+  },
+});
+
+/**
+ * Seed test customers for AI Email Marketing testing
+ * Creates customers with varied visit patterns for churn/RFM testing
+ * Run: npx convex run seed:seedEmailMarketingTestData
+ */
+export const seedEmailMarketingTestData = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    // Get first branch for association
+    const branches = await ctx.db.query("branches").collect();
+    const branchId = branches[0]?._id;
+
+    if (!branchId) {
+      throw new Error("No branch found. Run seedAll first.");
+    }
+
+    // Test customers with different profiles for AI segmentation
+    const testCustomers = [
+      // === CRITICAL CHURN (90+ days since visit) ===
+      {
+        email: "critical1@test.com",
+        name: "Carlos Critical",
+        lastVisitDaysAgo: 95,
+        totalBookings: 8,
+        totalSpent: 4500,
+        description: "Critical churn - was regular, now absent",
+      },
+      {
+        email: "critical2@test.com",
+        name: "Diana Danger",
+        lastVisitDaysAgo: 120,
+        totalBookings: 15,
+        totalSpent: 8000,
+        description: "Critical churn - VIP going dormant",
+      },
+      {
+        email: "critical3@test.com",
+        name: "Eduardo Emergency",
+        lastVisitDaysAgo: 100,
+        totalBookings: 5,
+        totalSpent: 2000,
+        description: "Critical churn - moderate customer",
+      },
+
+      // === HIGH CHURN (60-89 days) ===
+      {
+        email: "high1@test.com",
+        name: "Felix Fading",
+        lastVisitDaysAgo: 65,
+        totalBookings: 10,
+        totalSpent: 5500,
+        description: "High churn risk - needs attention",
+      },
+      {
+        email: "high2@test.com",
+        name: "Gloria Gone",
+        lastVisitDaysAgo: 75,
+        totalBookings: 6,
+        totalSpent: 3000,
+        description: "High churn risk - slipping away",
+      },
+      {
+        email: "high3@test.com",
+        name: "Henry Hesitant",
+        lastVisitDaysAgo: 70,
+        totalBookings: 12,
+        totalSpent: 6500,
+        description: "High churn risk - high value at risk",
+      },
+
+      // === MEDIUM CHURN (45-59 days) ===
+      {
+        email: "medium1@test.com",
+        name: "Isabel Inactive",
+        lastVisitDaysAgo: 50,
+        totalBookings: 7,
+        totalSpent: 3500,
+        description: "Medium risk - needs reminder",
+      },
+      {
+        email: "medium2@test.com",
+        name: "Juan Jittery",
+        lastVisitDaysAgo: 45,
+        totalBookings: 4,
+        totalSpent: 1800,
+        description: "Medium risk - still recoverable",
+      },
+      {
+        email: "medium3@test.com",
+        name: "Karen Questioning",
+        lastVisitDaysAgo: 55,
+        totalBookings: 9,
+        totalSpent: 4200,
+        description: "Medium risk - was consistent",
+      },
+
+      // === CHAMPIONS (Recent, Frequent, High Spend) ===
+      {
+        email: "champion1@test.com",
+        name: "Leo Loyal",
+        lastVisitDaysAgo: 5,
+        totalBookings: 30,
+        totalSpent: 15000,
+        description: "Champion - best customer",
+      },
+      {
+        email: "champion2@test.com",
+        name: "Maria Magnificent",
+        lastVisitDaysAgo: 10,
+        totalBookings: 25,
+        totalSpent: 12000,
+        description: "Champion - VIP regular",
+      },
+      {
+        email: "champion3@test.com",
+        name: "Noel Noble",
+        lastVisitDaysAgo: 7,
+        totalBookings: 28,
+        totalSpent: 14000,
+        description: "Champion - consistent high spender",
+      },
+
+      // === POTENTIAL LOYALISTS (Recent but lower frequency) ===
+      {
+        email: "potential1@test.com",
+        name: "Oscar Opportunity",
+        lastVisitDaysAgo: 12,
+        totalBookings: 5,
+        totalSpent: 2500,
+        description: "Potential loyalist - growing",
+      },
+      {
+        email: "potential2@test.com",
+        name: "Patricia Promising",
+        lastVisitDaysAgo: 8,
+        totalBookings: 6,
+        totalSpent: 3000,
+        description: "Potential loyalist - convert to regular",
+      },
+      {
+        email: "potential3@test.com",
+        name: "Quincy Quick",
+        lastVisitDaysAgo: 15,
+        totalBookings: 4,
+        totalSpent: 2200,
+        description: "Potential loyalist - needs engagement",
+      },
+
+      // === NEW CUSTOMERS ===
+      {
+        email: "new1@test.com",
+        name: "Rachel Recent",
+        lastVisitDaysAgo: 3,
+        totalBookings: 2,
+        totalSpent: 600,
+        description: "New customer - just started",
+      },
+      {
+        email: "new2@test.com",
+        name: "Samuel Starter",
+        lastVisitDaysAgo: 7,
+        totalBookings: 1,
+        totalSpent: 350,
+        description: "New customer - single visit",
+      },
+
+      // === LOW RISK (Active regulars) ===
+      {
+        email: "active1@test.com",
+        name: "Teresa Trusty",
+        lastVisitDaysAgo: 20,
+        totalBookings: 15,
+        totalSpent: 7500,
+        description: "Low risk - regular schedule",
+      },
+      {
+        email: "active2@test.com",
+        name: "Ulysses Usual",
+        lastVisitDaysAgo: 25,
+        totalBookings: 12,
+        totalSpent: 6000,
+        description: "Low risk - monthly visitor",
+      },
+    ];
+
+    const results = [];
+
+    for (const customer of testCustomers) {
+      // Check if customer already exists
+      const existing = await ctx.db
+        .query("users")
+        .withIndex("by_email", (q) => q.eq("email", customer.email))
+        .first();
+
+      if (existing) {
+        // Update existing customer with test data
+        await ctx.db.patch(existing._id, {
+          nickname: customer.name.split(" ")[0],
+          lastBookingDate: now - customer.lastVisitDaysAgo * DAY_MS,
+          totalBookings: customer.totalBookings,
+          totalSpent: customer.totalSpent * 100, // Convert to centavos
+          updatedAt: now,
+        });
+        results.push({ email: customer.email, action: "updated" });
+      } else {
+        // Create new customer
+        await ctx.db.insert("users", {
+          username: customer.email.split("@")[0],
+          email: customer.email,
+          password: "test123",
+          nickname: customer.name.split(" ")[0],
+          mobile_number: `+63 9${Math.floor(Math.random() * 1000000000).toString().padStart(9, "0")}`,
+          role: "customer",
+          branch_id: branchId,
+          is_active: true,
+          skills: [],
+          isVerified: true,
+          lastBookingDate: now - customer.lastVisitDaysAgo * DAY_MS,
+          totalBookings: customer.totalBookings,
+          totalSpent: customer.totalSpent * 100, // Convert to centavos
+          createdAt: now - 180 * DAY_MS, // Account created 6 months ago
+          updatedAt: now,
+        });
+        results.push({ email: customer.email, action: "created" });
+      }
+    }
+
+    console.log("[Seed] AI Email Marketing test data created:", {
+      total: testCustomers.length,
+      created: results.filter((r) => r.action === "created").length,
+      updated: results.filter((r) => r.action === "updated").length,
+    });
+
+    return {
+      success: true,
+      total: testCustomers.length,
+      customers: results,
+      segments: {
+        criticalChurn: 3,
+        highChurn: 3,
+        mediumChurn: 3,
+        champions: 3,
+        potentialLoyalists: 3,
+        newCustomers: 2,
+        lowRisk: 2,
+      },
+    };
+  },
+});
+
+// Debug query to check if analytics fields are present
+export const checkCustomerAnalyticsFields = query({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+
+    if (!user) return { found: false };
+
+    return {
+      found: true,
+      email: user.email,
+      hasLastBookingDate: "lastBookingDate" in user,
+      lastBookingDate: user.lastBookingDate,
+      hasTotalBookings: "totalBookings" in user,
+      totalBookings: user.totalBookings,
+      hasTotalSpent: "totalSpent" in user,
+      totalSpent: user.totalSpent,
+      createdAt: user.createdAt,
+    };
+  },
+});
+
+/**
+ * Seed sample branch posts for testing the Branch Profile feature
+ * Run: npx convex run seed:seedBranchPosts
+ */
+export const seedBranchPosts = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const HOUR_MS = 60 * 60 * 1000;
+
+    // Get branches
+    const branches = await ctx.db.query("branches").collect();
+    if (branches.length === 0) {
+      return { success: false, message: "No branches found. Run seedAll first." };
+    }
+
+    // Get barbers
+    const barbers = await ctx.db.query("barbers").collect();
+    if (barbers.length === 0) {
+      return { success: false, message: "No barbers found. Run seedAll first." };
+    }
+
+    // Get barber users (to use as author_id)
+    const barberUsers = await ctx.db
+      .query("users")
+      .withIndex("by_role", (q) => q.eq("role", "barber"))
+      .collect();
+
+    // Get branch admin user
+    const adminUser = await ctx.db
+      .query("users")
+      .withIndex("by_role", (q) => q.eq("role", "branch_admin"))
+      .first();
+
+    if (!adminUser) {
+      return { success: false, message: "No admin user found. Run seedAll first." };
+    }
+
+    // Check if posts already exist
+    const existingPosts = await ctx.db.query("branch_posts").collect();
+    if (existingPosts.length > 0) {
+      return {
+        success: false,
+        message: `Posts already exist (${existingPosts.length}). Use clearBranchPosts to clear first.`,
+      };
+    }
+
+    const branch1 = branches[0];
+    const postsCreated: string[] = [];
+
+    // Sample posts data
+    const samplePosts = [
+      // === SHOWCASE POSTS (barber work) ===
+      {
+        author_id: barberUsers[0]?._id || adminUser._id,
+        author_type: "barber" as const,
+        post_type: "showcase" as const,
+        content: "Fresh fade with textured top! This client wanted something clean for his job interview. Clean lines, sharp edges. Book now if you want the same look! 💈",
+        images: ["https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=800"],
+        status: "published" as const,
+        pinned: true,
+        daysAgo: 1,
+        view_count: 127,
+      },
+      {
+        author_id: barberUsers[1]?._id || adminUser._id,
+        author_type: "barber" as const,
+        post_type: "showcase" as const,
+        content: "Skin fade with beard lineup combo. Saturday special! My client trusted me with the full transformation. Swipe to see before/after 🔥",
+        images: ["https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800"],
+        status: "published" as const,
+        pinned: false,
+        daysAgo: 3,
+        view_count: 89,
+      },
+      {
+        author_id: barberUsers[2]?._id || adminUser._id,
+        author_type: "barber" as const,
+        post_type: "showcase" as const,
+        content: "Classic pompadour with mid fade. Sometimes the classics just hit different. This gentleman knows what he wants! 🎩",
+        images: ["https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=800"],
+        status: "published" as const,
+        pinned: false,
+        daysAgo: 5,
+        view_count: 56,
+      },
+
+      // === PROMO POSTS ===
+      {
+        author_id: adminUser._id,
+        author_type: "branch_admin" as const,
+        post_type: "promo" as const,
+        content: "🎉 WEEKEND SPECIAL! Get 20% off on all combo services this Saturday and Sunday. Book now to lock in your slot! Limited availability. Use code: WEEKEND20",
+        images: [],
+        status: "published" as const,
+        pinned: true,
+        daysAgo: 0,
+        view_count: 245,
+        expires_at: now + 3 * DAY_MS, // Expires in 3 days
+      },
+      {
+        author_id: adminUser._id,
+        author_type: "branch_admin" as const,
+        post_type: "promo" as const,
+        content: "Refer a friend and BOTH of you get ₱50 off your next haircut! No limits - the more you refer, the more you save. Ask our staff for details.",
+        images: [],
+        status: "published" as const,
+        pinned: false,
+        daysAgo: 7,
+        view_count: 178,
+      },
+
+      // === AVAILABILITY POSTS ===
+      {
+        author_id: barberUsers[0]?._id || adminUser._id,
+        author_type: "barber" as const,
+        post_type: "availability" as const,
+        content: "📅 OPEN SLOTS TODAY! I have 3 slots left this afternoon: 2:00 PM, 3:30 PM, and 5:00 PM. First come, first served - book now via the app!",
+        images: [],
+        status: "published" as const,
+        pinned: false,
+        daysAgo: 0,
+        view_count: 34,
+        expires_at: now + 12 * HOUR_MS, // Expires in 12 hours
+      },
+      {
+        author_id: barberUsers[1]?._id || adminUser._id,
+        author_type: "barber" as const,
+        post_type: "availability" as const,
+        content: "Back from vacation! 🌴 Ready to make you look fresh again. Fully booked tomorrow but have plenty of slots Wednesday onwards. Book ahead!",
+        images: [],
+        status: "published" as const,
+        pinned: false,
+        daysAgo: 2,
+        view_count: 67,
+      },
+
+      // === ANNOUNCEMENT POSTS ===
+      {
+        author_id: adminUser._id,
+        author_type: "branch_admin" as const,
+        post_type: "announcement" as const,
+        content: "📣 HOLIDAY HOURS: We will be closed on February 10 for the holiday. Regular hours resume February 11. Book your pre-holiday appointments now!",
+        images: [],
+        status: "published" as const,
+        pinned: true,
+        daysAgo: 1,
+        view_count: 312,
+      },
+      {
+        author_id: adminUser._id,
+        author_type: "branch_admin" as const,
+        post_type: "announcement" as const,
+        content: "Welcome our newest barber, Maria Garcia! 👋 She specializes in precision cuts and hair coloring. Book with her and get 15% off your first visit!",
+        images: ["https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800"],
+        status: "published" as const,
+        pinned: false,
+        daysAgo: 14,
+        view_count: 189,
+      },
+
+      // === TIP POSTS ===
+      {
+        author_id: barberUsers[0]?._id || adminUser._id,
+        author_type: "barber" as const,
+        post_type: "tip" as const,
+        content: "💡 PRO TIP: Don't wash your hair right before your haircut! Natural oils help me see your hair's texture and how it falls naturally. Wait at least a day after washing for best results.",
+        images: [],
+        status: "published" as const,
+        pinned: false,
+        daysAgo: 4,
+        view_count: 156,
+      },
+      {
+        author_id: barberUsers[2]?._id || adminUser._id,
+        author_type: "barber" as const,
+        post_type: "tip" as const,
+        content: "How to maintain your fade between cuts: 🔹 Use a good pomade or clay for texture 🔹 Clean up the neckline yourself with a trimmer 🔹 Come back every 2-3 weeks for best results",
+        images: [],
+        status: "published" as const,
+        pinned: false,
+        daysAgo: 10,
+        view_count: 98,
+      },
+
+      // === PENDING POSTS (for moderation queue testing) ===
+      {
+        author_id: barberUsers[1]?._id || adminUser._id,
+        author_type: "barber" as const,
+        post_type: "showcase" as const,
+        content: "Check out this crazy design I did today! Client wanted something unique and I delivered. What do you guys think? 🎨",
+        images: ["https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=800"],
+        status: "pending" as const,
+        pinned: false,
+        daysAgo: 0,
+        view_count: 0,
+      },
+      {
+        author_id: barberUsers[0]?._id || adminUser._id,
+        author_type: "barber" as const,
+        post_type: "tip" as const,
+        content: "Quick tip for all my clients with curly hair - use a diffuser when blow drying! It keeps your curls defined and reduces frizz. Trust me on this one! 🌀",
+        images: [],
+        status: "pending" as const,
+        pinned: false,
+        daysAgo: 0,
+        view_count: 0,
+      },
+      {
+        author_id: barberUsers[2]?._id || adminUser._id,
+        author_type: "barber" as const,
+        post_type: "promo" as const,
+        content: "Offering 10% off beard trims this week only! DM me to book your slot. First time clients welcome! 🧔",
+        images: [],
+        status: "pending" as const,
+        pinned: false,
+        daysAgo: 0,
+        view_count: 0,
+      },
+    ];
+
+    // Create posts
+    for (const postData of samplePosts) {
+      const createdAt = now - postData.daysAgo * DAY_MS;
+
+      const postId = await ctx.db.insert("branch_posts", {
+        branch_id: branch1._id,
+        author_id: postData.author_id,
+        author_type: postData.author_type,
+        post_type: postData.post_type,
+        content: postData.content,
+        images: postData.images,
+        status: postData.status,
+        pinned: postData.pinned,
+        expires_at: postData.expires_at,
+        view_count: postData.view_count,
+        createdAt,
+        updatedAt: createdAt,
+      });
+
+      postsCreated.push(`${postData.post_type}: ${postData.status}`);
+    }
+
+    return {
+      success: true,
+      message: `Created ${postsCreated.length} sample branch posts`,
+      data: {
+        totalPosts: postsCreated.length,
+        published: samplePosts.filter((p) => p.status === "published").length,
+        pending: samplePosts.filter((p) => p.status === "pending").length,
+        byType: {
+          showcase: samplePosts.filter((p) => p.post_type === "showcase").length,
+          promo: samplePosts.filter((p) => p.post_type === "promo").length,
+          availability: samplePosts.filter((p) => p.post_type === "availability").length,
+          announcement: samplePosts.filter((p) => p.post_type === "announcement").length,
+          tip: samplePosts.filter((p) => p.post_type === "tip").length,
+        },
+        pinned: samplePosts.filter((p) => p.pinned).length,
+      },
+    };
+  },
+});
+
+/**
+ * Clear all branch posts
+ * Run: npx convex run seed:clearBranchPosts
+ */
+export const clearBranchPosts = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const posts = await ctx.db.query("branch_posts").collect();
+
+    for (const post of posts) {
+      await ctx.db.delete(post._id);
+    }
+
+    return {
+      success: true,
+      message: `Cleared ${posts.length} branch posts`,
+    };
+  },
+});
+
+/**
+ * Get branch posts status
+ * Run: npx convex run seed:getBranchPostsStatus
+ */
+export const getBranchPostsStatus = query({
+  args: {},
+  handler: async (ctx) => {
+    const posts = await ctx.db.query("branch_posts").collect();
+
+    const byStatus: Record<string, number> = {};
+    const byType: Record<string, number> = {};
+    const byAuthorType: Record<string, number> = {};
+
+    for (const post of posts) {
+      byStatus[post.status] = (byStatus[post.status] || 0) + 1;
+      byType[post.post_type] = (byType[post.post_type] || 0) + 1;
+      byAuthorType[post.author_type] = (byAuthorType[post.author_type] || 0) + 1;
+    }
+
+    return {
+      total: posts.length,
+      byStatus,
+      byType,
+      byAuthorType,
+      pinned: posts.filter((p) => p.pinned).length,
+      withImages: posts.filter((p) => p.images && p.images.length > 0).length,
+    };
+  },
+});
+
+/**
+ * Debug query to check branch IDs
+ * Run: npx convex run seed:debugBranchIds
+ */
+export const debugBranchIds = query({
+  args: {},
+  handler: async (ctx) => {
+    const posts = await ctx.db.query("branch_posts").take(3);
+    const branches = await ctx.db.query("branches").collect();
+
+    const postBranchIds = [...new Set(posts.map((p) => p.branch_id))];
+
+    return {
+      branches: branches.map((b) => ({
+        _id: b._id,
+        name: b.name,
+        is_active: b.is_active,
+      })),
+      postBranchIds,
+      postsLinkedToBranch: postBranchIds.map((id) => {
+        const branch = branches.find((b) => b._id === id);
+        return { branch_id: id, branch_name: branch?.name || "NOT FOUND" };
+      }),
+    };
+  },
+});
+
+/**
+ * Seed products for the shop
+ * Run: npx convex run seed:seedProducts
+ */
+export const seedProducts = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+
+    // Get the first branch
+    const branches = await ctx.db.query("branches").collect();
+    if (branches.length === 0) {
+      throw new Error("No branches found. Run seedAll first.");
+    }
+    const branch1Id = branches[0]._id;
+
+    // Check if products already exist
+    const existingProducts = await ctx.db.query("products").collect();
+    if (existingProducts.length > 0) {
+      return {
+        success: false,
+        message: `Products already exist (${existingProducts.length} products). Run clearProducts first if you want to reseed.`,
+      };
+    }
+
+    const products = [
+      // Hair Care Products
+      {
+        name: "Premium Pomade",
+        description: "Strong hold water-based pomade with natural shine. Easy to wash out.",
+        price: 450,
+        cost: 180,
+        category: "hair-care" as const,
+        brand: "TipunoX",
+        sku: "TPX-HC-001",
+        stock: 50,
+        minStock: 10,
+        imageUrl: "https://images.unsplash.com/photo-1597854710175-69c14789c3e3?w=400",
+        status: "active" as const,
+        soldThisMonth: 23,
+      },
+      {
+        name: "Matte Clay Wax",
+        description: "Medium hold matte finish clay for textured, natural looks.",
+        price: 380,
+        cost: 150,
+        category: "hair-care" as const,
+        brand: "TipunoX",
+        sku: "TPX-HC-002",
+        stock: 35,
+        minStock: 8,
+        imageUrl: "https://images.unsplash.com/photo-1626808642875-0aa545482dfb?w=400",
+        status: "active" as const,
+        soldThisMonth: 18,
+      },
+      {
+        name: "Hair Growth Serum",
+        description: "Biotin-enriched serum to promote healthy hair growth and thickness.",
+        price: 750,
+        cost: 320,
+        category: "hair-care" as const,
+        brand: "GroMax",
+        sku: "GMX-HC-001",
+        stock: 25,
+        minStock: 5,
+        imageUrl: "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=400",
+        status: "active" as const,
+        soldThisMonth: 12,
+      },
+      {
+        name: "Anti-Dandruff Shampoo",
+        description: "Medicated shampoo with zinc pyrithione for flake-free scalp.",
+        price: 320,
+        cost: 130,
+        category: "hair-care" as const,
+        brand: "ClearHead",
+        sku: "CLH-HC-001",
+        stock: 40,
+        minStock: 10,
+        imageUrl: "https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=400",
+        status: "active" as const,
+        soldThisMonth: 28,
+      },
+      {
+        name: "Sea Salt Spray",
+        description: "Creates beachy waves and texture with natural sea salt minerals.",
+        price: 290,
+        cost: 100,
+        category: "hair-care" as const,
+        brand: "TipunoX",
+        sku: "TPX-HC-003",
+        stock: 30,
+        minStock: 8,
+        imageUrl: "https://images.unsplash.com/photo-1594998893017-36147cbcae05?w=400",
+        status: "active" as const,
+        soldThisMonth: 15,
+      },
+
+      // Beard Care Products
+      {
+        name: "Beard Oil - Sandalwood",
+        description: "Premium beard oil with sandalwood scent. Softens and conditions.",
+        price: 420,
+        cost: 170,
+        category: "beard-care" as const,
+        brand: "BeardKing",
+        sku: "BDK-BC-001",
+        stock: 45,
+        minStock: 10,
+        imageUrl: "https://images.unsplash.com/photo-1621607512214-68297480165e?w=400",
+        status: "active" as const,
+        soldThisMonth: 31,
+      },
+      {
+        name: "Beard Balm",
+        description: "Styling balm with light hold. Tames flyaways and adds shine.",
+        price: 350,
+        cost: 140,
+        category: "beard-care" as const,
+        brand: "BeardKing",
+        sku: "BDK-BC-002",
+        stock: 38,
+        minStock: 8,
+        imageUrl: "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=400",
+        status: "active" as const,
+        soldThisMonth: 22,
+      },
+      {
+        name: "Beard Wash",
+        description: "Gentle cleanser specifically formulated for facial hair.",
+        price: 280,
+        cost: 110,
+        category: "beard-care" as const,
+        brand: "TipunoX",
+        sku: "TPX-BC-001",
+        stock: 42,
+        minStock: 10,
+        imageUrl: "https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=400",
+        status: "active" as const,
+        soldThisMonth: 19,
+      },
+      {
+        name: "Beard Growth Kit",
+        description: "Complete kit with derma roller, growth serum, and beard oil.",
+        price: 1250,
+        cost: 500,
+        category: "beard-care" as const,
+        brand: "GroMax",
+        sku: "GMX-BC-001",
+        stock: 15,
+        minStock: 5,
+        imageUrl: "https://images.unsplash.com/photo-1621607512022-6aecc4fed814?w=400",
+        status: "active" as const,
+        soldThisMonth: 8,
+      },
+
+      // Shaving Products
+      {
+        name: "Classic Shaving Cream",
+        description: "Rich lather shaving cream with aloe vera for smooth shaves.",
+        price: 220,
+        cost: 85,
+        category: "shaving" as const,
+        brand: "TipunoX",
+        sku: "TPX-SH-001",
+        stock: 55,
+        minStock: 12,
+        imageUrl: "https://images.unsplash.com/photo-1585751119414-ef2636f8aede?w=400",
+        status: "active" as const,
+        soldThisMonth: 35,
+      },
+      {
+        name: "Pre-Shave Oil",
+        description: "Prepares skin and softens stubble for a closer, irritation-free shave.",
+        price: 340,
+        cost: 130,
+        category: "shaving" as const,
+        brand: "SmoothCut",
+        sku: "SMC-SH-001",
+        stock: 28,
+        minStock: 8,
+        imageUrl: "https://images.unsplash.com/photo-1621607512175-adf5eba23c09?w=400",
+        status: "active" as const,
+        soldThisMonth: 14,
+      },
+      {
+        name: "After Shave Balm",
+        description: "Alcohol-free balm that soothes and hydrates post-shave skin.",
+        price: 290,
+        cost: 115,
+        category: "shaving" as const,
+        brand: "TipunoX",
+        sku: "TPX-SH-002",
+        stock: 48,
+        minStock: 10,
+        imageUrl: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400",
+        status: "active" as const,
+        soldThisMonth: 27,
+      },
+      {
+        name: "Safety Razor Blades (10 pack)",
+        description: "Premium stainless steel double-edge razor blades.",
+        price: 150,
+        cost: 50,
+        category: "shaving" as const,
+        brand: "SharpEdge",
+        sku: "SHP-SH-001",
+        stock: 100,
+        minStock: 25,
+        imageUrl: "https://images.unsplash.com/photo-1621607512022-6aecc4fed814?w=400",
+        status: "active" as const,
+        soldThisMonth: 45,
+      },
+
+      // Tools
+      {
+        name: "Professional Hair Clipper",
+        description: "Cordless clipper with titanium blades. Includes 8 guard sizes.",
+        price: 2850,
+        cost: 1200,
+        category: "tools" as const,
+        brand: "BarberPro",
+        sku: "BPR-TL-001",
+        stock: 12,
+        minStock: 3,
+        imageUrl: "https://images.unsplash.com/photo-1621607512214-68297480165e?w=400",
+        status: "active" as const,
+        soldThisMonth: 5,
+      },
+      {
+        name: "Beard Trimmer",
+        description: "Precision trimmer for beard detailing. 20 length settings.",
+        price: 1650,
+        cost: 680,
+        category: "tools" as const,
+        brand: "BarberPro",
+        sku: "BPR-TL-002",
+        stock: 18,
+        minStock: 5,
+        imageUrl: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400",
+        status: "active" as const,
+        soldThisMonth: 9,
+      },
+      {
+        name: "Styling Comb Set",
+        description: "Set of 5 professional styling combs in different sizes.",
+        price: 250,
+        cost: 80,
+        category: "tools" as const,
+        brand: "TipunoX",
+        sku: "TPX-TL-001",
+        stock: 60,
+        minStock: 15,
+        imageUrl: "https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?w=400",
+        status: "active" as const,
+        soldThisMonth: 21,
+      },
+      {
+        name: "Barber Scissors",
+        description: "Japanese steel scissors for precision cutting. 6 inch blade.",
+        price: 1450,
+        cost: 580,
+        category: "tools" as const,
+        brand: "SharpEdge",
+        sku: "SHP-TL-001",
+        stock: 10,
+        minStock: 3,
+        imageUrl: "https://images.unsplash.com/photo-1582095133179-bfd08e2fc6b3?w=400",
+        status: "active" as const,
+        soldThisMonth: 4,
+      },
+
+      // Accessories
+      {
+        name: "TPX Branded Cap",
+        description: "Snapback cap with embroidered TPX logo. One size fits all.",
+        price: 450,
+        cost: 150,
+        category: "accessories" as const,
+        brand: "TipunoX",
+        sku: "TPX-AC-001",
+        stock: 40,
+        minStock: 10,
+        imageUrl: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400",
+        status: "active" as const,
+        soldThisMonth: 16,
+      },
+      {
+        name: "Dopp Kit Bag",
+        description: "Premium leather toiletry bag for travel. Water-resistant lining.",
+        price: 890,
+        cost: 350,
+        category: "accessories" as const,
+        brand: "TipunoX",
+        sku: "TPX-AC-002",
+        stock: 22,
+        minStock: 5,
+        imageUrl: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400",
+        status: "active" as const,
+        soldThisMonth: 7,
+      },
+      {
+        name: "Shaving Brush",
+        description: "Badger hair shaving brush for rich lather application.",
+        price: 580,
+        cost: 220,
+        category: "accessories" as const,
+        brand: "SmoothCut",
+        sku: "SMC-AC-001",
+        stock: 25,
+        minStock: 6,
+        imageUrl: "https://images.unsplash.com/photo-1621607512022-6aecc4fed814?w=400",
+        status: "active" as const,
+        soldThisMonth: 11,
+      },
+      {
+        name: "Gift Card ₱500",
+        description: "TPX Barbershop gift card. Valid for services and products.",
+        price: 500,
+        cost: 500,
+        category: "accessories" as const,
+        brand: "TipunoX",
+        sku: "TPX-GC-500",
+        stock: 999,
+        minStock: 50,
+        imageUrl: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=400",
+        status: "active" as const,
+        soldThisMonth: 25,
+      },
+    ];
+
+    // Insert all products
+    const insertedIds = [];
+    for (const product of products) {
+      const id = await ctx.db.insert("products", {
+        branch_id: branch1Id,
+        ...product,
+        createdAt: now,
+        updatedAt: now,
+      });
+      insertedIds.push(id);
+    }
+
+    return {
+      success: true,
+      message: `Created ${insertedIds.length} products`,
+      data: {
+        totalProducts: insertedIds.length,
+        byCategory: {
+          "hair-care": products.filter((p) => p.category === "hair-care").length,
+          "beard-care": products.filter((p) => p.category === "beard-care").length,
+          shaving: products.filter((p) => p.category === "shaving").length,
+          tools: products.filter((p) => p.category === "tools").length,
+          accessories: products.filter((p) => p.category === "accessories").length,
+        },
+      },
+    };
+  },
+});
+
+/**
+ * Clear all products
+ * Run: npx convex run seed:clearProducts
+ */
+export const clearProducts = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const products = await ctx.db.query("products").collect();
+
+    for (const product of products) {
+      await ctx.db.delete(product._id);
+    }
+
+    return {
+      success: true,
+      message: `Cleared ${products.length} products`,
+    };
+  },
+});
+
+/**
+ * Seed products for the admin product catalog (central warehouse)
+ * Run: npx convex run seed:seedProductCatalog
+ */
+export const seedProductCatalog = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+
+    // Get super admin user for created_by field
+    const superAdmin = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("role"), "super_admin"))
+      .first();
+
+    if (!superAdmin) {
+      throw new Error("No super_admin user found. Run seedAll first.");
+    }
+
+    // Check if catalog products already exist
+    const existingProducts = await ctx.db.query("productCatalog").collect();
+    if (existingProducts.length > 0) {
+      return {
+        success: false,
+        message: `Product catalog already has ${existingProducts.length} products. Run clearProductCatalog first if you want to reseed.`,
+      };
+    }
+
+    const products = [
+      // Hair Care Products
+      {
+        name: "Premium Pomade",
+        description: "Strong hold water-based pomade with natural shine. Easy to wash out.",
+        price: 450,
+        cost: 180,
+        category: "hair-care",
+        brand: "TipunoX",
+        sku: "TPX-HC-001",
+        stock: 50,
+        minStock: 10,
+        image_url: "https://images.unsplash.com/photo-1597854710175-69c14789c3e3?w=400",
+      },
+      {
+        name: "Matte Clay Wax",
+        description: "Medium hold matte finish clay for textured, natural looks.",
+        price: 380,
+        cost: 150,
+        category: "hair-care",
+        brand: "TipunoX",
+        sku: "TPX-HC-002",
+        stock: 35,
+        minStock: 8,
+        image_url: "https://images.unsplash.com/photo-1626808642875-0aa545482dfb?w=400",
+      },
+      {
+        name: "Hair Growth Serum",
+        description: "Biotin-enriched serum to promote healthy hair growth and thickness.",
+        price: 750,
+        cost: 320,
+        category: "hair-care",
+        brand: "GroMax",
+        sku: "GMX-HC-001",
+        stock: 25,
+        minStock: 5,
+        image_url: "https://images.unsplash.com/photo-1608248597279-f99d160bfcbc?w=400",
+      },
+      {
+        name: "Anti-Dandruff Shampoo",
+        description: "Medicated shampoo with zinc pyrithione for flake-free scalp.",
+        price: 320,
+        cost: 130,
+        category: "hair-care",
+        brand: "ClearHead",
+        sku: "CLH-HC-001",
+        stock: 40,
+        minStock: 10,
+        image_url: "https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?w=400",
+      },
+      {
+        name: "Sea Salt Spray",
+        description: "Creates beachy waves and texture with natural sea salt minerals.",
+        price: 290,
+        cost: 100,
+        category: "hair-care",
+        brand: "TipunoX",
+        sku: "TPX-HC-003",
+        stock: 30,
+        minStock: 8,
+        image_url: "https://images.unsplash.com/photo-1594998893017-36147cbcae05?w=400",
+      },
+
+      // Beard Care Products
+      {
+        name: "Beard Oil - Sandalwood",
+        description: "Premium beard oil with sandalwood scent. Softens and conditions.",
+        price: 420,
+        cost: 170,
+        category: "beard-care",
+        brand: "BeardKing",
+        sku: "BDK-BC-001",
+        stock: 45,
+        minStock: 10,
+        image_url: "https://images.unsplash.com/photo-1621607512214-68297480165e?w=400",
+      },
+      {
+        name: "Beard Balm",
+        description: "Styling balm with light hold. Tames flyaways and adds shine.",
+        price: 350,
+        cost: 140,
+        category: "beard-care",
+        brand: "BeardKing",
+        sku: "BDK-BC-002",
+        stock: 38,
+        minStock: 8,
+        image_url: "https://images.unsplash.com/photo-1556228578-0d85b1a4d571?w=400",
+      },
+      {
+        name: "Beard Wash",
+        description: "Gentle cleanser specifically formulated for facial hair.",
+        price: 280,
+        cost: 110,
+        category: "beard-care",
+        brand: "TipunoX",
+        sku: "TPX-BC-001",
+        stock: 42,
+        minStock: 10,
+        image_url: "https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=400",
+      },
+      {
+        name: "Beard Growth Kit",
+        description: "Complete kit with derma roller, growth serum, and beard oil.",
+        price: 1250,
+        cost: 500,
+        category: "beard-care",
+        brand: "GroMax",
+        sku: "GMX-BC-001",
+        stock: 15,
+        minStock: 5,
+        image_url: "https://images.unsplash.com/photo-1621607512022-6aecc4fed814?w=400",
+      },
+
+      // Shaving Products
+      {
+        name: "Classic Shaving Cream",
+        description: "Rich lather shaving cream with aloe vera for smooth shaves.",
+        price: 220,
+        cost: 85,
+        category: "shaving",
+        brand: "TipunoX",
+        sku: "TPX-SH-001",
+        stock: 55,
+        minStock: 12,
+        image_url: "https://images.unsplash.com/photo-1585751119414-ef2636f8aede?w=400",
+      },
+      {
+        name: "Pre-Shave Oil",
+        description: "Prepares skin and softens stubble for a closer, irritation-free shave.",
+        price: 340,
+        cost: 130,
+        category: "shaving",
+        brand: "SmoothCut",
+        sku: "SMC-SH-001",
+        stock: 28,
+        minStock: 8,
+        image_url: "https://images.unsplash.com/photo-1621607512175-adf5eba23c09?w=400",
+      },
+      {
+        name: "After Shave Balm",
+        description: "Alcohol-free balm that soothes and hydrates post-shave skin.",
+        price: 290,
+        cost: 115,
+        category: "shaving",
+        brand: "TipunoX",
+        sku: "TPX-SH-002",
+        stock: 48,
+        minStock: 10,
+        image_url: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400",
+      },
+      {
+        name: "Safety Razor Blades (10 pack)",
+        description: "Premium stainless steel double-edge razor blades.",
+        price: 150,
+        cost: 50,
+        category: "shaving",
+        brand: "SharpEdge",
+        sku: "SHP-SH-001",
+        stock: 100,
+        minStock: 25,
+        image_url: "https://images.unsplash.com/photo-1621607512022-6aecc4fed814?w=400",
+      },
+
+      // Tools
+      {
+        name: "Professional Hair Clipper",
+        description: "Cordless clipper with titanium blades. Includes 8 guard sizes.",
+        price: 2850,
+        cost: 1200,
+        category: "tools",
+        brand: "BarberPro",
+        sku: "BPR-TL-001",
+        stock: 12,
+        minStock: 3,
+        image_url: "https://images.unsplash.com/photo-1621607512214-68297480165e?w=400",
+      },
+      {
+        name: "Beard Trimmer",
+        description: "Precision trimmer for beard detailing. 20 length settings.",
+        price: 1650,
+        cost: 680,
+        category: "tools",
+        brand: "BarberPro",
+        sku: "BPR-TL-002",
+        stock: 18,
+        minStock: 5,
+        image_url: "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400",
+      },
+      {
+        name: "Styling Comb Set",
+        description: "Set of 5 professional styling combs in different sizes.",
+        price: 250,
+        cost: 80,
+        category: "tools",
+        brand: "TipunoX",
+        sku: "TPX-TL-001",
+        stock: 60,
+        minStock: 15,
+        image_url: "https://images.unsplash.com/photo-1527799820374-dcf8d9d4a388?w=400",
+      },
+      {
+        name: "Barber Scissors",
+        description: "Japanese steel scissors for precision cutting. 6 inch blade.",
+        price: 1450,
+        cost: 580,
+        category: "tools",
+        brand: "SharpEdge",
+        sku: "SHP-TL-001",
+        stock: 10,
+        minStock: 3,
+        image_url: "https://images.unsplash.com/photo-1582095133179-bfd08e2fc6b3?w=400",
+      },
+
+      // Accessories
+      {
+        name: "TPX Branded Cap",
+        description: "Snapback cap with embroidered TPX logo. One size fits all.",
+        price: 450,
+        cost: 150,
+        category: "accessories",
+        brand: "TipunoX",
+        sku: "TPX-AC-001",
+        stock: 40,
+        minStock: 10,
+        image_url: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400",
+      },
+      {
+        name: "Dopp Kit Bag",
+        description: "Premium leather toiletry bag for travel. Water-resistant lining.",
+        price: 890,
+        cost: 350,
+        category: "accessories",
+        brand: "TipunoX",
+        sku: "TPX-AC-002",
+        stock: 22,
+        minStock: 5,
+        image_url: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400",
+      },
+      {
+        name: "Shaving Brush",
+        description: "Badger hair shaving brush for rich lather application.",
+        price: 580,
+        cost: 220,
+        category: "accessories",
+        brand: "SmoothCut",
+        sku: "SMC-AC-001",
+        stock: 25,
+        minStock: 6,
+        image_url: "https://images.unsplash.com/photo-1621607512022-6aecc4fed814?w=400",
+      },
+      {
+        name: "Gift Card ₱500",
+        description: "TPX Barbershop gift card. Valid for services and products.",
+        price: 500,
+        cost: 500,
+        category: "accessories",
+        brand: "TipunoX",
+        sku: "TPX-GC-500",
+        stock: 999,
+        minStock: 50,
+        image_url: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?w=400",
+      },
+    ];
+
+    // Insert all products into productCatalog
+    const insertedIds = [];
+    for (const product of products) {
+      const id = await ctx.db.insert("productCatalog", {
+        ...product,
+        is_active: true,
+        price_enforced: false,
+        created_at: now,
+        created_by: superAdmin._id,
+      });
+      insertedIds.push(id);
+    }
+
+    return {
+      success: true,
+      message: `Created ${insertedIds.length} products in catalog`,
+      data: {
+        totalProducts: insertedIds.length,
+        byCategory: {
+          "hair-care": products.filter((p) => p.category === "hair-care").length,
+          "beard-care": products.filter((p) => p.category === "beard-care").length,
+          shaving: products.filter((p) => p.category === "shaving").length,
+          tools: products.filter((p) => p.category === "tools").length,
+          accessories: products.filter((p) => p.category === "accessories").length,
+        },
+      },
+    };
+  },
+});
+
+/**
+ * Clear all product catalog items
+ * Run: npx convex run seed:clearProductCatalog
+ */
+export const clearProductCatalog = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const products = await ctx.db.query("productCatalog").collect();
+
+    for (const product of products) {
+      await ctx.db.delete(product._id);
+    }
+
+    return {
+      success: true,
+      message: `Cleared ${products.length} products from catalog`,
     };
   },
 });

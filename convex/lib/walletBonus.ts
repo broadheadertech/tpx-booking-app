@@ -103,3 +103,92 @@ export function getFormattedBonusTiers(
 ): string[] {
   return tiers.map(formatBonusTier);
 }
+
+/**
+ * Story 23.4: Calculate bonus with monthly cap consideration
+ *
+ * This function calculates the bonus for a top-up considering:
+ * 1. The full bonus based on the top-up amount
+ * 2. Cap the bonus at the remaining monthly allowance
+ *
+ * IMPORTANT: The monthly cap limits the BONUS AMOUNT given, not the top-up amount.
+ * Example: If cap is ₱380 and user tops up ₱1000:
+ * - Full bonus would be ₱150 (from ₱1000 tier)
+ * - If ₱0 used so far, they get the full ₱150
+ * - Remaining cap becomes ₱380 - ₱150 = ₱230
+ *
+ * @param topUpAmount - The full top-up amount in pesos
+ * @param monthlyBonusCap - The monthly bonus cap (0 = unlimited) - max bonus that can be given per month
+ * @param bonusGivenThisMonth - Total bonus already given this month
+ * @param tiers - Bonus tiers to apply
+ * @returns Object with bonus calculation details
+ */
+export function calculateBonusWithCap(
+  topUpAmount: number,
+  monthlyBonusCap: number,
+  bonusGivenThisMonth: number,
+  tiers: BonusTier[] = DEFAULT_BONUS_TIERS
+): {
+  bonus: number;
+  fullBonus: number;
+  newBonusGivenThisMonth: number;
+  wasLimited: boolean;
+} {
+  // Calculate the full bonus based on the top-up amount (ignoring cap)
+  const fullBonus = calculateTopUpBonus(topUpAmount, tiers);
+
+  // If no cap (0 = unlimited), give full bonus
+  if (monthlyBonusCap === 0) {
+    return {
+      bonus: fullBonus,
+      fullBonus,
+      newBonusGivenThisMonth: bonusGivenThisMonth + fullBonus,
+      wasLimited: false,
+    };
+  }
+
+  // Calculate remaining bonus allowance
+  const remainingBonusAllowance = Math.max(0, monthlyBonusCap - bonusGivenThisMonth);
+
+  // If no remaining allowance, no bonus
+  if (remainingBonusAllowance <= 0) {
+    return {
+      bonus: 0,
+      fullBonus,
+      newBonusGivenThisMonth: bonusGivenThisMonth,
+      wasLimited: true,
+    };
+  }
+
+  // Cap the bonus at the remaining allowance
+  const bonus = Math.min(fullBonus, remainingBonusAllowance);
+  const wasLimited = bonus < fullBonus;
+
+  return {
+    bonus,
+    fullBonus,
+    newBonusGivenThisMonth: bonusGivenThisMonth + bonus,
+    wasLimited,
+  };
+}
+
+/**
+ * Helper to check if current month has started (for resetting monthly tracking)
+ * Returns timestamp of the start of current month
+ */
+export function getMonthStartTimestamp(): number {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+}
+
+/**
+ * Check if we need to reset the monthly bonus tracking
+ *
+ * @param lastMonthStart - Timestamp of when the last bonus month started
+ * @returns true if we're in a new month and should reset
+ */
+export function shouldResetMonthlyBonus(lastMonthStart: number | undefined): boolean {
+  if (!lastMonthStart) return true;
+  const currentMonthStart = getMonthStartTimestamp();
+  return lastMonthStart < currentMonthStart;
+}

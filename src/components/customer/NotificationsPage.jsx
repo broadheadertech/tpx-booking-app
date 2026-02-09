@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Bell, X, Check, Clock, AlertTriangle, Info, Gift, CreditCard, Calendar, ArrowLeft, CheckCircle } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 
 // Notification type icons mapping
 const NOTIFICATION_ICONS = {
@@ -172,7 +172,7 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
 };
 
 const NotificationsPage = ({ onBack }) => {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const [activeFilter, setActiveFilter] = useState('all');
   const [unreadOnly, setUnreadOnly] = useState(false);
   

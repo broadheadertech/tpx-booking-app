@@ -51,6 +51,7 @@ export const getProductById = query({
 // Create new product
 export const createProduct = mutation({
   args: {
+    branch_id: v.id("branches"), // Required: which branch this product belongs to
     name: v.string(),
     description: v.string(),
     price: v.number(),
@@ -104,6 +105,7 @@ export const createProduct = mutation({
     }
     
     const productData: any = {
+      branch_id: args.branch_id,
       name: args.name,
       description: args.description,
       price: args.price,

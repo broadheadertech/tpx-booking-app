@@ -491,7 +491,7 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
                           {scanResult.payment_status === 'paid' && (
                             <div className="flex items-center space-x-2">
                               <span className="px-2 py-0.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded text-xs font-bold">PAID</span>
-                              <span className="text-green-400 text-xs">₱{(scanResult.service_price || 0).toLocaleString()} via PayMongo</span>
+                              <span className="text-green-400 text-xs">₱{(scanResult.service_price || 0).toLocaleString()} via Online Pay</span>
                             </div>
                           )}
                           {scanResult.payment_status === 'partial' && (

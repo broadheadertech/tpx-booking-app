@@ -125,6 +125,7 @@ export const updateProduct = mutation({
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     price: v.optional(v.number()),
+    original_price: v.optional(v.number()),
     cost: v.optional(v.number()),
     category: v.optional(v.string()),
     brand: v.optional(v.string()),
@@ -134,6 +135,13 @@ export const updateProduct = mutation({
     minStock: v.optional(v.number()),
     is_active: v.optional(v.boolean()),
     price_enforced: v.optional(v.boolean()),
+    // Promo/Discount fields
+    discount_percent: v.optional(v.number()),
+    promo_label: v.optional(v.string()),
+    promo_start: v.optional(v.number()),
+    promo_end: v.optional(v.number()),
+    promo_quantity_limit: v.optional(v.number()),
+    is_featured: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const product = await ctx.db.get(args.product_id);
@@ -172,6 +180,7 @@ export const updateProduct = mutation({
     }
 
     if (args.cost !== undefined) updates.cost = args.cost;
+    if (args.original_price !== undefined) updates.original_price = args.original_price;
     if (args.category !== undefined) updates.category = args.category;
     if (args.brand !== undefined) updates.brand = args.brand?.trim();
     if (args.sku !== undefined) updates.sku = args.sku?.trim();
@@ -180,6 +189,13 @@ export const updateProduct = mutation({
     if (args.minStock !== undefined) updates.minStock = args.minStock;
     if (args.is_active !== undefined) updates.is_active = args.is_active;
     if (args.price_enforced !== undefined) updates.price_enforced = args.price_enforced;
+    // Promo/Discount fields
+    if (args.discount_percent !== undefined) updates.discount_percent = args.discount_percent;
+    if (args.promo_label !== undefined) updates.promo_label = args.promo_label?.trim();
+    if (args.promo_start !== undefined) updates.promo_start = args.promo_start;
+    if (args.promo_end !== undefined) updates.promo_end = args.promo_end;
+    if (args.promo_quantity_limit !== undefined) updates.promo_quantity_limit = args.promo_quantity_limit;
+    if (args.is_featured !== undefined) updates.is_featured = args.is_featured;
 
     await ctx.db.patch(args.product_id, updates);
 

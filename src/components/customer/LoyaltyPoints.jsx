@@ -138,8 +138,8 @@ const LoyaltyPoints = ({ onBack }) => {
           <div className="space-y-3">
             {(allTiers || []).map((tier) => {
               const isCurrentTier = currentTier?.name === tier.name
-              const isUnlocked = lifetimePoints >= (tier.min_points / 100)
-              const tierThreshold = tier.min_points / 100
+              const tierThreshold = (tier.min_points || 0) / 100
+              const isUnlocked = lifetimePoints >= tierThreshold
 
               return (
                 <div

@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react'
-import { BarChart3, TrendingUp, Download, Calendar, Building, Users, DollarSign, Activity, Filter, ArrowUp, ArrowDown, Zap, CheckCircle, AlertCircle, Package, Scissors, Award, Target, PieChart, Clock, Star, ShoppingBag, FileText, Trophy, Crown, Medal, Sparkles } from 'lucide-react'
+import { BarChart3, TrendingUp, Download, Calendar, Building, Users, DollarSign, Activity, Filter, ArrowUp, ArrowDown, Zap, CheckCircle, AlertCircle, Package, Scissors, Award, Target, PieChart, Clock, Star, ShoppingBag, FileText, Trophy, Crown, Medal, Sparkles, Brain, Lightbulb, TrendingDown, Wallet, GitBranch, AlertTriangle, Rocket, ChevronDown, ChevronUp } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import AIAnalyticsDashboard from './AIAnalyticsDashboard'
 
 const SystemReports = ({ onRefresh }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('month')
@@ -359,6 +360,7 @@ const SystemReports = ({ onRefresh }) => {
       <div className="flex space-x-4 border-b border-[#333333] overflow-x-auto scrollbar-hide">
         {[
           { id: 'overview', label: 'Overview', icon: BarChart3 },
+          { id: 'ddpp', label: 'DDPP Analytics', icon: Brain },
           { id: 'summary', label: 'Branch Summary', icon: FileText },
           { id: 'performers', label: 'Top Performers', icon: Trophy }
         ].map(tab => {
@@ -382,6 +384,14 @@ const SystemReports = ({ onRefresh }) => {
 
       {/* Content */}
       {activeTab === 'overview' && renderOverview()}
+      {activeTab === 'ddpp' && (
+        <SADDPPAnalytics
+          branches={branches}
+          selectedPeriod={selectedPeriod}
+          selectedBranch={selectedBranch}
+          setSelectedBranch={setSelectedBranch}
+        />
+      )}
       {activeTab === 'summary' && <BranchSummary
         branches={branches}
         transactions={transactions}
@@ -1351,5 +1361,895 @@ const TopPerformers = ({ branches, transactions, bookings, barbers, users, recog
     </div>
   )
 }
+
+// ============================================================================
+// SUPER ADMIN DDPP ANALYTICS COMPONENT
+// ============================================================================
+// Descriptive, Diagnostic, Predictive, Prescriptive Analytics for SA
+const SADDPPAnalytics = ({ branches, selectedPeriod, selectedBranch, setSelectedBranch }) => {
+  const [activeTab, setActiveTab] = useState('descriptive')
+  const [expandedSections, setExpandedSections] = useState({})
+
+  // Calculate date range based on selected period
+  const getDateRange = () => {
+    const now = new Date()
+    let startDate = new Date()
+    let endDate = new Date()
+
+    switch (selectedPeriod) {
+      case 'week':
+        const dayOfWeek = now.getDay()
+        const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday, 0, 0, 0, 0)
+        endDate = new Date(startDate)
+        endDate.setDate(startDate.getDate() + 6)
+        endDate.setHours(23, 59, 59, 999)
+        break
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0)
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+        break
+      case 'quarter':
+        const currentQuarter = Math.floor(now.getMonth() / 3)
+        const quarterStartMonth = currentQuarter * 3
+        startDate = new Date(now.getFullYear(), quarterStartMonth, 1, 0, 0, 0, 0)
+        endDate = new Date(now.getFullYear(), quarterStartMonth + 3, 0, 23, 59, 59, 999)
+        break
+      case 'year':
+        startDate = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0)
+        endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999)
+        break
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0)
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+    }
+
+    return { startDate: startDate.getTime(), endDate: endDate.getTime() }
+  }
+
+  const { startDate, endDate } = getDateRange()
+
+  // SA Analytics Queries
+  const descriptiveData = useQuery(api.services.aiAnalytics.getSADescriptiveAnalytics, {
+    start_date: startDate,
+    end_date: endDate
+  })
+
+  const diagnosticData = useQuery(api.services.aiAnalytics.getSADiagnosticAnalytics, {
+    start_date: startDate,
+    end_date: endDate
+  })
+
+  const predictiveData = useQuery(api.services.aiAnalytics.getSAPredictiveAnalytics, {
+    forecast_months: 3
+  })
+
+  const prescriptiveData = useQuery(api.services.aiAnalytics.getSAPrescriptiveAnalytics, {})
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
+  }
+
+  const tabs = [
+    { id: 'descriptive', label: 'Descriptive', icon: BarChart3, description: 'What is happening?' },
+    { id: 'diagnostic', label: 'Diagnostic', icon: AlertTriangle, description: 'Why is it happening?' },
+    { id: 'predictive', label: 'Predictive', icon: TrendingUp, description: 'What will happen?' },
+    { id: 'prescriptive', label: 'Prescriptive', icon: Rocket, description: 'What should we do?' },
+  ]
+
+  // Descriptive Tab Content
+  const renderDescriptive = () => {
+    if (!descriptiveData) return <LoadingState />
+
+    const { summary, branch_performance, insights } = descriptiveData
+
+    return (
+      <div className="space-y-6">
+        {/* AI Insights Banner */}
+        <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-xl p-4 border border-purple-500/30">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-5 h-5 text-purple-400" />
+            <span className="text-purple-400 font-semibold">AI Insights</span>
+          </div>
+          <div className="space-y-2">
+            {insights.map((insight, idx) => (
+              <p key={idx} className="text-gray-300 text-sm">{insight}</p>
+            ))}
+          </div>
+        </div>
+
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl p-5 border border-[#444]/50">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-white" />
+              </div>
+              <span className={`text-xs font-medium ${summary.revenue_growth >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                {summary.revenue_growth >= 0 ? '+' : ''}{summary.revenue_growth.toFixed(1)}%
+              </span>
+            </div>
+            <p className="text-gray-400 text-xs">System Revenue</p>
+            <p className="text-xl font-bold text-white">₱{summary.total_revenue.toLocaleString()}</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl p-5 border border-[#444]/50">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center">
+                <Crown className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xs text-yellow-400 font-medium">Royalties</span>
+            </div>
+            <p className="text-gray-400 text-xs">Total Royalties</p>
+            <p className="text-xl font-bold text-white">₱{summary.total_royalties.toLocaleString()}</p>
+            <p className="text-xs text-gray-500 mt-1">₱{summary.pending_royalties.toLocaleString()} pending</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl p-5 border border-[#444]/50">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xs text-blue-400 font-medium">{summary.topup_count} txns</span>
+            </div>
+            <p className="text-gray-400 text-xs">Wallet Top-ups</p>
+            <p className="text-xl font-bold text-white">₱{summary.wallet_topups.toLocaleString()}</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl p-5 border border-[#444]/50">
+            <div className="flex items-center justify-between mb-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                <Building className="w-5 h-5 text-white" />
+              </div>
+              {summary.new_branches > 0 && (
+                <span className="text-xs text-green-400 font-medium">+{summary.new_branches} new</span>
+              )}
+            </div>
+            <p className="text-gray-400 text-xs">Active Branches</p>
+            <p className="text-xl font-bold text-white">{summary.active_branches}</p>
+          </div>
+        </div>
+
+        {/* SA Product Sales Section */}
+        {summary.sa_product_orders && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl p-5 border border-orange-500/30">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg flex items-center justify-center">
+                  <Package className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xs text-orange-400 font-medium">{summary.sa_product_orders.completed_orders} orders</span>
+              </div>
+              <p className="text-gray-400 text-xs">SA Product Sales</p>
+              <p className="text-xl font-bold text-white">₱{summary.sa_product_orders.total_revenue.toLocaleString()}</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl p-5 border border-[#444]/50">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xs text-green-400 font-medium">{summary.sa_product_orders.paid_orders} paid</span>
+              </div>
+              <p className="text-gray-400 text-xs">Paid Product Orders</p>
+              <p className="text-xl font-bold text-white">₱{summary.sa_product_orders.paid_revenue.toLocaleString()}</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl p-5 border border-[#444]/50">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-rose-500 rounded-lg flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xs text-red-400 font-medium">{summary.sa_product_orders.unpaid_orders} unpaid</span>
+              </div>
+              <p className="text-gray-400 text-xs">Pending Payments</p>
+              <p className="text-xl font-bold text-white">₱{summary.sa_product_orders.pending_payments.toLocaleString()}</p>
+            </div>
+
+            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl p-5 border border-[#444]/50">
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-teal-500 rounded-lg flex items-center justify-center">
+                  <Package className="w-5 h-5 text-white" />
+                </div>
+                {summary.product_catalog?.low_stock_products > 0 && (
+                  <span className="text-xs text-yellow-400 font-medium">{summary.product_catalog.low_stock_products} low stock</span>
+                )}
+              </div>
+              <p className="text-gray-400 text-xs">Active Catalog Products</p>
+              <p className="text-xl font-bold text-white">{summary.product_catalog?.active_products || 0}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Revenue Breakdown */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-[#2A2A2A] rounded-xl p-5 border border-[#444]/50">
+            <h4 className="text-white font-semibold mb-4 flex items-center gap-2">
+              <PieChart className="w-4 h-4 text-purple-400" />
+              Revenue Breakdown
+            </h4>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  <span className="text-gray-300 text-sm">Services</span>
+                </div>
+                <span className="text-white font-medium">₱{summary.service_revenue.toLocaleString()}</span>
+              </div>
+              <div className="w-full h-2 bg-[#1A1A1A] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full"
+                  style={{ width: `${summary.total_revenue > 0 ? (summary.service_revenue / summary.total_revenue) * 100 : 0}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                  <span className="text-gray-300 text-sm">Products</span>
+                </div>
+                <span className="text-white font-medium">₱{summary.product_revenue.toLocaleString()}</span>
+              </div>
+              <div className="w-full h-2 bg-[#1A1A1A] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full"
+                  style={{ width: `${summary.total_revenue > 0 ? (summary.product_revenue / summary.total_revenue) * 100 : 0}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Top Branches */}
+          <div className="bg-[#2A2A2A] rounded-xl p-5 border border-[#444]/50">
+            <h4 className="text-white font-semibold mb-4 flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-yellow-400" />
+              Top Performing Branches
+            </h4>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {branch_performance.slice(0, 5).map((branch, idx) => (
+                <div key={branch.branch_id} className="flex items-center justify-between p-2 bg-[#1A1A1A] rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                      idx === 0 ? 'bg-yellow-500/20 text-yellow-400' :
+                      idx === 1 ? 'bg-gray-400/20 text-gray-300' :
+                      idx === 2 ? 'bg-orange-500/20 text-orange-400' :
+                      'bg-[#333] text-gray-400'
+                    }`}>{idx + 1}</span>
+                    <span className="text-white text-sm">{branch.branch_name}</span>
+                  </div>
+                  <span className="text-green-400 font-medium text-sm">₱{branch.revenue.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Diagnostic Tab Content
+  const renderDiagnostic = () => {
+    if (!diagnosticData) return <LoadingState />
+
+    const { royalty_analysis, product_analysis, sa_product_analysis, branch_performance, wallet_analysis, diagnostics } = diagnosticData
+
+    return (
+      <div className="space-y-6">
+        {/* Issues Banner */}
+        {diagnostics.length > 0 && (
+          <div className="bg-gradient-to-r from-red-500/10 to-orange-500/10 rounded-xl p-4 border border-red-500/30">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="w-5 h-5 text-red-400" />
+              <span className="text-red-400 font-semibold">Issues Detected ({diagnostics.length})</span>
+            </div>
+            <div className="space-y-3">
+              {diagnostics.map((diag, idx) => (
+                <div key={idx} className={`p-3 rounded-lg ${
+                  diag.severity === 'high' ? 'bg-red-500/10 border border-red-500/30' :
+                  diag.severity === 'medium' ? 'bg-yellow-500/10 border border-yellow-500/30' :
+                  'bg-blue-500/10 border border-blue-500/30'
+                }`}>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-white font-medium text-sm">{diag.issue}</p>
+                      <p className="text-gray-400 text-xs mt-1">{diag.analysis}</p>
+                    </div>
+                    <span className={`text-xs px-2 py-1 rounded ${
+                      diag.severity === 'high' ? 'bg-red-500/20 text-red-400' :
+                      diag.severity === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                      'bg-blue-500/20 text-blue-400'
+                    }`}>{diag.severity}</span>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2 text-xs text-purple-400">
+                    <Lightbulb className="w-3 h-3" />
+                    {diag.action}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Royalty Analysis */}
+        <div className="bg-[#2A2A2A] rounded-xl p-5 border border-[#444]/50">
+          <button
+            onClick={() => toggleSection('royalty')}
+            className="w-full flex items-center justify-between"
+          >
+            <h4 className="text-white font-semibold flex items-center gap-2">
+              <Crown className="w-4 h-4 text-yellow-400" />
+              Royalty Collection Analysis
+            </h4>
+            {expandedSections.royalty ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+          </button>
+          {expandedSections.royalty !== false && (
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center gap-4">
+                <div className="flex-1 bg-[#1A1A1A] rounded-lg p-3">
+                  <p className="text-gray-400 text-xs">Overdue Payments</p>
+                  <p className="text-xl font-bold text-red-400">{royalty_analysis.overdue_count}</p>
+                </div>
+                <div className="flex-1 bg-[#1A1A1A] rounded-lg p-3">
+                  <p className="text-gray-400 text-xs">Overdue Amount</p>
+                  <p className="text-xl font-bold text-red-400">₱{royalty_analysis.overdue_amount.toLocaleString()}</p>
+                </div>
+              </div>
+              {royalty_analysis.branches_with_issues.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-gray-400 text-sm">Branches with Payment Issues:</p>
+                  {royalty_analysis.branches_with_issues.slice(0, 5).map((branch, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-2 bg-[#1A1A1A] rounded-lg">
+                      <span className="text-white text-sm">{branch.branch_name}</span>
+                      <span className="text-red-400 text-sm">₱{branch.overdue_amount.toLocaleString()} ({branch.overdue_count} overdue)</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Product Analysis */}
+        <div className="bg-[#2A2A2A] rounded-xl p-5 border border-[#444]/50">
+          <button
+            onClick={() => toggleSection('products')}
+            className="w-full flex items-center justify-between"
+          >
+            <h4 className="text-white font-semibold flex items-center gap-2">
+              <Package className="w-4 h-4 text-purple-400" />
+              Product Sales Analysis
+            </h4>
+            {expandedSections.products ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+          </button>
+          {expandedSections.products !== false && (
+            <div className="mt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-gray-400 text-sm">Product Revenue Ratio:</span>
+                <span className={`font-medium ${product_analysis.product_revenue_ratio < 15 ? 'text-red-400' : product_analysis.product_revenue_ratio < 20 ? 'text-yellow-400' : 'text-green-400'}`}>
+                  {product_analysis.product_revenue_ratio.toFixed(1)}%
+                </span>
+                <span className="text-gray-500 text-xs">(Target: 20-30%)</span>
+              </div>
+              <div className="space-y-2">
+                {product_analysis.top_products.slice(0, 5).map((product, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 bg-[#1A1A1A] rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500 text-xs">#{idx + 1}</span>
+                      <span className="text-white text-sm">{product.name}</span>
+                      <span className="text-gray-500 text-xs">({product.branch_count} branches)</span>
+                    </div>
+                    <span className="text-green-400 text-sm">₱{product.revenue.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* SA Product Order Analysis */}
+        {sa_product_analysis && (
+          <div className="bg-[#2A2A2A] rounded-xl p-5 border border-orange-500/30">
+            <button
+              onClick={() => toggleSection('sa_products')}
+              className="w-full flex items-center justify-between"
+            >
+              <h4 className="text-white font-semibold flex items-center gap-2">
+                <Package className="w-4 h-4 text-orange-400" />
+                SA Product Orders Analysis
+              </h4>
+              {expandedSections.sa_products ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            </button>
+            {expandedSections.sa_products !== false && (
+              <div className="mt-4 space-y-4">
+                {/* Order Status & Unpaid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-[#1A1A1A] rounded-lg p-3">
+                    <p className="text-gray-400 text-xs">Fulfillment Rate</p>
+                    <p className={`text-xl font-bold ${sa_product_analysis.fulfillment_rate >= 80 ? 'text-green-400' : sa_product_analysis.fulfillment_rate >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
+                      {sa_product_analysis.fulfillment_rate.toFixed(1)}%
+                    </p>
+                  </div>
+                  <div className="bg-[#1A1A1A] rounded-lg p-3">
+                    <p className="text-gray-400 text-xs">Unpaid Orders</p>
+                    <p className="text-xl font-bold text-red-400">{sa_product_analysis.unpaid_orders.count}</p>
+                  </div>
+                  <div className="bg-[#1A1A1A] rounded-lg p-3">
+                    <p className="text-gray-400 text-xs">Unpaid Amount</p>
+                    <p className="text-xl font-bold text-red-400">₱{sa_product_analysis.unpaid_orders.amount.toLocaleString()}</p>
+                  </div>
+                  <div className="bg-[#1A1A1A] rounded-lg p-3">
+                    <p className="text-gray-400 text-xs">Out of Stock</p>
+                    <p className={`text-xl font-bold ${sa_product_analysis.inventory_health.out_of_stock > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                      {sa_product_analysis.inventory_health.out_of_stock}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Top SA Products */}
+                {sa_product_analysis.top_products?.length > 0 && (
+                  <div>
+                    <p className="text-gray-400 text-sm mb-2">Top Products (Central Warehouse Sales):</p>
+                    <div className="space-y-2">
+                      {sa_product_analysis.top_products.slice(0, 5).map((product, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-2 bg-[#1A1A1A] rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-500 text-xs">#{idx + 1}</span>
+                            <span className="text-white text-sm">{product.name}</span>
+                            <span className="text-gray-500 text-xs">({product.branch_count} branches, {product.quantity} units)</span>
+                          </div>
+                          <span className="text-orange-400 text-sm">₱{product.revenue.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Branches with Unpaid Orders */}
+                {sa_product_analysis.unpaid_orders.branches_with_unpaid?.length > 0 && (
+                  <div>
+                    <p className="text-gray-400 text-sm mb-2">Branches with Unpaid Product Orders:</p>
+                    <div className="space-y-2">
+                      {sa_product_analysis.unpaid_orders.branches_with_unpaid.slice(0, 5).map((branch, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-2 bg-[#1A1A1A] rounded-lg">
+                          <span className="text-white text-sm">{branch.branch_name}</span>
+                          <span className="text-red-400 text-sm">₱{branch.unpaid_amount.toLocaleString()} ({branch.unpaid_count} orders)</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Low Stock Items */}
+                {sa_product_analysis.inventory_health.low_stock_items?.length > 0 && (
+                  <div>
+                    <p className="text-gray-400 text-sm mb-2">Low Stock Alert ({sa_product_analysis.inventory_health.low_stock} items):</p>
+                    <div className="flex flex-wrap gap-2">
+                      {sa_product_analysis.inventory_health.low_stock_items.map((item, idx) => (
+                        <span key={idx} className="text-xs px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded">
+                          {item.name} ({item.stock}/{item.minStock})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Branch Performance */}
+        {branch_performance.declining_branches.length > 0 && (
+          <div className="bg-[#2A2A2A] rounded-xl p-5 border border-[#444]/50">
+            <h4 className="text-white font-semibold mb-4 flex items-center gap-2">
+              <TrendingDown className="w-4 h-4 text-red-400" />
+              Declining Branches ({branch_performance.declining_branches.length})
+            </h4>
+            <div className="space-y-2">
+              {branch_performance.declining_branches.map((branch, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 bg-[#1A1A1A] rounded-lg">
+                  <div>
+                    <p className="text-white font-medium">{branch.branch_name}</p>
+                    <p className="text-gray-500 text-xs">Current: ₱{branch.current_revenue.toLocaleString()} | Previous: ₱{branch.previous_revenue.toLocaleString()}</p>
+                  </div>
+                  <span className="text-red-400 font-bold">{branch.change_percent.toFixed(1)}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Wallet Analysis */}
+        <div className="bg-[#2A2A2A] rounded-xl p-5 border border-[#444]/50">
+          <h4 className="text-white font-semibold mb-4 flex items-center gap-2">
+            <Wallet className="w-4 h-4 text-blue-400" />
+            Wallet Top-up Distribution
+          </h4>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {Object.entries(wallet_analysis.topup_distribution).map(([bracket, count]) => (
+              <div key={bracket} className="bg-[#1A1A1A] rounded-lg p-3 text-center">
+                <p className="text-gray-400 text-xs">₱{bracket}</p>
+                <p className="text-white font-bold text-lg">{count}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Predictive Tab Content
+  const renderPredictive = () => {
+    if (!predictiveData) return <LoadingState />
+
+    const { revenue_forecast, royalty_forecast, branch_growth_forecast, wallet_forecast, product_order_forecast, trend_analysis, historical_data, product_order_historical } = predictiveData
+
+    return (
+      <div className="space-y-6">
+        {/* Trend Banner */}
+        <div className={`rounded-xl p-4 border ${
+          trend_analysis.overall_trend === 'upward' ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/30' :
+          trend_analysis.overall_trend === 'downward' ? 'bg-gradient-to-r from-red-500/10 to-orange-500/10 border-red-500/30' :
+          'bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/30'
+        }`}>
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className={`w-5 h-5 ${
+              trend_analysis.overall_trend === 'upward' ? 'text-green-400' :
+              trend_analysis.overall_trend === 'downward' ? 'text-red-400' :
+              'text-blue-400'
+            }`} />
+            <span className={`font-semibold ${
+              trend_analysis.overall_trend === 'upward' ? 'text-green-400' :
+              trend_analysis.overall_trend === 'downward' ? 'text-red-400' :
+              'text-blue-400'
+            }`}>
+              {trend_analysis.overall_trend.charAt(0).toUpperCase() + trend_analysis.overall_trend.slice(1)} Trend ({trend_analysis.trend_percent}%)
+            </span>
+          </div>
+          <p className="text-gray-300 text-sm">Based on {trend_analysis.data_points} months of historical data</p>
+        </div>
+
+        {/* Forecast Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-[#2A2A2A] rounded-xl p-5 border border-[#444]/50">
+            <div className="flex items-center gap-2 mb-3">
+              <DollarSign className="w-4 h-4 text-green-400" />
+              <span className="text-gray-400 text-sm">Revenue (Next 3mo)</span>
+            </div>
+            <p className="text-2xl font-bold text-white">
+              ₱{revenue_forecast.reduce((sum, f) => sum + f.predicted_revenue, 0).toLocaleString()}
+            </p>
+          </div>
+
+          <div className="bg-[#2A2A2A] rounded-xl p-5 border border-[#444]/50">
+            <div className="flex items-center gap-2 mb-3">
+              <Crown className="w-4 h-4 text-yellow-400" />
+              <span className="text-gray-400 text-sm">Royalties (Next Qtr)</span>
+            </div>
+            <p className="text-2xl font-bold text-white">₱{royalty_forecast.next_quarter.toLocaleString()}</p>
+          </div>
+
+          <div className="bg-[#2A2A2A] rounded-xl p-5 border border-[#444]/50">
+            <div className="flex items-center gap-2 mb-3">
+              <Building className="w-4 h-4 text-purple-400" />
+              <span className="text-gray-400 text-sm">New Branches (Next Qtr)</span>
+            </div>
+            <p className="text-2xl font-bold text-white">+{branch_growth_forecast.expected_next_quarter}</p>
+            <p className="text-xs text-gray-500">Current: {branch_growth_forecast.current_total} branches</p>
+          </div>
+
+          <div className="bg-[#2A2A2A] rounded-xl p-5 border border-[#444]/50">
+            <div className="flex items-center gap-2 mb-3">
+              <Wallet className="w-4 h-4 text-blue-400" />
+              <span className="text-gray-400 text-sm">Wallet Top-ups (Next Qtr)</span>
+            </div>
+            <p className="text-2xl font-bold text-white">₱{wallet_forecast.next_quarter.toLocaleString()}</p>
+          </div>
+        </div>
+
+        {/* SA Product Order Forecast */}
+        {product_order_forecast && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-[#2A2A2A] rounded-xl p-5 border border-orange-500/30">
+              <div className="flex items-center gap-2 mb-3">
+                <Package className="w-4 h-4 text-orange-400" />
+                <span className="text-gray-400 text-sm">SA Product Sales (Next Qtr)</span>
+              </div>
+              <p className="text-2xl font-bold text-white">₱{product_order_forecast.next_quarter_revenue.toLocaleString()}</p>
+              <p className="text-xs text-gray-500">~{product_order_forecast.expected_monthly_orders} orders/month</p>
+            </div>
+
+            <div className="bg-[#2A2A2A] rounded-xl p-5 border border-[#444]/50">
+              <div className="flex items-center gap-2 mb-3">
+                <TrendingUp className="w-4 h-4 text-orange-400" />
+                <span className="text-gray-400 text-sm">Monthly Avg Revenue</span>
+              </div>
+              <p className="text-2xl font-bold text-white">₱{product_order_forecast.expected_monthly_revenue.toLocaleString()}</p>
+            </div>
+
+            <div className="bg-[#2A2A2A] rounded-xl p-5 border border-[#444]/50 col-span-1 sm:col-span-2">
+              <div className="flex items-center gap-2 mb-3">
+                <BarChart3 className="w-4 h-4 text-orange-400" />
+                <span className="text-gray-400 text-sm">SA Product Order Trend</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={`text-lg font-bold ${
+                  product_order_forecast.trend === 'upward' ? 'text-green-400' :
+                  product_order_forecast.trend === 'downward' ? 'text-red-400' :
+                  'text-blue-400'
+                }`}>
+                  {product_order_forecast.trend.charAt(0).toUpperCase() + product_order_forecast.trend.slice(1)}
+                </span>
+                <span className="text-gray-500 text-sm">({product_order_forecast.data_points} months data)</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Revenue Forecast Detail */}
+        <div className="bg-[#2A2A2A] rounded-xl p-5 border border-[#444]/50">
+          <h4 className="text-white font-semibold mb-4 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-green-400" />
+            Monthly Revenue Forecast
+          </h4>
+          <div className="space-y-3">
+            {revenue_forecast.map((forecast, idx) => (
+              <div key={idx} className="flex items-center justify-between p-3 bg-[#1A1A1A] rounded-lg">
+                <div>
+                  <p className="text-white font-medium">{forecast.month_name}</p>
+                  <span className={`text-xs px-2 py-0.5 rounded ${
+                    forecast.confidence === 'high' ? 'bg-green-500/20 text-green-400' :
+                    forecast.confidence === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-red-500/20 text-red-400'
+                  }`}>
+                    {forecast.confidence} confidence
+                  </span>
+                </div>
+                <span className="text-green-400 font-bold text-lg">₱{forecast.predicted_revenue.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Historical Trend */}
+        <div className="bg-[#2A2A2A] rounded-xl p-5 border border-[#444]/50">
+          <h4 className="text-white font-semibold mb-4 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-blue-400" />
+            Historical Revenue (Last 6 Months)
+          </h4>
+          <div className="space-y-2">
+            {historical_data.slice(-6).map((data, idx) => {
+              const maxRev = Math.max(...historical_data.map(d => d.revenue))
+              const width = maxRev > 0 ? (data.revenue / maxRev) * 100 : 0
+              return (
+                <div key={idx} className="flex items-center gap-3">
+                  <span className="text-gray-400 text-sm w-20">{data.month}</span>
+                  <div className="flex-1 h-6 bg-[#1A1A1A] rounded overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded flex items-center justify-end pr-2"
+                      style={{ width: `${width}%` }}
+                    >
+                      <span className="text-white text-xs font-medium">₱{(data.revenue / 1000).toFixed(0)}k</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* SA Product Order Historical */}
+        {product_order_historical && product_order_historical.length > 0 && (
+          <div className="bg-[#2A2A2A] rounded-xl p-5 border border-orange-500/30">
+            <h4 className="text-white font-semibold mb-4 flex items-center gap-2">
+              <Package className="w-4 h-4 text-orange-400" />
+              SA Product Order History (Last 6 Months)
+            </h4>
+            <div className="space-y-2">
+              {product_order_historical.slice(-6).map((data, idx) => {
+                const maxRev = Math.max(...product_order_historical.map(d => d.revenue))
+                const width = maxRev > 0 ? (data.revenue / maxRev) * 100 : 0
+                return (
+                  <div key={idx} className="flex items-center gap-3">
+                    <span className="text-gray-400 text-sm w-20">{data.month}</span>
+                    <div className="flex-1 h-6 bg-[#1A1A1A] rounded overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-orange-500 to-amber-500 rounded flex items-center justify-end pr-2"
+                        style={{ width: `${width}%` }}
+                      >
+                        <span className="text-white text-xs font-medium">₱{(data.revenue / 1000).toFixed(0)}k</span>
+                      </div>
+                    </div>
+                    <span className="text-gray-500 text-xs w-16 text-right">{data.order_count} orders</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Prescriptive Tab Content
+  const renderPrescriptive = () => {
+    if (!prescriptiveData) return <LoadingState />
+
+    const { strategies, summary, kpis } = prescriptiveData
+
+    return (
+      <div className="space-y-6">
+        {/* KPIs Overview */}
+        <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-xl p-4 border border-purple-500/30">
+          <div className="flex items-center gap-2 mb-3">
+            <Target className="w-5 h-5 text-purple-400" />
+            <span className="text-purple-400 font-semibold">Key Performance Indicators</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="bg-[#1A1A1A]/50 rounded-lg p-2 text-center">
+              <p className="text-gray-400 text-xs">Wallet Adoption</p>
+              <p className="text-white font-bold">{kpis.wallet_adoption}</p>
+            </div>
+            <div className="bg-[#1A1A1A]/50 rounded-lg p-2 text-center">
+              <p className="text-gray-400 text-xs">Product Ratio</p>
+              <p className="text-white font-bold">{kpis.product_ratio}</p>
+            </div>
+            <div className="bg-[#1A1A1A]/50 rounded-lg p-2 text-center">
+              <p className="text-gray-400 text-xs">Avg Branch Rev</p>
+              <p className="text-white font-bold">{kpis.avg_branch_revenue}</p>
+            </div>
+            <div className="bg-[#1A1A1A]/50 rounded-lg p-2 text-center">
+              <p className="text-gray-400 text-xs">Overdue Royalties</p>
+              <p className="text-red-400 font-bold">{kpis.overdue_royalties}</p>
+            </div>
+            <div className="bg-[#1A1A1A]/50 rounded-lg p-2 text-center">
+              <p className="text-gray-400 text-xs">Underperforming</p>
+              <p className={`font-bold ${kpis.underperforming_branches > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                {kpis.underperforming_branches} branches
+              </p>
+            </div>
+          </div>
+
+          {/* SA Product Order KPIs */}
+          {kpis.sa_product_orders && (
+            <div className="mt-4 pt-4 border-t border-[#444]/50">
+              <p className="text-orange-400 text-xs font-medium mb-2">SA Product Orders</p>
+              <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+                <div className="bg-[#1A1A1A]/50 rounded-lg p-2 text-center">
+                  <p className="text-gray-400 text-xs">Orders</p>
+                  <p className="text-white font-bold">{kpis.sa_product_orders.total_orders}</p>
+                </div>
+                <div className="bg-[#1A1A1A]/50 rounded-lg p-2 text-center">
+                  <p className="text-gray-400 text-xs">Revenue</p>
+                  <p className="text-orange-400 font-bold">{kpis.sa_product_orders.total_revenue}</p>
+                </div>
+                <div className="bg-[#1A1A1A]/50 rounded-lg p-2 text-center">
+                  <p className="text-gray-400 text-xs">Unpaid</p>
+                  <p className="text-red-400 font-bold">{kpis.sa_product_orders.unpaid_amount}</p>
+                </div>
+                <div className="bg-[#1A1A1A]/50 rounded-lg p-2 text-center">
+                  <p className="text-gray-400 text-xs">Avg Order</p>
+                  <p className="text-white font-bold">{kpis.sa_product_orders.avg_order_value}</p>
+                </div>
+                <div className="bg-[#1A1A1A]/50 rounded-lg p-2 text-center">
+                  <p className="text-gray-400 text-xs">Out of Stock</p>
+                  <p className={`font-bold ${kpis.sa_product_orders.out_of_stock > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                    {kpis.sa_product_orders.out_of_stock}
+                  </p>
+                </div>
+                <div className="bg-[#1A1A1A]/50 rounded-lg p-2 text-center">
+                  <p className="text-gray-400 text-xs">Low Stock</p>
+                  <p className={`font-bold ${kpis.sa_product_orders.low_stock > 0 ? 'text-yellow-400' : 'text-green-400'}`}>
+                    {kpis.sa_product_orders.low_stock}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Strategies */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h4 className="text-white font-semibold flex items-center gap-2">
+              <Rocket className="w-4 h-4 text-purple-400" />
+              Strategic Recommendations ({summary.total_strategies})
+            </h4>
+            <span className="text-xs text-red-400 font-medium">{summary.high_priority} high priority</span>
+          </div>
+
+          {strategies.map((strategy, idx) => (
+            <div key={idx} className={`bg-[#2A2A2A] rounded-xl p-5 border ${
+              strategy.priority === 'high' ? 'border-red-500/30' :
+              strategy.priority === 'medium' ? 'border-yellow-500/30' :
+              'border-blue-500/30'
+            }`}>
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`text-xs px-2 py-0.5 rounded ${
+                      strategy.category === 'expansion' ? 'bg-green-500/20 text-green-400' :
+                      strategy.category === 'finance' ? 'bg-yellow-500/20 text-yellow-400' :
+                      strategy.category === 'digital' ? 'bg-blue-500/20 text-blue-400' :
+                      strategy.category === 'revenue' ? 'bg-purple-500/20 text-purple-400' :
+                      strategy.category === 'operations' ? 'bg-orange-500/20 text-orange-400' :
+                      strategy.category === 'inventory' ? 'bg-amber-500/20 text-amber-400' :
+                      'bg-pink-500/20 text-pink-400'
+                    }`}>{strategy.category}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded ${
+                      strategy.priority === 'high' ? 'bg-red-500/20 text-red-400' :
+                      strategy.priority === 'medium' ? 'bg-yellow-500/20 text-yellow-400' :
+                      'bg-blue-500/20 text-blue-400'
+                    }`}>{strategy.priority}</span>
+                  </div>
+                  <h5 className="text-white font-semibold text-lg">{strategy.title}</h5>
+                </div>
+              </div>
+
+              <p className="text-gray-300 text-sm mb-3">{strategy.description}</p>
+
+              <div className="flex items-center gap-2 mb-4">
+                <Target className="w-4 h-4 text-green-400" />
+                <span className="text-green-400 text-sm font-medium">Impact: {strategy.impact}</span>
+              </div>
+
+              <div className="bg-[#1A1A1A] rounded-lg p-3">
+                <p className="text-gray-400 text-xs mb-2 flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3" /> Action Items
+                </p>
+                <ul className="space-y-1">
+                  {strategy.action_items.map((item, itemIdx) => (
+                    <li key={itemIdx} className="text-gray-300 text-sm flex items-start gap-2">
+                      <span className="text-purple-400 mt-1">•</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* DDPP Tab Navigation */}
+      <div className="grid grid-cols-4 gap-2 bg-[#1A1A1A] p-2 rounded-xl">
+        {tabs.map(tab => {
+          const IconComponent = tab.icon
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex flex-col items-center p-3 rounded-lg transition-all ${
+                activeTab === tab.id
+                  ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white'
+                  : 'text-gray-400 hover:bg-[#2A2A2A] hover:text-white'
+              }`}
+            >
+              <IconComponent className="w-5 h-5 mb-1" />
+              <span className="text-sm font-medium">{tab.label}</span>
+              <span className="text-xs opacity-70 hidden sm:block">{tab.description}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'descriptive' && renderDescriptive()}
+      {activeTab === 'diagnostic' && renderDiagnostic()}
+      {activeTab === 'predictive' && renderPredictive()}
+      {activeTab === 'prescriptive' && renderPrescriptive()}
+    </div>
+  )
+}
+
+// Loading State Component
+const LoadingState = () => (
+  <div className="flex items-center justify-center py-12">
+    <div className="animate-spin w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full" />
+    <span className="ml-3 text-gray-400">Loading analytics...</span>
+  </div>
+)
 
 export default SystemReports

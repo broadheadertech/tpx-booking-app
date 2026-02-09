@@ -49,6 +49,8 @@ export const getWalletConfig = query({
       min_settlement_amount: config.min_settlement_amount,
       // Story 23.3: Return bonus tiers configuration
       bonus_tiers: config.bonus_tiers || [],
+      // Story 23.4: Monthly bonus cap (0 = unlimited)
+      monthly_bonus_cap: config.monthly_bonus_cap ?? 0,
       created_at: config.created_at,
       updated_at: config.updated_at,
       // Flag to indicate secrets are configured (for UI)
@@ -88,6 +90,8 @@ export const updateWalletConfig = mutation({
       minAmount: v.number(),
       bonus: v.number(),
     }))),
+    // Story 23.4: Monthly bonus cap (0 = unlimited)
+    monthly_bonus_cap: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     // Check super_admin role
@@ -214,6 +218,8 @@ export const updateWalletConfig = mutation({
         min_settlement_amount: args.min_settlement_amount,
         // Story 23.3: Save bonus tiers
         bonus_tiers: args.bonus_tiers,
+        // Story 23.4: Monthly bonus cap
+        monthly_bonus_cap: args.monthly_bonus_cap ?? 0,
         updated_at: now,
       });
 
@@ -235,6 +241,8 @@ export const updateWalletConfig = mutation({
         min_settlement_amount: args.min_settlement_amount,
         // Story 23.3: Save bonus tiers
         bonus_tiers: args.bonus_tiers,
+        // Story 23.4: Monthly bonus cap
+        monthly_bonus_cap: args.monthly_bonus_cap ?? 0,
         created_at: now,
         updated_at: now,
       });
@@ -336,11 +344,12 @@ export const getDecryptedWalletConfig = query({
 /**
  * Get bonus tiers for wallet top-ups (public, no auth required)
  * Story 23.3: Configurable bonus tiers for wallet top-ups
+ * Story 23.4: Includes monthly bonus cap info
  *
  * Returns configured bonus tiers or default tiers if none configured.
  * This is a public query - no role check required as customers need to see available bonuses.
  *
- * @returns Object with tiers array and isConfigured flag
+ * @returns Object with tiers array, isConfigured flag, and monthly cap
  */
 export const getBonusTiers = query({
   args: {},
@@ -352,6 +361,8 @@ export const getBonusTiers = query({
       return {
         tiers: DEFAULT_BONUS_TIERS,
         isConfigured: false,
+        // Story 23.4: Monthly bonus cap (0 = unlimited)
+        monthlyBonusCap: config?.monthly_bonus_cap ?? 0,
       };
     }
 
@@ -361,9 +372,87 @@ export const getBonusTiers = query({
     return {
       tiers: sortedTiers,
       isConfigured: true,
+      // Story 23.4: Monthly bonus cap (0 = unlimited)
+      monthlyBonusCap: config.monthly_bonus_cap ?? 0,
     };
   },
 });
+
+/**
+ * Get user's remaining bonus eligibility for the current month
+ * Story 23.4: Monthly bonus cap tracking
+ *
+ * @param userId - User ID to check
+ * @returns Remaining amount eligible for bonus this month
+ */
+export const getUserBonusEligibility = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const config = await ctx.db.query("walletConfig").first();
+    const monthlyBonusCap = config?.monthly_bonus_cap ?? 0;
+
+    // If no cap (0 = unlimited), return unlimited eligibility
+    if (monthlyBonusCap === 0) {
+      return {
+        monthlyBonusCap: 0,
+        usedThisMonth: 0,
+        remainingEligible: Infinity,
+        isUnlimited: true,
+      };
+    }
+
+    // Get user's wallet
+    const wallet = await ctx.db
+      .query("wallets")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    if (!wallet) {
+      return {
+        monthlyBonusCap,
+        usedThisMonth: 0,
+        remainingEligible: monthlyBonusCap,
+        isUnlimited: false,
+      };
+    }
+
+    // Check if we need to reset (new month)
+    const now = Date.now();
+    const currentMonthStart = getMonthStart(now);
+    const walletMonthStart = wallet.bonus_month_started ?? 0;
+
+    // If wallet's month start is before current month, treat as reset
+    if (walletMonthStart < currentMonthStart) {
+      return {
+        monthlyBonusCap,
+        usedThisMonth: 0,
+        remainingEligible: monthlyBonusCap,
+        isUnlimited: false,
+      };
+    }
+
+    // Calculate remaining eligibility
+    const usedThisMonth = wallet.bonus_topup_this_month ?? 0;
+    const remainingEligible = Math.max(0, monthlyBonusCap - usedThisMonth);
+
+    return {
+      monthlyBonusCap,
+      usedThisMonth,
+      remainingEligible,
+      isUnlimited: false,
+    };
+  },
+});
+
+/**
+ * Helper to get the start of the current month (timestamp)
+ */
+function getMonthStart(timestamp: number): number {
+  const date = new Date(timestamp);
+  return new Date(date.getFullYear(), date.getMonth(), 1).getTime();
+}
 
 /**
  * Update only bonus tiers (separate mutation for admin convenience)

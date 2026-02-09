@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight, X, AlertCircle, Banknote, Store, Calendar, Clock, ChevronDown, ChevronUp, Filter } from 'lucide-react'
+import React, { useState, useEffect, useRef } from 'react'
+import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight, X, AlertCircle, Banknote, Store, Calendar, Clock, ChevronDown, ChevronUp, Filter, ShoppingBag, History } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
@@ -66,6 +66,7 @@ const POS = () => {
   const [activeModal, setActiveModal] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('services') // 'services' or 'products'
+  const [posMode, setPosMode] = useState('service') // 'service' or 'retail' - retail mode for product-only sales
   const [selectedCategory, setSelectedCategory] = useState(null) // Category filter: 'Haircut', 'Package', 'Other Services', or null for all
   const [openCategory, setOpenCategory] = useState(null) // For category dropdown toggle
   const [paymentMethod, setPaymentMethod] = useState('cash')
@@ -80,6 +81,7 @@ const POS = () => {
   const [unpaidBalanceWarning, setUnpaidBalanceWarning] = useState(null) // Unpaid balance warning data
   const [showTodaysBookings, setShowTodaysBookings] = useState(false) // Today's Bookings section (Story 8.4)
   const [todaysBookingsFilter, setTodaysBookingsFilter] = useState('all') // Payment status filter
+  const [showProductHistory, setShowProductHistory] = useState(false) // Product transaction history
 
   // Mobile-specific states
   const [showMobileCart, setShowMobileCart] = useState(false)
@@ -88,6 +90,9 @@ const POS = () => {
 
   const itemsPerPage = 9 // For card view
   const tableItemsPerPage = 15 // For table view
+
+  // Ref to track when we're intentionally clearing a booking (prevents useEffect from re-applying booking fee)
+  const clearingBookingRef = useRef(false)
 
   // Detect mobile viewport
   useEffect(() => {
@@ -141,6 +146,12 @@ const POS = () => {
       ? { code: currentTransaction.voucher_applied }
       : "skip"
   )
+
+  // Query for product transaction history
+  const productTransactionHistory = useQuery(
+    api.services.transactions.getProductTransactionHistory,
+    user?.branch_id ? { branch_id: user.branch_id, limit: 20 } : "skip"
+  ) || []
 
   // Filter active services and products
   const activeServices = services?.filter(service => service.is_active) || []
@@ -226,43 +237,19 @@ const POS = () => {
     }
   }, [services, customers, barbers])
 
-  // Apply default booking fee for new transactions (walk-ins)
+  // Ensure booking fee is 0 for walk-ins (no booking attached)
+  // Booking fees only apply to online bookings
   useEffect(() => {
-    // Only apply if no booking is attached (walk-in/new transaction)
-    if (!currentBooking && currentBranch) {
-      if (currentBranch.enable_booking_fee) {
-        const hasServices = currentTransaction.services.length > 0
-
-        let calculatedFee = 0
-        if (currentBranch.booking_fee_type === 'percent') {
-          // This is handled in the calculation effect, but we initialize here
-          // We can leave it as 0 here and let the calc effect update it
-          // OR we can calculate it here. Better to let calc effect handle dynamic updates.
-          // However, if we don't set it initially, it might flicker.
-          // Let's set the flag or base amount.
-          // For simplicity, if percent, we rely on main calc.
-        } else {
-          calculatedFee = currentBranch.booking_fee_amount || 0
-        }
-
-        const currentFee = currentTransaction.booking_fee
-
-        // If services exist and fee isn't set correct (for fixed), apply it
-        if (hasServices && currentBranch.booking_fee_type !== 'percent' && currentFee !== calculatedFee) {
-          setCurrentTransaction(prev => ({ ...prev, booking_fee: calculatedFee }))
-        }
-        // If no services, ensure fee is 0
-        else if (!hasServices && currentFee !== 0) {
-          setCurrentTransaction(prev => ({ ...prev, booking_fee: 0 }))
-        }
-      } else {
-        // If booking fee is disabled in branch settings, ensure it's 0 for walk-ins
-        if (currentTransaction.booking_fee !== 0) {
-          setCurrentTransaction(prev => ({ ...prev, booking_fee: 0 }))
-        }
-      }
+    // Skip if we're intentionally clearing a booking (prevents race condition)
+    if (clearingBookingRef.current) {
+      return
     }
-  }, [currentBranch, currentBooking, currentTransaction.services.length, currentTransaction.booking_fee])
+
+    // Walk-ins should NEVER have a booking fee
+    if (!currentBooking && currentTransaction.booking_fee !== 0) {
+      setCurrentTransaction(prev => ({ ...prev, booking_fee: 0 }))
+    }
+  }, [currentBooking, currentTransaction.booking_fee])
 
   const customerUsers = customers?.filter(customer => customer.role === 'customer') || []
 
@@ -273,6 +260,9 @@ const POS = () => {
 
   // Handle confirmed booking cancellation
   const handleConfirmCancelBooking = () => {
+    // Set flag to prevent useEffect from re-applying booking fee during clearing
+    clearingBookingRef.current = true
+
     // Clear booking data
     setCurrentBooking(null)
     sessionStorage.removeItem('posBooking')
@@ -305,6 +295,11 @@ const POS = () => {
 
     console.log('Booking attachment canceled - converted to regular POS transaction')
     setActiveModal(null)
+
+    // Reset the flag after state updates have completed
+    setTimeout(() => {
+      clearingBookingRef.current = false
+    }, 100)
   }
 
   // Handle marking booking as complete (Story 8.3 - FR16)
@@ -329,16 +324,64 @@ const POS = () => {
       }
 
       if (result.success) {
-        // Update local booking state
+        // Update local booking state to completed
         setCurrentBooking(prev => ({ ...prev, status: 'completed' }))
-        setAlertModal({
-          show: true,
-          title: 'Booking Completed',
-          message: 'The booking has been marked as completed.',
-          type: 'success'
-        })
         setShowCompleteConfirmModal(false)
         setUnpaidBalanceWarning(null)
+
+        // Generate receipt data for the completed booking
+        const timestamp = Date.now()
+        const receiptNumber = `RCP-${timestamp}`
+        const servicePrice = currentBooking.service_price || 0
+        const bookingFee = currentBooking.convenience_fee_paid || 0
+        const total = servicePrice + bookingFee
+
+        // Determine payment info based on booking payment status
+        let paymentMethod = 'cash'
+        let amountPaid = total
+        let amountDue = 0
+
+        if (currentBooking.payment_status === 'paid') {
+          paymentMethod = 'online_payment'
+          amountPaid = total
+          amountDue = 0
+        } else if (currentBooking.payment_status === 'partial') {
+          paymentMethod = 'partial_online'
+          amountPaid = bookingFee
+          amountDue = servicePrice
+        }
+
+        const receiptData = {
+          transaction_id: `TXN-${timestamp}`,
+          receipt_number: receiptNumber,
+          timestamp,
+          customer_name: currentBooking.customer_name || 'Walk-in Customer',
+          barber_name: selectedBarber?.name || currentBooking.barber_name || 'Not assigned',
+          services: [{
+            service_name: currentBooking.service_name,
+            name: currentBooking.service_name,
+            quantity: 1,
+            price: servicePrice
+          }],
+          products: [],
+          subtotal: servicePrice,
+          discount_amount: 0,
+          tax_amount: 0,
+          booking_fee: bookingFee,
+          late_fee: 0,
+          total_amount: total,
+          payment_method: paymentMethod,
+          amount_paid: amountPaid,
+          amount_due: amountDue,
+          payment_status: currentBooking.payment_status || 'unpaid',
+          booking_code: currentBooking.booking_code,
+          booking_date: currentBooking.date,
+          booking_time: currentBooking.time,
+        }
+
+        // Show receipt modal instead of alert
+        setCompletedTransaction(receiptData)
+        setActiveModal('receipt')
       }
     } catch (error) {
       console.error('Failed to mark booking complete:', error)
@@ -349,6 +392,107 @@ const POS = () => {
         type: 'error'
       })
     }
+  }
+
+  // Generate receipt data from current booking/transaction
+  const generateBookingReceipt = () => {
+    if (!currentBooking && currentTransaction.services.length === 0 && currentTransaction.products.length === 0) {
+      return null
+    }
+
+    const timestamp = Date.now()
+    const receiptNumber = `RCP-${timestamp}`
+
+    // Build services array from currentTransaction or currentBooking
+    const services = currentTransaction.services.length > 0
+      ? currentTransaction.services.map(s => ({
+          service_name: s.name,
+          name: s.name,
+          quantity: s.quantity || 1,
+          price: s.price || 0
+        }))
+      : currentBooking ? [{
+          service_name: currentBooking.service_name,
+          name: currentBooking.service_name,
+          quantity: 1,
+          price: currentBooking.service_price || 0
+        }] : []
+
+    // Build products array
+    const products = currentTransaction.products.map(p => ({
+      product_name: p.name,
+      name: p.name,
+      quantity: p.quantity || 1,
+      price: p.price || 0
+    }))
+
+    // Calculate totals
+    const serviceTotal = services.reduce((sum, s) => sum + (s.price * (s.quantity || 1)), 0)
+    const productTotal = products.reduce((sum, p) => sum + (p.price * (p.quantity || 1)), 0)
+    const subtotal = currentTransaction.subtotal || serviceTotal + productTotal
+    const bookingFee = currentTransaction.booking_fee || currentBooking?.convenience_fee_paid || 0
+    const discount = currentTransaction.discount_amount || 0
+    const total = currentTransaction.total_amount || (subtotal + bookingFee - discount)
+
+    // Determine payment method and amounts based on booking status
+    let paymentMethod = 'pending'
+    let amountPaid = 0
+    let amountDue = total
+
+    if (currentBooking) {
+      if (currentBooking.payment_status === 'paid') {
+        paymentMethod = 'online_payment'
+        amountPaid = currentBooking.service_price + (currentBooking.convenience_fee_paid || 0)
+        amountDue = 0
+      } else if (currentBooking.payment_status === 'partial') {
+        paymentMethod = 'partial_online'
+        amountPaid = currentBooking.convenience_fee_paid || 0
+        amountDue = currentBooking.service_price
+      } else {
+        paymentMethod = 'pay_at_shop'
+        amountPaid = 0
+        amountDue = currentBooking.service_price + bookingFee
+      }
+    }
+
+    return {
+      transaction_id: `TXN-${timestamp}`,
+      receipt_number: receiptNumber,
+      timestamp,
+      customer_name: currentTransaction.customer?.full_name || currentBooking?.customer_name || 'Walk-in Customer',
+      barber_name: selectedBarber?.name || currentBooking?.barber_name || 'Not assigned',
+      services,
+      products,
+      subtotal,
+      discount_amount: discount,
+      tax_amount: currentTransaction.tax_amount || 0,
+      booking_fee: bookingFee,
+      late_fee: currentTransaction.late_fee || 0,
+      total_amount: total,
+      payment_method: paymentMethod,
+      amount_paid: amountPaid,
+      amount_due: amountDue,
+      payment_status: currentBooking?.payment_status || 'unpaid',
+      booking_code: currentBooking?.booking_code || null,
+      booking_date: currentBooking?.date || null,
+      booking_time: currentBooking?.time || null,
+    }
+  }
+
+  // Handle showing receipt for current booking/transaction
+  const handleShowReceipt = () => {
+    const receiptData = generateBookingReceipt()
+    if (!receiptData) {
+      setAlertModal({
+        show: true,
+        title: 'No Data',
+        message: 'Please load a booking or add items to generate a receipt.',
+        type: 'warning'
+      })
+      return
+    }
+    setCompletedTransaction(receiptData)
+    setActiveModal('receipt')
   }
 
   // Handle loading a booking from Today's Bookings list (Story 8.4)
@@ -431,19 +575,28 @@ const POS = () => {
 
   // Calculate totals
   useEffect(() => {
+    // Skip calculation if we're clearing (prevents race conditions)
+    if (clearingBookingRef.current) {
+      return
+    }
+
     const servicesTotal = currentTransaction.services.reduce((sum, item) => sum + (item.price * item.quantity), 0)
     const productsTotal = currentTransaction.products.reduce((sum, item) => sum + (item.price * item.quantity), 0)
     const subtotal = servicesTotal + productsTotal
     const taxAmount = 0 // No tax
 
-    // Calculate booking fee dynamically if type is percentage
-    let bookingFee = currentTransaction.booking_fee || 0
+    // Calculate booking fee - ONLY for online bookings with items in cart
+    let bookingFee = 0
 
-    // Only recalculate for walk-ins (no booking attached) or if explicitly needed
-    if (!currentBooking && currentBranch && currentBranch.enable_booking_fee && currentBranch.booking_fee_type === 'percent') {
-      // Percentage of subtotal
-      bookingFee = (subtotal * (currentBranch.booking_fee_amount || 0)) / 100
+    // Only apply booking fee if:
+    // 1. There's an attached booking (online booking)
+    // 2. AND there are items in the cart (subtotal > 0)
+    // If cart is empty, no booking fee should show
+    if (currentBooking && subtotal > 0) {
+      // For online bookings, use the stored booking fee from the booking
+      bookingFee = currentTransaction.booking_fee || currentBooking.booking_fee || currentBooking.convenience_fee_paid || 0
     }
+    // Walk-ins OR empty cart: booking fee stays 0
 
     const lateFee = currentTransaction.late_fee || 0
     // Total = Subtotal - Discount + Booking Fee + Late Fee
@@ -453,7 +606,7 @@ const POS = () => {
     if (
       subtotal !== currentTransaction.subtotal ||
       totalAmount !== currentTransaction.total_amount ||
-      (currentBranch?.booking_fee_type === 'percent' && bookingFee !== currentTransaction.booking_fee)
+      bookingFee !== currentTransaction.booking_fee
     ) {
       setCurrentTransaction(prev => ({
         ...prev,
@@ -474,9 +627,12 @@ const POS = () => {
         // Check if clicking the same service that's already in cart
         const existingIndex = prev.services.findIndex(item => item.service_id === service._id)
         if (existingIndex >= 0) {
-          // Same service clicked - increment quantity
-          const updatedServices = [...prev.services]
-          updatedServices[existingIndex].quantity += 1
+          // Same service clicked - increment quantity (immutable update)
+          const updatedServices = prev.services.map((item, idx) =>
+            idx === existingIndex
+              ? { ...item, quantity: item.quantity + 1 }
+              : item
+          )
           return { ...prev, services: updatedServices }
         } else {
           // Different service clicked - REPLACE the entire services array
@@ -499,8 +655,12 @@ const POS = () => {
       // Normal behavior when no booking is attached - add to cart
       const existingIndex = prev.services.findIndex(item => item.service_id === service._id)
       if (existingIndex >= 0) {
-        const updatedServices = [...prev.services]
-        updatedServices[existingIndex].quantity += 1
+        // Immutable update - create new array with new object
+        const updatedServices = prev.services.map((item, idx) =>
+          idx === existingIndex
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        )
         return { ...prev, services: updatedServices }
       } else {
         return {
@@ -521,8 +681,12 @@ const POS = () => {
     setCurrentTransaction(prev => {
       const existingIndex = prev.products.findIndex(item => item.product_id === product._id)
       if (existingIndex >= 0) {
-        const updatedProducts = [...prev.products]
-        updatedProducts[existingIndex].quantity += 1
+        // Create new array with new object to avoid mutation
+        const updatedProducts = prev.products.map((item, idx) =>
+          idx === existingIndex
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        )
         return { ...prev, products: updatedProducts }
       } else {
         return {
@@ -541,11 +705,17 @@ const POS = () => {
   // Update item quantity
   const updateQuantity = (type, index, change) => {
     setCurrentTransaction(prev => {
-      const items = [...prev[type]]
-      items[index].quantity = Math.max(0, items[index].quantity + change)
-      if (items[index].quantity === 0) {
-        items.splice(index, 1)
+      const newQuantity = Math.max(0, prev[type][index].quantity + change)
+      if (newQuantity === 0) {
+        // Remove item - create new array without the item
+        return { ...prev, [type]: prev[type].filter((_, idx) => idx !== index) }
       }
+      // Update quantity - create new array with new object
+      const items = prev[type].map((item, idx) =>
+        idx === index
+          ? { ...item, quantity: newQuantity }
+          : item
+      )
       return { ...prev, [type]: items }
     })
   }
@@ -561,6 +731,9 @@ const POS = () => {
 
   // Clear transaction
   const clearTransaction = () => {
+    // Set flag to prevent useEffect from re-applying booking fee during clearing
+    clearingBookingRef.current = true
+
     setCurrentTransaction({
       customer: null,
       customer_name: null,
@@ -577,6 +750,29 @@ const POS = () => {
       late_fee: 0,
       total_amount: 0
     })
+
+    // Also clear any attached booking
+    setCurrentBooking(null)
+    sessionStorage.removeItem('posBooking')
+
+    // Reset the flag after state updates have completed
+    setTimeout(() => {
+      clearingBookingRef.current = false
+    }, 100)
+  }
+
+  // Handle POS mode switch (service <-> retail)
+  const handleModeSwitch = (newMode) => {
+    if (newMode !== posMode) {
+      // Clear transaction when switching modes
+      clearTransaction()
+      setSelectedBarber(null)
+      setPosMode(newMode)
+      // Auto-switch to products tab in retail mode
+      if (newMode === 'retail') {
+        setActiveTab('products')
+      }
+    }
   }
 
   // Open payment confirmation modal
@@ -591,7 +787,8 @@ const POS = () => {
       return
     }
 
-    if (!selectedBarber) {
+    // Barber only required for service mode
+    if (posMode === 'service' && !selectedBarber) {
       setAlertModal({
         show: true,
         title: 'Barber Required',
@@ -613,11 +810,22 @@ const POS = () => {
       return
     }
 
-    if (currentTransaction.services.length === 0 && currentTransaction.products.length === 0) {
+    // Validate items based on mode
+    if (posMode === 'service' && currentTransaction.services.length === 0) {
       setAlertModal({
         show: true,
-        title: 'Items Required',
-        message: 'Please add at least one service or product before processing payment.',
+        title: 'Service Required',
+        message: 'Please add at least one service before processing payment in Service Mode.',
+        type: 'warning'
+      })
+      return
+    }
+
+    if (posMode === 'retail' && currentTransaction.products.length === 0) {
+      setAlertModal({
+        show: true,
+        title: 'Product Required',
+        message: 'Please add at least one product before processing payment in Retail Mode.',
         type: 'warning'
       })
       return
@@ -736,14 +944,19 @@ const POS = () => {
       if (!resolvedBranchId) {
         throw new Error('Branch ID is required for transaction')
       }
-      if (!selectedBarber?._id) {
-        throw new Error('Barber ID is required for transaction')
+      // Barber only required for service mode
+      if (posMode === 'service' && !selectedBarber?._id) {
+        throw new Error('Barber ID is required for service transactions')
       }
       if (!user?._id) {
         throw new Error('Staff ID (processed_by) is required for transaction')
       }
-      if (!currentTransaction.services || currentTransaction.services.length === 0) {
-        throw new Error('At least one service is required for transaction')
+      // Validate based on mode
+      if (posMode === 'service' && (!currentTransaction.services || currentTransaction.services.length === 0)) {
+        throw new Error('At least one service is required for service transactions')
+      }
+      if (posMode === 'retail' && (!currentTransaction.products || currentTransaction.products.length === 0)) {
+        throw new Error('At least one product is required for retail transactions')
       }
 
       const transactionData = {
@@ -752,8 +965,9 @@ const POS = () => {
         customer_phone: currentTransaction.customer_phone?.trim() || undefined,
         customer_email: currentTransaction.customer_email?.trim() || undefined, // Only include if provided
         branch_id: resolvedBranchId, // Ensure branch_id is provided (barber branch preferred)
-        barber: selectedBarber._id,
-        services: currentTransaction.services,
+        transaction_type: posMode, // 'service' or 'retail'
+        barber: posMode === 'service' ? selectedBarber._id : undefined, // Barber only for service mode
+        services: posMode === 'service' ? currentTransaction.services : [], // Empty array for retail
         products: currentTransaction.products.length > 0 ? currentTransaction.products : undefined,
         subtotal: currentTransaction.subtotal,
         discount_amount: currentTransaction.discount_amount,
@@ -778,34 +992,40 @@ const POS = () => {
       // Check if this transaction is for a booking payment
       const posBooking = sessionStorage.getItem('posBooking')
       const isBookingPayment = posBooking && currentTransaction.services.length > 0
+      // Skip booking creation for retail mode or if it's a booking payment
+      const shouldSkipBookingCreation = posMode === 'retail' || isBookingPayment
 
       console.log('[POS] Transaction preparation:', {
+        posMode: posMode,
         hasBookingInSession: !!posBooking,
         servicesCount: currentTransaction.services.length,
+        productsCount: currentTransaction.products.length,
         isBookingPayment: isBookingPayment,
-        skip_booking_creation: isBookingPayment || false
+        skip_booking_creation: shouldSkipBookingCreation
       })
 
       // Include the skip_booking_creation flag in transaction data
       console.log('[POS] Creating transaction with data:', {
         ...transactionData,
-        skip_booking_creation: isBookingPayment || false
+        skip_booking_creation: shouldSkipBookingCreation
       })
 
       const result = await createTransaction({
         ...transactionData,
-        skip_booking_creation: isBookingPayment || false
+        skip_booking_creation: shouldSkipBookingCreation
       })
 
       console.log('[POS] Transaction created successfully:', result)
 
-      // Send email notification to the barber about the new POS transaction
+      // Send email notification to the barber about the new POS transaction (only for service mode)
       console.log('📧 [POS] Attempting to send barber notification...');
+      console.log('  → posMode:', posMode);
       console.log('  → selectedBarber:', selectedBarber?.full_name);
       console.log('  → selectedBarber.email:', selectedBarber?.email);
       console.log('  → services count:', currentTransaction.services.length);
 
-      if (selectedBarber?.email && currentTransaction.services.length > 0) {
+      // Only send barber notification for service transactions
+      if (posMode === 'service' && selectedBarber?.email && currentTransaction.services.length > 0) {
         try {
           // Get the current date in Philippine timezone
           const phNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
@@ -891,7 +1111,7 @@ const POS = () => {
         receipt_number: receiptNumber,
         timestamp: timestamp,
         customer_name: currentTransaction.customer_name,
-        barber_name: selectedBarber.full_name,
+        barber_name: selectedBarber?.full_name || (posMode === 'retail' ? 'Retail Sale' : 'N/A'),
         services: currentTransaction.services,
         products: currentTransaction.products,
         subtotal: currentTransaction.subtotal,
@@ -1036,55 +1256,70 @@ const POS = () => {
 
         {/* Mobile Content */}
         <div className="relative z-10 px-3 py-3 space-y-3">
-          {/* Barber Selection - Collapsible */}
-          <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl border border-[#444444]/50 overflow-hidden">
-            <button
-              onClick={() => setExpandedSection(expandedSection === 'barber' ? null : 'barber')}
-              className="w-full px-4 py-3 flex items-center justify-between"
-            >
-              <div className="flex items-center space-x-3">
-                <Scissors className="w-5 h-5 text-[var(--color-primary)]" />
-                <div className="text-left">
-                  <h3 className="text-sm font-bold text-white">
-                    {selectedBarber ? selectedBarber.full_name : 'Select Barber'}
-                  </h3>
-                  <p className="text-[10px] text-gray-400">
-                    {selectedBarber ? 'Tap to change' : 'Required'}
-                  </p>
+          {/* Barber Selection - Collapsible (Only in Service Mode) */}
+          {posMode === 'service' && (
+            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl border border-[#444444]/50 overflow-hidden">
+              <button
+                onClick={() => setExpandedSection(expandedSection === 'barber' ? null : 'barber')}
+                className="w-full px-4 py-3 flex items-center justify-between"
+              >
+                <div className="flex items-center space-x-3">
+                  <Scissors className="w-5 h-5 text-[var(--color-primary)]" />
+                  <div className="text-left">
+                    <h3 className="text-sm font-bold text-white">
+                      {selectedBarber ? selectedBarber.full_name : 'Select Barber'}
+                    </h3>
+                    <p className="text-[10px] text-gray-400">
+                      {selectedBarber ? 'Tap to change' : 'Required'}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              {selectedBarber ? (
-                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[var(--color-primary)]/30">
-                  <BarberAvatar barber={selectedBarber} className="w-10 h-10" />
-                </div>
-              ) : (
-                <ChevronRight className="w-5 h-5 text-gray-400" />
-              )}
-            </button>
+                {selectedBarber ? (
+                  <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[var(--color-primary)]/30">
+                    <BarberAvatar barber={selectedBarber} className="w-10 h-10" />
+                  </div>
+                ) : (
+                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                )}
+              </button>
 
-            {expandedSection === 'barber' && (
-              <div className="px-4 pb-4 grid grid-cols-3 gap-2">
-                {activeBarbers.map((barber) => (
-                  <button
-                    key={barber._id}
-                    onClick={() => {
-                      setSelectedBarber(barber)
-                      setExpandedSection(null)
-                    }}
-                    className={`p-3 rounded-lg border transition-all ${selectedBarber?._id === barber._id
-                      ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
-                      : 'border-[#555555] hover:border-[var(--color-primary)]/50'
-                      }`}
-                  >
-                    <div className="w-12 h-12 rounded-full overflow-hidden mx-auto mb-2 border-2 border-[var(--color-primary)]/30">
-                      <BarberAvatar barber={barber} className="w-12 h-12" />
-                    </div>
-                    <p className="text-[10px] font-semibold text-white text-center truncate">{barber.full_name}</p>
-                  </button>
-                ))}
+              {expandedSection === 'barber' && (
+                <div className="px-4 pb-4 grid grid-cols-3 gap-2">
+                  {activeBarbers.map((barber) => (
+                    <button
+                      key={barber._id}
+                      onClick={() => {
+                        setSelectedBarber(barber)
+                        setExpandedSection(null)
+                      }}
+                      className={`p-3 rounded-lg border transition-all ${selectedBarber?._id === barber._id
+                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
+                        : 'border-[#555555] hover:border-[var(--color-primary)]/50'
+                        }`}
+                    >
+                      <div className="w-12 h-12 rounded-full overflow-hidden mx-auto mb-2 border-2 border-[var(--color-primary)]/30">
+                        <BarberAvatar barber={barber} className="w-12 h-12" />
+                      </div>
+                      <p className="text-[10px] font-semibold text-white text-center truncate">{barber.full_name}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Retail Mode Indicator */}
+          {posMode === 'retail' && (
+            <div className="bg-gradient-to-br from-green-900/30 to-green-800/20 rounded-xl border border-green-500/30 p-4">
+              <div className="flex items-center space-x-3">
+                <ShoppingBag className="w-5 h-5 text-green-400" />
+                <div>
+                  <h3 className="text-sm font-bold text-white">Retail Mode Active</h3>
+                  <p className="text-[10px] text-gray-400">Product-only sales - No barber required</p>
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Customer Selection - Collapsible */}
           <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl border border-[#444444]/50 overflow-hidden">
@@ -1218,37 +1453,65 @@ const POS = () => {
             />
           </div>
 
-          {/* Services/Products Tabs */}
-          <div className="flex space-x-2 bg-[#1A1A1A] rounded-xl p-1">
+          {/* POS Mode Toggle - Service vs Retail */}
+          <div className="flex gap-2 p-1 bg-[#1A1A1A] rounded-xl">
             <button
-              onClick={() => {
-                setActiveTab('services')
-                setSelectedCategory(null)
-                setOpenCategory(null)
-              }}
-              className={`flex-1 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${activeTab === 'services'
-                ? 'bg-[var(--color-primary)] text-white'
-                : 'text-gray-400'
-                }`}
+              onClick={() => handleModeSwitch('service')}
+              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                posMode === 'service'
+                  ? 'bg-[var(--color-primary)] text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
             >
-              <Scissors className="w-4 h-4 inline mr-2" />
-              Services
+              <Scissors className="w-4 h-4" />
+              Service Mode
             </button>
             <button
-              onClick={() => {
-                setActiveTab('products')
-                setSelectedCategory(null)
-                setOpenCategory(null)
-              }}
-              className={`flex-1 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${activeTab === 'products'
-                ? 'bg-[var(--color-primary)] text-white'
-                : 'text-gray-400'
-                }`}
+              onClick={() => handleModeSwitch('retail')}
+              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                posMode === 'retail'
+                  ? 'bg-green-600 text-white'
+                  : 'text-gray-400 hover:text-white'
+              }`}
             >
-              <Package className="w-4 h-4 inline mr-2" />
-              Products
+              <ShoppingBag className="w-4 h-4" />
+              Retail Mode
             </button>
           </div>
+
+          {/* Services/Products Tabs - Only show in Service Mode or when switching */}
+          {posMode === 'service' && (
+            <div className="flex space-x-2 bg-[#1A1A1A] rounded-xl p-1">
+              <button
+                onClick={() => {
+                  setActiveTab('services')
+                  setSelectedCategory(null)
+                  setOpenCategory(null)
+                }}
+                className={`flex-1 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${activeTab === 'services'
+                  ? 'bg-[var(--color-primary)] text-white'
+                  : 'text-gray-400'
+                  }`}
+              >
+                <Scissors className="w-4 h-4 inline mr-2" />
+                Services
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('products')
+                  setSelectedCategory(null)
+                  setOpenCategory(null)
+                }}
+                className={`flex-1 px-4 py-2.5 rounded-lg font-semibold text-sm transition-all ${activeTab === 'products'
+                  ? 'bg-[var(--color-primary)] text-white'
+                  : 'text-gray-400'
+                  }`}
+              >
+                <Package className="w-4 h-4 inline mr-2" />
+                Products
+              </button>
+            </div>
+          )}
 
           {/* Category Dropdown - Only for Services */}
           {activeTab === 'services' && (
@@ -1337,6 +1600,63 @@ const POS = () => {
               ))}
             </div>
           )}
+
+          {/* Mobile Product Sales History */}
+          <div className="mt-4">
+            <button
+              onClick={() => setShowProductHistory(!showProductHistory)}
+              className="w-full flex items-center justify-between p-3 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl border border-[#444444]/50"
+            >
+              <div className="flex items-center space-x-2">
+                <History className="w-4 h-4 text-blue-400" />
+                <span className="text-white font-semibold text-sm">Product Sales</span>
+                <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-bold rounded-full">
+                  {productTransactionHistory.length}
+                </span>
+              </div>
+              {showProductHistory ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            </button>
+
+            {showProductHistory && (
+              <div className="mt-2 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl border border-[#444444]/50 p-3">
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {productTransactionHistory.length === 0 ? (
+                    <p className="text-gray-400 text-sm text-center py-4">No product sales yet</p>
+                  ) : (
+                    productTransactionHistory.map((tx) => (
+                      <div
+                        key={tx._id}
+                        className={`p-2 rounded-lg border ${
+                          tx.transaction_type === 'retail'
+                            ? 'bg-green-500/10 border-green-500/20'
+                            : 'bg-[#1A1A1A] border-[#333333]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs text-gray-400">
+                            {new Date(tx.createdAt).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          {tx.transaction_type === 'retail' ? (
+                            <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-xs font-bold rounded">RETAIL</span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-bold rounded">SERVICE+</span>
+                          )}
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-300 truncate">
+                              {tx.products.map(p => `${p.product_name} x${p.quantity}`).join(', ')}
+                            </p>
+                          </div>
+                          <p className="text-sm font-semibold text-green-400 ml-2">₱{tx.product_total.toFixed(2)}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Mobile Cart Drawer */}
@@ -1453,7 +1773,11 @@ const POS = () => {
 
             <button
               onClick={openPaymentModal}
-              disabled={!selectedBarber || totalItems === 0}
+              disabled={
+                (posMode === 'service' && !selectedBarber) ||
+                (posMode === 'service' && currentTransaction.services.length === 0) ||
+                (posMode === 'retail' && currentTransaction.products.length === 0)
+              }
               className="py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-bold rounded-xl hover:from-[var(--color-accent)] hover:to-[var(--color-accent)] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
             >
               <CreditCard className="w-4 h-4" />
@@ -1727,29 +2051,74 @@ const POS = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Panel - Product/Service Selection */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Barber Selection */}
-            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
-              <h3 className="text-lg font-bold text-white mb-4">Select Barber</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {activeBarbers.map((barber) => (
-                  <button
-                    key={barber._id}
-                    onClick={() => setSelectedBarber(barber)}
-                    className={`p-3 rounded-xl border-2 transition-all duration-200 ${selectedBarber?._id === barber._id
-                      ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
-                      : 'border-[#555555] hover:border-[var(--color-primary)]/50 text-gray-300 hover:text-[var(--color-primary)]'
-                      }`}
-                  >
-                    <div className="text-center">
-                      <div className="w-10 h-10 rounded-full overflow-hidden mx-auto mb-2 border-2 border-[var(--color-primary)]/30">
-                        <BarberAvatar barber={barber} className="w-10 h-10" />
-                      </div>
-                      <p className="text-sm font-semibold">{barber.full_name}</p>
-                    </div>
-                  </button>
-                ))}
+            {/* POS Mode Toggle - Desktop */}
+            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-4">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleModeSwitch('service')}
+                  className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                    posMode === 'service'
+                      ? 'bg-[var(--color-primary)] text-white shadow-lg'
+                      : 'bg-[#1A1A1A] text-gray-400 hover:text-white border border-[#444444]'
+                  }`}
+                >
+                  <Scissors className="w-5 h-5" />
+                  Service Mode
+                </button>
+                <button
+                  onClick={() => handleModeSwitch('retail')}
+                  className={`flex-1 py-3 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                    posMode === 'retail'
+                      ? 'bg-green-600 text-white shadow-lg'
+                      : 'bg-[#1A1A1A] text-gray-400 hover:text-white border border-[#444444]'
+                  }`}
+                >
+                  <ShoppingBag className="w-5 h-5" />
+                  Retail Mode
+                </button>
               </div>
             </div>
+
+            {/* Barber Selection - Only in Service Mode */}
+            {posMode === 'service' && (
+              <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
+                <h3 className="text-lg font-bold text-white mb-4">Select Barber</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {activeBarbers.map((barber) => (
+                    <button
+                      key={barber._id}
+                      onClick={() => setSelectedBarber(barber)}
+                      className={`p-3 rounded-xl border-2 transition-all duration-200 ${selectedBarber?._id === barber._id
+                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 text-[var(--color-primary)]'
+                        : 'border-[#555555] hover:border-[var(--color-primary)]/50 text-gray-300 hover:text-[var(--color-primary)]'
+                        }`}
+                    >
+                      <div className="text-center">
+                        <div className="w-10 h-10 rounded-full overflow-hidden mx-auto mb-2 border-2 border-[var(--color-primary)]/30">
+                          <BarberAvatar barber={barber} className="w-10 h-10" />
+                        </div>
+                        <p className="text-sm font-semibold">{barber.full_name}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Retail Mode Info - Desktop */}
+            {posMode === 'retail' && (
+              <div className="bg-gradient-to-br from-green-900/30 to-green-800/20 rounded-2xl shadow-lg border border-green-500/30 p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="p-3 bg-green-500/20 rounded-xl">
+                    <ShoppingBag className="w-8 h-8 text-green-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Retail Mode Active</h3>
+                    <p className="text-sm text-gray-400">Product-only sales - No barber or service required</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Search and Tabs */}
             <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
@@ -1757,20 +2126,23 @@ const POS = () => {
                 {/* Top row: Tabs and View Mode Toggle */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex space-x-1 bg-[#1A1A1A] rounded-xl p-1 mb-4 sm:mb-0">
-                    <button
-                      onClick={() => {
-                        setActiveTab('services')
-                        setSelectedCategory(null)
-                        setOpenCategory(null)
-                      }}
-                      className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${activeTab === 'services'
-                        ? 'bg-[var(--color-primary)] text-white shadow-lg'
-                        : 'text-gray-400 hover:text-[var(--color-primary)]'
-                        }`}
-                    >
-                      <Scissors className="w-4 h-4 inline mr-2" />
-                      Services
-                    </button>
+                    {/* Services tab - only show in Service Mode */}
+                    {posMode === 'service' && (
+                      <button
+                        onClick={() => {
+                          setActiveTab('services')
+                          setSelectedCategory(null)
+                          setOpenCategory(null)
+                        }}
+                        className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${activeTab === 'services'
+                          ? 'bg-[var(--color-primary)] text-white shadow-lg'
+                          : 'text-gray-400 hover:text-[var(--color-primary)]'
+                          }`}
+                      >
+                        <Scissors className="w-4 h-4 inline mr-2" />
+                        Services
+                      </button>
+                    )}
                     <button
                       onClick={() => {
                         setActiveTab('products')
@@ -2047,6 +2419,7 @@ const POS = () => {
                   </div>
                 </div>
               )}
+
             </div>
           </div>
 
@@ -2243,13 +2616,19 @@ const POS = () => {
                             </div>
                             {/* Payment Status Badge */}
                             {booking.payment_status === 'paid' && (
-                              <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs font-bold rounded-full">PAID</span>
+                              <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+                                booking.payment_method === 'wallet'
+                                  ? 'bg-purple-500/20 text-purple-400'
+                                  : 'bg-green-500/20 text-green-400'
+                              }`}>
+                                {booking.payment_method === 'wallet' ? '👛 WALLET' : booking.payment_method === 'combo' ? '🔄 COMBO' : '💳 PAID'}
+                              </span>
                             )}
                             {booking.payment_status === 'partial' && (
-                              <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs font-bold rounded-full">PARTIAL</span>
+                              <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs font-bold rounded-full">FEE PAID</span>
                             )}
                             {booking.payment_status === 'unpaid' && (
-                              <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-bold rounded-full">AT BRANCH</span>
+                              <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-bold rounded-full">💵 PAY HERE</span>
                             )}
                           </div>
                           <div className="flex justify-between items-center">
@@ -2266,6 +2645,82 @@ const POS = () => {
                             </div>
                           </div>
                         </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Product Sales History Section */}
+            <div className="mt-4">
+              <button
+                onClick={() => setShowProductHistory(!showProductHistory)}
+                className="w-full flex items-center justify-between p-3 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl shadow-lg border border-[#444444]/50 hover:border-blue-500/30 transition-all duration-200"
+              >
+                <div className="flex items-center space-x-2">
+                  <History className="w-5 h-5 text-blue-400" />
+                  <span className="text-white font-semibold">Product Sales</span>
+                  <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-bold rounded-full">
+                    {productTransactionHistory.length}
+                  </span>
+                </div>
+                {showProductHistory ? (
+                  <ChevronUp className="w-5 h-5 text-gray-400" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-gray-400" />
+                )}
+              </button>
+
+              {showProductHistory && (
+                <div className="mt-2 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl shadow-lg border border-[#444444]/50 p-4">
+                  {/* Filter */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <Filter className="w-4 h-4 text-gray-400" />
+                    <span className="text-sm text-gray-400">Recent product transactions</span>
+                  </div>
+
+                  {/* Product Sales List */}
+                  <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar">
+                    {productTransactionHistory.length === 0 ? (
+                      <p className="text-gray-400 text-sm text-center py-4">No product sales yet</p>
+                    ) : (
+                      productTransactionHistory.map((tx) => (
+                        <div
+                          key={tx._id}
+                          className={`p-3 rounded-lg border ${
+                            tx.transaction_type === 'retail'
+                              ? 'bg-green-500/10 border-green-500/20'
+                              : 'bg-[#1A1A1A] border-[#333333]'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center space-x-2">
+                              <Clock className="w-4 h-4 text-gray-400" />
+                              <span className="text-white font-medium text-sm">
+                                {new Date(tx.createdAt).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            {/* Transaction Type Badge */}
+                            {tx.transaction_type === 'retail' ? (
+                              <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs font-bold rounded-full">RETAIL</span>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-bold rounded-full">SERVICE+</span>
+                            )}
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="text-sm text-white">{tx.customer_name}</p>
+                              <p className="text-xs text-gray-400">
+                                {tx.products.map(p => `${p.product_name} x${p.quantity}`).join(', ')}
+                              </p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-semibold text-green-400">₱{tx.product_total.toFixed(2)}</p>
+                              <p className="text-xs text-gray-500">by {tx.processed_by_name}</p>
+                            </div>
+                          </div>
+                        </div>
                       ))
                     )}
                   </div>
@@ -2386,6 +2841,28 @@ const POS = () => {
               {/* Booking Payment Details (if booking attached) */}
               {currentBooking && currentBooking.payment_status && (
                 <div className="bg-[#1A1A1A] rounded-lg p-3 space-y-2 mb-4">
+                  {/* Payment Type Label */}
+                  <div className="flex justify-between items-center text-sm pb-2 border-b border-[#333333]">
+                    <span className="text-gray-400">Payment Type:</span>
+                    <span className={`font-bold px-2 py-0.5 rounded text-xs ${
+                      currentBooking.payment_status === 'unpaid'
+                        ? 'bg-blue-500/20 text-blue-400'
+                        : currentBooking.payment_method === 'wallet'
+                          ? 'bg-purple-500/20 text-purple-400'
+                          : currentBooking.payment_method === 'combo'
+                            ? 'bg-cyan-500/20 text-cyan-400'
+                            : 'bg-green-500/20 text-green-400'
+                    }`}>
+                      {currentBooking.payment_status === 'unpaid'
+                        ? '💵 PAY AT SHOP'
+                        : currentBooking.payment_method === 'wallet'
+                          ? '👛 WALLET PAY'
+                          : currentBooking.payment_method === 'combo'
+                            ? '🔄 COMBO (Wallet + Online)'
+                            : '💳 ONLINE PAY'}
+                    </span>
+                  </div>
+
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-400">Service Total:</span>
                     <span className="text-white font-semibold">
@@ -2398,22 +2875,25 @@ const POS = () => {
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-400">Amount Paid:</span>
                       <span className="text-green-400 font-semibold">
-                        ₱{(currentBooking.service_price || currentBooking.total_amount || 0).toLocaleString()} via PayMongo
+                        ₱{(currentBooking.service_price || currentBooking.total_amount || 0).toLocaleString()}
+                        {currentBooking.payment_method === 'wallet' && ' (Wallet)'}
+                        {currentBooking.payment_method === 'paymongo' && ' (Online)'}
+                        {currentBooking.payment_method === 'combo' && ' (Wallet + Online)'}
                       </span>
                     </div>
                   )}
                   {currentBooking.payment_status === 'partial' && (
                     <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-400">Reservation Fee Paid:</span>
+                      <span className="text-gray-400">Booking Fee Paid:</span>
                       <span className="text-green-400 font-semibold">
-                        ₱{(currentBooking.convenience_fee_paid || 0).toLocaleString()} via PayMongo
+                        ₱{(currentBooking.convenience_fee_paid || 0).toLocaleString()} (Online)
                       </span>
                     </div>
                   )}
                   {currentBooking.payment_status === 'unpaid' && (
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-400">Amount Paid:</span>
-                      <span className="text-gray-500 font-semibold">₱0</span>
+                      <span className="text-gray-500 font-semibold">₱0 (Pay at Shop)</span>
                     </div>
                   )}
 
@@ -2527,7 +3007,7 @@ const POS = () => {
                 {currentBooking?.payment_status === 'paid' ? (
                   <button
                     onClick={() => handleMarkComplete()}
-                    disabled={!selectedBarber}
+                    disabled={posMode === 'service' && !selectedBarber}
                     className="w-full py-3 bg-gradient-to-r from-green-600 to-green-500 text-white font-bold rounded-xl hover:from-green-500 hover:to-green-400 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
                   >
                     <CheckCircle className="w-5 h-5" />
@@ -2536,7 +3016,11 @@ const POS = () => {
                 ) : (
                   <button
                     onClick={openPaymentModal}
-                    disabled={!selectedBarber || (currentTransaction.services.length === 0 && currentTransaction.products.length === 0)}
+                    disabled={
+                      (posMode === 'service' && !selectedBarber) ||
+                      (posMode === 'service' && currentTransaction.services.length === 0) ||
+                      (posMode === 'retail' && currentTransaction.products.length === 0)
+                    }
                     className="w-full py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-bold rounded-xl hover:from-[var(--color-accent)] hover:to-[var(--color-accent)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg"
                   >
                     <CreditCard className="w-5 h-5" />
@@ -2545,13 +3029,9 @@ const POS = () => {
                 )}
 
                 <button
-                  onClick={() => setAlertModal({
-                    show: true,
-                    title: 'Coming Soon',
-                    message: 'Receipt printing functionality is coming soon!',
-                    type: 'warning'
-                  })}
-                  className="w-full py-2 border border-[#555555] text-gray-300 font-semibold rounded-xl hover:bg-[var(--color-primary)]/10 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors flex items-center justify-center space-x-2"
+                  onClick={handleShowReceipt}
+                  disabled={!currentBooking && currentTransaction.services.length === 0 && currentTransaction.products.length === 0}
+                  className="w-full py-2 border border-[#555555] text-gray-300 font-semibold rounded-xl hover:bg-[var(--color-primary)]/10 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Receipt className="w-4 h-4" />
                   <span>Print Receipt</span>

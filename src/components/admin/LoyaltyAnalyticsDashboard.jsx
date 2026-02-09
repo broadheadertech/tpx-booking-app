@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 
 /**
  * Loyalty Analytics Dashboard
@@ -29,7 +29,7 @@ import { useAuth } from '../../context/AuthContext'
  * Story 19.3: Loyalty Analytics Dashboard
  */
 const LoyaltyAnalyticsDashboard = () => {
-  const { user } = useAuth()
+  const { user } = useCurrentUser()
   const [datePreset, setDatePreset] = useState('this_month')
   const isSuperAdmin = user?.role === 'super_admin'
 

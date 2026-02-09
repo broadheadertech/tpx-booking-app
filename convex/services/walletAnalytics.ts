@@ -27,27 +27,31 @@ import { checkRole } from "./rbac";
 export const getWalletOverview = query({
   args: {},
   handler: async (ctx) => {
-    // Total Float: Sum of all customer wallet balances
+    // Total Float: Sum of all customer wallet balances (stored in centavos)
     const wallets = await ctx.db.query("wallets").collect();
-    const totalFloat = wallets.reduce((sum, w) => sum + (w.balance || 0), 0);
+    const totalFloatCentavos = wallets.reduce((sum, w) => sum + (w.balance || 0) + (w.bonus_balance || 0), 0);
 
     // Outstanding to Branches: Sum of all pending earnings across all branches
+    // NOTE: branchWalletEarnings stores amounts in PESOS (not centavos)
     const pendingEarnings = await ctx.db
       .query("branchWalletEarnings")
       .filter((q) => q.eq(q.field("status"), EARNING_STATUS.PENDING))
       .collect();
-    const outstandingToBranches = pendingEarnings.reduce(
+    const outstandingToBranchesPesos = pendingEarnings.reduce(
       (sum, e) => sum + (e.net_amount || 0),
       0
     );
 
-    // Available for Operations: Float minus Outstanding
-    const availableForOps = totalFloat - outstandingToBranches;
+    // Convert wallet balance from centavos to pesos for display
+    const totalFloatPesos = totalFloatCentavos / 100;
+
+    // Available for Operations: Float minus Outstanding (both now in pesos)
+    const availableForOpsPesos = totalFloatPesos - outstandingToBranchesPesos;
 
     return {
-      totalFloat,
-      outstandingToBranches,
-      availableForOps,
+      totalFloat: totalFloatPesos,
+      outstandingToBranches: outstandingToBranchesPesos,
+      availableForOps: availableForOpsPesos,
       walletCount: wallets.length,
       pendingEarningsCount: pendingEarnings.length,
     };
@@ -91,6 +95,15 @@ export const getMonthlyMetrics = query({
       (sum, t) => sum + (t.amount || 0),
       0
     );
+
+    // Total Bonuses Given: Sum of bonus_amount from topup transactions
+    const totalBonusGiven = topUpTransactions.reduce(
+      (sum, t) => sum + ((t as any).bonus_amount || 0),
+      0
+    );
+    const bonusTransactionCount = topUpTransactions.filter(
+      (t) => (t as any).bonus_amount && (t as any).bonus_amount > 0
+    ).length;
 
     // Total Wallet Payments: Sum of wallet_transactions where type=payment AND completed
     const paymentTransactions = allTransactions.filter(
@@ -140,16 +153,21 @@ export const getMonthlyMetrics = query({
       (s) => s.status === "pending" || s.status === "approved" || s.status === "processing"
     );
 
+    // NOTE: wallet_transactions.amount, branchWalletEarnings amounts, and branchSettlements.amount
+    // are all stored in PESOS (not centavos), so no conversion needed
     return {
-      totalTopUps,
+      totalTopUps: totalTopUps,
       topUpCount: topUpTransactions.length,
-      totalPayments,
+      totalPayments: Math.abs(totalPayments), // Payments are stored as negative, return absolute value
       paymentCount: paymentTransactions.length,
-      commissionEarned,
-      grossEarnings,
-      settlementsPaid,
+      commissionEarned: commissionEarned,
+      grossEarnings: grossEarnings,
+      settlementsPaid: settlementsPaid,
       settlementsCount: completedSettlements.length,
       pendingSettlementsCount: pendingSettlements.length,
+      // Bonus tracking for admin analytics
+      totalBonusGiven: totalBonusGiven,
+      bonusTransactionCount: bonusTransactionCount,
       periodStart: startDate,
       periodEnd: endDate,
     };
@@ -229,12 +247,13 @@ export const getMonthlyTrends = query({
         0
       );
 
+      // NOTE: All amounts (transactions, earnings, settlements) are stored in PESOS
       trends.push({
         month: monthDate.toLocaleString("en-US", { month: "short" }),
         year: monthDate.getFullYear(),
-        topUps,
-        payments,
-        commission,
+        topUps: topUps,
+        payments: Math.abs(payments), // Payments are stored as negative
+        commission: commission,
         settlements: settlementsTotal,
       });
     }
@@ -283,13 +302,14 @@ export const getQuickStats = query({
       .filter((t) => t.type === "payment")
       .reduce((sum, t) => sum + (t.amount || 0), 0);
 
+    // NOTE: wallet_transactions.amount is stored in PESOS (not centavos)
     return {
       activeWallets,
       totalWallets: wallets.length,
       branchesWithPending,
       pendingSettlements,
-      todayTopUps,
-      todayPayments,
+      todayTopUps: todayTopUps,
+      todayPayments: Math.abs(todayPayments), // Payments are stored as negative
       todayTransactionCount: todayTransactions.length,
     };
   },
@@ -352,13 +372,14 @@ export const getBranchWalletSummaries = query({
         (a, b) => (b.completed_at || 0) - (a.completed_at || 0)
       )[0];
 
+      // NOTE: branchWalletEarnings amounts are stored in PESOS (not centavos)
       return {
         branchId: branch._id,
         branchName: branch.name || "Unknown Branch",
-        totalEarnings,
-        pendingAmount,
-        settledAmount,
-        totalCommission,
+        totalEarnings: totalEarnings,
+        pendingAmount: pendingAmount,
+        settledAmount: settledAmount,
+        totalCommission: totalCommission,
         lastSettlementDate: lastSettlement?.completed_at || null,
         transactionCount: branchEarnings.length,
         pendingSettlements: allSettlements.filter(
@@ -421,15 +442,16 @@ export const getBranchWalletDetail = query({
       .query("branchWalletEarnings")
       .filter((q) => q.eq(q.field("branch_id"), args.branchId))
       .collect();
+    // NOTE: branchWalletEarnings amounts are stored in PESOS (not centavos)
     const recentEarnings = allEarnings
       .sort((a, b) => b.created_at - a.created_at)
       .slice(0, 20)
       .map((e) => ({
         id: e._id,
         serviceName: e.service_name,
-        grossAmount: e.gross_amount,
-        commissionAmount: e.commission_amount,
-        netAmount: e.net_amount,
+        grossAmount: e.gross_amount || 0,
+        commissionAmount: e.commission_amount || 0,
+        netAmount: e.net_amount || 0,
         status: e.status,
         createdAt: e.created_at,
       }));
@@ -439,12 +461,13 @@ export const getBranchWalletDetail = query({
       .query("branchSettlements")
       .filter((q) => q.eq(q.field("branch_id"), args.branchId))
       .collect();
+    // NOTE: branchSettlements.amount is stored in PESOS (not centavos)
     const recentSettlements = allSettlements
       .sort((a, b) => b.created_at - a.created_at)
       .slice(0, 10)
       .map((s) => ({
         id: s._id,
-        amount: s.amount,
+        amount: s.amount || 0,
         status: s.status,
         createdAt: s.created_at,
         completedAt: s.completed_at,
@@ -467,6 +490,7 @@ export const getBranchWalletDetail = query({
       .filter((e) => e.status === EARNING_STATUS.SETTLED)
       .reduce((sum, e) => sum + (e.net_amount || 0), 0);
 
+    // NOTE: branchWalletEarnings amounts are stored in PESOS (not centavos)
     return {
       branch: {
         id: branch._id,
@@ -483,10 +507,10 @@ export const getBranchWalletDetail = query({
           }
         : null,
       summary: {
-        totalEarnings,
-        totalCommission,
-        pendingAmount,
-        settledAmount,
+        totalEarnings: totalEarnings,
+        totalCommission: totalCommission,
+        pendingAmount: pendingAmount,
+        settledAmount: settledAmount,
         transactionCount: allEarnings.length,
         settlementCount: allSettlements.length,
       },

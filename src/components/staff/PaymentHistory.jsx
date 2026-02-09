@@ -521,7 +521,7 @@ export default function PaymentHistory() {
                   {bookingAuditData.booking.convenience_fee_paid > 0 && (
                     <div>
                       <p className="text-gray-400">Convenience Fee Paid</p>
-                      <p className="text-green-400 font-medium">₱{bookingAuditData.booking.convenience_fee_paid?.toLocaleString()}</p>
+                      <p className="text-green-400 font-medium">₱{(bookingAuditData.booking.convenience_fee_paid || 0).toLocaleString()}</p>
                     </div>
                   )}
                   {bookingAuditData.booking.booking_fee > 0 && (

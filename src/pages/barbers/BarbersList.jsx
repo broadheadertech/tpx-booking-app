@@ -15,12 +15,12 @@ import {
   Award,
 } from "lucide-react";
 import { useBranding } from "../../context/BrandingContext";
-import { useAuth } from "../../context/AuthContext";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 
 const BarbersList = () => {
   const navigate = useNavigate();
   const { branding } = useBranding();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useCurrentUser();
   const [searchQuery, setSearchQuery] = useState("");
 
   const barbers = useQuery(api.services.portfolio.getPublicBarbers, {});

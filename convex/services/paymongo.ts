@@ -1,6 +1,6 @@
 import { action, mutation, query } from "../_generated/server";
 import { v } from "convex/values";
-import { internal } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 import { encryptApiKey, decryptApiKey } from "../lib/encryption";
 
 const PAYMONGO_SECRET_KEY = process.env.PAYMONGO_SECRET_KEY || "";
@@ -746,8 +746,8 @@ export const createPaymentLink = action({
       description = `Convenience Fee - Booking #${booking.booking_code}`;
     }
 
-    // Convert to centavos for PayMongo API (minimum 100 centavos = ₱1)
-    const amountInCentavos = Math.max(Math.round(amountInPesos * 100), 100);
+    // Convert to centavos for PayMongo API (minimum ₱100 = 10000 centavos for e-wallet/card)
+    const amountInCentavos = Math.max(Math.round(amountInPesos * 100), 10000);
 
     // Create auth header using branch's secret key
     const authToken = base64EncodeAscii(config.secret_key + ":");
@@ -854,8 +854,11 @@ export const createPaymentLinkDeferred = action({
     booking_fee: v.optional(v.number()),
     price: v.number(),
     // Payment info
-    payment_type: v.union(v.literal("pay_now"), v.literal("pay_later")),
+    payment_type: v.union(v.literal("pay_now"), v.literal("pay_later"), v.literal("combo_wallet_online")),
     origin: v.optional(v.string()),
+    // Combo payment fields
+    is_combo_payment: v.optional(v.boolean()),
+    use_wallet_balance: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     // Get branch payment configuration with decrypted keys
@@ -874,14 +877,53 @@ export const createPaymentLinkDeferred = action({
     if (args.payment_type === "pay_later" && !config.pay_later_enabled) {
       throw new Error("Pay Later option is not enabled for this branch");
     }
+    // Combo payment requires pay_now to be enabled (uses same infrastructure)
+    if (args.payment_type === "combo_wallet_online" && !config.pay_now_enabled) {
+      throw new Error("Online payment is not enabled for this branch");
+    }
 
     // Calculate amount based on payment type
     const servicePrice = args.price;
     const bookingFee = args.booking_fee || 0;
     let amountInPesos: number;
     let description: string;
+    let walletPortion = 0;
 
-    if (args.payment_type === "pay_now") {
+    if (args.payment_type === "combo_wallet_online") {
+      // Combo Payment: Get wallet balance first, calculate online portion
+      const wallet = await ctx.runQuery(api.services.wallet.getWallet, {
+        userId: args.customer_id,
+      });
+
+      const walletBalance = wallet
+        ? ((wallet.balance || 0) + (wallet.bonus_balance || 0)) / 100 // Convert from centavos to pesos
+        : 0;
+
+      const totalPrice = servicePrice + bookingFee;
+      walletPortion = Math.min(walletBalance, totalPrice);
+      amountInPesos = Math.max(0, totalPrice - walletPortion);
+
+      if (amountInPesos <= 0) {
+        // If wallet covers full amount, this shouldn't be a combo payment
+        throw new Error("Wallet balance covers full amount - use regular wallet payment instead");
+      }
+
+      // Minimum PayMongo amount is ₱100 for e-wallet/card transactions
+      // If online portion is too small, reject with helpful message
+      const PAYMONGO_MIN_AMOUNT = 100;
+      if (amountInPesos < PAYMONGO_MIN_AMOUNT) {
+        throw new Error(`Online payment portion (₱${amountInPesos.toFixed(2)}) is below minimum ₱${PAYMONGO_MIN_AMOUNT}. Please use a different payment method or top up your wallet.`);
+      }
+
+      description = `Partial Payment - Service Booking (₱${walletPortion.toFixed(0)} from wallet)`;
+
+      console.log("[PayMongo] Combo payment calculation:", {
+        totalPrice,
+        walletBalance,
+        walletPortion,
+        onlinePortion: amountInPesos,
+      });
+    } else if (args.payment_type === "pay_now") {
       // Pay Now: Full service price + booking fee
       amountInPesos = servicePrice + bookingFee;
       description = `Full Payment - Service Booking`;
@@ -899,8 +941,8 @@ export const createPaymentLinkDeferred = action({
       description = `Convenience Fee - Service Booking`;
     }
 
-    // Convert to centavos for PayMongo API (minimum 100 centavos = ₱1)
-    const amountInCentavos = Math.max(Math.round(amountInPesos * 100), 100);
+    // Convert to centavos for PayMongo API (minimum ₱100 = 10000 centavos for e-wallet/card)
+    const amountInCentavos = Math.max(Math.round(amountInPesos * 100), 10000);
 
     // Create auth header using branch's secret key
     const authToken = base64EncodeAscii(config.secret_key + ":");
@@ -937,10 +979,12 @@ export const createPaymentLinkDeferred = action({
           payment_method_types: ["gcash", "card", "grab_pay", "paymaya"],
           success_url: successUrl,
           cancel_url: cancelUrl,
-          description: `${description} - ${args.payment_type === "pay_now" ? "Full Payment" : "Convenience Fee"}`,
+          description: `${description} - ${args.payment_type === "pay_now" ? "Full Payment" : args.payment_type === "combo_wallet_online" ? "Partial Payment" : "Convenience Fee"}`,
           metadata: {
             payment_type: args.payment_type,
             deferred_booking: "true",
+            is_combo_payment: args.is_combo_payment ? "true" : "false",
+            wallet_portion: walletPortion.toString(),
           },
         },
       },
@@ -1008,6 +1052,9 @@ export const createPaymentLinkDeferred = action({
       created_at: now,
       expires_at: expiresAt,
       created_by: args.customer_id,
+      // Combo payment fields
+      is_combo_payment: args.is_combo_payment || false,
+      wallet_portion: walletPortion,
     });
 
     // Log successful checkout session creation
@@ -1048,12 +1095,15 @@ export const createPendingPayment = mutation({
     customer_name: v.optional(v.string()),
     booking_fee: v.optional(v.number()),
     price: v.number(),
-    payment_type: v.union(v.literal("pay_now"), v.literal("pay_later")),
+    payment_type: v.union(v.literal("pay_now"), v.literal("pay_later"), v.literal("combo_wallet_online")),
     paymongo_link_id: v.string(),
     amount_to_pay: v.number(),
     created_at: v.number(),
     expires_at: v.number(),
     created_by: v.optional(v.id("users")),
+    // Combo payment fields
+    is_combo_payment: v.optional(v.boolean()),
+    wallet_portion: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("pendingPayments", {
@@ -1087,7 +1137,7 @@ export const createBookingFromPending = mutation({
     pending_payment_id: v.id("pendingPayments"),
     paymongo_payment_id: v.string(),
     paymongo_link_id: v.string(),
-    payment_type: v.union(v.literal("pay_now"), v.literal("pay_later")),
+    payment_type: v.union(v.literal("pay_now"), v.literal("pay_later"), v.literal("combo_wallet_online")),
     amount_paid: v.number(),
   },
   handler: async (ctx, args) => {
@@ -1119,13 +1169,84 @@ export const createBookingFromPending = mutation({
     const randomStr = Math.random().toString(36).substring(2, 6).toUpperCase();
     const bookingCode = `BK${dateStr}${randomStr}`;
 
+    // Handle combo payment - debit wallet portion first
+    let walletDebitResult = null;
+    if (pending.is_combo_payment && pending.wallet_portion && pending.wallet_portion > 0) {
+      // Debit wallet for the wallet portion
+      const wallet = await ctx.db
+        .query("wallets")
+        .withIndex("by_user", (q) => q.eq("user_id", pending.customer_id))
+        .first();
+
+      if (wallet) {
+        const mainBalance = wallet.balance || 0;
+        const bonusBalance = wallet.bonus_balance || 0;
+        const totalAvailable = (mainBalance + bonusBalance) / 100; // Convert from centavos to pesos
+
+        if (totalAvailable >= pending.wallet_portion) {
+          // Calculate deduction: bonus first, then main
+          const walletPortionCentavos = pending.wallet_portion * 100;
+          const bonusUsed = Math.min(bonusBalance, walletPortionCentavos);
+          const mainUsed = Math.min(mainBalance, walletPortionCentavos - bonusUsed);
+
+          // Update wallet balances
+          await ctx.db.patch(wallet._id, {
+            balance: mainBalance - mainUsed,
+            bonus_balance: bonusBalance - bonusUsed,
+            updatedAt: now,
+          });
+
+          // Record wallet payment transaction
+          await ctx.db.insert("wallet_transactions", {
+            user_id: pending.customer_id,
+            type: "payment",
+            amount: -pending.wallet_portion, // Negative for debit (in pesos)
+            status: "completed",
+            provider: "wallet",
+            reference_id: args.paymongo_payment_id,
+            createdAt: now,
+            updatedAt: now,
+            description: `Combo Payment (Wallet portion) - ₱${pending.wallet_portion}`,
+          });
+
+          walletDebitResult = {
+            walletPortion: pending.wallet_portion,
+            bonusUsed: bonusUsed / 100,
+            mainUsed: mainUsed / 100,
+          };
+
+          console.log("[PayMongo] Combo payment - wallet debited:", walletDebitResult);
+        } else {
+          console.error("[PayMongo] Combo payment - insufficient wallet balance:", {
+            required: pending.wallet_portion,
+            available: totalAvailable,
+          });
+          // Wallet debit failed - record this in the booking for manual resolution
+          walletDebitResult = {
+            walletPortion: 0,
+            bonusUsed: 0,
+            mainUsed: 0,
+            walletDebitFailed: true,
+            failureReason: `Insufficient balance: needed ₱${pending.wallet_portion}, had ₱${totalAvailable.toFixed(2)}`,
+          };
+        }
+      }
+    }
+
     // Determine payment status based on payment type
-    const paymentStatus = args.payment_type === "pay_now" ? "paid" : "partial";
+    const paymentStatus = args.payment_type === "pay_now" || args.payment_type === "combo_wallet_online" ? "paid" : "partial";
     const convenienceFeePaid = args.payment_type === "pay_later" ? args.amount_paid : undefined;
 
     // Calculate final price
     const discountAmount = pending.discount_amount || 0;
     const finalPrice = pending.price - discountAmount;
+
+    // Determine payment method based on payment type
+    const paymentMethod = args.payment_type === "combo_wallet_online"
+      ? "combo"
+      : args.payment_type === "pay_later"
+        ? "paymongo"
+        : "paymongo"; // pay_now uses PayMongo
 
     // Create the actual booking
     const bookingId = await ctx.db.insert("bookings", {
@@ -1146,9 +1267,16 @@ export const createBookingFromPending = mutation({
       final_price: finalPrice,
       booking_code: bookingCode,
       payment_status: paymentStatus,
+      payment_method: paymentMethod,
       paymongo_link_id: args.paymongo_link_id,
       paymongo_payment_id: args.paymongo_payment_id,
       convenience_fee_paid: convenienceFeePaid,
+      // Combo payment fields
+      is_combo_payment: pending.is_combo_payment || false,
+      wallet_amount_paid: walletDebitResult?.walletDebitFailed ? 0 : walletDebitResult?.walletPortion,
+      online_amount_paid: pending.is_combo_payment ? args.amount_paid : undefined,
+      wallet_debit_failed: walletDebitResult?.walletDebitFailed || false,
+      wallet_debit_failure_reason: walletDebitResult?.failureReason,
       createdAt: now,
       updatedAt: now,
     });
@@ -1158,6 +1286,30 @@ export const createBookingFromPending = mutation({
       status: "paid",
       paid_at: now,
     });
+
+    // Award loyalty points for pay_now and combo_wallet_online payments
+    // (Pay later doesn't earn points until full payment at branch)
+    let pointsAwarded = null;
+    if (args.payment_type === "pay_now" || args.payment_type === "combo_wallet_online") {
+      try {
+        // Award points on the full service price (not just online portion)
+        // This is consistent with wallet-only payment behavior
+        pointsAwarded = await ctx.runMutation(api.services.points.awardPointsWithPromo, {
+          userId: pending.customer_id,
+          baseAmount: finalPrice, // Full service price in pesos
+          branchId: pending.branch_id,
+          sourceType: "payment",
+          sourceId: `BOOKING-${bookingId}`,
+          notes: pending.is_combo_payment
+            ? `Points earned from combo payment (Wallet + Online)`
+            : `Points earned from online payment`,
+        });
+        console.log("[PayMongo] Points awarded for payment:", pointsAwarded);
+      } catch (pointsError) {
+        console.error("[PayMongo] Failed to award points:", pointsError);
+        // Don't fail the booking if points award fails - can be reconciled later
+      }
+    }
 
     // Redeem voucher if one was used
     if (pending.voucher_id) {

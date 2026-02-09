@@ -26,6 +26,7 @@ import {
   Users,
   Activity,
   ChevronDown,
+  Gift,
 } from "lucide-react";
 
 /**
@@ -205,14 +206,23 @@ function PrimaryMetricCard({ title, value, subtitle, icon: Icon, variant = "defa
 /**
  * Monthly metric card (smaller, simpler)
  */
-function MonthlyMetricCard({ title, value, count, icon: Icon }) {
+function MonthlyMetricCard({ title, value, count, icon: Icon, color }) {
+  const colorClasses = {
+    yellow: "text-yellow-400",
+    green: "text-green-400",
+    blue: "text-blue-400",
+    red: "text-red-400",
+    default: "text-white",
+  };
+  const valueColor = colorClasses[color] || colorClasses.default;
+
   return (
     <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A] hover:border-[#3A3A3A] transition-colors">
       <div className="flex items-center gap-2 mb-2">
-        <Icon className="w-4 h-4 text-gray-500" />
+        <Icon className={`w-4 h-4 ${color ? colorClasses[color] : 'text-gray-500'}`} />
         <p className="text-xs text-gray-400 font-medium">{title}</p>
       </div>
-      <p className="text-xl font-bold text-white">{formatCurrency(value)}</p>
+      <p className={`text-xl font-bold ${valueColor}`}>{formatCurrency(value)}</p>
       {count !== undefined && (
         <p className="text-xs text-gray-500 mt-1">{count} transactions</p>
       )}
@@ -432,12 +442,19 @@ export function WalletOverviewDashboard() {
         {isLoading ? (
           <MonthlyMetricsSkeleton />
         ) : (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <MonthlyMetricCard
               title="Top-ups"
               value={monthlyMetrics?.totalTopUps || 0}
               count={monthlyMetrics?.topUpCount}
               icon={ArrowUpRight}
+            />
+            <MonthlyMetricCard
+              title="Bonuses Given"
+              value={monthlyMetrics?.totalBonusGiven || 0}
+              count={monthlyMetrics?.bonusTransactionCount}
+              icon={Gift}
+              color="yellow"
             />
             <MonthlyMetricCard
               title="Wallet Payments"

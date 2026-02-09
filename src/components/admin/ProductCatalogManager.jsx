@@ -21,6 +21,7 @@ import {
   Phone,
   Mail,
   TrendingDown,
+  TrendingUp,
   Archive,
   Edit2,
   Trash2,
@@ -30,10 +31,12 @@ import {
   FileText,
   Building,
   Banknote,
+  Star,
+  Zap,
 } from "lucide-react";
 import Skeleton from "../common/Skeleton";
 import Modal from "../common/Modal";
-import { useAuth } from "../../context/AuthContext";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useToast } from "../common/ToastNotification";
 
 /**
@@ -316,7 +319,7 @@ const ProductsSkeleton = () => {
  * Add Product Modal Component with Image Upload and Stock Fields
  */
 const AddProductModal = ({ isOpen, onClose }) => {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const toast = useToast();
   const addProduct = useMutation(api.services.productCatalog.addProduct);
   const generateUploadUrl = useMutation(api.services.productCatalog.generateUploadUrl);
@@ -558,7 +561,7 @@ const AddProductModal = ({ isOpen, onClose }) => {
  * Receive Stock Modal
  */
 const ReceiveStockModal = ({ isOpen, onClose, product }) => {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const toast = useToast();
   const receiveStock = useMutation(api.services.productCatalog.receiveStock);
 
@@ -643,7 +646,7 @@ const ReceiveStockModal = ({ isOpen, onClose, product }) => {
  * Edit Product Modal Component
  */
 const EditProductModal = ({ isOpen, onClose, product }) => {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const toast = useToast();
   const updateProduct = useMutation(api.services.productCatalog.updateProduct);
   const generateUploadUrl = useMutation(api.services.productCatalog.generateUploadUrl);
@@ -653,12 +656,18 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
     name: "",
     description: "",
     price: "",
+    original_price: "",
     cost: "",
     category: "hair-care",
     brand: "",
     sku: "",
     minStock: "10",
     price_enforced: false,
+    // Promo/Discount fields
+    discount_percent: "",
+    promo_label: "",
+    promo_quantity_limit: "",
+    is_featured: false,
   });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -673,12 +682,18 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
         name: product.name || "",
         description: product.description || "",
         price: product.price?.toString() || "",
+        original_price: product.original_price?.toString() || "",
         cost: product.cost?.toString() || "",
         category: product.category || "hair-care",
         brand: product.brand || "",
         sku: product.sku || "",
         minStock: product.minStock?.toString() || "10",
         price_enforced: product.price_enforced || false,
+        // Promo/Discount fields
+        discount_percent: product.discount_percent?.toString() || "",
+        promo_label: product.promo_label || "",
+        promo_quantity_limit: product.promo_quantity_limit?.toString() || "",
+        is_featured: product.is_featured || false,
       });
       setImagePreview(product.resolvedImageUrl || product.image_url || "");
     }
@@ -764,12 +779,18 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         price: parseInt(formData.price, 10),
+        original_price: formData.original_price ? parseInt(formData.original_price, 10) : undefined,
         cost: formData.cost ? parseInt(formData.cost, 10) : undefined,
         category: formData.category,
         brand: formData.brand.trim() || undefined,
         sku: formData.sku.trim() || undefined,
         minStock: parseInt(formData.minStock, 10) || 10,
         price_enforced: formData.price_enforced,
+        // Promo/Discount fields
+        discount_percent: formData.discount_percent ? parseInt(formData.discount_percent, 10) : undefined,
+        promo_label: formData.promo_label.trim() || undefined,
+        promo_quantity_limit: formData.promo_quantity_limit ? parseInt(formData.promo_quantity_limit, 10) : undefined,
+        is_featured: formData.is_featured,
       };
 
       if (imageStorageId) {
@@ -907,6 +928,123 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
               }`} />
             </button>
           </div>
+        </div>
+
+        {/* Promo/Discount Section */}
+        <div className="bg-gradient-to-br from-[#2A1810] to-[#252525] rounded-xl p-4 border border-orange-500/30">
+          <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-orange-400" />
+            Promotion Settings
+          </h3>
+
+          {/* Discount % and Original Price */}
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">Discount %</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={formData.discount_percent}
+                  onChange={(e) => handleChange("discount_percent", e.target.value)}
+                  min="0"
+                  max="100"
+                  placeholder="e.g., 37"
+                  className="w-full bg-[#111111] border border-[#333333] text-white rounded-lg px-3 py-2 text-sm pr-8"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">%</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Leave empty for no discount</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">Original Price (PHP)</label>
+              <input
+                type="number"
+                value={formData.original_price}
+                onChange={(e) => handleChange("original_price", e.target.value)}
+                min="0"
+                placeholder="e.g., 699"
+                className="w-full bg-[#111111] border border-[#333333] text-white rounded-lg px-3 py-2 text-sm"
+              />
+              <p className="text-xs text-gray-500 mt-1">Shown with strikethrough</p>
+            </div>
+          </div>
+
+          {/* Promo Label and Quantity Limit */}
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">Promo Label</label>
+              <div className="flex gap-2 flex-wrap">
+                {["", "Flash Sale", "Hot Deal", "Limited", "New"].map((label) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => handleChange("promo_label", label)}
+                    className={`px-2 py-1 rounded-lg text-[10px] font-medium transition-colors ${
+                      formData.promo_label === label
+                        ? "bg-orange-500 text-white"
+                        : "bg-[#333333] text-gray-400 hover:bg-[#444444]"
+                    }`}
+                  >
+                    {label || "None"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-1">Quantity Limit</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={formData.promo_quantity_limit}
+                  onChange={(e) => handleChange("promo_quantity_limit", e.target.value)}
+                  min="1"
+                  placeholder="e.g., 50"
+                  className="w-full bg-[#111111] border border-[#333333] text-white rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Max items at promo price</p>
+            </div>
+          </div>
+
+          {/* Featured Toggle */}
+          <div className="flex items-center justify-between pt-3 border-t border-[#333333]">
+            <div>
+              <label className="text-sm font-medium text-white flex items-center gap-2">
+                <Star className="w-4 h-4 text-yellow-400" />
+                Featured in Flash Sales
+              </label>
+              <p className="text-xs text-gray-500 mt-1">Show in flash sale carousel</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleChange("is_featured", !formData.is_featured)}
+              className={`relative w-12 h-6 rounded-full transition-colors ${
+                formData.is_featured ? "bg-yellow-500" : "bg-[#333333]"
+              }`}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
+                formData.is_featured ? "translate-x-6" : ""
+              }`} />
+            </button>
+          </div>
+
+          {/* Preview */}
+          {(formData.discount_percent || formData.original_price) && (
+            <div className="mt-4 p-3 bg-[#1A1A1A] rounded-lg border border-[#333333]">
+              <p className="text-xs text-gray-500 mb-2">Price Preview:</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-lg font-bold text-orange-400">₱{formData.price || "0"}</span>
+                {formData.original_price && (
+                  <span className="text-sm text-gray-500 line-through">₱{formData.original_price}</span>
+                )}
+                {formData.discount_percent && (
+                  <span className="px-2 py-0.5 bg-orange-500 rounded text-xs font-bold text-white">
+                    -{formData.discount_percent}%
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Actions */}
@@ -1180,7 +1318,7 @@ const MyInventoryTab = () => {
 // MARK AS PAID MODAL
 // ============================================
 const MarkAsPaidModal = ({ isOpen, onClose, order, onSuccess }) => {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const toast = useToast();
   const markAsPaid = useMutation(api.services.productOrders.markOrderAsPaid);
 
@@ -1290,7 +1428,7 @@ const MarkAsPaidModal = ({ isOpen, onClose, order, onSuccess }) => {
 // MANUAL ORDER MODAL
 // ============================================
 const ManualOrderModal = ({ isOpen, onClose }) => {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const toast = useToast();
   const createManualOrder = useMutation(api.services.productOrders.createManualOrder);
 
@@ -1518,13 +1656,20 @@ const ManualOrderModal = ({ isOpen, onClose }) => {
 // TAB 2: BRANCH ORDERS
 // ============================================
 const BranchOrdersTab = () => {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const toast = useToast();
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderToMarkPaid, setOrderToMarkPaid] = useState(null);
   const [showManualOrderModal, setShowManualOrderModal] = useState(false);
   const [isBackfilling, setIsBackfilling] = useState(false);
+
+  // Confirmation dialog states
+  const [orderToApprove, setOrderToApprove] = useState(null);
+  const [orderToReject, setOrderToReject] = useState(null);
+  const [orderToShip, setOrderToShip] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const orders = useQuery(api.services.productOrders.getAllOrders, filterStatus === "all" ? {} : { status: filterStatus });
   const ordersSummary = useQuery(api.services.productOrders.getOrdersSummary);
@@ -1549,34 +1694,46 @@ const BranchOrdersTab = () => {
     }
   };
 
-  const handleApprove = async (orderId) => {
-    if (!user) return;
+  const handleApproveConfirm = async () => {
+    if (!user || !orderToApprove) return;
+    setIsProcessing(true);
     try {
-      await approveOrder({ order_id: orderId, approved_by: user._id });
-      toast.success("Success", "Order approved");
+      await approveOrder({ order_id: orderToApprove._id, approved_by: user._id });
+      toast.success("Success", "Order approved successfully");
+      setOrderToApprove(null);
     } catch (err) {
       toast.error("Error", err.message);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const handleReject = async (orderId) => {
-    const reason = prompt("Enter rejection reason:");
-    if (!reason || !user) return;
+  const handleRejectConfirm = async () => {
+    if (!user || !orderToReject || !rejectReason.trim()) return;
+    setIsProcessing(true);
     try {
-      await rejectOrder({ order_id: orderId, rejected_by: user._id, rejection_reason: reason });
+      await rejectOrder({ order_id: orderToReject._id, rejected_by: user._id, rejection_reason: rejectReason.trim() });
       toast.success("Success", "Order rejected");
+      setOrderToReject(null);
+      setRejectReason("");
     } catch (err) {
       toast.error("Error", err.message);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const handleShip = async (orderId) => {
-    if (!user) return;
+  const handleShipConfirm = async () => {
+    if (!user || !orderToShip) return;
+    setIsProcessing(true);
     try {
-      await shipOrder({ order_id: orderId, shipped_by: user._id });
+      await shipOrder({ order_id: orderToShip._id, shipped_by: user._id });
       toast.success("Success", "Order marked as shipped");
+      setOrderToShip(null);
     } catch (err) {
       toast.error("Error", err.message);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -1688,12 +1845,16 @@ const BranchOrdersTab = () => {
                   </button>
                   {order.status === "pending" && (
                     <>
-                      <button onClick={() => handleApprove(order._id)} className="px-3 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 text-sm">Approve</button>
-                      <button onClick={() => handleReject(order._id)} className="px-3 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 text-sm">Reject</button>
+                      <button onClick={() => setOrderToApprove(order)} className="px-3 py-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 text-sm flex items-center gap-1">
+                        <CheckCircle className="w-4 h-4" /> Approve
+                      </button>
+                      <button onClick={() => setOrderToReject(order)} className="px-3 py-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 text-sm flex items-center gap-1">
+                        <XCircle className="w-4 h-4" /> Reject
+                      </button>
                     </>
                   )}
                   {order.status === "approved" && (
-                    <button onClick={() => handleShip(order._id)} className="px-3 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 text-sm flex items-center gap-1">
+                    <button onClick={() => setOrderToShip(order)} className="px-3 py-2 bg-purple-500/20 text-purple-400 rounded-lg hover:bg-purple-500/30 text-sm flex items-center gap-1">
                       <Truck className="w-4 h-4" /> Ship
                     </button>
                   )}
@@ -1800,6 +1961,171 @@ const BranchOrdersTab = () => {
         isOpen={showManualOrderModal}
         onClose={() => setShowManualOrderModal(false)}
       />
+
+      {/* Approve Order Confirmation Modal */}
+      {orderToApprove && (
+        <Modal isOpen={!!orderToApprove} onClose={() => !isProcessing && setOrderToApprove(null)} title="Confirm Approval" size="md" variant="dark">
+          <div className="space-y-4">
+            <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <CheckCircle className="w-6 h-6 text-green-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-white font-semibold">Approve Order #{orderToApprove.order_number}?</h4>
+                  <p className="text-gray-400 text-sm mt-1">
+                    This will approve the order from <span className="text-white font-medium">{orderToApprove.branch_name}</span> for {orderToApprove.items?.length || 0} item(s) totaling <span className="text-[#FF8C42] font-semibold">{formatPrice(orderToApprove.total_amount)}</span>.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-[#111111] rounded-lg p-3">
+              <p className="text-xs text-gray-500 mb-2">Order Items:</p>
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {orderToApprove.items?.map((item, idx) => (
+                  <div key={idx} className="flex justify-between text-sm">
+                    <span className="text-gray-300">{item.product_name} × {item.quantity_approved || item.quantity_requested || item.quantity}</span>
+                    <span className="text-gray-400">{formatPrice(item.unit_price * (item.quantity_approved || item.quantity_requested || item.quantity))}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setOrderToApprove(null)}
+                disabled={isProcessing}
+                className="flex-1 px-4 py-3 bg-[#333333] hover:bg-[#444444] text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApproveConfirm}
+                disabled={isProcessing}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                {isProcessing ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="w-4 h-4" />
+                )}
+                {isProcessing ? "Approving..." : "Approve Order"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Reject Order Confirmation Modal */}
+      {orderToReject && (
+        <Modal isOpen={!!orderToReject} onClose={() => !isProcessing && (setOrderToReject(null), setRejectReason(""))} title="Reject Order" size="md" variant="dark">
+          <div className="space-y-4">
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <XCircle className="w-6 h-6 text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-white font-semibold">Reject Order #{orderToReject.order_number}?</h4>
+                  <p className="text-gray-400 text-sm mt-1">
+                    This will reject the order from <span className="text-white font-medium">{orderToReject.branch_name}</span>. The branch will be notified of the rejection.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-400 mb-2">
+                Rejection Reason <span className="text-red-400">*</span>
+              </label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Enter the reason for rejecting this order..."
+                rows={3}
+                className="w-full bg-[#111111] border border-[#333333] rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-red-500/50 focus:outline-none resize-none"
+                disabled={isProcessing}
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => { setOrderToReject(null); setRejectReason(""); }}
+                disabled={isProcessing}
+                className="flex-1 px-4 py-3 bg-[#333333] hover:bg-[#444444] text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRejectConfirm}
+                disabled={isProcessing || !rejectReason.trim()}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                {isProcessing ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <XCircle className="w-4 h-4" />
+                )}
+                {isProcessing ? "Rejecting..." : "Reject Order"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Ship Order Confirmation Modal */}
+      {orderToShip && (
+        <Modal isOpen={!!orderToShip} onClose={() => !isProcessing && setOrderToShip(null)} title="Confirm Shipment" size="md" variant="dark">
+          <div className="space-y-4">
+            <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <Truck className="w-6 h-6 text-purple-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-white font-semibold">Ship Order #{orderToShip.order_number}?</h4>
+                  <p className="text-gray-400 text-sm mt-1">
+                    This will mark the order as shipped to <span className="text-white font-medium">{orderToShip.branch_name}</span>. Make sure all items are packed and ready for delivery.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-[#111111] rounded-lg p-3">
+              <p className="text-xs text-gray-500 mb-2">Items being shipped:</p>
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {orderToShip.items?.map((item, idx) => (
+                  <div key={idx} className="flex justify-between text-sm">
+                    <span className="text-gray-300">{item.product_name} × {item.quantity_approved || item.quantity_requested || item.quantity}</span>
+                    <span className="text-gray-400">{formatPrice(item.unit_price * (item.quantity_approved || item.quantity_requested || item.quantity))}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t border-[#333333] mt-2 pt-2 flex justify-between text-sm font-semibold">
+                <span className="text-gray-300">Total</span>
+                <span className="text-[#FF8C42]">{formatPrice(orderToShip.total_amount)}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setOrderToShip(null)}
+                disabled={isProcessing}
+                className="flex-1 px-4 py-3 bg-[#333333] hover:bg-[#444444] text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleShipConfirm}
+                disabled={isProcessing}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+              >
+                {isProcessing ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Truck className="w-4 h-4" />
+                )}
+                {isProcessing ? "Processing..." : "Mark as Shipped"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };

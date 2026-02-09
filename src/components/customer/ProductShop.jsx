@@ -83,8 +83,8 @@ const ProductShop = ({ onBack }) => {
   // Product Image Component
   const ProductImage = ({ imageUrl, imageStorageId, productName }) => {
     const imageUrlFromStorage = useQuery(
-      imageStorageId ? api.services.products.getImageUrl : undefined,
-      imageStorageId ? { storageId: imageStorageId } : undefined
+      api.services.products.getImageUrl,
+      imageStorageId ? { storageId: imageStorageId } : 'skip'
     )
     
     const [imageError, setImageError] = useState(false)

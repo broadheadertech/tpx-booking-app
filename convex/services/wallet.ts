@@ -1,7 +1,14 @@
 import { mutation, query, action, internalMutation, internalAction } from "../_generated/server";
 import { v, ConvexError } from "convex/values";
 import { api, internal } from "../_generated/api";
-import { calculateTopUpBonus, DEFAULT_BONUS_TIERS, type BonusTier } from "../lib/walletBonus";
+import {
+  calculateTopUpBonus,
+  calculateBonusWithCap,
+  shouldResetMonthlyBonus,
+  getMonthStartTimestamp,
+  DEFAULT_BONUS_TIERS,
+  type BonusTier
+} from "../lib/walletBonus";
 import { toStorageFormat } from "../lib/points";
 import { decryptApiKey } from "../lib/encryption";
 
@@ -70,9 +77,59 @@ export const creditWallet = mutation({
       bonusTiers = walletConfig.bonus_tiers as BonusTier[];
     }
 
-    // Calculate standard bonus if this is a top-up with bonus enabled
-    // Uses configured tiers from walletConfig or defaults
-    let bonus = args.applyBonus !== false ? calculateTopUpBonus(args.amount, bonusTiers) : 0;
+    // Story 23.4: Get monthly bonus cap (0 = unlimited)
+    const monthlyBonusCap = walletConfig?.monthly_bonus_cap ?? 0;
+
+    // Get existing wallet to check monthly bonus tracking
+    const existingWallet = await ctx.db
+      .query("wallets")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    // Story 23.4: Calculate monthly bonus usage, reset if new month
+    // NOTE: bonus_topup_this_month now tracks BONUS GIVEN (in pesos), not top-up amount
+    let bonusGivenThisMonth = 0;
+    let bonusMonthStarted = getMonthStartTimestamp();
+
+    if (existingWallet) {
+      // Check if we need to reset monthly tracking
+      if (shouldResetMonthlyBonus(existingWallet.bonus_month_started)) {
+        // New month - reset tracking
+        bonusGivenThisMonth = 0;
+        bonusMonthStarted = getMonthStartTimestamp();
+      } else {
+        // Same month - use existing tracking (this is now bonus given, not top-up amount)
+        bonusGivenThisMonth = existingWallet.bonus_topup_this_month ?? 0;
+        bonusMonthStarted = existingWallet.bonus_month_started ?? getMonthStartTimestamp();
+      }
+    }
+
+    // Story 23.4: Calculate bonus with monthly cap consideration
+    // The cap now limits the BONUS AMOUNT given, not the top-up amount
+    let tierBonus = 0;
+    let newBonusGivenThisMonth = bonusGivenThisMonth;
+
+    if (args.applyBonus !== false) {
+      const bonusResult = calculateBonusWithCap(
+        args.amount,
+        monthlyBonusCap,
+        bonusGivenThisMonth,
+        bonusTiers
+      );
+      tierBonus = bonusResult.bonus;
+      newBonusGivenThisMonth = bonusResult.newBonusGivenThisMonth;
+
+      if (bonusResult.wasLimited) {
+        console.log("[WALLET] Bonus limited by monthly cap:", {
+          topUpAmount: args.amount,
+          fullBonus: bonusResult.fullBonus,
+          actualBonus: bonusResult.bonus,
+          monthlyBonusCap,
+          bonusGivenThisMonth,
+          newBonusGivenThisMonth: bonusResult.newBonusGivenThisMonth,
+        });
+      }
+    }
 
     // ========================================
     // Story 20.4: Check for wallet_bonus promo
@@ -138,34 +195,40 @@ export const creditWallet = mutation({
       }
     }
 
-    // Add promo bonus to total bonus
-    bonus += promoBonus;
+    // Add promo bonus to total bonus (tier bonus + promo bonus)
+    const totalBonus = tierBonus + promoBonus;
 
-    const wallet = await ctx.db
-      .query("wallets")
-      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
-      .first();
+    // Convert to centavos for storage (₱1 = 100 centavos)
+    const amountInCentavos = Math.round(args.amount * 100);
+    const bonusInCentavos = Math.round(totalBonus * 100);
 
-    if (!wallet) {
-      // Create wallet with initial balance and bonus
+    // Use existingWallet we already queried earlier (Story 23.4)
+    if (!existingWallet) {
+      // Create wallet with initial balance, bonus, and monthly tracking (in centavos)
       await ctx.db.insert("wallets", {
         user_id: args.userId,
-        balance: args.amount,
-        bonus_balance: bonus,
+        balance: amountInCentavos,
+        bonus_balance: bonusInCentavos,
         currency: "PHP",
+        // Story 23.4: Monthly bonus tracking - now tracks BONUS GIVEN in pesos
+        bonus_topup_this_month: newBonusGivenThisMonth,
+        bonus_month_started: bonusMonthStarted,
         createdAt: now,
         updatedAt: now,
       });
     } else {
-      // Update existing wallet
-      await ctx.db.patch(wallet._id, {
-        balance: wallet.balance + args.amount,
-        bonus_balance: (wallet.bonus_balance || 0) + bonus,
+      // Update existing wallet (add centavos) with monthly tracking
+      await ctx.db.patch(existingWallet._id, {
+        balance: existingWallet.balance + amountInCentavos,
+        bonus_balance: (existingWallet.bonus_balance || 0) + bonusInCentavos,
+        // Story 23.4: Update monthly bonus tracking - now tracks BONUS GIVEN in pesos
+        bonus_topup_this_month: newBonusGivenThisMonth,
+        bonus_month_started: bonusMonthStarted,
         updatedAt: now,
       });
     }
 
-    // Record main top-up transaction
+    // Record main top-up transaction with bonus amount
     const description = appliedPromo
       ? `Wallet Top-up ₱${args.amount} [PROMO: ${appliedPromo.name}]`
       : args.description || `Wallet Top-up ₱${args.amount}`;
@@ -174,6 +237,7 @@ export const creditWallet = mutation({
       user_id: args.userId,
       type: "topup",
       amount: args.amount,
+      bonus_amount: totalBonus > 0 ? totalBonus : undefined, // Store bonus amount for display
       status: "completed",
       provider: "paymongo",
       reference_id: args.reference_id,
@@ -183,10 +247,10 @@ export const creditWallet = mutation({
     });
 
     // If bonus was applied, award bonus points
-    if (bonus > 0) {
+    if (totalBonus > 0) {
       try {
         // Award points for the bonus (1:1 ratio)
-        const bonusPoints = toStorageFormat(bonus);
+        const bonusPoints = toStorageFormat(totalBonus);
         await ctx.runMutation(api.services.points.earnPoints, {
           userId: args.userId,
           amount: bonusPoints,
@@ -196,7 +260,7 @@ export const creditWallet = mutation({
             ? `Bonus from ₱${args.amount} wallet top-up [PROMO: ${appliedPromo.name}]`
             : `Bonus from ₱${args.amount} wallet top-up`,
         });
-        console.log("[WALLET] Bonus points awarded:", { bonus, bonusPoints });
+        console.log("[WALLET] Bonus points awarded:", { totalBonus, bonusPoints });
       } catch (error) {
         // Log but don't fail the transaction if points fail
         console.error("[WALLET] Failed to award bonus points:", error);
@@ -224,15 +288,16 @@ export const creditWallet = mutation({
       console.log("[WALLET] Promo applied to top-up:", {
         promoName: appliedPromo.name,
         promoBonus,
-        totalBonus: bonus,
+        totalBonus,
       });
     }
 
     return {
       success: true,
-      bonus,
+      bonus: totalBonus,
+      tierBonus,
       promoBonus,
-      total: args.amount + bonus,
+      total: args.amount + totalBonus,
       promoApplied: appliedPromo
         ? { name: appliedPromo.name, bonus: promoBonus }
         : null,
@@ -278,6 +343,29 @@ export const getTransactionBySource = query({
   },
 });
 
+/**
+ * Get pending wallet top-up transactions for a user
+ * Used to show "Check Payment Status" option on wallet page
+ */
+export const getPendingTopups = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const transactions = await ctx.db
+      .query("wallet_transactions")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("type"), "topup"),
+          q.eq(q.field("status"), "pending")
+        )
+      )
+      .order("desc")
+      .take(5); // Limit to recent 5 pending
+
+    return transactions;
+  },
+});
+
 export const updateTransactionStatus = internalMutation({
   args: {
     transactionId: v.id("wallet_transactions"),
@@ -298,10 +386,13 @@ export const updateTransactionStatus = internalMutation({
 export const creditWalletBalance = mutation({
   args: {
     userId: v.id("users"),
-    amount: v.number(),
+    amount: v.number(), // Amount in PESOS
   },
   handler: async (ctx, args) => {
     const now = Date.now();
+    // Convert to centavos for storage (₱1 = 100 centavos)
+    const amountInCentavos = Math.round(args.amount * 100);
+
     const wallet = await ctx.db
       .query("wallets")
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
@@ -309,14 +400,14 @@ export const creditWalletBalance = mutation({
     if (!wallet) {
       await ctx.db.insert("wallets", {
         user_id: args.userId,
-        balance: args.amount,
+        balance: amountInCentavos,
         currency: "PHP",
         createdAt: now,
         updatedAt: now,
       });
     } else {
       await ctx.db.patch(wallet._id, {
-        balance: wallet.balance + args.amount,
+        balance: wallet.balance + amountInCentavos,
         updatedAt: now,
       });
     }
@@ -331,7 +422,7 @@ export const creditWalletBalance = mutation({
 export const debitWallet = mutation({
   args: {
     userId: v.id("users"),
-    amount: v.number(),
+    amount: v.number(), // Amount in PESOS (will be converted to centavos internally)
     description: v.optional(v.string()),
     reference_id: v.optional(v.string()),
   },
@@ -343,6 +434,10 @@ export const debitWallet = mutation({
       throw new Error("Debit amount must be positive");
     }
 
+    // Convert pesos to centavos for comparison with stored balances
+    // Wallet balances are stored in centavos (₱1 = 100 centavos)
+    const amountInCentavos = Math.round(args.amount * 100);
+
     // Get user's wallet
     const wallet = await ctx.db
       .query("wallets")
@@ -353,23 +448,24 @@ export const debitWallet = mutation({
       throw new Error("Wallet not found. Please top up your wallet first.");
     }
 
-    const mainBalance = wallet.balance || 0;
-    const bonusBalance = wallet.bonus_balance || 0;
-    const totalAvailable = mainBalance + bonusBalance;
+    const mainBalance = wallet.balance || 0; // In centavos
+    const bonusBalance = wallet.bonus_balance || 0; // In centavos
+    const totalAvailable = mainBalance + bonusBalance; // In centavos
 
-    // Server-side validation: check sufficient balance
-    if (totalAvailable < args.amount) {
+    // Server-side validation: check sufficient balance (both in centavos)
+    if (totalAvailable < amountInCentavos) {
+      const availablePesos = totalAvailable / 100;
       throw new Error(
-        `Insufficient wallet balance. Available: ₱${totalAvailable.toFixed(2)}, Required: ₱${args.amount.toFixed(2)}`
+        `Insufficient wallet balance. Available: ₱${availablePesos.toFixed(2)}, Required: ₱${args.amount.toFixed(2)}`
       );
     }
 
-    // Calculate deduction: bonus first, then main
-    const bonusUsed = Math.min(bonusBalance, args.amount);
-    const remainingAmount = args.amount - bonusUsed;
+    // Calculate deduction: bonus first, then main (all in centavos)
+    const bonusUsed = Math.min(bonusBalance, amountInCentavos);
+    const remainingAmount = amountInCentavos - bonusUsed;
     const mainUsed = Math.min(mainBalance, remainingAmount);
 
-    // Update wallet balances
+    // Update wallet balances (in centavos)
     const newBonusBalance = bonusBalance - bonusUsed;
     const newMainBalance = mainBalance - mainUsed;
 
@@ -379,11 +475,11 @@ export const debitWallet = mutation({
       updatedAt: now,
     });
 
-    // Record wallet payment transaction
+    // Record wallet payment transaction (amount in pesos for display)
     await ctx.db.insert("wallet_transactions", {
       user_id: args.userId,
       type: "payment",
-      amount: -args.amount, // Negative for debit
+      amount: -args.amount, // Negative for debit, in pesos
       status: "completed",
       provider: "wallet",
       reference_id: args.reference_id,
@@ -394,21 +490,23 @@ export const debitWallet = mutation({
 
     console.log("[WALLET] Debit successful:", {
       userId: args.userId,
-      amount: args.amount,
-      bonusUsed,
-      mainUsed,
-      newBonusBalance,
-      newMainBalance,
+      amountPesos: args.amount,
+      amountCentavos: amountInCentavos,
+      bonusUsedCentavos: bonusUsed,
+      mainUsedCentavos: mainUsed,
+      newBonusBalanceCentavos: newBonusBalance,
+      newMainBalanceCentavos: newMainBalance,
     });
 
+    // Return values in pesos for display purposes
     return {
       success: true,
-      bonusUsed,
-      mainUsed,
-      totalDeducted: bonusUsed + mainUsed,
-      remainingBonus: newBonusBalance,
-      remainingMain: newMainBalance,
-      remainingTotal: newBonusBalance + newMainBalance,
+      bonusUsed: bonusUsed / 100, // Convert to pesos
+      mainUsed: mainUsed / 100, // Convert to pesos
+      totalDeducted: (bonusUsed + mainUsed) / 100, // Convert to pesos
+      remainingBonus: newBonusBalance / 100, // Convert to pesos
+      remainingMain: newMainBalance / 100, // Convert to pesos
+      remainingTotal: (newBonusBalance + newMainBalance) / 100, // Convert to pesos
     };
   },
 });
@@ -420,7 +518,7 @@ export const debitWallet = mutation({
 export const checkWalletBalance = query({
   args: {
     userId: v.id("users"),
-    amount: v.number(),
+    amount: v.number(), // Amount in PESOS
   },
   handler: async (ctx, args) => {
     const wallet = await ctx.db
@@ -439,18 +537,20 @@ export const checkWalletBalance = query({
       };
     }
 
-    const mainBalance = wallet.balance || 0;
-    const bonusBalance = wallet.bonus_balance || 0;
-    const totalBalance = mainBalance + bonusBalance;
-    const hasSufficientBalance = totalBalance >= args.amount;
+    // Balances are stored in centavos, convert to pesos for comparison
+    const mainBalancePesos = (wallet.balance || 0) / 100;
+    const bonusBalancePesos = (wallet.bonus_balance || 0) / 100;
+    const totalBalancePesos = mainBalancePesos + bonusBalancePesos;
+    const hasSufficientBalance = totalBalancePesos >= args.amount;
 
+    // Return all values in pesos for consistency
     return {
       hasWallet: true,
       hasSufficientBalance,
-      mainBalance,
-      bonusBalance,
-      totalBalance,
-      shortfall: hasSufficientBalance ? 0 : args.amount - totalBalance,
+      mainBalance: mainBalancePesos,
+      bonusBalance: bonusBalancePesos,
+      totalBalance: totalBalancePesos,
+      shortfall: hasSufficientBalance ? 0 : args.amount - totalBalancePesos,
     };
   },
 });
@@ -1091,14 +1191,16 @@ export const getCustomerWalletBalance = query({
       };
     }
 
-    const balance = wallet.balance || 0;
-    const bonusBalance = wallet.bonus_balance || 0;
+    // Wallet stores balances in CENTAVOS - convert to PESOS for API response
+    // This ensures consistency with service prices and payment amounts which are in pesos
+    const balanceCentavos = wallet.balance || 0;
+    const bonusBalanceCentavos = wallet.bonus_balance || 0;
 
     return {
       hasWallet: true,
-      balance,
-      bonusBalance,
-      totalBalance: balance + bonusBalance,
+      balance: balanceCentavos / 100, // Convert to pesos
+      bonusBalance: bonusBalanceCentavos / 100, // Convert to pesos
+      totalBalance: (balanceCentavos + bonusBalanceCentavos) / 100, // Convert to pesos
     };
   },
 });
@@ -1197,5 +1299,257 @@ export const verifySAWalletWebhookSignature = internalAction({
     });
 
     return { valid };
+  },
+});
+
+// ============================================================================
+// MANUAL WALLET TOP-UP VERIFICATION
+// ============================================================================
+
+/**
+ * Manually check and process a pending wallet top-up payment
+ * This is a fallback for when the webhook doesn't fire (e.g., during development or webhook misconfiguration)
+ *
+ * @param sessionId - The PayMongo checkout session ID (stored as source_id in pending transaction)
+ * @returns Payment status and whether wallet was credited
+ */
+export const checkAndProcessWalletTopupStatus = action({
+  args: {
+    sessionId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    console.log("[WALLET_TOPUP_CHECK] Checking session:", args.sessionId);
+
+    // 1. Get the pending transaction
+    const pending = await ctx.runQuery(api.services.wallet.getTransactionBySource, {
+      sourceId: args.sessionId,
+    });
+
+    if (!pending) {
+      return { success: false, error: "Pending transaction not found", status: "not_found" };
+    }
+
+    // Already processed?
+    if (pending.status === "completed") {
+      return {
+        success: true,
+        status: "already_completed",
+        userId: pending.user_id,
+        amount: pending.amount,
+      };
+    }
+
+    // 2. Get SA wallet config for PayMongo credentials
+    const config = await ctx.runQuery(api.services.walletConfig.getDecryptedWalletConfig);
+
+    if (!config) {
+      return { success: false, error: "SA wallet config not found", status: "config_error" };
+    }
+
+    // Check encryption key
+    if (!PAYMONGO_ENCRYPTION_KEY || PAYMONGO_ENCRYPTION_KEY.length !== 64) {
+      return { success: false, error: "Encryption key not configured", status: "config_error" };
+    }
+
+    // Decrypt secret key
+    const [iv, encrypted] = config.paymongo_secret_key.split(":");
+    if (!iv || !encrypted) {
+      return { success: false, error: "Invalid key format", status: "config_error" };
+    }
+
+    let secretKey: string;
+    try {
+      secretKey = await decryptApiKey(encrypted, iv, PAYMONGO_ENCRYPTION_KEY);
+    } catch (error) {
+      console.error("[WALLET_TOPUP_CHECK] Failed to decrypt key:", error);
+      return { success: false, error: "Failed to decrypt credentials", status: "config_error" };
+    }
+
+    // 3. Poll PayMongo to check checkout session status
+    const authToken = base64EncodeAscii(secretKey + ":");
+    const authHeaderValue = `Basic ${authToken}`;
+
+    const response = await fetch(`https://api.paymongo.com/v1/checkout_sessions/${args.sessionId}`, {
+      method: "GET",
+      headers: {
+        Authorization: authHeaderValue,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const data = await response.json();
+
+    console.log("[WALLET_TOPUP_CHECK] PayMongo response:", {
+      ok: response.ok,
+      status: response.status,
+      sessionStatus: data?.data?.attributes?.status,
+      paymentIntentStatus: data?.data?.attributes?.payment_intent?.attributes?.status,
+    });
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data?.errors?.[0]?.detail || "Failed to check payment status",
+        status: "api_error",
+      };
+    }
+
+    const sessionData = data.data;
+    const sessionStatus = sessionData?.attributes?.status;
+    const paymentIntent = sessionData?.attributes?.payment_intent;
+    const paymentIntentStatus = paymentIntent?.attributes?.status;
+
+    // Check if payment was successful
+    if (sessionStatus === "paid" || paymentIntentStatus === "succeeded") {
+      console.log("[WALLET_TOPUP_CHECK] Payment confirmed! Crediting wallet...");
+
+      const payments = paymentIntent?.attributes?.payments || [];
+      const paymentId = payments[0]?.id || `manual_${Date.now()}`;
+      const amountCentavos = paymentIntent?.attributes?.amount || pending.amount * 100;
+      const amount = amountCentavos / 100;
+
+      // Credit the wallet
+      const creditResult = await ctx.runMutation(api.services.wallet.creditWallet, {
+        userId: pending.user_id,
+        amount: pending.amount,
+        description: `Wallet Top-up ₱${pending.amount}`,
+        reference_id: paymentId,
+        applyBonus: true,
+      });
+
+      // Update transaction status
+      await ctx.runMutation(internal.services.wallet.updateTransactionStatus, {
+        transactionId: pending._id,
+        status: "completed",
+        payment_id: paymentId,
+      });
+
+      return {
+        success: true,
+        status: "paid",
+        userId: pending.user_id,
+        amount: pending.amount,
+        bonus: creditResult.bonus || 0,
+        total: creditResult.total || pending.amount,
+      };
+    } else if (sessionStatus === "expired") {
+      // Mark as failed
+      await ctx.runMutation(internal.services.wallet.updateTransactionStatus, {
+        transactionId: pending._id,
+        status: "failed",
+      });
+
+      return {
+        success: false,
+        status: "expired",
+        error: "Payment session has expired",
+      };
+    } else {
+      // Still pending
+      return {
+        success: true,
+        status: "pending",
+        sessionStatus,
+        paymentIntentStatus,
+      };
+    }
+  },
+});
+
+// ============================================================================
+// MONTHLY BONUS TRACKING MANAGEMENT
+// ============================================================================
+
+/**
+ * Reset monthly bonus tracking for a specific user
+ * This resets the bonus_topup_this_month counter to 0
+ *
+ * @param userId - The user ID whose bonus tracking should be reset
+ * @returns Success status
+ */
+export const resetUserMonthlyBonusTracking = mutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const wallet = await ctx.db
+      .query("wallets")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    if (!wallet) {
+      throw new ConvexError("Wallet not found for user");
+    }
+
+    await ctx.db.patch(wallet._id, {
+      bonus_topup_this_month: 0,
+      bonus_month_started: getMonthStartTimestamp(),
+      updatedAt: Date.now(),
+    });
+
+    return { success: true, walletId: wallet._id };
+  },
+});
+
+/**
+ * Reset monthly bonus tracking for ALL users (admin function)
+ * This resets the bonus_topup_this_month counter to 0 for all wallets
+ *
+ * @returns Number of wallets reset
+ */
+export const resetAllMonthlyBonusTracking = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const wallets = await ctx.db.query("wallets").collect();
+    const currentMonthStart = getMonthStartTimestamp();
+    const now = Date.now();
+
+    let resetCount = 0;
+    for (const wallet of wallets) {
+      // Only reset if there's bonus tracking data
+      if (wallet.bonus_topup_this_month !== undefined && wallet.bonus_topup_this_month > 0) {
+        await ctx.db.patch(wallet._id, {
+          bonus_topup_this_month: 0,
+          bonus_month_started: currentMonthStart,
+          updatedAt: now,
+        });
+        resetCount++;
+      }
+    }
+
+    return { success: true, walletsReset: resetCount };
+  },
+});
+
+/**
+ * Get monthly bonus tracking status for a user
+ * Shows how much of their monthly bonus cap they've used
+ *
+ * @param userId - The user ID to check
+ * @returns Bonus tracking status
+ */
+export const getMonthlyBonusStatus = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const wallet = await ctx.db
+      .query("wallets")
+      .withIndex("by_user", (q) => q.eq("user_id", args.userId))
+      .first();
+
+    if (!wallet) {
+      return {
+        hasWallet: false,
+        bonusTopupThisMonth: 0,
+        bonusMonthStarted: null,
+        needsReset: false,
+      };
+    }
+
+    const needsReset = shouldResetMonthlyBonus(wallet.bonus_month_started);
+
+    return {
+      hasWallet: true,
+      bonusTopupThisMonth: wallet.bonus_topup_this_month ?? 0,
+      bonusMonthStarted: wallet.bonus_month_started ?? null,
+      needsReset,
+    };
   },
 });
