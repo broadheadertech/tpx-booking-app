@@ -1,8 +1,9 @@
 import { v } from "convex/values";
-import { mutation, query, action } from "../_generated/server";
+import { mutation, query, action, internalMutation } from "../_generated/server";
 // import { api } from "../_generated/api"; // Removed to break circular dependency
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { hashPassword, verifyPassword } from "../utils/password";
+import { requireAuthenticatedUser } from "../lib/unifiedAuth";
 
 import { Resend } from 'resend';
 
@@ -369,7 +370,7 @@ export const loginWithFacebookInternal = mutation({
 // Update user profile
 export const updateUserProfile = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     nickname: v.optional(v.string()),
     birthday: v.optional(v.string()),
     mobile_number: v.optional(v.string()),
@@ -379,21 +380,8 @@ export const updateUserProfile = mutation({
     skills: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
-    // Verify session
-    const session = await ctx.db
-      .query("sessions")
-      .withIndex("by_token", (q) => q.eq("token", args.sessionToken))
-      .first();
-
-    if (!session || session.expiresAt < Date.now()) {
-      throwUserError(ERROR_CODES.AUTH_SESSION_EXPIRED);
-    }
-
-    // Get current user to validate
-    const currentUser = await ctx.db.get(session.userId);
-    if (!currentUser) {
-      throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "User not found", "Your user account could not be found in the system.");
-    }
+    // Use unified auth (supports both Clerk and legacy)
+    const currentUser = await requireAuthenticatedUser(ctx, args.sessionToken);
 
     // Validate inputs
     if (args.mobile_number !== undefined && args.mobile_number.length > 0) {
@@ -415,7 +403,7 @@ export const updateUserProfile = mutation({
     }
 
     // Update user
-    await ctx.db.patch(session.userId, {
+    await ctx.db.patch(currentUser._id, {
       ...(args.nickname !== undefined && { nickname: args.nickname }),
       ...(args.birthday !== undefined && { birthday: args.birthday }),
       ...(args.mobile_number !== undefined && { mobile_number: args.mobile_number }),
@@ -427,7 +415,7 @@ export const updateUserProfile = mutation({
     });
 
     // Return updated user
-    const user = await ctx.db.get(session.userId);
+    const user = await ctx.db.get(currentUser._id);
     return {
       _id: user?._id,
       id: user?._id,
@@ -518,6 +506,124 @@ export const createUser = mutation({
   },
 });
 
+// Create user with Clerk account (admin user creation)
+// Uses action because it needs to call external Clerk API
+export const createUserWithClerk = action({
+  args: {
+    username: v.string(),
+    email: v.string(),
+    password: v.string(),
+    mobile_number: v.optional(v.string()),
+    address: v.optional(v.string()),
+    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("super_admin"), v.literal("branch_admin")),
+    branch_id: v.optional(v.id("branches")),
+    page_access: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    const { api } = require("../_generated/api");
+
+    // Step 1: Create Convex user first (validates email/username uniqueness)
+    const convexUser = await ctx.runMutation(api.services.auth.createUser, {
+      username: args.username,
+      email: args.email,
+      password: args.password,
+      mobile_number: args.mobile_number,
+      address: args.address,
+      role: args.role,
+      branch_id: args.branch_id,
+      page_access: args.page_access,
+    });
+
+    // Step 2: Try to create Clerk account
+    const clerkSecretKey = process.env.CLERK_SECRET_KEY;
+    if (!clerkSecretKey) {
+      console.log("[createUserWithClerk] CLERK_SECRET_KEY not configured, skipping Clerk creation");
+      return convexUser;
+    }
+
+    try {
+      // Sanitize username for Clerk (only allows [a-zA-Z0-9_-])
+      const sanitizedUsername = args.username
+        .replace(/[^a-zA-Z0-9_-]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '') || undefined;
+
+      const response = await fetch("https://api.clerk.com/v1/users", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${clerkSecretKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email_address: [args.email],
+          username: sanitizedUsername,
+          password: args.password,
+          skip_password_checks: true,
+        }),
+      });
+
+      let clerkUserId: string | null = null;
+
+      if (!response.ok) {
+        const errorData = await response.json();
+
+        // If user already exists in Clerk, find and link
+        if (errorData.errors?.[0]?.code === "form_identifier_exists") {
+          const findResponse = await fetch(
+            `https://api.clerk.com/v1/users?email_address=${encodeURIComponent(args.email)}`,
+            { headers: { Authorization: `Bearer ${clerkSecretKey}` } }
+          );
+          if (findResponse.ok) {
+            const existingUsers = await findResponse.json();
+            if (existingUsers[0]) {
+              clerkUserId = existingUsers[0].id;
+            }
+          }
+        }
+
+        if (!clerkUserId) {
+          console.error("[createUserWithClerk] Clerk API error:", errorData);
+          // Convex user was already created, just return it without Clerk link
+          return convexUser;
+        }
+      } else {
+        const clerkUser = await response.json();
+        clerkUserId = clerkUser.id;
+      }
+
+      // Step 3: Link Clerk user ID to Convex user
+      if (clerkUserId) {
+        await ctx.runMutation(api.services.auth.linkClerkToUser, {
+          userId: convexUser._id,
+          clerk_user_id: clerkUserId,
+        });
+        console.log(`[createUserWithClerk] Linked ${args.email} to Clerk ${clerkUserId}`);
+      }
+
+      return convexUser;
+    } catch (error) {
+      console.error("[createUserWithClerk] Clerk error:", error instanceof Error ? error.message : error);
+      // Convex user was already created, return it even if Clerk fails
+      return convexUser;
+    }
+  },
+});
+
+// Internal mutation to link a Clerk user ID to a Convex user
+export const linkClerkToUser = mutation({
+  args: {
+    userId: v.id("users"),
+    clerk_user_id: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, {
+      clerk_user_id: args.clerk_user_id,
+      migration_status: "completed",
+      updatedAt: Date.now(),
+    });
+  },
+});
+
 // Create guest user mutation (for guest bookings with better redundancy handling)
 export const createGuestUser = mutation({
   args: {
@@ -572,11 +678,15 @@ export const createGuestUser = mutation({
       );
     }
 
-    // Check if username already exists and generate unique one if needed
-    let finalUsername = args.username;
+    // Generate a clean username format: Guest-JD-a3f2 (initials + short ID)
+    const nameParts = args.guest_name.trim().split(/\s+/);
+    const initials = nameParts.map(part => part.charAt(0).toUpperCase()).join('').slice(0, 2) || 'GU';
+    let shortId = Math.random().toString(36).slice(2, 6);
+    let finalUsername = `Guest-${initials}-${shortId}`;
     let attempts = 0;
     const maxAttempts = 5;
 
+    // Check if username already exists and generate new one if needed
     while (attempts < maxAttempts) {
       const existingUsername = await ctx.db
         .query("users")
@@ -588,9 +698,8 @@ export const createGuestUser = mutation({
       }
 
       // Generate a new unique username
-      const timestamp = now;
-      const randomSuffix = Math.random().toString(36).slice(2, 8);
-      finalUsername = `guest_${args.guest_name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')}_${timestamp}_${randomSuffix}`;
+      shortId = Math.random().toString(36).slice(2, 6);
+      finalUsername = `Guest-${initials}-${shortId}`;
       attempts++;
 
       console.log(`Username conflict detected, trying new username: ${finalUsername} (attempt ${attempts})`);
@@ -616,6 +725,7 @@ export const createGuestUser = mutation({
       role: "customer",
       branch_id: args.branch_id,
       is_active: true,
+      is_guest: true, // Mark as guest for analytics filtering
       avatar: undefined,
       bio: undefined,
       skills: [],
@@ -645,6 +755,126 @@ export const createGuestUser = mutation({
       branch_id: user?.branch_id,
       is_active: user?.is_active,
     };
+  },
+});
+
+// Convert guest account to full account
+// Called when a guest creates a real account with the same email
+export const convertGuestToAccount = mutation({
+  args: {
+    email: v.string(),
+    username: v.string(),
+    password: v.string(),
+    mobile_number: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    // Find existing guest user by email
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .first();
+
+    if (!existingUser) {
+      throwUserError(ERROR_CODES.USER_NOT_FOUND,
+        "No account found",
+        "No account found with this email address."
+      );
+    }
+
+    // Check if already a full account
+    if (!existingUser.is_guest) {
+      throwUserError(ERROR_CODES.AUTH_EMAIL_EXISTS,
+        "Account already exists",
+        "This email is already registered as a full account. Please login instead."
+      );
+    }
+
+    // Check if new username is available
+    const existingUsername = await ctx.db
+      .query("users")
+      .withIndex("by_username", (q) => q.eq("username", args.username))
+      .first();
+
+    if (existingUsername && existingUsername._id !== existingUser._id) {
+      throwUserError(ERROR_CODES.AUTH_USERNAME_EXISTS,
+        "Username taken",
+        "This username is already taken. Please choose another."
+      );
+    }
+
+    // Convert guest to full account
+    await ctx.db.patch(existingUser._id, {
+      username: args.username,
+      password: hashPassword(args.password),
+      mobile_number: args.mobile_number || existingUser.mobile_number,
+      is_guest: false, // Convert to full account
+      isVerified: true,
+      updatedAt: now,
+    });
+
+    console.log(`✅ Guest account converted to full account:`, {
+      id: existingUser._id,
+      email: args.email,
+      previousUsername: existingUser.username,
+      newUsername: args.username,
+    });
+
+    // Create session for the newly converted user
+    const sessionToken = generateSessionToken();
+    await ctx.db.insert("sessions", {
+      userId: existingUser._id,
+      token: sessionToken,
+      expiresAt: now + (30 * 24 * 60 * 60 * 1000), // 30 days
+      createdAt: now,
+    });
+
+    return {
+      success: true,
+      userId: existingUser._id,
+      sessionToken,
+      message: "Account converted successfully. Your booking history has been preserved.",
+    };
+  },
+});
+
+// Migration: Mark existing guest users with is_guest: true
+// Run once to fix legacy guest accounts
+export const migrateGuestUsers = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    let updated = 0;
+    let alreadyMarked = 0;
+
+    // Get all users with username starting with "guest_" or "Guest-"
+    const allUsers = await ctx.db.query("users").collect();
+
+    for (const user of allUsers) {
+      // Skip if already marked as guest
+      if (user.is_guest === true) {
+        alreadyMarked++;
+        continue;
+      }
+
+      // Check if username indicates a guest
+      const isGuestUsername = user.username?.startsWith("guest_") ||
+        user.username?.startsWith("Guest-") ||
+        user.username?.toLowerCase().includes("guest");
+
+      if (isGuestUsername && user.role === "customer") {
+        await ctx.db.patch(user._id, {
+          is_guest: true,
+          updatedAt: now,
+        });
+        updated++;
+        console.log(`Marked guest: ${user.username} (${user.nickname || 'no nickname'})`);
+      }
+    }
+
+    console.log(`[Guest Migration] Complete: ${updated} marked as guest, ${alreadyMarked} already marked`);
+    return { updated, alreadyMarked };
   },
 });
 
@@ -814,6 +1044,10 @@ export const getAllUsers = query({
       is_active: user.is_active,
       isVerified: user.isVerified,
       createdAt: user._creationTime,
+      // Customer analytics fields for AI Email Marketing segmentation
+      lastBookingDate: user.lastBookingDate,
+      totalBookings: user.totalBookings,
+      totalSpent: user.totalSpent,
       // Exclude heavy fields like avatar (if base64), bio, skills, password
     }));
   },
@@ -1136,8 +1370,230 @@ export const getUsersByBranch = query({
       is_active: user.is_active,
       isVerified: user.isVerified,
       createdAt: user._creationTime,
+      // Customer analytics fields for AI Email Marketing segmentation
+      lastBookingDate: user.lastBookingDate,
+      totalBookings: user.totalBookings,
+      totalSpent: user.totalSpent,
       // Exclude heavy fields like avatar (if base64), bio, skills, password
     }));
+  },
+});
+
+// ============================================================================
+// CLERK AUTHENTICATION QUERIES (Story 10.4)
+// ============================================================================
+
+/**
+ * Ensure user exists in Convex from Clerk authentication
+ *
+ * This is a fallback mechanism for when the Clerk webhook hasn't processed yet.
+ * Called from the client side when a Clerk-authenticated user doesn't have
+ * a corresponding Convex user. This ensures robust registration sync.
+ *
+ * @param clerk_user_id - The Clerk user ID
+ * @param email - Primary email from Clerk
+ * @param first_name - First name from Clerk
+ * @param last_name - Last name from Clerk
+ * @param image_url - Profile image URL from Clerk
+ * @returns Created or existing user object
+ */
+export const ensureUserFromClerk = mutation({
+  args: {
+    clerk_user_id: v.string(),
+    email: v.string(),
+    first_name: v.optional(v.string()),
+    last_name: v.optional(v.string()),
+    image_url: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { clerk_user_id, email, first_name, last_name, image_url } = args;
+
+    // 1. Check if user already exists by clerk_user_id (idempotent)
+    const existingByClerkId = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_user_id", (q) => q.eq("clerk_user_id", clerk_user_id))
+      .first();
+
+    if (existingByClerkId) {
+      console.log("[EnsureUser] User already exists with clerk_user_id:", existingByClerkId._id);
+      return {
+        _id: existingByClerkId._id,
+        id: existingByClerkId._id,
+        username: existingByClerkId.username,
+        email: existingByClerkId.email,
+        nickname: existingByClerkId.nickname,
+        mobile_number: existingByClerkId.mobile_number,
+        birthday: existingByClerkId.birthday,
+        role: existingByClerkId.role,
+        branch_id: existingByClerkId.branch_id,
+        is_active: existingByClerkId.is_active,
+        avatar: existingByClerkId.avatar,
+        isVerified: existingByClerkId.isVerified,
+        clerk_user_id: existingByClerkId.clerk_user_id,
+        action: "exists",
+      };
+    }
+
+    // 2. Check if user exists by email but no clerk_user_id (migration case)
+    const existingByEmail = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
+
+    if (existingByEmail && !existingByEmail.clerk_user_id) {
+      // Check if this is a guest account being converted to full account
+      const wasGuest = existingByEmail.is_guest === true;
+      const fullName = [first_name, last_name].filter(Boolean).join(" ") || existingByEmail.nickname || "User";
+
+      console.log("[EnsureUser] Linking existing user by email:", existingByEmail._id, wasGuest ? "(converting from guest)" : "");
+
+      await ctx.db.patch(existingByEmail._id, {
+        clerk_user_id,
+        migration_status: "completed",
+        is_guest: false, // Convert guest to full account
+        isVerified: true,
+        nickname: fullName, // Update with Clerk name if available
+        avatar: image_url || existingByEmail.avatar, // Update avatar from Clerk
+        updatedAt: Date.now(),
+      });
+
+      return {
+        _id: existingByEmail._id,
+        id: existingByEmail._id,
+        username: existingByEmail.username,
+        email: existingByEmail.email,
+        nickname: fullName,
+        mobile_number: existingByEmail.mobile_number,
+        birthday: existingByEmail.birthday,
+        role: existingByEmail.role,
+        branch_id: existingByEmail.branch_id,
+        is_active: existingByEmail.is_active,
+        avatar: image_url || existingByEmail.avatar,
+        isVerified: true,
+        clerk_user_id,
+        action: wasGuest ? "guest_converted" : "linked",
+      };
+    }
+
+    // 3. Create new user with role "customer" by default
+    const firstName = first_name || "";
+    const lastName = last_name || "";
+    const fullName = [firstName, lastName].filter(Boolean).join(" ") || "User";
+    const baseUsername = email.split("@")[0] || clerk_user_id;
+    const uniqueUsername = `${baseUsername}_${clerk_user_id.slice(-6)}`;
+
+    const now = Date.now();
+    const userId = await ctx.db.insert("users", {
+      email,
+      username: uniqueUsername,
+      nickname: fullName,
+      password: "", // Clerk manages authentication
+      mobile_number: "",
+      role: "customer",
+      clerk_user_id,
+      migration_status: "completed",
+      is_active: true,
+      isVerified: true,
+      avatar: image_url,
+      skills: [],
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // =========================================================================
+    // INITIALIZE LOYALTY DATA FOR NEW CUSTOMERS
+    // Creates wallet and points ledger with 0 balance (fresh start)
+    // =========================================================================
+
+    // Create wallet with 0 balance
+    await ctx.db.insert("wallets", {
+      user_id: userId,
+      balance: 0, // ₱0.00 in centavos
+      bonus_balance: 0, // ₱0.00 bonus
+      currency: "PHP",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create points ledger with 0 balance
+    await ctx.db.insert("points_ledger", {
+      user_id: userId,
+      current_balance: 0, // 0 points (×100 format)
+      lifetime_earned: 0, // 0 points total
+      lifetime_redeemed: 0, // 0 points redeemed
+      last_activity_at: now,
+    });
+
+    console.log("[EnsureUser] Created new user with fresh loyalty data:", {
+      userId,
+      clerk_user_id,
+      email,
+      wallet: "₱0.00",
+      points: "0 pts",
+    });
+
+    const user = await ctx.db.get(userId);
+    return {
+      _id: userId,
+      id: userId,
+      username: user?.username,
+      email: user?.email,
+      nickname: user?.nickname,
+      mobile_number: user?.mobile_number,
+      birthday: user?.birthday,
+      role: user?.role,
+      branch_id: user?.branch_id,
+      is_active: user?.is_active,
+      avatar: user?.avatar,
+      isVerified: user?.isVerified,
+      clerk_user_id,
+      action: "created",
+    };
+  },
+});
+
+/**
+ * Get user by Clerk user ID
+ * Used by frontend to look up Convex user after Clerk authentication
+ *
+ * @param clerk_user_id - The Clerk user ID (e.g., "user_2abc123def")
+ * @returns User object or null if not found
+ */
+export const getUserByClerkId = query({
+  args: { clerk_user_id: v.string() },
+  handler: async (ctx, args) => {
+    if (!args.clerk_user_id) {
+      return null;
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerk_user_id", (q) => q.eq("clerk_user_id", args.clerk_user_id))
+      .first();
+
+    if (!user || !user.is_active) {
+      return null;
+    }
+
+    // Return user data without sensitive fields
+    return {
+      _id: user._id,
+      id: user._id,
+      username: user.username,
+      email: user.email,
+      nickname: user.nickname,
+      mobile_number: user.mobile_number,
+      birthday: user.birthday,
+      role: user.role,
+      branch_id: user.branch_id,
+      is_active: user.is_active,
+      avatar: user.avatar,
+      bio: user.bio,
+      skills: user.skills,
+      isVerified: user.isVerified,
+      page_access: user.page_access,
+      clerk_user_id: user.clerk_user_id,
+    };
   },
 });
 
@@ -1781,5 +2237,164 @@ export const sendBookingConfirmationEmail = action({
       // Don't throw error - email failure shouldn't block booking
       return { success: false, error: error.message };
     }
+  },
+});
+
+// ============================================================================
+// TEST DATA SEEDING
+// ============================================================================
+
+/**
+ * Seed a test customer with wallet and points
+ * Run via: npx convex run services/auth:seedTestCustomer
+ */
+export const seedTestCustomer = mutation({
+  args: {
+    email: v.optional(v.string()),
+    name: v.optional(v.string()),
+    walletBalance: v.optional(v.number()), // in pesos
+    points: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const email = args.email || "testcustomer@example.com";
+    const name = args.name || "Test Customer";
+    const walletBalanceCentavos = (args.walletBalance || 500) * 100;
+    const pointsX100 = (args.points || 5000) * 100;
+
+    // Check if customer already exists
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
+
+    if (existingUser) {
+      // Update existing user's wallet and points
+      const wallet = await ctx.db
+        .query("wallets")
+        .withIndex("by_user", (q) => q.eq("user_id", existingUser._id))
+        .first();
+
+      if (wallet) {
+        await ctx.db.patch(wallet._id, {
+          balance: walletBalanceCentavos,
+          bonus_balance: Math.floor(walletBalanceCentavos * 0.1),
+          updatedAt: now,
+        });
+      } else {
+        await ctx.db.insert("wallets", {
+          user_id: existingUser._id,
+          balance: walletBalanceCentavos,
+          bonus_balance: Math.floor(walletBalanceCentavos * 0.1),
+          currency: "PHP",
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+
+      const pointsLedger = await ctx.db
+        .query("points_ledger")
+        .withIndex("by_user", (q) => q.eq("user_id", existingUser._id))
+        .first();
+
+      if (pointsLedger) {
+        await ctx.db.patch(pointsLedger._id, {
+          current_balance: pointsX100,
+          lifetime_earned: Math.floor(pointsX100 * 1.2),
+          last_activity_at: now,
+        });
+      } else {
+        await ctx.db.insert("points_ledger", {
+          user_id: existingUser._id,
+          current_balance: pointsX100,
+          lifetime_earned: Math.floor(pointsX100 * 1.2),
+          lifetime_redeemed: 0,
+          last_activity_at: now,
+        });
+      }
+
+      return {
+        success: true,
+        action: "updated",
+        userId: existingUser._id,
+        email,
+        wallet: `₱${(walletBalanceCentavos / 100).toFixed(2)}`,
+        points: args.points || 5000,
+      };
+    }
+
+    // Create new test customer
+    const userId = await ctx.db.insert("users", {
+      email,
+      username: email.split("@")[0],
+      nickname: name,
+      password: "",
+      mobile_number: "+639123456789",
+      role: "customer",
+      is_active: true,
+      isVerified: true,
+      skills: [],
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create wallet with balance
+    await ctx.db.insert("wallets", {
+      user_id: userId,
+      balance: walletBalanceCentavos,
+      bonus_balance: Math.floor(walletBalanceCentavos * 0.1),
+      currency: "PHP",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Create points ledger
+    await ctx.db.insert("points_ledger", {
+      user_id: userId,
+      current_balance: pointsX100,
+      lifetime_earned: Math.floor(pointsX100 * 1.2),
+      lifetime_redeemed: Math.floor(pointsX100 * 0.2),
+      last_activity_at: now,
+    });
+
+    // Add wallet transaction history
+    await ctx.db.insert("wallet_transactions", {
+      user_id: userId,
+      type: "topup",
+      amount: walletBalanceCentavos,
+      status: "completed",
+      reference_id: `SEED-${Date.now()}`,
+      description: "Initial top-up (seeded)",
+      createdAt: now - 3 * 24 * 60 * 60 * 1000,
+      updatedAt: now - 3 * 24 * 60 * 60 * 1000,
+    });
+
+    // Add points transaction history
+    await ctx.db.insert("points_transactions", {
+      user_id: userId,
+      type: "earn",
+      amount: pointsX100,
+      balance_after: pointsX100,
+      source_type: "payment",
+      source_id: "seed-bonus",
+      notes: "Initial points (seeded)",
+      created_at: now - 3 * 24 * 60 * 60 * 1000,
+    });
+
+    console.log("[Seed] Created test customer:", {
+      userId,
+      email,
+      wallet: `₱${(walletBalanceCentavos / 100).toFixed(2)}`,
+      points: args.points || 5000,
+    });
+
+    return {
+      success: true,
+      action: "created",
+      userId,
+      email,
+      wallet: `₱${(walletBalanceCentavos / 100).toFixed(2)}`,
+      points: args.points || 5000,
+    };
   },
 });

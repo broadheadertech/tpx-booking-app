@@ -1,252 +1,240 @@
-import React from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Wallet as WalletIcon, ArrowLeft, PlusCircle, CreditCard, Send, Download, Banknote, CheckCircle, Clock, Gift, Star } from 'lucide-react'
-import Button from '../../components/common/Button'
-import { useAuth } from '../../context/AuthContext'
-import { useBranding } from '../../context/BrandingContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { useQuery, useAction, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useToast } from '../../components/common/ToastNotification'
+import { useUser } from '@clerk/clerk-react'
+import { WalletHub } from '../../components/customer/wallet'
+
+// Auto-polling interval for pending transactions (5 seconds)
+const AUTO_POLL_INTERVAL = 5000
+// Max auto-poll attempts before stopping
+const MAX_AUTO_POLL_ATTEMPTS = 12 // 1 minute total
 
 function Wallet() {
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const { user } = useAuth()
-  const { branding } = useBranding()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const topupToastShownRef = useRef(false)
+  const { user: authUser } = useCurrentUser()
+  const { user: clerkUser } = useUser()
   const toast = useToast()
-  
-  // Branding colors with fallbacks
-  const primaryColor = branding?.primary_color || '#F68B24'
-  const accentColor = branding?.accent_color || '#E67E22'
-  const bgColor = branding?.bg_color || '#0A0A0A'
-  const mutedColor = branding?.muted_color || '#6B7280'
+
+  // Get Convex user from Clerk ID (for Clerk-authenticated users)
+  const clerkConvexUser = useQuery(
+    api.services.auth.getUserByClerkId,
+    clerkUser?.id ? { clerk_user_id: clerkUser.id } : 'skip'
+  )
+
+  // Use Clerk user if available, otherwise fall back to AuthContext user
+  const user = clerkConvexUser || authUser
+
   const wallet = useQuery(api.services.wallet.getWallet, user?._id ? { userId: user._id } : 'skip')
   const txs = useQuery(api.services.wallet.listTransactions, user?._id ? { userId: user._id, limit: 50 } : 'skip')
+  const pendingTopups = useQuery(api.services.wallet.getPendingTopups, user?._id ? { userId: user._id } : 'skip')
   const ensureWallet = useMutation(api.services.wallet.ensureWallet)
   const finalizeTopUp = useAction(api.services.paymongo.captureSourceAndCreditWallet)
+  const checkTopupStatus = useAction(api.services.wallet.checkAndProcessWalletTopupStatus)
 
-  const iconForTx = (type) => {
-    if (type === 'Top-up') return Banknote
-    if (type === 'Payment') return CreditCard
-    if (type === 'Refund') return Download
-    return Send
-  }
+  const [checkingTopupId, setCheckingTopupId] = useState(null)
+  const [isProcessingReturn, setIsProcessingReturn] = useState(false)
+  const [autoPollingActive, setAutoPollingActive] = useState(false)
+  const pollAttemptsRef = useRef(0)
+  const pollIntervalRef = useRef(null)
 
-  // Status colors - using CSS variables for consistency
-  const getStatusStyle = (status) => {
-    if (status === 'completed') return { color: '#22C55E' } // green
-    if (status === 'pending') return { color: primaryColor } // use primary for pending
-    return { color: '#EF4444' } // red for failed
-  }
-
-  const goToTopUp = () => {
+  const goToTopUp = useCallback(() => {
     navigate('/customer/wallet/topup')
-  }
+  }, [navigate])
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (user?._id) {
       ensureWallet({ userId: user._id }).catch(() => {})
     }
   }, [user, ensureWallet])
 
-  React.useEffect(() => {
-    const topupResult = searchParams.get('topup')
-    if (topupResult === 'success' && user?._id && txs) {
-      const pendingSources = txs.filter(t => t.status === 'pending' && !!t.source_id)
-      pendingSources.forEach(async (t) => {
-        try {
-          await finalizeTopUp({ sourceId: t.source_id, userId: user._id })
-          toast.success('Wallet updated', `Top-up of ₱${t.amount} completed`)
-        } catch (e) {}
-      })
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current)
+      }
     }
-  }, [searchParams, user, txs, finalizeTopUp, toast])
+  }, [])
+
+  // Auto-process a single pending top-up
+  const processOnePendingTopup = useCallback(async (pending) => {
+    if (!pending.source_id) return null
+
+    try {
+      const result = await checkTopupStatus({ sessionId: pending.source_id })
+      console.log('[Wallet] Auto-check result:', result)
+      return result
+    } catch (e) {
+      console.error('[Wallet] Auto-check failed:', e)
+      return null
+    }
+  }, [checkTopupStatus])
+
+  // Start automatic polling for pending transactions
+  const startAutoPolling = useCallback(() => {
+    if (pollIntervalRef.current || autoPollingActive) return
+
+    console.log('[Wallet] Starting auto-polling for pending top-ups')
+    setAutoPollingActive(true)
+    pollAttemptsRef.current = 0
+
+    pollIntervalRef.current = setInterval(async () => {
+      pollAttemptsRef.current += 1
+      console.log(`[Wallet] Auto-poll attempt ${pollAttemptsRef.current}/${MAX_AUTO_POLL_ATTEMPTS}`)
+
+      // Check if we still have pending transactions
+      if (!pendingTopups || pendingTopups.length === 0) {
+        console.log('[Wallet] No pending top-ups, stopping auto-poll')
+        clearInterval(pollIntervalRef.current)
+        pollIntervalRef.current = null
+        setAutoPollingActive(false)
+        return
+      }
+
+      // Process each pending top-up
+      let anyProcessed = false
+      for (const pending of pendingTopups) {
+        const result = await processOnePendingTopup(pending)
+        if (result?.status === 'paid') {
+          anyProcessed = true
+          toast.success('Top-up Successful!', `₱${result.amount} has been credited${result.bonus > 0 ? ` (+₱${result.bonus} bonus!)` : ''}`)
+        }
+      }
+
+      // Stop polling if we processed any or reached max attempts
+      if (anyProcessed || pollAttemptsRef.current >= MAX_AUTO_POLL_ATTEMPTS) {
+        console.log('[Wallet] Stopping auto-poll:', anyProcessed ? 'transaction processed' : 'max attempts reached')
+        clearInterval(pollIntervalRef.current)
+        pollIntervalRef.current = null
+        setAutoPollingActive(false)
+
+        if (!anyProcessed && pollAttemptsRef.current >= MAX_AUTO_POLL_ATTEMPTS) {
+          toast.info('Payment Processing', 'Your payment is being processed. It may take a moment to appear.')
+        }
+      }
+    }, AUTO_POLL_INTERVAL)
+  }, [pendingTopups, processOnePendingTopup, autoPollingActive, toast])
+
+  // Handle top-up success/cancelled query params
+  useEffect(() => {
+    const topupResult = searchParams.get('topup')
+
+    // Prevent multiple toast firings on re-renders
+    if (!topupResult || topupToastShownRef.current) return
+
+    if (topupResult === 'success') {
+      topupToastShownRef.current = true
+      setIsProcessingReturn(true)
+
+      // Try to process any pending SA wallet top-ups with immediate check + auto-polling
+      const processPendingTopups = async () => {
+        if (user?._id && pendingTopups && pendingTopups.length > 0) {
+          let anyProcessed = false
+
+          for (const pending of pendingTopups) {
+            if (pending.source_id) {
+              const result = await processOnePendingTopup(pending)
+              if (result?.status === 'paid') {
+                anyProcessed = true
+                toast.success('Top-up Successful!', `₱${result.amount} has been credited to your wallet${result.bonus > 0 ? ` (+₱${result.bonus} bonus!)` : ''}`)
+              }
+            }
+          }
+
+          // If not processed yet, start auto-polling
+          if (!anyProcessed) {
+            console.log('[Wallet] Payment not yet confirmed, starting auto-poll')
+            startAutoPolling()
+          }
+        }
+
+        setIsProcessingReturn(false)
+      }
+
+      // Small delay to ensure pendingTopups query is loaded
+      setTimeout(() => {
+        processPendingTopups()
+      }, 500)
+
+      // Also handle legacy paymongo source flow for backwards compatibility
+      if (user?._id && txs) {
+        const pendingSources = txs.filter(t => t.status === 'pending' && !!t.source_id && !pendingTopups?.find(p => p.source_id === t.source_id))
+        pendingSources.forEach(async (t) => {
+          try {
+            await finalizeTopUp({ sourceId: t.source_id, userId: user._id })
+          } catch (e) {
+            console.error('[Wallet] Legacy finalize top-up failed:', e)
+          }
+        })
+      }
+
+      // Clear the query param to prevent re-firing on navigation
+      searchParams.delete('topup')
+      setSearchParams(searchParams, { replace: true })
+    } else if (topupResult === 'cancelled') {
+      topupToastShownRef.current = true
+      toast.error('Top-up Cancelled', 'Your payment was cancelled. No charges were made.')
+
+      // Clear the query param
+      searchParams.delete('topup')
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, [searchParams, setSearchParams, user, txs, pendingTopups, finalizeTopUp, processOnePendingTopup, startAutoPolling, toast])
+
+  // Auto-start polling when there are pending transactions (for users who land on page directly)
+  useEffect(() => {
+    if (pendingTopups && pendingTopups.length > 0 && !autoPollingActive && !pollIntervalRef.current) {
+      // Start auto-polling after a short delay
+      const timer = setTimeout(() => {
+        startAutoPolling()
+      }, 2000)
+
+      return () => clearTimeout(timer)
+    }
+  }, [pendingTopups, autoPollingActive, startAutoPolling])
+
+  // Handler for manually checking a pending top-up
+  const handleCheckTopupStatus = useCallback(async (sourceId) => {
+    setCheckingTopupId(sourceId)
+    try {
+      const result = await checkTopupStatus({ sessionId: sourceId })
+      console.log('[Wallet] Manual check result:', result)
+      if (result.status === 'paid') {
+        toast.success('Top-up Successful!', `₱${result.amount} has been credited${result.bonus > 0 ? ` (+₱${result.bonus} bonus!)` : ''}`)
+      } else if (result.status === 'expired') {
+        toast.error('Top-up Expired', 'The payment session has expired. Please try again.')
+      } else if (result.status === 'pending') {
+        toast.info('Still Processing', 'Your payment is still being processed. Please wait a moment.')
+      } else if (result.status === 'already_completed') {
+        toast.info('Already Processed', 'This top-up has already been credited.')
+      } else {
+        toast.error('Check Failed', result.error || 'Unable to verify payment status')
+      }
+    } catch (e) {
+      console.error('[Wallet] Check status error:', e)
+      toast.error('Check Failed', 'Unable to verify payment status. Please try again.')
+    } finally {
+      setCheckingTopupId(null)
+    }
+  }, [checkTopupStatus, toast])
 
   return (
-    <div className="min-h-screen bg-transparent relative">
-      <div className="relative z-10">
-        <div className="sticky top-0 z-40 bg-[#0A0A0A]/98 backdrop-blur-2xl border-b border-[#1A1A1A]">
-          <div className="max-w-md mx-auto px-4">
-            <div className="flex justify-between items-center py-5">
-              <button 
-                onClick={() => navigate('/customer/dashboard')} 
-                className="flex items-center space-x-2 px-4 py-2 bg-[#1A1A1A] hover:bg-[#1A1A1A]/80 rounded-2xl border border-[#2A2A2A] active:scale-95 transition-all"
-              >
-                <ArrowLeft className="w-4 h-4 text-white" />
-                <span className="text-sm font-semibold text-white">Back</span>
-              </button>
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center">
-                  <WalletIcon className="w-5 h-5 text-white" />
-                </div>
-                <h1 className="text-lg font-black text-white">Wallet</h1>
-              </div>
-              <div className="w-[72px]" />
-            </div>
-          </div>
-        </div>
-
-      <div className="relative z-10 max-w-md mx-auto px-4 py-6 pb-24 space-y-6">
-        {/* Balance Card - Modern Wallet Design */}
-        <div 
-          className="relative overflow-hidden rounded-[28px] shadow-xl"
-          style={{ backgroundColor: bgColor, borderWidth: '2px', borderStyle: 'solid', borderColor: primaryColor }}
-        >
-          <img
-            src="/carousel/IMG_0155-min.JPG"
-            alt=""
-            className="absolute inset-0 w-full h-full object-cover opacity-10"
-          />
-          <div className="absolute inset-0 bg-black/10" />
-          <div className="relative z-10 p-6">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center space-x-2">
-                <img
-                  src="/img/tipuno_x_logo_white.avif"
-                  alt={branding?.display_name || ''}
-                  className="w-10 h-10 object-contain"
-                />
-                <div>
-                  <div className="text-xs font-semibold" style={{ color: mutedColor }}>{branding?.display_name || ''}</div>
-                  <div className="text-sm text-white font-black">Wallet</div>
-                </div>
-              </div>
-              <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 flex items-center space-x-1.5">
-                <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: primaryColor }} />
-                <span className="text-xs font-bold text-gray-300">Active</span>
-              </div>
-            </div>
-            
-            {/* Balance */}
-            <div className="mb-6">
-              <div className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: primaryColor }}>Available Balance</div>
-              <div className="text-5xl font-black text-white mb-2">₱{(wallet?.balance || 0).toLocaleString()}</div>
-              <div className="flex items-center space-x-2 text-xs" style={{ color: mutedColor }}>
-                <Clock className="w-3.5 h-3.5" />
-                <span>Last updated {new Date(wallet?.updatedAt || Date.now()).toLocaleString('en-PH')}</span>
-              </div>
-            </div>
-            
-            <div className="inline-flex items-center space-x-2 px-4 py-2 rounded-full bg-white/5 border border-white/10">
-              <div className="text-sm font-bold text-white">{user?.nickname || user?.username || 'User'}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={goToTopUp} 
-            className="group p-3 rounded-xl hover:bg-white/5 active:scale-95 transition-all"
-          >
-            <div className="flex flex-col items-center">
-              <PlusCircle className="w-6 h-6 text-white" />
-              <span className="mt-2 text-xs font-bold text-white">Add Funds</span>
-            </div>
-          </button>
-        </div>
-
-        {/* Payment Methods - Modern Cards */}
-        
-
-        {/* Recent Activity - Modern List */}
-        <div>
-          <div className="flex items-center justify-between mb-4 px-1">
-            <h3 className="text-lg font-black text-white">Recent Activity</h3>
-            <button 
-              className="text-xs font-bold transition-colors"
-              style={{ color: primaryColor }}
-              onMouseEnter={(e) => e.target.style.color = accentColor}
-              onMouseLeave={(e) => e.target.style.color = primaryColor}
-            >
-              View All →
-            </button>
-          </div>
-          <div className="space-y-2">
-            {!txs || txs.length === 0 ? (
-              <div 
-                className="rounded-[20px] border p-12 text-center"
-                style={{ backgroundColor: bgColor, borderColor: '#1A1A1A' }}
-              >
-                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#1A1A1A' }}>
-                  <Clock className="w-8 h-8" style={{ color: mutedColor }} />
-                </div>
-                <p className="text-sm font-semibold" style={{ color: mutedColor }}>No transactions yet</p>
-                <p className="text-xs mt-1" style={{ color: mutedColor }}>Your transaction history will appear here</p>
-              </div>
-            ) : (
-              txs.map((t) => {
-                const TxIcon = iconForTx(t.type === 'topup' ? 'Top-up' : t.type === 'refund' ? 'Refund' : 'Payment')
-                const isPositive = t.type === 'topup' || t.amount >= 0
-                return (
-                  <div 
-                    key={t._id} 
-                    className="relative overflow-hidden rounded-[20px] p-4 transition-all group"
-                    style={{ 
-                      backgroundColor: bgColor, 
-                      border: '1px solid #1A1A1A',
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.borderColor = `${primaryColor}33`}
-                    onMouseLeave={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <TxIcon className="w-6 h-6 text-white" />
-                        <div>
-                          <div className="text-sm font-bold text-white">{t.type === 'topup' ? 'Top-up' : t.type}</div>
-                          <div className="text-xs" style={{ color: mutedColor }}>{new Date(t.createdAt).toLocaleString('en-PH')}</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div 
-                          className="text-base font-black"
-                          style={{ color: isPositive ? '#22C55E' : 'white' }}
-                        >
-                          {isPositive ? `+₱${t.amount.toLocaleString()}` : `-₱${Math.abs(t.amount).toLocaleString()}`}
-                        </div>
-                        <div 
-                          className="text-xs font-semibold capitalize"
-                          style={getStatusStyle(t.status)}
-                        >
-                          {t.status}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Vouchers Link */}
-        <button 
-          onClick={() => navigate('/customer/dashboard')} 
-          className="w-full rounded-[20px] p-5 active:scale-[0.98] transition-all group"
-          style={{ backgroundColor: bgColor, border: '1px solid #1A1A1A' }}
-          onMouseEnter={(e) => e.currentTarget.style.borderColor = `${primaryColor}33`}
-          onMouseLeave={(e) => e.currentTarget.style.borderColor = '#1A1A1A'}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Gift className="w-6 h-6 text-white" />
-              </div>
-              <div className="text-left">
-                <div className="text-sm font-bold text-white">My Vouchers</div>
-                <div className="text-xs" style={{ color: mutedColor }}>View and manage rewards</div>
-              </div>
-            </div>
-            <svg className="w-5 h-5 group-hover:text-white" style={{ color: mutedColor }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        </button>
-
-        
-      </div>
-      </div>
-    </div>
+    <WalletHub
+      user={user}
+      wallet={wallet}
+      transactions={txs}
+      pendingTopups={pendingTopups}
+      onTopUp={goToTopUp}
+      onCheckTopupStatus={handleCheckTopupStatus}
+      checkingTopupId={checkingTopupId}
+      isProcessingReturn={isProcessingReturn}
+      autoPollingActive={autoPollingActive}
+    />
   )
 }
 

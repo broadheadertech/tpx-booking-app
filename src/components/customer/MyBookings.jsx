@@ -14,15 +14,28 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
+  Banknote,
+  Store,
+  MapPin,
+  Scissors,
+  Receipt,
+  ChevronDown,
+  ChevronUp,
+  CreditCard,
+  Wallet,
+  Tag,
+  Timer,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from "../../context/AuthContext";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { useBranding } from "../../context/BrandingContext";
 
 const MyBookings = ({ onBack }) => {
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useCurrentUser();
+  const { branding } = useBranding();
   const [activeFilter, setActiveFilter] = useState("all");
   const [showQRCode, setShowQRCode] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(null);
@@ -30,7 +43,12 @@ const MyBookings = ({ onBack }) => {
   const [showRatingModal, setShowRatingModal] = useState(null);
   const [ratingLoading, setRatingLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedBooking, setExpandedBooking] = useState(null);
   const itemsPerPage = 8;
+
+  // Branding colors with fallbacks
+  const primaryColor = branding?.primary_color || '#00704A';
+  const accentColor = branding?.accent_color || '#1E3932';
 
   // Convex queries - only call when user exists
   const bookings = user?._id ? useQuery(api.services.bookings.getBookingsByCustomer, { customerId: user._id }) : undefined;
@@ -42,6 +60,25 @@ const MyBookings = ({ onBack }) => {
 
   // Loading state - true when user exists but data not loaded yet
   const loading = user?._id && (bookings === undefined || services === undefined || barbers === undefined);
+
+  // Debug: Log booking data to check barber fields
+  if (bookings && bookings.length > 0) {
+    console.log('[MyBookings] First booking data:', {
+      barber_id: bookings[0].barber,
+      barber_name: bookings[0].barber_name,
+      barber_name_type: typeof bookings[0].barber_name,
+      barber_name_is_undefined: bookings[0].barber_name === undefined,
+      barber_name_is_null: bookings[0].barber_name === null,
+      barber_name_is_empty: bookings[0].barber_name === '',
+      booking_code: bookings[0].booking_code,
+    });
+    // Also log all bookings' barber info
+    console.log('[MyBookings] All bookings barber data:', bookings.map(b => ({
+      code: b.booking_code,
+      barber_id: b.barber,
+      barber_name: b.barber_name
+    })));
+  }
   
   // Error state - currently no error handling implemented
   const error = null;
@@ -134,7 +171,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
               Rate Your Service
             </h3>
             <p className="text-sm" style={{ color: "#8B8B8B" }}>
-              How was your experience with {booking.barber?.name || "your barber"}?
+              How was your experience with {booking.barber_name || "your barber"}?
             </p>
           </div>
 
@@ -159,7 +196,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
               <div className="flex justify-between">
                 <span style={{ color: "#36454F" }}>Barber:</span>
                 <span className="font-bold" style={{ color: "#36454F" }}>
-                  {booking.barber?.name || "Any Barber"}
+                  {booking.barber_name || "Any Barber"}
                 </span>
               </div>
             </div>
@@ -304,14 +341,98 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case "confirmed":
+      case "booked":
         return "bg-green-500/20 text-green-400 border-green-500/30";
       case "pending":
         return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
       case "cancelled":
         return "bg-red-500/20 text-red-400 border-red-500/30";
+      case "completed":
+        return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+      case "in_progress":
+        return "bg-purple-500/20 text-purple-400 border-purple-500/30";
       default:
         return "bg-gray-500/20 text-gray-400 border-gray-500/30";
     }
+  };
+
+  // Get status border color for card accent
+  const getStatusBorderColor = (status) => {
+    switch (status) {
+      case "confirmed":
+      case "booked":
+        return "#22c55e"; // green-500
+      case "pending":
+        return "#eab308"; // yellow-500
+      case "cancelled":
+        return "#ef4444"; // red-500
+      case "completed":
+        return "#3b82f6"; // blue-500
+      case "in_progress":
+        return "#a855f7"; // purple-500
+      default:
+        return "#6b7280"; // gray-500
+    }
+  };
+
+  // Format relative date (Today, Tomorrow, Jan 15)
+  const formatRelativeDate = (dateStr) => {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const isToday = date.toDateString() === today.toDateString();
+    const isTomorrow = date.toDateString() === tomorrow.toDateString();
+
+    if (isToday) return "Today";
+    if (isTomorrow) return "Tomorrow";
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  // Format payment method display
+  const getPaymentMethodIcon = (method) => {
+    switch (method) {
+      case 'wallet':
+        return <Wallet className="w-3.5 h-3.5" />;
+      case 'card':
+      case 'gcash':
+      case 'paymongo':
+        return <CreditCard className="w-3.5 h-3.5" />;
+      default:
+        return <Banknote className="w-3.5 h-3.5" />;
+    }
+  };
+
+  // Get payment method label for display
+  const getPaymentMethodLabel = (method) => {
+    switch (method) {
+      case 'wallet':
+        return 'Wallet';
+      case 'gcash':
+        return 'GCash';
+      case 'paymongo':
+        return 'Online Pay';
+      case 'card':
+        return 'Card';
+      case 'cash':
+        return 'Cash';
+      default:
+        return 'Cash';
+    }
+  };
+
+  // Format time from 24-hour to 12-hour format (e.g., "14:30" → "2:30 PM")
+  const formatTime12Hour = (time) => {
+    if (!time) return '';
+
+    // Handle if time is already in 12-hour format
+    if (time.includes('AM') || time.includes('PM')) return time;
+
+    const [hours, minutes] = time.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const hour12 = hours % 12 || 12;
+    return `${hour12}:${minutes.toString().padStart(2, '0')} ${period}`;
   };
 
   const filteredBookings = bookings ? bookings.filter((booking) => {
@@ -466,157 +587,289 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
                 // Get service and barber data from Convex queries
                 const service = services?.find(s => s._id === booking.service) || {};
                 const barber = barbers?.find(b => b._id === booking.barber) || {};
+                const isExpanded = expandedBooking === booking._id;
 
-                // Debug logging for voucher information
-                console.log(`Booking ${booking._id}:`, {
-                  voucher_code: booking.voucher_code,
-                  total_amount: booking.total_amount,
-                  voucherCode: booking.voucherCode,
-                  voucher: booking.voucher,
-                });
+                // Calculate price breakdown
+                const servicePrice = booking.service_price || service.price || 0;
+                const bookingFee = booking.booking_fee || 0;
+                const convenienceFee = booking.convenience_fee_paid || booking.convenience_fee || bookingFee || 0;
+                const discount = booking.discount_amount || 0;
+                const voucherCode = booking.voucher_code || booking.voucherCode || booking.voucher?.code;
+                const totalPaid = booking.total_amount || booking.amount_paid || 0;
+                // Due at shop is the full service price + booking fee (convenience fee is just for reservation)
+                const amountDue = booking.amount_due || (servicePrice + bookingFee);
 
                 return (
                   <div
                     key={booking._id}
-                    className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] hover:border-[var(--color-primary)]/30 transition-all duration-200 p-4"
+                    className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] overflow-hidden hover:border-[#3A3A3A] transition-all duration-200"
+                    style={{ borderLeft: `4px solid ${getStatusBorderColor(booking.status)}` }}
                   >
-                    {/* Compact Header */}
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h3 className="text-base font-semibold text-white truncate">
-                            {booking.is_custom_booking ? 'Custom Booking' : (service.name || "Service")}
-                          </h3>
+                    {/* Main Card Content */}
+                    <div className="p-4">
+                      {/* Top Row: Service + Status */}
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                          {/* Service Icon */}
+                          <div
+                            className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                            style={{ backgroundColor: `${primaryColor}20` }}
+                          >
+                            <Scissors className="w-5 h-5" style={{ color: primaryColor }} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-sm font-bold text-white truncate">
+                              {booking.is_custom_booking ? 'Custom Booking' : (service.name || "Service")}
+                            </h3>
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                              <span className="text-xs text-gray-500">#{booking.booking_code}</span>
+                              {booking.branch_name && (
+                                <span className="text-xs text-gray-400 flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {booking.branch_name}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        {/* Status Badge */}
+                        <div className="flex flex-col items-end gap-1">
+                          <span className={`px-2 py-1 rounded-lg text-[10px] font-bold uppercase ${getStatusColor(booking.status)}`}>
+                            {booking.status}
+                          </span>
                           {booking.is_custom_booking && (
-                            <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-[var(--color-primary)]/20 text-[var(--color-primary)] border border-[var(--color-primary)]/30">
+                            <span className="px-2 py-0.5 rounded text-[10px] font-medium" style={{ backgroundColor: `${primaryColor}20`, color: primaryColor }}>
                               CUSTOM
                             </span>
                           )}
-                          <span
-                            className={`px-2 py-0.5 rounded-md text-xs font-medium ${getStatusColor(
-                              booking.status
-                            )}`}
-                          >
-                            {booking.status.toUpperCase()}
-                          </span>
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-gray-400">
-                          <span>#{booking.booking_code}</span>
-                          {booking.branch_name && (
-                            <span className="text-[var(--color-primary)] font-medium flex items-center gap-1">
-                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                              </svg>
-                              {booking.branch_name}
+                      </div>
+
+                      {/* Date, Time, Barber Row */}
+                      <div className="flex items-center gap-4 mb-3 p-2.5 bg-[#0F0F0F] rounded-lg">
+                        <div className="flex items-center gap-2 flex-1">
+                          <Calendar className="w-4 h-4 text-gray-500" />
+                          <div>
+                            <p className="text-xs font-semibold text-white">{formatRelativeDate(booking.date)}</p>
+                            <p className="text-[10px] text-gray-500">{new Date(booking.date).toLocaleDateString('en-US', { weekday: 'short' })}</p>
+                          </div>
+                        </div>
+                        <div className="w-px h-8 bg-[#2A2A2A]" />
+                        <div className="flex items-center gap-2 flex-1">
+                          <Clock className="w-4 h-4 text-gray-500" />
+                          <div>
+                            <p className="text-xs font-semibold text-white">{formatTime12Hour(booking.time)}</p>
+                            {service.duration && (
+                              <p className="text-[10px] text-gray-500">{service.duration} min</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="w-px h-8 bg-[#2A2A2A]" />
+                        <div className="flex items-center gap-2 flex-1">
+                          <div className="w-6 h-6 rounded-full bg-[#2A2A2A] flex items-center justify-center">
+                            <User className="w-3.5 h-3.5 text-gray-400" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-white truncate">{booking.barber_name || barber.full_name || barber.name || "Any"}</p>
+                            <p className="text-[10px] text-gray-500">Barber</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Price Summary Row */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {/* Total/Price Display */}
+                          <div>
+                            <p className="text-[10px] text-gray-500 uppercase tracking-wider">Total</p>
+                            <p className="text-lg font-black" style={{ color: primaryColor }}>
+                              ₱{parseFloat(totalPaid || (servicePrice + convenienceFee - discount)).toLocaleString()}
+                            </p>
+                          </div>
+                          {/* Booking Fee indicator (if paid) */}
+                          {convenienceFee > 0 && (booking.payment_status === 'paid' || booking.payment_status === 'partial') && (
+                            <div className="px-2 py-1 rounded-lg bg-[#2A2A2A]">
+                              <p className="text-[9px] text-gray-500 uppercase">Booking Fee</p>
+                              <p className="text-[10px] text-green-400 font-medium">₱{parseFloat(convenienceFee).toLocaleString()}</p>
+                            </div>
+                          )}
+                          {/* Payment Method Pill */}
+                          {(booking.payment_status === 'paid' || booking.payment_status === 'partial') && booking.payment_method && (
+                            <span className="px-2 py-1 rounded-lg text-[10px] font-medium bg-[#2A2A2A] text-gray-300 flex items-center gap-1">
+                              {getPaymentMethodIcon(booking.payment_method)}
+                              {getPaymentMethodLabel(booking.payment_method)}
+                            </span>
+                          )}
+                          {/* Payment Status Pill */}
+                          {booking.payment_status === 'paid' && (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-green-500/20 text-green-400 flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3" />
+                              PAID
+                            </span>
+                          )}
+                          {booking.payment_status === 'partial' && (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-yellow-500/20 text-yellow-400 flex items-center gap-1">
+                              <Timer className="w-3 h-3" />
+                              ₱{amountDue.toLocaleString()} DUE
+                            </span>
+                          )}
+                          {(booking.payment_status === 'unpaid' || !booking.payment_status) && booking.status !== 'cancelled' && (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-400 flex items-center gap-1">
+                              <Store className="w-3 h-3" />
+                              PAY AT SHOP
                             </span>
                           )}
                         </div>
+
+                        {/* Expand/Actions Toggle */}
+                        <button
+                          onClick={() => setExpandedBooking(isExpanded ? null : booking._id)}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-gray-400 hover:text-white hover:bg-[#2A2A2A] transition-colors"
+                        >
+                          <Receipt className="w-3.5 h-3.5" />
+                          <span>Details</span>
+                          {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        </button>
                       </div>
                     </div>
 
-                    {/* Compact Details Grid */}
-                    <div className="grid grid-cols-3 gap-3 mb-3 text-xs">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-                        <div>
-                          <p className="text-gray-400">Date</p>
-                          <p className="font-medium text-white">
-                            {new Date(booking.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-                        <div>
-                          <p className="text-gray-400">Time</p>
-                          <p className="font-medium text-white">
-                            {booking.time}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <User className="w-3.5 h-3.5 text-[var(--color-primary)]" />
-                        <div>
-                          <p className="text-gray-400">Barber</p>
-                          <p className="font-medium text-white">
-                            {barber.name || "Any Barber"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Price and Actions Row */}
-                    <div className="flex items-center justify-between pt-3 border-t border-[#2A2A2A]">
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <p className="text-xs text-gray-400">Price</p>
-                          <p className="font-semibold text-[var(--color-primary)]">
-                            ₱{service.price ? parseFloat(service.price).toLocaleString() : "--"}
-                          </p>
-                        </div>
-                        {(() => {
-                          const voucherCode = booking.voucher_code || booking.voucherCode || booking.voucher?.code;
-                          return voucherCode && (
-                            <div className="text-right">
-                              <p className="text-xs text-gray-400">Voucher</p>
-                              <p className="text-xs font-medium text-green-400">{voucherCode}</p>
+                    {/* Expandable Details Section */}
+                    {isExpanded && (
+                      <div className="border-t border-[#2A2A2A] bg-[#0F0F0F]">
+                        {/* Price Breakdown */}
+                        <div className="p-4 space-y-2">
+                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Price Breakdown</p>
+                          <div className="space-y-1.5">
+                            <div className="flex justify-between text-xs">
+                              <span className="text-gray-400">Service Price</span>
+                              <span className="text-white font-medium">₱{parseFloat(servicePrice).toLocaleString()}</span>
                             </div>
-                          );
-                        })()}
-                       </div>
+                            {convenienceFee > 0 && (
+                              <div className="flex justify-between text-xs">
+                                <span className="text-gray-400">Booking Fee</span>
+                                <span className="text-white font-medium">₱{parseFloat(convenienceFee).toLocaleString()}</span>
+                              </div>
+                            )}
+                            {discount > 0 && (
+                              <div className="flex justify-between text-xs">
+                                <span className="text-green-400 flex items-center gap-1">
+                                  <Tag className="w-3 h-3" />
+                                  Discount
+                                </span>
+                                <span className="text-green-400 font-medium">-₱{parseFloat(discount).toLocaleString()}</span>
+                              </div>
+                            )}
+                            {voucherCode && (
+                              <div className="flex justify-between text-xs">
+                                <span className="text-green-400 flex items-center gap-1">
+                                  <Tag className="w-3 h-3" />
+                                  Voucher ({voucherCode})
+                                </span>
+                                <span className="text-green-400 font-medium">Applied</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between text-xs pt-2 border-t border-[#2A2A2A]">
+                              <span className="text-white font-bold">Total</span>
+                              <span className="font-black" style={{ color: primaryColor }}>
+                                ₱{parseFloat(totalPaid || (servicePrice + convenienceFee - discount)).toLocaleString()}
+                              </span>
+                            </div>
+                            {booking.payment_status === 'partial' && (
+                              <>
+                                <div className="flex justify-between text-xs">
+                                  <span className="text-gray-400">Convenience Fee Paid</span>
+                                  <span className="text-green-400 font-medium">₱{convenienceFee.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between text-xs">
+                                  <span className="text-yellow-400 font-medium">Due at Shop</span>
+                                  <span className="text-yellow-400 font-bold">₱{amountDue.toLocaleString()}</span>
+                                </div>
+                              </>
+                            )}
+                            {/* Payment Method Info */}
+                            {booking.payment_method && (booking.payment_status === 'paid' || booking.payment_status === 'partial') && (
+                              <div className="flex justify-between items-center text-xs pt-2 mt-2 border-t border-[#2A2A2A]">
+                                <span className="text-gray-400 flex items-center gap-1.5">
+                                  {getPaymentMethodIcon(booking.payment_method)}
+                                  Payment Method
+                                </span>
+                                <span className="text-white font-medium">{getPaymentMethodLabel(booking.payment_method)}</span>
+                              </div>
+                            )}
+                            {/* Convenience Fee Breakdown Note */}
+                            {convenienceFee > 0 && (booking.payment_status === 'paid' || booking.payment_status === 'partial') && (
+                              <div className="mt-2 p-2 bg-[#1A1A1A] rounded-lg">
+                                <p className="text-[10px] text-gray-500">
+                                  <span className="text-gray-400 font-medium">Booking fee of ₱{parseFloat(convenienceFee).toLocaleString()}</span> was charged for online reservation and is non-refundable.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
 
-                       {/* Compact Action Buttons */}
-                       <div className="flex gap-2">
-                         {/* Track button for custom bookings */}
-                         {booking.is_custom_booking && (
-                           <button
-                             onClick={() => navigate(`/track/${booking.booking_code}`)}
-                             className="flex-1 py-2 px-3 bg-[var(--color-primary)] text-white text-xs font-medium rounded-lg hover:bg-[var(--color-accent)] transition-colors flex items-center justify-center gap-1"
-                           >
-                             <ExternalLink className="w-3 h-3" />
-                             <span>Track</span>
-                           </button>
-                         )}
-                         {booking.status === "booked" && !booking.is_custom_booking && (
-                           <button
-                             onClick={() => setShowQRCode({ ...booking, service, barber })}
-                             className="flex-1 py-2 px-3 bg-[var(--color-primary)] text-white text-xs font-medium rounded-lg hover:bg-[var(--color-accent)] transition-colors flex items-center justify-center gap-1"
-                           >
-                             <QrCode className="w-3 h-3" />
-                             <span>Show QR</span>
-                           </button>
-                         )}
-                         {booking.status === "pending" && !booking.is_custom_booking && (
-                           <>
-                             <button
-                               onClick={() => setShowCancelModal({ ...booking, service, barber })}
-                               className="flex-1 py-2 px-3 bg-red-500 text-white text-xs font-medium rounded-lg hover:bg-red-600 transition-colors"
-                             >
-                               Cancel
-                             </button>
-                             <button
-                               onClick={() => setShowQRCode({ ...booking, service, barber })}
-                               className="flex-1 py-2 px-3 bg-[var(--color-primary)] text-white text-xs font-medium rounded-lg hover:bg-[var(--color-accent)] transition-colors flex items-center justify-center gap-1"
-                             >
-                               <QrCode className="w-3 h-3" />
-                               <span>QR Code</span>
-                             </button>
-                           </>
-                         )}
-                         {booking.status === "completed" && !hasBeenRated(booking._id) && !booking.is_custom_booking && (
-                           <button
-                             onClick={() => setShowRatingModal({ ...booking, service, barber })}
-                             className="flex-1 py-2 px-3 bg-yellow-500 text-white text-xs font-medium rounded-lg hover:bg-yellow-600 transition-colors flex items-center justify-center gap-1"
-                           >
-                             <Star className="w-3 h-3" />
-                             <span>Rate</span>
-                           </button>
-                         )}
-                       </div>
-                     </div>
-                   </div>
-          );
-        })
+                        {/* Action Buttons */}
+                        <div className="p-4 pt-0 flex gap-2">
+                          {/* Track button for custom bookings */}
+                          {booking.is_custom_booking && (
+                            <button
+                              onClick={() => navigate(`/track/${booking.booking_code}`)}
+                              className="flex-1 py-2.5 px-4 text-white text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                              style={{ backgroundColor: primaryColor }}
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              Track Order
+                            </button>
+                          )}
+                          {(booking.status === "booked" || booking.status === "confirmed") && !booking.is_custom_booking && (
+                            <button
+                              onClick={() => setShowQRCode({ ...booking, service, barber })}
+                              className="flex-1 py-2.5 px-4 text-white text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                              style={{ backgroundColor: primaryColor }}
+                            >
+                              <QrCode className="w-4 h-4" />
+                              Show QR Code
+                            </button>
+                          )}
+                          {booking.status === "pending" && !booking.is_custom_booking && (
+                            <>
+                              <button
+                                onClick={() => setShowCancelModal({ ...booking, service, barber })}
+                                className="flex-1 py-2.5 px-4 bg-red-500/20 text-red-400 text-xs font-bold rounded-xl hover:bg-red-500/30 transition-colors flex items-center justify-center gap-2"
+                              >
+                                <XCircle className="w-4 h-4" />
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => setShowQRCode({ ...booking, service, barber })}
+                                className="flex-1 py-2.5 px-4 text-white text-xs font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+                                style={{ backgroundColor: primaryColor }}
+                              >
+                                <QrCode className="w-4 h-4" />
+                                QR Code
+                              </button>
+                            </>
+                          )}
+                          {booking.status === "completed" && !hasBeenRated(booking._id) && !booking.is_custom_booking && (
+                            <button
+                              onClick={() => setShowRatingModal({ ...booking, service, barber })}
+                              className="flex-1 py-2.5 px-4 bg-yellow-500 text-white text-xs font-bold rounded-xl hover:bg-yellow-600 transition-colors flex items-center justify-center gap-2"
+                            >
+                              <Star className="w-4 h-4" />
+                              Rate Service
+                            </button>
+                          )}
+                          {booking.status === "completed" && hasBeenRated(booking._id) && (
+                            <div className="flex-1 py-2.5 px-4 bg-green-500/20 text-green-400 text-xs font-bold rounded-xl flex items-center justify-center gap-2">
+                              <CheckCircle className="w-4 h-4" />
+                              Rated
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
       )}
     </div>
 
@@ -749,7 +1002,7 @@ return (
             <div className="flex justify-between">
               <span style={{ color: "#36454F" }}>Barber:</span>
               <span className="font-bold" style={{ color: "#36454F" }}>
-                {booking.barber?.name || "Any Barber"}
+                {booking.barber_name || "Any Barber"}
               </span>
             </div>
           </div>
@@ -927,7 +1180,7 @@ const QRCodeModal = ({ booking, onClose }) => {
               <div className="flex justify-between">
                 <span style={{ color: "#36454F" }}>Barber:</span>
                 <span className="font-bold" style={{ color: "#36454F" }}>
-                  {booking.barber?.name || "Any Barber"}
+                  {booking.barber_name || "Any Barber"}
                 </span>
               </div>
 
@@ -942,7 +1195,12 @@ const QRCodeModal = ({ booking, onClose }) => {
                   booking.voucher_code ||
                   booking.voucherCode ||
                   booking.voucher?.code;
-                const totalAmount = booking.total_amount || booking.totalAmount;
+                const servicePrice = booking.service_price || booking.service?.price || 0;
+                const bookingFee = booking.booking_fee || 0;
+                // For paid bookings, calculate service + booking fee; for partial, use stored total
+                const totalAmount = booking.payment_status === 'paid'
+                  ? servicePrice + bookingFee
+                  : (booking.total_amount || booking.totalAmount);
 
                 return (
                   <>
@@ -960,7 +1218,7 @@ const QRCodeModal = ({ booking, onClose }) => {
                         </span>
                       </div>
                     )}
-                    {totalAmount && (
+                    {(booking.payment_status === 'paid' || totalAmount) && (
                       <div className="flex justify-between">
                         <span style={{ color: "#3B82F6" }}>Total Paid:</span>
                         <span
@@ -1047,7 +1305,7 @@ const CancelBookingModal = ({ booking, onConfirm, onClose, loading }) => {
               <div className="flex justify-between">
                 <span style={{ color: "#36454F" }}>Barber:</span>
                 <span className="font-bold" style={{ color: "#36454F" }}>
-                  {booking.barber?.name || "Any Barber"}
+                  {booking.barber_name || "Any Barber"}
                 </span>
               </div>
               <div

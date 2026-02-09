@@ -2,14 +2,14 @@ import { useState, useRef } from 'react'
 import { Upload, X, Image as ImageIcon, AlertCircle, Loader2 } from 'lucide-react'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 
 const ImageUploadInput = ({ label, value, onChange, disabled, placeholder = 'Click to upload image' }) => {
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState(value || '')
   const [error, setError] = useState('')
   const fileInputRef = useRef(null)
-  const { sessionToken } = useAuth()
+  const { sessionToken } = useCurrentUser()
   
   const generateUploadUrl = useMutation(api.services.branding.generateUploadUrl)
   const getImageUrl = useMutation(api.services.branding.getImageUrl)
@@ -46,8 +46,8 @@ const ImageUploadInput = ({ label, value, onChange, disabled, placeholder = 'Cli
     setUploading(true)
 
     try {
-      // Generate upload URL
-      const uploadUrl = await generateUploadUrl({ sessionToken })
+      // Generate upload URL (convert null to undefined for Convex validation)
+      const uploadUrl = await generateUploadUrl({ sessionToken: sessionToken || undefined })
 
       // Upload file
       const result = await fetch(uploadUrl, {
@@ -59,7 +59,7 @@ const ImageUploadInput = ({ label, value, onChange, disabled, placeholder = 'Cli
       const { storageId } = await result.json()
 
       // Get the URL for the uploaded file
-      const imageUrl = await getImageUrl({ sessionToken, storageId })
+      const imageUrl = await getImageUrl({ sessionToken: sessionToken || undefined, storageId })
 
       // Update preview and notify parent
       setPreview(imageUrl)

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Bell, X, Check, Clock, AlertTriangle, Info, Gift, CreditCard, Calendar, ArrowLeft, CheckCircle } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 
 // Notification type icons mapping
 const NOTIFICATION_ICONS = {
@@ -172,20 +172,28 @@ const NotificationItem = ({ notification, onMarkAsRead, onDelete }) => {
 };
 
 const NotificationsPage = ({ onBack }) => {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const [activeFilter, setActiveFilter] = useState('all');
   const [unreadOnly, setUnreadOnly] = useState(false);
   
-  // Fetch notifications
-  const notifications = useQuery(api.services.bookingNotifications.getRecentNotifications, {
-    userId: user?._id,
-    limit: 50,
-    type: activeFilter === 'all' ? undefined : activeFilter,
-    unreadOnly: unreadOnly,
-  });
+  // Fetch notifications - skip if user not loaded yet
+  const notifications = useQuery(
+    api.services.bookingNotifications.getRecentNotifications,
+    user?._id
+      ? {
+          userId: user._id,
+          limit: 50,
+          type: activeFilter === 'all' ? undefined : activeFilter,
+          unreadOnly: unreadOnly,
+        }
+      : "skip"
+  );
 
-  // Fetch notification stats
-  const stats = useQuery(api.services.bookingNotifications.getNotificationStats, { userId: user?._id });
+  // Fetch notification stats - skip if user not loaded yet
+  const stats = useQuery(
+    api.services.bookingNotifications.getNotificationStats,
+    user?._id ? { userId: user._id } : "skip"
+  );
 
   // Mutation hooks
   const markAsRead = useMutation(api.services.bookingNotifications.markNotificationsAsRead);

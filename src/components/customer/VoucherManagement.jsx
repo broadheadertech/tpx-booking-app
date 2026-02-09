@@ -4,10 +4,10 @@ import QRCode from 'qrcode'
 import jsQR from 'jsqr'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 
 const VoucherManagement = ({ onBack }) => {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated } = useCurrentUser()
   const [selectedVoucher, setSelectedVoucher] = useState(null)
   const [showQRCode, setShowQRCode] = useState(false)
   const [claimLoading, setClaimLoading] = useState(false)
@@ -1137,7 +1137,7 @@ const VoucherManagement = ({ onBack }) => {
 
 // QR Code Display Component
 const QRCodeDisplay = ({ voucher }) => {
-  const { user } = useAuth()
+  const { user } = useCurrentUser()
   const qrRef = useRef(null)
   
   // Get username from localStorage or user context

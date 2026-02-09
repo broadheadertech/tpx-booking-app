@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { User, Mail, Phone, Scissors, Camera, Upload, X, Clock, ChevronDown, ChevronUp, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react'
-import { useQuery, useMutation } from 'convex/react'
+import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 import LoadingSpinner from '../common/LoadingSpinner'
 import ErrorDisplay from '../common/ErrorDisplay'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, isToday } from 'date-fns'
 import { parseError } from '../../utils/errorHandler'
 
 const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, services = [] }) => {
-  const { user } = useAuth()
+  const { user } = useCurrentUser()
 
   // Track if form has been initialized to prevent resetting on services refetch
   const [formInitialized, setFormInitialized] = useState(false)
@@ -144,7 +144,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, se
   // Remove separate services query since it's passed as prop
   // const services = useQuery(api.services.services.getAllServices)
   const createBarber = useMutation(api.services.barbers.createBarber)
-  const createBarberWithAccount = useMutation(api.services.barbers.createBarberWithAccount)
+  const createBarberWithAccount = useAction(api.services.barbers.createBarberWithClerk)
   const updateBarber = useMutation(api.services.barbers.updateBarber)
   const updateBarberPassword = useMutation(api.services.barbers.updateBarberPassword)
   const generateUploadUrl = useMutation(api.services.barbers.generateUploadUrl)
@@ -321,7 +321,7 @@ const CreateBarberModal = ({ isOpen, onClose, onSubmit, editingBarber = null, se
     try {
       if (editingBarber) {
         // Update existing barber
-        if (!user?.id) {
+        if (!user?._id && !user?.id) {
           setError('You must be logged in to update a barber')
           return
         }

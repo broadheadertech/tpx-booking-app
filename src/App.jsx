@@ -6,6 +6,8 @@ import {
 } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { BrandingProvider } from "./context/BrandingContext";
+import { BranchProvider } from "./context/BranchContext";
+import { CartProvider } from "./context/CartContext";
 import { ToastProvider } from "./components/common/ToastNotification";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import AuthRedirect from "./components/common/AuthRedirect";
@@ -16,6 +18,10 @@ import Register from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import FacebookCallback from "./pages/auth/FacebookCallback";
+import ClerkLogin from "./pages/auth/ClerkLogin";
+import ClerkSignUp from "./pages/auth/ClerkSignUp";
+import ClerkCallback from "./pages/auth/ClerkCallback";
+import SecuritySettings from "./pages/settings/Security";
 import StaffDashboard from "./pages/staff/Dashboard";
 import POS from "./pages/staff/POS";
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -26,9 +32,11 @@ import TrackBooking from "./pages/customer/TrackBooking.jsx";
 import Wallet from "./pages/customer/Wallet.jsx";
 import WalletTopUp from "./pages/customer/WalletTopUp.jsx";
 import CustomerProfile from "./pages/customer/Profile.jsx";
+import Shop from "./pages/customer/Shop.jsx";
 import BarberDashboard from "./components/barber/BarberDashboard";
 import BarbersList from "./pages/barbers/BarbersList";
 import BarberProfile from "./pages/barbers/BarberProfile";
+import BranchProfile from "./pages/b/BranchProfile";
 import Kiosk from "./pages/Kiosk";
 import PaymentSuccess from "./pages/booking/payment/success.jsx";
 import PaymentFailure from "./pages/booking/payment/failure.jsx";
@@ -47,6 +55,8 @@ function App() {
     <AuthProvider>
       <ToastProvider>
         <BrandingProvider>
+          <BranchProvider>
+            <CartProvider>
         <Router>
           <div className="min-h-screen bg-[var(--color-bg)]">
             <Routes>
@@ -66,6 +76,8 @@ function App() {
               <Route path="/track/:bookingCode" element={<TrackBooking />} />
               <Route path="/barbers" element={<BarbersList />} />
               <Route path="/barbers/:barberSlug" element={<BarberProfile />} />
+              {/* Public Branch Profile */}
+              <Route path="/b/:slug" element={<BranchProfile />} />
               <Route
                 path="/platform-selection"
                 element={<PlatformSelection />}
@@ -73,13 +85,21 @@ function App() {
               <Route path="/privacy" element={<Policy />} />
               <Route path="/account-deletion" element={<AccountDeletion />} />
               <Route path="/email-test" element={<EmailTest />} />
+              {/* Primary Login - Clerk Authentication */}
+              {/* Clerk uses sub-routes for multi-step auth (factor-one, factor-two, etc.) */}
               <Route
-                path="/auth/login"
-                element={
-                  <AuthRedirect>
-                    <Login />
-                  </AuthRedirect>
-                }
+                path="/auth/login/*"
+                element={<ClerkLogin />}
+              />
+              {/* Legacy login redirect to Clerk */}
+              <Route
+                path="/auth/clerk-login/*"
+                element={<Navigate to="/auth/login" replace />}
+              />
+              {/* Staff/Admin Login - Redirect to Clerk (universal login) */}
+              <Route
+                path="/auth/staff-login"
+                element={<Navigate to="/auth/login" replace />}
               />
               <Route
                 path="/auth/forgot-password"
@@ -102,12 +122,22 @@ function App() {
                 element={<FacebookCallback />}
               />
               <Route
-                path="/auth/register"
+                path="/auth/clerk-callback"
+                element={<ClerkCallback />}
+              />
+              {/* Security Settings (Story 10-5: MFA) */}
+              <Route
+                path="/settings/security"
                 element={
-                  <AuthRedirect>
-                    <Register />
-                  </AuthRedirect>
+                  <ProtectedRoute>
+                    <SecuritySettings />
+                  </ProtectedRoute>
                 }
+              />
+              {/* Clerk uses sub-routes for multi-step signup (verification, etc.) */}
+              <Route
+                path="/auth/register/*"
+                element={<ClerkSignUp />}
               />
               <Route
                 path="/admin"
@@ -246,6 +276,14 @@ function App() {
                 }
               />
               <Route
+                path="/customer/shop"
+                element={
+                  <ProtectedRoute>
+                    <Shop />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/kiosk"
                 element={
                   <ErrorBoundary>
@@ -261,10 +299,21 @@ function App() {
                 path="/booking/payment/failure"
                 element={<PaymentFailure />}
               />
+              {/* PayMongo payment redirect routes (Story 7.6) */}
+              <Route
+                path="/booking/payment-success"
+                element={<PaymentSuccess />}
+              />
+              <Route
+                path="/booking/payment-failed"
+                element={<PaymentFailure />}
+              />
               <Route path="/download-app" element={<DownloadApp />} />
               </Routes>
           </div>
         </Router>
+            </CartProvider>
+          </BranchProvider>
         </BrandingProvider>
       </ToastProvider>
     </AuthProvider>

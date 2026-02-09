@@ -9,14 +9,34 @@ import SystemReports from '../../components/admin/SystemReports'
 import GlobalSettings from '../../components/admin/GlobalSettings'
 import BrandingManagement from '../../components/admin/BrandingManagement'
 import EmailNotificationSettings from '../../components/admin/EmailNotificationSettings'
+import SAEmailMarketing from '../../components/admin/SAEmailMarketing'
 import AdminVoucherManagement from '../../components/admin/VoucherManagement'
+import ProductCatalogManager from '../../components/admin/ProductCatalogManager'
+import RoyaltyManagement from '../../components/admin/RoyaltyManagement'
+import SuperAdminPLDashboard from '../../components/admin/SuperAdminPLDashboard'
+import SuperAdminBalanceSheet from '../../components/admin/SuperAdminBalanceSheet'
+import AuditTrailViewer from '../../components/admin/AuditTrailViewer'
+import PointsConfigPanel from '../../components/admin/PointsConfigPanel'
+import FlashPromotionsPage from './FlashPromotionsPage'
+import WalletConfigPanel from '../../components/admin/WalletConfigPanel'
+import BranchWalletSettingsPanel from '../../components/admin/BranchWalletSettingsPanel'
+import SettlementApprovalQueue from '../../components/admin/SettlementApprovalQueue'
+import WalletOverviewDashboard from '../../components/admin/WalletOverviewDashboard'
+import BranchCustomerAnalytics from '../../components/admin/BranchCustomerAnalytics'
+import DeliveryOrdersManagement from '../../components/admin/DeliveryOrdersManagement'
+import DefaultServicesManager from '../../components/admin/DefaultServicesManager'
+import ShopBannerManagement from '../../components/admin/ShopBannerManagement'
+import ShopConfigPanel from '../../components/admin/ShopConfigPanel'
+// SuperAdminPaymentHistory removed - payments managed in staff dashboard
+// SuperAdminExpenseManagement removed - expenses now managed in P&L dashboard
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { useNavigate } from 'react-router-dom'
 
 function AdminDashboard() {
-  const { user, logout } = useAuth()
+  // Use unified hook that supports both Clerk and legacy auth
+  const { user, logout } = useCurrentUser()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('admin_dashboard_active_tab') || 'overview'
@@ -149,35 +169,168 @@ function AdminDashboard() {
           <div className="text-center text-gray-400">You do not have access to email notification settings.</div>
         )
 
+      case 'email_marketing':
+        return user?.role === 'super_admin' ? (
+          <SAEmailMarketing />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to email marketing.</div>
+        )
+
       case 'vouchers':
         return <AdminVoucherManagement />
+
+      case 'default_services':
+        return <DefaultServicesManager />
+
+      case 'catalog':
+        return user?.role === 'super_admin' ? (
+          <ProductCatalogManager />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to product catalog management.</div>
+        )
+
+      case 'royalty':
+        return user?.role === 'super_admin' ? (
+          <RoyaltyManagement />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to royalty management.</div>
+        )
+
+      case 'pl':
+        return user?.role === 'super_admin' ? (
+          <SuperAdminPLDashboard />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to P&L reports.</div>
+        )
+
+      case 'balance_sheet':
+        return user?.role === 'super_admin' ? (
+          <SuperAdminBalanceSheet />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to balance sheet.</div>
+        )
+
+      case 'audit_trail':
+        return user?.role === 'super_admin' ? (
+          <AuditTrailViewer />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to audit trail.</div>
+        )
+
+      case 'loyalty':
+        return user?.role === 'super_admin' ? (
+          <PointsConfigPanel />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to loyalty configuration.</div>
+        )
+
+      case 'promotions':
+        return user?.role === 'super_admin' ? (
+          <FlashPromotionsPage />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to promotions management.</div>
+        )
+
+      case 'wallet':
+        return user?.role === 'super_admin' ? (
+          <div className="space-y-8">
+            <WalletConfigPanel />
+            <BranchWalletSettingsPanel />
+          </div>
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to wallet configuration.</div>
+        )
+
+      case 'settlements':
+        return user?.role === 'super_admin' ? (
+          <SettlementApprovalQueue />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to settlement management.</div>
+        )
+
+      case 'wallet_analytics':
+        return user?.role === 'super_admin' ? (
+          <WalletOverviewDashboard />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to wallet analytics.</div>
+        )
+
+      case 'customer_analytics':
+        // Available for super_admin (all branches) and branch_admin (their branch only)
+        return (user?.role === 'super_admin' || user?.role === 'branch_admin' || user?.role === 'admin') ? (
+          <BranchCustomerAnalytics branchId={user?.branch_id} />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to customer analytics.</div>
+        )
+
+      case 'delivery_orders':
+        return user?.role === 'super_admin' ? (
+          <DeliveryOrdersManagement />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to delivery orders management.</div>
+        )
+
+      case 'shop_banners':
+        return user?.role === 'super_admin' ? (
+          <ShopBannerManagement />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to shop banner management.</div>
+        )
+
+      case 'shop_config':
+        return user?.role === 'super_admin' ? (
+          <ShopConfigPanel />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to shop configuration.</div>
+        )
 
       default:
         return renderOverview()
     }
   }
 
-  // Tab configuration for admin
-  const baseTabs = [
-    { id: 'overview', label: 'Overview', icon: 'dashboard' },
-    { id: 'branches', label: 'Branches', icon: 'building' },
-    { id: 'users', label: 'Users', icon: 'users' },
-    { id: 'reports', label: 'Reports', icon: 'chart' },
-    { id: 'settings', label: 'Settings', icon: 'settings' }
-  ]
-
+  // Tab configuration for admin - categorized hub-style navigation
   const tabs = user?.role === 'super_admin'
     ? [
-      ...baseTabs.slice(0, 4),
-      { id: 'vouchers', label: 'Vouchers', icon: 'ticket' }, // Added Vouchers tab
-      { id: 'branding', label: 'Branding', icon: 'palette' },
-      { id: 'emails', label: 'Emails', icon: 'mail' },
-      ...baseTabs.slice(4),
+      // Simple tabs (no category - direct navigation)
+      { id: 'overview', label: 'Overview', icon: 'dashboard' },
+      { id: 'branches', label: 'Branches', icon: 'building' },
+      { id: 'users', label: 'Users', icon: 'users' },
+      // Commerce category
+      { id: 'default_services', label: 'Services', icon: 'scissors', category: 'Commerce' },
+      { id: 'catalog', label: 'Catalog', icon: 'package', category: 'Commerce' },
+      { id: 'vouchers', label: 'Vouchers', icon: 'ticket', category: 'Commerce' },
+      { id: 'shop_config', label: 'Shop Config', icon: 'shopping-cart', category: 'Commerce' },
+      { id: 'shop_banners', label: 'Banners', icon: 'image', category: 'Commerce' },
+      { id: 'delivery_orders', label: 'Deliveries', icon: 'truck', category: 'Commerce' },
+      // Finance category
+      { id: 'pl', label: 'P&L', icon: 'pie-chart', category: 'Finance' },
+      { id: 'balance_sheet', label: 'Balance Sheet', icon: 'scale', category: 'Finance' },
+      { id: 'royalty', label: 'Royalty', icon: 'percent', category: 'Finance' },
+      { id: 'settlements', label: 'Settlements', icon: 'banknote', category: 'Finance' },
+      { id: 'wallet', label: 'Wallet', icon: 'wallet', category: 'Finance' },
+      { id: 'wallet_analytics', label: 'Wallet Analytics', icon: 'activity', category: 'Finance' },
+      // Marketing category
+      { id: 'loyalty', label: 'Loyalty', icon: 'star', category: 'Marketing' },
+      { id: 'promotions', label: 'Promos', icon: 'zap', category: 'Marketing' },
+      { id: 'email_marketing', label: 'Email AI', icon: 'brain', category: 'Marketing' },
+      { id: 'branding', label: 'Branding', icon: 'palette', category: 'Marketing' },
+      { id: 'emails', label: 'Emails', icon: 'mail', category: 'Marketing' },
+      { id: 'customer_analytics', label: 'Customers', icon: 'target', category: 'Marketing' },
+      // Reports category
+      { id: 'reports', label: 'Reports', icon: 'chart', category: 'Reports' },
+      { id: 'audit_trail', label: 'Audit Trail', icon: 'history', category: 'Reports' },
+      // Simple tab
+      { id: 'settings', label: 'Settings', icon: 'settings' },
     ]
     : [
-      ...baseTabs.slice(0, 4),
-      { id: 'vouchers', label: 'Vouchers', icon: 'ticket' }, // Added Vouchers tab for regular admins too?
-      ...baseTabs.slice(4),
+      { id: 'overview', label: 'Overview', icon: 'dashboard' },
+      { id: 'branches', label: 'Branches', icon: 'building' },
+      { id: 'users', label: 'Users', icon: 'users' },
+      { id: 'reports', label: 'Reports', icon: 'chart' },
+      { id: 'vouchers', label: 'Vouchers', icon: 'ticket' },
+      { id: 'customer_analytics', label: 'Customers', icon: 'target' },
+      { id: 'settings', label: 'Settings', icon: 'settings' },
     ]
 
   return (

@@ -1,17 +1,6 @@
 import { v } from "convex/values";
-// Force rebuild
 import { mutation, query } from "../_generated/server";
-
-// Helper: get current user by session token
-async function getUserBySession(ctx: any, sessionToken: string) {
-  const session = await ctx.db
-    .query("sessions")
-    .withIndex("by_token", (q: any) => q.eq("token", sessionToken))
-    .first();
-  if (!session || session.expiresAt < Date.now()) return null;
-  const user = await ctx.db.get(session.userId);
-  return user || null;
-}
+import { getAuthenticatedUser, requireSuperAdmin, requireRole } from "../lib/unifiedAuth";
 
 // Validation helpers
 function isValidColor(color: string): boolean {
@@ -147,7 +136,7 @@ export const getGlobalBranding = query({
 
 export const upsertGlobalBranding = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     payload: v.object({
       display_name: v.optional(v.string()),
       primary_color: v.optional(v.string()),
@@ -169,10 +158,8 @@ export const upsertGlobalBranding = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user || user.role !== "super_admin") {
-      throw new Error("Permission denied: Only super admins can update branding");
-    }
+    // Use unified auth (supports both Clerk and legacy)
+    const user = await requireSuperAdmin(ctx, args.sessionToken);
 
     // Validate payload
     const validationErrors = validateBrandingPayload(args.payload);
@@ -222,14 +209,12 @@ export const upsertGlobalBranding = mutation({
 
 export const getBrandingHistory = query({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user || user.role !== "super_admin") {
-      throw new Error("Permission denied: Only super admins can view history");
-    }
+    // Use unified auth (supports both Clerk and legacy)
+    const user = await requireSuperAdmin(ctx, args.sessionToken);
 
     const limit = args.limit || 20;
     const history = await ctx.db
@@ -258,14 +243,12 @@ export const getBrandingHistory = query({
 
 export const rollbackGlobalBranding = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     version: v.number(),
   },
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user || user.role !== "super_admin") {
-      throw new Error("Permission denied: Only super admins can rollback");
-    }
+    // Use unified auth (supports both Clerk and legacy)
+    const user = await requireSuperAdmin(ctx, args.sessionToken);
 
     const current = await ctx.db.query("branding_global").first();
     if (!current) {
@@ -310,12 +293,10 @@ export const rollbackGlobalBranding = mutation({
 });
 
 export const exportBranding = query({
-  args: { sessionToken: v.string() },
+  args: { sessionToken: v.optional(v.string()) }, // Optional for backwards compatibility
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user || user.role !== "super_admin") {
-      throw new Error("Permission denied: Only super admins can export");
-    }
+    // Use unified auth (supports both Clerk and legacy)
+    const user = await requireSuperAdmin(ctx, args.sessionToken);
 
     const branding = await ctx.db.query("branding_global").first();
     return {
@@ -329,14 +310,12 @@ export const exportBranding = query({
 
 export const importBranding = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     config: v.any(),
   },
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user || user.role !== "super_admin") {
-      throw new Error("Permission denied: Only super admins can import");
-    }
+    // Use unified auth (supports both Clerk and legacy)
+    const user = await requireSuperAdmin(ctx, args.sessionToken);
 
     // Validate import format
     if (!args.config.version || !args.config.data) {
@@ -395,31 +374,29 @@ export const importBranding = mutation({
 });
 
 // Upload image mutation - stores file and returns storage ID
+// Allows branch_admin and above to upload images for their branch
 export const generateUploadUrl = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
   },
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user || user.role !== "super_admin") {
-      throw new Error("Permission denied: Only super admins can upload");
-    }
+    // Use unified auth - allow branch_admin and above
+    await requireRole(ctx, "branch_admin", args.sessionToken);
 
     return await ctx.storage.generateUploadUrl();
   },
 });
 
 // Get URL for uploaded file
+// Allows branch_admin and above to get image URLs
 export const getImageUrl = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     storageId: v.string(),
   },
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user || user.role !== "super_admin") {
-      throw new Error("Permission denied");
-    }
+    // Use unified auth - allow branch_admin and above
+    await requireRole(ctx, "branch_admin", args.sessionToken);
 
     const url = await ctx.storage.getUrl(args.storageId as any);
     return url;
@@ -428,7 +405,7 @@ export const getImageUrl = mutation({
 
 export const upsertBranding = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     branch_id: v.id("branches"),
     payload: v.object({
       display_name: v.optional(v.string()),
@@ -451,9 +428,11 @@ export const upsertBranding = mutation({
     }),
   },
   handler: async (ctx, args) => {
-    // AuthZ: only super_admin or branch_admin for the branch
-    const user = await getUserBySession(ctx, args.sessionToken);
+    // Use unified auth (supports both Clerk and legacy)
+    const user = await getAuthenticatedUser(ctx, args.sessionToken);
     if (!user) throw new Error("Unauthorized");
+
+    // AuthZ: only super_admin or branch_admin for the branch
     const isSuperAdmin = user.role === "super_admin";
     const isBranchAdmin = user.role === "branch_admin" && String(user.branch_id) === String(args.branch_id);
     if (!isSuperAdmin && !isBranchAdmin) throw new Error("Permission denied");

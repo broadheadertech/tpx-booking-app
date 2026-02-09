@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw, Grid, List, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw, Grid, List, ChevronLeft, ChevronRight, Download } from 'lucide-react'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import CreateServiceModal from './CreateServiceModal'
@@ -16,6 +16,26 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
 
   // Convex mutations
   const deleteService = useMutation(api.services.services.deleteService)
+  const copyDefaults = useMutation(api.services.defaultServices.copyDefaultsToBranch)
+
+  const handleLoadDefaults = async () => {
+    if (!user?.branch_id) return
+    if (!confirm('This will load the default services into your branch. Continue?')) return
+    setLoading(true)
+    try {
+      const result = await copyDefaults({ branch_id: user.branch_id })
+      if (result.success) {
+        onRefresh()
+      } else {
+        alert(result.message || 'No default services available.')
+      }
+    } catch (err) {
+      console.error('Failed to load default services:', err)
+      alert('Failed to load default services. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredServices = services
     .filter(service =>
@@ -407,11 +427,21 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
           <p className="mt-1 text-sm text-gray-400">
             {searchTerm
               ? 'Try adjusting your search criteria.'
-              : 'Get started by creating your first service.'
+              : 'Get started by creating your first service or load the default services.'
             }
           </p>
           {!searchTerm && (
-            <div className="mt-6">
+            <div className="mt-6 flex items-center justify-center gap-3">
+              {user?.branch_id && (user?.role === 'branch_admin' || user?.role === 'super_admin') && services.length === 0 && (
+                <button
+                  onClick={handleLoadDefaults}
+                  disabled={loading}
+                  className="inline-flex items-center px-4 py-2 border border-[var(--color-primary)] shadow-sm text-sm font-medium rounded-md text-[var(--color-primary)] bg-[var(--color-primary)]/10 hover:bg-[var(--color-primary)]/20 transition-colors disabled:opacity-50"
+                >
+                  <Download className="-ml-1 mr-2 h-4 w-4" />
+                  {loading ? 'Loading...' : 'Load Default Services'}
+                </button>
+              )}
               <button
                 onClick={handleCreate}
                 className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:brightness-110"

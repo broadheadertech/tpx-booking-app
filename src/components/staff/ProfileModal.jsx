@@ -25,11 +25,6 @@ const ProfileModal = ({ isOpen, onClose, user, sessionToken }) => {
     setError(null)
     setSuccess(false)
 
-    if (!sessionToken) {
-      setError('Session expired. Please refresh the page.')
-      return
-    }
-
     // Validate inputs
     if (editedProfile.mobile_number && !/^\+?[0-9\s\-\(\)]{7,}$/.test(editedProfile.mobile_number)) {
       setError('Invalid mobile number format')
@@ -44,7 +39,7 @@ const ProfileModal = ({ isOpen, onClose, user, sessionToken }) => {
     try {
       setLoading(true)
       await updateProfile({
-        sessionToken,
+        sessionToken: sessionToken || undefined, // Pass sessionToken if available (for legacy auth), otherwise undefined (for Clerk auth)
         nickname: editedProfile.nickname || undefined,
         mobile_number: editedProfile.mobile_number || undefined
       })

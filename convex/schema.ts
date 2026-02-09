@@ -1,6 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+// Schema version: 2026-01-29v2 - Story 19.1: Added loyalty_config and loyalty_config_audit tables for dynamic loyalty program settings
 export default defineSchema({
   // Branches table for multi-branch support
   branches: defineTable({
@@ -20,12 +21,33 @@ export default defineSchema({
     late_fee_type: v.optional(v.string()), // 'fixed', 'per_minute', 'per_hour'
     late_fee_grace_period: v.optional(v.number()), // Grace period in minutes
     carousel_images: v.optional(v.array(v.string())), // Array of carousel image URLs
+    // Clerk RBAC field (Story 10.1)
+    clerk_org_id: v.optional(v.string()), // Clerk Organization ID for branch-org mapping
+    // Branch Profile fields (public-facing storefront)
+    slug: v.optional(v.string()), // URL-friendly name: "kapitolyo-branch"
+    description: v.optional(v.string()), // About this branch (shown on public profile)
+    profile_photo: v.optional(v.string()), // Profile picture/logo URL
+    cover_photo: v.optional(v.string()), // Cover/banner image URL
+    social_links: v.optional(
+      v.object({
+        facebook: v.optional(v.string()),
+        instagram: v.optional(v.string()),
+        tiktok: v.optional(v.string()),
+        twitter: v.optional(v.string()), // X/Twitter
+        youtube: v.optional(v.string()),
+        website: v.optional(v.string()),
+      })
+    ),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_branch_code", ["branch_code"])
     .index("by_active", ["is_active"])
-    .index("by_created_at", ["createdAt"]),
+    .index("by_created_at", ["createdAt"])
+    // Clerk RBAC index (Story 10.1)
+    .index("by_clerk_org_id", ["clerk_org_id"])
+    // Branch Profile index
+    .index("by_slug", ["slug"]),
 
   // Branding / Whitelabel settings per branch
   branding: defineTable({
@@ -96,6 +118,98 @@ export default defineSchema({
     .index("by_version", ["version"])
     .index("by_created_at", ["createdAt"]),
 
+  // Branch Posts - Social-style posts by barbers and admins for branch profiles
+  branch_posts: defineTable({
+    // Core relationship
+    branch_id: v.id("branches"),
+    author_id: v.id("users"),
+    author_type: v.union(
+      v.literal("barber"),
+      v.literal("branch_admin"),
+      v.literal("super_admin")
+    ),
+
+    // Content
+    post_type: v.union(
+      v.literal("showcase"), // Work photos/videos
+      v.literal("promo"), // Promotional offers
+      v.literal("availability"), // Open slots announcement
+      v.literal("announcement"), // General news
+      v.literal("tip"), // Hair care tips
+      v.literal("vacation") // Vacation/closure notice
+    ),
+    content: v.string(),
+    images: v.optional(v.array(v.string())), // Array of image URLs
+
+    // Vacation/closure date range (for vacation post type)
+    vacation_start: v.optional(v.number()), // Start timestamp
+    vacation_end: v.optional(v.number()), // End timestamp
+
+    // BT3: Shoppable Posts - Product tagging
+    tagged_products: v.optional(v.array(v.object({
+      product_id: v.id("products"),
+      position: v.optional(v.object({  // Position on image (for tap-to-shop)
+        x: v.number(),  // 0-100 percentage
+        y: v.number(),  // 0-100 percentage
+      })),
+      note: v.optional(v.string()),  // "Used for styling" etc.
+    }))),
+    is_shoppable: v.optional(v.boolean()),  // Quick filter flag
+
+    // Moderation
+    status: v.union(
+      v.literal("pending"), // Awaiting approval
+      v.literal("published"), // Live
+      v.literal("archived"), // Hidden but not deleted
+      v.literal("rejected") // Rejected by admin
+    ),
+    rejection_reason: v.optional(v.string()),
+
+    // Features
+    pinned: v.optional(v.boolean()), // Pin to top of feed
+    expires_at: v.optional(v.number()), // For time-limited promos
+
+    // Engagement tracking
+    view_count: v.optional(v.number()),
+    likes_count: v.optional(v.number()),
+    // BT3: Product engagement
+    product_clicks: v.optional(v.number()),  // Times products were clicked
+    product_purchases: v.optional(v.number()),  // Purchases from this post
+
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_branch_status", ["branch_id", "status"])
+    .index("by_author", ["author_id"])
+    .index("by_branch_type", ["branch_id", "post_type"])
+    .index("by_branch_pinned", ["branch_id", "pinned"])
+    .index("by_created_at", ["createdAt"])
+    .index("by_branch_shoppable", ["branch_id", "is_shoppable"]),
+
+  // BT3: Post-Product Purchase Tracking
+  post_product_purchases: defineTable({
+    post_id: v.id("branch_posts"),
+    product_id: v.id("products"),
+    user_id: v.optional(v.id("users")),  // May be guest purchase
+    transaction_id: v.optional(v.id("transactions")),
+    quantity: v.number(),
+    unit_price: v.number(),
+    total_price: v.number(),
+    source: v.union(
+      v.literal("feed_quick_buy"),    // Quick purchase from feed
+      v.literal("feed_add_to_cart"),  // Added to cart from feed
+      v.literal("product_modal")       // From product detail modal
+    ),
+    createdAt: v.number(),
+  })
+    .index("by_post", ["post_id"])
+    .index("by_product", ["product_id"])
+    .index("by_user", ["user_id"])
+    .index("by_transaction", ["transaction_id"])
+    .index("by_created", ["createdAt"]),
+
   // Users table for authentication
   users: defineTable({
     username: v.string(),
@@ -111,18 +225,85 @@ export default defineSchema({
       v.literal("admin"),
       v.literal("barber"),
       v.literal("super_admin"),
-      v.literal("branch_admin")
+      v.literal("branch_admin"),
+      v.literal("admin_staff") // Clerk RBAC: Cross-branch operations role
     ),
     branch_id: v.optional(v.id("branches")), // Optional for super_admin and customers, required for staff/barber/admin/branch_admin
     is_active: v.boolean(),
+    is_guest: v.optional(v.boolean()), // true for guest bookings (anonymous customers)
     avatar: v.optional(v.string()),
     bio: v.optional(v.string()),
     skills: v.array(v.string()),
-    page_access: v.optional(v.array(v.string())), // Array of page keys the user can access
+    page_access: v.optional(v.array(v.string())), // Array of page keys the user can access (legacy)
+
+    // ============================================================================
+    // CLERK AUTHENTICATION & RBAC FIELDS (Story 10.1)
+    // ============================================================================
+    clerk_user_id: v.optional(v.string()), // Clerk user ID for SSO linkage
+    clerk_org_ids: v.optional(v.array(v.string())), // Clerk Organization IDs for multi-org support
+    migration_status: v.optional(v.union(
+      v.literal("pending"),    // User not yet migrated to Clerk
+      v.literal("invited"),    // Invitation sent, awaiting Clerk signup
+      v.literal("completed"),  // Successfully migrated to Clerk
+      v.literal("failed")      // Migration attempt failed
+    )),
+    legacy_password_hash: v.optional(v.string()), // Preserved hash for rollback scenarios
+
+    // page_access_v2: Object-based permissions (30 pages × 5 actions)
+    // Always accessible pages (bypass check): overview, custom_bookings, walkins
+    page_access_v2: v.optional(v.object({
+      // Staff Dashboard Pages (25)
+      overview: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      reports: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      bookings: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      custom_bookings: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      calendar: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      walkins: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      pos: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      barbers: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      users: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      services: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      customers: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      products: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      order_products: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      vouchers: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      payroll: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      cash_advances: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      royalty: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      pl: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      balance_sheet: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      payments: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      payment_history: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      attendance: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      events: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      notifications: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      email_marketing: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      // Admin Dashboard Pages (5)
+      branches: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      catalog: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      branding: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      emails: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      settings: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+    })),
+    // ============================================================================
+
+    // VIP Tier (Customer Experience)
+    // References the tiers table - customers progress through Bronze→Silver→Gold→Platinum
+    current_tier_id: v.optional(v.id("tiers")), // null = Bronze (default), set on first points earn
+
     isVerified: v.boolean(),
     // Password reset fields
     password_reset_token: v.optional(v.string()),
     password_reset_expires: v.optional(v.number()),
+
+    // ============================================================================
+    // CUSTOMER ANALYTICS FIELDS (AI Email Marketing - Epic 27)
+    // ============================================================================
+    // These fields are used for RFM segmentation, churn risk analysis, and AI campaigns
+    lastBookingDate: v.optional(v.number()), // Timestamp of last booking/visit
+    totalBookings: v.optional(v.number()),   // Total number of bookings
+    totalSpent: v.optional(v.number()),      // Total amount spent (in centavos)
+
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -131,7 +312,10 @@ export default defineSchema({
     .index("by_created_at", ["createdAt"])
     .index("by_branch", ["branch_id"])
     .index("by_role", ["role"])
-    .index("by_branch_role", ["branch_id", "role"]),
+    .index("by_branch_role", ["branch_id", "role"])
+    // Clerk RBAC indexes (Story 10.1)
+    .index("by_clerk_user_id", ["clerk_user_id"])
+    .index("by_migration_status", ["migration_status"]),
 
   // Barbers table
   barbers: defineTable({
@@ -145,6 +329,7 @@ export default defineSchema({
     phone: v.optional(v.string()),
     avatar: v.optional(v.string()),
     avatarStorageId: v.optional(v.id("_storage")),
+    coverPhotoStorageId: v.optional(v.id("_storage")),
     bio: v.optional(v.string()),
     experience: v.string(),
     rating: v.number(),
@@ -214,6 +399,43 @@ export default defineSchema({
     // Custom booking feature - allows barbers to have a custom form instead of regular booking
     custom_booking_enabled: v.optional(v.boolean()),
     custom_booking_form_id: v.optional(v.id("custom_booking_forms")),
+
+    // ============================================================================
+    // BARBER MATCHER PROFILE (Help Me Choose Feature - Phase 3)
+    // ============================================================================
+    // Style vibes the barber excels at (used for matching)
+    style_vibes: v.optional(v.array(v.union(
+      v.literal("classic"),    // Traditional, clean cuts
+      v.literal("trendy"),     // Modern, fashion-forward
+      v.literal("edgy"),       // Bold, experimental
+      v.literal("clean")       // Minimalist, precise
+    ))),
+    // Conversation style during cuts
+    conversation_style: v.optional(v.union(
+      v.literal("chatty"),     // Loves to talk, social
+      v.literal("balanced"),   // Responsive but not pushy
+      v.literal("quiet")       // Focused, minimal small talk
+    )),
+    // Work pace/speed
+    work_speed: v.optional(v.union(
+      v.literal("fast"),       // Efficient, quick service
+      v.literal("moderate"),   // Standard pace
+      v.literal("detailed")    // Takes time for precision
+    )),
+    // Price positioning
+    price_tier: v.optional(v.union(
+      v.literal("budget"),     // Entry-level pricing
+      v.literal("mid"),        // Average market rate
+      v.literal("premium")     // Top-tier pricing
+    )),
+    // Showcase images for matcher swipe (best work samples)
+    showcase_images: v.optional(v.array(v.string())),
+    // Barber's own tagline/intro
+    matcher_tagline: v.optional(v.string()),
+
+    // Weekly earnings goal (set by barber)
+    weekly_goal: v.optional(v.number()),
+
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -260,8 +482,22 @@ export default defineSchema({
       v.literal("cancelled")
     ),
     payment_status: v.optional(
-      v.union(v.literal("unpaid"), v.literal("paid"), v.literal("refunded"))
+      v.union(
+        v.literal("unpaid"),
+        v.literal("paid"),
+        v.literal("partial"),     // Pay Later: convenience fee paid, balance due at branch
+        v.literal("refunded")
+      )
     ),
+    // PayMongo payment integration fields (Story 7.1)
+    paymongo_link_id: v.optional(v.string()),      // PayMongo payment link ID
+    paymongo_payment_id: v.optional(v.string()),   // PayMongo payment ID
+    convenience_fee_paid: v.optional(v.number()),  // Amount of convenience fee paid for Pay Later
+    payment_method: v.optional(v.string()),        // Payment method: "paymongo", "wallet", "cash", "combo"
+    // Combo payment fields (wallet + PayMongo)
+    is_combo_payment: v.optional(v.boolean()),     // True if paid with wallet + PayMongo
+    wallet_portion: v.optional(v.number()),        // Amount paid from wallet
+    wallet_debit_failed: v.optional(v.boolean()),  // True if wallet debit failed after PayMongo success
     price: v.number(),
     voucher_id: v.optional(v.id("vouchers")), // Link to voucher if used
     discount_amount: v.optional(v.number()), // Discount applied
@@ -273,6 +509,7 @@ export default defineSchema({
     check_in_reminder_sent: v.optional(v.boolean()),
     createdAt: v.number(),
     updatedAt: v.number(),
+    completed_at: v.optional(v.number()), // Timestamp when booking was marked complete
   })
     .index("by_customer", ["customer"])
     .index("by_barber", ["barber"])
@@ -282,7 +519,8 @@ export default defineSchema({
     .index("by_booking_code", ["booking_code"])
     .index("by_branch", ["branch_id"])
     .index("by_date_reminder", ["date", "reminder_sent"])
-    .index("by_barber_date", ["barber", "date"]),
+    .index("by_barber_date", ["barber", "date"])
+    .index("by_paymongo_link", ["paymongo_link_id"]),
 
   // Walk-ins table - for customers who come without booking
   walkIns: defineTable({
@@ -442,8 +680,9 @@ export default defineSchema({
     .index("by_branch_read", ["branch_id", "is_read"])
     .index("by_recipient_archived", ["recipient_id", "is_archived"]),
 
-  // Products table
+  // Products table (Branch-level inventory)
   products: defineTable({
+    branch_id: v.id("branches"), // Which branch owns this product
     name: v.string(),
     description: v.string(),
     price: v.number(),
@@ -470,10 +709,13 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   })
+    .index("by_branch", ["branch_id"])
     .index("by_category", ["category"])
     .index("by_sku", ["sku"])
     .index("by_status", ["status"])
-    .index("by_stock", ["stock"]),
+    .index("by_stock", ["stock"])
+    .index("by_branch_category", ["branch_id", "category"])
+    .index("by_branch_status", ["branch_id", "status"]),
 
   // POS Transactions table
   transactions: defineTable({
@@ -484,19 +726,21 @@ export default defineSchema({
     customer_phone: v.optional(v.string()), // For walk-in customers
     customer_email: v.optional(v.string()), // For walk-in customers
     customer_address: v.optional(v.string()), // For walk-in customers
-    barber: v.id("barbers"),
-    services: v.array(
-      v.object({
-        service_id: v.id("services"),
-        service_name: v.string(),
-        price: v.number(),
-        quantity: v.number(),
-      })
+    barber: v.optional(v.id("barbers")), // Optional for retail-only transactions
+    services: v.optional(
+      v.array(
+        v.object({
+          service_id: v.id("services"),
+          service_name: v.string(),
+          price: v.number(),
+          quantity: v.number(),
+        })
+      )
     ),
     products: v.optional(
       v.array(
         v.object({
-          product_id: v.id("products"),
+          product_id: v.union(v.id("products"), v.id("productCatalog")), // Support both branch and catalog products
           product_name: v.string(),
           price: v.number(),
           quantity: v.number(),
@@ -514,7 +758,9 @@ export default defineSchema({
       v.literal("cash"),
       v.literal("card"),
       v.literal("digital_wallet"),
-      v.literal("bank_transfer")
+      v.literal("bank_transfer"),
+      v.literal("wallet"), // Customer wallet payment
+      v.literal("combo") // Combination of points, wallet, and cash
     ),
     payment_status: v.union(
       v.literal("pending"),
@@ -522,9 +768,41 @@ export default defineSchema({
       v.literal("failed"),
       v.literal("refunded")
     ),
+    transaction_type: v.optional(
+      v.union(
+        v.literal("service"),
+        v.literal("retail")
+      )
+    ), // "service" = barber+services required, "retail" = products only
     notes: v.optional(v.string()),
     cash_received: v.optional(v.number()), // Amount of cash received for cash payments
     change_amount: v.optional(v.number()), // Change given back for cash payments
+    // Combo payment fields (for payment_method = "combo")
+    points_redeemed: v.optional(v.number()), // Integer ×100 format (e.g., 20000 = 200 pts = ₱200)
+    wallet_used: v.optional(v.number()), // Wallet amount deducted (e.g., 150 = ₱150)
+    cash_collected: v.optional(v.number()), // Cash portion collected (e.g., 150 = ₱150)
+    // Delivery fields
+    fulfillment_type: v.optional(v.literal("delivery")), // Delivery only
+    delivery_address: v.optional(v.object({
+      street_address: v.string(),
+      barangay: v.optional(v.string()),
+      city: v.string(),
+      province: v.string(),
+      zip_code: v.string(),
+      landmark: v.optional(v.string()),
+      contact_name: v.string(),
+      contact_phone: v.string(),
+      notes: v.optional(v.string()),
+    })),
+    delivery_fee: v.optional(v.number()), // Delivery fee in pesos
+    delivery_status: v.optional(v.union(
+      v.literal("pending"),
+      v.literal("preparing"),
+      v.literal("out_for_delivery"),
+      v.literal("delivered"),
+      v.literal("cancelled")
+    )),
+    estimated_delivery: v.optional(v.string()), // e.g., "30-45 mins" or timestamp
     receipt_number: v.string(),
     processed_by: v.id("users"), // Staff member who processed the transaction
     createdAt: v.number(),
@@ -565,7 +843,7 @@ export default defineSchema({
         products: v.optional(
           v.array(
             v.object({
-              product_id: v.id("products"),
+              product_id: v.union(v.id("products"), v.id("productCatalog")), // Support both branch and catalog products
               product_name: v.string(),
               price: v.number(),
               quantity: v.number(),
@@ -635,7 +913,11 @@ export default defineSchema({
     payout_day: v.number(), // Day of week (0-6) for weekly, day of month (1-31) for monthly
     tax_rate: v.optional(v.number()), // Tax percentage to deduct
     include_booking_fee: v.optional(v.boolean()), // Whether to include booking fees in payroll
+    booking_fee_percentage: v.optional(v.number()), // Percentage of booking fee for barber (default 100%)
     include_late_fee: v.optional(v.boolean()), // Whether to include late fees in payroll
+    late_fee_percentage: v.optional(v.number()), // Percentage of late fee for barber (default 100%)
+    include_convenience_fee: v.optional(v.boolean()), // Whether to include convenience fees in payroll
+    convenience_fee_percentage: v.optional(v.number()), // Percentage of convenience fee for barber (default 100%)
     is_active: v.boolean(),
     created_by: v.id("users"),
     createdAt: v.number(),
@@ -688,6 +970,10 @@ export default defineSchema({
     calculated_by: v.optional(v.id("users")), // Who calculated the payroll
     paid_by: v.optional(v.id("users")), // Who processed payments
     notes: v.optional(v.string()),
+    // Lock feature - prevents recalculation after finalization
+    is_locked: v.optional(v.boolean()), // Whether period is locked from changes
+    locked_at: v.optional(v.number()), // When period was locked
+    locked_by: v.optional(v.id("users")), // Who locked the period
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -762,17 +1048,44 @@ export default defineSchema({
       )
     ),
 
-    // Fee earnings breakdown
+    // Fee earnings breakdown (total amounts collected)
     total_booking_fees: v.optional(v.number()),
     total_late_fees: v.optional(v.number()),
+    total_convenience_fees: v.optional(v.number()),
+    // Fee percentages for barber
+    booking_fee_percentage: v.optional(v.number()),
+    late_fee_percentage: v.optional(v.number()),
+    convenience_fee_percentage: v.optional(v.number()),
+    // Barber's calculated share of fees
+    barber_booking_fees: v.optional(v.number()),
+    barber_late_fees: v.optional(v.number()),
+    barber_convenience_fees: v.optional(v.number()),
 
     // Deductions
     tax_deduction: v.number(), // Tax deducted
+    cash_advance_deduction: v.optional(v.number()), // Cash advance repayment deduction
+    cash_advance_details: v.optional(
+      v.array(
+        v.object({
+          id: v.id("cashAdvances"),
+          amount: v.number(),
+          requested_at: v.number(),
+          paid_out_at: v.optional(v.number()),
+          // Installment tracking fields
+          installment_amount: v.optional(v.number()), // Amount to deduct per installment
+          repayment_terms: v.optional(v.number()), // Total number of installments (1, 2, or 3)
+          installments_paid: v.optional(v.number()), // Number of installments already paid
+          remaining_installments: v.optional(v.number()), // Remaining installments
+          remaining_amount: v.optional(v.number()), // Remaining balance
+          total_repaid: v.optional(v.number()), // Total amount already repaid
+        })
+      )
+    ), // Details of advances being deducted
     other_deductions: v.number(), // Other deductions (insurance, etc.)
-    total_deductions: v.number(), // Total deductions
+    total_deductions: v.number(), // Total deductions (including cash advance)
 
     // Final amounts
-    net_pay: v.number(), // Final amount to be paid
+    net_pay: v.number(), // Final amount to be paid (after all deductions)
 
     // Payment tracking
     payment_method: v.optional(
@@ -948,7 +1261,11 @@ export default defineSchema({
   wallets: defineTable({
     user_id: v.id("users"),
     balance: v.number(),
+    bonus_balance: v.optional(v.number()), // Bonus from top-ups (e.g., ₱500→₱550 gives ₱50 bonus)
     currency: v.optional(v.string()),
+    // Story 23.4: Monthly bonus cap tracking
+    bonus_topup_this_month: v.optional(v.number()), // Cumulative top-up amount that received bonus this month (pesos)
+    bonus_month_started: v.optional(v.number()),    // Timestamp when current bonus month started
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_user", ["user_id"]),
@@ -962,6 +1279,7 @@ export default defineSchema({
       v.literal("refund")
     ),
     amount: v.number(),
+    bonus_amount: v.optional(v.number()), // Bonus amount given for this top-up (in pesos)
     status: v.union(
       v.literal("pending"),
       v.literal("completed"),
@@ -980,6 +1298,172 @@ export default defineSchema({
     .index("by_source", ["source_id"])
     .index("by_payment", ["payment_id"])
     .index("by_status", ["status"]),
+
+  // ============================================================================
+  // LOYALTY POINTS SYSTEM (Customer Experience)
+  // ============================================================================
+
+  // Points ledger - User balances and lifetime tracking (universal across branches)
+  // Integer ×100 storage pattern: 4575 = 45.75 points (avoids floating-point precision errors)
+  points_ledger: defineTable({
+    user_id: v.id("users"),
+    current_balance: v.number(), // Integer ×100 (4575 = 45.75 pts)
+    lifetime_earned: v.number(), // Integer ×100 - never decreases (used for tier promotion)
+    lifetime_redeemed: v.number(), // Integer ×100
+    last_activity_at: v.number(), // Unix timestamp (Date.now())
+  }).index("by_user", ["user_id"]),
+
+  // Points transactions - Full audit trail for all points operations
+  // Immutable records (no updates, only inserts) for complete audit history
+  points_transactions: defineTable({
+    user_id: v.id("users"),
+    branch_id: v.optional(v.id("branches")), // Optional for universal operations
+    type: v.union(
+      v.literal("earn"),
+      v.literal("redeem"),
+      v.literal("expire"),
+      v.literal("adjust")
+    ),
+    amount: v.number(), // Integer ×100 (positive for earn, negative for redeem)
+    balance_after: v.number(), // Integer ×100 - snapshot after transaction
+    source_type: v.union(
+      v.literal("payment"), // Points earned from service payment
+      v.literal("wallet_payment"), // Points earned from wallet (1.5x)
+      v.literal("redemption"), // Points redeemed for reward
+      v.literal("top_up_bonus"), // Bonus points from wallet top-up
+      v.literal("manual_adjustment"), // Admin adjustment
+      v.literal("expiry") // System expiry
+    ),
+    source_id: v.optional(v.string()), // ID of payment/redemption/etc
+    notes: v.optional(v.string()),
+    created_at: v.number(), // Unix timestamp
+  })
+    .index("by_user", ["user_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_type", ["type"])
+    .index("by_created_at", ["created_at"])
+    .index("by_user_created", ["user_id", "created_at"]),
+
+  // ============================================================================
+  // CUSTOMER-BRANCH ACTIVITY TRACKING (Marketing, Promotions, Churn)
+  // ============================================================================
+
+  // Tracks customer activity per branch for marketing and churn prevention
+  // Pre-computed metrics updated after each booking and via daily cron job
+  // Status thresholds: active (0-12 days), at_risk (13-30 days), churned (31+ days)
+  customer_branch_activity: defineTable({
+    // Core relationship
+    customer_id: v.id("users"),
+    branch_id: v.id("branches"),
+
+    // Activity metrics
+    first_visit_date: v.number(),        // Timestamp of first completed booking
+    last_visit_date: v.number(),         // Timestamp of last completed booking
+    total_bookings: v.number(),          // Completed bookings count
+    total_spent: v.number(),             // Total revenue from customer (pesos)
+
+    // Engagement status
+    // - new: Registered but no completed booking yet
+    // - active: Visited within 12 days (normal haircut cycle)
+    // - at_risk: 13-30 days since last visit (overdue, needs reminder)
+    // - churned: 31+ days since last visit (lost customer)
+    // - win_back: Was churned, has now returned
+    status: v.union(
+      v.literal("new"),
+      v.literal("active"),
+      v.literal("at_risk"),
+      v.literal("churned"),
+      v.literal("win_back")
+    ),
+    days_since_last_visit: v.optional(v.number()),
+
+    // Marketing preferences
+    opted_in_marketing: v.boolean(),
+    preferred_contact: v.optional(v.union(
+      v.literal("sms"),
+      v.literal("email"),
+      v.literal("push"),
+      v.literal("none")
+    )),
+
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_customer", ["customer_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_customer_branch", ["customer_id", "branch_id"])
+    .index("by_branch_status", ["branch_id", "status"])
+    .index("by_branch_last_visit", ["branch_id", "last_visit_date"])
+    .index("by_branch_total_spent", ["branch_id", "total_spent"]),
+
+  // ============================================================================
+  // VIP TIER SYSTEM (Customer Experience)
+  // ============================================================================
+
+  // VIP Tiers - Bronze, Silver, Gold, Platinum
+  // Progression based on lifetime_earned points (not current balance)
+  tiers: defineTable({
+    name: v.string(), // "Bronze", "Silver", "Gold", "Platinum"
+    threshold: v.number(), // Minimum lifetime_earned points (×100 format): 0, 500000, 1500000, 5000000
+    display_order: v.number(), // 1, 2, 3, 4 for sorting
+    icon: v.string(), // Emoji or icon identifier
+    color: v.string(), // Hex color for badge display
+    is_active: v.optional(v.boolean()), // Allow disabling tiers
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_threshold", ["threshold"])
+    .index("by_name", ["name"])
+    .index("by_display_order", ["display_order"]),
+
+  // Tier Benefits - Perks for each tier level
+  tier_benefits: defineTable({
+    tier_id: v.id("tiers"),
+    benefit_type: v.union(
+      v.literal("points_multiplier"), // e.g., 1.05 for 5% bonus
+      v.literal("priority_booking"), // Access to priority slots
+      v.literal("free_service"), // Complimentary services
+      v.literal("discount"), // Percentage discount
+      v.literal("early_access"), // Early access to promos
+      v.literal("vip_line"), // Dedicated service line
+      v.literal("exclusive_event") // Member-only events
+    ),
+    benefit_value: v.number(), // Multiplier or percentage (e.g., 1.05 for 5% bonus)
+    description: v.string(), // Human-readable description
+    is_active: v.optional(v.boolean()),
+    created_at: v.number(),
+  })
+    .index("by_tier", ["tier_id"])
+    .index("by_type", ["benefit_type"]),
+
+  // Loyalty Configuration - Dynamic settings for loyalty program economics
+  // Super Admin configurable values that control points earning, multipliers, etc.
+  loyalty_config: defineTable({
+    config_key: v.string(), // Unique identifier: "base_earning_rate", "wallet_bonus_multiplier", etc.
+    config_value: v.string(), // JSON-encoded value for flexibility
+    config_type: v.union(
+      v.literal("number"),
+      v.literal("boolean"),
+      v.literal("string"),
+      v.literal("json")
+    ),
+    description: v.string(), // Human-readable description for admin UI
+    updated_at: v.number(),
+    updated_by: v.optional(v.id("users")), // Admin who last modified
+  }).index("by_key", ["config_key"]),
+
+  // Loyalty Config Audit Log - Track all configuration changes
+  loyalty_config_audit: defineTable({
+    config_key: v.string(),
+    old_value: v.optional(v.string()),
+    new_value: v.string(),
+    changed_by: v.id("users"),
+    changed_at: v.number(),
+    change_reason: v.optional(v.string()),
+  })
+    .index("by_key", ["config_key"])
+    .index("by_changed_at", ["changed_at"]),
 
   // Barber portfolio for Instagram-like gallery posts
   barber_portfolio: defineTable({
@@ -1018,6 +1502,16 @@ export default defineSchema({
     .index("by_barber", ["barber_id"])
     .index("by_type", ["achievement_type"])
     .index("by_created_at", ["createdAt"]),
+
+  // Post likes tracking (for branch_posts)
+  post_likes: defineTable({
+    post_id: v.id("branch_posts"),
+    user_id: v.id("users"),
+    created_at: v.number(),
+  })
+    .index("by_post", ["post_id"])
+    .index("by_user", ["user_id"])
+    .index("by_post_user", ["post_id", "user_id"]),
 
   // Email templates for customizable email content
   email_templates: defineTable({
@@ -1116,4 +1610,1430 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_booking", ["booking_id"])
     .index("by_created_at", ["createdAt"]),
+
+  // Time attendance for barber clock in/out tracking
+  timeAttendance: defineTable({
+    barber_id: v.id("barbers"),
+    branch_id: v.id("branches"),
+    clock_in: v.number(), // Unix timestamp (ms)
+    clock_out: v.optional(v.number()), // null until clocked out
+    status: v.optional(v.string()), // "pending_in" | "approved_in" | "pending_out" | "approved_out" | "rejected"
+    reviewed_by: v.optional(v.string()), // staff user name who approved/rejected
+    reviewed_at: v.optional(v.number()), // timestamp of approval/rejection
+    created_at: v.number(),
+  })
+    .index("by_barber", ["barber_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_date", ["clock_in"])
+    .index("by_barber_date", ["barber_id", "clock_in"])
+    .index("by_branch_status", ["branch_id", "status"]),
+
+  // Default service templates managed by Super Admin
+  // Copied to new branches on creation
+  defaultServices: defineTable({
+    name: v.string(),
+    description: v.string(),
+    price: v.number(),
+    duration_minutes: v.number(),
+    category: v.string(),
+    is_active: v.boolean(),
+    hide_price: v.optional(v.boolean()),
+    image: v.optional(v.string()),
+    sort_order: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_category", ["category"])
+    .index("by_active", ["is_active"]),
+
+  // Central product catalog managed by Super Admin (Central Warehouse Inventory)
+  productCatalog: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    price: v.number(), // Whole pesos (e.g., 500 = ₱500) - this is the SALE price when discount is active
+    original_price: v.optional(v.number()), // Original price before discount (shown with strikethrough)
+    cost: v.optional(v.number()), // Cost per unit for profit tracking
+    category: v.string(),
+    brand: v.optional(v.string()), // Product brand
+    sku: v.optional(v.string()), // Stock Keeping Unit
+    image_url: v.optional(v.string()), // External URL
+    image_storage_id: v.optional(v.id("_storage")), // Convex storage ID
+    // Inventory fields
+    stock: v.number(), // Current total stock in central warehouse
+    minStock: v.number(), // Low stock threshold
+    is_active: v.boolean(),
+    price_enforced: v.boolean(), // If true, branches cannot change price
+    // Promotional/Discount fields
+    discount_percent: v.optional(v.number()), // Discount percentage (e.g., 37 for 37% off)
+    promo_label: v.optional(v.string()), // e.g., "Flash Sale", "Hot Deal", "Limited"
+    promo_start: v.optional(v.number()), // Promo start timestamp
+    promo_end: v.optional(v.number()), // Promo end timestamp
+    promo_quantity_limit: v.optional(v.number()), // Max items at promo price (e.g., "Only 50 items!")
+    promo_quantity_sold: v.optional(v.number()), // Tracks how many sold at promo price
+    is_featured: v.optional(v.boolean()), // Featured in flash sales
+    created_at: v.number(),
+    created_by: v.id("users"),
+  })
+    .index("by_category", ["category"])
+    .index("by_is_active", ["is_active"])
+    .index("by_stock", ["stock"])
+    .index("by_sku", ["sku"])
+    .index("by_featured", ["is_featured"]),
+
+  // Inventory batches for FIFO tracking (First In, First Out)
+  inventoryBatches: defineTable({
+    product_id: v.string(), // ID from either productCatalog or products table
+    product_type: v.union(v.literal("central"), v.literal("branch")), // Which table the product is from
+    branch_id: v.optional(v.id("branches")), // null for central warehouse, set for branch inventory
+    batch_number: v.string(), // e.g., "BATCH-2026-001"
+    quantity: v.number(), // Remaining quantity in this batch
+    initial_quantity: v.number(), // Original quantity when received
+    received_at: v.number(), // When batch was received (Unix timestamp for FIFO sorting)
+    expiry_date: v.optional(v.number()), // Optional expiry date tracking
+    cost_per_unit: v.optional(v.number()), // Batch-specific cost
+    supplier: v.optional(v.string()), // Supplier name
+    notes: v.optional(v.string()),
+    created_by: v.id("users"),
+    created_at: v.number(),
+  })
+    .index("by_product", ["product_id"])
+    .index("by_product_type", ["product_type"])
+    .index("by_branch", ["branch_id"])
+    .index("by_received_at", ["received_at"])
+    .index("by_product_branch", ["product_id", "branch_id"]),
+
+  // Product orders from branches to central warehouse
+  productOrders: defineTable({
+    order_number: v.string(), // e.g., "PO-2026-0001"
+    branch_id: v.id("branches"), // Requesting branch
+    requested_by: v.id("users"), // Branch admin who requested
+    status: v.union(
+      v.literal("pending"), // Awaiting super admin review
+      v.literal("approved"), // Approved, being prepared
+      v.literal("shipped"), // In transit to branch
+      v.literal("received"), // Branch confirmed receipt
+      v.literal("rejected"), // Super admin rejected
+      v.literal("cancelled") // Branch cancelled
+    ),
+    items: v.array(
+      v.object({
+        catalog_product_id: v.id("productCatalog"),
+        product_name: v.string(), // Denormalized for history
+        quantity_requested: v.number(),
+        quantity_approved: v.optional(v.number()),
+        unit_price: v.number(), // Price at time of order
+      })
+    ),
+    total_amount: v.number(),
+    notes: v.optional(v.string()),
+    rejection_reason: v.optional(v.string()),
+    // Timestamps
+    created_at: v.number(),
+    approved_at: v.optional(v.number()),
+    approved_by: v.optional(v.id("users")),
+    shipped_at: v.optional(v.number()),
+    received_at: v.optional(v.number()),
+
+    // Payment tracking (separate from shipping)
+    is_paid: v.optional(v.boolean()),
+    paid_at: v.optional(v.number()),
+    paid_by: v.optional(v.id("users")),
+    payment_method: v.optional(v.union(
+      v.literal("cash"),
+      v.literal("bank_transfer"),
+      v.literal("check"),
+      v.literal("gcash"),
+      v.literal("maya")
+    )),
+    payment_reference: v.optional(v.string()),
+    payment_notes: v.optional(v.string()),
+
+    // Manual order flag (created by super admin, not branch request)
+    is_manual_order: v.optional(v.boolean()),
+    created_by_admin: v.optional(v.id("users")),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"])
+    .index("by_created_at", ["created_at"])
+    .index("by_order_number", ["order_number"])
+    .index("by_paid", ["is_paid"]),
+
+  // Branch expenses for P&L tracking
+  expenses: defineTable({
+    branch_id: v.id("branches"),
+    expense_type: v.union(
+      v.literal("fixed"),      // Recurring monthly costs
+      v.literal("operating")   // Variable costs
+    ),
+    category: v.union(
+      // Fixed expenses
+      v.literal("rent"),
+      v.literal("utilities"),
+      v.literal("insurance"),
+      v.literal("salaries"),      // Fixed salaries (non-commission)
+      v.literal("subscriptions"), // Software, services
+      // Operating expenses
+      v.literal("supplies"),
+      v.literal("maintenance"),
+      v.literal("marketing"),
+      v.literal("equipment"),
+      v.literal("transportation"),
+      v.literal("miscellaneous")
+    ),
+    description: v.string(),
+    amount: v.number(),
+    expense_date: v.number(),  // Date of expense (Unix timestamp)
+    receipt_url: v.optional(v.string()),
+    receipt_storage_id: v.optional(v.id("_storage")),
+    notes: v.optional(v.string()),
+    is_recurring: v.boolean(),
+    recurring_day: v.optional(v.number()), // Day of month for recurring
+    // Double-entry accounting: link expense to asset account for automatic balance sheet adjustment
+    paid_from_asset_id: v.optional(v.id("assets")), // Which asset (cash/bank) paid for this expense
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_category", ["category"])
+    .index("by_expense_type", ["expense_type"])
+    .index("by_expense_date", ["expense_date"])
+    .index("by_branch_date", ["branch_id", "expense_date"]),
+
+  // Branch Revenue table - Track manual revenue for branches
+  branchRevenue: defineTable({
+    branch_id: v.id("branches"),
+    category: v.union(
+      v.literal("service_tips"),       // Tips from services
+      v.literal("product_sales"),      // Additional product sales
+      v.literal("event_income"),       // Events, promotions
+      v.literal("gift_card_sales"),    // Gift card sales
+      v.literal("rental_income"),      // Chair rental, space rental
+      v.literal("training_income"),    // Training fees
+      v.literal("other")               // Other revenue
+    ),
+    description: v.string(),
+    amount: v.number(),
+    revenue_date: v.number(),           // Date of revenue
+    notes: v.optional(v.string()),
+    // Payment destination tracking (double-entry: debit cash/asset, credit revenue)
+    received_to_asset_id: v.optional(v.id("assets")), // Specific manual asset
+    received_to_cash: v.optional(v.boolean()), // true = received to cash on hand
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_category", ["category"])
+    .index("by_revenue_date", ["revenue_date"])
+    .index("by_branch_date", ["branch_id", "revenue_date"]),
+
+  // ============================================================================
+  // BALANCE SHEET TABLES
+  // ============================================================================
+
+  // Assets table - Track business assets
+  assets: defineTable({
+    branch_id: v.id("branches"),
+    asset_type: v.union(
+      v.literal("current"),       // Cash, receivables, inventory
+      v.literal("fixed"),         // Equipment, furniture, property
+      v.literal("intangible")     // Software licenses, goodwill
+    ),
+    category: v.union(
+      // Current assets
+      v.literal("cash"),                  // Cash on hand, petty cash
+      v.literal("bank_accounts"),         // Bank balances
+      v.literal("accounts_receivable"),   // Money owed to business
+      v.literal("inventory"),             // Product inventory value
+      v.literal("prepaid_expenses"),      // Prepaid rent, insurance
+      // Fixed assets
+      v.literal("equipment"),             // Barber equipment, chairs
+      v.literal("furniture"),             // Shop furniture
+      v.literal("leasehold_improvements"), // Shop renovations
+      v.literal("vehicles"),              // Business vehicles
+      // Intangible assets
+      v.literal("software"),              // Software licenses
+      v.literal("deposits"),              // Security deposits
+      v.literal("other")
+    ),
+    name: v.string(),                     // Asset name/description
+    purchase_value: v.number(),           // Original purchase price
+    current_value: v.number(),            // Current book value
+    purchase_date: v.optional(v.number()), // When asset was acquired
+    depreciation_rate: v.optional(v.number()), // Annual depreciation %
+    accumulated_depreciation: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    is_active: v.boolean(),
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_asset_type", ["asset_type"])
+    .index("by_category", ["category"])
+    .index("by_active", ["is_active"])
+    .index("by_branch_type", ["branch_id", "asset_type"]),
+
+  // Liabilities table - Track business debts and obligations
+  liabilities: defineTable({
+    branch_id: v.id("branches"),
+    liability_type: v.union(
+      v.literal("current"),       // Due within 1 year
+      v.literal("long_term")      // Due after 1 year
+    ),
+    category: v.union(
+      // Current liabilities
+      v.literal("accounts_payable"),      // Money owed to suppliers
+      v.literal("wages_payable"),         // Unpaid wages/commissions
+      v.literal("taxes_payable"),         // Tax obligations
+      v.literal("unearned_revenue"),      // Prepaid services not delivered
+      v.literal("credit_card"),           // Credit card balances
+      v.literal("short_term_loan"),       // Loans due within year
+      v.literal("accrued_expenses"),      // Expenses incurred not paid
+      // Long-term liabilities
+      v.literal("bank_loan"),             // Business loans
+      v.literal("equipment_financing"),   // Equipment loans
+      v.literal("lease_obligations"),     // Long-term leases
+      v.literal("owner_loan"),            // Loans from owners
+      v.literal("other")
+    ),
+    name: v.string(),                     // Liability name/description
+    original_amount: v.number(),          // Original debt amount
+    current_balance: v.number(),          // Current outstanding balance
+    interest_rate: v.optional(v.number()), // Annual interest rate %
+    due_date: v.optional(v.number()),     // When payment is due
+    payment_frequency: v.optional(v.union(
+      v.literal("one_time"),
+      v.literal("weekly"),
+      v.literal("monthly"),
+      v.literal("quarterly"),
+      v.literal("annually")
+    )),
+    monthly_payment: v.optional(v.number()),
+    creditor: v.optional(v.string()),     // Who is owed
+    notes: v.optional(v.string()),
+    is_active: v.boolean(),
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_liability_type", ["liability_type"])
+    .index("by_category", ["category"])
+    .index("by_active", ["is_active"])
+    .index("by_due_date", ["due_date"])
+    .index("by_branch_type", ["branch_id", "liability_type"]),
+
+  // Equity table - Track owner's equity and retained earnings
+  equity: defineTable({
+    branch_id: v.id("branches"),
+    equity_type: v.union(
+      v.literal("owner_capital"),         // Owner's investment
+      v.literal("retained_earnings"),     // Accumulated profits
+      v.literal("drawings"),              // Owner withdrawals
+      v.literal("additional_investment"), // Additional capital injections
+      v.literal("other")
+    ),
+    description: v.string(),
+    amount: v.number(),                   // Positive for investment, negative for drawings
+    transaction_date: v.number(),         // Date of transaction
+    notes: v.optional(v.string()),
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_equity_type", ["equity_type"])
+    .index("by_transaction_date", ["transaction_date"])
+    .index("by_branch_type", ["branch_id", "equity_type"]),
+
+  // Balance sheet snapshots for historical tracking
+  balance_sheet_snapshots: defineTable({
+    branch_id: v.id("branches"),
+    snapshot_date: v.number(),            // Date of snapshot
+    total_assets: v.number(),
+    total_liabilities: v.number(),
+    total_equity: v.number(),
+    // Detailed breakdown
+    current_assets: v.number(),
+    fixed_assets: v.number(),
+    intangible_assets: v.number(),
+    current_liabilities: v.number(),
+    long_term_liabilities: v.number(),
+    cash_and_equivalents: v.optional(v.number()), // Balancing entry for Assets = Liabilities + Equity
+    // Calculated metrics
+    working_capital: v.number(),          // Current Assets - Current Liabilities
+    debt_to_equity_ratio: v.optional(v.number()),
+    current_ratio: v.optional(v.number()), // Current Assets / Current Liabilities
+    notes: v.optional(v.string()),
+    created_by: v.id("users"),
+    created_at: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_snapshot_date", ["snapshot_date"])
+    .index("by_branch_date", ["branch_id", "snapshot_date"]),
+
+  // Accounting periods for formal month-end/period-end closing
+  accounting_periods: defineTable({
+    branch_id: v.id("branches"),
+    period_name: v.string(),              // e.g., "January 2026", "Q1 2026"
+    period_type: v.union(
+      v.literal("monthly"),
+      v.literal("quarterly"),
+      v.literal("yearly")
+    ),
+    start_date: v.number(),               // Period start timestamp
+    end_date: v.number(),                 // Period end timestamp
+    status: v.union(
+      v.literal("open"),                  // Period is active, transactions allowed
+      v.literal("closing"),               // Period being reviewed before close
+      v.literal("closed")                 // Period closed, no more changes
+    ),
+    // Frozen snapshot at close
+    snapshot: v.optional(v.object({
+      total_assets: v.number(),
+      total_liabilities: v.number(),
+      total_equity: v.number(),
+      current_assets: v.number(),
+      fixed_assets: v.number(),
+      intangible_assets: v.number(),
+      current_liabilities: v.number(),
+      long_term_liabilities: v.number(),
+      retained_earnings: v.number(),
+      cash_and_equivalents: v.optional(v.number()), // Balancing entry for Assets = Liabilities + Equity
+      inventory_value: v.number(),
+      revenue: v.number(),
+      expenses: v.number(),
+      net_income: v.number(),
+      working_capital: v.number(),
+      current_ratio: v.optional(v.number()),
+      debt_to_equity_ratio: v.optional(v.number()),
+    })),
+    notes: v.optional(v.string()),
+    closed_by: v.optional(v.id("users")),
+    closed_at: v.optional(v.number()),
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"])
+    .index("by_start_date", ["start_date"])
+    .index("by_end_date", ["end_date"])
+    .index("by_branch_status", ["branch_id", "status"])
+    .index("by_branch_date", ["branch_id", "start_date"]),
+
+  // ============================================================================
+  // CASH ADVANCE SYSTEM
+  // ============================================================================
+  // Manages barber cash advance requests and approvals
+  // Integrates with payroll for automatic deduction
+  // ============================================================================
+
+  // ============================================================================
+  // ROYALTY MANAGEMENT SYSTEM
+  // ============================================================================
+  // Manages royalty rates and payments for franchisees
+  // Super Admin configures rates; system calculates monthly dues
+  // ============================================================================
+
+  royaltyConfig: defineTable({
+    branch_id: v.id("branches"),        // Branch this config applies to
+    royalty_type: v.union(
+      v.literal("percentage"),          // Percentage of monthly revenue
+      v.literal("fixed")                // Fixed amount per month
+    ),
+    rate: v.number(),                   // Percentage (e.g., 10 for 10%) or fixed amount
+    billing_cycle: v.union(
+      v.literal("monthly"),             // Due monthly
+      v.literal("quarterly"),           // Due quarterly
+      v.literal("annually")             // Due annually
+    ),
+    billing_day: v.optional(v.number()), // Day of month to generate royalty (1-31, default: 1)
+    grace_period_days: v.optional(v.number()), // Days after billing before late (default: 7)
+    late_fee_rate: v.optional(v.number()), // Late fee percentage (e.g., 5 for 5%)
+    notes: v.optional(v.string()),
+    is_active: v.boolean(),
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_active", ["is_active"])
+    .index("by_branch_active", ["branch_id", "is_active"]),
+
+  // Royalty payment records - tracks what each branch owes
+  royaltyPayments: defineTable({
+    branch_id: v.id("branches"),          // Branch this payment is for
+    config_id: v.id("royaltyConfig"),     // Reference to the config used
+    period_start: v.number(),             // Start of billing period
+    period_end: v.number(),               // End of billing period
+    period_label: v.string(),             // Human-readable period (e.g., "January 2026")
+
+    // Revenue and calculation details
+    gross_revenue: v.number(),            // Branch revenue for the period
+    royalty_type: v.union(
+      v.literal("percentage"),
+      v.literal("fixed")
+    ),
+    rate: v.number(),                     // Rate used for calculation
+    amount: v.number(),                   // Calculated royalty amount
+    late_fee: v.optional(v.number()),     // Late fee if applicable
+    total_due: v.number(),                // amount + late_fee
+
+    // Payment status
+    status: v.union(
+      v.literal("due"),                   // Payment is due
+      v.literal("overdue"),               // Past grace period
+      v.literal("paid"),                  // Payment received
+      v.literal("waived")                 // Waived by super admin
+    ),
+    due_date: v.number(),                 // When payment is due
+    grace_period_end: v.number(),         // After this, late fees apply
+
+    // Payment tracking
+    paid_at: v.optional(v.number()),
+    paid_amount: v.optional(v.number()),
+    payment_method: v.optional(v.string()),
+    payment_reference: v.optional(v.string()), // Bank reference, check number, etc.
+    receipt_id: v.optional(v.id("officialReceipts")), // Link to official receipt
+
+    // Audit
+    notes: v.optional(v.string()),
+    created_at: v.number(),
+    created_by: v.id("users"),
+    updated_at: v.number(),
+    updated_by: v.optional(v.id("users")),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"])
+    .index("by_due_date", ["due_date"])
+    .index("by_branch_status", ["branch_id", "status"])
+    .index("by_period", ["period_start", "period_end"]),
+
+  // Official receipts for royalty payments
+  officialReceipts: defineTable({
+    receipt_number: v.string(),           // Sequential: "OR-2026-00001"
+    payment_id: v.id("royaltyPayments"),  // Link to the royalty payment
+    branch_id: v.id("branches"),          // Branch that paid
+    amount: v.number(),                   // Amount paid
+    payment_method: v.optional(v.string()), // How payment was made
+    payment_reference: v.optional(v.string()), // Bank ref, check number, etc.
+    period_label: v.string(),             // e.g., "January 2026"
+    issued_at: v.number(),                // When receipt was issued
+    issued_by: v.id("users"),             // Super Admin who issued
+    notes: v.optional(v.string()),
+    created_at: v.number(),
+  })
+    .index("by_receipt_number", ["receipt_number"])
+    .index("by_payment", ["payment_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_issued_at", ["issued_at"]),
+
+  // Counter for sequential receipt numbering (NFR11 compliance)
+  receiptCounters: defineTable({
+    counter_type: v.string(),  // e.g., "official_receipt"
+    year: v.number(),          // Year for reset
+    last_number: v.number(),   // Last used number
+    updated_at: v.number(),
+  })
+    .index("by_type_year", ["counter_type", "year"]),
+
+  // ============================================================================
+  // SUPER ADMIN FINANCIAL TABLES
+  // ============================================================================
+  // Separate financial tracking for Super Admin (NOT branch aggregation)
+  // Super Admin's own P&L and Balance Sheet entries
+  // ============================================================================
+
+  // Super Admin Revenue - manual revenue entries
+  superAdminRevenue: defineTable({
+    category: v.union(
+      v.literal("royalty_income"),      // Royalty payments from branches (automated)
+      v.literal("product_order_income"), // Product order payments (automated)
+      v.literal("consulting"),          // Consulting fees
+      v.literal("franchise_fee"),       // Initial franchise fees
+      v.literal("training_fee"),        // Training program fees
+      v.literal("marketing_fee"),       // Marketing fund contributions
+      v.literal("other")                // Other revenue
+    ),
+    description: v.string(),
+    amount: v.number(),
+    revenue_date: v.number(),           // Date of revenue
+    reference_id: v.optional(v.string()), // External reference if applicable
+    // Link to automated source (for royalty/product orders)
+    royalty_payment_id: v.optional(v.id("royaltyPayments")),
+    product_order_id: v.optional(v.id("productOrders")),
+    notes: v.optional(v.string()),
+    is_automated: v.boolean(),          // true for system-generated entries
+    // Payment destination tracking (double-entry: debit cash/asset, credit revenue)
+    received_to_asset_id: v.optional(v.id("superAdminAssets")), // Specific manual asset
+    received_to_sales_cash: v.optional(v.boolean()), // true = received to automated sales cash pool
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_category", ["category"])
+    .index("by_revenue_date", ["revenue_date"])
+    .index("by_automated", ["is_automated"])
+    .index("by_royalty_payment", ["royalty_payment_id"])
+    .index("by_product_order", ["product_order_id"])
+    .index("by_received_to_sales_cash", ["received_to_sales_cash"]),
+
+  // Super Admin Expenses - manual expense entries
+  superAdminExpenses: defineTable({
+    expense_type: v.union(
+      v.literal("fixed"),               // Fixed monthly costs
+      v.literal("operating")            // Variable costs
+    ),
+    category: v.union(
+      // Fixed expenses
+      v.literal("office_rent"),
+      v.literal("utilities"),
+      v.literal("insurance"),
+      v.literal("salaries"),            // HQ staff salaries
+      v.literal("subscriptions"),       // Software, services
+      // Operating expenses
+      v.literal("supplies"),
+      v.literal("travel"),
+      v.literal("marketing"),
+      v.literal("legal_accounting"),
+      v.literal("training_costs"),
+      v.literal("warehouse_costs"),     // Central warehouse costs
+      v.literal("miscellaneous")
+    ),
+    description: v.string(),
+    amount: v.number(),
+    expense_date: v.number(),           // Date of expense
+    receipt_url: v.optional(v.string()),
+    receipt_storage_id: v.optional(v.id("_storage")),
+    notes: v.optional(v.string()),
+    is_recurring: v.boolean(),
+    recurring_day: v.optional(v.number()),
+    // Payment source tracking (double-entry: debit expense, credit cash/asset)
+    paid_from_asset_id: v.optional(v.id("superAdminAssets")), // Specific manual asset
+    paid_from_sales_cash: v.optional(v.boolean()), // true = paid from automated sales cash
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_category", ["category"])
+    .index("by_expense_type", ["expense_type"])
+    .index("by_expense_date", ["expense_date"])
+    .index("by_paid_from_sales_cash", ["paid_from_sales_cash"]),
+
+  // Super Admin Assets
+  superAdminAssets: defineTable({
+    asset_type: v.union(
+      v.literal("current"),             // Cash, receivables
+      v.literal("fixed"),               // Equipment, furniture
+      v.literal("intangible")           // Software, goodwill
+    ),
+    category: v.union(
+      // Current assets
+      v.literal("cash"),
+      v.literal("bank_accounts"),
+      v.literal("royalty_receivables"), // Unpaid royalties (automated)
+      v.literal("product_order_receivables"), // Unpaid product orders (automated)
+      v.literal("accounts_receivable"),
+      v.literal("prepaid_expenses"),
+      // Fixed assets
+      v.literal("equipment"),
+      v.literal("furniture"),
+      v.literal("vehicles"),
+      v.literal("warehouse_equipment"),
+      // Intangible assets
+      v.literal("software"),
+      v.literal("trademarks"),
+      v.literal("franchise_rights"),
+      v.literal("deposits"),
+      v.literal("other")
+    ),
+    name: v.string(),
+    purchase_value: v.number(),
+    current_value: v.number(),
+    purchase_date: v.optional(v.number()),
+    depreciation_rate: v.optional(v.number()),
+    accumulated_depreciation: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    is_active: v.boolean(),
+    is_automated: v.optional(v.boolean()), // true for system-calculated (receivables)
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_asset_type", ["asset_type"])
+    .index("by_category", ["category"])
+    .index("by_active", ["is_active"]),
+
+  // Super Admin Liabilities
+  superAdminLiabilities: defineTable({
+    liability_type: v.union(
+      v.literal("current"),             // Due within 1 year
+      v.literal("long_term")            // Due after 1 year
+    ),
+    category: v.union(
+      // Current liabilities
+      v.literal("accounts_payable"),
+      v.literal("wages_payable"),
+      v.literal("taxes_payable"),
+      v.literal("credit_card"),
+      v.literal("short_term_loan"),
+      v.literal("accrued_expenses"),
+      // Long-term liabilities
+      v.literal("bank_loan"),
+      v.literal("equipment_financing"),
+      v.literal("owner_loan"),
+      v.literal("other")
+    ),
+    name: v.string(),
+    original_amount: v.number(),
+    current_balance: v.number(),
+    interest_rate: v.optional(v.number()),
+    due_date: v.optional(v.number()),
+    payment_frequency: v.optional(v.union(
+      v.literal("one_time"),
+      v.literal("weekly"),
+      v.literal("monthly"),
+      v.literal("quarterly"),
+      v.literal("annually")
+    )),
+    monthly_payment: v.optional(v.number()),
+    creditor: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    is_active: v.boolean(),
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_liability_type", ["liability_type"])
+    .index("by_category", ["category"])
+    .index("by_active", ["is_active"])
+    .index("by_due_date", ["due_date"]),
+
+  // Super Admin Equity
+  superAdminEquity: defineTable({
+    equity_type: v.union(
+      v.literal("owner_capital"),
+      v.literal("retained_earnings"),
+      v.literal("drawings"),
+      v.literal("additional_investment"),
+      v.literal("other")
+    ),
+    description: v.string(),
+    amount: v.number(),
+    transaction_date: v.number(),
+    notes: v.optional(v.string()),
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_equity_type", ["equity_type"])
+    .index("by_transaction_date", ["transaction_date"]),
+
+  // Super Admin Accounting Periods (Lock-in periods for financial reporting)
+  superAdminAccountingPeriods: defineTable({
+    period_name: v.string(),              // e.g., "January 2026", "Q1 2026"
+    period_type: v.union(
+      v.literal("monthly"),
+      v.literal("quarterly"),
+      v.literal("yearly")
+    ),
+    start_date: v.number(),               // Period start timestamp
+    end_date: v.number(),                 // Period end timestamp
+    status: v.union(
+      v.literal("open"),                  // Period is active, entries allowed
+      v.literal("closing"),               // Period being reviewed before close
+      v.literal("closed")                 // Period closed, no more changes
+    ),
+    // Frozen snapshot at close
+    snapshot: v.optional(v.object({
+      total_assets: v.number(),
+      total_liabilities: v.number(),
+      total_equity: v.number(),
+      current_assets: v.number(),
+      fixed_assets: v.number(),
+      intangible_assets: v.number(),
+      current_liabilities: v.number(),
+      long_term_liabilities: v.number(),
+      retained_earnings: v.number(),
+      cash_and_equivalents: v.optional(v.number()), // Balancing entry for Assets = Liabilities + Equity
+      // Automated cash tracking
+      royalty_cash_received: v.number(),
+      product_order_cash_received: v.number(),
+      total_sales_cash: v.number(),
+      // Receivables
+      royalty_receivables: v.optional(v.number()),
+      order_receivables: v.optional(v.number()),
+      // P&L data
+      total_revenue: v.number(),
+      total_expenses: v.number(),
+      net_income: v.number(),
+      // Ratios
+      working_capital: v.number(),
+      current_ratio: v.optional(v.number()),
+      debt_to_equity_ratio: v.optional(v.number()),
+    })),
+    notes: v.optional(v.string()),
+    closed_by: v.optional(v.id("users")),
+    closed_at: v.optional(v.number()),
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_status", ["status"])
+    .index("by_start_date", ["start_date"])
+    .index("by_end_date", ["end_date"]),
+
+  // Super Admin Balance Sheet Snapshots (historical records)
+  superAdminBalanceSheetSnapshots: defineTable({
+    snapshot_date: v.number(),
+    period_id: v.optional(v.id("superAdminAccountingPeriods")),
+    total_assets: v.number(),
+    total_liabilities: v.number(),
+    total_equity: v.number(),
+    current_assets: v.number(),
+    fixed_assets: v.number(),
+    intangible_assets: v.number(),
+    current_liabilities: v.number(),
+    long_term_liabilities: v.number(),
+    cash_and_equivalents: v.optional(v.number()), // Balancing entry for Assets = Liabilities + Equity
+    royalty_cash_received: v.optional(v.number()),
+    product_order_cash_received: v.optional(v.number()),
+    total_sales_cash: v.optional(v.number()),
+    working_capital: v.number(),
+    current_ratio: v.optional(v.number()),
+    debt_to_equity_ratio: v.optional(v.number()),
+    notes: v.optional(v.string()),
+    created_by: v.id("users"),
+    created_at: v.number(),
+  })
+    .index("by_snapshot_date", ["snapshot_date"])
+    .index("by_period", ["period_id"]),
+
+  cashAdvances: defineTable({
+    barber_id: v.id("users"),           // The barber requesting the advance
+    branch_id: v.id("branches"),        // Branch for isolation
+    amount: v.number(),                 // Amount requested
+    reason: v.optional(v.string()),     // Optional reason for the request
+    status: v.union(
+      v.literal("pending"),             // Awaiting approval
+      v.literal("approved"),            // Approved, ready for payout
+      v.literal("rejected"),            // Rejected by admin
+      v.literal("paid_out"),            // Cash given to barber
+      v.literal("repaid")               // Fully deducted from payroll
+    ),
+    max_allowed: v.number(),            // 50% of avg 2-week earnings at time of request
+    requested_at: v.number(),           // Timestamp of request
+    decided_at: v.optional(v.number()), // When approved/rejected
+    decided_by: v.optional(v.id("users")), // Branch admin who decided
+    rejection_reason: v.optional(v.string()),
+    paid_out_at: v.optional(v.number()), // When cash was given
+    repaid_at: v.optional(v.number()),   // When fully deducted from payroll
+    payroll_id: v.optional(v.id("payroll_records")), // Link to payroll record where deducted
+    // Installment repayment fields
+    repayment_terms: v.optional(v.number()), // 1, 2, or 3 installments (default: 1)
+    installments_paid: v.optional(v.number()), // Number of installments already paid (0 to repayment_terms)
+    amount_per_installment: v.optional(v.number()), // Calculated: amount / repayment_terms
+    total_repaid: v.optional(v.number()), // Total amount already repaid
+    notes: v.optional(v.string()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_barber", ["barber_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"])
+    .index("by_barber_status", ["barber_id", "status"])
+    .index("by_branch_status", ["branch_id", "status"])
+    .index("by_requested_at", ["requested_at"]),
+
+  // ============================================================================
+  // PAYMONGO PAYMENT INTEGRATION
+  // ============================================================================
+  // Branch-level PayMongo payment configuration with encrypted credentials
+  // ============================================================================
+
+  branchPaymentConfig: defineTable({
+    branch_id: v.id("branches"),
+    provider: v.literal("paymongo"),            // Future-proof for other providers
+    is_enabled: v.boolean(),
+
+    // Encrypted credentials (AES-256-GCM)
+    public_key_encrypted: v.string(),           // pk_live_xxx (encrypted)
+    secret_key_encrypted: v.string(),           // sk_live_xxx (encrypted)
+    webhook_secret_encrypted: v.string(),       // whsec_xxx (encrypted)
+    encryption_iv: v.string(),                  // IV for decryption
+
+    // Payment option toggles
+    pay_now_enabled: v.boolean(),               // Toggle for Pay Now (full payment via PayMongo)
+    pay_later_enabled: v.boolean(),             // Toggle for Pay Later (convenience fee now)
+    pay_at_shop_enabled: v.boolean(),           // Toggle for Pay at Shop (no online payment)
+
+    // Payment policies - Convenience fee for Pay Later
+    convenience_fee_type: v.optional(v.union(
+      v.literal("percent"),
+      v.literal("fixed")
+    )),                                         // Type of fee: "percent" or "fixed" (default: percent)
+    convenience_fee_percent: v.optional(v.number()), // Fee percentage for Pay Later (e.g., 5 = 5%)
+    convenience_fee_amount: v.optional(v.number()),  // Fixed fee amount for Pay Later (e.g., 50 = ₱50)
+
+    // Timestamps
+    created_at: v.number(),
+    updated_at: v.number(),
+    updated_by: v.id("users"),
+  })
+    .index("by_branch", ["branch_id"]),
+
+  // ============================================================================
+  // PAYMENT AUDIT LOG
+  // ============================================================================
+  // Tracks all payment-related events for audit, compliance, and debugging
+  // Story 7.1: Create Payment Audit Log Schema & Booking Extensions
+  // FR27, FR28, FR29 - Audit logging requirements
+  // ============================================================================
+
+  paymentAuditLog: defineTable({
+    branch_id: v.id("branches"),                // Branch reference (FR25 - branch isolation)
+    booking_id: v.optional(v.id("bookings")),   // Booking reference (optional for webhook events)
+    transaction_id: v.optional(v.id("transactions")), // POS transaction reference
+
+    // PayMongo identifiers
+    paymongo_payment_id: v.optional(v.string()), // PayMongo payment ID
+    paymongo_link_id: v.optional(v.string()),    // PayMongo payment link ID
+
+    // Event details
+    event_type: v.union(
+      v.literal("link_created"),              // Payment link generated (FR27)
+      v.literal("checkout_session_created"),  // Checkout session created
+      v.literal("payment_initiated"),         // Customer started payment
+      v.literal("payment_completed"),         // Payment successful (FR28)
+      v.literal("payment_failed"),            // Payment failed (FR28)
+      v.literal("payment_refunded"),          // Payment refunded
+      v.literal("webhook_received"),          // Webhook received (FR29)
+      v.literal("webhook_verified"),          // Webhook signature verified
+      v.literal("webhook_failed"),            // Webhook signature invalid
+      v.literal("cash_collected"),            // Cash payment collected at POS
+      v.literal("booking_completed")          // Booking marked as completed (Story 8.3)
+    ),
+
+    // Payment details
+    amount: v.optional(v.number()),              // Amount in pesos
+    payment_method: v.optional(v.string()),      // GCash, Maya, Card, Cash, etc.
+    payment_for: v.optional(v.union(             // What the payment covers
+      v.literal("full_service"),                 // Pay Now: full service + booking fee
+      v.literal("convenience_fee"),              // Pay Later: convenience fee only
+      v.literal("remaining_balance"),            // Cash at shop: remaining service amount
+      v.literal("full_cash"),                    // Full cash payment at shop
+      v.literal("partial")                       // Partial payment
+    )),
+
+    // Audit trail
+    raw_payload: v.optional(v.any()),            // Webhook raw payload for FR29
+    error_message: v.optional(v.string()),       // Error details for failures
+    ip_address: v.optional(v.string()),          // IP address of request
+
+    // Timestamps
+    created_at: v.number(),
+    created_by: v.optional(v.id("users")),       // User who triggered event (if applicable)
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_booking", ["booking_id"])
+    .index("by_paymongo_payment", ["paymongo_payment_id"])
+    .index("by_paymongo_link", ["paymongo_link_id"])
+    .index("by_created_at", ["created_at"])
+    .index("by_event_type", ["event_type"])
+    .index("by_branch_created", ["branch_id", "created_at"]),
+
+  // PENDING PAYMENTS
+  // ============================================================================
+  // Temporarily holds booking data for online payments until payment is confirmed
+  // Booking is only created in the bookings table after payment success
+  // This implements the "deferred booking" flow where booking is not recorded
+  // until payment is completed
+  // ============================================================================
+
+  pendingPayments: defineTable({
+    // Booking data to be created after payment success
+    customer_id: v.id("users"),
+    service_id: v.id("services"),
+    barber_id: v.optional(v.id("barbers")),
+    branch_id: v.id("branches"),
+    date: v.string(),
+    time: v.string(),
+    notes: v.optional(v.string()),
+    voucher_id: v.optional(v.id("vouchers")),
+    discount_amount: v.optional(v.number()),
+    customer_email: v.optional(v.string()),
+    customer_name: v.optional(v.string()),
+    booking_fee: v.optional(v.number()),
+    price: v.number(),                          // Service price
+
+    // Combo payment info (wallet + PayMongo)
+    is_combo_payment: v.optional(v.boolean()),  // True if paying with wallet + PayMongo
+    wallet_portion: v.optional(v.number()),     // Amount paid from wallet
+
+    // Payment info
+    payment_type: v.union(v.literal("pay_now"), v.literal("pay_later")),
+    paymongo_link_id: v.optional(v.string()),   // PayMongo link ID
+    amount_to_pay: v.number(),                  // Amount customer will pay (full or fee)
+
+    // Status
+    status: v.union(
+      v.literal("pending"),                     // Awaiting payment
+      v.literal("paid"),                        // Payment received, booking created
+      v.literal("expired"),                     // Payment link expired
+      v.literal("failed")                       // Payment failed
+    ),
+
+    // Timestamps
+    created_at: v.number(),
+    expires_at: v.number(),                     // Auto-expire after 24 hours
+    paid_at: v.optional(v.number()),
+    created_by: v.optional(v.id("users")),
+  })
+    .index("by_paymongo_link", ["paymongo_link_id"])
+    .index("by_customer", ["customer_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"])
+    .index("by_expires_at", ["expires_at"]),
+
+  // ============================================================================
+  // PERMISSION AUDIT LOG (Story 10.1 - Clerk RBAC)
+  // ============================================================================
+  // Tracks all permission-related changes for audit, compliance, and debugging
+  // ============================================================================
+
+  permissionAuditLog: defineTable({
+    user_id: v.id("users"),                       // User whose permissions were changed
+    changed_by: v.id("users"),                    // Admin who made the change
+    change_type: v.union(
+      v.literal("role_changed"),                  // User role was changed
+      v.literal("page_access_changed"),           // Page permissions were modified
+      v.literal("branch_assigned"),               // User was assigned to a branch
+      v.literal("branch_removed"),                // User was removed from a branch
+      v.literal("user_created"),                  // New user was created
+      v.literal("user_deleted")                   // User was deactivated/deleted
+    ),
+    previous_value: v.optional(v.string()),       // JSON stringified previous state
+    new_value: v.string(),                        // JSON stringified new state
+    created_at: v.number(),                       // Timestamp of change
+  })
+    .index("by_user", ["user_id"])
+    .index("by_changed_by", ["changed_by"])
+    .index("by_created_at", ["created_at"]),
+
+  // ============================================================================
+  // FLASH PROMOTIONS (Epic 20 - Customer Experience)
+  // ============================================================================
+  // Time-limited promotional events with bonus points, multipliers, etc.
+  // ============================================================================
+
+  flash_promotions: defineTable({
+    // Basic Info
+    name: v.string(),
+    description: v.optional(v.string()),
+
+    // Promo Type and Value
+    type: v.union(
+      v.literal("bonus_points"),    // Multiplier on points (e.g., 2x)
+      v.literal("flat_bonus"),      // Flat points added (e.g., +500)
+      v.literal("wallet_bonus")     // Extra wallet credit on top-up
+    ),
+    multiplier: v.optional(v.number()),    // For bonus_points type (e.g., 2.0 = 2x)
+    flat_amount: v.optional(v.number()),   // For flat_bonus/wallet_bonus (×100 format)
+
+    // Scope
+    branch_id: v.optional(v.id("branches")), // null = system-wide
+    is_template: v.optional(v.boolean()),    // Super Admin templates
+
+    // Eligibility Rules
+    tier_requirement: v.optional(v.union(
+      v.literal("bronze"),
+      v.literal("silver"),
+      v.literal("gold"),
+      v.literal("platinum")
+    )),
+    min_purchase: v.optional(v.number()),         // Minimum purchase amount
+    new_customers_only: v.optional(v.boolean()),  // Only for first-time customers
+    max_uses: v.optional(v.number()),             // Total uses allowed (null = unlimited)
+    max_uses_per_user: v.optional(v.number()),    // Per-user limit (default 1)
+
+    // Dates
+    start_at: v.number(),
+    end_at: v.number(),
+
+    // Status
+    status: v.union(
+      v.literal("draft"),
+      v.literal("scheduled"),
+      v.literal("active"),
+      v.literal("ended"),
+      v.literal("cancelled")
+    ),
+
+    // Usage Tracking
+    total_uses: v.number(),           // Counter for total uses
+
+    // Audit
+    created_by: v.id("users"),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"])
+    .index("by_dates", ["start_at", "end_at"])
+    .index("by_branch_status", ["branch_id", "status"]),
+
+  // Promo Usage Tracking - tracks which customers used which promos
+  promo_usage: defineTable({
+    promo_id: v.id("flash_promotions"),
+    user_id: v.id("users"),
+    branch_id: v.optional(v.id("branches")),
+    transaction_id: v.optional(v.string()),   // Payment or transaction ID
+    points_earned: v.number(),                // Total points with promo (×100)
+    bonus_points: v.number(),                 // Extra points from promo (×100)
+    used_at: v.number(),
+  })
+    .index("by_promo", ["promo_id"])
+    .index("by_user", ["user_id"])
+    .index("by_promo_user", ["promo_id", "user_id"]),
+
+  // ============================================================================
+  // MULTI-BRANCH WALLET PAYMENT SYSTEM (Epic 21-26)
+  // Tables: walletConfig, branchWalletSettings, branchWalletEarnings, branchSettlements
+  // ============================================================================
+
+  // Super Admin Wallet Configuration - Central PayMongo settings
+  walletConfig: defineTable({
+    paymongo_public_key: v.string(),
+    paymongo_secret_key: v.string(), // Encrypted at service layer
+    paymongo_webhook_secret: v.string(), // Encrypted at service layer
+    is_test_mode: v.boolean(),
+    default_commission_percent: v.number(), // e.g., 5 = 5%
+    default_settlement_frequency: v.string(), // "daily" | "weekly" | "manual"
+    min_settlement_amount: v.number(), // Minimum payout threshold in whole pesos
+    // Story 23.3: Configurable bonus tiers for wallet top-ups
+    bonus_tiers: v.optional(v.array(v.object({
+      minAmount: v.number(), // Minimum top-up amount in pesos
+      bonus: v.number(),     // Bonus amount in pesos
+    }))),
+    // Story 23.4: Monthly bonus cap - limits bonus-eligible top-ups per user per month
+    monthly_bonus_cap: v.optional(v.number()), // Max top-up amount that can receive bonus per month (pesos), 0 = unlimited
+    created_at: v.number(),
+    updated_at: v.number(),
+  }),
+
+  // Shop Configuration - Global settings for e-commerce shop
+  shopConfig: defineTable({
+    delivery_fee: v.number(), // Flat delivery fee in pesos (e.g., 50)
+    free_delivery_threshold: v.optional(v.number()), // Min order amount for free delivery (0 = disabled)
+    min_order_amount: v.optional(v.number()), // Minimum order amount (0 = no minimum)
+    enable_delivery: v.boolean(), // Toggle delivery option
+    enable_pickup: v.boolean(), // Toggle pickup option
+    estimated_delivery_days: v.optional(v.number()), // Estimated delivery time in days
+    created_at: v.number(),
+    updated_at: v.number(),
+  }),
+
+  // Branch-specific Wallet Settings - Payout preferences
+  branchWalletSettings: defineTable({
+    branch_id: v.id("branches"),
+    commission_override: v.optional(v.number()), // Branch-specific rate if different from default
+    settlement_frequency: v.optional(v.string()), // Override default frequency
+    payout_method: v.optional(v.string()), // "bank" | "gcash" | "maya" - optional until configured
+    payout_account_number: v.optional(v.string()), // Required when payout_method is set
+    payout_account_name: v.optional(v.string()), // Required when payout_method is set
+    payout_bank_name: v.optional(v.string()), // Required if payout_method is "bank"
+    created_at: v.number(),
+    updated_at: v.number(),
+  }).index("by_branch", ["branch_id"]),
+
+  // Branch Wallet Earnings - Individual transaction records
+  branchWalletEarnings: defineTable({
+    branch_id: v.id("branches"),
+    booking_id: v.id("bookings"),
+    customer_id: v.id("users"),
+    staff_id: v.optional(v.id("users")),
+    service_name: v.string(),
+    gross_amount: v.number(), // Full payment amount in whole pesos
+    commission_percent: v.number(), // Commission rate applied
+    commission_amount: v.number(), // SA commission in whole pesos
+    net_amount: v.number(), // Branch earnings after commission
+    settlement_id: v.optional(v.id("branchSettlements")), // Linked when settled
+    status: v.string(), // "pending" | "settled"
+    created_at: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_branch_status", ["branch_id", "status"])
+    .index("by_settlement", ["settlement_id"]),
+
+  // Branch Settlement Requests - Payout requests and processing
+  branchSettlements: defineTable({
+    branch_id: v.id("branches"),
+    requested_by: v.id("users"),
+    amount: v.number(), // Total settlement amount in whole pesos
+    earnings_count: v.number(), // Number of earnings included
+    payout_method: v.string(), // "bank" | "gcash" | "maya"
+    payout_account_number: v.string(),
+    payout_account_name: v.string(),
+    payout_bank_name: v.optional(v.string()),
+    status: v.string(), // "pending" | "approved" | "processing" | "completed" | "rejected"
+    approved_by: v.optional(v.id("users")),
+    approved_at: v.optional(v.number()),
+    processed_by: v.optional(v.id("users")), // Story 25.4: Track who marked as processing
+    processing_started_at: v.optional(v.number()), // Story 25.4: Track when processing started
+    rejected_by: v.optional(v.id("users")), // Story 25.3: Track who rejected
+    rejected_at: v.optional(v.number()), // Story 25.3: Track when rejected
+    completed_by: v.optional(v.id("users")), // Story 25.4: Track who completed
+    completed_at: v.optional(v.number()),
+    rejection_reason: v.optional(v.string()),
+    transfer_reference: v.optional(v.string()), // Bank/GCash reference number
+    notes: v.optional(v.string()),
+    created_at: v.number(),
+    updated_at: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"])
+    .index("by_branch_status", ["branch_id", "status"]),
+
+  // ============================================================================
+  // BARBER MATCHER TABLES (Help Me Choose Feature - Phase 3)
+  // ============================================================================
+
+  // User Style Preferences - Stored quiz results for personalization
+  user_style_preferences: defineTable({
+    user_id: v.id("users"),
+    // Quiz results
+    preferred_vibes: v.optional(v.array(v.union(
+      v.literal("classic"),
+      v.literal("trendy"),
+      v.literal("edgy"),
+      v.literal("clean")
+    ))),
+    preferred_conversation: v.optional(v.union(
+      v.literal("chatty"),
+      v.literal("balanced"),
+      v.literal("quiet")
+    )),
+    preferred_speed: v.optional(v.union(
+      v.literal("fast"),
+      v.literal("moderate"),
+      v.literal("detailed")
+    )),
+    budget_preference: v.optional(v.union(
+      v.literal("budget"),
+      v.literal("mid"),
+      v.literal("premium"),
+      v.literal("any")
+    )),
+    time_preference: v.optional(v.union(
+      v.literal("weekday_am"),
+      v.literal("weekday_pm"),
+      v.literal("weekend"),
+      v.literal("flexible")
+    )),
+    // Last match results for "Find Similar" feature
+    last_matched_barber_id: v.optional(v.id("barbers")),
+    last_match_score: v.optional(v.number()),
+    // Learning data
+    swipe_count: v.optional(v.number()),
+    quiz_completed_at: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_last_matched", ["last_matched_barber_id"]),
+
+  // Style Swipe History - Track user's swipe preferences for learning
+  style_swipe_history: defineTable({
+    user_id: v.id("users"),
+    image_url: v.string(),        // The haircut image shown
+    barber_id: v.optional(v.id("barbers")), // If from a specific barber's portfolio
+    liked: v.boolean(),           // true = swiped right, false = swiped left
+    style_tags: v.optional(v.array(v.string())), // Tags associated with this image
+    createdAt: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_liked", ["user_id", "liked"])
+    .index("by_barber", ["barber_id"]),
+
+  // Barber Match History - Track successful matches for analytics
+  barber_match_history: defineTable({
+    user_id: v.id("users"),
+    barber_id: v.id("barbers"),
+    match_score: v.number(),      // 0-100 percentage
+    match_reasons: v.array(v.string()), // ["style_match", "conversation_match", etc.]
+    resulted_in_booking: v.optional(v.boolean()),
+    booking_id: v.optional(v.id("bookings")),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_barber", ["barber_id"])
+    .index("by_user_barber", ["user_id", "barber_id"])
+    .index("by_resulted_booking", ["resulted_in_booking"]),
+
+  // ============================================================
+  // BT2: PERSONALIZED FEED ALGORITHM TABLES
+  // ============================================================
+
+  // Feed Interactions - Track individual user engagement with posts
+  feed_interactions: defineTable({
+    user_id: v.id("users"),
+    post_id: v.id("branch_posts"),
+    interaction_type: v.union(
+      v.literal("view"),           // Viewed the post
+      v.literal("view_long"),      // Viewed > 5 seconds (dwell time)
+      v.literal("like"),           // Fire reaction
+      v.literal("bookmark"),       // Saved post
+      v.literal("book"),           // Booked from this post
+      v.literal("skip")            // Scrolled past quickly (< 1 sec)
+    ),
+    // Context data
+    barber_id: v.optional(v.id("barbers")), // Barber associated with post
+    post_type: v.optional(v.string()),      // showcase, promo, etc.
+    style_vibes: v.optional(v.array(v.string())), // Vibes from barber's profile
+    // Metadata
+    view_duration_ms: v.optional(v.number()), // How long they viewed
+    resulted_in_booking: v.optional(v.boolean()),
+    booking_id: v.optional(v.id("bookings")),
+    createdAt: v.number(),
+    // Decay tracking
+    expires_at: v.optional(v.number()),      // When signal should decay
+  })
+    .index("by_user", ["user_id"])
+    .index("by_post", ["post_id"])
+    .index("by_user_post", ["user_id", "post_id"])
+    .index("by_user_type", ["user_id", "interaction_type"])
+    .index("by_barber", ["barber_id"])
+    .index("by_created", ["createdAt"])
+    .index("by_expires", ["expires_at"]),
+
+  // User Feed Profile - Aggregated preferences for fast lookups
+  user_feed_profile: defineTable({
+    user_id: v.id("users"),
+    // Barber affinity scores (denormalized for performance)
+    barber_affinities: v.optional(v.array(v.object({
+      barber_id: v.id("barbers"),
+      score: v.number(),           // 0-100 affinity score
+      last_interaction: v.number(), // Timestamp
+      booking_count: v.number(),    // Times booked
+      like_count: v.number(),       // Times liked their posts
+    }))),
+    // Style preferences (from Matcher + learned from feed)
+    preferred_vibes: v.optional(v.array(v.union(
+      v.literal("classic"),
+      v.literal("trendy"),
+      v.literal("edgy"),
+      v.literal("clean")
+    ))),
+    vibe_scores: v.optional(v.object({
+      classic: v.optional(v.number()),
+      trendy: v.optional(v.number()),
+      edgy: v.optional(v.number()),
+      clean: v.optional(v.number()),
+    })),
+    // Content type preferences
+    preferred_post_types: v.optional(v.array(v.string())),
+    // Learning stats
+    total_interactions: v.number(),
+    last_feed_view: v.optional(v.number()),
+    profile_version: v.number(),   // For cache invalidation
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_updated", ["updatedAt"]),
+
+  // Post Bookmarks - Dedicated table for saved posts
+  post_bookmarks: defineTable({
+    user_id: v.id("users"),
+    post_id: v.id("branch_posts"),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_post", ["post_id"])
+    .index("by_user_post", ["user_id", "post_id"])
+    .index("by_created", ["createdAt"]),
+
+  // Product Wishlists - Customer saved products for later
+  wishlists: defineTable({
+    user_id: v.id("users"),
+    product_id: v.union(v.id("products"), v.id("productCatalog")), // Support both branch and catalog products
+    createdAt: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_product", ["product_id"])
+    .index("by_user_product", ["user_id", "product_id"])
+    .index("by_created", ["createdAt"]),
+
+  // ============================================================================
+  // USER ADDRESSES (Delivery Support)
+  // ============================================================================
+  user_addresses: defineTable({
+    user_id: v.id("users"),
+    label: v.string(), // "Home", "Work", "Other"
+    // Address components
+    street_address: v.string(), // House/Unit No., Street, Subdivision
+    barangay: v.optional(v.string()),
+    city: v.string(),
+    province: v.string(),
+    zip_code: v.string(),
+    landmark: v.optional(v.string()),
+    // Contact info
+    contact_name: v.string(),
+    contact_phone: v.string(),
+    is_default: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_user_default", ["user_id", "is_default"]),
+
+  // ============================================================================
+  // SHOP BANNERS - Promotional carousel for customer shop
+  // ============================================================================
+  shopBanners: defineTable({
+    // Banner type: product_promo, custom_ad, external_link
+    type: v.union(
+      v.literal("product_promo"),  // Auto-generated from product discount
+      v.literal("custom_ad"),       // Manual image upload (internal promotion)
+      v.literal("external_link")    // External website/partner ads
+    ),
+    // Display content
+    title: v.string(),              // e.g., "MEGA SALE", "NEW ARRIVALS"
+    subtitle: v.optional(v.string()), // e.g., "Up to 50% OFF"
+    badge: v.optional(v.string()),  // e.g., "Sale", "New", "Hot", "Partner"
+    // Image (either storage ID or external URL)
+    image_storage_id: v.optional(v.id("_storage")),
+    image_url: v.optional(v.string()),
+    // Link/action configuration
+    link_type: v.union(
+      v.literal("product"),         // Navigate to product detail
+      v.literal("category"),        // Filter by category
+      v.literal("external"),        // Open external URL
+      v.literal("none")             // No action (display only)
+    ),
+    link_url: v.optional(v.string()),       // External URL or category slug
+    product_id: v.optional(v.id("productCatalog")), // Link to specific product
+    // Styling
+    gradient: v.optional(v.string()), // e.g., "from-orange-500 to-red-600"
+    text_color: v.optional(v.string()), // "white" or "dark"
+    // Scheduling & visibility
+    is_active: v.boolean(),
+    sort_order: v.number(),         // Display order (lower = first)
+    start_date: v.optional(v.number()), // Promo start timestamp
+    end_date: v.optional(v.number()),   // Promo end timestamp
+    // Tracking
+    click_count: v.optional(v.number()),
+    impression_count: v.optional(v.number()),
+    // Metadata
+    created_by: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_active", ["is_active"])
+    .index("by_type", ["type"])
+    .index("by_sort_order", ["sort_order"])
+    .index("by_active_sort", ["is_active", "sort_order"]),
 });

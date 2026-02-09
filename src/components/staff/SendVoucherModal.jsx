@@ -14,11 +14,11 @@ import {
 import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useAuth } from "../../context/AuthContext";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useBranding } from "../../context/BrandingContext";
 
 const SendVoucherModal = ({ isOpen, onClose, voucher }) => {
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
   const [filteredClients, setFilteredClients] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [customerSearch, setCustomerSearch] = useState("");

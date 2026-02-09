@@ -225,6 +225,12 @@ export const getPublicBarberProfileBySlug = query({
       avatarUrl = await ctx.storage.getUrl(barber.avatarStorageId);
     }
 
+    // Get cover photo URL
+    let coverPhotoUrl = null;
+    if (barber.coverPhotoStorageId) {
+      coverPhotoUrl = await ctx.storage.getUrl(barber.coverPhotoStorageId);
+    }
+
     // Get services
     const services = await Promise.all(
       barber.services.map(async (serviceId) => {
@@ -287,6 +293,7 @@ export const getPublicBarberProfileBySlug = query({
       name: barber.full_name,
       email: user?.email,
       avatarUrl,
+      coverPhotoUrl,
       services: services.filter(Boolean),
       portfolio: portfolioWithUrls,
       achievements: achievementsWithUrls,
@@ -311,6 +318,12 @@ export const getPublicBarberProfile = query({
     let avatarUrl = barber.avatar;
     if (barber.avatarStorageId) {
       avatarUrl = await ctx.storage.getUrl(barber.avatarStorageId);
+    }
+
+    // Get cover photo URL
+    let coverPhotoUrl = null;
+    if (barber.coverPhotoStorageId) {
+      coverPhotoUrl = await ctx.storage.getUrl(barber.coverPhotoStorageId);
     }
 
     // Get services
@@ -375,6 +388,7 @@ export const getPublicBarberProfile = query({
       name: barber.full_name,
       email: user?.email,
       avatarUrl,
+      coverPhotoUrl,
       services: services.filter(Boolean),
       portfolio: portfolioWithUrls,
       achievements: achievementsWithUrls,

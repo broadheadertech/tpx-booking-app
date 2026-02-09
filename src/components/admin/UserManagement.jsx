@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useQuery, useMutation } from 'convex/react'
+import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { User, UserPlus, Edit, Trash2, Shield, Building, Users, Search, Filter, CheckCircle, AlertCircle } from 'lucide-react'
 import UserFormModal from './UserFormModal'
@@ -36,7 +36,7 @@ export default function UserManagement() {
   const branches = useQuery(api.services.branches.getActiveBranches) || []
 
   // Mutations
-  const createUser = useMutation(api.services.auth.createUser)
+  const createUser = useAction(api.services.auth.createUserWithClerk)
   const updateUser = useMutation(api.services.auth.updateUser)
 
   const getRoleColor = (role) => {

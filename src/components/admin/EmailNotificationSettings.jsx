@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
 import { useBranding } from '../../context/BrandingContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { 
   Mail, 
   RefreshCw, 
@@ -100,12 +100,16 @@ const TextAreaInput = ({ label, value, onChange, disabled, placeholder, rows = 4
 )
 
 export default function EmailNotificationSettings() {
-  const { sessionToken } = useAuth()
+  // Use unified auth hook for user data (supports both Clerk and legacy auth)
+  const { user: currentUser, isAuthenticated, sessionToken } = useCurrentUser()
   const { branding } = useBranding()
-  
+
+  const isSuperAdmin = currentUser?.role === 'super_admin'
+
+  // Query templates - backend now supports both Clerk and legacy auth
   const templates = useQuery(
-    sessionToken ? api.services.emailTemplates.getAllTemplates : null,
-    sessionToken ? { sessionToken } : 'skip'
+    isSuperAdmin && isAuthenticated ? api.services.emailTemplates.getAllTemplates : null,
+    isSuperAdmin && isAuthenticated ? { sessionToken: sessionToken || undefined } : 'skip'
   )
   const upsertTemplate = useMutation(api.services.emailTemplates.upsertTemplate)
   const resetToDefault = useMutation(api.services.emailTemplates.resetToDefault)
@@ -143,14 +147,14 @@ export default function EmailNotificationSettings() {
   const IconComponent = currentConfig?.icon || Mail
 
   const handleSave = async () => {
-    if (!sessionToken) return
-    
+    if (!isAuthenticated) return
+
     setSaving(true)
     setStatus(null)
-    
+
     try {
       await upsertTemplate({
-        sessionToken,
+        sessionToken: sessionToken || undefined, // Pass sessionToken if available (for legacy auth), otherwise undefined (for Clerk auth)
         template_type: selectedType,
         subject: form.subject,
         heading: form.heading,
@@ -169,14 +173,14 @@ export default function EmailNotificationSettings() {
   }
 
   const handleReset = async () => {
-    if (!sessionToken) return
-    
+    if (!isAuthenticated) return
+
     setSaving(true)
     setStatus(null)
-    
+
     try {
       await resetToDefault({
-        sessionToken,
+        sessionToken: sessionToken || undefined, // Pass sessionToken if available (for legacy auth), otherwise undefined (for Clerk auth)
         template_type: selectedType,
       })
       setStatus({ type: 'success', message: 'Template reset to default!' })

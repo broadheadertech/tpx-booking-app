@@ -10,4 +10,13 @@ crons.daily(
   internal.services.walkIn.cleanupOldWalkIns
 );
 
+// Update customer-branch activity statuses daily
+// Recalculates status (active/at_risk/churned) based on days since last visit
+// Runs at 4 PM UTC = 12 AM PHT (midnight Philippines time)
+crons.daily(
+  "update customer branch activity statuses",
+  { hourUTC: 16, minuteUTC: 0 },
+  internal.services.customerBranchActivity.updateAllStatuses
+);
+
 export default crons;

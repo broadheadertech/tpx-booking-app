@@ -18,11 +18,11 @@ import {
 } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 import Modal from '../common/Modal'
 
 const NotificationsManagement = ({ onRefresh }) => {
-  const { user } = useAuth()
+  const { user } = useCurrentUser()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('all')
   const [showCreateModal, setShowCreateModal] = useState(false)

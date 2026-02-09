@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { Palette, RefreshCw, Eye, Undo2, Sparkles, Image as ImageIcon, ToggleLeft, ShieldCheck, Clock3, History, Download, Upload, AlertCircle, X } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
 import { useBranding } from '../../context/BrandingContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 import ConfirmDialog from '../common/ConfirmDialog'
 import ImageUploadInput from './ImageUploadInput'
 
@@ -213,16 +213,18 @@ const formatTimestamp = (timestamp) => {
 }
 
 export default function BrandingManagement() {
-  const { user, sessionToken } = useAuth()
+  // Use unified auth hook for user data (supports both Clerk and legacy auth)
+  const { user: currentUser, authMethod, isAuthenticated, sessionToken } = useCurrentUser()
   const { branding: activeBranding, loading: brandingLoading, error: brandingError, refresh: refreshBranding } = useBranding()
-  
-  // Define canEdit early so it can be used in hooks below
-  const canEdit = user?.role === 'super_admin'
-  
+
+  // Define canEdit - requires super_admin role (backend now supports both Clerk and legacy auth)
+  const canEdit = currentUser?.role === 'super_admin' && isAuthenticated
+  const canView = currentUser?.role === 'super_admin'
+
   const upsertGlobalBranding = useMutation(api.services.branding.upsertGlobalBranding)
   const rollbackGlobalBranding = useMutation(api.services.branding.rollbackGlobalBranding)
-  const exportBranding = useQuery(canEdit && sessionToken ? api.services.branding.exportBranding : null, canEdit && sessionToken ? { sessionToken } : 'skip')
-  const brandingHistory = useQuery(canEdit && sessionToken ? api.services.branding.getBrandingHistory : null, canEdit && sessionToken ? { sessionToken, limit: 10 } : 'skip')
+  const exportBranding = useQuery(canEdit ? api.services.branding.exportBranding : null, canEdit ? { sessionToken: sessionToken || undefined } : 'skip')
+  const brandingHistory = useQuery(canEdit ? api.services.branding.getBrandingHistory : null, canEdit ? { sessionToken: sessionToken || undefined, limit: 10 } : 'skip')
   const importBrandingMutation = useMutation(api.services.branding.importBranding)
   
   const [form, setForm] = useState(() => ({ ...DEFAULT_BRANDING, ...(activeBranding || {}) }))
@@ -281,14 +283,14 @@ export default function BrandingManagement() {
   }
 
   const handleSave = async () => {
-    if (!canEdit || !isEditing || !sessionToken) return
-    
+    if (!canEdit || !isEditing) return
+
     // Validate before saving
     if (!validateForm()) {
       setStatus({ type: 'error', message: 'Please fix validation errors before saving.' })
       return
     }
-    
+
     // Show confirmation dialog
     setConfirmDialog({
       type: 'warning',
@@ -301,7 +303,7 @@ export default function BrandingManagement() {
         setConfirmDialog(null)
         try {
           await upsertGlobalBranding({
-            sessionToken,
+            sessionToken: sessionToken || undefined, // Pass sessionToken if available (for legacy auth), otherwise undefined (for Clerk auth)
             payload: sanitizePayload(form),
           })
           setStatus({ type: 'success', message: `Branding updated successfully! Version ${(activeBranding?.version || 0) + 1} saved.` })
@@ -364,15 +366,15 @@ export default function BrandingManagement() {
   }
   
   const handleImport = async (file) => {
-    if (!file || !canEdit || !sessionToken) return
-    
+    if (!file || !canEdit) return
+
     setImporting(true)
     const reader = new FileReader()
-    
+
     reader.onload = async (e) => {
       try {
         const config = JSON.parse(e.target.result)
-        
+
         setConfirmDialog({
           type: 'danger',
           title: 'Import Branding Configuration?',
@@ -381,7 +383,7 @@ export default function BrandingManagement() {
           onConfirm: async () => {
             setConfirmDialog(null)
             try {
-              await importBrandingMutation({ sessionToken, config })
+              await importBrandingMutation({ sessionToken: sessionToken || undefined, config })
               setStatus({ type: 'success', message: 'Branding imported successfully!' })
               refreshBranding()
               setIsEditing(false)
@@ -415,8 +417,8 @@ export default function BrandingManagement() {
   }
   
   const handleRollback = async (version) => {
-    if (!canEdit || !sessionToken) return
-    
+    if (!canEdit) return
+
     setConfirmDialog({
       type: 'warning',
       title: `Rollback to Version ${version}?`,
@@ -425,7 +427,7 @@ export default function BrandingManagement() {
       onConfirm: async () => {
         setConfirmDialog(null)
         try {
-          await rollbackGlobalBranding({ sessionToken, version })
+          await rollbackGlobalBranding({ sessionToken: sessionToken || undefined, version })
           setStatus({ type: 'success', message: `Successfully rolled back to version ${version}.` })
           refreshBranding()
           setIsEditing(false)

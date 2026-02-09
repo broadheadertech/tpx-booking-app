@@ -26,7 +26,6 @@ import {
   Trophy,
   Crown,
   Medal,
-  Zap,
   Eye,
   MoreHorizontal,
   Filter,
@@ -50,14 +49,25 @@ import {
   Bookmark,
   MoreVertical,
   Sparkles,
+  Sun,
+  Moon,
+  Lightbulb,
+  Flame,
+  Gift,
+  Repeat,
+  UserPlus,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useAuth } from "../../context/AuthContext";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 import BarberBookings from "./BarberBookings";
 import BarberProfile from "./BarberProfile";
 import TimeOffManager from "./TimeOffManager";
+import CashAdvanceSection from "./CashAdvanceSection";
 import LoadingSpinner from "../common/LoadingSpinner";
+import ClockButton from "../common/ClockButton";
 import { formatTime } from "../../utils/dateUtils";
 import { useBranding } from "../../context/BrandingContext";
 
@@ -330,7 +340,7 @@ const StatCard = ({ icon: Icon, label, value, subValue, trend, trendUp }) => (
 );
 
 const BarberDashboard = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useCurrentUser();
   const location = useLocation();
   const navigate = useNavigate();
   const { tab } = useParams();
@@ -343,7 +353,7 @@ const BarberDashboard = () => {
     home: "overview",
     bookings: "bookings",
     portfolio: "portfolio",
-    earnings: "earnings",
+    finance: "finance",
     schedule: "schedule",
     profile: "profile",
   };
@@ -408,10 +418,74 @@ const BarberDashboard = () => {
     currentBarber?.avatarStorageId ? { storageId: currentBarber.avatarStorageId } : "skip"
   );
 
-  // Get stats by period
+  // Get branch info for the barber
+  const barberBranch = useQuery(
+    api.services.branches.getBranchById,
+    currentBarber?.branch_id ? { id: currentBarber.branch_id } : "skip"
+  );
+
+  // Get cover photo URL from storage
+  const coverUrl = useQuery(
+    api.services.barbers.getImageUrl,
+    currentBarber?.coverPhotoStorageId ? { storageId: currentBarber.coverPhotoStorageId } : "skip"
+  );
+
+  // Get stats by period (for booking counts, unique customers, etc.)
   const periodStats = useQuery(
     api.services.barbers.getBarberStatsByPeriod,
     currentBarber ? { barberId: currentBarber._id, period: statsPeriod } : "skip"
+  );
+
+  // Calculate period timestamps for payroll earnings query
+  const periodTimestamps = React.useMemo(() => {
+    const now = new Date();
+    let startDate;
+    switch (statsPeriod) {
+      case "daily":
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        break;
+      case "weekly": {
+        const day = now.getDay();
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day);
+        break;
+      }
+      case "monthly":
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case "yearly":
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      case "all_time":
+      default:
+        startDate = new Date(0);
+        break;
+    }
+    return { period_start: startDate.getTime(), period_end: now.getTime() };
+  }, [statsPeriod]);
+
+  // Use payroll's calculateBarberEarnings for earnings (guaranteed same formula)
+  const payrollEarnings = useQuery(
+    api.services.payroll.calculateBarberEarnings,
+    currentBarber ? {
+      barber_id: currentBarber._id,
+      ...periodTimestamps
+    } : "skip"
+  );
+
+  // Weekly timestamps for earnings goal progress bar
+  const weeklyTimestamps = React.useMemo(() => {
+    const now = new Date();
+    const day = now.getDay();
+    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - day);
+    return { period_start: startOfWeek.getTime(), period_end: now.getTime() };
+  }, []);
+
+  // Always fetch weekly payroll earnings for goal progress bar
+  const weeklyPayrollEarnings = useQuery(
+    api.services.payroll.calculateBarberEarnings,
+    currentBarber && statsPeriod !== "weekly"
+      ? { barber_id: currentBarber._id, ...weeklyTimestamps }
+      : "skip"
   );
 
   // Get top barbers
@@ -424,6 +498,12 @@ const BarberDashboard = () => {
   const barberActivities = useQuery(
     api.services.barbers.getBarberActivities,
     currentBarber ? { barberId: currentBarber._id, limit: 10 } : "skip"
+  );
+
+  // Get cash advance deductions for payroll view
+  const cashAdvanceDeductions = useQuery(
+    api.services.payroll.getCashAdvanceDeductions,
+    currentBarber ? { barber_id: currentBarber._id } : "skip"
   );
 
   // Get portfolio items
@@ -444,6 +524,33 @@ const BarberDashboard = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const coverInputRef = React.useRef(null);
+  const avatarInputRef = React.useRef(null);
+
+  // Reviews state
+  const [showAllReviews, setShowAllReviews] = useState(false);
+
+  // Expandable sections state for compact dashboard
+  const [expandedSections, setExpandedSections] = useState({
+    insights: false,
+    schedule: true, // Default expanded
+    records: false,
+    commissionBreakdown: false, // Earnings tab - collapsible commission details
+  });
+
+  // Earnings tab state
+  const [showGoalEditor, setShowGoalEditor] = useState(false);
+  const [goalInput, setGoalInput] = useState("");
+  const [goalSaving, setGoalSaving] = useState(false);
+  const [ringExpanded, setRingExpanded] = useState(false);
+  const [earningsPop, setEarningsPop] = useState(false);
+  const prevEarningsRef = React.useRef(null);
+
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   // Filter transactions for this barber
   const barberTransactions = allTransactions?.filter(
@@ -464,6 +571,509 @@ const BarberDashboard = () => {
     .filter((t) => new Date(t.createdAt).toISOString().slice(0, 7) === thisMonth)
     .reduce((sum, t) => sum + t.total_amount, 0);
 
+  // ============================================
+  // NEW: Enhanced Analytics & Insights
+  // ============================================
+
+  // Smart Timeline: sorted schedule with focus index and progress
+  const smartTimeline = React.useMemo(() => {
+    const sorted = [...todayBookings]
+      .filter(b => b.time)
+      .sort((a, b) => {
+        const [aH, aM] = a.time.split(':').map(Number);
+        const [bH, bM] = b.time.split(':').map(Number);
+        return (aH * 60 + aM) - (bH * 60 + bM);
+      });
+
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // Find the focused booking: first non-completed upcoming, or current one
+    let focusIndex = -1;
+    for (let i = 0; i < sorted.length; i++) {
+      const b = sorted[i];
+      const [h, m] = b.time.split(':').map(Number);
+      const bookingMins = h * 60 + m;
+      if (b.status === 'completed' || b.status === 'cancelled') continue;
+      // First active booking at or after now, or the next one coming
+      if (bookingMins + (b.service_duration || 30) > currentMinutes) {
+        focusIndex = i;
+        break;
+      }
+    }
+    // If none found, focus on the last non-completed
+    if (focusIndex === -1) {
+      for (let i = sorted.length - 1; i >= 0; i--) {
+        if (sorted[i].status !== 'completed' && sorted[i].status !== 'cancelled') {
+          focusIndex = i;
+          break;
+        }
+      }
+    }
+
+    const completed = sorted.filter(b => b.status === 'completed').length;
+    const total = sorted.filter(b => b.status !== 'cancelled').length;
+
+    return { bookings: sorted, focusIndex, completed, total, currentMinutes };
+  }, [todayBookings]);
+
+  // Get customer IDs from today's bookings for last-visit lookup
+  const todayCustomerIds = React.useMemo(() => {
+    return [...new Set(todayBookings.filter(b => b.customer).map(b => b.customer))];
+  }, [todayBookings]);
+
+  const customerLastVisits = useQuery(
+    api.services.bookings.getCustomerLastVisit,
+    currentBarber && todayCustomerIds.length > 0
+      ? { barberId: currentBarber._id, customerIds: todayCustomerIds }
+      : "skip"
+  );
+
+  // Smart Insights based on patterns
+  const smartInsights = React.useMemo(() => {
+    if (!barberBookings || barberBookings.length === 0) return [];
+
+    const insights = [];
+    const completedBookings = barberBookings.filter(b => b.status === 'completed');
+
+    // Analyze busiest day
+    const dayCount = {};
+    completedBookings.forEach(b => {
+      const day = new Date(b.date).toLocaleDateString('en-US', { weekday: 'long' });
+      dayCount[day] = (dayCount[day] || 0) + 1;
+    });
+    const busiestDay = Object.entries(dayCount).sort((a, b) => b[1] - a[1])[0];
+    if (busiestDay && busiestDay[1] >= 3) {
+      insights.push({
+        type: 'pattern',
+        icon: 'Calendar',
+        title: `${busiestDay[0]}s are your busiest`,
+        description: `You get ${Math.round(busiestDay[1] / Math.max(completedBookings.length, 1) * 100)}% of bookings on ${busiestDay[0]}s`,
+        color: 'blue'
+      });
+    }
+
+    // Analyze service popularity
+    const serviceCount = {};
+    completedBookings.forEach(b => {
+      if (b.service_name) {
+        serviceCount[b.service_name] = (serviceCount[b.service_name] || 0) + 1;
+      }
+    });
+    const topService = Object.entries(serviceCount).sort((a, b) => b[1] - a[1])[0];
+    if (topService && topService[1] >= 3) {
+      insights.push({
+        type: 'specialty',
+        icon: 'Scissors',
+        title: `${topService[0]} is your specialty`,
+        description: `${topService[1]} customers chose this service`,
+        color: 'purple'
+      });
+    }
+
+    // Analyze rating trend
+    if (ratingAnalytics && ratingAnalytics.averageRating >= 4.5) {
+      insights.push({
+        type: 'excellence',
+        icon: 'Star',
+        title: 'Top performer!',
+        description: `Your ${ratingAnalytics.averageRating} rating puts you in the top tier`,
+        color: 'gold'
+      });
+    }
+
+    // Analyze returning customers
+    const customerBookings = {};
+    completedBookings.forEach(b => {
+      if (b.customer) {
+        customerBookings[b.customer] = (customerBookings[b.customer] || 0) + 1;
+      }
+    });
+    const returningCustomers = Object.values(customerBookings).filter(c => c > 1).length;
+    const totalCustomers = Object.keys(customerBookings).length;
+    const returnRate = totalCustomers > 0 ? Math.round((returningCustomers / totalCustomers) * 100) : 0;
+    if (returnRate >= 30) {
+      insights.push({
+        type: 'loyalty',
+        icon: 'Heart',
+        title: `${returnRate}% return rate`,
+        description: `${returningCustomers} customers have come back for more`,
+        color: 'pink'
+      });
+    }
+
+    // Time preference insight
+    const morningBookings = completedBookings.filter(b => {
+      const hour = parseInt(b.time?.split(':')[0] || '12');
+      return hour < 12;
+    }).length;
+    const afternoonBookings = completedBookings.filter(b => {
+      const hour = parseInt(b.time?.split(':')[0] || '12');
+      return hour >= 12 && hour < 17;
+    }).length;
+    if (morningBookings > afternoonBookings * 1.5) {
+      insights.push({
+        type: 'time',
+        icon: 'Sun',
+        title: 'Morning specialist',
+        description: 'Most of your clients prefer morning slots',
+        color: 'amber'
+      });
+    } else if (afternoonBookings > morningBookings * 1.5) {
+      insights.push({
+        type: 'time',
+        icon: 'Moon',
+        title: 'Afternoon specialist',
+        description: 'Most of your clients prefer afternoon slots',
+        color: 'indigo'
+      });
+    }
+
+    return insights.slice(0, 3); // Max 3 insights
+  }, [barberBookings, ratingAnalytics]);
+
+  // Client Loyalty Stats
+  const clientStats = React.useMemo(() => {
+    if (!barberBookings || barberBookings.length === 0) {
+      return { newClients: 0, returningClients: 0, totalClients: 0, returnRate: 0 };
+    }
+
+    const completedBookings = barberBookings.filter(b => b.status === 'completed');
+    const customerBookings = {};
+
+    completedBookings.forEach(b => {
+      if (b.customer) {
+        customerBookings[b.customer] = (customerBookings[b.customer] || 0) + 1;
+      }
+    });
+
+    const totalClients = Object.keys(customerBookings).length;
+    const returningClients = Object.values(customerBookings).filter(c => c > 1).length;
+    const newClients = totalClients - returningClients;
+    const returnRate = totalClients > 0 ? Math.round((returningClients / totalClients) * 100) : 0;
+
+    // This month's new vs returning
+    const thisMonthBookings = completedBookings.filter(b =>
+      new Date(b.date).toISOString().slice(0, 7) === thisMonth
+    );
+    const thisMonthCustomers = {};
+    const firstTimeCustomers = new Set();
+
+    thisMonthBookings.forEach(b => {
+      if (b.customer) {
+        // Check if customer had bookings before this month
+        const hadPreviousBookings = completedBookings.some(prev =>
+          prev.customer === b.customer &&
+          new Date(prev.date).toISOString().slice(0, 7) < thisMonth
+        );
+        if (!hadPreviousBookings) {
+          firstTimeCustomers.add(b.customer);
+        }
+        thisMonthCustomers[b.customer] = true;
+      }
+    });
+
+    return {
+      newClients,
+      returningClients,
+      totalClients,
+      returnRate,
+      thisMonthNew: firstTimeCustomers.size,
+      thisMonthTotal: Object.keys(thisMonthCustomers).length
+    };
+  }, [barberBookings, thisMonth]);
+
+  // Personal Bests / Records
+  const personalBests = React.useMemo(() => {
+    if (!barberBookings || barberBookings.length === 0) return null;
+
+    const completedBookings = barberBookings.filter(b => b.status === 'completed');
+    if (completedBookings.length < 3) return null;
+
+    // Most bookings in a single day
+    const bookingsByDate = {};
+    completedBookings.forEach(b => {
+      bookingsByDate[b.date] = (bookingsByDate[b.date] || 0) + 1;
+    });
+    const maxBookingsDay = Math.max(...Object.values(bookingsByDate), 0);
+    const maxBookingsDate = Object.entries(bookingsByDate).find(([, v]) => v === maxBookingsDay)?.[0];
+
+    // Highest earning day
+    const earningsByDate = {};
+    barberTransactions.forEach(t => {
+      const date = new Date(t.createdAt).toISOString().split('T')[0];
+      earningsByDate[date] = (earningsByDate[date] || 0) + t.total_amount;
+    });
+    const maxEarningsDay = Math.max(...Object.values(earningsByDate), 0);
+
+    // Current streak (consecutive days with at least 1 booking)
+    let currentStreak = 0;
+    const sortedDates = Object.keys(bookingsByDate).sort().reverse();
+    if (sortedDates.length > 0) {
+      const today = new Date().toISOString().split('T')[0];
+      let checkDate = new Date(today);
+
+      for (let i = 0; i < 365; i++) {
+        const dateStr = checkDate.toISOString().split('T')[0];
+        if (bookingsByDate[dateStr]) {
+          currentStreak++;
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else if (i === 0) {
+          // Today doesn't have bookings yet, check yesterday
+          checkDate.setDate(checkDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+    }
+
+    // Best rated service
+    const serviceRatings = {};
+    const serviceRatingCounts = {};
+    if (ratingAnalytics?.recentRatings) {
+      ratingAnalytics.recentRatings.forEach(r => {
+        if (r.service_name) {
+          serviceRatings[r.service_name] = (serviceRatings[r.service_name] || 0) + r.rating;
+          serviceRatingCounts[r.service_name] = (serviceRatingCounts[r.service_name] || 0) + 1;
+        }
+      });
+    }
+    const bestService = Object.entries(serviceRatings)
+      .map(([name, total]) => ({ name, avg: total / serviceRatingCounts[name], count: serviceRatingCounts[name] }))
+      .filter(s => s.count >= 2)
+      .sort((a, b) => b.avg - a.avg)[0];
+
+    return {
+      maxBookingsDay,
+      maxBookingsDate,
+      maxEarningsDay,
+      currentStreak,
+      bestService,
+      totalCompleted: completedBookings.length
+    };
+  }, [barberBookings, barberTransactions, ratingAnalytics]);
+
+  // Earnings Goal - uses payroll's calculateBarberEarnings (100% same formula)
+  const earningsGoal = React.useMemo(() => {
+    const weeklyTarget = currentBarber?.weekly_goal || 15000; // Barber-set goal or default
+
+    // Always use weekly data for goal tracking
+    const weeklyData = statsPeriod === "weekly" ? payrollEarnings : weeklyPayrollEarnings;
+    const weeklyEarnings = weeklyData?.daily_pay ?? 0;
+
+    const weeklyProgress = weeklyTarget > 0
+      ? Math.min(Math.round((weeklyEarnings / weeklyTarget) * 100), 100)
+      : 0;
+
+    const weeklyRemaining = Math.max(weeklyTarget - weeklyEarnings, 0);
+
+    // Days left in week
+    const now = new Date();
+    const daysLeftInWeek = 7 - now.getDay();
+
+    return {
+      weeklyTarget,
+      weeklyEarnings,
+      weeklyProgress,
+      weeklyRemaining,
+      daysLeftInWeek
+    };
+  }, [payrollEarnings, weeklyPayrollEarnings, statsPeriod, currentBarber?.weekly_goal]);
+
+  // Daily Scoreboard: cuts completed today, earnings today, products sold today
+  const dailyScoreboard = React.useMemo(() => {
+    const todayCuts = todayBookings.filter(b => b.status === 'completed').length;
+    const todayEarnings = todayRevenue;
+    // Count products from today's transactions
+    const todayTx = barberTransactions.filter(
+      t => new Date(t.createdAt).toISOString().split("T")[0] === today
+    );
+    const todayProducts = todayTx.reduce((sum, t) => {
+      if (t.products && Array.isArray(t.products)) {
+        return sum + t.products.reduce((ps, p) => ps + (p.quantity || 0), 0);
+      }
+      return sum;
+    }, 0);
+
+    return { todayCuts, todayEarnings, todayProducts };
+  }, [todayBookings, todayRevenue, barberTransactions, today]);
+
+  // AI Pace Calculator + Gap Translator
+  const paceInsights = React.useMemo(() => {
+    const completedBookings = barberBookings.filter(b => b.status === 'completed');
+    if (completedBookings.length < 3) return null;
+
+    // Calculate average revenue per completed service from recent transactions
+    const recentTx = barberTransactions.slice(0, 50);
+    const avgRevenuePerService = recentTx.length > 0
+      ? recentTx.reduce((sum, t) => sum + t.total_amount, 0) / recentTx.length
+      : 0;
+
+    if (avgRevenuePerService <= 0) return null;
+
+    const remaining = earningsGoal.weeklyRemaining;
+    const daysLeft = earningsGoal.daysLeftInWeek;
+
+    // Gap Translator: how many services to reach goal
+    const servicesNeeded = remaining > 0 ? Math.ceil(remaining / avgRevenuePerService) : 0;
+
+    // Daily pace: services per remaining day
+    const dailyPace = daysLeft > 0 && servicesNeeded > 0
+      ? Math.ceil(servicesNeeded / daysLeft)
+      : 0;
+
+    // Yesterday's earnings for pace comparison
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const yesterdayEarnings = barberTransactions
+      .filter(t => new Date(t.createdAt).toISOString().split('T')[0] === yesterdayStr)
+      .reduce((sum, t) => sum + t.total_amount, 0);
+
+    return {
+      avgRevenuePerService: Math.round(avgRevenuePerService),
+      servicesNeeded,
+      dailyPace,
+      yesterdayEarnings,
+      todayEarnings: todayRevenue,
+      isAheadOfYesterday: todayRevenue >= yesterdayEarnings,
+    };
+  }, [barberBookings, barberTransactions, earningsGoal, todayRevenue]);
+
+  // Earnings Coach Tips (contextual, data-driven)
+  const coachTips = React.useMemo(() => {
+    const tips = [];
+    const completedBookings = barberBookings.filter(b => b.status === 'completed');
+    if (completedBookings.length < 5) return tips;
+
+    // Best day of week analysis
+    const dayTotals = {};
+    const dayCounts = {};
+    completedBookings.forEach(b => {
+      const dayName = new Date(b.date).toLocaleDateString('en-US', { weekday: 'long' });
+      dayTotals[dayName] = (dayTotals[dayName] || 0) + 1;
+      dayCounts[dayName] = (dayCounts[dayName] || 0) + 1;
+    });
+    const bestDay = Object.entries(dayTotals).sort((a, b) => b[1] - a[1])[0];
+    if (bestDay) {
+      tips.push({ icon: 'calendar', text: `${bestDay[0]}s are your busiest day with ${bestDay[1]} clients` });
+    }
+
+    // Product upsell nudge
+    if (paceInsights && paceInsights.servicesNeeded > 0 && paceInsights.avgRevenuePerService > 0) {
+      const productTx = barberTransactions.filter(t => t.products && t.products.length > 0);
+      const avgProductRevenue = productTx.length > 0
+        ? productTx.reduce((s, t) => s + t.products.reduce((ps, p) => ps + p.price * p.quantity, 0), 0) / productTx.length
+        : 0;
+      if (avgProductRevenue > 0) {
+        const productSalesNeeded = Math.ceil(earningsGoal.weeklyRemaining / avgProductRevenue);
+        if (productSalesNeeded > 0 && productSalesNeeded < 20) {
+          tips.push({ icon: 'product', text: `${productSalesNeeded} product sales could close your goal gap` });
+        }
+      }
+    }
+
+    // Goal progress encouragement
+    const progress = earningsGoal.weeklyProgress;
+    if (progress >= 75 && progress < 100) {
+      tips.push({ icon: 'fire', text: `Almost there! Just ${earningsGoal.weeklyRemaining.toLocaleString()} more to hit your goal` });
+    } else if (progress >= 50) {
+      tips.push({ icon: 'target', text: `Halfway there! Keep the momentum going` });
+    } else if (progress > 0 && earningsGoal.daysLeftInWeek <= 2) {
+      tips.push({ icon: 'alert', text: `${earningsGoal.daysLeftInWeek} day${earningsGoal.daysLeftInWeek > 1 ? 's' : ''} left — push for extra bookings!` });
+    }
+
+    return tips.slice(0, 2); // Max 2 tips
+  }, [barberBookings, barberTransactions, earningsGoal, paceInsights]);
+
+  // Weekly Streak Bar (Mon-Sun, did barber earn on each day?)
+  const weeklyStreak = React.useMemo(() => {
+    const now = new Date();
+    const currentDay = now.getDay(); // 0=Sun, 1=Mon...
+    // Start of week (Monday)
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((currentDay + 6) % 7));
+    monday.setHours(0, 0, 0, 0);
+
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const streak = days.map((label, i) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + i);
+      const dateStr = date.toISOString().split('T')[0];
+      const todayStr = now.toISOString().split('T')[0];
+      const isFuture = dateStr > todayStr;
+      const isCurrentDay = dateStr === todayStr;
+
+      // Check if barber had completed bookings on this day
+      const dayBookings = barberBookings.filter(
+        b => b.date === dateStr && b.status === 'completed'
+      ).length;
+
+      // Check earnings from transactions
+      const dayEarnings = barberTransactions
+        .filter(t => new Date(t.createdAt).toISOString().split('T')[0] === dateStr)
+        .reduce((sum, t) => sum + t.total_amount, 0);
+
+      return {
+        label,
+        dateStr,
+        isFuture,
+        isCurrentDay,
+        hasActivity: dayBookings > 0,
+        earnings: dayEarnings,
+        bookings: dayBookings,
+      };
+    });
+
+    const activeDays = streak.filter(d => d.hasActivity).length;
+    return { days: streak, activeDays };
+  }, [barberBookings, barberTransactions]);
+
+  // Product Upsell Nudge - dedicated card data
+  const productUpsell = React.useMemo(() => {
+    if (!paceInsights || earningsGoal.weeklyRemaining <= 0) return null;
+
+    // Calculate avg product revenue from transactions with products
+    const productTx = barberTransactions.filter(t => t.products && t.products.length > 0);
+    if (productTx.length === 0) return null;
+
+    const totalProductRevenue = productTx.reduce((s, t) =>
+      s + t.products.reduce((ps, p) => ps + p.price * p.quantity, 0), 0
+    );
+    const avgProductSaleValue = totalProductRevenue / productTx.length;
+    if (avgProductSaleValue <= 0) return null;
+
+    const salesNeeded = Math.ceil(earningsGoal.weeklyRemaining / avgProductSaleValue);
+    // Only show if reasonable number
+    if (salesNeeded > 30) return null;
+
+    // Find top selling product
+    const productCounts = {};
+    productTx.forEach(t => {
+      t.products.forEach(p => {
+        productCounts[p.product_name] = (productCounts[p.product_name] || 0) + p.quantity;
+      });
+    });
+    const topProduct = Object.entries(productCounts).sort((a, b) => b[1] - a[1])[0];
+
+    return {
+      salesNeeded,
+      avgValue: Math.round(avgProductSaleValue),
+      topProduct: topProduct ? topProduct[0] : null,
+    };
+  }, [barberTransactions, earningsGoal, paceInsights]);
+
+  // Animated Earnings Pop - trigger when earnings increase
+  React.useEffect(() => {
+    const currentEarnings = payrollEarnings?.daily_pay ?? 0;
+    if (prevEarningsRef.current !== null && currentEarnings > prevEarningsRef.current) {
+      setEarningsPop(true);
+      const timer = setTimeout(() => setEarningsPop(false), 1500);
+      return () => clearTimeout(timer);
+    }
+    prevEarningsRef.current = currentEarnings;
+  }, [payrollEarnings?.daily_pay]);
+
   // Period options
   const periodOptions = [
     { value: "daily", label: "Today" },
@@ -473,13 +1083,13 @@ const BarberDashboard = () => {
     { value: "all_time", label: "All" },
   ];
 
-  // Tab configuration - 5 tabs for bottom nav (Profile moved to header)
+  // Tab configuration - 5 tabs for bottom nav
   const tabs = [
     { id: "overview", urlPath: "home", label: "Home", icon: Home },
     { id: "bookings", urlPath: "bookings", label: "Bookings", icon: Calendar },
     { id: "portfolio", urlPath: "portfolio", label: "Portfolio", icon: Image },
-    { id: "earnings", urlPath: "earnings", label: "Earnings", icon: Wallet },
-    { id: "schedule", urlPath: "schedule", label: "Schedule", icon: Clock },
+    { id: "finance", urlPath: "finance", label: "Finance", icon: Wallet },
+    { id: "schedule", urlPath: "schedule", label: "Schedule", icon: CalendarDays },
   ];
 
   // Format activity time
@@ -507,106 +1117,151 @@ const BarberDashboard = () => {
     }
   };
 
-  // Render Overview Tab
+  // Render Overview Tab - COMPACT DESIGN (Uber/Grab Driver inspired)
   const renderOverview = () => (
-    <div className="px-4 pb-6 space-y-4">
-      {/* Welcome Hero Card */}
-      <div className="relative overflow-hidden rounded-2xl bg-[#1A1A1A] border border-[var(--color-primary)]/50">
-        <div className="relative p-5">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 rounded-xl bg-[#2A2A2A] flex items-center justify-center overflow-hidden border border-[#3A3A3A]">
-                {currentBarber?.avatar ? (
-                  <img src={currentBarber.avatar} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-lg font-bold text-[var(--color-primary)]">
-                    {currentBarber?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'U'}
+    <div className="px-4 pb-6 space-y-3 max-w-4xl mx-auto">
+      {/* COMPACT HEADER - Avatar + Greeting + Quick Stats inline */}
+      <div className="bg-[#1A1A1A] rounded-2xl p-4 md:p-5 border border-[#2A2A2A]">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3 md:space-x-4">
+            <div className="w-11 h-11 md:w-14 md:h-14 rounded-xl bg-[#2A2A2A] flex items-center justify-center overflow-hidden border border-[#3A3A3A]">
+              {currentBarber?.avatar ? (
+                <img src={currentBarber.avatar} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-base md:text-lg font-bold text-[var(--color-primary)]">
+                  {currentBarber?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || 'U'}
+                </span>
+              )}
+            </div>
+            <div>
+              <p className="text-base md:text-lg font-bold text-white">{currentBarber?.full_name?.split(' ')[0] || 'Barber'}</p>
+              <div className="flex items-center space-x-2 text-xs md:text-sm">
+                {currentBarber?.rating > 0 && (
+                  <span className="flex items-center text-gray-400">
+                    <Star className="w-3 h-3 md:w-4 md:h-4 fill-[var(--color-primary)] text-[var(--color-primary)] mr-0.5" />
+                    {currentBarber.rating}
+                  </span>
+                )}
+                {personalBests?.currentStreak > 0 && (
+                  <span className="flex items-center text-orange-400">
+                    <Flame className="w-3 h-3 md:w-4 md:h-4 mr-0.5" />
+                    {personalBests.currentStreak}d
                   </span>
                 )}
               </div>
-              <div>
-                <p className="text-sm text-gray-400">Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'},</p>
-                <h2 className="text-lg font-bold text-white">{currentBarber?.full_name?.split(' ')[0] || 'Barber'}!</h2>
-              </div>
             </div>
-            {currentBarber?.rating > 0 && (
-              <div className="flex items-center space-x-1 bg-[#2A2A2A] rounded-lg px-2 py-1 border border-[#3A3A3A]">
-                <Star className="w-3 h-3 fill-[var(--color-primary)] text-[var(--color-primary)]" />
-                <span className="text-sm font-medium text-white">{currentBarber.rating}</span>
+          </div>
+          {/* Time Clock Mini */}
+          <ClockButton
+            barberId={currentBarber?._id}
+            barberName={currentBarber?.full_name}
+            branchId={currentBarber?.branch_id}
+            compact={true}
+          />
+        </div>
+      </div>
+
+      {/* STATS GRID - Today, Pending, Rating, Clients */}
+      <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
+        <div className="bg-[#1A1A1A] rounded-xl p-2.5 md:p-4 border border-[#2A2A2A]">
+          <div className="flex items-center justify-center mb-0.5">
+            <Calendar className="w-4 h-4 md:w-5 md:h-5 text-blue-400" />
+          </div>
+          <p className="text-lg md:text-2xl font-bold text-white text-center">{todayBookings.length}</p>
+          <p className="text-[9px] md:text-xs text-gray-500 text-center">Today</p>
+        </div>
+        <div className="bg-[#1A1A1A] rounded-xl p-2.5 md:p-4 border border-[#2A2A2A]">
+          <div className="flex items-center justify-center mb-0.5">
+            <Clock className="w-4 h-4 md:w-5 md:h-5 text-amber-400" />
+          </div>
+          <p className="text-lg md:text-2xl font-bold text-white text-center">{pendingBookings.length}</p>
+          <p className="text-[9px] md:text-xs text-gray-500 text-center">Pending</p>
+        </div>
+        <div className="bg-[#1A1A1A] rounded-xl p-2.5 md:p-4 border border-[#2A2A2A]">
+          <div className="flex items-center justify-center mb-0.5">
+            <Star className="w-4 h-4 md:w-5 md:h-5 text-[var(--color-primary)]" />
+          </div>
+          <p className="text-lg md:text-2xl font-bold text-white text-center">{ratingAnalytics?.averageRating || currentBarber?.rating || '0.0'}</p>
+          <p className="text-[9px] md:text-xs text-gray-500 text-center">Rating</p>
+        </div>
+        <div className="bg-[#1A1A1A] rounded-xl p-2.5 md:p-4 border border-[#2A2A2A]">
+          <div className="flex items-center justify-center mb-0.5">
+            <Users className="w-4 h-4 md:w-5 md:h-5 text-green-400" />
+          </div>
+          <p className="text-lg md:text-2xl font-bold text-white text-center">{clientStats?.totalClients || 0}</p>
+          <p className="text-[9px] md:text-xs text-gray-500 text-center">Clients</p>
+        </div>
+        {/* These 2 show on tablet+ only */}
+        <div className="hidden md:block bg-[#1A1A1A] rounded-xl p-2.5 md:p-4 border border-[#2A2A2A]">
+          <div className="flex items-center justify-center mb-0.5">
+            <Heart className="w-4 h-4 md:w-5 md:h-5 text-pink-400" />
+          </div>
+          <p className="text-lg md:text-2xl font-bold text-white text-center">{clientStats?.returnRate || 0}%</p>
+          <p className="text-[9px] md:text-xs text-gray-500 text-center">Return</p>
+        </div>
+        <div className="hidden md:block bg-[#1A1A1A] rounded-xl p-2.5 md:p-4 border border-[#2A2A2A]">
+          <div className="flex items-center justify-center mb-0.5">
+            <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
+          </div>
+          <p className="text-lg md:text-2xl font-bold text-white text-center">{personalBests?.totalCompleted || 0}</p>
+          <p className="text-[9px] md:text-xs text-gray-500 text-center">Total</p>
+        </div>
+      </div>
+
+      {/* EARNINGS */}
+      <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
+        {/* Big Earnings Number */}
+        <div className="p-4 md:p-5 pb-3">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs md:text-sm text-gray-500 uppercase tracking-wide mb-1">Earnings</p>
+              <p className="text-3xl md:text-4xl font-black text-white">
+                ₱{(payrollEarnings?.daily_pay ?? 0).toLocaleString()}
+              </p>
+            </div>
+            {earningsGoal && (
+              <div className="text-right">
+                <p className={`text-lg md:text-xl font-bold ${
+                  earningsGoal.weeklyProgress >= 100 ? 'text-green-400' :
+                  earningsGoal.weeklyProgress >= 70 ? 'text-[var(--color-primary)]' : 'text-gray-400'
+                }`}>
+                  {earningsGoal.weeklyProgress}%
+                </p>
+                <p className="text-[10px] md:text-xs text-gray-500">of weekly goal</p>
               </div>
             )}
           </div>
-
-          {/* Quick Stats Row */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="bg-[#2A2A2A] rounded-xl p-3 text-center border border-[#3A3A3A]">
-              <div className="text-xl font-bold text-white">{todayBookings.length}</div>
-              <div className="text-xs text-gray-500">Today's Booking</div>
-            </div>
-            <div className="bg-[#2A2A2A] rounded-xl p-3 text-center border border-[#3A3A3A]">
-              <div className="text-xl font-bold text-white">{pendingBookings.length}</div>
-              <div className="text-xs text-gray-500">Pending Bookings</div>
-            </div>
-          </div>
-
-          {/* Status Message */}
-          <div className="mt-3 bg-[#2A2A2A] rounded-xl p-2.5 border border-[#3A3A3A]">
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-[var(--color-primary)] rounded-full animate-pulse"></div>
-              <p className="text-sm text-gray-400">
-                {todayBookings.length === 0 ? "No appointments yet - time to shine!" :
-                 todayBookings.length <= 2 ? "Great start! Keep up the momentum!" :
-                 todayBookings.length <= 4 ? "Busy day ahead! You're doing great!" :
-                 "Fully booked! You're on fire today!"}
+          {/* Progress Bar */}
+          {earningsGoal && (
+            <div className="mt-3">
+              <div className="h-2 md:h-2.5 bg-[#2A2A2A] rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    earningsGoal.weeklyProgress >= 100 ? 'bg-green-500' :
+                    earningsGoal.weeklyProgress >= 70 ? 'bg-[var(--color-primary)]' :
+                    'bg-gray-500'
+                  }`}
+                  style={{ width: `${Math.min(earningsGoal.weeklyProgress, 100)}%` }}
+                />
+              </div>
+              <p className="text-[10px] md:text-xs text-gray-500 mt-1">
+                {earningsGoal.weeklyProgress >= 100
+                  ? '✓ Weekly goal achieved!'
+                  : `₱${earningsGoal.weeklyRemaining.toLocaleString()} to go • ${earningsGoal.daysLeftInWeek}d left`}
               </p>
             </div>
-          </div>
+          )}
         </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div>
-        <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center">
-          <Zap className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
-          Quick Actions
-        </h3>
-        <div className="grid grid-cols-4 gap-2">
-          <QuickActionButton
-            icon={Calendar}
-            label="Bookings"
-            onClick={() => setActiveTab("bookings")}
-            badge={pendingBookings.length > 0 ? pendingBookings.length : null}
-          />
-          <QuickActionButton
-            icon={Wallet}
-            label="Earnings"
-            onClick={() => setActiveTab("earnings")}
-          />
-          <QuickActionButton
-            icon={Clock}
-            label="Schedule"
-            onClick={() => setActiveTab("schedule")}
-          />
-          <QuickActionButton
-            icon={Users}
-            label="Clients"
-            onClick={() => setActiveTab("clients")}
-          />
-        </div>
-      </div>
-
-      {/* Stats Period Filter */}
-      <div className="flex items-center justify-between bg-[#1A1A1A] rounded-2xl p-3 border border-[#2A2A2A]">
-        <span className="text-xs text-gray-400 font-medium">Statistics</span>
-        <div className="flex gap-1">
-          {periodOptions.map((option) => (
+        {/* Period Tabs */}
+        <div className="flex border-t border-[#2A2A2A]">
+          {periodOptions.slice(0, 4).map((option) => (
             <button
               key={option.value}
               onClick={() => setStatsPeriod(option.value)}
-              className={`px-2.5 py-1 text-xs rounded-lg transition-colors ${
+              className={`flex-1 py-2.5 md:py-3 text-xs md:text-sm font-medium transition-colors ${
                 statsPeriod === option.value
-                  ? "bg-[var(--color-primary)] text-white"
-                  : "bg-[#2A2A2A] text-gray-400 hover:bg-[#333333]"
+                  ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/10 border-t-2 border-[var(--color-primary)]'
+                  : 'text-gray-500 hover:text-gray-300'
               }`}
             >
               {option.label}
@@ -615,251 +1270,550 @@ const BarberDashboard = () => {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard
-          icon={Calendar}
-          label="Bookings"
-          value={periodStats?.totalBookings ?? barberBookings.length}
-          subValue={periodOptions.find(p => p.value === statsPeriod)?.label.toLowerCase()}
-          trend={`${periodStats?.completedBookings ?? 0} done`}
-          trendUp={true}
-        />
-        <StatCard
-          icon={Star}
-          label="Rating"
-          value={ratingAnalytics?.averageRating || currentBarber?.rating || "0.0"}
-          subValue="/5"
-          trend={`${ratingAnalytics?.totalRatings || 0} reviews`}
-          trendUp={true}
-        />
-        <StatCard
-          icon={DollarSign}
-          label="Earnings"
-          value={`₱${(periodStats?.totalEarnings ?? 0).toLocaleString()}`}
-          trend={`${periodStats?.commissionRate ?? 0}% commission`}
-          trendUp={true}
-        />
-        <StatCard
-          icon={Users}
-          label="Clients"
-          value={periodStats?.uniqueCustomers ?? 0}
-          subValue="unique"
-          trend={`${periodStats?.cancelledBookings ?? 0} cancelled`}
-          trendUp={false}
-        />
-      </div>
-
-      {/* Today's Appointments */}
+      {/* SMART TIMELINE - Today's Schedule with Now-Line */}
       <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
-        <div className="p-4 border-b border-[#2A2A2A] flex justify-between items-center">
-          <h3 className="text-sm font-medium text-white flex items-center">
-            <CalendarDays className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
-            Today's Schedule
-          </h3>
-          <button
-            onClick={() => setActiveTab("bookings")}
-            className="text-xs text-gray-400 hover:text-white"
-          >
-            View All
-          </button>
+        {/* Header with Progress Counter */}
+        <div className="p-3 md:p-4 flex items-center justify-between border-b border-[#2A2A2A]">
+          <div className="flex items-center space-x-2">
+            <CalendarDays className="w-4 h-4 md:w-5 md:h-5 text-[var(--color-primary)]" />
+            <span className="text-sm md:text-base font-medium text-white">Today's Schedule</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-xs md:text-sm font-bold text-[var(--color-primary)]">
+              {smartTimeline.completed} of {smartTimeline.total}
+            </span>
+            <span className="text-xs text-gray-500">done</span>
+          </div>
         </div>
-        <div className="divide-y divide-[#2A2A2A]">
-          {todayBookings.length === 0 ? (
-            <div className="p-8 text-center">
-              <div className="w-14 h-14 bg-[#2A2A2A] rounded-full flex items-center justify-center mx-auto mb-3">
-                <Calendar className="w-6 h-6 text-gray-600" />
-              </div>
-              <p className="text-white font-medium mb-1">No appointments today</p>
-              <p className="text-gray-500 text-sm">Time to relax or prepare for tomorrow!</p>
-            </div>
-          ) : (
-            todayBookings.slice(0, 4).map((booking) => (
-              <div key={booking._id} className="p-4 flex items-center space-x-3">
-                <div className="flex-shrink-0 w-12 h-12 bg-[#2A2A2A] rounded-xl flex flex-col items-center justify-center">
-                  <span className="text-[10px] text-gray-500">{formatTime(booking.time).split(" ")[1]}</span>
-                  <span className="text-sm font-bold text-white">{formatTime(booking.time).split(" ")[0]}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-white text-sm truncate">{booking.customer_name}</p>
-                  <p className="text-xs text-gray-400 truncate">{booking.service_name}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-white">₱{booking.price}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    booking.status === 'confirmed' ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]' :
-                    booking.status === 'completed' ? 'bg-white/10 text-white' :
-                    booking.status === 'pending' ? 'bg-gray-500/20 text-gray-400' :
-                    'bg-gray-500/20 text-gray-400'
+
+        {/* Timeline */}
+        {smartTimeline.bookings.length === 0 ? (
+          <div className="p-6 md:p-8 text-center">
+            <Calendar className="w-8 h-8 md:w-10 md:h-10 text-gray-600 mx-auto mb-2" />
+            <p className="text-sm md:text-base text-gray-400">No appointments today</p>
+          </div>
+        ) : (
+          <div className="relative">
+            {smartTimeline.bookings.map((booking, index) => {
+              const isFocused = index === smartTimeline.focusIndex;
+              const isPast = booking.status === 'completed';
+              const isCancelled = booking.status === 'cancelled';
+              const [bH, bM] = booking.time.split(':').map(Number);
+              const bookingMins = bH * 60 + bM;
+
+              // Determine if the now-line should appear before this booking
+              const prevBooking = index > 0 ? smartTimeline.bookings[index - 1] : null;
+              const prevMins = prevBooking ? prevBooking.time.split(':').map(Number).reduce((h, m) => h * 60 + m) : 0;
+              const showNowLine = !isPast && !isCancelled &&
+                smartTimeline.currentMinutes >= (prevBooking ? prevMins : 0) &&
+                smartTimeline.currentMinutes < bookingMins &&
+                index === smartTimeline.focusIndex;
+
+              const lastVisit = booking.customer && customerLastVisits?.[booking.customer];
+
+              return (
+                <div key={booking._id}>
+                  {/* Now Line */}
+                  {showNowLine && (
+                    <div className="relative flex items-center px-3 md:px-4 py-1">
+                      <div className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                      <div className="flex-1 h-[2px] bg-red-500 ml-1" />
+                      <span className="text-[10px] text-red-400 font-medium ml-2 shrink-0">
+                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Booking Card */}
+                  <div className={`px-3 md:px-4 transition-all ${
+                    isFocused
+                      ? 'py-3 md:py-4 bg-[var(--color-primary)]/5 border-l-2 border-[var(--color-primary)]'
+                      : 'py-2.5 md:py-3'
+                  } ${isPast ? 'opacity-40' : ''} ${isCancelled ? 'opacity-25' : ''} ${
+                    index < smartTimeline.bookings.length - 1 ? 'border-b border-[#2A2A2A]/50' : ''
                   }`}>
-                    {booking.status}
-                  </span>
+                    <div className="flex items-center space-x-3">
+                      {/* Time Column */}
+                      <div className={`w-12 md:w-14 text-center shrink-0 ${isFocused ? '' : ''}`}>
+                        <p className={`font-bold ${isFocused ? 'text-sm md:text-base text-white' : 'text-xs md:text-sm text-gray-400'}`}>
+                          {formatTime(booking.time).split(" ")[0]}
+                        </p>
+                        <p className={`${isFocused ? 'text-[10px] md:text-xs text-gray-400' : 'text-[9px] md:text-[10px] text-gray-600'}`}>
+                          {formatTime(booking.time).split(" ")[1]}
+                        </p>
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-medium truncate ${
+                          isFocused ? 'text-sm md:text-base text-white' : 'text-xs md:text-sm text-gray-300'
+                        }`}>
+                          {booking.customer_name}
+                        </p>
+                        <div className="flex items-center space-x-2">
+                          <p className={`truncate ${
+                            isFocused ? 'text-xs md:text-sm text-gray-400' : 'text-[10px] md:text-xs text-gray-500'
+                          }`}>
+                            {booking.service_name}
+                          </p>
+                          {isFocused && booking.service_duration > 0 && (
+                            <span className="text-[10px] text-gray-500 shrink-0">
+                              {booking.service_duration}min
+                            </span>
+                          )}
+                        </div>
+                        {/* Last Visit - only on focused card */}
+                        {isFocused && lastVisit && (
+                          <p className="text-[10px] md:text-xs text-[var(--color-primary)]/70 mt-1">
+                            Last visit: {lastVisit.days_ago === 1 ? 'yesterday' :
+                              lastVisit.days_ago < 7 ? `${lastVisit.days_ago} days ago` :
+                              lastVisit.days_ago < 30 ? `${Math.floor(lastVisit.days_ago / 7)} weeks ago` :
+                              `${Math.floor(lastVisit.days_ago / 30)} months ago`
+                            } — {lastVisit.service_name}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Right - Duration/Status */}
+                      <div className="text-right shrink-0">
+                        {isPast ? (
+                          <CheckCircle className="w-4 h-4 text-green-500/50" />
+                        ) : isCancelled ? (
+                          <XCircle className="w-4 h-4 text-red-500/50" />
+                        ) : isFocused ? (
+                          <p className="text-sm md:text-base font-bold text-[var(--color-primary)]">
+                            {formatTime(booking.time)}
+                          </p>
+                        ) : (
+                          <p className="text-[10px] md:text-xs text-gray-500">
+                            {booking.service_duration > 0 ? `${booking.service_duration}min` : ''}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
+              );
+            })}
+
+            {/* Now line at bottom if all bookings are past */}
+            {smartTimeline.focusIndex === -1 && smartTimeline.bookings.length > 0 && (
+              <div className="relative flex items-center px-3 md:px-4 py-1">
+                <div className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                <div className="flex-1 h-[2px] bg-red-500 ml-1" />
+                <span className="text-[10px] text-red-400 font-medium ml-2 shrink-0">
+                  {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
               </div>
-            ))
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Recent Activity */}
-      {barberActivities && barberActivities.length > 0 && (
+      {/* COLLAPSIBLE: Performance Insights */}
+      {smartInsights && smartInsights.length > 0 && (
         <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
-          <div className="p-4 border-b border-[#2A2A2A]">
-            <h3 className="text-sm font-medium text-white flex items-center">
-              <Activity className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
-              Recent Activity
-            </h3>
-          </div>
-          <div className="divide-y divide-[#2A2A2A]">
-            {barberActivities.slice(0, 5).map((activity, index) => {
-              const Icon = getActivityIcon(activity.type);
-              return (
-                <div key={index} className="p-3 flex items-center space-x-3">
-                  <div className="p-2 rounded-xl bg-[#2A2A2A]">
-                    <Icon className="w-4 h-4 text-gray-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white">{activity.title}</p>
-                    <p className="text-xs text-gray-500 truncate">{activity.description}</p>
-                  </div>
-                  <span className="text-xs text-gray-500">{formatActivityTime(activity.timestamp)}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Top Barbers Leaderboard */}
-      {topBarbers && topBarbers.length > 0 && (
-        <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
-          <div className="p-4 border-b border-[#2A2A2A] flex justify-between items-center">
-            <h3 className="text-sm font-medium text-white flex items-center">
-              <Trophy className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
-              Leaderboard
-            </h3>
-            <span className="text-xs text-gray-500">This Month</span>
-          </div>
-          <div className="divide-y divide-[#2A2A2A]">
-            {topBarbers.slice(0, 3).map((barber, index) => {
-              const isCurrentBarber = currentBarber && barber._id === currentBarber._id;
-              return (
-                <div key={barber._id} className={`p-3 flex items-center space-x-3 ${isCurrentBarber ? "bg-[#2A2A2A]" : ""}`}>
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs ${
-                    index === 0 ? "bg-[var(--color-primary)] text-white" :
-                    "bg-[#2A2A2A] text-gray-400"
-                  }`}>
-                    {index + 1}
-                  </div>
-                  <div className="w-9 h-9 rounded-full overflow-hidden bg-[#2A2A2A]">
-                    {barber.avatar ? (
-                      <img src={barber.avatar} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-500">
-                        <User className="w-4 h-4" />
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium truncate ${isCurrentBarber ? "text-[var(--color-primary)]" : "text-white"}`}>
-                      {barber.full_name}
-                      {isCurrentBarber && <span className="text-xs text-gray-500 ml-1">(You)</span>}
-                    </p>
-                    <div className="flex items-center space-x-2 text-xs text-gray-500">
-                      <span className="flex items-center">
-                        <Star className="w-3 h-3 text-[var(--color-primary)] fill-[var(--color-primary)] mr-0.5" />
-                        {barber.rating || 0}
-                      </span>
-                      <span>{barber.completedBookings} jobs</span>
-                    </div>
-                  </div>
-                  <TierBadge tier={barber.tier} />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Rating Analytics */}
-      {ratingAnalytics && ratingAnalytics.totalRatings > 0 && (
-        <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-white flex items-center">
-              <Star className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
-              Customer Reviews
-            </h3>
-            <div className="flex items-center space-x-1 bg-[var(--color-primary)]/20 px-2 py-1 rounded-lg">
-              <Star className="w-3 h-3 text-[var(--color-primary)] fill-[var(--color-primary)]" />
-              <span className="text-sm font-bold text-[var(--color-primary)]">{ratingAnalytics.averageRating}</span>
+          <button
+            onClick={() => toggleSection('insights')}
+            className="w-full p-4 md:p-5 flex items-center justify-between"
+          >
+            <div className="flex items-center">
+              <Lightbulb className="w-4 h-4 md:w-5 md:h-5 mr-2 text-amber-400" />
+              <span className="text-sm md:text-base font-medium text-white">Performance Insights</span>
             </div>
-          </div>
-
-          {/* Rating Breakdown */}
-          <div className="space-y-2 mb-4">
-            {[5, 4, 3, 2, 1].map((rating) => {
-              const count = ratingAnalytics.ratingBreakdown[rating] || 0;
-              const percentage = ratingAnalytics.totalRatings > 0 ? (count / ratingAnalytics.totalRatings) * 100 : 0;
-              return (
-                <div key={rating} className="flex items-center space-x-2">
-                  <span className="text-xs text-gray-500 w-3">{rating}</span>
-                  <Star className="w-3 h-3 text-[var(--color-primary)] fill-[var(--color-primary)]" />
-                  <div className="flex-1 bg-[#2A2A2A] rounded-full h-1.5">
-                    <div className="bg-[var(--color-primary)] h-1.5 rounded-full transition-all" style={{ width: `${percentage}%` }}></div>
-                  </div>
-                  <span className="text-xs text-gray-500 w-6 text-right">{count}</span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Recent Reviews */}
-          {ratingAnalytics.recentRatings?.length > 0 && (
-            <div className="border-t border-[#2A2A2A] pt-3">
-              <p className="text-xs text-gray-500 mb-2">Recent Reviews</p>
-              <div className="space-y-2">
-                {ratingAnalytics.recentRatings.slice(0, 2).map((review, index) => (
-                  <div key={index} className="bg-[#2A2A2A] rounded-lg p-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star
-                            key={star}
-                            className={`w-3 h-3 ${star <= review.rating ? "text-[var(--color-primary)] fill-[var(--color-primary)]" : "text-gray-600"}`}
-                          />
-                        ))}
-                      </div>
-                      <span className="text-xs text-gray-500">{new Date(review.created_at).toLocaleDateString()}</span>
+            {expandedSections.insights ? (
+              <ChevronUp className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
+            )}
+          </button>
+          {expandedSections.insights && (
+            <div className="border-t border-[#2A2A2A] divide-y divide-[#2A2A2A] md:divide-y-0 md:grid md:grid-cols-3">
+              {smartInsights.map((insight, index) => {
+                const IconComponent = insight.icon === 'Calendar' ? Calendar :
+                                     insight.icon === 'Scissors' ? Scissors :
+                                     insight.icon === 'Star' ? Star :
+                                     insight.icon === 'Heart' ? Heart :
+                                     insight.icon === 'Sun' ? Sun :
+                                     insight.icon === 'Moon' ? Moon : Sparkles;
+                return (
+                  <div key={index} className="p-3 md:p-4 flex items-center space-x-3 md:border-r md:border-[#2A2A2A] md:last:border-r-0">
+                    <IconComponent className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
+                    <div className="flex-1">
+                      <p className="text-sm md:text-base text-white">{insight.title}</p>
+                      <p className="text-xs md:text-sm text-gray-500">{insight.description}</p>
                     </div>
-                    {review.feedback && <p className="text-xs text-gray-400 line-clamp-2">{review.feedback}</p>}
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           )}
         </div>
       )}
+
+      {/* COLLAPSIBLE: Your Records */}
+      {personalBests && (
+        <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
+          <button
+            onClick={() => toggleSection('records')}
+            className="w-full p-4 md:p-5 flex items-center justify-between"
+          >
+            <div className="flex items-center">
+              <Trophy className="w-4 h-4 md:w-5 md:h-5 mr-2 text-amber-400" />
+              <span className="text-sm md:text-base font-medium text-white">Your Records</span>
+            </div>
+            {expandedSections.records ? (
+              <ChevronUp className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-4 h-4 md:w-5 md:h-5 text-gray-400" />
+            )}
+          </button>
+          {expandedSections.records && (
+            <div className="border-t border-[#2A2A2A]">
+              <div className="grid grid-cols-4 divide-x divide-[#2A2A2A]">
+                <div className="p-3 md:p-4 text-center">
+                  <p className="text-lg md:text-xl font-bold text-blue-400">{personalBests.maxBookingsDay}</p>
+                  <p className="text-[9px] md:text-xs text-gray-500">Max/Day</p>
+                </div>
+                <div className="p-3 md:p-4 text-center">
+                  <p className="text-lg md:text-xl font-bold text-green-400">₱{(personalBests.maxEarningsDay / 1000).toFixed(1)}k</p>
+                  <p className="text-[9px] md:text-xs text-gray-500">Best Day</p>
+                </div>
+                <div className="p-3 md:p-4 text-center">
+                  <p className="text-lg md:text-xl font-bold text-orange-400">{personalBests.currentStreak}</p>
+                  <p className="text-[9px] md:text-xs text-gray-500">Streak</p>
+                </div>
+                <div className="p-3 md:p-4 text-center">
+                  <p className="text-lg md:text-xl font-bold text-purple-400">{personalBests.totalCompleted}</p>
+                  <p className="text-[9px] md:text-xs text-gray-500">Total</p>
+                </div>
+              </div>
+              {personalBests.bestService && (
+                <div className="p-3 md:p-4 border-t border-[#2A2A2A] flex items-center justify-between">
+                  <span className="text-xs md:text-sm text-gray-500">Top Rated:</span>
+                  <span className="text-xs md:text-sm font-medium text-white">{personalBests.bestService.name} ({personalBests.bestService.avg.toFixed(1)}★)</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   );
 
-  // Render Earnings Tab
-  const renderEarnings = () => (
-    <div className="px-4 pb-6 space-y-4">
-      {/* Earnings Hero */}
-      <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
-        <p className="text-sm text-gray-500 mb-1">Your Earnings</p>
-        <h2 className="text-3xl font-bold text-white mb-3">₱{(periodStats?.totalEarnings ?? 0).toLocaleString()}</h2>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center text-gray-400 text-xs">
-            <span>Gross Revenue: ₱{(periodStats?.totalRevenue ?? monthlyRevenue).toLocaleString()}</span>
+  // Handle weekly goal save
+  const handleSaveGoal = async () => {
+    const amount = parseInt(goalInput);
+    if (!amount || amount < 1000 || !currentBarber) return;
+    setGoalSaving(true);
+    try {
+      await updateBarberMutation({ id: currentBarber._id, weekly_goal: amount });
+      setShowGoalEditor(false);
+      setGoalInput("");
+    } catch (e) {
+      console.error("Failed to save goal:", e);
+    }
+    setGoalSaving(false);
+  };
+
+  // Render Earnings Tab - GOAL-FIRST LAYOUT
+  const renderEarnings = () => {
+    const progress = earningsGoal.weeklyProgress;
+    const circumference = 2 * Math.PI * 54; // radius=54
+    const strokeDashoffset = circumference - (progress / 100) * circumference;
+    // Color based on progress
+    const ringColor = progress >= 100 ? '#22c55e' : progress >= 75 ? '#22c55e' : progress >= 50 ? 'var(--color-primary)' : progress >= 25 ? '#f59e0b' : '#ef4444';
+
+    return (
+    <div className="px-4 pb-6 space-y-3 max-w-4xl mx-auto">
+
+      {/* ====== 1. GOAL PROGRESS RING HERO ====== */}
+      <div
+        className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] cursor-pointer select-none"
+        onClick={() => setRingExpanded(!ringExpanded)}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider">Weekly Goal</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-sm font-medium text-white">₱{earningsGoal.weeklyTarget.toLocaleString()}</p>
+              <button
+                onClick={(e) => { e.stopPropagation(); setGoalInput(String(earningsGoal.weeklyTarget)); setShowGoalEditor(true); }}
+                className="p-1 rounded-lg hover:bg-[#2A2A2A] transition-colors"
+              >
+                <Edit3 className="w-3 h-3 text-gray-500" />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center text-[var(--color-primary)] text-xs">
-            <span>{periodStats?.daysWorked ?? 0} days worked</span>
+          <div className="text-right">
+            <p className="text-xs text-gray-500">{earningsGoal.daysLeftInWeek} days left</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {earningsGoal.weeklyRemaining > 0
+                ? `₱${earningsGoal.weeklyRemaining.toLocaleString()} to go`
+                : 'Goal reached!'
+              }
+            </p>
           </div>
+        </div>
+
+        {/* SVG Progress Ring with centered amount */}
+        <div className="flex justify-center">
+          <div className="relative w-40 h-40">
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+              {/* Background ring */}
+              <circle cx="60" cy="60" r="54" fill="none" stroke="#2A2A2A" strokeWidth="8" />
+              {/* Progress ring */}
+              <circle
+                cx="60" cy="60" r="54" fill="none"
+                stroke={ringColor}
+                strokeWidth="8"
+                strokeLinecap="round"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+                className="transition-all duration-700 ease-out"
+              />
+            </svg>
+            {/* Center content */}
+            <div className={`absolute inset-0 flex flex-col items-center justify-center transition-transform ${earningsPop ? 'scale-110' : 'scale-100'}`}>
+              <p className={`text-2xl font-bold text-white transition-all ${earningsPop ? 'text-green-400' : ''}`}>
+                ₱{earningsGoal.weeklyEarnings.toLocaleString()}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">{progress}%</p>
+              {progress >= 100 && (
+                <Trophy className="w-4 h-4 text-yellow-400 mt-1" />
+              )}
+            </div>
+            {/* Earnings pop burst */}
+            {earningsPop && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-24 h-24 rounded-full border-2 border-green-400/50 animate-ping" />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Milestone Checkpoints */}
+        <div className="flex items-center justify-between mt-4 px-2">
+          {[25, 50, 75, 100].map((milestone) => {
+            const reached = progress >= milestone;
+            return (
+              <div key={milestone} className="flex flex-col items-center gap-1">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold transition-all ${
+                  reached
+                    ? milestone === 100
+                      ? 'bg-yellow-500/20 text-yellow-400 ring-1 ring-yellow-500/40'
+                      : 'bg-[var(--color-primary)]/20 text-[var(--color-primary)] ring-1 ring-[var(--color-primary)]/40'
+                    : 'bg-[#2A2A2A] text-gray-600'
+                }`}>
+                  {reached ? <Check className="w-3 h-3" /> : `${milestone}`}
+                </div>
+                <span className={`text-[9px] ${reached ? 'text-gray-300' : 'text-gray-600'}`}>{milestone}%</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Expanded details (tap to reveal) */}
+        {ringExpanded && (
+          <div className="mt-4 pt-3 border-t border-[#2A2A2A] space-y-2 animate-in fade-in">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-500">Total Revenue</span>
+              <span className="text-gray-300">₱{((payrollEarnings?.total_service_revenue ?? 0) + (payrollEarnings?.total_product_revenue ?? 0)).toLocaleString()}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-gray-500">Days Worked</span>
+              <span className="text-gray-300">{payrollEarnings?.days_worked ?? 0}</span>
+            </div>
+            {payrollEarnings?.tax_deduction > 0 && (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-500">Tax</span>
+                <span className="text-red-400">-₱{payrollEarnings.tax_deduction.toLocaleString()}</span>
+              </div>
+            )}
+            {payrollEarnings?.tax_deduction > 0 && (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-400 font-medium">Net Pay</span>
+                <span className="text-green-400 font-medium">₱{(payrollEarnings.net_pay ?? 0).toLocaleString()}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <p className="text-[10px] text-gray-600 text-center mt-3">
+          {ringExpanded ? 'Tap to collapse' : 'Tap for details'}
+        </p>
+      </div>
+
+      {/* Goal Editor Modal */}
+      {showGoalEditor && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" onClick={() => setShowGoalEditor(false)}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="relative bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A] w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-medium text-white">Set Weekly Goal</h3>
+              <button onClick={() => setShowGoalEditor(false)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#2A2A2A]">
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">How much do you want to earn this week?</p>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-lg text-gray-400">₱</span>
+              <input
+                type="number"
+                value={goalInput}
+                onChange={e => setGoalInput(e.target.value)}
+                placeholder="15000"
+                min="1000"
+                step="500"
+                className="flex-1 bg-[#0D0D0D] border border-[#3A3A3A] rounded-xl px-3 py-2.5 text-white text-lg font-medium outline-none focus:border-[var(--color-primary)] transition-colors"
+                autoFocus
+              />
+            </div>
+            {/* Quick presets */}
+            <div className="flex gap-2 mb-4">
+              {[10000, 15000, 20000, 25000].map(amount => (
+                <button
+                  key={amount}
+                  onClick={() => setGoalInput(String(amount))}
+                  className={`flex-1 py-1.5 text-xs rounded-lg border transition-colors ${
+                    goalInput === String(amount)
+                      ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[var(--color-primary)]/10'
+                      : 'border-[#2A2A2A] text-gray-400 hover:border-[#3A3A3A]'
+                  }`}
+                >
+                  {(amount / 1000)}k
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={handleSaveGoal}
+              disabled={goalSaving || !goalInput || parseInt(goalInput) < 1000}
+              className="w-full py-3 rounded-xl font-medium text-white bg-[var(--color-primary)] disabled:opacity-40 transition-opacity"
+            >
+              {goalSaving ? 'Saving...' : 'Set Goal'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ====== 2. DAILY SCOREBOARD ====== */}
+      <div className="grid grid-cols-3 gap-2">
+        <div className="bg-[#1A1A1A] rounded-2xl p-3 border border-[#2A2A2A] text-center">
+          <Scissors className="w-4 h-4 text-[var(--color-primary)] mx-auto mb-1" />
+          <p className="text-xl font-bold text-white">{dailyScoreboard.todayCuts}</p>
+          <p className="text-[10px] text-gray-500">Cuts Today</p>
+        </div>
+        <div className="bg-[#1A1A1A] rounded-2xl p-3 border border-[#2A2A2A] text-center">
+          <Wallet className="w-4 h-4 text-green-400 mx-auto mb-1" />
+          <p className="text-xl font-bold text-white">₱{dailyScoreboard.todayEarnings.toLocaleString()}</p>
+          <p className="text-[10px] text-gray-500">Earned Today</p>
+        </div>
+        <div className="bg-[#1A1A1A] rounded-2xl p-3 border border-[#2A2A2A] text-center">
+          <Gift className="w-4 h-4 text-blue-400 mx-auto mb-1" />
+          <p className="text-xl font-bold text-white">{dailyScoreboard.todayProducts}</p>
+          <p className="text-[10px] text-gray-500">Products Sold</p>
         </div>
       </div>
 
-      {/* Period Filter */}
+      {/* ====== 2b. AI PACE CALCULATOR + GAP TRANSLATOR ====== */}
+      {paceInsights && earningsGoal.weeklyRemaining > 0 && (
+        <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
+          <div className="flex items-center gap-2 mb-3">
+            <Lightbulb className="w-4 h-4 text-amber-400" />
+            <h3 className="text-sm font-medium text-white">Pace Calculator</h3>
+          </div>
+          <div className="space-y-2.5">
+            {/* Gap Translator - services needed */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-400">Services to goal</span>
+              <span className="text-sm font-bold text-[var(--color-primary)]">
+                {paceInsights.servicesNeeded} more
+              </span>
+            </div>
+            {/* Daily pace */}
+            {paceInsights.dailyPace > 0 && earningsGoal.daysLeftInWeek > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-400">Daily pace needed</span>
+                <span className="text-sm font-medium text-white">
+                  ~{paceInsights.dailyPace}/day for {earningsGoal.daysLeftInWeek} day{earningsGoal.daysLeftInWeek > 1 ? 's' : ''}
+                </span>
+              </div>
+            )}
+            {/* Avg revenue per service */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-400">Avg. per service</span>
+              <span className="text-xs text-gray-500">₱{paceInsights.avgRevenuePerService.toLocaleString()}</span>
+            </div>
+            {/* Yesterday vs Today comparison */}
+            <div className="mt-1 pt-2 border-t border-[#2A2A2A] flex items-center justify-between">
+              <span className="text-xs text-gray-400">Today vs Yesterday</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-gray-500">₱{paceInsights.yesterdayEarnings.toLocaleString()}</span>
+                <span className="text-gray-600">→</span>
+                <span className={`text-xs font-medium ${paceInsights.isAheadOfYesterday ? 'text-green-400' : 'text-amber-400'}`}>
+                  ₱{paceInsights.todayEarnings.toLocaleString()}
+                </span>
+                {paceInsights.isAheadOfYesterday
+                  ? <ArrowUpRight className="w-3 h-3 text-green-400" />
+                  : <ArrowDownRight className="w-3 h-3 text-amber-400" />
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====== 2c. EARNINGS COACH TIPS ====== */}
+      {coachTips.length > 0 && (
+        <div className="space-y-2">
+          {coachTips.map((tip, i) => (
+            <div key={i} className="bg-[#1A1A1A] rounded-xl px-3 py-2.5 border border-[#2A2A2A] flex items-center gap-2.5">
+              {tip.icon === 'calendar' && <CalendarDays className="w-3.5 h-3.5 text-blue-400 shrink-0" />}
+              {tip.icon === 'product' && <Gift className="w-3.5 h-3.5 text-purple-400 shrink-0" />}
+              {tip.icon === 'fire' && <Flame className="w-3.5 h-3.5 text-orange-400 shrink-0" />}
+              {tip.icon === 'target' && <Target className="w-3.5 h-3.5 text-[var(--color-primary)] shrink-0" />}
+              {tip.icon === 'alert' && <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+              <p className="text-xs text-gray-300">{tip.text}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ====== 2d. WEEKLY STREAK BAR ====== */}
+      <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-medium text-gray-400 flex items-center gap-1.5">
+            <Flame className="w-3.5 h-3.5 text-orange-400" />
+            Weekly Streak
+          </h3>
+          <span className="text-[10px] text-gray-500">{weeklyStreak.activeDays}/7 active</span>
+        </div>
+        <div className="flex items-center justify-between gap-1">
+          {weeklyStreak.days.map((day) => (
+            <div key={day.label} className="flex-1 text-center">
+              <div
+                className={`w-7 h-7 mx-auto rounded-full flex items-center justify-center text-[10px] font-medium transition-all ${
+                  day.hasActivity
+                    ? 'bg-[var(--color-primary)] text-white'
+                    : day.isCurrentDay
+                      ? 'bg-[#2A2A2A] ring-1 ring-[var(--color-primary)] text-white'
+                      : day.isFuture
+                        ? 'bg-[#1A1A1A] border border-[#2A2A2A] text-gray-600'
+                        : 'bg-[#2A2A2A] text-gray-500'
+                }`}
+              >
+                {day.hasActivity ? <Check className="w-3 h-3" /> : day.label.charAt(0)}
+              </div>
+              <p className={`text-[9px] mt-1 ${day.isCurrentDay ? 'text-[var(--color-primary)] font-medium' : 'text-gray-600'}`}>
+                {day.label}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ====== 3. PERIOD FILTER ====== */}
       <div className="flex items-center justify-between bg-[#1A1A1A] rounded-2xl p-3 border border-[#2A2A2A]">
         <span className="text-xs text-gray-500 font-medium">Period</span>
         <div className="flex gap-1">
@@ -879,39 +1833,128 @@ const BarberDashboard = () => {
         </div>
       </div>
 
-      {/* Commission Breakdown */}
-      <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
-        <h3 className="text-sm font-medium text-white mb-3 flex items-center">
-          <Wallet className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
-          Commission Breakdown
-        </h3>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 rounded-full bg-[var(--color-primary)]"></div>
-              <span className="text-sm text-gray-400">Service Commission</span>
+      {/* ====== 4. COLLAPSIBLE COMMISSION BREAKDOWN ====== */}
+      <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
+        <button
+          onClick={() => toggleSection('commissionBreakdown')}
+          className="w-full p-4 flex items-center justify-between"
+        >
+          <h3 className="text-sm font-medium text-white flex items-center">
+            <Wallet className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+            Commission Breakdown
+          </h3>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-white">₱{(payrollEarnings?.daily_pay ?? 0).toLocaleString()}</span>
+            {expandedSections.commissionBreakdown
+              ? <ChevronUp className="w-4 h-4 text-gray-500" />
+              : <ChevronDown className="w-4 h-4 text-gray-500" />
+            }
+          </div>
+        </button>
+        {expandedSections.commissionBreakdown && (
+          <div className="px-4 pb-4 space-y-3 border-t border-[#2A2A2A] pt-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 rounded-full bg-[var(--color-primary)]"></div>
+                <span className="text-sm text-gray-400">Service Commission</span>
+              </div>
+              <span className="text-sm font-medium text-white">₱{(payrollEarnings?.service_commission ?? 0).toLocaleString()}</span>
             </div>
-            <span className="text-sm font-medium text-white">₱{(periodStats?.serviceCommission ?? 0).toLocaleString()}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-              <span className="text-sm text-gray-400">Product Commission</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                <span className="text-sm text-gray-400">Product Commission</span>
+              </div>
+              <span className="text-sm font-medium text-white">₱{(payrollEarnings?.product_commission ?? 0).toLocaleString()}</span>
             </div>
-            <span className="text-sm font-medium text-white">₱{(periodStats?.productCommission ?? 0).toLocaleString()}</span>
+            {(payrollEarnings?.barber_booking_fees > 0 || payrollEarnings?.barber_late_fees > 0 || payrollEarnings?.barber_convenience_fees > 0) && (
+              <>
+                {payrollEarnings?.barber_booking_fees > 0 && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                      <span className="text-sm text-gray-400">Booking Fees</span>
+                    </div>
+                    <span className="text-sm font-medium text-white">₱{payrollEarnings.barber_booking_fees.toLocaleString()}</span>
+                  </div>
+                )}
+                {payrollEarnings?.barber_late_fees > 0 && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                      <span className="text-sm text-gray-400">Late Fees</span>
+                    </div>
+                    <span className="text-sm font-medium text-white">₱{payrollEarnings.barber_late_fees.toLocaleString()}</span>
+                  </div>
+                )}
+                {payrollEarnings?.barber_convenience_fees > 0 && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                      <span className="text-sm text-gray-400">Convenience Fees</span>
+                    </div>
+                    <span className="text-sm font-medium text-white">₱{payrollEarnings.barber_convenience_fees.toLocaleString()}</span>
+                  </div>
+                )}
+              </>
+            )}
+            <div className="border-t border-[#2A2A2A] pt-3 flex items-center justify-between">
+              <span className="text-sm text-gray-400">Daily Rate</span>
+              <span className="text-sm text-gray-500">₱{(payrollEarnings?.daily_rate ?? 0).toLocaleString()}/day</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-400">Commission Rate</span>
+              <span className="text-sm text-gray-500">{(payrollEarnings?.commission_rate ?? 0)}%</span>
+            </div>
           </div>
-          <div className="border-t border-[#2A2A2A] pt-3 flex items-center justify-between">
-            <span className="text-sm text-gray-400">Daily Rate</span>
-            <span className="text-sm text-gray-500">₱{(periodStats?.dailyRate ?? 0).toLocaleString()}/day</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-400">Commission Rate</span>
-            <span className="text-sm text-gray-500">{(periodStats?.commissionRate ?? 0)}%</span>
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Earnings Stats */}
+      {/* ====== 5. CASH ADVANCE DEDUCTIONS (unchanged) ====== */}
+      {cashAdvanceDeductions && cashAdvanceDeductions.advances && cashAdvanceDeductions.advances.length > 0 && (
+        <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
+          <h3 className="text-sm font-medium text-white mb-3 flex items-center">
+            <DollarSign className="w-4 h-4 mr-2 text-red-400" />
+            Upcoming Deductions
+          </h3>
+          <div className="space-y-3">
+            {cashAdvanceDeductions.advances.map((advance, index) => (
+              <div key={index} className="bg-[#0D0D0D] rounded-xl p-3 border border-[#2A2A2A]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-gray-400">Cash Advance</span>
+                  <span className="text-sm font-medium text-red-400">
+                    -₱{(advance.installment_amount || advance.amount).toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>Total: ₱{advance.amount.toLocaleString()}</span>
+                  {advance.repayment_terms > 1 && (
+                    <span>Installment {(advance.installments_paid || 0) + 1} of {advance.repayment_terms}</span>
+                  )}
+                </div>
+                {advance.repayment_terms > 1 && (
+                  <div className="mt-2">
+                    <div className="h-1.5 bg-[#2A2A2A] rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-[var(--color-primary)] rounded-full transition-all"
+                        style={{ width: `${((advance.installments_paid || 0) / advance.repayment_terms) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            <div className="border-t border-[#2A2A2A] pt-3 flex items-center justify-between">
+              <span className="text-sm text-gray-400">Total Next Payroll Deduction</span>
+              <span className="text-sm font-bold text-red-400">
+                -₱{cashAdvanceDeductions.installmentTotal.toLocaleString()}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ====== 6. EARNINGS STATS ====== */}
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
           <div className="flex items-center space-x-2 mb-2">
@@ -931,7 +1974,56 @@ const BarberDashboard = () => {
         </div>
       </div>
 
-      {/* Recent Transactions */}
+      {/* ====== 7. PERSONAL RECORDS ====== */}
+      {personalBests && (
+        <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A]">
+          <h3 className="text-xs font-medium text-gray-400 flex items-center gap-1.5 mb-3">
+            <Trophy className="w-3.5 h-3.5 text-yellow-400" />
+            Personal Records
+          </h3>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-[#0D0D0D] rounded-xl p-2.5 text-center">
+              <p className="text-lg font-bold text-blue-400">{personalBests.maxBookingsDay}</p>
+              <p className="text-[9px] text-gray-500 mt-0.5">Most Cuts/Day</p>
+            </div>
+            <div className="bg-[#0D0D0D] rounded-xl p-2.5 text-center">
+              <p className="text-lg font-bold text-green-400">₱{(personalBests.maxEarningsDay / 1000).toFixed(1)}k</p>
+              <p className="text-[9px] text-gray-500 mt-0.5">Best Day</p>
+            </div>
+            <div className="bg-[#0D0D0D] rounded-xl p-2.5 text-center">
+              <p className="text-lg font-bold text-orange-400">{personalBests.currentStreak}</p>
+              <p className="text-[9px] text-gray-500 mt-0.5">Day Streak</p>
+            </div>
+          </div>
+          {personalBests.bestService && (
+            <div className="mt-2 flex items-center justify-between bg-[#0D0D0D] rounded-xl px-3 py-2">
+              <span className="text-[10px] text-gray-500">Top Rated Service</span>
+              <span className="text-xs font-medium text-purple-400">{personalBests.bestService.name} ({personalBests.bestService.avg.toFixed(1)}★)</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ====== 8. PRODUCT UPSELL NUDGE ====== */}
+      {productUpsell && earningsGoal.weeklyRemaining > 0 && (
+        <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-2xl p-4 border border-purple-500/20">
+          <div className="flex items-center gap-2 mb-2">
+            <Gift className="w-4 h-4 text-purple-400" />
+            <h3 className="text-sm font-medium text-white">Product Sales Boost</h3>
+          </div>
+          <p className="text-xs text-gray-300 mb-2">
+            <span className="text-purple-400 font-bold">{productUpsell.salesNeeded} product sale{productUpsell.salesNeeded > 1 ? 's' : ''}</span> could close your ₱{earningsGoal.weeklyRemaining.toLocaleString()} gap
+          </p>
+          <div className="flex items-center justify-between text-[10px] text-gray-500">
+            <span>Avg. sale: ₱{productUpsell.avgValue.toLocaleString()}</span>
+            {productUpsell.topProduct && (
+              <span>Top seller: {productUpsell.topProduct}</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ====== 9. RECENT TRANSACTIONS ====== */}
       <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
         <div className="p-4 border-b border-[#2A2A2A]">
           <h3 className="text-sm font-medium text-white flex items-center">
@@ -961,7 +2053,8 @@ const BarberDashboard = () => {
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   // Format time from 24h to 12h format
   const formatScheduleTime = (time) => {
@@ -976,78 +2069,469 @@ const BarberDashboard = () => {
   // Get schedule data from barber
   const scheduleData = currentBarber?.schedule || {};
   const days = [
-    { key: 'monday', label: 'Monday' },
-    { key: 'tuesday', label: 'Tuesday' },
-    { key: 'wednesday', label: 'Wednesday' },
-    { key: 'thursday', label: 'Thursday' },
-    { key: 'friday', label: 'Friday' },
-    { key: 'saturday', label: 'Saturday' },
-    { key: 'sunday', label: 'Sunday' },
+    { key: 'monday', label: 'Monday', short: 'Mon' },
+    { key: 'tuesday', label: 'Tuesday', short: 'Tue' },
+    { key: 'wednesday', label: 'Wednesday', short: 'Wed' },
+    { key: 'thursday', label: 'Thursday', short: 'Thu' },
+    { key: 'friday', label: 'Friday', short: 'Fri' },
+    { key: 'saturday', label: 'Saturday', short: 'Sat' },
+    { key: 'sunday', label: 'Sunday', short: 'Sun' },
   ];
 
+  // ============================================
+  // SCHEDULE TAB: Data Computations
+  // ============================================
+
+  // Today's Schedule Hero - day progress, next booking
+  const todayScheduleHero = React.useMemo(() => {
+    const now = new Date();
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const todayKey = dayNames[now.getDay()];
+    const todaySchedule = scheduleData[todayKey];
+    const isWorkingDay = todaySchedule?.available ?? false;
+
+    if (!isWorkingDay) {
+      return { isWorkingDay: false, dayLabel: todayKey.charAt(0).toUpperCase() + todayKey.slice(1) };
+    }
+
+    const startTime = todaySchedule?.start || '09:00';
+    const endTime = todaySchedule?.end || '17:00';
+    const [startH, startM] = startTime.split(':').map(Number);
+    const [endH, endM] = endTime.split(':').map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    const totalWorkMinutes = endMinutes - startMinutes;
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const elapsedMinutes = Math.max(0, Math.min(currentMinutes - startMinutes, totalWorkMinutes));
+    const progress = totalWorkMinutes > 0 ? Math.round((elapsedMinutes / totalWorkMinutes) * 100) : 0;
+    const remainingMinutes = Math.max(0, endMinutes - currentMinutes);
+    const hoursLeft = Math.floor(remainingMinutes / 60);
+    const minsLeft = remainingMinutes % 60;
+
+    // Find next upcoming booking
+    const upcomingBookings = todayBookings
+      .filter(b => b.time && b.status !== 'completed' && b.status !== 'cancelled')
+      .map(b => {
+        const [h, m] = b.time.split(':').map(Number);
+        return { ...b, bookingMins: h * 60 + m };
+      })
+      .filter(b => b.bookingMins > currentMinutes)
+      .sort((a, b) => a.bookingMins - b.bookingMins);
+
+    const nextBooking = upcomingBookings[0] || null;
+    const nextCountdown = nextBooking ? nextBooking.bookingMins - currentMinutes : null;
+
+    const beforeWork = currentMinutes < startMinutes;
+    const afterWork = currentMinutes >= endMinutes;
+
+    return {
+      isWorkingDay: true,
+      dayLabel: todayKey.charAt(0).toUpperCase() + todayKey.slice(1),
+      startTime, endTime, progress: Math.min(progress, 100),
+      hoursLeft, minsLeft,
+      nextBooking, nextCountdown,
+      beforeWork, afterWork,
+      completedToday: todayBookings.filter(b => b.status === 'completed').length,
+      totalToday: todayBookings.filter(b => b.status !== 'cancelled').length,
+    };
+  }, [scheduleData, todayBookings]);
+
+  // Today's Appointments Timeline
+  const todayTimeline = React.useMemo(() => {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const entries = todayBookings
+      .filter(b => b.time)
+      .map(b => {
+        const [h, m] = b.time.split(':').map(Number);
+        const bookingMins = h * 60 + m;
+        const duration = b.service_duration || 30;
+        const endMins = bookingMins + duration;
+        const isCurrent = currentMinutes >= bookingMins && currentMinutes < endMins && b.status !== 'completed' && b.status !== 'cancelled';
+        const isNext = !isCurrent && bookingMins > currentMinutes && b.status !== 'completed' && b.status !== 'cancelled';
+        const customerName = b.customer_name || 'Walk-in';
+        const shortName = customerName.split(' ')[0] + (customerName.split(' ')[1] ? ' ' + customerName.split(' ')[1][0] + '.' : '');
+
+        return {
+          ...b,
+          bookingMins, endMins, duration, isCurrent, isNext,
+          shortName,
+          services: b.service_name || b.services?.map(s => s.name).join(', ') || 'Service',
+          timeDisplay: formatScheduleTime(b.time),
+        };
+      })
+      .sort((a, b) => a.bookingMins - b.bookingMins);
+
+    // Mark only the first "isNext" as truly next
+    let foundNext = false;
+    entries.forEach(e => {
+      if (e.isNext && !foundNext) {
+        foundNext = true;
+      } else {
+        e.isNext = false;
+      }
+    });
+
+    return entries;
+  }, [todayBookings]);
+
+  // Weekly Calendar Data
+  const weeklyCalendarData = React.useMemo(() => {
+    const now = new Date();
+    const currentDay = now.getDay(); // 0=Sun, 1=Mon...
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((currentDay + 6) % 7));
+    monday.setHours(0, 0, 0, 0);
+
+    const dayKeys = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    const dayShorts = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const blockedPeriods = currentBarber?.blocked_periods || [];
+
+    return dayShorts.map((short, i) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + i);
+      const dateStr = date.toISOString().split('T')[0];
+      const todayStr = now.toISOString().split('T')[0];
+      const isToday = dateStr === todayStr;
+      const daySchedule = scheduleData[dayKeys[i]];
+      const isWorking = daySchedule?.available ?? false;
+      const hasTimeOff = blockedPeriods.some(p => p.date === dateStr);
+      const bookingCount = barberBookings.filter(b => b.date === dateStr && b.status !== 'cancelled').length;
+      const dateNum = date.getDate();
+
+      return { short, dateStr, dateNum, isToday, isWorking, hasTimeOff, bookingCount };
+    });
+  }, [scheduleData, barberBookings, currentBarber?.blocked_periods]);
+
+  // Schedule Summary Stats
+  const scheduleSummary = React.useMemo(() => {
+    const workingDays = days.filter(d => scheduleData[d.key]?.available).length;
+
+    // Total weekly hours
+    let totalMinutes = 0;
+    days.forEach(d => {
+      const ds = scheduleData[d.key];
+      if (ds?.available) {
+        const [sH, sM] = (ds.start || '09:00').split(':').map(Number);
+        const [eH, eM] = (ds.end || '17:00').split(':').map(Number);
+        totalMinutes += (eH * 60 + eM) - (sH * 60 + sM);
+      }
+    });
+    const totalHours = Math.round(totalMinutes / 60 * 10) / 10;
+
+    // Time-off count this month
+    const now = new Date();
+    const monthStr = now.toISOString().slice(0, 7);
+    const blockedPeriods = currentBarber?.blocked_periods || [];
+    const monthTimeOff = blockedPeriods.filter(p => p.date.startsWith(monthStr)).length;
+
+    // This week's booking count
+    const currentDay = now.getDay();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((currentDay + 6) % 7));
+    monday.setHours(0, 0, 0, 0);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    const mondayStr = monday.toISOString().split('T')[0];
+    const sundayStr = sunday.toISOString().split('T')[0];
+    const weekBookings = barberBookings.filter(
+      b => b.date >= mondayStr && b.date <= sundayStr && b.status !== 'cancelled'
+    ).length;
+
+    return { workingDays, totalHours, monthTimeOff, weekBookings };
+  }, [scheduleData, currentBarber?.blocked_periods, barberBookings, days]);
+
   // Render Schedule Tab
-  const renderSchedule = () => (
+  const renderSchedule = () => {
+    // SVG ring calculations
+    const ringSize = 140;
+    const strokeWidth = 10;
+    const radius = (ringSize - strokeWidth) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const schedProgress = todayScheduleHero.isWorkingDay ? todayScheduleHero.progress : 0;
+    const strokeDashoffset = circumference - (schedProgress / 100) * circumference;
+
+    const statusColors = {
+      pending: 'bg-amber-500',
+      confirmed: 'bg-blue-500',
+      completed: 'bg-green-500',
+      cancelled: 'bg-red-500',
+      'no-show': 'bg-gray-500',
+    };
+
+    return (
     <div className="px-4 pb-6 space-y-4">
-      {/* Schedule Header */}
+      {/* Section 1: Today's Schedule Hero */}
       <div className="bg-[#1A1A1A] rounded-2xl p-5 border border-[#2A2A2A]">
-        <p className="text-sm text-gray-500 mb-1">Your Schedule</p>
-        <h2 className="text-xl font-bold text-white mb-1">Working Hours</h2>
-        <p className="text-sm text-gray-500">Your weekly availability schedule</p>
+        {todayScheduleHero.isWorkingDay ? (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-xs text-gray-500">Today - {todayScheduleHero.dayLabel}</p>
+                <h2 className="text-lg font-bold text-white">Your Workday</h2>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-500">Schedule</p>
+                <p className="text-sm font-medium text-gray-300">
+                  {formatScheduleTime(todayScheduleHero.startTime)} - {formatScheduleTime(todayScheduleHero.endTime)}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center mb-4">
+              <div className="relative">
+                <svg width={ringSize} height={ringSize} className="transform -rotate-90">
+                  <circle cx={ringSize/2} cy={ringSize/2} r={radius} fill="none" stroke="#2A2A2A" strokeWidth={strokeWidth} />
+                  <circle cx={ringSize/2} cy={ringSize/2} r={radius} fill="none"
+                    stroke={todayScheduleHero.afterWork ? '#22c55e' : 'var(--color-primary)'}
+                    strokeWidth={strokeWidth} strokeLinecap="round"
+                    strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
+                    className="transition-all duration-1000"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  {todayScheduleHero.afterWork ? (
+                    <>
+                      <CheckCircle className="w-5 h-5 text-green-400 mb-1" />
+                      <p className="text-xs font-bold text-green-400">Done!</p>
+                    </>
+                  ) : todayScheduleHero.beforeWork ? (
+                    <>
+                      <Sun className="w-5 h-5 text-amber-400 mb-1" />
+                      <p className="text-xs font-medium text-amber-400">Starting soon</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-lg font-bold text-white">{schedProgress}%</p>
+                      <p className="text-[10px] text-gray-400">
+                        {todayScheduleHero.hoursLeft > 0 ? `${todayScheduleHero.hoursLeft}h ${todayScheduleHero.minsLeft}m left` : `${todayScheduleHero.minsLeft}m left`}
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Today's count */}
+            <div className="flex justify-center gap-6 mb-3">
+              <div className="text-center">
+                <p className="text-xl font-bold text-white">{todayScheduleHero.completedToday}</p>
+                <p className="text-[10px] text-gray-500">Completed</p>
+              </div>
+              <div className="w-px bg-[#2A2A2A]" />
+              <div className="text-center">
+                <p className="text-xl font-bold text-white">{todayScheduleHero.totalToday}</p>
+                <p className="text-[10px] text-gray-500">Total Booked</p>
+              </div>
+            </div>
+
+            {/* Next booking countdown */}
+            {todayScheduleHero.nextBooking && (
+              <div className="bg-[#2A2A2A] rounded-xl p-3 flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/20 flex items-center justify-center shrink-0">
+                  <Clock className="w-5 h-5 text-[var(--color-primary)]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-400">Next appointment</p>
+                  <p className="text-sm font-medium text-white truncate">
+                    {todayScheduleHero.nextBooking.customer_name || 'Walk-in'} - {todayScheduleHero.nextBooking.service_name || 'Service'}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-sm font-bold text-[var(--color-primary)]">
+                    {todayScheduleHero.nextCountdown < 60 ? `${todayScheduleHero.nextCountdown}m` : `${Math.floor(todayScheduleHero.nextCountdown / 60)}h ${todayScheduleHero.nextCountdown % 60}m`}
+                  </p>
+                  <p className="text-[10px] text-gray-500">away</p>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-6">
+            <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-3">
+              <Moon className="w-8 h-8 text-blue-400" />
+            </div>
+            <h2 className="text-lg font-bold text-white mb-1">Day Off</h2>
+            <p className="text-sm text-gray-500">{todayScheduleHero.dayLabel} - Enjoy your rest!</p>
+          </div>
+        )}
       </div>
 
-      {/* Working Hours */}
+      {/* Section 2: Today's Appointments Timeline */}
       <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
         <div className="p-4 border-b border-[#2A2A2A] flex justify-between items-center">
           <h3 className="text-sm font-medium text-white flex items-center">
-            <Clock className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
-            Weekly Schedule
+            <Calendar className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+            Today's Appointments
           </h3>
+          <span className="text-xs text-gray-500">{todayTimeline.length} booked</span>
         </div>
-        <div className="divide-y divide-[#2A2A2A]">
-          {days.map(({ key, label }) => {
-            const daySchedule = scheduleData[key];
-            const isAvailable = daySchedule?.available ?? false;
-            const startTime = daySchedule?.start || '09:00';
-            const endTime = daySchedule?.end || '17:00';
 
-            return (
-              <div key={key} className="p-3 flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className={`w-2 h-2 rounded-full ${isAvailable ? 'bg-green-500' : 'bg-gray-600'}`} />
-                  <span className={`text-sm ${isAvailable ? 'text-white' : 'text-gray-500'}`}>{label}</span>
+        {todayTimeline.length === 0 ? (
+          <div className="p-8 text-center">
+            <Calendar className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+            <p className="text-gray-500 text-sm">No appointments today</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[#2A2A2A]/50 max-h-72 overflow-y-auto">
+            {todayTimeline.map((entry, index) => (
+              <div key={entry._id || index}
+                className={`p-3 flex items-center space-x-3 transition-colors ${
+                  entry.isCurrent ? 'bg-[var(--color-primary)]/5 border-l-2 border-[var(--color-primary)]' :
+                  entry.isNext ? 'bg-blue-500/5 border-l-2 border-blue-500' : ''
+                }`}
+              >
+                {/* Time column */}
+                <div className="w-14 shrink-0 text-center">
+                  <p className={`text-xs font-bold ${entry.isCurrent ? 'text-[var(--color-primary)]' : entry.isNext ? 'text-blue-400' : entry.status === 'completed' ? 'text-gray-600' : 'text-gray-300'}`}>
+                    {entry.timeDisplay}
+                  </p>
+                  <p className="text-[10px] text-gray-600">{entry.duration}min</p>
                 </div>
-                <span className={`text-sm ${isAvailable ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {isAvailable ? `${formatScheduleTime(startTime)} - ${formatScheduleTime(endTime)}` : 'Day Off'}
-                </span>
+
+                {/* Timeline dot */}
+                <div className="flex flex-col items-center">
+                  <div className={`w-2.5 h-2.5 rounded-full ${statusColors[entry.status] || 'bg-gray-500'} ${entry.isCurrent ? 'ring-2 ring-[var(--color-primary)]/30' : ''}`} />
+                </div>
+
+                {/* Details */}
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-medium truncate ${entry.status === 'completed' ? 'text-gray-500' : 'text-white'}`}>
+                    {entry.shortName}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">{entry.services}</p>
+                </div>
+
+                {/* Status */}
+                <div className="shrink-0">
+                  {entry.isCurrent && (
+                    <span className="px-2 py-0.5 bg-[var(--color-primary)]/20 text-[var(--color-primary)] text-[10px] font-bold rounded-full">NOW</span>
+                  )}
+                  {entry.isNext && (
+                    <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] font-bold rounded-full">NEXT</span>
+                  )}
+                  {entry.status === 'completed' && (
+                    <CheckCircle className="w-4 h-4 text-green-500/50" />
+                  )}
+                </div>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Weekly Summary */}
+      {/* Section 3: Weekly Calendar View */}
       <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] p-4">
         <h3 className="text-sm font-medium text-white mb-3 flex items-center">
           <CalendarDays className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+          This Week
+        </h3>
+        <div className="grid grid-cols-7 gap-1.5">
+          {weeklyCalendarData.map((day) => (
+            <div key={day.dateStr}
+              className={`text-center py-2 px-1 rounded-xl transition-colors relative ${
+                day.isToday ? 'bg-[var(--color-primary)]/15 ring-1 ring-[var(--color-primary)]/40' :
+                day.isWorking ? 'bg-[#2A2A2A]' : 'bg-[#1A1A1A]'
+              }`}
+            >
+              <p className={`text-[10px] font-medium ${day.isToday ? 'text-[var(--color-primary)]' : day.isWorking ? 'text-gray-400' : 'text-gray-600'}`}>
+                {day.short}
+              </p>
+              <p className={`text-sm font-bold ${day.isToday ? 'text-white' : day.isWorking ? 'text-gray-300' : 'text-gray-600'}`}>
+                {day.dateNum}
+              </p>
+              {day.bookingCount > 0 && (
+                <span className={`text-[9px] font-bold ${day.isToday ? 'text-[var(--color-primary)]' : 'text-gray-500'}`}>
+                  {day.bookingCount}
+                </span>
+              )}
+              {day.hasTimeOff && (
+                <div className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-red-500" />
+              )}
+              {!day.isWorking && !day.hasTimeOff && (
+                <span className="text-[9px] text-gray-600">off</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Section 4: Working Hours (view-only, collapsible) */}
+      <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
+        <button
+          onClick={() => toggleSection('schedule')}
+          className="w-full p-4 flex justify-between items-center"
+        >
+          <h3 className="text-sm font-medium text-white flex items-center">
+            <Clock className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+            Working Hours
+          </h3>
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-gray-500">Set by staff</span>
+            {expandedSections.schedule ? (
+              <ChevronUp className="w-4 h-4 text-gray-500" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-gray-500" />
+            )}
+          </div>
+        </button>
+        {expandedSections.schedule && (
+          <div className="divide-y divide-[#2A2A2A] border-t border-[#2A2A2A]">
+            {days.map(({ key, label }) => {
+              const daySchedule = scheduleData[key];
+              const isAvailable = daySchedule?.available ?? false;
+              const startTime = daySchedule?.start || '09:00';
+              const endTime = daySchedule?.end || '17:00';
+
+              return (
+                <div key={key} className="p-3 flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-2 h-2 rounded-full ${isAvailable ? 'bg-green-500' : 'bg-gray-600'}`} />
+                    <span className={`text-sm ${isAvailable ? 'text-white' : 'text-gray-500'}`}>{label}</span>
+                  </div>
+                  <span className={`text-sm ${isAvailable ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {isAvailable ? `${formatScheduleTime(startTime)} - ${formatScheduleTime(endTime)}` : 'Day Off'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Section 6: Schedule Summary */}
+      <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] p-4">
+        <h3 className="text-sm font-medium text-white mb-3 flex items-center">
+          <BarChart3 className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
           Schedule Summary
         </h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-[#2A2A2A] rounded-xl p-3 text-center">
-            <p className="text-xl font-bold text-white">
-              {days.filter(d => scheduleData[d.key]?.available).length}
-            </p>
-            <p className="text-xs text-gray-500">Working Days</p>
+        <div className="grid grid-cols-4 gap-2">
+          <div className="bg-[#2A2A2A] rounded-xl p-2.5 text-center">
+            <Calendar className="w-4 h-4 text-blue-400 mx-auto mb-1" />
+            <p className="text-lg font-bold text-white">{scheduleSummary.workingDays}</p>
+            <p className="text-[10px] text-gray-500">Work Days</p>
           </div>
-          <div className="bg-[#2A2A2A] rounded-xl p-3 text-center">
-            <p className="text-xl font-bold text-white">
-              {days.filter(d => !scheduleData[d.key]?.available).length}
-            </p>
-            <p className="text-xs text-gray-500">Days Off</p>
+          <div className="bg-[#2A2A2A] rounded-xl p-2.5 text-center">
+            <Clock className="w-4 h-4 text-green-400 mx-auto mb-1" />
+            <p className="text-lg font-bold text-white">{scheduleSummary.totalHours}</p>
+            <p className="text-[10px] text-gray-500">Hrs/Week</p>
+          </div>
+          <div className="bg-[#2A2A2A] rounded-xl p-2.5 text-center">
+            <Moon className="w-4 h-4 text-purple-400 mx-auto mb-1" />
+            <p className="text-lg font-bold text-white">{scheduleSummary.monthTimeOff}</p>
+            <p className="text-[10px] text-gray-500">Time Off</p>
+          </div>
+          <div className="bg-[#2A2A2A] rounded-xl p-2.5 text-center">
+            <Users className="w-4 h-4 text-amber-400 mx-auto mb-1" />
+            <p className="text-lg font-bold text-white">{scheduleSummary.weekBookings}</p>
+            <p className="text-[10px] text-gray-500">This Week</p>
           </div>
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   // Render Clients Tab (placeholder)
   const renderClients = () => (
@@ -1113,116 +2597,193 @@ const BarberDashboard = () => {
     }
   };
 
+  // Handle cover photo upload
+  const handleCoverUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !currentBarber) return;
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > 5 * 1024 * 1024) return;
+    setIsUploadingCover(true);
+    try {
+      const uploadUrl = await generateUploadUrl();
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const { storageId } = await result.json();
+      await updateBarberMutation({ id: currentBarber._id, coverPhotoStorageId: storageId });
+    } catch (error) {
+      console.error("Failed to upload cover photo:", error);
+    } finally {
+      setIsUploadingCover(false);
+    }
+  };
+
+  // Handle avatar upload from portfolio tab
+  const handleAvatarUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !currentBarber) return;
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > 5 * 1024 * 1024) return;
+    setIsUploadingAvatar(true);
+    try {
+      const uploadUrl = await generateUploadUrl();
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      const { storageId } = await result.json();
+      await updateBarberMutation({ id: currentBarber._id, avatarStorageId: storageId });
+    } catch (error) {
+      console.error("Failed to upload avatar:", error);
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
   // Render Portfolio Tab - Instagram-like Design
   const renderPortfolio = () => (
-    <div className="pb-6 px-4">
-      {/* Instagram-style Profile Header */}
-      <div className="pt-2 pb-4">
-        <div className="flex items-center gap-5">
-          {/* Avatar */}
-          <div className="relative">
-            <div className="w-20 h-20 rounded-full overflow-hidden ring-2 ring-[var(--color-primary)] ring-offset-2 ring-offset-[#0D0D0D]">
-              {(avatarUrl || currentBarber?.avatar) ? (
-                <img
-                  src={avatarUrl || currentBarber?.avatar}
-                  alt={currentBarber?.full_name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center">
-                  <span className="text-2xl font-bold text-white">
-                    {currentBarber?.full_name?.charAt(0)}
-                  </span>
-                </div>
-              )}
-            </div>
-            {/* Add Story Button */}
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="absolute -bottom-1 -right-1 w-7 h-7 bg-[var(--color-primary)] rounded-full flex items-center justify-center border-2 border-[#0D0D0D] shadow-lg"
-            >
-              <Plus className="w-4 h-4 text-white" />
-            </button>
-          </div>
+    <div className="pb-6">
+      {/* Hidden file inputs for cover & avatar */}
+      <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverUpload} className="hidden" />
+      <input ref={avatarInputRef} type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
 
-          {/* Stats */}
-          <div className="flex-1 grid grid-cols-3 gap-2">
-            <div className="text-center">
-              <p className="text-xl font-bold text-white">{portfolioItems?.length || 0}</p>
-              <p className="text-xs text-gray-500">Posts</p>
-            </div>
-            <div className="text-center">
-              <p className="text-xl font-bold text-white">{currentBarber?.totalBookings || 0}</p>
-              <p className="text-xs text-gray-500">Clients</p>
-            </div>
-            <div className="text-center">
-              <p className="text-xl font-bold text-white">{currentBarber?.rating?.toFixed(1) || "5.0"}</p>
-              <p className="text-xs text-gray-500">Rating</p>
-            </div>
-          </div>
-        </div>
+      {/* Cover Photo */}
+      <div className="relative h-44 overflow-hidden rounded-b-3xl mx-1">
+        {coverUrl ? (
+          <img src={coverUrl} alt="Cover" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-[#1A1A1A] via-[#151515] to-[#0D0D0D]" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0D0D0D]/80 via-transparent to-transparent" />
+        <button
+          onClick={() => coverInputRef.current?.click()}
+          disabled={isUploadingCover}
+          className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-black/50 backdrop-blur-md rounded-full text-white text-[11px] hover:bg-black/70 transition-colors disabled:opacity-50"
+        >
+          {isUploadingCover ? (
+            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <Camera className="w-3 h-3" />
+          )}
+          {coverUrl ? "Edit" : "Add"}
+        </button>
 
-        {/* Bio Section */}
-        <div className="mt-4">
-          <h3 className="text-base font-bold text-white">{currentBarber?.full_name}</h3>
-          <p className="text-sm text-[var(--color-primary)] font-medium">Professional Barber</p>
+        {/* Name overlay on cover */}
+        <div className="absolute bottom-3 left-24 right-3">
+          <h3 className="text-lg font-bold text-white drop-shadow-lg">{currentBarber?.full_name}</h3>
+          {barberBranch && (
+            <div className="flex items-center gap-1 mt-0.5">
+              <MapPin className="w-3 h-3 text-white/60 flex-shrink-0" />
+              <p className="text-xs text-white/70 drop-shadow truncate">
+                {barberBranch.name}{barberBranch.address ? ` · ${barberBranch.address}` : ""}
+              </p>
+            </div>
+          )}
           {currentBarber?.specialties?.length > 0 && (
-            <p className="text-sm text-gray-400 mt-1">
-              {currentBarber.specialties.slice(0, 3).join(" • ")}
+            <p className="text-[11px] text-white/50 drop-shadow mt-0.5">
+              {currentBarber.specialties.slice(0, 3).join(" · ")}
             </p>
           )}
         </div>
+      </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-2 mt-4">
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="flex-1 py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
+      {/* Avatar — overlaps cover */}
+      <div className="px-4 -mt-10 relative z-10">
+        <div className="relative w-[76px]">
+          <div
+            onClick={() => avatarInputRef.current?.click()}
+            className="w-[76px] h-[76px] rounded-full overflow-hidden border-[3px] border-[#0D0D0D] cursor-pointer shadow-xl"
+            style={{ boxShadow: "0 0 0 2px var(--color-primary), 0 4px 12px rgba(0,0,0,0.5)" }}
           >
-            <Plus className="w-4 h-4" />
-            New Post
-          </button>
+            {isUploadingAvatar ? (
+              <div className="w-full h-full bg-[#2A2A2A] flex items-center justify-center">
+                <div className="w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : (avatarUrl || currentBarber?.avatar) ? (
+              <img
+                src={avatarUrl || currentBarber?.avatar}
+                alt={currentBarber?.full_name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] flex items-center justify-center">
+                <span className="text-2xl font-bold text-white">
+                  {currentBarber?.full_name?.charAt(0)}
+                </span>
+              </div>
+            )}
+          </div>
           <button
-            onClick={() => setActiveTab("profile")}
-            className="flex-1 py-2.5 bg-[#1A1A1A] hover:bg-[#2A2A2A] text-white font-semibold rounded-xl transition-colors border border-[#2A2A2A]"
+            onClick={() => avatarInputRef.current?.click()}
+            disabled={isUploadingAvatar}
+            className="absolute -bottom-0.5 -right-0.5 w-6 h-6 bg-[var(--color-primary)] rounded-full flex items-center justify-center border-2 border-[#0D0D0D] shadow-lg disabled:opacity-50"
           >
-            Edit Profile
+            <Camera className="w-3 h-3 text-white" />
           </button>
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="border-t border-[#1A1A1A] flex -mx-4">
-        <button className="flex-1 py-3 flex items-center justify-center gap-2 border-b-2 border-white text-white">
-          <Grid3X3 className="w-5 h-5" />
-          <span className="text-sm font-medium">Grid</span>
-        </button>
-        <button className="flex-1 py-3 flex items-center justify-center gap-2 border-b-2 border-transparent text-gray-500">
-          <Bookmark className="w-5 h-5" />
-          <span className="text-sm font-medium">Saved</span>
+      {/* Stats Bar */}
+      <div className="px-4 mt-4">
+        <div className="flex items-center gap-1 bg-[#1A1A1A] rounded-2xl p-3 border border-[#2A2A2A]">
+          <div className="flex-1 text-center">
+            <p className="text-lg font-bold text-white leading-none">{portfolioItems?.length || 0}</p>
+            <p className="text-[10px] text-gray-500 mt-1">Posts</p>
+          </div>
+          <div className="w-px h-8 bg-[#2A2A2A]" />
+          <div className="flex-1 text-center">
+            <p className="text-lg font-bold text-white leading-none">{currentBarber?.totalBookings || 0}</p>
+            <p className="text-[10px] text-gray-500 mt-1">Clients</p>
+          </div>
+          <div className="w-px h-8 bg-[#2A2A2A]" />
+          <div className="flex-1 text-center">
+            <p className="text-lg font-bold text-white leading-none">{currentBarber?.rating?.toFixed(1) || "5.0"}</p>
+            <p className="text-[10px] text-gray-500 mt-1">Rating</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Portfolio Section Header */}
+      <div className="px-4 mt-5 mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Grid3X3 className="w-4 h-4 text-gray-400" />
+          <span className="text-sm font-semibold text-white">My Work</span>
+          {portfolioItems?.length > 0 && (
+            <span className="text-xs text-gray-500">({portfolioItems.length})</span>
+          )}
+        </div>
+        <button
+          onClick={() => setShowUploadModal(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-primary)] text-white rounded-full text-xs font-medium hover:opacity-90 transition-opacity"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add Photo
         </button>
       </div>
 
-      {/* Portfolio Grid - Instagram Style */}
+      {/* Portfolio Grid */}
       {portfolioItems?.length === 0 ? (
-        <div className="py-16 text-center">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-full border-2 border-gray-700 flex items-center justify-center">
-            <Camera className="w-10 h-10 text-gray-600" />
+        <div className="mx-4 py-12 text-center bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A]">
+          <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-[#2A2A2A] flex items-center justify-center">
+            <Camera className="w-7 h-7 text-gray-600" />
           </div>
-          <h3 className="text-xl font-bold text-white mb-2">Share Photos</h3>
-          <p className="text-gray-500 text-sm max-w-xs mx-auto mb-6">
-            When you share photos, they will appear on your profile.
+          <h3 className="text-base font-semibold text-white mb-1">Share Your Work</h3>
+          <p className="text-gray-500 text-xs max-w-[200px] mx-auto mb-4">
+            Upload photos of your best cuts to build your portfolio
           </p>
           <button
             onClick={() => setShowUploadModal(true)}
-            className="text-[var(--color-primary)] font-semibold text-sm hover:text-[var(--color-accent)]"
+            className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-full text-xs font-medium hover:opacity-90 transition-opacity"
           >
-            Share your first photo
+            Upload First Photo
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-1 -mx-4 mt-2">
-          {portfolioItems?.map((item, index) => (
+        <div className="grid grid-cols-3 gap-0.5 mx-1 rounded-xl overflow-hidden">
+          {portfolioItems?.map((item) => (
             <div
               key={item._id}
               onClick={() => setSelectedPortfolioItem(item)}
@@ -1234,20 +2795,16 @@ const BarberDashboard = () => {
                 className="w-full h-full object-cover"
               />
               {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-6">
-                <div className="flex items-center gap-1.5 text-white">
-                  <Heart className="w-5 h-5 fill-white" />
-                  <span className="font-semibold">{item.likes_count || 0}</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-white">
-                  <MessageCircle className="w-5 h-5 fill-white" />
-                  <span className="font-semibold">0</span>
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                <div className="flex items-center gap-1 text-white text-xs">
+                  <Heart className="w-4 h-4 fill-white" />
+                  <span className="font-medium">{item.likes_count || 0}</span>
                 </div>
               </div>
               {/* Featured Badge */}
               {item.is_featured && (
-                <div className="absolute top-2 right-2">
-                  <Sparkles className="w-4 h-4 text-yellow-400 drop-shadow-lg" />
+                <div className="absolute top-1.5 right-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-yellow-400 drop-shadow-lg" />
                 </div>
               )}
             </div>
@@ -1523,16 +3080,49 @@ const BarberDashboard = () => {
       case "overview": return renderOverview();
       case "bookings": return <BarberBookings />;
       case "portfolio": return renderPortfolio();
-      case "earnings": return renderEarnings();
+      case "finance": return renderFinanceHub();
       case "schedule": return renderSchedule();
-      case "clients": return renderClients();
       case "profile": return <BarberProfile />;
       default: return renderOverview();
     }
   };
 
+  // Finance Hub — combines Earnings + Cash Advance
+  const [financeTab, setFinanceTab] = useState("earnings");
+  const renderFinanceHub = () => (
+    <div>
+      {/* Sub-tabs */}
+      <div className="px-4 mb-4 max-w-4xl mx-auto">
+        <div className="flex gap-1 bg-[#1A1A1A] rounded-xl p-1 border border-[#2A2A2A]">
+          <button
+            onClick={() => setFinanceTab("earnings")}
+            className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+              financeTab === "earnings"
+                ? "bg-[var(--color-primary)] text-white"
+                : "text-gray-400 hover:text-white"
+            }`}
+          >
+            Earnings
+          </button>
+          <button
+            onClick={() => setFinanceTab("advance")}
+            className={`flex-1 py-2.5 text-sm font-medium rounded-lg transition-colors ${
+              financeTab === "advance"
+                ? "bg-[var(--color-primary)] text-white"
+                : "text-gray-400 hover:text-white"
+            }`}
+          >
+            Cash Advance
+          </button>
+        </div>
+      </div>
+      {/* Content */}
+      {financeTab === "earnings" ? renderEarnings() : <CashAdvanceSection />}
+    </div>
+  );
+
   // Loading state
-  if (barbers === undefined || user === undefined) {
+  if (authLoading || barbers === undefined || user === undefined) {
     return (
       <div className="min-h-screen bg-[#0D0D0D] flex items-center justify-center p-4">
         <LoadingSpinner size="lg" message="Loading dashboard..." />
@@ -1554,40 +3144,39 @@ const BarberDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0D0D0D] pb-20">
-      {/* Mobile Header */}
+    <div className="min-h-screen bg-[#0D0D0D] pb-20 md:pb-24">
+      {/* Header - Responsive */}
       <div className="bg-[#0D0D0D] border-b border-[#1A1A1A] sticky top-0 z-20">
-        <div className="px-4 py-3">
+        <div className="px-4 py-3 md:px-6 md:py-4 max-w-4xl mx-auto">
           <div className="flex items-center justify-between">
-            <h1 className="text-lg font-bold text-white">
+            <h1 className="text-lg md:text-xl font-bold text-white">
               {activeTab === "overview" ? "Dashboard" :
                activeTab === "bookings" ? "Bookings" :
                activeTab === "portfolio" ? "Portfolio" :
-               activeTab === "earnings" ? "Earnings" :
+               activeTab === "finance" ? "Finance" :
                activeTab === "schedule" ? "Schedule" :
-               activeTab === "clients" ? "Clients" :
                activeTab === "profile" ? "Profile" : "Dashboard"}
             </h1>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 md:gap-3">
               {/* Edit Profile Button - only show on profile tab */}
               {activeTab === "profile" && (
                 <button
                   onClick={() => {
                     window.dispatchEvent(new CustomEvent('toggleBarberProfileEdit'));
                   }}
-                  className="w-9 h-9 flex items-center justify-center bg-[#1A1A1A] rounded-xl active:scale-95 transition-transform"
+                  className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center bg-[#1A1A1A] rounded-xl active:scale-95 transition-transform"
                 >
-                  <Edit3 className="w-[18px] h-[18px] text-gray-400" />
+                  <Edit3 className="w-[18px] h-[18px] md:w-5 md:h-5 text-gray-400" />
                 </button>
               )}
               {/* Notification Button */}
               <button
                 onClick={() => setShowNotifications(true)}
-                className="w-9 h-9 flex items-center justify-center bg-[#1A1A1A] rounded-xl relative active:scale-95 transition-transform"
+                className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center bg-[#1A1A1A] rounded-xl relative active:scale-95 transition-transform"
               >
-                <Bell className="w-[18px] h-[18px] text-gray-400" />
+                <Bell className="w-[18px] h-[18px] md:w-5 md:h-5 text-gray-400" />
                 {(notificationUnreadCount > 0 || pendingBookings.length > 0) && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-[var(--color-primary)] text-white text-[10px] rounded-full flex items-center justify-center font-medium animate-pulse">
+                  <span className="absolute -top-1 -right-1 w-4 h-4 md:w-5 md:h-5 bg-[var(--color-primary)] text-white text-[10px] md:text-xs rounded-full flex items-center justify-center font-medium animate-pulse">
                     {notificationUnreadCount > 0 ? notificationUnreadCount : pendingBookings.length}
                   </span>
                 )}
@@ -1595,7 +3184,7 @@ const BarberDashboard = () => {
               {/* Profile Button */}
               <button
                 onClick={() => setActiveTab("profile")}
-                className={`w-9 h-9 flex items-center justify-center rounded-xl active:scale-95 transition-transform overflow-hidden ${
+                className={`w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-xl active:scale-95 transition-transform overflow-hidden ${
                   activeTab === "profile"
                     ? "bg-[var(--color-primary)] ring-2 ring-[var(--color-primary)]"
                     : "bg-[#1A1A1A]"
@@ -1608,7 +3197,7 @@ const BarberDashboard = () => {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <UserCircle className={`w-[18px] h-[18px] ${
+                  <UserCircle className={`w-[18px] h-[18px] md:w-5 md:h-5 ${
                     activeTab === "profile" ? "text-white" : "text-gray-400"
                   }`} />
                 )}
@@ -1619,7 +3208,7 @@ const BarberDashboard = () => {
       </div>
 
       {/* Content */}
-      <div className="pt-4">{renderContent()}</div>
+      <div className="pt-4 md:pt-6">{renderContent()}</div>
 
       {/* Notification Panel */}
       <NotificationPanel
@@ -1628,25 +3217,165 @@ const BarberDashboard = () => {
         userId={user?._id}
       />
 
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0D0D0D] border-t border-[#1A1A1A] safe-area-inset-bottom">
-        <div className="grid grid-cols-5 p-1 pb-2">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
+      {/* All Reviews Modal */}
+      {showAllReviews && ratingAnalytics?.recentRatings && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/60 z-40 animate-fade-in"
+            onClick={() => setShowAllReviews(false)}
+          />
+
+          {/* Modal Panel */}
+          <div className="fixed top-0 right-0 bottom-20 w-full max-w-md bg-[#0D0D0D] z-50 animate-slide-in-right flex flex-col border-l border-[#2A2A2A]">
+            {/* Header */}
+            <div className="px-4 py-4 border-b border-[#2A2A2A] flex items-center justify-between bg-[#0D0D0D]">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-[#1A1A1A] rounded-xl flex items-center justify-center">
+                  <Star className="w-5 h-5 text-[var(--color-primary)] fill-[var(--color-primary)]" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">All Reviews</h2>
+                  <p className="text-xs text-gray-500">
+                    {ratingAnalytics.totalRatings} total • {ratingAnalytics.averageRating} avg
+                  </p>
+                </div>
+              </div>
               <button
-                key={tab.id}
-                onClick={() => navigate(`/barber/${tab.urlPath}`, { replace: true })}
-                className={`flex flex-col items-center justify-center py-2 transition-colors ${
-                  isActive ? "text-[var(--color-primary)]" : "text-gray-600"
-                }`}
+                onClick={() => setShowAllReviews(false)}
+                className="p-2 bg-[#1A1A1A] rounded-xl hover:bg-[#2A2A2A] transition-colors"
               >
-                <Icon className="w-5 h-5" />
-                <span className="text-[10px] mt-1 font-medium">{tab.label}</span>
+                <X className="w-5 h-5 text-gray-400" />
               </button>
-            );
-          })}
+            </div>
+
+            {/* Rating Summary */}
+            <div className="px-4 py-3 border-b border-[#2A2A2A] bg-[#1A1A1A]/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl font-bold text-white">{ratingAnalytics.averageRating}</span>
+                  <div className="flex">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`w-5 h-5 ${
+                          star <= Math.round(ratingAnalytics.averageRating)
+                            ? "text-[var(--color-primary)] fill-[var(--color-primary)]"
+                            : "text-gray-600"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-white">{ratingAnalytics.totalRatings}</p>
+                  <p className="text-xs text-gray-500">Total Reviews</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Reviews List */}
+            <div className="flex-1 overflow-y-auto">
+              <div className="p-4 space-y-3">
+                {ratingAnalytics.recentRatings.map((review, index) => (
+                  <div key={index} className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A]">
+                    <div className="flex items-start gap-3 mb-3">
+                      {/* Customer Avatar */}
+                      <div className="w-10 h-10 rounded-full bg-[#2A2A2A] flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {review.customer_avatar ? (
+                          <img src={review.customer_avatar} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <User className="w-5 h-5 text-gray-500" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-semibold text-white truncate">
+                            {review.customer_name || 'Customer'}
+                          </p>
+                          <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
+                            {formatActivityTime(review.created_at)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div className="flex">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`w-4 h-4 ${
+                                  star <= review.rating
+                                    ? "text-[var(--color-primary)] fill-[var(--color-primary)]"
+                                    : "text-gray-600"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                            review.rating === 5 ? 'bg-green-500/20 text-green-400' :
+                            review.rating === 4 ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]' :
+                            review.rating === 3 ? 'bg-yellow-500/20 text-yellow-400' :
+                            'bg-red-500/20 text-red-400'
+                          }`}>
+                            {review.rating === 5 ? 'Excellent' :
+                             review.rating === 4 ? 'Great' :
+                             review.rating === 3 ? 'Good' :
+                             review.rating === 2 ? 'Fair' : 'Poor'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Review Content */}
+                    {review.feedback ? (
+                      <p className="text-sm text-gray-300 leading-relaxed">{review.feedback}</p>
+                    ) : (
+                      <p className="text-sm text-gray-500 italic">No written feedback provided</p>
+                    )}
+
+                    {/* Service & Date Info */}
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#2A2A2A]">
+                      {review.service_name && (
+                        <span className="text-xs text-gray-400 bg-[#2A2A2A] px-2 py-1 rounded">
+                          {review.service_name}
+                        </span>
+                      )}
+                      <span className="text-xs text-gray-500">
+                        {new Date(review.created_at).toLocaleDateString('en-PH', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Bottom Navigation - Responsive */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#0D0D0D] border-t border-[#1A1A1A] safe-area-inset-bottom">
+        <div className="max-w-4xl mx-auto">
+          <div className="grid grid-cols-5 p-1 pb-2 md:p-2 md:pb-3">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => navigate(`/barber/${tab.urlPath}`, { replace: true })}
+                  className={`flex flex-col items-center justify-center py-2 md:py-3 transition-colors ${
+                    isActive ? "text-[var(--color-primary)]" : "text-gray-600 hover:text-gray-400"
+                  }`}
+                >
+                  <Icon className="w-5 h-5 md:w-6 md:h-6" />
+                  <span className="text-[10px] md:text-xs mt-1 font-medium">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

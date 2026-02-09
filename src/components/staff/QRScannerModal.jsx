@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 import QrScanner from 'qr-scanner'
-import { QrCode, Camera, CheckCircle, XCircle, RefreshCw, User, DollarSign, Calendar, Gift, Settings } from 'lucide-react'
+import { QrCode, Camera, CheckCircle, XCircle, RefreshCw, User, DollarSign, Calendar, Gift, Settings, Banknote, Store } from 'lucide-react'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 
@@ -136,7 +136,7 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
   const handleBookingQR = async (bookingCode) => {
     try {
       const booking = await validateBookingMutation({ bookingCode })
-      
+
       if (!booking) {
         throw new Error('Booking not found')
       }
@@ -151,6 +151,11 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
         date: booking.formattedDate,
         time: booking.formattedTime,
         price: booking.service_price || booking.price,
+        // Payment status fields (Story 8.1 - FR13, FR14)
+        payment_status: booking.payment_status,
+        convenience_fee_paid: booking.convenience_fee_paid,
+        service_price: booking.service_price,
+        total_amount: booking.total_amount,
         status: 'scanned'
       })
     } catch (err) {
@@ -473,6 +478,48 @@ const QRScannerModal = ({ isOpen, onClose, onVoucherScanned, onBookingScanned })
                     <p className="font-semibold text-white text-xs lg:text-sm truncate">{scanResult.barber_name}</p>
                     <p className="text-gray-400 text-[10px] lg:text-xs truncate">{scanResult.service_name}</p>
                   </div>
+
+                  {/* Payment Status Section (Story 8.1 - FR13, FR14) */}
+                  {scanResult.payment_status && (
+                    <div className="bg-[#1A1A1A] rounded-lg p-2.5 lg:p-3 border border-[#444444] col-span-2">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center space-x-1.5 lg:space-x-2 mb-1">
+                            <Banknote className="w-3 h-3 lg:w-4 lg:h-4 text-gray-500" />
+                            <span className="text-[10px] lg:text-xs font-medium text-gray-500 uppercase tracking-wide">Payment Status</span>
+                          </div>
+                          {scanResult.payment_status === 'paid' && (
+                            <div className="flex items-center space-x-2">
+                              <span className="px-2 py-0.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded text-xs font-bold">PAID</span>
+                              <span className="text-green-400 text-xs">₱{(scanResult.service_price || 0).toLocaleString()} via Online Pay</span>
+                            </div>
+                          )}
+                          {scanResult.payment_status === 'partial' && (
+                            <div className="flex items-center space-x-2">
+                              <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded text-xs font-bold">PARTIAL</span>
+                              <span className="text-yellow-400 text-xs">₱{(scanResult.convenience_fee_paid || 0).toLocaleString()} paid</span>
+                            </div>
+                          )}
+                          {scanResult.payment_status === 'unpaid' && (
+                            <div className="flex items-center space-x-2">
+                              <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded text-xs font-bold flex items-center gap-1">
+                                <Store className="w-3 h-3" />
+                                PAY AT BRANCH
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] lg:text-xs text-gray-500">Balance Due</p>
+                          {scanResult.payment_status === 'paid' ? (
+                            <p className="text-gray-500 font-bold text-sm">₱0</p>
+                          ) : (
+                            <p className="text-yellow-400 font-bold text-sm lg:text-base">₱{(scanResult.service_price || 0).toLocaleString()}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>

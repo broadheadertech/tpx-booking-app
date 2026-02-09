@@ -13,7 +13,7 @@ import {
     ShieldAlert,
 } from "lucide-react";
 import Modal from "../common/Modal";
-import { useAuth } from "../../context/AuthContext";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 
 const AdminVoucherManagement = () => {
     const [selectedBranchId, setSelectedBranchId] = useState("");
@@ -22,7 +22,7 @@ const AdminVoucherManagement = () => {
     const [rejectModal, setRejectModal] = useState(null);
     const [approveModal, setApproveModal] = useState(null);
     const [processingId, setProcessingId] = useState(null);
-    const { user } = useAuth();
+    const { user } = useCurrentUser();
 
     // Queries
     const branches = useQuery(api.services.branches.getAllBranches) || [];

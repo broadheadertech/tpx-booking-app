@@ -2,10 +2,10 @@ import React from 'react'
 import { Calendar, Gift, UserPlus, Clock, DollarSign, User, Info, CheckCircle, XCircle } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { useAuth } from '../../context/AuthContext'
+import { useCurrentUser } from '../../hooks/useCurrentUser'
 
 const RecentActivity = ({ activities: propActivities = [] }) => {
-  const { user } = useAuth()
+  const { user } = useCurrentUser()
   
   // Fetch recent bookings to generate activity feed - with pagination limits
   const bookingsData = user?.role === 'super_admin'

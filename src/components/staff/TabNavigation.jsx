@@ -1,7 +1,39 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { LayoutDashboard, Users, Calendar, Scissors, Gift, BarChart3, UserCheck, CalendarDays, Package, Bell, ChevronDown, MoreHorizontal, Building, Settings, DollarSign, Mail, CreditCard, FileText, UserPlus, Clock } from 'lucide-react'
+import {
+  LayoutDashboard,
+  Users,
+  Calendar,
+  Scissors,
+  Gift,
+  BarChart3,
+  UserCheck,
+  CalendarDays,
+  Package,
+  Bell,
+  ChevronDown,
+  MoreHorizontal,
+  Building,
+  Settings,
+  DollarSign,
+  Mail,
+  CreditCard,
+  FileText,
+  UserPlus,
+  Clock,
+  Banknote,
+  Percent,
+  PieChart,
+  Scale,
+  ShoppingCart,
+  ClipboardList,
+  TrendingUp,
+  Wallet,
+  Target,
+  MessageSquare,
+  Megaphone
+} from 'lucide-react'
 
-const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount = 0, waitingWalkInsCount = 0 }) => {
+const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount = 0, waitingWalkInsCount = 0, pendingAdvancesCount = 0 }) => {
   const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false)
 
   // Dynamic badge color based on count severity
@@ -17,13 +49,18 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
     if (count > 7) return 'animate-pulse' // Pulse when queue is high
     return ''
   }
-  const moreDropdownRef = useRef(null)
+  const desktopDropdownRef = useRef(null)
+  const mobileDropdownRef = useRef(null)
+  const tabletDropdownRef = useRef(null)
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Handle More dropdown
-      if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target)) {
+      const isOutsideDesktop = !desktopDropdownRef.current || !desktopDropdownRef.current.contains(event.target)
+      const isOutsideMobile = !mobileDropdownRef.current || !mobileDropdownRef.current.contains(event.target)
+      const isOutsideTablet = !tabletDropdownRef.current || !tabletDropdownRef.current.contains(event.target)
+
+      if (isOutsideDesktop && isOutsideMobile && isOutsideTablet) {
         setIsMoreDropdownOpen(false)
       }
     }
@@ -36,30 +73,49 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
 
   const getIconComponent = (tabId) => {
     const iconMap = {
+      // Main navigation (consolidated)
       overview: LayoutDashboard,
-      customers: Users,
+      reports: BarChart3,
       bookings: Calendar,
+      pos: CreditCard,
+      team: Users,
+      customers: UserCheck,
+      products: Package,
+      finance: DollarSign,
+      marketing: Megaphone,
+      settings: Settings,
+      // Legacy mappings (for backwards compatibility)
       services: Scissors,
       vouchers: Gift,
-      reports: BarChart3,
       barbers: UserCheck,
       users: Users,
       events: CalendarDays,
       calendar: CalendarDays,
-      products: Package,
       notifications: Bell,
       branches: Building,
       payroll: DollarSign,
       email_marketing: Mail,
-      pos: CreditCard,
       custom_bookings: FileText,
-      walkins: UserPlus
+      walkins: UserPlus,
+      cash_advances: Banknote,
+      royalty: Percent,
+      accounting: PieChart,
+      balance_sheet: Scale,
+      attendance: Clock,
+      order_products: ShoppingCart,
+      queue: ClipboardList,
+      payments: CreditCard,
+      payment_history: FileText,
+      branch_wallet: Wallet,
+      wallet_earnings: TrendingUp,
+      customer_analytics: Target,
+      post_moderation: MessageSquare,
     }
     return iconMap[tabId] || LayoutDashboard
   }
 
-  // Define primary tabs (most frequently used)
-  const primaryTabIds = ['overview', 'reports', 'bookings', 'custom_bookings', 'calendar', 'walkins', 'barbers', 'users', 'services', 'vouchers', 'payroll']
+  // All tabs are now primary since navigation is consolidated
+  const primaryTabIds = ['overview', 'reports', 'bookings', 'pos', 'team', 'customers', 'products', 'finance', 'marketing', 'settings']
 
   // Helper to check if a tab is available in the current filtered tabs
   const isTabAvailable = (tabId) => tabs.some(t => t.id === tabId)
@@ -118,6 +174,13 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
                       {waitingWalkInsCount > 99 ? '99+' : waitingWalkInsCount}
                     </span>
                   )}
+
+                  {/* Badge for cash advances */}
+                  {tab.id === 'cash_advances' && pendingAdvancesCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-yellow-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-0.5">
+                      {pendingAdvancesCount > 99 ? '99+' : pendingAdvancesCount}
+                    </span>
+                  )}
                 </button>
               </div>
             )
@@ -125,7 +188,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
 
           {/* More Dropdown */}
           {secondaryTabs.length > 0 && (
-            <div className="relative" ref={moreDropdownRef}>
+            <div className="relative" ref={desktopDropdownRef}>
               <button
                 onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
                 className={`relative flex items-center space-x-1.5 px-3 py-2.5 rounded-md font-medium text-xs transition-all duration-250 group ${activeSecondaryTab
@@ -209,7 +272,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
       </nav>
 
       {/* Mobile Navigation - No Horizontal Scroll */}
-      <nav className="lg:hidden">
+      <nav className="md:hidden">
         <div className="flex flex-wrap gap-1.5 sm:gap-2 p-2 sm:p-3 justify-center">
           {/* Show primary tabs first */}
           {primaryTabs.map((tab) => {
@@ -248,6 +311,13 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
                       {waitingWalkInsCount > 99 ? '99+' : waitingWalkInsCount}
                     </span>
                   )}
+
+                  {/* Badge for cash advances */}
+                  {tab.id === 'cash_advances' && pendingAdvancesCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-yellow-500 text-white text-[10px] font-bold rounded-full min-w-[16px] h-[16px] flex items-center justify-center px-1">
+                      {pendingAdvancesCount > 99 ? '99+' : pendingAdvancesCount}
+                    </span>
+                  )}
                 </button>
               </div>
             )
@@ -255,7 +325,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
 
           {/* More button for secondary tabs */}
           {secondaryTabs.length > 0 && (
-            <div className="relative">
+            <div className="relative" ref={mobileDropdownRef}>
               <button
                 onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
                 className={`flex flex-col items-center justify-center px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-medium text-xs transition-all duration-200 whitespace-nowrap flex-shrink-0 min-w-[60px] sm:min-w-[70px] touch-manipulation ${activeSecondaryTab
@@ -363,6 +433,13 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
                       {waitingWalkInsCount > 99 ? '99+' : waitingWalkInsCount}
                     </span>
                   )}
+
+                  {/* Badge for cash advances */}
+                  {tab.id === 'cash_advances' && pendingAdvancesCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-yellow-500 text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                      {pendingAdvancesCount > 99 ? '99+' : pendingAdvancesCount}
+                    </span>
+                  )}
                 </button>
               </div>
             )
@@ -370,7 +447,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
 
           {/* More Dropdown for Tablet */}
           {secondaryTabs.length > 0 && (
-            <div className="relative">
+            <div className="relative" ref={tabletDropdownRef}>
               <button
                 onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
                 className={`flex items-center space-x-2 px-3 py-2.5 rounded-lg font-semibold text-sm transition-all duration-300 whitespace-nowrap ${activeSecondaryTab

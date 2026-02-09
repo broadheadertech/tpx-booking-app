@@ -1,11 +1,11 @@
 import React from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { NotificationDashboard } from '../../components/common/NotificationDashboard';
 import { ArrowLeft, Bell, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const NotificationsPage = () => {
-  const { user, loading } = useAuth();
+  const { user, loading } = useCurrentUser();
 
   if (loading) {
     return (

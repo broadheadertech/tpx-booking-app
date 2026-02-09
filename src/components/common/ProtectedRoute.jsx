@@ -1,5 +1,8 @@
 import { useState, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { useUser } from '@clerk/clerk-react'
+import { useQuery } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import { Navigate, useLocation } from 'react-router-dom'
 import LoadingScreen from './LoadingScreen'
 import useIdleTimer from '../../hooks/useIdleTimer'
@@ -9,7 +12,30 @@ const IDLE_TIMEOUT = 30 * 60 * 1000 // 30 minutes
 const WARNING_TIME = 60 * 1000 // 60 seconds warning before logout
 
 const ProtectedRoute = ({ children, requireStaff = false, requireBarber = false, requireSuperAdmin = false, requirePageAccess = null }) => {
-  const { isAuthenticated, user, loading, logout } = useAuth()
+  // Legacy auth context
+  const { isAuthenticated: legacyAuthenticated, user: legacyUser, loading: legacyLoading, logout } = useAuth()
+
+  // Clerk auth
+  const { user: clerkUser, isLoaded: clerkLoaded, isSignedIn: clerkSignedIn } = useUser()
+
+  // Query Convex for Clerk user (only if signed in via Clerk)
+  const clerkConvexUser = useQuery(
+    api.services.auth.getUserByClerkId,
+    clerkLoaded && clerkSignedIn && clerkUser?.id
+      ? { clerk_user_id: clerkUser.id }
+      : "skip"
+  )
+
+  // Determine authentication status (either legacy OR Clerk)
+  const isClerkLoading = !clerkLoaded || (clerkSignedIn && clerkConvexUser === undefined)
+  const loading = legacyLoading || isClerkLoading
+
+  // Check if authenticated via either method
+  const isAuthenticated = legacyAuthenticated || (clerkSignedIn && clerkConvexUser !== null)
+
+  // Get the active user (prefer Clerk user if signed in via Clerk)
+  const user = (clerkSignedIn && clerkConvexUser) ? clerkConvexUser : legacyUser
+
   const location = useLocation()
   const [showWarning, setShowWarning] = useState(false)
 

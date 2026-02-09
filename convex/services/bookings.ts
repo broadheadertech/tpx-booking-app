@@ -1,8 +1,191 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
-// import { api } from "../_generated/api"; // Removed to break circular dependency
+import { api } from "../_generated/api";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
+import { getCurrentUser } from "../lib/clerkAuth";
 import type { Id } from "../_generated/dataModel";
+
+// ============================================================================
+// SECURE CUSTOMER QUERIES (Story 13-7: Customer Booking Self-Service)
+// ============================================================================
+
+/**
+ * Get the current customer's bookings
+ * Automatically filters to only show bookings where the authenticated user is the customer
+ * No customerId parameter needed - uses the authenticated user
+ */
+export const getMyBookings = query({
+  args: {
+    status: v.optional(v.union(
+      v.literal("pending"),
+      v.literal("confirmed"),
+      v.literal("completed"),
+      v.literal("cancelled"),
+      v.literal("no_show")
+    )),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+
+    if (!user) {
+      return [];
+    }
+
+    const userEmail = user.email?.toLowerCase();
+    const limit = args.limit || 50;
+
+    // Get bookings by customer ID
+    let bookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_customer", (q) => q.eq("customer", user._id))
+      .order("desc")
+      .take(limit);
+
+    // Also get bookings by email (for custom bookings where customer ID is not set)
+    if (userEmail) {
+      const customBookings = await ctx.db
+        .query("bookings")
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("customer"), undefined),
+            q.eq(q.field("customer_email"), userEmail)
+          )
+        )
+        .take(limit);
+
+      // Merge and deduplicate
+      const bookingIds = new Set(bookings.map((b) => b._id.toString()));
+      bookings = [
+        ...bookings,
+        ...customBookings.filter((b) => !bookingIds.has(b._id.toString())),
+      ];
+    }
+
+    // Filter by status if provided
+    if (args.status) {
+      bookings = bookings.filter((b) => b.status === args.status);
+    }
+
+    // Get associated data
+    const bookingsWithData = await Promise.all(
+      bookings.map(async (booking) => {
+        const [service, barber, branch] = await Promise.all([
+          ctx.db.get(booking.service),
+          booking.barber ? ctx.db.get(booking.barber) : null,
+          ctx.db.get(booking.branch_id),
+        ]);
+
+        return {
+          _id: booking._id,
+          booking_code: booking.booking_code,
+          branch_id: booking.branch_id,
+          date: booking.date,
+          time: booking.time,
+          status: booking.status,
+          price: booking.price,
+          final_price: booking.final_price,
+          payment_status: booking.payment_status,
+          payment_method: booking.payment_method,
+          payment_type: booking.payment_type,
+          booking_fee: booking.booking_fee || 0,
+          service_price: service?.price || booking.price || 0,
+          serviceName: service?.name || "Unknown Service",
+          serviceDuration: service?.duration_minutes || 30,
+          barberName: barber?.full_name || "Any Available",
+          branchName: branch?.name || "Unknown Branch",
+          branchPhone: branch?.phone,
+          createdAt: booking.createdAt,
+          // Include full objects for rebook functionality
+          service: service ? {
+            _id: service._id,
+            name: service.name,
+            price: service.price,
+            duration: service.duration_minutes || 30,
+          } : null,
+          barber: barber ? barber._id : null,
+          branch: branch ? {
+            _id: branch._id,
+            name: branch.name,
+            phone: branch.phone,
+          } : null,
+        };
+      })
+    );
+
+    // Sort by date descending
+    return bookingsWithData.sort((a, b) => {
+      const dateA = new Date(`${a.date} ${a.time}`).getTime();
+      const dateB = new Date(`${b.date} ${b.time}`).getTime();
+      return dateB - dateA;
+    });
+  },
+});
+
+/**
+ * Check if a booking can be cancelled (within cancellation window)
+ * Returns { canCancel: boolean, reason?: string }
+ */
+export const checkCancellationEligibility = query({
+  args: {
+    bookingId: v.id("bookings"),
+  },
+  handler: async (ctx, args) => {
+    const user = await getCurrentUser(ctx);
+
+    if (!user) {
+      return { canCancel: false, reason: "Not authenticated" };
+    }
+
+    const booking = await ctx.db.get(args.bookingId);
+
+    if (!booking) {
+      return { canCancel: false, reason: "Booking not found" };
+    }
+
+    // Verify the booking belongs to this user
+    const userEmail = user.email?.toLowerCase();
+    const isOwner =
+      booking.customer === user._id ||
+      (booking.customer_email?.toLowerCase() === userEmail && !booking.customer);
+
+    if (!isOwner) {
+      return { canCancel: false, reason: "Not authorized" };
+    }
+
+    // Check if already cancelled
+    if (booking.status === "cancelled") {
+      return { canCancel: false, reason: "Booking is already cancelled" };
+    }
+
+    // Check if already completed
+    if (booking.status === "completed") {
+      return { canCancel: false, reason: "Booking is already completed" };
+    }
+
+    // Check cancellation window (default 2 hours)
+    const bookingDateTime = new Date(`${booking.date}T${booking.time}`);
+    const now = new Date();
+    const hoursUntilBooking = (bookingDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    // Get branch for custom cancellation window (if configured)
+    const branch = await ctx.db.get(booking.branch_id);
+    const cancellationWindowHours = 2; // Default 2 hours, could be configurable per branch
+
+    if (hoursUntilBooking < cancellationWindowHours) {
+      return {
+        canCancel: false,
+        reason: `Cancellations must be made at least ${cancellationWindowHours} hours before your appointment`,
+      };
+    }
+
+    return { canCancel: true };
+  },
+});
+
+// ============================================================================
+// EXISTING FUNCTIONS
+// ============================================================================
 
 // Generate booking code
 function generateBookingCode() {
@@ -53,11 +236,16 @@ export const getAllBookings = query({
             time: booking.time,
             status: booking.status,
             payment_status: booking.payment_status,
+            payment_method: booking.payment_method,
             price: booking.price,
             final_price: booking.final_price,
             discount_amount: booking.discount_amount,
             voucher_id: booking.voucher_id,
             notes: booking.notes,
+            booking_fee: booking.booking_fee || 0,
+            convenience_fee_paid: booking.convenience_fee_paid || 0,
+            cash_collected: booking.cash_collected || 0,
+            late_fee: booking.late_fee || 0,
             createdAt: booking.createdAt || booking._creationTime,
             updatedAt: booking.updatedAt || booking._creationTime,
             customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
@@ -89,11 +277,16 @@ export const getAllBookings = query({
             time: booking.time,
             status: booking.status,
             payment_status: booking.payment_status,
+            payment_method: booking.payment_method,
             price: booking.price,
             final_price: booking.final_price,
             discount_amount: booking.discount_amount,
             voucher_id: booking.voucher_id,
             notes: booking.notes,
+            booking_fee: booking.booking_fee || 0,
+            convenience_fee_paid: booking.convenience_fee_paid || 0,
+            cash_collected: booking.cash_collected || 0,
+            late_fee: booking.late_fee || 0,
             createdAt: booking.createdAt || booking._creationTime,
             updatedAt: booking.updatedAt || booking._creationTime,
             customer_name: booking.customer_name || 'Unknown',
@@ -164,11 +357,16 @@ export const getBookingsByBranch = query({
             time: booking.time,
             status: booking.status,
             payment_status: booking.payment_status,
+            payment_method: booking.payment_method,
             price: booking.price,
             final_price: booking.final_price,
             discount_amount: booking.discount_amount,
             voucher_id: booking.voucher_id,
             notes: booking.notes,
+            booking_fee: booking.booking_fee || 0,
+            convenience_fee_paid: booking.convenience_fee_paid || 0,
+            cash_collected: booking.cash_collected || 0,
+            late_fee: booking.late_fee || 0,
             createdAt: booking.createdAt || booking._creationTime,
             updatedAt: booking.updatedAt || booking._creationTime,
             customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
@@ -199,11 +397,16 @@ export const getBookingsByBranch = query({
             time: booking.time,
             status: booking.status,
             payment_status: booking.payment_status,
+            payment_method: booking.payment_method,
             price: booking.price,
             final_price: booking.final_price,
             discount_amount: booking.discount_amount,
             voucher_id: booking.voucher_id,
             notes: booking.notes,
+            booking_fee: booking.booking_fee || 0,
+            convenience_fee_paid: booking.convenience_fee_paid || 0,
+            cash_collected: booking.cash_collected || 0,
+            late_fee: booking.late_fee || 0,
             createdAt: booking.createdAt || booking._creationTime,
             updatedAt: booking.updatedAt || booking._creationTime,
             customer_name: booking.customer_name || 'Unknown',
@@ -288,6 +491,7 @@ export const getBookingsByCustomer = query({
           time: booking.time,
           status: booking.status,
           payment_status: booking.payment_status,
+          payment_method: booking.payment_method,
           price: booking.price,
           final_price: booking.final_price,
           discount_amount: booking.discount_amount,
@@ -302,6 +506,12 @@ export const getBookingsByCustomer = query({
           formattedDate: new Date(booking.date).toLocaleDateString(),
           formattedTime: formatTime(booking.time),
           is_custom_booking: isCustomBooking,
+          // Payment/fee fields
+          booking_fee: booking.booking_fee || 0,
+          convenience_fee_paid: booking.convenience_fee_paid || 0,
+          total_amount: booking.final_price || booking.price || 0,
+          amount_paid: booking.amount_paid || 0,
+          amount_due: booking.amount_due || 0,
         };
       })
     );
@@ -338,6 +548,7 @@ export const getBookingsByBarber = query({
           time: booking.time,
           status: booking.status,
           payment_status: booking.payment_status,
+          payment_method: booking.payment_method,
           price: booking.price,
           final_price: booking.final_price,
           discount_amount: booking.discount_amount,
@@ -387,11 +598,13 @@ export const getBookingById = query({
       time: booking.time,
       status: booking.status,
       payment_status: booking.payment_status,
+      payment_method: booking.payment_method,
       price: booking.price,
       final_price: booking.final_price,
       discount_amount: booking.discount_amount,
       voucher_id: booking.voucher_id,
       notes: booking.notes,
+      booking_fee: booking.booking_fee || 0,
       createdAt: booking._creationTime,
       customer_name: customer?.username || booking.customer_name || 'Unknown',
       customer_email: customer?.email || booking.customer_email || '',
@@ -462,6 +675,12 @@ export const createBooking = mutation({
     customer_phone: v.optional(v.string()),
     customer_email: v.optional(v.string()),
     booking_fee: v.optional(v.number()),
+    payment_status: v.optional(v.union(
+      v.literal("unpaid"),
+      v.literal("paid"),
+      v.literal("partial"),
+      v.literal("refunded")
+    )),
   },
   handler: async (ctx, args) => {
     // Get service details for price
@@ -580,7 +799,7 @@ export const createBooking = mutation({
       date: args.date,
       time: args.time,
       status: args.status || "pending",
-      payment_status: "unpaid",
+      payment_status: args.payment_status || "unpaid",
       price: originalPrice,
       voucher_id: args.voucher_id,
       booking_fee: args.booking_fee,
@@ -1060,6 +1279,10 @@ export const getBookingsByDateRange = query({
             discount_amount: booking.discount_amount,
             voucher_id: booking.voucher_id,
             notes: booking.notes,
+            booking_fee: booking.booking_fee || 0,
+            convenience_fee_paid: booking.convenience_fee_paid || 0,
+            cash_collected: booking.cash_collected || 0,
+            late_fee: booking.late_fee || 0,
             createdAt: booking.createdAt || booking._creationTime,
             updatedAt: booking.updatedAt || booking._creationTime,
             customer_name: booking.customer_name || customer?.username || customer?.nickname || 'Unknown',
@@ -1096,6 +1319,10 @@ export const getBookingsByDateRange = query({
             discount_amount: booking.discount_amount,
             voucher_id: booking.voucher_id,
             notes: booking.notes,
+            booking_fee: booking.booking_fee || 0,
+            convenience_fee_paid: booking.convenience_fee_paid || 0,
+            cash_collected: booking.cash_collected || 0,
+            late_fee: booking.late_fee || 0,
             createdAt: booking.createdAt || booking._creationTime,
             updatedAt: booking.updatedAt || booking._creationTime,
             customer_name: booking.customer_name || 'Unknown',
@@ -1647,5 +1874,305 @@ export const createWalkInBooking = mutation({
     }
 
     return bookingId;
+  },
+});
+
+// Record cash payment collection at POS (Story 8.2 - FR15)
+export const recordCashPayment = mutation({
+  args: {
+    booking_id: v.id("bookings"),
+    amount: v.number(),
+    payment_method: v.union(
+      v.literal("cash"),
+      v.literal("gcash_manual"),
+      v.literal("maya_manual"),
+      v.literal("card_manual")
+    ),
+    collected_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Get the booking
+    const booking = await ctx.db.get(args.booking_id);
+    if (!booking) {
+      throw new Error("Booking not found");
+    }
+
+    // Calculate remaining balance
+    // Note: Convenience fee is a separate reservation payment, NOT deducted from service price
+    const servicePrice = booking.service_price || booking.price || 0;
+    const convenienceFeePaid = booking.convenience_fee_paid || 0;
+    const cashAlreadyCollected = booking.cash_collected || 0;
+    const remainingBalance = servicePrice - cashAlreadyCollected;
+
+    // Determine new payment status based on total cash collected
+    let newPaymentStatus: "paid" | "partial" | "unpaid" = booking.payment_status || "unpaid";
+    const totalCashAfterPayment = cashAlreadyCollected + args.amount;
+    if (totalCashAfterPayment >= servicePrice) {
+      newPaymentStatus = "paid";
+    } else if (totalCashAfterPayment > 0) {
+      newPaymentStatus = "partial";
+    }
+
+    // Update booking payment_status
+    await ctx.db.patch(args.booking_id, {
+      payment_status: newPaymentStatus,
+      // Track total amount paid at branch
+      cash_collected: (booking.cash_collected || 0) + args.amount,
+    });
+
+    // Determine payment_for based on context
+    // If convenience fee was paid previously, this is remaining_balance
+    // If this covers full service price, it's full_cash
+    // Otherwise it's partial
+    let paymentFor: "remaining_balance" | "full_cash" | "partial" = "partial";
+    if (convenienceFeePaid > 0) {
+      paymentFor = "remaining_balance";
+    } else if (args.amount >= servicePrice) {
+      paymentFor = "full_cash";
+    }
+
+    // Log to paymentAuditLog
+    await ctx.db.insert("paymentAuditLog", {
+      booking_id: args.booking_id,
+      branch_id: booking.branch_id,
+      event_type: "cash_collected",
+      amount: args.amount,
+      payment_method: args.payment_method,
+      payment_for: paymentFor,
+      created_at: Date.now(),
+      created_by: args.collected_by,
+      raw_payload: {
+        booking_code: booking.booking_code,
+        service_price: servicePrice,
+        convenience_fee_paid: convenienceFeePaid,
+        previous_status: booking.payment_status || "unpaid",
+        new_status: newPaymentStatus,
+        remaining_after: remainingBalance - args.amount,
+      },
+    });
+
+    return {
+      success: true,
+      new_payment_status: newPaymentStatus,
+      amount_collected: args.amount,
+      remaining_balance: Math.max(0, remainingBalance - args.amount),
+    };
+  },
+});
+
+// Mark booking as completed (Story 8.3 - FR16)
+export const markBookingComplete = mutation({
+  args: {
+    booking_id: v.id("bookings"),
+    completed_by: v.id("users"),
+    force_complete: v.optional(v.boolean()), // Allow completion even with unpaid balance
+  },
+  handler: async (ctx, args) => {
+    // Get the booking
+    const booking = await ctx.db.get(args.booking_id);
+    if (!booking) {
+      throw new Error("Booking not found");
+    }
+
+    // Calculate remaining balance
+    const servicePrice = booking.service_price || booking.price || 0;
+    const convenienceFeePaid = booking.convenience_fee_paid || 0;
+    const cashCollected = booking.cash_collected || 0;
+    const remainingBalance = servicePrice - convenienceFeePaid - cashCollected;
+
+    // Skip balance check if payment_status is 'paid' (already paid via PayMongo)
+    const isFullyPaid = booking.payment_status === 'paid';
+
+    // Check if there's unpaid balance and force_complete is not set
+    // But skip this check if booking is already marked as fully paid
+    if (remainingBalance > 0 && !args.force_complete && !isFullyPaid) {
+      return {
+        success: false,
+        requires_confirmation: true,
+        unpaid_balance: remainingBalance,
+        message: `Customer has unpaid balance of ₱${remainingBalance.toLocaleString()}`,
+      };
+    }
+
+    // Update booking status to completed
+    await ctx.db.patch(args.booking_id, {
+      status: "completed",
+      completed_at: Date.now(),
+    });
+
+    // Log to paymentAuditLog
+    await ctx.db.insert("paymentAuditLog", {
+      booking_id: args.booking_id,
+      branch_id: booking.branch_id,
+      event_type: "booking_completed",
+      amount: 0,
+      payment_method: "system",
+      created_at: Date.now(),
+      created_by: args.completed_by,
+      raw_payload: {
+        booking_code: booking.booking_code,
+        service_price: servicePrice,
+        total_paid: convenienceFeePaid + cashCollected,
+        unpaid_balance: Math.max(0, remainingBalance),
+        forced_complete: args.force_complete || false,
+        payment_status: booking.payment_status || "unpaid",
+      },
+    });
+
+    // Update customer-branch activity for marketing/churn tracking
+    // Only if customer has an account (not walk-in without account)
+    if (booking.customer) {
+      try {
+        await ctx.runMutation(api.services.customerBranchActivity.upsertActivity, {
+          customerId: booking.customer,
+          branchId: booking.branch_id,
+          bookingAmount: servicePrice,
+          bookingDate: Date.now(),
+        });
+      } catch (error) {
+        // Log but don't fail booking completion if activity tracking fails
+        console.error("[markBookingComplete] Failed to update customer branch activity:", error);
+      }
+    }
+
+    return {
+      success: true,
+      booking_status: "completed",
+    };
+  },
+});
+
+// Get today's bookings with payment status (Story 8.4 - FR17)
+export const getTodaysBookingsWithPaymentStatus = query({
+  args: {
+    branch_id: v.id("branches"),
+    payment_status_filter: v.optional(v.union(
+      v.literal("all"),
+      v.literal("paid"),
+      v.literal("partial"),
+      v.literal("unpaid")
+    )),
+  },
+  handler: async (ctx, args) => {
+    // Get today's date range (start and end of day)
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const endOfDay = startOfDay + 24 * 60 * 60 * 1000;
+
+    // Get today's date string for matching
+    const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+    // Query bookings for this branch
+    const bookings = await ctx.db
+      .query("bookings")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+
+    // Filter for today's bookings
+    const todaysBookings = bookings.filter((booking) => {
+      // Check if booking date matches today
+      if (booking.date === todayStr) {
+        return true;
+      }
+      // Also check created_at for walk-in bookings
+      if (booking.created_at && booking.created_at >= startOfDay && booking.created_at < endOfDay) {
+        return true;
+      }
+      return false;
+    });
+
+    // Apply payment status filter
+    let filteredBookings = todaysBookings;
+    if (args.payment_status_filter && args.payment_status_filter !== "all") {
+      filteredBookings = todaysBookings.filter(
+        (booking) => booking.payment_status === args.payment_status_filter
+      );
+    }
+
+    // Get barber and service names
+    const enrichedBookings = await Promise.all(
+      filteredBookings.map(async (booking) => {
+        const barber = booking.barber ? await ctx.db.get(booking.barber) : null;
+        const service = booking.service_id ? await ctx.db.get(booking.service_id) : null;
+
+        // Calculate amounts
+        const servicePrice = booking.service_price || booking.price || 0;
+        const convenienceFeePaid = booking.convenience_fee_paid || 0;
+        const cashCollected = booking.cash_collected || 0;
+        const remainingBalance = Math.max(0, servicePrice - convenienceFeePaid - cashCollected);
+
+        return {
+          _id: booking._id,
+          booking_code: booking.booking_code,
+          time: booking.time,
+          date: booking.date,
+          customer_name: booking.customer_name,
+          customer_phone: booking.customer_phone,
+          service_name: service?.name || booking.service_name || "Unknown Service",
+          barber_name: barber?.full_name || booking.barber_name || "Any Barber",
+          payment_status: booking.payment_status || "unpaid",
+          service_price: servicePrice,
+          convenience_fee_paid: convenienceFeePaid,
+          cash_collected: cashCollected,
+          remaining_balance: remainingBalance,
+          status: booking.status,
+        };
+      })
+    );
+
+    // Sort by time
+    return enrichedBookings.sort((a, b) => {
+      if (!a.time || !b.time) return 0;
+      return a.time.localeCompare(b.time);
+    });
+  },
+});
+
+// Get customer's last completed booking with a specific barber
+export const getCustomerLastVisit = query({
+  args: {
+    barberId: v.id("barbers"),
+    customerIds: v.array(v.id("users")),
+  },
+  handler: async (ctx, args) => {
+    if (args.customerIds.length === 0) return {};
+
+    const result: Record<string, { service_name: string; date: string; days_ago: number }> = {};
+
+    for (const customerId of args.customerIds) {
+      const bookings = await ctx.db
+        .query("bookings")
+        .withIndex("by_customer", (q) => q.eq("customer", customerId))
+        .collect();
+
+      // Filter for completed bookings with this barber, excluding today
+      const today = new Date().toISOString().split("T")[0];
+      const pastBookings = bookings
+        .filter(
+          (b) =>
+            b.barber === args.barberId &&
+            b.status === "completed" &&
+            b.date !== today
+        )
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+      if (pastBookings.length > 0) {
+        const last = pastBookings[0];
+        const service = await ctx.db.get(last.service);
+        const lastDate = new Date(last.date);
+        const now = new Date();
+        const daysAgo = Math.floor(
+          (now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        result[customerId] = {
+          service_name: service?.name || "Unknown",
+          date: last.date,
+          days_ago: daysAgo,
+        };
+      }
+    }
+
+    return result;
   },
 });

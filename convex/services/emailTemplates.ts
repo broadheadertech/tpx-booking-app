@@ -1,16 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
-
-// Helper: get current user by session token
-async function getUserBySession(ctx: any, sessionToken: string) {
-  const session = await ctx.db
-    .query("sessions")
-    .withIndex("by_token", (q: any) => q.eq("token", sessionToken))
-    .first();
-  if (!session || session.expiresAt < Date.now()) return null;
-  const user = await ctx.db.get(session.userId);
-  return user || null;
-}
+import { requireSuperAdmin } from "../lib/unifiedAuth";
 
 // Template type definition
 const templateTypeValidator = v.union(
@@ -62,22 +52,20 @@ const DEFAULT_TEMPLATES = {
 
 // Get all email templates
 export const getAllTemplates = query({
-  args: { sessionToken: v.string() },
+  args: { sessionToken: v.optional(v.string()) }, // Optional for backwards compatibility
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user || user.role !== "super_admin") {
-      throw new Error("Permission denied: Only super admins can view email templates");
-    }
+    // Use unified auth (supports both Clerk and legacy)
+    await requireSuperAdmin(ctx, args.sessionToken);
 
     const templates = await ctx.db.query("email_templates").collect();
-    
+
     // Return templates with defaults for missing ones
     const templateTypes = ["password_reset", "voucher", "booking_confirmation", "booking_reminder", "welcome"] as const;
-    
+
     return templateTypes.map(type => {
       const existing = templates.find(t => t.template_type === type);
       if (existing) return existing;
-      
+
       return {
         _id: null,
         template_type: type,
@@ -117,7 +105,7 @@ export const getTemplateByType = query({
 // Upsert (create or update) an email template
 export const upsertTemplate = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     template_type: templateTypeValidator,
     subject: v.string(),
     heading: v.string(),
@@ -127,10 +115,8 @@ export const upsertTemplate = mutation({
     is_active: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user || user.role !== "super_admin") {
-      throw new Error("Permission denied: Only super admins can update email templates");
-    }
+    // Use unified auth (supports both Clerk and legacy)
+    const user = await requireSuperAdmin(ctx, args.sessionToken);
 
     // Validate inputs
     if (!args.subject || args.subject.trim().length === 0) {
@@ -177,14 +163,12 @@ export const upsertTemplate = mutation({
 // Reset a template to its default
 export const resetToDefault = mutation({
   args: {
-    sessionToken: v.string(),
+    sessionToken: v.optional(v.string()), // Optional for backwards compatibility
     template_type: templateTypeValidator,
   },
   handler: async (ctx, args) => {
-    const user = await getUserBySession(ctx, args.sessionToken);
-    if (!user || user.role !== "super_admin") {
-      throw new Error("Permission denied: Only super admins can reset email templates");
-    }
+    // Use unified auth (supports both Clerk and legacy)
+    await requireSuperAdmin(ctx, args.sessionToken);
 
     const existing = await ctx.db
       .query("email_templates")

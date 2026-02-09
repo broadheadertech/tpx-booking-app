@@ -4,23 +4,15 @@ import QuickActions from "../../components/staff/QuickActions";
 import StatsCards from "../../components/staff/StatsCards";
 import RecentActivity from "../../components/staff/RecentActivity";
 import TabNavigation from "../../components/staff/TabNavigation";
-import ManagementSection from "../../components/staff/ManagementSection";
-import VoucherManagement from "../../components/staff/VoucherManagement";
-import ServicesManagement from "../../components/staff/ServicesManagement";
-import BookingsManagement from "../../components/staff/BookingsManagement";
-import CalendarManagement from "../../components/staff/CalendarManagement";
-import BarbersManagement from "../../components/staff/BarbersManagement";
-import BranchUserManagement from "../../components/staff/BranchUserManagement";
-import CustomersManagement from "../../components/staff/CustomersManagement";
 import ReportsManagement from "../../components/staff/ReportsManagement";
-import EventsManagement from "../../components/staff/EventsManagement";
-import ProductsManagement from "../../components/staff/ProductsManagement";
-import NotificationsManagement from "../../components/staff/NotificationsManagement";
-import EmailMarketing from "../../components/staff/EmailMarketing";
-import PayrollManagement from "../../components/staff/PayrollManagement";
-import CustomBookingsManagement from "../../components/staff/CustomBookingsManagement";
-import WalkInSection from "../../components/staff/WalkInSection";
-import QueueSection from "../../components/staff/QueueSection";
+// Hub components - consolidated navigation
+import BookingsHub from "../../components/staff/hubs/BookingsHub";
+import TeamHub from "../../components/staff/hubs/TeamHub";
+import CustomersHub from "../../components/staff/hubs/CustomersHub";
+import ProductsHub from "../../components/staff/hubs/ProductsHub";
+import FinanceHub from "../../components/staff/hubs/FinanceHub";
+import MarketingHub from "../../components/staff/hubs/MarketingHub";
+import BranchSettings from "../../components/staff/BranchSettings";
 import DashboardFooter from "../../components/common/DashboardFooter";
 import {
   NotificationModal,
@@ -28,13 +20,14 @@ import {
 } from "../../components/common/NotificationSystem";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
-import { useAuth } from "../../context/AuthContext";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useNavigate } from "react-router-dom";
 import { useRealtimeNotifications } from "../../hooks/useRealtimeNotifications";
 import { useBookingNotificationListener } from "../../utils/bookingNotifications";
 
 function StaffDashboard() {
-  const { user, logout } = useAuth();
+  // Use unified hook that supports both Clerk and legacy auth
+  const { user, logout } = useCurrentUser();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(() => {
     // Restore active tab from localStorage on component mount
@@ -101,17 +94,23 @@ function StaffDashboard() {
           branch_id: user.branch_id,
         })
         : undefined;
-  const customers =
-    user?.role === "super_admin"
-      ? useQuery(api.services.auth.getAllUsers)
-      : user?.branch_id
-        ? useQuery(api.services.auth.getUsersByBranch, {
-          branch_id: user.branch_id,
-        })
-        : undefined;
+  // Customers are system-wide (not branch-specific), so always fetch all customers
+  // regardless of the logged-in user's role. The getAllUsers query supports role filtering.
+  const customers = useQuery(api.services.auth.getAllUsers, { roles: ["customer"] });
+
+  // Get customer wallets for wallet monitoring
+  const customerWallets = useQuery(api.services.wallet.getAllCustomerWallets, {});
 
   // Get walk-ins data for queue badge
   const allWalkInsData = useQuery(api.services.walkIn.getAllWalkIns, {}) || [];
+
+  // Get pending cash advances count for badge (branch admins only)
+  const pendingAdvancesCount = useQuery(
+    api.services.cashAdvance.getPendingAdvancesCount,
+    user?.branch_id && (user?.role === "branch_admin" || user?.role === "super_admin")
+      ? { branch_id: user.branch_id }
+      : "skip"
+  ) || 0;
 
   // Calculate incomplete bookings count (pending, booked, confirmed - not completed or cancelled)
   const incompleteBookingsCount = bookings
@@ -223,16 +222,26 @@ function StaffDashboard() {
 
   // Render different tab content based on Convex data
   const renderTabContent = () => {
-    // Basic security check: if user doesn't have access to the tab, fall back to overview
-    // Super admins bypass this check
-    // Always allow overview, custom_bookings, walkins, and queue tabs
-    if (user?.role !== "super_admin" && activeTab !== "overview" && activeTab !== "custom_bookings" && activeTab !== "walkins" && activeTab !== "queue") {
-      if (
-        user?.page_access &&
-        user.page_access.length > 0 &&
-        !user.page_access.includes(activeTab)
-      ) {
-        return renderOverview();
+    // Story 11-4: Permission check for tab content
+    // Super admins and admin_staff bypass all checks
+    if (user?.role !== "super_admin" && user?.role !== "admin_staff") {
+      // Always allow always-accessible tabs
+      if (!alwaysAccessiblePages.includes(activeTab)) {
+        // branch_admin has full staff dashboard access
+        if (user?.role !== "branch_admin") {
+          // Check page_access_v2 first
+          if (user?.page_access_v2) {
+            if (!user.page_access_v2[activeTab]?.view) {
+              return renderOverview();
+            }
+          }
+          // Fallback to legacy page_access
+          else if (user?.page_access && user.page_access.length > 0) {
+            if (!user.page_access.includes(activeTab)) {
+              return renderOverview();
+            }
+          }
+        }
       }
     }
 
@@ -240,84 +249,69 @@ function StaffDashboard() {
       case "overview":
         return renderOverview();
 
+      case "reports":
+        return <ReportsManagement onRefresh={handleRefresh} user={user} />;
+
       case "bookings":
-        return <BookingsManagement onRefresh={handleRefresh} user={user} />;
-
-      case "calendar":
-        return <CalendarManagement user={user} />;
-
-      case "walkins":
-        return <WalkInSection />;
-
-      case "queue":
-        return <QueueSection />;
-
-      case "services":
         return (
-          <ServicesManagement
-            services={services || []}
-            onRefresh={handleRefresh}
+          <BookingsHub
             user={user}
+            onRefresh={handleRefresh}
+            incompleteBookingsCount={incompleteBookingsCount}
+            waitingWalkInsCount={waitingWalkInsCount}
           />
         );
 
-      case "vouchers":
+      case "team":
         return (
-          <VoucherManagement
+          <TeamHub
+            user={user}
+            barbers={barbers || []}
+            onRefresh={handleRefresh}
+          />
+        );
+
+      case "customers":
+        return (
+          <CustomersHub
+            user={user}
+            customers={customers || []}
+            wallets={customerWallets || []}
+            onRefresh={handleRefresh}
+          />
+        );
+
+      case "products":
+        return (
+          <ProductsHub
+            user={user}
+            services={services || []}
             vouchers={vouchers || []}
             onRefresh={handleRefresh}
             onCreateVoucher={() => setActiveModal("voucher")}
           />
         );
 
-      case "barbers":
+      case "finance":
         return (
-          <BarbersManagement
-            barbers={barbers || []}
-            onRefresh={handleRefresh}
+          <FinanceHub
             user={user}
-          />
-        );
-
-      case "users":
-        return <BranchUserManagement onRefresh={handleRefresh} />;
-
-      case "customers":
-        // Filter to only show customers (exclude staff, barbers, admins, etc.)
-        const customersOnly = (customers || []).filter(c => c.role === 'customer');
-        return (
-          <CustomersManagement
-            customers={customersOnly}
             onRefresh={handleRefresh}
+            pendingAdvancesCount={pendingAdvancesCount}
           />
         );
 
-      case "events":
+      case "marketing":
         return (
-          <EventsManagement
+          <MarketingHub
+            user={user}
             events={events || []}
             onRefresh={handleRefresh}
-            user={user}
           />
         );
 
-      case "reports":
-        return <ReportsManagement onRefresh={handleRefresh} user={user} />;
-
-      case "products":
-        return <ProductsManagement onRefresh={handleRefresh} user={user} />;
-
-      case "notifications":
-        return <NotificationsManagement onRefresh={handleRefresh} />;
-
-      case "payroll":
-        return <PayrollManagement onRefresh={handleRefresh} user={user} />;
-
-      case "email_marketing":
-        return <EmailMarketing onRefresh={handleRefresh} />;
-
-      case "custom_bookings":
-        return <CustomBookingsManagement onRefresh={handleRefresh} user={user} />;
+      case "settings":
+        return <BranchSettings user={user} onRefresh={handleRefresh} />;
 
       default:
         return renderOverview();
@@ -361,41 +355,63 @@ function StaffDashboard() {
     }
   };
 
-  // Tab configuration for staff
+  // Tab configuration for staff - Consolidated navigation
   const baseTabs = [
-    { id: "overview", label: "Overview", icon: "dashboard" },
-    { id: "reports", label: "Reports", icon: "chart" },
+    { id: "overview", label: "Overview", icon: "layout-dashboard" },
+    { id: "reports", label: "Reports", icon: "bar-chart-3" },
     { id: "bookings", label: "Bookings", icon: "calendar" },
-    { id: "custom_bookings", label: "Custom Bookings", icon: "file-text" },
-    { id: "calendar", label: "Calendar", icon: "calendar" },
-    { id: "walkins", label: "Walk-ins", icon: "user-plus" },
-    { id: "services", label: "Services", icon: "scissors" },
-    { id: "vouchers", label: "Vouchers", icon: "gift" },
-    { id: "barbers", label: "Barbers", icon: "user" },
-    { id: "users", label: "Users", icon: "users" },
-    { id: "customers", label: "Customers", icon: "users" },
-    { id: "events", label: "Events", icon: "calendar" },
-    { id: "payroll", label: "Payroll", icon: "dollar-sign" },
-    { id: "products", label: "Products", icon: "package" },
-    { id: "notifications", label: "Notifications", icon: "bell" },
-    { id: "email_marketing", label: "Email Marketing", icon: "mail" },
     { id: "pos", label: "POS", icon: "credit-card" },
+    { id: "team", label: "Team", icon: "users" },
+    { id: "customers", label: "Customers", icon: "user-check" },
+    { id: "products", label: "Products", icon: "package" },
+    { id: "finance", label: "Finance", icon: "dollar-sign" },
+    { id: "marketing", label: "Marketing", icon: "megaphone" },
+    { id: "settings", label: "Settings", icon: "settings" },
   ];
 
-  // Filter tabs based on user page_access permissions
-  const tabs =
-    user?.role === "super_admin"
-      ? baseTabs
-      : user?.page_access
-        ? baseTabs.filter(
-          (t) => user.page_access.includes(t.id) || t.id === "overview" || t.id === "custom_bookings" || t.id === "walkins"
-        ) // Always include overview, custom_bookings, and walkins
-        : baseTabs;
+  // Always accessible pages (bypass permission checks)
+  const alwaysAccessiblePages = ["overview", "bookings"];
 
-  // Redirect if current active tab is not allowed (unless it's overview, custom_bookings, walkins, or queue)
+  // Filter tabs based on user permissions (Story 11-4: Navigation Filtering)
+  // Priority: page_access_v2 (new) > page_access (legacy) > role defaults
+  const getFilteredTabs = () => {
+    // super_admin and admin_staff have full access
+    if (user?.role === "super_admin" || user?.role === "admin_staff") {
+      return baseTabs;
+    }
+
+    // branch_admin has full staff dashboard access
+    if (user?.role === "branch_admin") {
+      return baseTabs;
+    }
+
+    // Check page_access_v2 first (new RBAC system)
+    if (user?.page_access_v2) {
+      return baseTabs.filter((t) => {
+        // Always include always-accessible pages
+        if (alwaysAccessiblePages.includes(t.id)) return true;
+        // Check if view permission is granted
+        return user.page_access_v2[t.id]?.view === true;
+      });
+    }
+
+    // Fallback to legacy page_access array
+    if (user?.page_access && user.page_access.length > 0) {
+      return baseTabs.filter(
+        (t) => user.page_access.includes(t.id) || alwaysAccessiblePages.includes(t.id)
+      );
+    }
+
+    // Default: show all tabs for roles without explicit permissions
+    return baseTabs;
+  };
+
+  const tabs = getFilteredTabs();
+
+  // Redirect if current active tab is not allowed (Story 11-4: Navigation Filtering)
   useEffect(() => {
     const allowedTabIds = tabs.map((t) => t.id);
-    if (!allowedTabIds.includes(activeTab) && activeTab !== "overview" && activeTab !== "custom_bookings" && activeTab !== "walkins" && activeTab !== "queue") {
+    if (!allowedTabIds.includes(activeTab) && !alwaysAccessiblePages.includes(activeTab)) {
       setActiveTab("overview");
     }
   }, [tabs, activeTab]);
@@ -436,6 +452,7 @@ function StaffDashboard() {
               }}
               incompleteBookingsCount={incompleteBookingsCount}
               waitingWalkInsCount={waitingWalkInsCount}
+              pendingAdvancesCount={pendingAdvancesCount}
             />
             <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl sm:rounded-2xl lg:rounded-3xl shadow-2xl border border-[#2A2A2A]/50 p-3 sm:p-4 md:p-6 lg:p-8 xl:p-10 backdrop-blur-sm overflow-hidden">
               {renderTabContent()}
@@ -448,7 +465,7 @@ function StaffDashboard() {
 
       {/* Notification Modal */}
       <NotificationModal
-        userId={user._id}
+        userId={user?._id}
         isOpen={showNotifications}
         onClose={() => setShowNotifications(false)}
         userRole={user?.role}

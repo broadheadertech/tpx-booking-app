@@ -1,4 +1,3 @@
-import React from 'react'
 import Modal from '../common/Modal'
 import { Printer, Download, CheckCircle } from 'lucide-react'
 
@@ -32,6 +31,23 @@ const ReceiptModal = ({
   const formatCurrency = (value) => {
     const amount = Number(value) || 0
     return `₱${amount.toFixed(2)}`
+  }
+
+  // Format payment method for display
+  const formatPaymentMethod = (method) => {
+    const methodMap = {
+      'cash': 'CASH',
+      'card': 'CARD',
+      'gcash': 'GCASH',
+      'maya': 'MAYA',
+      'bank_transfer': 'BANK TRANSFER',
+      'online_payment': 'PAID ONLINE',
+      'partial_online': 'PARTIAL (ONLINE)',
+      'pay_at_shop': 'PAY AT SHOP',
+      'pending': 'PENDING',
+      'wallet': 'WALLET'
+    }
+    return methodMap[method] || (method || 'CASH').replace(/_/g, ' ').toUpperCase()
   }
 
   const generateReceiptHTML = () => {
@@ -96,7 +112,13 @@ const ReceiptModal = ({
     const total = Number(transactionData.total_amount || 0)
     const cashReceived = Number(transactionData.cash_received || 0)
     const change = Number(transactionData.change_amount || 0)
-    const paymentMethod = escapeHtml((transactionData.payment_method || 'cash').replace(/_/g, ' ').toUpperCase())
+    const amountPaid = Number(transactionData.amount_paid || 0)
+    const amountDue = Number(transactionData.amount_due || 0)
+    const paymentMethod = escapeHtml(formatPaymentMethod(transactionData.payment_method))
+    const paymentStatus = transactionData.payment_status || ''
+    const bookingCode = transactionData.booking_code || ''
+    const bookingDate = transactionData.booking_date || ''
+    const bookingTime = transactionData.booking_time || ''
 
     return `<!DOCTYPE html>
 <html>
@@ -185,12 +207,26 @@ const ReceiptModal = ({
   </table>
   <div class="line2"></div>
   
+  ${bookingCode ? `
+  <table style="font-size: 12px; margin-bottom: 1mm;">
+    <tr><td>Booking #:</td><td class="right">${escapeHtml(bookingCode)}</td></tr>
+    ${bookingDate ? `<tr><td>Booking Date:</td><td class="right">${escapeHtml(bookingDate)}</td></tr>` : ''}
+    ${bookingTime ? `<tr><td>Booking Time:</td><td class="right">${escapeHtml(bookingTime)}</td></tr>` : ''}
+  </table>
+  <div class="line"></div>
+  ` : ''}
+
   <table style="font-size: 13px;">
     <tr><td class="bold">Payment:</td><td class="right">${paymentMethod}</td></tr>
+    ${paymentStatus === 'paid' ? `<tr><td>Status:</td><td class="right" style="color: green;">FULLY PAID</td></tr>` : ''}
+    ${paymentStatus === 'partial' ? `<tr><td>Status:</td><td class="right" style="color: orange;">PARTIAL</td></tr>` : ''}
+    ${paymentStatus === 'unpaid' ? `<tr><td>Status:</td><td class="right" style="color: blue;">PAY AT SHOP</td></tr>` : ''}
+    ${amountPaid > 0 ? `<tr><td>Amount Paid:</td><td class="right">${formatCurrency(amountPaid)}</td></tr>` : ''}
+    ${amountDue > 0 ? `<tr><td class="bold">Amount Due:</td><td class="right bold">${formatCurrency(amountDue)}</td></tr>` : ''}
     ${transactionData.payment_method === 'cash' && cashReceived > 0 ? `<tr><td>Cash:</td><td class="right">${formatCurrency(cashReceived)}</td></tr>` : ''}
     ${transactionData.payment_method === 'cash' && change > 0 ? `<tr><td>Change:</td><td class="right">${formatCurrency(change)}</td></tr>` : ''}
   </table>
-  
+
   <div class="line"></div>
   <div class="center bold" style="margin-top: 2mm; font-size: 15px;">Thank you!</div>
   <div class="center" style="font-size: 13px;">Please come again!</div>
@@ -292,9 +328,37 @@ const ReceiptModal = ({
     lines.push(leftRight('TOTAL:', formatCurrency(transactionData.total_amount || 0)))
     lines.push(separator)
 
-    const paymentMethod = (transactionData.payment_method || 'cash').replace(/_/g, ' ').toUpperCase()
+    const paymentMethod = formatPaymentMethod(transactionData.payment_method)
+
+    // Add booking info if available
+    if (transactionData.booking_code) {
+      lines.push('')
+      lines.push(leftRight('Booking #:', transactionData.booking_code.substring(0, 15)))
+      if (transactionData.booking_date) lines.push(leftRight('Booking Date:', transactionData.booking_date.substring(0, 15)))
+      if (transactionData.booking_time) lines.push(leftRight('Booking Time:', transactionData.booking_time.substring(0, 15)))
+      lines.push(dashedLine)
+    }
+
     lines.push('')
     lines.push(leftRight('Payment:', paymentMethod))
+
+    // Payment status
+    if (transactionData.payment_status === 'paid') {
+      lines.push(leftRight('Status:', 'FULLY PAID'))
+    } else if (transactionData.payment_status === 'partial') {
+      lines.push(leftRight('Status:', 'PARTIAL'))
+    } else if (transactionData.payment_status === 'unpaid') {
+      lines.push(leftRight('Status:', 'PAY AT SHOP'))
+    }
+
+    // Amount paid and due
+    if (transactionData.amount_paid > 0) {
+      lines.push(leftRight('Amount Paid:', formatCurrency(transactionData.amount_paid)))
+    }
+    if (transactionData.amount_due > 0) {
+      lines.push(leftRight('Amount Due:', formatCurrency(transactionData.amount_due)))
+    }
+
     if (transactionData.payment_method === 'cash') {
       if (transactionData.cash_received) lines.push(leftRight('Cash Received:', formatCurrency(transactionData.cash_received)))
       if (transactionData.change_amount) lines.push(leftRight('Change:', formatCurrency(transactionData.change_amount)))
@@ -311,13 +375,49 @@ const ReceiptModal = ({
     return lines.join('\n')
   }
 
+  // Determine header content based on payment status
+  const getHeaderContent = () => {
+    const status = transactionData.payment_status
+    if (status === 'paid') {
+      return {
+        bgColor: 'bg-green-500/10 border-green-500/30',
+        iconColor: 'text-green-400',
+        title: 'Fully Paid',
+        subtitle: 'This booking has been paid online'
+      }
+    } else if (status === 'partial') {
+      return {
+        bgColor: 'bg-yellow-500/10 border-yellow-500/30',
+        iconColor: 'text-yellow-400',
+        title: 'Partial Payment',
+        subtitle: `₱${(transactionData.amount_paid || 0).toLocaleString()} paid online • ₱${(transactionData.amount_due || 0).toLocaleString()} due at shop`
+      }
+    } else if (status === 'unpaid') {
+      return {
+        bgColor: 'bg-blue-500/10 border-blue-500/30',
+        iconColor: 'text-blue-400',
+        title: 'Pay at Shop',
+        subtitle: `Total due: ₱${(transactionData.total_amount || 0).toLocaleString()}`
+      }
+    }
+    // Default - completed transaction
+    return {
+      bgColor: 'bg-green-500/10 border-green-500/30',
+      iconColor: 'text-green-400',
+      title: 'Payment Successful!',
+      subtitle: 'Transaction completed successfully'
+    }
+  }
+
+  const headerContent = getHeaderContent()
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Receipt" size="md" variant="dark">
       <div className="space-y-4">
-        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 text-center">
-          <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-2" />
-          <h3 className="text-lg font-bold text-white mb-1">Payment Successful!</h3>
-          <p className="text-sm text-gray-400">Transaction completed successfully</p>
+        <div className={`${headerContent.bgColor} border rounded-lg p-4 text-center`}>
+          <CheckCircle className={`w-12 h-12 ${headerContent.iconColor} mx-auto mb-2`} />
+          <h3 className="text-lg font-bold text-white mb-1">{headerContent.title}</h3>
+          <p className="text-sm text-gray-400">{headerContent.subtitle}</p>
         </div>
 
         <div className="bg-[#1A1A1A] rounded-lg p-4 border border-[#444444] max-h-64 overflow-y-auto">

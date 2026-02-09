@@ -1,0 +1,152 @@
+# Sprint Status - Customer Experience
+# Generated: 2026-01-29
+# Project: tpx-booking-app
+# Feature: Customer Experience (Loyalty Points, E-Wallet, VIP Tiers)
+# Tracking System: file-system
+# Epic Source: _bmad-output/planning-artifacts/epics-customer-experience.md
+# Story Location: _bmad-output/implementation-artifacts/
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Mark epic as 'in-progress' when starting work on its first story
+# - SM typically creates next story ONLY after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then Dev runs code-review (fresh context, ideally different LLM)
+# - Phase 2 stories (Epic 6) should be implemented after Phase 1 (Epics 1-5)
+
+generated: 2026-01-29
+project: tpx-booking-app
+feature: customer-experience
+tracking_system: file-system
+story_location: "_bmad-output/implementation-artifacts/"
+
+# Summary:
+#   Total Epics: 6
+#   Total Stories: 37
+#   Phase 1 Stories: 33 (Epics 1-5)
+#   Phase 2 Stories: 4 (Epic 6)
+
+development_status:
+  # ===========================================
+  # Epic 1: Points Foundation & Display
+  # ===========================================
+  # Goal: Customers can earn loyalty points on payments and view their
+  #       balance with peso value display. Establishes core points system
+  #       with full audit trail and decimal precision.
+  # FRs covered: FR1, FR2, FR3, FR5, FR6
+  # Stories: 5
+
+  epic-1: done
+  1-1-schema-setup-for-points-system: done
+  1-2-points-display-helpers: done
+  1-3-points-balance-display: done
+  1-4-earn-points-on-payment: done
+  1-5-points-history-view: done
+  epic-1-retrospective: optional
+
+  # ===========================================
+  # Epic 2: Enhanced Wallet Payments
+  # ===========================================
+  # Goal: Customers can pay with wallet, earn 1.5x bonus points, receive
+  #       top-up bonuses, and use combo payments (Points → Wallet → Cash).
+  # FRs covered: FR4, FR7, FR8, FR9, FR10, FR11, FR12
+  # Stories: 6
+
+  epic-2: in-progress
+  2-1-real-time-wallet-balance-display: done
+  2-2-wallet-top-up-via-paymongo: done
+  2-3-top-up-bonus-application: done
+  2-4-pay-with-wallet-balance: backlog
+  2-5-bonus-points-for-wallet-payments: backlog
+  2-6-combo-payment-flow: backlog
+  epic-2-retrospective: optional
+
+  # ===========================================
+  # Epic 3: VIP Tier Progression
+  # ===========================================
+  # Goal: Customers can progress through Bronze→Silver→Gold→Platinum tiers
+  #       based on lifetime points, view progress, browse redemption catalog,
+  #       and redeem points for rewards.
+  # FRs covered: FR13, FR14, FR15, FR16, FR17, FR18
+  # Stories: 6
+
+  epic-3: backlog
+  3-1-tier-system-schema-and-configuration: backlog
+  3-2-view-current-tier-status: backlog
+  3-3-tier-progress-visualization: backlog
+  3-4-automatic-tier-promotion: backlog
+  3-5-redemption-catalog-browse: backlog
+  3-6-redeem-points-for-rewards: backlog
+  epic-3-retrospective: optional
+
+  # ===========================================
+  # Epic 4: Customer VIP Recognition
+  # ===========================================
+  # Goal: Staff can recognize VIP customers with badges, preferences, and
+  #       personalized "welcome back" screens. Customers view own VIP status.
+  # FRs covered: FR19, FR20, FR21, FR22, FR23
+  # Stories: 5
+
+  epic-4: backlog
+  4-1-staff-vip-badge-display: backlog
+  4-2-customer-preferences-and-history-view-staff: backlog
+  4-3-welcome-back-personalization-screen: backlog
+  4-4-customer-vip-status-self-view: backlog
+  4-5-progress-bar-to-next-reward: backlog
+  epic-4-retrospective: optional
+
+  # ===========================================
+  # Epic 5: Loyalty Administration & Analytics
+  # ===========================================
+  # Goal: Branch Admins view dashboards and adjust pricing. Super Admins
+  #       configure rates, tiers, bonuses, and view system-wide analytics.
+  #       Cross-branch sync ensures universal points/wallet.
+  # FRs covered: FR24-FR30, FR35-FR44
+  # Stories: 11
+
+  epic-5: backlog
+  5-1-branch-admin-wallet-dashboard: backlog
+  5-2-branch-admin-vip-metrics: backlog
+  5-3-branch-admin-redemption-pricing: backlog
+  5-4-super-admin-system-wide-dashboard: backlog
+  5-5-super-admin-branch-comparison: backlog
+  5-6-super-admin-points-configuration: backlog
+  5-7-super-admin-tier-configuration: backlog
+  5-8-super-admin-top-up-bonus-configuration: backlog
+  5-9-barber-commission-on-redemptions: backlog
+  5-10-inactive-account-archival: backlog
+  5-11-cross-branch-points-and-wallet-sync: backlog
+  epic-5-retrospective: optional
+
+  # ===========================================
+  # Epic 6: Flash Promotions (Phase 2)
+  # ===========================================
+  # Goal: Branch Admins create time-limited flash promos. Super Admins
+  #       create promo templates. Customers receive auto-applied bonuses.
+  # FRs covered: FR31, FR32, FR33, FR34
+  # Stories: 4
+  # NOTE: Phase 2 feature - implement after Epics 1-5 are complete
+
+  epic-6: backlog
+  6-1-branch-admin-flash-promo-creation: backlog
+  6-2-super-admin-promo-templates: backlog
+  6-3-customer-promo-view: backlog
+  6-4-auto-apply-promo-bonuses: backlog
+  epic-6-retrospective: optional

@@ -306,7 +306,10 @@ interface NotificationBellProps {
 }
 
 export const NotificationBell: React.FC<NotificationBellProps> = ({ userId, className = '', onOpenModal }) => {
-  const stats = useQuery(api.services.bookingNotifications.getNotificationStats, { userId });
+  const stats = useQuery(
+    api.services.bookingNotifications.getNotificationStats,
+    userId ? { userId } : "skip"
+  );
 
   return (
     <motion.button
@@ -343,16 +346,24 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ userId, is
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  // Fetch notifications
-  const notifications = useQuery(api.services.bookingNotifications.getRecentNotifications, {
-    userId,
-    limit: 50,
-    type: activeFilter === 'all' ? undefined : activeFilter as any,
-    unreadOnly: unreadOnly,
-  });
+  // Fetch notifications - skip if userId not available
+  const notifications = useQuery(
+    api.services.bookingNotifications.getRecentNotifications,
+    userId
+      ? {
+          userId,
+          limit: 50,
+          type: activeFilter === 'all' ? undefined : activeFilter as any,
+          unreadOnly: unreadOnly,
+        }
+      : "skip"
+  );
 
-  // Fetch notification stats
-  const stats = useQuery(api.services.bookingNotifications.getNotificationStats, { userId });
+  // Fetch notification stats - skip if userId not available
+  const stats = useQuery(
+    api.services.bookingNotifications.getNotificationStats,
+    userId ? { userId } : "skip"
+  );
 
   // Mutation hooks
   const markAsRead = useMutation(api.services.bookingNotifications.markNotificationsAsRead);

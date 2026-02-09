@@ -1,0 +1,315 @@
+# generated: 2026-01-31
+# project: tpx-booking-app
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+#
+# Epic Status Transitions:
+#   - backlog → in-progress: Automatically when first story is created (via create-story)
+#   - in-progress → done: Manually when all stories reach 'done' status
+#
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created in stories folder
+#   - in-progress: Developer actively working on implementation
+#   - review: Ready for code review (via Dev's code-review workflow)
+#   - done: Story completed
+#
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+#
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when first story is created
+# - Stories can be worked in parallel if team capacity allows
+# - SM typically creates next story after previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+
+generated: 2026-01-31
+project: tpx-booking-app
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  # ============================================================================
+  # ACCOUNTING FEATURE (epics.md) - COMPLETED
+  # ============================================================================
+
+  # Epic 1: Time & Attendance Tracking
+  # Barbers can track their work hours and Branch Admins can monitor attendance
+  epic-1: done
+  1-1-barber-clock-in: done
+  1-2-barber-clock-out: done
+  1-3-branch-admin-view-attendance: done
+  epic-1-retrospective: optional
+
+  # Epic 2: Central Product Catalog
+  # Super Admin can manage a centralized product catalog with optional price enforcement
+  epic-2: done
+  2-1-super-admin-add-product-to-catalog: done
+  2-2-super-admin-edit-and-remove-products: done
+  2-3-super-admin-price-enforcement-toggle: done
+  2-4-branch-staff-view-product-catalog: done
+  epic-2-retrospective: optional
+
+  # Epic 3: Branch Financial Reporting (P&L)
+  # Branch Admins can view their financial performance and export reports
+  epic-3: done
+  3-1-pl-dashboard-with-summary-cards: done
+  3-2-income-and-expense-breakdown: done
+  3-3-date-range-selection-for-pl: done
+  3-4-export-pl-to-csv-and-pdf: done
+  epic-3-retrospective: optional
+
+  # Epic 4: Cash Advance Workflow
+  # Barbers can request advances and Branch Admins can approve with automatic payroll integration
+  epic-4: done
+  4-1-barber-request-cash-advance: done
+  4-2-barber-view-advance-status: done
+  4-3-branch-admin-approve-or-reject-advance: done
+  4-4-payroll-integration-for-cash-advance: done
+  4-5-branch-admin-view-advance-history: done
+  epic-4-retrospective: optional
+
+  # Epic 5: Royalty Management System
+  # Super Admin can configure, track, and collect royalty payments from franchisees
+  epic-5: done
+  5-1-configure-royalty-rate-for-branch: done
+  5-2-system-calculate-and-create-royalty-payment: done
+  5-3-email-notification-for-royalty-due: done
+  5-4-super-admin-view-royalty-dashboard: done
+  5-5-mark-royalty-as-paid-with-official-receipt: done
+  5-6-branch-admin-view-royalty-history: done
+  epic-5-retrospective: optional
+
+  # ============================================================================
+  # PAYMONGO PAYMENT INTEGRATION (epics-paymongo.md) - COMPLETED
+  # ============================================================================
+
+  # Epic 6: Branch Payment Configuration (PayMongo Epic 1)
+  # Branch admins can configure PayMongo payment processing for their branch
+  epic-6: done
+  6-1-create-payment-configuration-schema: done
+  6-2-create-encryption-library: done
+  6-3-build-paymongo-configuration-service: done
+  6-4-build-payment-settings-ui: done
+  epic-6-retrospective: optional
+
+  # Epic 7: Customer Online Payment Flow (PayMongo Epic 2)
+  # Customers can complete online payments via Pay Now, Pay Later, or Pay at Shop
+  epic-7: done
+  7-1-create-payment-audit-log-schema-and-booking-extensions: done
+  7-2-build-payment-link-creation-service: done
+  7-3-build-paymongo-webhook-handler: done
+  7-4-build-payment-options-modal: done
+  7-5-integrate-payment-flow-into-booking-components: done
+  7-6-build-payment-confirmation-and-status-display: done
+  epic-7-retrospective: optional
+
+  # Epic 8: POS Payment Collection (PayMongo Epic 3)
+  # Staff can view and collect remaining balances for Pay Later and Pay at Shop bookings
+  epic-8: done
+  8-1-display-payment-status-in-pos-booking-view: done
+  8-2-record-cash-payment-collection: done
+  8-3-mark-booking-as-completed: done
+  8-4-view-todays-bookings-with-payment-status: done
+  epic-8-retrospective: optional
+
+  # Epic 9: Payment Audit & Reporting (PayMongo Epic 4)
+  # Admins can view payment transaction history and audit logs
+  epic-9: done
+  9-1-implement-payment-audit-logging-functions: done
+  9-2-build-branch-admin-payment-history-view: done
+  9-3-build-super-admin-payment-history-view: done
+  epic-9-retrospective: optional
+
+  # ============================================================================
+  # CLERK AUTHENTICATION + RBAC (epics-clerk-rbac.md) - COMPLETED
+  # ============================================================================
+
+  # Epic 10: Clerk Authentication Foundation (Clerk RBAC Epic 1)
+  # Users can securely log in using Clerk with SSO, MFA, password reset, and webhook sync
+  epic-10: done
+  10-1-schema-extension-for-clerk-integration: done
+  10-2-clerk-provider-and-auth-helpers-setup: done
+  10-3-clerk-webhook-integration: done
+  10-4-complete-login-experience: done
+  10-5-multi-factor-authentication-setup: done
+  10-6-password-reset-and-session-management: done
+  epic-10-retrospective: optional
+
+  # Epic 11: Role-Based Access Control (Clerk RBAC Epic 2)
+  # Staff users see only navigation items and actions appropriate to their role
+  epic-11: done
+  11-1-role-hierarchy-and-utility-functions: done
+  11-2-rbac-service-with-permission-checking: done
+  11-3-permission-aware-ui-components: done
+  11-4-navigation-filtering-by-permissions: done
+  11-5-access-denied-handling: done
+  11-6-real-time-permission-updates: done
+  epic-11-retrospective: optional
+
+  # Epic 12: User Administration & Audit Trail (Clerk RBAC Epic 3)
+  # Admins can create users, assign roles, configure permissions, and track changes
+  epic-12: done
+  12-1-super-admin-user-management: done
+  12-2-admin-staff-user-management: done
+  12-3-branch-admin-user-management: done
+  12-4-clerk-invite-integration: done
+  12-5-user-listing-with-branch-filter: done
+  12-6-permission-change-audit-logging: done
+  12-7-audit-trail-viewer-for-super-admin: done
+  epic-12-retrospective: optional
+
+  # Epic 13: Multi-Tenant Data Isolation (Clerk RBAC Epic 4)
+  # Branch data is properly isolated - staff see only their branch data
+  epic-13: done
+  13-1-branch-creation-with-clerk-organization: done
+  13-2-user-branch-assignment-and-org-sync: done
+  13-3-admin-staff-branch-context-switching: done
+  13-4-branch-admin-single-branch-enforcement: done
+  13-5-query-level-branch-filtering: done
+  13-6-barber-personal-data-isolation: done
+  13-7-customer-booking-self-service: done
+  13-8-barber-schedule-and-cash-advance: done
+  13-9-branch-admin-cash-advance-approval: done
+  epic-13-retrospective: optional
+
+  # Epic 14: Seamless User Migration (Clerk RBAC Epic 5)
+  # Existing users are migrated to Clerk without service disruption
+  epic-14: done
+  14-1-migration-status-tracking: done
+  14-2-invite-based-user-migration: done
+  14-3-automatic-bulk-import-migration: done
+  14-4-role-mapping-to-6-role-system: done
+  14-5-data-preservation-during-migration: done
+  14-6-page-access-structure-migration: done
+  14-7-dual-auth-system-for-transition: done
+  epic-14-retrospective: optional
+
+  # ============================================================================
+  # CUSTOMER EXPERIENCE (epics-customer-experience.md) - COMPLETED
+  # ============================================================================
+
+  # Epic 15: Loyalty Points Foundation (Customer Experience Epic 1)
+  # Customers earn and track loyalty points from payments
+  epic-15: done
+  15-1-schema-setup-for-points-system: done
+  15-2-points-display-helpers: done
+  15-3-points-balance-display: done
+  15-4-earn-points-on-payment: done
+  15-5-points-history-view: done
+  epic-15-retrospective: optional
+
+  # Epic 16: Enhanced Wallet Payments (Customer Experience Epic 2)
+  # Customers can use wallet for payments with bonuses
+  epic-16: done
+  16-1-real-time-wallet-balance-display: done
+  16-2-wallet-top-up-via-paymongo: done
+  16-3-top-up-bonus-application: done
+  16-4-pay-with-wallet-balance: done
+  16-5-bonus-points-for-wallet-payments: done
+  16-6-combo-payment-flow: done
+  epic-16-retrospective: optional
+
+  # Epic 17: VIP Tier Progression (Customer Experience Epic 3)
+  # Customers progress through VIP tiers based on spending
+  epic-17: done
+  17-1-vip-tier-schema-and-thresholds: done
+  17-2-auto-tier-calculation: done
+  17-3-tier-benefits-configuration: done
+  17-4-tier-progress-display: done
+  17-5-tier-change-notifications: done
+  epic-17-retrospective: optional
+
+  # Epic 18: Customer VIP Recognition (Customer Experience Epic 4)
+  # Staff can see and recognize VIP customers
+  epic-18: done
+  18-1-vip-badge-in-booking-queue: done
+  18-2-customer-profile-vip-display: done
+  18-3-vip-customer-alerts: done
+  18-4-service-history-in-profile: done
+  epic-18-retrospective: optional
+
+  # Epic 19: Loyalty Administration & Analytics (Customer Experience Epic 5)
+  # Admins can configure and monitor the loyalty program
+  epic-19: done
+  19-1-points-configuration-panel: done
+  19-2-tier-management-interface: done
+  19-3-loyalty-analytics-dashboard: done
+  19-4-manual-points-adjustment: done
+  19-5-points-expiry-management: done
+  epic-19-retrospective: optional
+
+  # Epic 20: Flash Promotions (Customer Experience Epic 6)
+  # Admins can create time-limited point multiplier events
+  epic-20: done
+  20-1-flash-promo-schema: done
+  20-2-create-flash-promotion: done
+  20-3-active-promo-display: done
+  20-4-promo-points-calculation: done
+  20-5-promo-performance-tracking: done
+  epic-20-retrospective: optional
+
+  # ============================================================================
+  # MULTI-BRANCH WALLET PAYMENT (epics-multi-branch-wallet.md) - NEW BACKLOG
+  # ============================================================================
+
+  # Epic 21: Super Admin Wallet Configuration
+  # Super Admin can set up and manage the centralized wallet payment system
+  epic-21: done
+  21-1-add-wallet-schema-tables: done
+  21-2-configure-sa-paymongo-for-wallet: done
+  21-3-configure-global-commission-rate: done
+  21-4-configure-branch-wallet-settings: done
+  21-5-configure-settlement-parameters: done
+  epic-21-retrospective: optional
+
+  # Epic 22: Branch Wallet Earnings
+  # Branch Managers can view their wallet earnings and track pending balances
+  epic-22: done
+  22-1-create-wallet-earning-records: done
+  22-2-branch-earnings-dashboard: done
+  22-3-earnings-transaction-list: done
+  22-4-export-earnings-to-csv: done
+  epic-22-retrospective: optional
+
+  # Epic 23: Customer Wallet Top-up Flow
+  # Customers can load money into their wallet via Super Admin PayMongo
+  epic-23: done
+  23-1-wallet-top-up-via-sa-paymongo: done
+  23-2-top-up-confirmation-notification: done
+  23-3-top-up-bonus-tiers: done
+  epic-23-retrospective: optional
+
+  # Epic 24: POS Wallet Payment
+  # Staff can accept wallet payments at the counter
+  epic-24: done
+  24-1-display-wallet-payment-option-at-pos: done
+  24-2-process-full-wallet-payment: done
+  24-3-process-combo-payment: done
+  epic-24-retrospective: optional
+
+  # Epic 25: Settlement Process
+  # Branches can request payouts, Super Admin can approve and complete transfers
+  epic-25: done
+  25-1-branch-requests-settlement: done
+  25-2-sa-settlement-queue: done
+  25-3-approve-or-reject-settlement: done
+  25-4-complete-settlement-transfer: done
+  25-5-settlement-history-receipts: done
+  epic-25-retrospective: optional
+
+  # Epic 26: Reporting & Analytics
+  # Super Admin can monitor overall wallet system health and financial metrics
+  epic-26: done
+  26-1-wallet-system-overview-dashboard: done
+  26-2-by-branch-breakdown-table: done
+  epic-26-retrospective: optional

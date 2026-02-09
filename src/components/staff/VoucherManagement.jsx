@@ -30,7 +30,7 @@ import ViewVoucherUsersModal from "./ViewVoucherUsersModal";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useBranding } from "../../context/BrandingContext";
-import { useAuth } from "../../context/AuthContext";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
 import CreateVoucherModal from "../staff/CreateVoucherModal";
 
 const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
@@ -44,7 +44,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState("table"); // 'card' or 'table' - DEFAULT TABLE
   const { branding } = useBranding();
-  const { user } = useAuth();
+  const { user } = useCurrentUser();
 
   // Modal states
   const [confirmModal, setConfirmModal] = useState(null);
