@@ -55,6 +55,7 @@ import type * as services_index from "../services/index.js";
 import type * as services_loyaltyAnalytics from "../services/loyaltyAnalytics.js";
 import type * as services_loyaltyConfig from "../services/loyaltyConfig.js";
 import type * as services_mainQueue from "../services/mainQueue.js";
+import type * as services_maintenanceConfig from "../services/maintenanceConfig.js";
 import type * as services_notificationScheduler from "../services/notificationScheduler.js";
 import type * as services_notifications from "../services/notifications.js";
 import type * as services_paymentAudit from "../services/paymentAudit.js";
@@ -142,6 +143,7 @@ declare const fullApi: ApiFromModules<{
   "services/loyaltyAnalytics": typeof services_loyaltyAnalytics;
   "services/loyaltyConfig": typeof services_loyaltyConfig;
   "services/mainQueue": typeof services_mainQueue;
+  "services/maintenanceConfig": typeof services_maintenanceConfig;
   "services/notificationScheduler": typeof services_notificationScheduler;
   "services/notifications": typeof services_notifications;
   "services/paymentAudit": typeof services_paymentAudit;

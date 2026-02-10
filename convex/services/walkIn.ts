@@ -9,6 +9,8 @@ export const createWalkIn = mutation({
     name: v.string(),
     number: v.string(),
     barberId: v.id("barbers"),
+    service_id: v.optional(v.id("services")),
+    scheduled_time: v.optional(v.string()),
     notes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -74,51 +76,62 @@ export const createWalkIn = mutation({
       }
       console.log("[createWalkIn] All validations passed, branch_id:", branch_id);
 
-      // Get the highest queue number for ALL walk-ins in this branch today (regardless of status)
+      // Calculate queue position based on ALL entries (bookings + walk-ins) for this barber today
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
       const todayStartTimestamp = todayStart.getTime();
+      const todayDate = new Date().toISOString().split("T")[0];
 
-      console.log("[createWalkIn] Calculating queue number for branch:", branch_id);
+      console.log("[createWalkIn] Calculating queue number for barber:", args.barberId);
 
       let nextQueueNumber = 1;
 
-      // Query ALL walk-ins for this branch to get the max queue number today
-      // This ensures queue numbers continue incrementing regardless of status
       try {
-        console.log("[createWalkIn] Querying all walk-ins for queue calculation...");
-        const allWalkInsQuery = await ctx.db.query("walkIns").collect();
+        // Count today's active bookings for this barber
+        const allBookings = await ctx.db.query("bookings").collect();
+        const todaysBarberBookings = allBookings.filter(
+          (b: any) =>
+            b.branch_id === branch_id &&
+            b.barber === args.barberId &&
+            b.date === todayDate &&
+            b.status !== "cancelled" &&
+            b.status !== "completed"
+        );
 
-        console.log("[createWalkIn] All walk-ins fetched:", allWalkInsQuery?.length || 0);
+        // Count today's active walk-ins for this barber
+        const allWalkIns = await ctx.db.query("walkIns").collect();
+        const todaysBarberWalkIns = allWalkIns.filter(
+          (w: any) =>
+            w.branch_id === branch_id &&
+            w.barberId === args.barberId &&
+            w.createdAt >= todayStartTimestamp &&
+            w.status !== "cancelled" &&
+            w.status !== "completed"
+        );
 
-        // Filter for this branch and today's walk-ins only (all statuses)
-        if (Array.isArray(allWalkInsQuery) && allWalkInsQuery.length > 0) {
-          const todaysBranchWalkIns = allWalkInsQuery.filter(
-            (walkIn) =>
-              walkIn.branch_id === branch_id &&
-              walkIn.createdAt >= todayStartTimestamp
-          );
+        // Queue number = total existing entries + 1
+        nextQueueNumber = todaysBarberBookings.length + todaysBarberWalkIns.length + 1;
 
-          console.log("[createWalkIn] Today's walk-ins for this branch (all statuses):", todaysBranchWalkIns.length);
-
-          if (todaysBranchWalkIns.length > 0) {
-            const queueNumbers = todaysBranchWalkIns
-              .map((w) => w.queueNumber)
-              .filter((num) => typeof num === "number" && !isNaN(num));
-
-            if (queueNumbers.length > 0) {
-              nextQueueNumber = Math.max(...queueNumbers) + 1;
-            }
-          }
-        }
-      } catch (queryError) {
-        // If query fails, log the error but proceed with queue number 1
-        // This handles the case where the walkIns table might not exist yet or has issues
-        console.warn("[createWalkIn] Query failed (this might be the first walk-in):", queryError?.message || queryError);
-        console.log("[createWalkIn] Proceeding with default queue number:", nextQueueNumber);
+        console.log("[createWalkIn] Bookings for barber today:", todaysBarberBookings.length);
+        console.log("[createWalkIn] Walk-ins for barber today:", todaysBarberWalkIns.length);
+      } catch (queryError: any) {
+        console.warn("[createWalkIn] Queue calculation failed:", queryError?.message || queryError);
       }
 
       console.log("[createWalkIn] Final queue number:", nextQueueNumber);
+
+      // Look up service name if service_id provided
+      let serviceNote = "";
+      if (args.service_id) {
+        try {
+          const service = await ctx.db.get(args.service_id);
+          if (service) {
+            serviceNote = `Service: ${service.name}`;
+          }
+        } catch (e) {
+          console.warn("[createWalkIn] Could not look up service:", e);
+        }
+      }
 
       // Create the walk-in record - defensive approach
       console.log("Preparing to insert walk-in record...");
@@ -129,7 +142,9 @@ export const createWalkIn = mutation({
         barberId: barber._id,
         branch_id: branch_id,
         queueNumber: nextQueueNumber,
-        notes: args.notes?.trim() || "",
+        service_id: args.service_id,
+        scheduled_time: args.scheduled_time,
+        notes: args.notes?.trim() || serviceNote || "",
         status: "waiting" as const, // Default to waiting status
         createdAt: now,
         updatedAt: now,
@@ -805,5 +820,184 @@ export const getWalkInStats = query({
       completed: allWalkIns.filter((w) => w.status === "completed").length,
       cancelled: allWalkIns.filter((w) => w.status === "cancelled").length,
     };
+  },
+});
+
+// ───────────────────────────────────────────────────────
+// Helper: convert "HH:MM" to minutes since midnight
+// ───────────────────────────────────────────────────────
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + (m || 0);
+}
+
+// Helper: convert minutes since midnight to "HH:MM"
+function minutesToTime(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+// Day-of-week lookup matching barber schedule keys
+const DOW_KEYS = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+] as const;
+
+/**
+ * Get available time slots for walk-in booking.
+ * Returns open slots for the selected barber (or all barbers if barber_id omitted).
+ */
+export const getAvailableSlots = query({
+  args: {
+    branch_id: v.id("branches"),
+    barber_id: v.optional(v.id("barbers")),
+    service_id: v.id("services"),
+  },
+  handler: async (ctx, args) => {
+    // 1. Get selected service duration
+    const service = await ctx.db.get(args.service_id);
+    if (!service) return { slots: [] };
+    const duration = service.duration_minutes || 30;
+
+    // 2. Get barbers — single or all active for the branch
+    let barbers: any[] = [];
+    if (args.barber_id) {
+      const b = await ctx.db.get(args.barber_id);
+      if (b && b.is_active) barbers = [b];
+    } else {
+      barbers = await ctx.db
+        .query("barbers")
+        .withIndex("by_branch", (q: any) => q.eq("branch_id", args.branch_id))
+        .filter((q: any) => q.eq(q.field("is_active"), true))
+        .collect();
+    }
+
+    if (barbers.length === 0) return { slots: [] };
+
+    // 3. Today's date info
+    const todayDate = new Date().toISOString().split("T")[0];
+    const dayIndex = new Date().getDay(); // 0=Sun
+    const dayKey = DOW_KEYS[dayIndex];
+
+    // Current time in minutes (local, approximate — clients handle TZ)
+    const nowMinutes =
+      new Date().getHours() * 60 + new Date().getMinutes();
+
+    // 4. Fetch today's bookings
+    let allBookings: any[] = [];
+    try {
+      allBookings = await ctx.db.query("bookings").collect();
+    } catch (e) {
+      console.warn("[getAvailableSlots] bookings query failed:", e);
+    }
+    const todaysBookings = allBookings.filter(
+      (b: any) =>
+        b.branch_id === args.branch_id &&
+        b.date === todayDate &&
+        b.status !== "cancelled" &&
+        b.status !== "completed"
+    );
+
+    // 5. Fetch today's walk-ins
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayStartTs = todayStart.getTime();
+
+    let allWalkIns: any[] = [];
+    try {
+      allWalkIns = await ctx.db.query("walkIns").collect();
+    } catch (e) {
+      console.warn("[getAvailableSlots] walkIns query failed:", e);
+    }
+    const todaysWalkIns = allWalkIns.filter(
+      (w: any) =>
+        w.branch_id === args.branch_id &&
+        w.createdAt >= todayStartTs &&
+        w.status !== "cancelled" &&
+        w.status !== "completed"
+    );
+
+    // 6. Per barber — compute available slots
+    const result: Array<{
+      barber_id: string;
+      barber_name: string;
+      slots: string[];
+    }> = [];
+
+    for (const barber of barbers) {
+      // Get barber's schedule for today
+      const schedule = barber.schedule as Record<string, any> | undefined;
+      const daySchedule = schedule?.[dayKey];
+      if (!daySchedule || !daySchedule.available) continue;
+
+      const schedStart = timeToMinutes(daySchedule.start || "09:00");
+      const schedEnd = timeToMinutes(daySchedule.end || "18:00");
+
+      // Collect occupied ranges for this barber
+      const occupied: Array<{ start: number; end: number }> = [];
+
+      // From bookings
+      for (const bk of todaysBookings) {
+        if (String(bk.barber) !== String(barber._id)) continue;
+        const bkStart = timeToMinutes(bk.time?.substring(0, 5) || "00:00");
+        // Use service duration if available, default 30
+        let bkDuration = 30;
+        if (bk.service) {
+          try {
+            const svc = await ctx.db.get(bk.service);
+            if (svc) bkDuration = svc.duration_minutes || 30;
+          } catch (_) {}
+        }
+        occupied.push({ start: bkStart, end: bkStart + bkDuration });
+      }
+
+      // From walk-ins
+      for (const wi of todaysWalkIns) {
+        if (String(wi.barberId) !== String(barber._id)) continue;
+        if (!wi.scheduled_time) continue;
+        const wiStart = timeToMinutes(wi.scheduled_time);
+        let wiDuration = 30;
+        if (wi.service_id) {
+          try {
+            const svc = await ctx.db.get(wi.service_id);
+            if (svc) wiDuration = svc.duration_minutes || 30;
+          } catch (_) {}
+        }
+        occupied.push({ start: wiStart, end: wiStart + wiDuration });
+      }
+
+      // Sort occupied ranges
+      occupied.sort((a, b) => a.start - b.start);
+
+      // Find free slots in 30-min increments
+      const slots: string[] = [];
+      for (let t = schedStart; t + duration <= schedEnd; t += 30) {
+        // Skip past times
+        if (t < nowMinutes) continue;
+
+        // Check overlap with any occupied range
+        const slotEnd = t + duration;
+        const hasConflict = occupied.some(
+          (o) => t < o.end && slotEnd > o.start
+        );
+        if (!hasConflict) {
+          slots.push(minutesToTime(t));
+        }
+      }
+
+      result.push({
+        barber_id: barber._id,
+        barber_name: barber.full_name,
+        slots,
+      });
+    }
+
+    return { slots: result };
   },
 });

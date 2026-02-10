@@ -13,6 +13,7 @@ import ReceiptModal from '../../components/staff/ReceiptModal'
 import Modal from '../../components/common/Modal'
 import { sendWelcomeEmail, isEmailServiceConfigured, sendBarberBookingNotification } from '../../services/emailService'
 import { APP_VERSION } from '../../config/version'
+import { useAppModal } from '../../context/AppModalContext'
 
 // Barber Avatar Component for POS
 const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
@@ -45,6 +46,7 @@ const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
 }
 
 const POS = () => {
+  const { showAlert, showPrompt } = useAppModal()
   const { user, loading } = useCurrentUser()
   const [selectedBarber, setSelectedBarber] = useState(null)
   const [currentTransaction, setCurrentTransaction] = useState({
@@ -1155,7 +1157,7 @@ const POS = () => {
         }
       }
 
-      alert(errorMessage)
+      showAlert({ title: 'Transaction Failed', message: errorMessage, type: 'error' })
       setActiveModal(null)
     }
   }
@@ -1344,7 +1346,7 @@ const POS = () => {
                     e.stopPropagation()
                     setActiveModal('scanner')
                   }}
-                  className="p-2 bg-blue-500/20 rounded-lg border border-blue-500/30 cursor-pointer hover:bg-blue-500/30 transition-colors"
+                  className="p-2 bg-[var(--color-primary)]/20 rounded-lg border border-[var(--color-primary)]/30 cursor-pointer hover:bg-[var(--color-primary)]/30 transition-colors"
                   role="button"
                   tabIndex={0}
                   onKeyPress={(e) => {
@@ -1354,7 +1356,7 @@ const POS = () => {
                     }
                   }}
                 >
-                  <QrCode className="w-4 h-4 text-blue-400" />
+                  <QrCode className="w-4 h-4 text-[var(--color-primary)]" />
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               </div>
@@ -1378,7 +1380,7 @@ const POS = () => {
                     setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '', customer_email: '' }))
                     setExpandedSection(null)
                   }}
-                  className="w-full p-3 border-2 border-dashed border-blue-500/30 rounded-lg hover:border-blue-500 hover:bg-blue-500/10 flex items-center justify-center space-x-2 text-blue-400"
+                  className="w-full p-3 border-2 border-dashed border-[var(--color-primary)]/30 rounded-lg hover:border-[var(--color-primary)]hover:bg-[var(--color-primary)]/10 flex items-center justify-center space-x-2 text-[var(--color-primary)]"
                 >
                   <UserPlus className="w-4 h-4" />
                   <span className="text-sm font-medium">Walk-in Customer</span>
@@ -1391,7 +1393,7 @@ const POS = () => {
           {currentTransaction.customer_name !== undefined && currentTransaction.customer_name !== null && !currentTransaction.customer && (
             <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl border border-[#444444]/50 p-4 space-y-3">
               <h4 className="text-sm font-bold text-white flex items-center">
-                <UserPlus className="w-4 h-4 mr-2 text-blue-400" />
+                <UserPlus className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
                 Walk-in Customer Details
               </h4>
               <input
@@ -1592,8 +1594,8 @@ const POS = () => {
                         <span className="text-xs text-gray-500">Stock: {product.stock}</span>
                       </div>
                     </div>
-                    <div className="ml-3 w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center flex-shrink-0">
-                      <Plus className="w-5 h-5 text-blue-400" />
+                    <div className="ml-3 w-10 h-10 bg-[var(--color-primary)]/20 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Plus className="w-5 h-5 text-[var(--color-primary)]" />
                     </div>
                   </div>
                 </button>
@@ -1608,9 +1610,9 @@ const POS = () => {
               className="w-full flex items-center justify-between p-3 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl border border-[#444444]/50"
             >
               <div className="flex items-center space-x-2">
-                <History className="w-4 h-4 text-blue-400" />
+                <History className="w-4 h-4 text-[var(--color-primary)]" />
                 <span className="text-white font-semibold text-sm">Product Sales</span>
-                <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-bold rounded-full">
+                <span className="px-2 py-0.5 bg-[var(--color-primary)]/20 text-[var(--color-primary)] text-xs font-bold rounded-full">
                   {productTransactionHistory.length}
                 </span>
               </div>
@@ -1639,7 +1641,7 @@ const POS = () => {
                           {tx.transaction_type === 'retail' ? (
                             <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-xs font-bold rounded">RETAIL</span>
                           ) : (
-                            <span className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-bold rounded">SERVICE+</span>
+                            <span className="px-1.5 py-0.5 bg-[var(--color-primary)]/20 text-[var(--color-primary)] text-xs font-bold rounded">SERVICE+</span>
                           )}
                         </div>
                         <div className="flex justify-between items-center">
@@ -1699,7 +1701,7 @@ const POS = () => {
                 ))}
 
                 {currentTransaction.products.map((product, index) => (
-                  <div key={`product-${index}`} className="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                  <div key={`product-${index}`} className="flex items-center justify-between p-3 bg-[var(--color-primary)]/10 rounded-lg border border-[var(--color-primary)]/20">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-white text-sm">{product.product_name}</p>
                       <p className="text-xs text-gray-400">₱{product.price} each</p>
@@ -1714,7 +1716,7 @@ const POS = () => {
                       <span className="w-6 text-center font-semibold text-white text-sm">{product.quantity}</span>
                       <button
                         onClick={() => updateQuantity('products', index, 1)}
-                        className="w-7 h-7 bg-blue-500 rounded-full flex items-center justify-center"
+                        className="w-7 h-7 bg-[var(--color-primary)]rounded-full flex items-center justify-center"
                       >
                         <Plus className="w-3.5 h-3.5 text-white" />
                       </button>
@@ -1908,7 +1910,7 @@ const POS = () => {
                       <span className="font-mono text-sm text-gray-900">{newCustomerCredentials.email}</span>
                       <button
                         onClick={() => navigator.clipboard.writeText(newCustomerCredentials.email)}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        className="text-[var(--color-primary)] hover:text-[var(--color-accent)] text-sm font-medium"
                       >
                         Copy
                       </button>
@@ -1921,7 +1923,7 @@ const POS = () => {
                       <span className="font-mono text-sm text-gray-900">{newCustomerCredentials.password}</span>
                       <button
                         onClick={() => navigator.clipboard.writeText(newCustomerCredentials.password)}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        className="text-[var(--color-primary)] hover:text-[var(--color-accent)] text-sm font-medium"
                       >
                         Copy
                       </button>
@@ -2026,11 +2028,11 @@ const POS = () => {
               <div className="flex items-center space-x-1 sm:space-x-1.5">
                 <Link
                   to="/staff"
-                  className="bg-blue-500/15 backdrop-blur-sm rounded-lg flex items-center space-x-1 px-2 sm:px-3 py-1.5 hover:bg-blue-500/25 transition-all duration-200 border border-blue-500/25 group"
+                  className="bg-[var(--color-primary)]/15 backdrop-blur-sm rounded-lg flex items-center space-x-1 px-2 sm:px-3 py-1.5 hover:bg-[var(--color-primary)]/25 transition-all duration-200 border border-[var(--color-primary)]/25 group"
                   title="Back to Dashboard"
                 >
-                  <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 group-hover:text-blue-300 transition-colors duration-200" />
-                  <span className="hidden sm:inline text-blue-400 group-hover:text-blue-300 font-semibold text-xs transition-colors duration-200">Back</span>
+                  <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[var(--color-primary)] group-hover:text-[var(--color-primary)] transition-colors duration-200" />
+                  <span className="hidden sm:inline text-[var(--color-primary)] group-hover:text-[var(--color-primary)] font-semibold text-xs transition-colors duration-200">Back</span>
                 </Link>
 
                 <button
@@ -2432,7 +2434,7 @@ const POS = () => {
                 <div className="flex space-x-2">
                   <button
                     onClick={() => setActiveModal('scanner')}
-                    className="p-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors border border-blue-500/30"
+                    className="p-2 bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary)]/30 transition-colors border border-[var(--color-primary)]/30"
                     title="Scan QR"
                   >
                     <QrCode className="w-4 h-4" />
@@ -2473,11 +2475,11 @@ const POS = () => {
                 </div>
               ) : currentTransaction.customer_name !== undefined && currentTransaction.customer_name !== null ? (
                 <div className="space-y-4">
-                  <div className="p-4 bg-gradient-to-r from-blue-500/20 to-blue-600/20 rounded-lg border border-blue-500/30">
+                  <div className="p-4 bg-gradient-to-r from-[var(--color-primary)]/20 to-[var(--color-accent)]/20 rounded-lg border border-[var(--color-primary)]/30">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-blue-500/30 rounded-lg flex items-center justify-center border border-blue-500/40">
-                          <UserPlus className="w-5 h-5 text-blue-400" />
+                        <div className="w-10 h-10 bg-[var(--color-primary)]/30 rounded-lg flex items-center justify-center border border-[var(--color-primary)]/40">
+                          <UserPlus className="w-5 h-5 text-[var(--color-primary)]" />
                         </div>
                         <div>
                           <p className="font-semibold text-white">{(currentTransaction.customer_name && currentTransaction.customer_name.trim()) || 'Walk-in Customer'}</p>
@@ -2552,7 +2554,7 @@ const POS = () => {
 
                   <button
                     onClick={() => setCurrentTransaction(prev => ({ ...prev, customer: null, customer_name: '', customer_phone: '', customer_email: '' }))}
-                    className="w-full p-4 border-2 border-dashed border-blue-500/30 rounded-lg hover:border-blue-500 hover:bg-blue-500/10 transition-all duration-200 flex items-center justify-center space-x-2 text-blue-400 hover:text-blue-300"
+                    className="w-full p-4 border-2 border-dashed border-[var(--color-primary)]/30 rounded-lg hover:border-[var(--color-primary)]hover:bg-[var(--color-primary)]/10 transition-all duration-200 flex items-center justify-center space-x-2 text-[var(--color-primary)] hover:text-[var(--color-primary)]"
                   >
                     <UserPlus className="w-5 h-5" />
                     <span className="font-medium">Add Walk-in Customer</span>
@@ -2628,7 +2630,7 @@ const POS = () => {
                               <span className="px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs font-bold rounded-full">FEE PAID</span>
                             )}
                             {booking.payment_status === 'unpaid' && (
-                              <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-bold rounded-full">💵 PAY HERE</span>
+                              <span className="px-2 py-0.5 bg-[var(--color-primary)]/20 text-[var(--color-primary)] text-xs font-bold rounded-full">💵 PAY HERE</span>
                             )}
                           </div>
                           <div className="flex justify-between items-center">
@@ -2656,12 +2658,12 @@ const POS = () => {
             <div className="mt-4">
               <button
                 onClick={() => setShowProductHistory(!showProductHistory)}
-                className="w-full flex items-center justify-between p-3 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl shadow-lg border border-[#444444]/50 hover:border-blue-500/30 transition-all duration-200"
+                className="w-full flex items-center justify-between p-3 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl shadow-lg border border-[#444444]/50 hover:border-[var(--color-primary)]/30 transition-all duration-200"
               >
                 <div className="flex items-center space-x-2">
-                  <History className="w-5 h-5 text-blue-400" />
+                  <History className="w-5 h-5 text-[var(--color-primary)]" />
                   <span className="text-white font-semibold">Product Sales</span>
-                  <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-bold rounded-full">
+                  <span className="px-2 py-0.5 bg-[var(--color-primary)]/20 text-[var(--color-primary)] text-xs font-bold rounded-full">
                     {productTransactionHistory.length}
                   </span>
                 </div>
@@ -2705,7 +2707,7 @@ const POS = () => {
                             {tx.transaction_type === 'retail' ? (
                               <span className="px-2 py-0.5 bg-green-500/20 text-green-400 text-xs font-bold rounded-full">RETAIL</span>
                             ) : (
-                              <span className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-xs font-bold rounded-full">SERVICE+</span>
+                              <span className="px-2 py-0.5 bg-[var(--color-primary)]/20 text-[var(--color-primary)] text-xs font-bold rounded-full">SERVICE+</span>
                             )}
                           </div>
                           <div className="flex justify-between items-center">
@@ -2771,7 +2773,7 @@ const POS = () => {
 
                 {/* Products */}
                 {currentTransaction.products.map((product, index) => (
-                  <div key={`product-${index}`} className="flex items-center justify-between p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                  <div key={`product-${index}`} className="flex items-center justify-between p-3 bg-[var(--color-primary)]/10 rounded-lg border border-[var(--color-primary)]/20">
                     <div className="flex-1">
                       <p className="font-semibold text-white">{product.product_name}</p>
                       <p className="text-sm text-gray-400">₱{product.price} each</p>
@@ -2786,7 +2788,7 @@ const POS = () => {
                       <span className="w-8 text-center font-semibold text-white">{product.quantity}</span>
                       <button
                         onClick={() => updateQuantity('products', index, 1)}
-                        className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center hover:bg-blue-600 text-white transition-colors"
+                        className="w-6 h-6 bg-[var(--color-primary)]rounded-full flex items-center justify-center hover:bg-[var(--color-accent)] text-white transition-colors"
                       >
                         <Plus className="w-3 h-3" />
                       </button>
@@ -2846,7 +2848,7 @@ const POS = () => {
                     <span className="text-gray-400">Payment Type:</span>
                     <span className={`font-bold px-2 py-0.5 rounded text-xs ${
                       currentBooking.payment_status === 'unpaid'
-                        ? 'bg-blue-500/20 text-blue-400'
+                        ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'
                         : currentBooking.payment_method === 'wallet'
                           ? 'bg-purple-500/20 text-purple-400'
                           : currentBooking.payment_method === 'combo'
@@ -2948,7 +2950,7 @@ const POS = () => {
                 {currentBranch?.enable_late_fee && currentTransaction.late_fee === 0 && (
                   <div className="flex justify-end pt-1 pb-1">
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         const lateFeeType = currentBranch.late_fee_type || 'fixed';
                         const feeAmount = currentBranch.late_fee_amount || 0;
 
@@ -2957,7 +2959,7 @@ const POS = () => {
                         } else {
                           // Prompt for duration
                           const unit = lateFeeType === 'per_minute' ? 'minutes' : 'hours';
-                          const duration = prompt(`Enter number of ${unit} late:`);
+                          const duration = await showPrompt({ title: 'Late Fee Duration', message: `Enter number of ${unit} late:`, placeholder: `Number of ${unit}`, inputType: 'number' });
                           if (duration && !isNaN(duration) && duration > 0) {
                             const fee = feeAmount * parseFloat(duration);
                             setCurrentTransaction(prev => ({
@@ -3223,7 +3225,7 @@ const POS = () => {
                     <span className="font-mono text-sm text-gray-900">{newCustomerCredentials.email}</span>
                     <button
                       onClick={() => navigator.clipboard.writeText(newCustomerCredentials.email)}
-                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      className="text-[var(--color-primary)] hover:text-[var(--color-accent)] text-sm font-medium"
                     >
                       Copy
                     </button>
@@ -3236,7 +3238,7 @@ const POS = () => {
                     <span className="font-mono text-sm text-gray-900">{newCustomerCredentials.password}</span>
                     <button
                       onClick={() => navigator.clipboard.writeText(newCustomerCredentials.password)}
-                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      className="text-[var(--color-primary)] hover:text-[var(--color-accent)] text-sm font-medium"
                     >
                       Copy
                     </button>
@@ -3246,7 +3248,7 @@ const POS = () => {
             </div>
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <p className="text-sm text-blue-800">
+              <p className="text-sm text-[var(--color-accent)]">
                 <strong>Important:</strong> The customer should change their password after first login for security.
               </p>
             </div>
@@ -3326,7 +3328,7 @@ const POS = () => {
               </button>
               <button
                 onClick={() => handleMarkComplete(true)}
-                className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-200"
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:to-[var(--color-primary)] text-white font-medium rounded-lg transition-all duration-200"
               >
                 Complete Anyway
               </button>

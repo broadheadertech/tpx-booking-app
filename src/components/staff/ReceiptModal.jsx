@@ -1,5 +1,6 @@
 import Modal from '../common/Modal'
 import { Printer, Download, CheckCircle } from 'lucide-react'
+import { useAppModal } from '../../context/AppModalContext'
 
 const ReceiptModal = ({
   isOpen,
@@ -8,6 +9,7 @@ const ReceiptModal = ({
   branchInfo,
   staffInfo
 }) => {
+  const { showAlert } = useAppModal()
   if (!transactionData) return null
 
   const formatDate = (timestamp) => {
@@ -247,7 +249,7 @@ const ReceiptModal = ({
         printWindow.print()
       }, 250)
     } else {
-      alert('Please allow popups to print receipts')
+      showAlert({ title: 'Popups Blocked', message: 'Please allow popups to print receipts', type: 'warning' })
     }
   }
 

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import ReactDOM from "react-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { useAppModal } from '../../context/AppModalContext';
 import {
   DollarSign,
   TrendingUp,
@@ -112,8 +113,8 @@ const SummaryCard = ({ title, value, subtitle, icon: Icon, trend, trendValue, co
     green: "bg-green-500/10 text-green-400",
     red: "bg-red-500/10 text-red-400",
     purple: "bg-purple-500/10 text-purple-400",
-    amber: "bg-amber-500/10 text-amber-400",
-    orange: "bg-[#FF8C42]/10 text-[#FF8C42]",
+    amber: "bg-[var(--color-primary)]/10 text-[var(--color-primary)]",
+    orange: "bg-[var(--color-primary)]/10 text-[var(--color-primary)]",
   };
 
   const valueColors = {
@@ -121,12 +122,12 @@ const SummaryCard = ({ title, value, subtitle, icon: Icon, trend, trendValue, co
     green: "text-green-400",
     red: "text-red-400",
     purple: "text-purple-400",
-    amber: "text-amber-400",
-    orange: "text-[#FF8C42]",
+    amber: "text-[var(--color-primary)]",
+    orange: "text-[var(--color-primary)]",
   };
 
   return (
-    <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[#FF8C42]/30 transition-colors">
+    <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[var(--color-primary)]/30 transition-colors">
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm text-gray-400">{title}</span>
         <div className={`p-2 rounded-lg ${colorClasses[color]}`}>
@@ -149,7 +150,7 @@ const SummaryCard = ({ title, value, subtitle, icon: Icon, trend, trendValue, co
 const RatioCard = ({ title, value, description, status }) => {
   const statusColors = {
     good: "text-green-400 bg-green-500/10",
-    warning: "text-amber-400 bg-amber-500/10",
+    warning: "text-[var(--color-primary)] bg-[var(--color-primary)]/10",
     danger: "text-red-400 bg-red-500/10",
   };
 
@@ -182,7 +183,7 @@ const ItemCard = ({ item, type, onEdit, onDelete }) => {
   const Icon = categoryInfo.icon || CreditCard;
 
   return (
-    <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[#FF8C42]/30 transition-all group">
+    <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[var(--color-primary)]/30 transition-all group">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg ${type === "asset" ? "bg-green-500/10 text-green-400" : "bg-red-500/10 text-red-400"}`}>
@@ -289,7 +290,7 @@ const EquityCard = ({ entry, onEdit, onDelete }) => {
   const isNegative = entry.amount < 0;
 
   return (
-    <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[#FF8C42]/30 transition-colors group">
+    <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[var(--color-primary)]/30 transition-colors group">
       <div className="flex items-center justify-between">
         <div>
           <div className="font-medium text-white">{entry.description}</div>
@@ -392,7 +393,7 @@ const AssetModal = ({ isOpen, onClose, asset, branchId, userId }) => {
                   const firstCategory = Object.entries(ASSET_CATEGORIES).find(([, info]) => info.type === type)?.[0] || "other";
                   setFormData({ ...formData, asset_type: type, category: firstCategory });
                 }}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               >
                 <option value="current">Current Assets</option>
                 <option value="fixed">Fixed Assets</option>
@@ -405,7 +406,7 @@ const AssetModal = ({ isOpen, onClose, asset, branchId, userId }) => {
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               >
                 {currentCategories.map(([key, info]) => (
                   <option key={key} value={key}>{info.label}</option>
@@ -420,7 +421,7 @@ const AssetModal = ({ isOpen, onClose, asset, branchId, userId }) => {
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               placeholder="e.g., Barber Chair #1"
               required
             />
@@ -433,7 +434,7 @@ const AssetModal = ({ isOpen, onClose, asset, branchId, userId }) => {
                 type="number"
                 value={formData.purchase_value}
                 onChange={(e) => setFormData({ ...formData, purchase_value: Number(e.target.value) })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 min="0"
                 required
               />
@@ -445,7 +446,7 @@ const AssetModal = ({ isOpen, onClose, asset, branchId, userId }) => {
                 type="number"
                 value={formData.current_value}
                 onChange={(e) => setFormData({ ...formData, current_value: Number(e.target.value) })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 min="0"
                 required
               />
@@ -459,7 +460,7 @@ const AssetModal = ({ isOpen, onClose, asset, branchId, userId }) => {
                 type="date"
                 value={formData.purchase_date ? new Date(formData.purchase_date).toISOString().split("T")[0] : ""}
                 onChange={(e) => setFormData({ ...formData, purchase_date: new Date(e.target.value).getTime() })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               />
             </div>
 
@@ -469,7 +470,7 @@ const AssetModal = ({ isOpen, onClose, asset, branchId, userId }) => {
                 type="number"
                 value={formData.depreciation_rate || 0}
                 onChange={(e) => setFormData({ ...formData, depreciation_rate: Number(e.target.value) })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 min="0"
                 max="100"
               />
@@ -481,7 +482,7 @@ const AssetModal = ({ isOpen, onClose, asset, branchId, userId }) => {
             <textarea
               value={formData.notes || ""}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none resize-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none resize-none"
               rows={2}
               placeholder="Optional notes..."
             />
@@ -585,7 +586,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, branchId, userId }) => {
                   const firstCategory = Object.entries(LIABILITY_CATEGORIES).find(([, info]) => info.type === type)?.[0] || "other";
                   setFormData({ ...formData, liability_type: type, category: firstCategory });
                 }}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               >
                 <option value="current">Current (Due within 1 year)</option>
                 <option value="long_term">Long-term (Due after 1 year)</option>
@@ -597,7 +598,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, branchId, userId }) => {
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               >
                 {currentCategories.map(([key, info]) => (
                   <option key={key} value={key}>{info.label}</option>
@@ -612,7 +613,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, branchId, userId }) => {
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               placeholder="e.g., Equipment Loan - Bank ABC"
               required
             />
@@ -625,7 +626,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, branchId, userId }) => {
                 type="number"
                 value={formData.original_amount}
                 onChange={(e) => setFormData({ ...formData, original_amount: Number(e.target.value) })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 min="0"
                 required
               />
@@ -637,7 +638,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, branchId, userId }) => {
                 type="number"
                 value={formData.current_balance}
                 onChange={(e) => setFormData({ ...formData, current_balance: Number(e.target.value) })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 min="0"
                 required
               />
@@ -651,7 +652,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, branchId, userId }) => {
                 type="number"
                 value={formData.interest_rate || 0}
                 onChange={(e) => setFormData({ ...formData, interest_rate: Number(e.target.value) })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 min="0"
                 step="0.1"
               />
@@ -663,7 +664,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, branchId, userId }) => {
                 type="number"
                 value={formData.monthly_payment || 0}
                 onChange={(e) => setFormData({ ...formData, monthly_payment: Number(e.target.value) })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 min="0"
               />
             </div>
@@ -676,7 +677,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, branchId, userId }) => {
                 type="date"
                 value={formData.due_date ? new Date(formData.due_date).toISOString().split("T")[0] : ""}
                 onChange={(e) => setFormData({ ...formData, due_date: e.target.value ? new Date(e.target.value).getTime() : null })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               />
             </div>
 
@@ -686,7 +687,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, branchId, userId }) => {
                 type="text"
                 value={formData.creditor || ""}
                 onChange={(e) => setFormData({ ...formData, creditor: e.target.value })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 placeholder="Bank, supplier, etc."
               />
             </div>
@@ -697,7 +698,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, branchId, userId }) => {
             <textarea
               value={formData.notes || ""}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none resize-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none resize-none"
               rows={2}
               placeholder="Optional notes..."
             />
@@ -788,7 +789,7 @@ const EquityModal = ({ isOpen, onClose, equity, branchId, userId }) => {
             <select
               value={formData.equity_type}
               onChange={(e) => setFormData({ ...formData, equity_type: e.target.value })}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
             >
               {Object.entries(MANUAL_EQUITY_TYPES).map(([key, info]) => (
                 <option key={key} value={key}>{info.label}</option>
@@ -805,7 +806,7 @@ const EquityModal = ({ isOpen, onClose, equity, branchId, userId }) => {
               type="text"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               placeholder="e.g., Initial capital investment"
               required
             />
@@ -820,7 +821,7 @@ const EquityModal = ({ isOpen, onClose, equity, branchId, userId }) => {
                 type="number"
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 required
               />
             </div>
@@ -831,7 +832,7 @@ const EquityModal = ({ isOpen, onClose, equity, branchId, userId }) => {
                 type="date"
                 value={formData.transaction_date ? new Date(formData.transaction_date).toISOString().split("T")[0] : ""}
                 onChange={(e) => setFormData({ ...formData, transaction_date: new Date(e.target.value).getTime() })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 required
               />
             </div>
@@ -842,7 +843,7 @@ const EquityModal = ({ isOpen, onClose, equity, branchId, userId }) => {
             <textarea
               value={formData.notes || ""}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none resize-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none resize-none"
               rows={2}
               placeholder="Optional notes..."
             />
@@ -875,7 +876,7 @@ const EquityModal = ({ isOpen, onClose, equity, branchId, userId }) => {
 const PeriodStatusBadge = ({ status }) => {
   const statusConfig = {
     open: { label: "Open", bg: "bg-green-500/20", text: "text-green-400", icon: Unlock },
-    closing: { label: "Closing", bg: "bg-amber-500/20", text: "text-amber-400", icon: Clock },
+    closing: { label: "Closing", bg: "bg-[var(--color-primary)]/20", text: "text-[var(--color-primary)]", icon: Clock },
     closed: { label: "Closed", bg: "bg-gray-500/20", text: "text-gray-400", icon: Lock },
   };
 
@@ -895,7 +896,7 @@ const PeriodCard = ({ period, onClose, onReopen, onDelete, onCompare }) => {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[#FF8C42]/30 transition-all">
+    <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[var(--color-primary)]/30 transition-all">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg ${period.status === "closed" ? "bg-gray-500/20 text-gray-400" : "bg-blue-500/20 text-blue-400"}`}>
@@ -981,7 +982,7 @@ const PeriodCard = ({ period, onClose, onReopen, onDelete, onCompare }) => {
             {period.status === "open" && (
               <button
                 onClick={() => onClose(period)}
-                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/80 transition-colors"
+                className="flex items-center gap-1 px-3 py-1.5 text-sm bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/80 transition-colors"
               >
                 <Lock size={14} />
                 Close Period
@@ -991,7 +992,7 @@ const PeriodCard = ({ period, onClose, onReopen, onDelete, onCompare }) => {
               <>
                 <button
                   onClick={() => onReopen(period)}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 transition-colors"
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary)]/30 transition-colors"
                 >
                   <Unlock size={14} />
                   Reopen
@@ -1023,6 +1024,7 @@ const PeriodCard = ({ period, onClose, onReopen, onDelete, onCompare }) => {
 
 // Create Period Modal
 const CreatePeriodModal = ({ isOpen, onClose, branchId, userId }) => {
+  const { showAlert } = useAppModal();
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [customMode, setCustomMode] = useState(false);
@@ -1054,7 +1056,7 @@ const CreatePeriodModal = ({ isOpen, onClose, branchId, userId }) => {
       onClose();
     } catch (error) {
       console.error("Error creating period:", error);
-      alert(error.message || "Failed to create period");
+      showAlert({ title: 'Error', message: error.message || "Failed to create period", type: 'error' });
     }
   };
 
@@ -1069,7 +1071,7 @@ const CreatePeriodModal = ({ isOpen, onClose, branchId, userId }) => {
       onClose();
     } catch (error) {
       console.error("Error creating period:", error);
-      alert(error.message || "Failed to create period");
+      showAlert({ title: 'Error', message: error.message || "Failed to create period", type: 'error' });
     }
   };
 
@@ -1090,13 +1092,13 @@ const CreatePeriodModal = ({ isOpen, onClose, branchId, userId }) => {
           <div className="flex gap-2 mb-4">
             <button
               onClick={() => setCustomMode(false)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!customMode ? "bg-[#FF8C42] text-white" : "bg-[#333333] text-gray-400 hover:text-white"}`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!customMode ? "bg-[var(--color-primary)] text-white" : "bg-[#333333] text-gray-400 hover:text-white"}`}
             >
               Quick Select
             </button>
             <button
               onClick={() => setCustomMode(true)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${customMode ? "bg-[#FF8C42] text-white" : "bg-[#333333] text-gray-400 hover:text-white"}`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${customMode ? "bg-[var(--color-primary)] text-white" : "bg-[#333333] text-gray-400 hover:text-white"}`}
             >
               Custom Period
             </button>
@@ -1138,7 +1140,7 @@ const CreatePeriodModal = ({ isOpen, onClose, branchId, userId }) => {
                             className={`p-2 rounded-lg text-sm border transition-colors ${
                               suggestion.exists
                                 ? "bg-[#0A0A0A] text-gray-600 cursor-not-allowed border-[#333333]"
-                                : "bg-[#0A0A0A] text-gray-300 hover:bg-[#FF8C42]/20 hover:border-[#FF8C42]/50 border-[#333333]"
+                                : "bg-[#0A0A0A] text-gray-300 hover:bg-[var(--color-primary)]/20 hover:border-[var(--color-primary)]/50 border-[#333333]"
                             }`}
                           >
                             {suggestion.period_name.split(" ")[0].substring(0, 3)}
@@ -1162,7 +1164,7 @@ const CreatePeriodModal = ({ isOpen, onClose, branchId, userId }) => {
                             className={`p-2 rounded-lg text-sm border transition-colors ${
                               suggestion.exists
                                 ? "bg-[#0A0A0A] text-gray-600 cursor-not-allowed border-[#333333]"
-                                : "bg-[#0A0A0A] text-gray-300 hover:bg-[#FF8C42]/20 hover:border-[#FF8C42]/50 border-[#333333]"
+                                : "bg-[#0A0A0A] text-gray-300 hover:bg-[var(--color-primary)]/20 hover:border-[var(--color-primary)]/50 border-[#333333]"
                             }`}
                           >
                             {suggestion.period_name}
@@ -1186,7 +1188,7 @@ const CreatePeriodModal = ({ isOpen, onClose, branchId, userId }) => {
                             className={`p-2 rounded-lg text-sm border transition-colors ${
                               suggestion.exists
                                 ? "bg-[#0A0A0A] text-gray-600 cursor-not-allowed border-[#333333]"
-                                : "bg-[#0A0A0A] text-gray-300 hover:bg-[#FF8C42]/20 hover:border-[#FF8C42]/50 border-[#333333]"
+                                : "bg-[#0A0A0A] text-gray-300 hover:bg-[var(--color-primary)]/20 hover:border-[var(--color-primary)]/50 border-[#333333]"
                             }`}
                           >
                             {suggestion.period_name}
@@ -1207,7 +1209,7 @@ const CreatePeriodModal = ({ isOpen, onClose, branchId, userId }) => {
                   type="text"
                   value={formData.period_name}
                   onChange={(e) => setFormData({ ...formData, period_name: e.target.value })}
-                  className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                  className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                   placeholder="e.g., January 2026, Q1 2026"
                   required
                 />
@@ -1218,7 +1220,7 @@ const CreatePeriodModal = ({ isOpen, onClose, branchId, userId }) => {
                 <select
                   value={formData.period_type}
                   onChange={(e) => setFormData({ ...formData, period_type: e.target.value })}
-                  className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                  className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 >
                   <option value="monthly">Monthly</option>
                   <option value="quarterly">Quarterly</option>
@@ -1233,7 +1235,7 @@ const CreatePeriodModal = ({ isOpen, onClose, branchId, userId }) => {
                     type="date"
                     value={formData.start_date ? new Date(formData.start_date).toISOString().split("T")[0] : ""}
                     onChange={(e) => setFormData({ ...formData, start_date: new Date(e.target.value).getTime() })}
-                    className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                    className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                     required
                   />
                 </div>
@@ -1243,7 +1245,7 @@ const CreatePeriodModal = ({ isOpen, onClose, branchId, userId }) => {
                     type="date"
                     value={formData.end_date ? new Date(formData.end_date).toISOString().split("T")[0] : ""}
                     onChange={(e) => setFormData({ ...formData, end_date: new Date(e.target.value).getTime() })}
-                    className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                    className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                     required
                   />
                 </div>
@@ -1254,7 +1256,7 @@ const CreatePeriodModal = ({ isOpen, onClose, branchId, userId }) => {
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none resize-none"
+                  className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none resize-none"
                   rows={2}
                   placeholder="Optional notes..."
                 />
@@ -1270,7 +1272,7 @@ const CreatePeriodModal = ({ isOpen, onClose, branchId, userId }) => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/80 transition-colors"
+                  className="flex-1 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/80 transition-colors"
                 >
                   Create Period
                 </button>
@@ -1286,6 +1288,7 @@ const CreatePeriodModal = ({ isOpen, onClose, branchId, userId }) => {
 
 // Close Period Confirmation Modal
 const ClosePeriodModal = ({ isOpen, onClose, period, branchId, userId }) => {
+  const { showAlert } = useAppModal();
   const [notes, setNotes] = useState("");
   const [isClosing, setIsClosing] = useState(false);
 
@@ -1299,11 +1302,11 @@ const ClosePeriodModal = ({ isOpen, onClose, period, branchId, userId }) => {
         notes: notes || undefined,
         closed_by: userId,
       });
-      alert("Period closed successfully!");
+      showAlert({ title: 'Success', message: "Period closed successfully!", type: 'success' });
       onClose();
     } catch (error) {
       console.error("Error closing period:", error);
-      alert(error.message || "Failed to close period");
+      showAlert({ title: 'Error', message: error.message || "Failed to close period", type: 'error' });
     } finally {
       setIsClosing(false);
     }
@@ -1319,15 +1322,15 @@ const ClosePeriodModal = ({ isOpen, onClose, period, branchId, userId }) => {
         </div>
 
         <div className="p-4 space-y-4">
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+          <div className="bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <AlertCircle className="text-amber-400 mt-0.5" size={20} />
+              <AlertCircle className="text-[var(--color-primary)] mt-0.5" size={20} />
               <div>
-                <h4 className="font-medium text-amber-400">Confirm Period Close</h4>
-                <p className="text-sm text-amber-400/80 mt-1">
+                <h4 className="font-medium text-[var(--color-primary)]">Confirm Period Close</h4>
+                <p className="text-sm text-[var(--color-primary)]/80 mt-1">
                   Closing "{period.period_name}" will:
                 </p>
-                <ul className="text-sm text-amber-400/80 mt-2 list-disc list-inside space-y-1">
+                <ul className="text-sm text-[var(--color-primary)]/80 mt-2 list-disc list-inside space-y-1">
                   <li>Create a frozen snapshot of all financial data</li>
                   <li>Record Revenue, Expenses, and Net Income for this period</li>
                   <li>Lock the period from further changes</li>
@@ -1343,7 +1346,7 @@ const ClosePeriodModal = ({ isOpen, onClose, period, branchId, userId }) => {
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none resize-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none resize-none"
               rows={2}
               placeholder="Any notes for this period close..."
             />
@@ -1360,7 +1363,7 @@ const ClosePeriodModal = ({ isOpen, onClose, period, branchId, userId }) => {
             <button
               onClick={handleClose}
               disabled={isClosing}
-              className="flex-1 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/80 flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/80 flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
             >
               {isClosing ? (
                 <RefreshCw size={16} className="animate-spin" />
@@ -1379,13 +1382,14 @@ const ClosePeriodModal = ({ isOpen, onClose, period, branchId, userId }) => {
 
 // Reopen Period Modal
 const ReopenPeriodModal = ({ isOpen, onClose, period, userId }) => {
+  const { showAlert } = useAppModal();
   const [reason, setReason] = useState("");
 
   const reopenPeriod = useMutation(api.services.balanceSheet.reopenAccountingPeriod);
 
   const handleReopen = async () => {
     if (!reason.trim()) {
-      alert("Please provide a reason for reopening");
+      showAlert({ title: 'Validation', message: "Please provide a reason for reopening", type: 'error' });
       return;
     }
 
@@ -1395,11 +1399,11 @@ const ReopenPeriodModal = ({ isOpen, onClose, period, userId }) => {
         reason: reason,
         reopened_by: userId,
       });
-      alert("Period reopened successfully");
+      showAlert({ title: 'Success', message: "Period reopened successfully", type: 'success' });
       onClose();
     } catch (error) {
       console.error("Error reopening period:", error);
-      alert(error.message || "Failed to reopen period");
+      showAlert({ title: 'Error', message: error.message || "Failed to reopen period", type: 'error' });
     }
   };
 
@@ -1433,7 +1437,7 @@ const ReopenPeriodModal = ({ isOpen, onClose, period, userId }) => {
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none resize-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none resize-none"
               rows={3}
               placeholder="Explain why this period needs to be reopened..."
               required
@@ -1449,7 +1453,7 @@ const ReopenPeriodModal = ({ isOpen, onClose, period, userId }) => {
             </button>
             <button
               onClick={handleReopen}
-              className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 flex items-center justify-center gap-2 transition-colors"
+              className="flex-1 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-amber-700 flex items-center justify-center gap-2 transition-colors"
             >
               <Unlock size={16} />
               Reopen Period
@@ -1515,7 +1519,7 @@ const PeriodComparisonModal = ({ isOpen, onClose, period, branchId }) => {
             <select
               value={compareToPeriodId || ""}
               onChange={(e) => setCompareToPeriodId(e.target.value || null)}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
             >
               <option value="">Select a period to compare</option>
               {otherPeriods.map((p) => (
@@ -1532,7 +1536,7 @@ const PeriodComparisonModal = ({ isOpen, onClose, period, branchId }) => {
               <div className="grid grid-cols-3 gap-4 text-sm font-medium">
                 <div></div>
                 <div className="text-center text-gray-400">{comparison.period_1.name}</div>
-                <div className="text-center text-[#FF8C42]">{comparison.period_2.name}</div>
+                <div className="text-center text-[var(--color-primary)]">{comparison.period_2.name}</div>
               </div>
 
               {/* Comparison Rows */}
@@ -1578,6 +1582,7 @@ const PeriodComparisonModal = ({ isOpen, onClose, period, branchId }) => {
 
 // Main Balance Sheet Dashboard
 export default function BalanceSheetDashboard({ branchId, userId }) {
+  const { showAlert, showConfirm } = useAppModal();
   const [activeTab, setActiveTab] = useState("overview");
   const [assetModal, setAssetModal] = useState({ open: false, item: null });
   const [liabilityModal, setLiabilityModal] = useState({ open: false, item: null });
@@ -1628,10 +1633,10 @@ export default function BalanceSheetDashboard({ branchId, userId }) {
         created_by: userId,
         notes: `Snapshot taken on ${new Date().toLocaleDateString()}`,
       });
-      alert("Balance sheet snapshot saved successfully!");
+      showAlert({ title: 'Success', message: "Balance sheet snapshot saved successfully!", type: 'success' });
     } catch (error) {
       console.error("Error saving snapshot:", error);
-      alert("Failed to save snapshot");
+      showAlert({ title: 'Error', message: "Failed to save snapshot", type: 'error' });
     }
   };
 
@@ -1685,7 +1690,7 @@ export default function BalanceSheetDashboard({ branchId, userId }) {
         </div>
         <button
           onClick={handleSaveSnapshot}
-          className="flex items-center gap-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-colors"
         >
           <Save size={16} />
           Save Snapshot
@@ -1694,11 +1699,11 @@ export default function BalanceSheetDashboard({ branchId, userId }) {
 
       {/* Balance Check Alert */}
       {!balanceSheetSummary.is_balanced && (
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3">
-          <AlertCircle className="text-amber-400 mt-0.5" size={20} />
+        <div className="bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 rounded-xl p-4 flex items-start gap-3">
+          <AlertCircle className="text-[var(--color-primary)] mt-0.5" size={20} />
           <div>
-            <h4 className="font-medium text-amber-400">Balance Sheet Not Balanced</h4>
-            <p className="text-sm text-amber-300/80 mt-1">
+            <h4 className="font-medium text-[var(--color-primary)]">Balance Sheet Not Balanced</h4>
+            <p className="text-sm text-[var(--color-primary)]/70 mt-1">
               Assets ({formatCurrency(balanceSheetSummary.assets.total)}) should equal Liabilities + Equity (
               {formatCurrency(balanceSheetSummary.liabilities.total + balanceSheetSummary.equity.total)}).
               Difference: {formatCurrency(balanceSheetSummary.balance_difference)}
@@ -1795,27 +1800,27 @@ export default function BalanceSheetDashboard({ branchId, userId }) {
               <span className="text-xs text-blue-300/60 mb-2 block">Expense Breakdown</span>
               <div className="grid grid-cols-2 md:grid-cols-6 gap-3 text-sm">
                 <div className="bg-[#0A0A0A] rounded-lg p-2">
-                  <span className="text-orange-400 text-xs">COGS</span>
+                  <span className="text-[var(--color-primary)] text-xs">COGS</span>
                   <div className="font-semibold text-red-400">{formatCurrency(balanceSheetSummary.auto_calculated?.cogs || 0)}</div>
                 </div>
                 <div className="bg-[#0A0A0A] rounded-lg p-2">
-                  <span className="text-orange-400 text-xs">Gross Payroll</span>
+                  <span className="text-[var(--color-primary)] text-xs">Gross Payroll</span>
                   <div className="font-semibold text-red-400">{formatCurrency(balanceSheetSummary.auto_calculated?.payroll_breakdown?.gross_payroll || balanceSheetSummary.auto_calculated?.payroll_expense || 0)}</div>
                 </div>
                 <div className="bg-[#0A0A0A] rounded-lg p-2">
-                  <span className="text-orange-400 text-xs">Salary</span>
+                  <span className="text-[var(--color-primary)] text-xs">Salary</span>
                   <div className="font-semibold text-red-400">{formatCurrency(balanceSheetSummary.auto_calculated?.payroll_breakdown?.salary || 0)}</div>
                 </div>
                 <div className="bg-[#0A0A0A] rounded-lg p-2">
-                  <span className="text-orange-400 text-xs">Commission</span>
+                  <span className="text-[var(--color-primary)] text-xs">Commission</span>
                   <div className="font-semibold text-red-400">{formatCurrency(balanceSheetSummary.auto_calculated?.payroll_breakdown?.commission || 0)}</div>
                 </div>
                 <div className="bg-[#0A0A0A] rounded-lg p-2">
-                  <span className="text-orange-400 text-xs">Bonus + Allowance</span>
+                  <span className="text-[var(--color-primary)] text-xs">Bonus + Allowance</span>
                   <div className="font-semibold text-red-400">{formatCurrency((balanceSheetSummary.auto_calculated?.payroll_breakdown?.bonus || 0) + (balanceSheetSummary.auto_calculated?.payroll_breakdown?.allowance || 0))}</div>
                 </div>
                 <div className="bg-[#0A0A0A] rounded-lg p-2">
-                  <span className="text-orange-400 text-xs">Other Expenses</span>
+                  <span className="text-[var(--color-primary)] text-xs">Other Expenses</span>
                   <div className="font-semibold text-red-400">{formatCurrency(balanceSheetSummary.auto_calculated?.manual_expenses || 0)}</div>
                 </div>
               </div>
@@ -1855,7 +1860,7 @@ export default function BalanceSheetDashboard({ branchId, userId }) {
               onClick={() => setActiveTab(tab.id)}
               className={`pb-3 px-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                 activeTab === tab.id
-                  ? "border-[#FF8C42] text-[#FF8C42]"
+                  ? "border-[var(--color-primary)] text-[var(--color-primary)]"
                   : "border-transparent text-gray-500 hover:text-gray-300"
               }`}
             >
@@ -1986,7 +1991,7 @@ export default function BalanceSheetDashboard({ branchId, userId }) {
               <div className="border-t border-[#333333] pt-3">
                 <div className="flex justify-between font-semibold">
                   <span className="text-white">Liabilities + Equity</span>
-                  <span className="text-[#FF8C42]">{formatCurrency(balanceSheetSummary.liabilities.total + balanceSheetSummary.equity.total)}</span>
+                  <span className="text-[var(--color-primary)]">{formatCurrency(balanceSheetSummary.liabilities.total + balanceSheetSummary.equity.total)}</span>
                 </div>
               </div>
             </div>
@@ -2112,7 +2117,7 @@ export default function BalanceSheetDashboard({ branchId, userId }) {
           {/* Long-term Liabilities */}
           <div>
             <h3 className="font-semibold text-white mb-3 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-orange-400"></div>
+              <div className="w-2 h-2 rounded-full bg-[var(--color-primary)]"></div>
               Long-term Liabilities
               <span className="text-xs text-gray-500 font-normal">(Due after 1 year)</span>
             </h3>
@@ -2241,7 +2246,7 @@ export default function BalanceSheetDashboard({ branchId, userId }) {
                   </p>
                   <button
                     onClick={() => setClosePeriodModal({ open: true, period: currentOpenPeriod })}
-                    className="mt-2 flex items-center gap-1 px-3 py-1.5 text-sm bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-colors"
+                    className="mt-2 flex items-center gap-1 px-3 py-1.5 text-sm bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-colors"
                   >
                     <Lock size={14} />
                     Close This Period
@@ -2259,7 +2264,7 @@ export default function BalanceSheetDashboard({ branchId, userId }) {
             </div>
             <button
               onClick={() => setCreatePeriodModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-colors"
             >
               <Plus size={16} />
               Create Period
@@ -2292,12 +2297,12 @@ export default function BalanceSheetDashboard({ branchId, userId }) {
                 {accountingPeriods?.filter((p) => p.status === "open").length || 0}
               </div>
             </div>
-            <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-amber-500/30 transition-colors">
+            <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[var(--color-primary)]/30 transition-colors">
               <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                <Clock size={14} className="text-amber-400" />
+                <Clock size={14} className="text-[var(--color-primary)]" />
                 Closing
               </div>
-              <div className="text-2xl font-bold text-amber-400">
+              <div className="text-2xl font-bold text-[var(--color-primary)]">
                 {accountingPeriods?.filter((p) => p.status === "closing").length || 0}
               </div>
             </div>
@@ -2321,11 +2326,12 @@ export default function BalanceSheetDashboard({ branchId, userId }) {
                 onClose={(p) => setClosePeriodModal({ open: true, period: p })}
                 onReopen={(p) => setReopenPeriodModal({ open: true, period: p })}
                 onDelete={async (id) => {
-                  if (window.confirm("Are you sure you want to delete this period?")) {
+                  const confirmed = await showConfirm({ title: 'Delete Period', message: "Are you sure you want to delete this period?", type: 'warning' });
+                  if (confirmed) {
                     try {
                       await deletePeriod({ period_id: id });
                     } catch (error) {
-                      alert(error.message || "Failed to delete period");
+                      showAlert({ title: 'Error', message: error.message || "Failed to delete period", type: 'error' });
                     }
                   }
                 }}
@@ -2341,7 +2347,7 @@ export default function BalanceSheetDashboard({ branchId, userId }) {
                 </p>
                 <button
                   onClick={() => setCreatePeriodModal(true)}
-                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/80 transition-colors"
+                  className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/80 transition-colors"
                 >
                   <Plus size={16} />
                   Create First Period

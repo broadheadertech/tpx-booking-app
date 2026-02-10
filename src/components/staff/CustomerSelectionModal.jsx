@@ -3,8 +3,10 @@ import Modal from '../common/Modal'
 import { User, UserPlus, Search, Phone, Mail, QrCode } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { useAppModal } from '../../context/AppModalContext'
 
 const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR, onAddNewCustomer }) => {
+  const { showAlert } = useAppModal()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCustomerType, setSelectedCustomerType] = useState('registered') // 'registered' or 'walkin'
   const [walkInData, setWalkInData] = useState({
@@ -36,7 +38,7 @@ const CustomerSelectionModal = ({ isOpen, onClose, onCustomerSelected, onScanQR,
 
   const handleWalkInSelect = () => {
     if (!walkInData.name.trim()) {
-      alert('Please enter customer name')
+      showAlert({ title: 'Missing Name', message: 'Please enter customer name', type: 'error' })
       return
     }
     

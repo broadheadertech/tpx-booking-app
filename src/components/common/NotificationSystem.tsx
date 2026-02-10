@@ -3,6 +3,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { Bell, X, Check, Clock, AlertTriangle, Info, Gift, CreditCard, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAppModal } from '../../context/AppModalContext';
 
 // Notification type icons mapping
 const NOTIFICATION_ICONS = {
@@ -345,6 +346,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ userId, is
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const { showAlert } = useAppModal();
 
   // Fetch notifications - skip if userId not available
   const notifications = useQuery(
@@ -430,7 +432,7 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({ userId, is
       setShowClearConfirm(false);
     } catch (error) {
       console.error('Failed to clear all notifications:', error);
-      alert('Failed to clear notifications: ' + error.message);
+      showAlert({ title: 'Error', message: 'Failed to clear notifications: ' + error.message, type: 'error' });
     }
   };
   

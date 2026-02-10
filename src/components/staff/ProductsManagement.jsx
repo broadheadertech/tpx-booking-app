@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Package, DollarSign, TrendingUp, TrendingDown, Plus, Edit, Trash2, Search, Filter, RefreshCw, Save, X, AlertCircle, Image, ShoppingCart, BarChart3, Upload, Camera, History, Clock, ChevronUp, ChevronDown } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { useAppModal } from '../../context/AppModalContext'
 import Modal from '../common/Modal'
 import Button from '../common/Button'
 
@@ -37,6 +38,7 @@ const ProductImage = ({ imageUrl, imageStorageId, productName, className }) => {
 }
 
 const ProductsManagement = ({ onRefresh, user }) => {
+  const { showConfirm } = useAppModal()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('all')
   const [filterStock, setFilterStock] = useState('all')
@@ -269,7 +271,8 @@ const ProductsManagement = ({ onRefresh, user }) => {
   }
 
   const handleDelete = async (productId) => {
-    if (!confirm('Are you sure you want to delete this product?')) return
+    const confirmed = await showConfirm({ title: 'Delete Product', message: 'Are you sure you want to delete this product?', type: 'warning' })
+    if (!confirmed) return
 
     try {
       await deleteProductMutation({ id: productId })

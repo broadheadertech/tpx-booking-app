@@ -40,7 +40,7 @@ const CHANGE_TYPE_CONFIG = {
   },
   branch_removed: {
     label: "Branch Removed",
-    color: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+    color: "bg-[var(--color-primary)]/20 text-[var(--color-primary)] border-[var(--color-primary)]/30",
   },
   user_created: {
     label: "User Created",
@@ -166,8 +166,8 @@ export default function AuditTrailViewer() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#FF8C42]/10 rounded-xl flex items-center justify-center">
-            <History className="w-5 h-5 text-[#FF8C42]" />
+          <div className="w-10 h-10 bg-[var(--color-primary)]/10 rounded-xl flex items-center justify-center">
+            <History className="w-5 h-5 text-[var(--color-primary)]" />
           </div>
           <div>
             <h2 className="text-xl font-bold text-white">Audit Trail</h2>
@@ -187,7 +187,7 @@ export default function AuditTrailViewer() {
           </div>
           <div className="bg-[#1A1A1A] p-4 rounded-xl border border-[#2A2A2A]/50">
             <p className="text-xs text-gray-400 mb-1">Last 24 Hours</p>
-            <p className="text-2xl font-bold text-[#FF8C42]">
+            <p className="text-2xl font-bold text-[var(--color-primary)]">
               {stats.last24Hours}
             </p>
           </div>
@@ -215,7 +215,7 @@ export default function AuditTrailViewer() {
               placeholder="Search by user..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42]"
+              className="w-full pl-10 pr-4 py-2 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)]"
             />
           </div>
 
@@ -228,7 +228,7 @@ export default function AuditTrailViewer() {
                 setFilterType(e.target.value);
                 setPage(0);
               }}
-              className="bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#FF8C42]/50"
+              className="bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)]/50"
             >
               <option value="all">All Changes</option>
               <option value="role_changed">Role Changes</option>
@@ -313,7 +313,7 @@ export default function AuditTrailViewer() {
                         onClick={() =>
                           setExpandedEntry(isExpanded ? null : entry._id)
                         }
-                        className="flex items-center gap-1 text-xs text-[#FF8C42] hover:text-[#E67E3C]"
+                        className="flex items-center gap-1 text-xs text-[var(--color-primary)] hover:text-[var(--color-primary)]"
                       >
                         {isExpanded ? (
                           <>

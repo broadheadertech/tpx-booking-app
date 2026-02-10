@@ -472,6 +472,34 @@ export const updateBarber = mutation({
   },
 });
 
+// Update barber OT rate and penalty rate (for attendance/payroll tracking)
+// Shift times are based on the barber's booking schedule from BarberManagement
+export const updateBarberShiftSettings = mutation({
+  args: {
+    barber_id: v.id("barbers"),
+    ot_hourly_rate: v.number(),
+    penalty_hourly_rate: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const barber = await ctx.db.get(args.barber_id);
+    if (!barber) {
+      throwUserError(ERROR_CODES.BARBER_NOT_FOUND);
+    }
+
+    const updates: Record<string, any> = {
+      ot_hourly_rate: args.ot_hourly_rate,
+      updatedAt: Date.now(),
+    };
+    if (args.penalty_hourly_rate !== undefined) {
+      updates.penalty_hourly_rate = args.penalty_hourly_rate;
+    }
+
+    await ctx.db.patch(args.barber_id, updates);
+
+    return { success: true };
+  },
+});
+
 // Update barber password
 export const updateBarberPassword = mutation({
   args: {

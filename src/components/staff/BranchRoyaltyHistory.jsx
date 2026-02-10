@@ -139,10 +139,10 @@ export default function BranchRoyaltyHistory() {
 
       {/* Current Configuration Card */}
       {royaltyConfig && (
-        <div className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 rounded-xl p-6 border border-orange-500/30">
+        <div className="bg-gradient-to-br from-[var(--color-primary)]/10 to-[var(--color-primary)]/5 rounded-xl p-6 border border-[var(--color-primary)]/30">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-orange-500/20 rounded-lg">
-              <FileText className="w-5 h-5 text-orange-400" />
+            <div className="p-2 bg-[var(--color-primary)]/20 rounded-lg">
+              <FileText className="w-5 h-5 text-[var(--color-primary)]" />
             </div>
             <div>
               <h3 className="text-lg font-semibold text-white">Current Royalty Terms</h3>
@@ -178,12 +178,12 @@ export default function BranchRoyaltyHistory() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#1E1E1E] rounded-xl p-4 border border-[#333]">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-500/20 rounded-lg">
-              <DollarSign className="w-5 h-5 text-orange-400" />
+            <div className="p-2 bg-[var(--color-primary)]/20 rounded-lg">
+              <DollarSign className="w-5 h-5 text-[var(--color-primary)]" />
             </div>
             <div>
               <p className="text-gray-400 text-xs">Current Due</p>
-              <p className="text-xl font-bold text-orange-400">{formatCurrency(stats.currentDue)}</p>
+              <p className="text-xl font-bold text-[var(--color-primary)]">{formatCurrency(stats.currentDue)}</p>
             </div>
           </div>
         </div>
@@ -224,14 +224,14 @@ export default function BranchRoyaltyHistory() {
 
       {/* Current Due Alert */}
       {stats.currentDue > 0 && (
-        <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4">
+        <div className="bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 rounded-xl p-4">
           <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-orange-400 flex-shrink-0" />
+            <AlertTriangle className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0" />
             <div>
-              <p className="text-orange-300 font-medium">
+              <p className="text-[var(--color-primary)] font-medium">
                 You have {formatCurrency(stats.currentDue)} in pending royalty payments.
               </p>
-              <p className="text-orange-400/70 text-sm mt-1">
+              <p className="text-[var(--color-primary)]/70 text-sm mt-1">
                 Please coordinate with the Super Admin for payment instructions.
               </p>
             </div>
@@ -252,7 +252,7 @@ export default function BranchRoyaltyHistory() {
               onClick={() => setStatusFilter(status)}
               className={`px-3 py-1 text-sm rounded-lg transition-colors capitalize ${
                 statusFilter === status
-                  ? 'bg-orange-500 text-white'
+                  ? 'bg-[var(--color-primary)] text-white'
                   : 'bg-[#333] text-gray-400 hover:text-white'
               }`}
             >
@@ -470,7 +470,7 @@ function ReceiptModal({ payment, branchName, onClose }) {
 
           {/* Thank You */}
           <div className="text-center mt-6 pt-4 border-t border-[#333]">
-            <p className="text-orange-400 font-medium">Thank you for your payment!</p>
+            <p className="text-[var(--color-primary)] font-medium">Thank you for your payment!</p>
             <p className="text-gray-500 text-sm mt-2">
               Keep this receipt for your records.
             </p>

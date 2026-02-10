@@ -18,6 +18,7 @@ import {
   Wallet,
   QrCode,
   ChevronDown,
+  Palmtree,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { useQuery, useMutation, useAction } from "convex/react";
@@ -28,6 +29,7 @@ import { formatTime } from "../../utils/dateUtils";
 import { sendCustomBookingConfirmation, sendBarberBookingNotification } from "../../services/emailService";
 import PaymentOptionsModal from "./PaymentOptionsModal";
 import { MatcherQuiz } from "./BarberMatcher";
+import { useAppModal } from "../../context/AppModalContext";
 // Modern booking components
 import {
   // Phase 1: Quick Wins
@@ -112,6 +114,7 @@ const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
 const ServiceBooking = ({ onBack, onComplete, prefillData }) => {
   const { branding } = useBranding();
   const { user, isAuthenticated } = useCurrentUser();
+  const { showAlert, showConfirm } = useAppModal();
   const [selectedBranch, setSelectedBranch] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [selectedDate, setSelectedDate] = useState(() => {
@@ -760,6 +763,45 @@ const ServiceBooking = ({ onBack, onComplete, prefillData }) => {
     return slots;
   }, [selectedDate, selectedStaff, selectedBranch, existingBookings]);
 
+  // Compute blocked (full-day) dates for the selected barber
+  const blockedDates = React.useMemo(() => {
+    if (!selectedStaff?.blocked_periods) return []
+    return selectedStaff.blocked_periods
+      .filter(p => !p.start_time && !p.end_time) // Full-day blocks only
+      .map(p => p.date)
+  }, [selectedStaff])
+
+  // Check if the selected date is a full-day block for the barber
+  const blockedPeriodForDate = React.useMemo(() => {
+    if (!selectedStaff?.blocked_periods?.length || !selectedDate) return null
+    return selectedStaff.blocked_periods.find(
+      p => p.date === selectedDate && !p.start_time && !p.end_time
+    ) || null
+  }, [selectedStaff, selectedDate])
+
+  // Compute weekday numbers where barber doesn't work (weekly schedule)
+  const offDays = React.useMemo(() => {
+    if (!selectedStaff?.schedule || selectedStaff.schedule_type === 'specific_dates') return []
+    const dayMap = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 }
+    return Object.entries(selectedStaff.schedule)
+      .filter(([, sched]) => sched && !sched.available)
+      .map(([day]) => dayMap[day])
+      .filter(n => n !== undefined)
+  }, [selectedStaff])
+
+  // Check if selected date is a regular schedule off-day (not vacation, just not working)
+  const isBarberScheduledOff = React.useMemo(() => {
+    if (!selectedStaff || !selectedDate || blockedPeriodForDate) return false
+    if (selectedStaff.schedule_type === 'specific_dates' && selectedStaff.specific_dates) {
+      const specificDate = selectedStaff.specific_dates.find(d => d.date === selectedDate)
+      return !specificDate || !specificDate.available
+    }
+    const dateObj = new Date(selectedDate + 'T00:00:00')
+    const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+    const barberSchedule = selectedStaff.schedule?.[dayOfWeek]
+    return barberSchedule ? !barberSchedule.available : false
+  }, [selectedStaff, selectedDate, blockedPeriodForDate])
+
   // Get available barbers for selected service
   const getAvailableBarbers = () => {
     if (!barbers) return [];
@@ -786,7 +828,7 @@ const ServiceBooking = ({ onBack, onComplete, prefillData }) => {
     paymentMethod = null
   ) => {
     if (!selectedService || !selectedDate || !selectedTime) {
-      alert("Please fill in all booking details");
+      showAlert({ title: 'Missing Details', message: 'Please fill in all booking details', type: 'warning' });
       return;
     }
 
@@ -945,14 +987,16 @@ const ServiceBooking = ({ onBack, onComplete, prefillData }) => {
           });
           // Log the error but don't break the booking flow
           // The booking is still successful, but notify user about voucher issue
-          alert(
-            `Booking confirmed! Note: Voucher status update encountered an issue. Please refresh to see the updated status.`
-          );
+          showAlert({
+            title: 'Booking Confirmed',
+            message: 'Booking confirmed! Note: Voucher status update encountered an issue. Please refresh to see the updated status.',
+            type: 'warning'
+          });
         }
       }
     } catch (error) {
       console.error("Error creating booking:", error);
-      alert(error.message || "Failed to create booking. Please try again.");
+      showAlert({ title: 'Booking Failed', message: error.message || 'Failed to create booking. Please try again.', type: 'error' });
     } finally {
       setBookingLoading(false);
     }
@@ -1012,9 +1056,11 @@ const ServiceBooking = ({ onBack, onComplete, prefillData }) => {
       }
     } catch (error) {
       console.error("Payment processing error:", error);
-      alert(
-        `Payment failed: ${error.message}. Please try again or choose pay later.`
-      );
+      showAlert({
+        title: 'Payment Failed',
+        message: `Payment failed: ${error.message}. Please try again or choose pay later.`,
+        type: 'error'
+      });
       return false; // Payment failed, don't proceed
     }
   };
@@ -1416,12 +1462,13 @@ const ServiceBooking = ({ onBack, onComplete, prefillData }) => {
           }
 
           // For other errors, offer Pay at Shop fallback with clear messaging
-          const fallbackConfirmed = window.confirm(
-            `Payment processing failed: ${errorMessage}\n\n` +
-            `Would you like to book now and PAY AT THE SHOP instead?\n\n` +
-            `Click OK to create a booking (you'll pay ₱${(selectedService.price + bookingFee).toLocaleString()} at the branch)\n` +
-            `Click CANCEL to go back and try a different payment method`
-          );
+          const fallbackConfirmed = await showConfirm({
+            title: 'Payment Failed',
+            message: `Payment processing failed: ${errorMessage}\n\nWould you like to book now and PAY AT THE SHOP instead?\n\nYou'll pay ₱${(selectedService.price + bookingFee).toLocaleString()} at the branch.`,
+            type: 'warning',
+            confirmText: 'Pay at Shop',
+            cancelText: 'Try Again'
+          });
 
           if (fallbackConfirmed) {
             const bookingData = {
@@ -1521,9 +1568,13 @@ const ServiceBooking = ({ onBack, onComplete, prefillData }) => {
           console.error("Payment link creation failed:", paymentError);
 
           // Offer Pay at Shop fallback (FR22)
-          const fallbackConfirmed = window.confirm(
-            `Payment processing failed: ${paymentError.message || "Unknown error"}\n\nWould you like to proceed with "Pay at Shop" instead? You can pay the full amount when you arrive at the branch.`
-          );
+          const fallbackConfirmed = await showConfirm({
+            title: 'Payment Failed',
+            message: `Payment processing failed: ${paymentError.message || "Unknown error"}\n\nWould you like to proceed with "Pay at Shop" instead? You can pay the full amount when you arrive at the branch.`,
+            type: 'warning',
+            confirmText: 'Pay at Shop',
+            cancelText: 'Try Again'
+          });
 
           if (fallbackConfirmed) {
             // Create booking with pay_at_shop flow
@@ -1996,6 +2047,8 @@ const ServiceBooking = ({ onBack, onComplete, prefillData }) => {
             }}
             minDate={getPhilippineDateString()}
             maxMonthsAhead={12}
+            blockedDates={blockedDates}
+            offDays={offDays}
           />
         </div>
 
@@ -2007,8 +2060,38 @@ const ServiceBooking = ({ onBack, onComplete, prefillData }) => {
           </div>
         )}
 
+        {/* Vacation / Day Off Banner */}
+        {selectedDate && blockedPeriodForDate && (
+          <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl">
+            <Palmtree className="w-5 h-5 text-amber-400 flex-shrink-0" />
+            <div>
+              <p className="text-amber-400 font-semibold text-sm">
+                {selectedStaff?.name || 'Barber'} is away on this date
+              </p>
+              <p className="text-gray-400 text-xs">
+                {blockedPeriodForDate.reason || 'Day off'} — Please select another date
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Schedule Off-Day Banner */}
+        {selectedDate && !blockedPeriodForDate && isBarberScheduledOff && (
+          <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl">
+            <Calendar className="w-5 h-5 text-amber-400 flex-shrink-0" />
+            <div>
+              <p className="text-amber-400 font-semibold text-sm">
+                {selectedStaff?.name || 'Barber'} doesn't work on {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' })}s
+              </p>
+              <p className="text-gray-400 text-xs">
+                Please select another date
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Modern Time Slot Pills */}
-        {selectedDate && (
+        {selectedDate && !blockedPeriodForDate && !isBarberScheduledOff && (
           <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-4">
             <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
               <Clock className="w-5 h-5 text-[var(--color-primary)]" />
@@ -2799,18 +2882,18 @@ const ServiceBooking = ({ onBack, onComplete, prefillData }) => {
                   setStep(6); // Success step
                 } else if (result.status === 'pending') {
                   // Still pending - inform user
-                  window.alert('Payment is still processing. Please complete the payment in the payment window and try again.');
+                  showAlert({ title: 'Payment Pending', message: 'Payment is still processing. Please complete the payment in the payment window and try again.', type: 'info' });
                 } else if (result.status === 'expired') {
-                  window.alert('Payment session has expired. Please start a new booking.');
+                  showAlert({ title: 'Session Expired', message: 'Payment session has expired. Please start a new booking.', type: 'error' });
                   setPendingPaymentSessionId(null);
                   localStorage.removeItem('pendingPaymongoSessionId');
                   setStep(5);
                 } else {
-                  window.alert(result.error || 'Could not verify payment status. Please try again.');
+                  showAlert({ title: 'Verification Failed', message: result.error || 'Could not verify payment status. Please try again.', type: 'error' });
                 }
               } catch (err) {
                 console.error('[ServiceBooking] Manual check error:', err);
-                window.alert('Error checking payment: ' + (err.message || 'Unknown error'));
+                showAlert({ title: 'Error', message: 'Error checking payment: ' + (err.message || 'Unknown error'), type: 'error' });
               } finally {
                 setCheckingPaymentManually(false);
               }

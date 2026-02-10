@@ -33,7 +33,7 @@ const SETTLEMENT_TABS = [
 
 const getStatusBadgeClasses = (status) => {
   const classes = {
-    pending: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+    pending: 'bg-[var(--color-primary)]/20 text-[var(--color-primary)] border-[var(--color-primary)]/30',
     approved: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
     processing: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
     completed: 'bg-green-500/20 text-green-400 border-green-500/30',
@@ -115,7 +115,7 @@ export default function SettlementApprovalQueue() {
           <div className="flex items-center gap-4 text-sm">
             <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-4 py-2">
               <span className="text-gray-400">Pending:</span>
-              <span className="ml-2 text-orange-400 font-semibold">
+              <span className="ml-2 text-[var(--color-primary)] font-semibold">
                 ₱{summary.totalPendingAmount?.toLocaleString() || 0}
               </span>
             </div>

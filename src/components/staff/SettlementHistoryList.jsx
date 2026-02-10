@@ -378,7 +378,7 @@ function SettlementDetailModal({ settlementId, onClose, branchName }) {
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Receipt className="w-5 h-5 text-orange-500" />
+            <Receipt className="w-5 h-5 text-[var(--color-primary)]" />
             Settlement Details
           </h2>
           <button
@@ -507,7 +507,7 @@ function SettlementDetailModal({ settlementId, onClose, branchName }) {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-400">Commission</span>
-                      <span className="text-orange-400">
+                      <span className="text-[var(--color-primary)]">
                         -{formatCurrency(settlement.breakdown.commission)}
                       </span>
                     </div>
@@ -744,7 +744,7 @@ export function SettlementHistoryList({ branchId, branchName }) {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="appearance-none bg-[#1A1A1A] border border-gray-700 rounded-xl px-4 py-2 pr-10 text-white text-sm focus:outline-none focus:border-orange-500 min-h-[44px]"
+            className="appearance-none bg-[#1A1A1A] border border-gray-700 rounded-xl px-4 py-2 pr-10 text-white text-sm focus:outline-none focus:border-[var(--color-primary)] min-h-[44px]"
           >
             <option value="">All Status</option>
             <option value="pending">Pending</option>
@@ -763,7 +763,7 @@ export function SettlementHistoryList({ branchId, branchName }) {
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
-              className="bg-[#1A1A1A] border border-gray-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-orange-500 min-h-[44px]"
+              className="bg-[#1A1A1A] border border-gray-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-[var(--color-primary)] min-h-[44px]"
               placeholder="Start date"
             />
           </div>
@@ -773,7 +773,7 @@ export function SettlementHistoryList({ branchId, branchName }) {
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
-              className="bg-[#1A1A1A] border border-gray-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-orange-500 min-h-[44px]"
+              className="bg-[#1A1A1A] border border-gray-700 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-[var(--color-primary)] min-h-[44px]"
               placeholder="End date"
             />
           </div>
@@ -783,7 +783,7 @@ export function SettlementHistoryList({ branchId, branchName }) {
         {hasFilters && (
           <button
             onClick={clearFilters}
-            className="px-4 py-2 text-sm text-orange-400 hover:text-orange-300 transition-colors"
+            className="px-4 py-2 text-sm text-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors"
           >
             Clear filters
           </button>

@@ -96,20 +96,20 @@ function PayTab({
 
         <button
           onClick={() => navigate('/customer/booking')}
-          className="flex flex-col items-center p-4 bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] hover:border-blue-500/30 active:scale-[0.98] transition-all"
+          className="flex flex-col items-center p-4 bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] hover:border-[var(--color-primary)]/30 active:scale-[0.98] transition-all"
         >
-          <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center mb-2">
-            <CreditCard className="w-5 h-5 text-blue-400" />
+          <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/20 flex items-center justify-center mb-2">
+            <CreditCard className="w-5 h-5 text-[var(--color-primary)]" />
           </div>
           <span className="text-xs font-semibold text-white">Pay</span>
         </button>
 
         <button
           onClick={() => navigate('/customer/vouchers')}
-          className="flex flex-col items-center p-4 bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] hover:border-purple-500/30 active:scale-[0.98] transition-all"
+          className="flex flex-col items-center p-4 bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] hover:border-[var(--color-primary)]/30 active:scale-[0.98] transition-all"
         >
-          <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center mb-2">
-            <Gift className="w-5 h-5 text-purple-400" />
+          <div className="w-10 h-10 rounded-xl bg-[var(--color-primary)]/20 flex items-center justify-center mb-2">
+            <Gift className="w-5 h-5 text-[var(--color-primary)]" />
           </div>
           <span className="text-xs font-semibold text-white">Vouchers</span>
         </button>

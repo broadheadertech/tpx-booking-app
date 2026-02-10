@@ -5,9 +5,11 @@ import jsQR from 'jsqr'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
+import { useAppModal } from '../../context/AppModalContext'
 
 const VoucherManagement = ({ onBack }) => {
   const { user, isAuthenticated } = useCurrentUser()
+  const { showAlert } = useAppModal()
   const [selectedVoucher, setSelectedVoucher] = useState(null)
   const [showQRCode, setShowQRCode] = useState(false)
   const [claimLoading, setClaimLoading] = useState(false)
@@ -551,7 +553,7 @@ const VoucherManagement = ({ onBack }) => {
                   console.log('=== VOUCHER ENDPOINT DIAGNOSTIC ===')
                   const results = await voucherService.testVoucherEndpoints()
                   console.log('Diagnostic results:', results)
-                  alert('Check browser console for endpoint diagnostic results')
+                  showAlert({ title: 'Diagnostic Complete', message: 'Check browser console for endpoint diagnostic results', type: 'info' })
                 }}
                 className="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-colors"
               >

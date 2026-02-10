@@ -4,6 +4,7 @@ import { format } from 'date-fns'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import AlertModal from '../common/AlertModal'
+import { useAppModal } from '../../context/AppModalContext'
 
 // Helper function to get Philippine date string (YYYY-MM-DD) to avoid timezone issues
 const getPhilippineDateString = () => {
@@ -14,6 +15,7 @@ const getPhilippineDateString = () => {
 }
 
 const TimeOffManager = ({ barber }) => {
+  const { showConfirm } = useAppModal()
   const [showAddForm, setShowAddForm] = useState(false)
   const [formData, setFormData] = useState({
     date: getPhilippineDateString(),
@@ -77,7 +79,8 @@ const TimeOffManager = ({ barber }) => {
   const handleDeletePeriod = async (index) => {
     if (!barber?._id) return
 
-    if (!window.confirm('Are you sure you want to remove this time off?')) return
+    const confirmed = await showConfirm({ title: 'Remove Time Off', message: 'Are you sure you want to remove this time off?', type: 'warning' })
+    if (!confirmed) return
 
     setLoading(true)
     try {

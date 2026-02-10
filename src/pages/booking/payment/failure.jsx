@@ -3,8 +3,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { XCircle, ArrowLeft, RefreshCw, Store, Loader2 } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
+import { useAppModal } from '../../../context/AppModalContext';
 
 const PaymentFailure = () => {
+  const { showAlert } = useAppModal();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [paymentDetails, setPaymentDetails] = useState(null);
@@ -62,7 +64,7 @@ const PaymentFailure = () => {
       navigate(`/booking/payment-success?booking=${bookingCode}`);
     } catch (error) {
       console.error('Error updating to Pay at Shop:', error);
-      alert('Failed to update booking. Please try again.');
+      showAlert({ title: 'Update Failed', message: 'Failed to update booking. Please try again.', type: 'error' });
     } finally {
       setUpdatingToPayAtShop(false);
     }

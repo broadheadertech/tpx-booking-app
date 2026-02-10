@@ -30,6 +30,7 @@ import {
   Download,
   FileText,
 } from "lucide-react";
+import { useAppModal } from "../../context/AppModalContext";
 
 // Category configuration with icons and labels for Super Admin
 const EXPENSE_CATEGORIES = {
@@ -454,6 +455,7 @@ const exportToCSV = (expenses, summary, period) => {
 // ============================================================================
 const SuperAdminExpenseManagement = () => {
   const { user } = useCurrentUser();
+  const { showConfirm } = useAppModal();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [filter, setFilter] = useState("all"); // all, fixed, operating
@@ -486,7 +488,8 @@ const SuperAdminExpenseManagement = () => {
   };
 
   const handleDelete = async (expense) => {
-    if (confirm(`Delete "${expense.description}"?`)) {
+    const confirmed = await showConfirm({ title: 'Delete Expense', message: `Delete "${expense.description}"?`, type: 'warning' });
+    if (confirmed) {
       await deleteExpense({ id: expense._id });
     }
   };

@@ -3,6 +3,7 @@ import { User, Mail, Phone, Calendar, Search, Filter, RotateCcw, MessageCircle, 
 import Modal from '../common/Modal'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { useAppModal } from '../../context/AppModalContext'
 
 // Wallet Details Section Component - fetches and displays wallet transaction history
 const WalletDetailsSection = ({ customerId }) => {
@@ -96,6 +97,7 @@ const WalletDetailsSection = ({ customerId }) => {
 }
 
 const CustomersManagement = ({ customers = [], wallets = [], onRefresh }) => {
+  const { showAlert } = useAppModal()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('name')
@@ -189,7 +191,7 @@ const CustomersManagement = ({ customers = [], wallets = [], onRefresh }) => {
   // Handle send contact
   const handleSendContact = async () => {
     if (!contactMessage.trim()) {
-      alert('Please enter a message')
+      showAlert({ title: 'Empty Message', message: 'Please enter a message', type: 'error' })
       return
     }
 
@@ -214,7 +216,7 @@ const CustomersManagement = ({ customers = [], wallets = [], onRefresh }) => {
       setContactMessage('')
     } catch (error) {
       console.error('Error sending contact:', error)
-      alert('Failed to send message. Please try again.')
+      showAlert({ title: 'Send Failed', message: 'Failed to send message. Please try again.', type: 'error' })
     } finally {
       setSendingContact(false)
     }

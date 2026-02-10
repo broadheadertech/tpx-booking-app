@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Scissors, Clock, DollarSign, Search, Plus, Edit, Trash2, RotateCcw, Save, X, Sparkles } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { useAppModal } from '../../context/AppModalContext'
 
 const CATEGORIES = [
   { value: 'haircut', label: 'Haircut' },
@@ -13,6 +14,7 @@ const CATEGORIES = [
 ]
 
 export default function DefaultServicesManager() {
+  const { showConfirm } = useAppModal()
   const services = useQuery(api.services.defaultServices.getAllDefaultServices) || []
   const createService = useMutation(api.services.defaultServices.createDefaultService)
   const updateService = useMutation(api.services.defaultServices.updateDefaultService)
@@ -115,7 +117,8 @@ export default function DefaultServicesManager() {
   }
 
   const handleDelete = async (service) => {
-    if (!confirm(`Delete "${service.name}" from default services?`)) return
+    const confirmed = await showConfirm({ title: 'Delete Service', message: `Delete "${service.name}" from default services?`, type: 'warning' })
+    if (!confirmed) return
     try {
       await deleteService({ id: service._id })
       setSuccess('Service deleted')

@@ -28,7 +28,8 @@ import {
   Home,
   ShoppingBag,
   Wallet,
-  User
+  User,
+  ChevronRight
 } from 'lucide-react'
 
 const TAB_ICONS = {
@@ -202,6 +203,25 @@ const BranchProfile = () => {
         branding={branding}
         stats={stats}
       />
+
+      {/* Quick Actions */}
+      <div className="max-w-3xl mx-auto px-4 py-3">
+        <Link
+          to={`/b/${slug}/queue`}
+          className="flex items-center justify-between px-4 py-3 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl hover:border-[var(--color-primary)]/40 transition-colors group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-[var(--color-primary)]/15 rounded-lg flex items-center justify-center">
+              <Users className="w-4 h-4 text-[var(--color-primary)]" />
+            </div>
+            <div>
+              <p className="text-white text-sm font-medium">Live Queue</p>
+              <p className="text-gray-500 text-xs">See who's waiting</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-500" />
+        </Link>
+      </div>
 
       {/* Tab Navigation — sticky */}
       <div className="sticky top-0 z-40 bg-[#0D0D0D]/95 backdrop-blur-sm border-b border-[#1A1A1A]">

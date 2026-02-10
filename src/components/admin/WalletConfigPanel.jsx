@@ -283,8 +283,8 @@ const WalletConfigPanel = () => {
     <div className="bg-[#1A1A1A] rounded-xl p-6 border border-[#2A2A2A]">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-[#FF8C42]/10 rounded-lg flex items-center justify-center">
-          <Wallet className="w-5 h-5 text-[#FF8C42]" />
+        <div className="w-10 h-10 bg-[var(--color-primary)]/10 rounded-lg flex items-center justify-center">
+          <Wallet className="w-5 h-5 text-[var(--color-primary)]" />
         </div>
         <div>
           <h2 className="text-lg font-semibold text-white">Wallet Configuration</h2>
@@ -329,7 +329,7 @@ const WalletConfigPanel = () => {
         {/* Test Mode Toggle */}
         <div className="flex items-center justify-between p-4 bg-[#0A0A0A] rounded-lg border border-[#2A2A2A]">
           <div className="flex items-center gap-3">
-            <TestTube className="w-5 h-5 text-[#FF8C42]" />
+            <TestTube className="w-5 h-5 text-[var(--color-primary)]" />
             <div>
               <p className="text-white font-medium">Test Mode</p>
               <p className="text-sm text-gray-400">Use PayMongo test environment</p>
@@ -338,7 +338,7 @@ const WalletConfigPanel = () => {
           <button
             onClick={() => handleValueChange('is_test_mode', !formValues.is_test_mode)}
             className={`relative w-12 h-6 rounded-full transition-colors ${
-              formValues.is_test_mode ? 'bg-[#FF8C42]' : 'bg-[#2A2A2A]'
+              formValues.is_test_mode ? 'bg-[var(--color-primary)]' : 'bg-[#2A2A2A]'
             }`}
           >
             <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
@@ -362,7 +362,7 @@ const WalletConfigPanel = () => {
               value={formValues.public_key}
               onChange={(e) => handleValueChange('public_key', e.target.value)}
               placeholder={formValues.is_test_mode ? 'pk_test_...' : 'pk_live_...'}
-              className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-white placeholder-gray-500 focus:border-[#FF8C42] focus:outline-none"
+              className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-white placeholder-gray-500 focus:border-[var(--color-primary)] focus:outline-none"
             />
           </div>
 
@@ -377,7 +377,7 @@ const WalletConfigPanel = () => {
                 value={formValues.secret_key}
                 onChange={(e) => handleValueChange('secret_key', e.target.value)}
                 placeholder={config?.has_secrets_configured ? '••••••••' : (formValues.is_test_mode ? 'sk_test_...' : 'sk_live_...')}
-                className="w-full px-4 py-3 pr-12 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-white placeholder-gray-500 focus:border-[#FF8C42] focus:outline-none"
+                className="w-full px-4 py-3 pr-12 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-white placeholder-gray-500 focus:border-[var(--color-primary)] focus:outline-none"
               />
               <button
                 type="button"
@@ -400,7 +400,7 @@ const WalletConfigPanel = () => {
                 value={formValues.webhook_secret}
                 onChange={(e) => handleValueChange('webhook_secret', e.target.value)}
                 placeholder={config?.has_secrets_configured ? '••••••••' : 'whsec_...'}
-                className="w-full px-4 py-3 pr-12 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-white placeholder-gray-500 focus:border-[#FF8C42] focus:outline-none"
+                className="w-full px-4 py-3 pr-12 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-white placeholder-gray-500 focus:border-[var(--color-primary)] focus:outline-none"
               />
               <button
                 type="button"
@@ -417,8 +417,8 @@ const WalletConfigPanel = () => {
         <div className="p-4 bg-[#0A0A0A] rounded-lg border border-[#2A2A2A]">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#FF8C42]/10 rounded-lg flex items-center justify-center">
-                <Percent className="w-5 h-5 text-[#FF8C42]" />
+              <div className="w-10 h-10 bg-[var(--color-primary)]/10 rounded-lg flex items-center justify-center">
+                <Percent className="w-5 h-5 text-[var(--color-primary)]" />
               </div>
               <div>
                 <p className="text-white font-medium">Global Commission Rate</p>
@@ -463,10 +463,10 @@ const WalletConfigPanel = () => {
                   className={`w-24 px-4 py-3 bg-[#1A1A1A] border rounded-lg text-white text-lg font-semibold focus:outline-none transition-colors ${
                     commissionError
                       ? 'border-red-500 focus:border-red-500'
-                      : 'border-[#2A2A2A] focus:border-[#FF8C42]'
+                      : 'border-[#2A2A2A] focus:border-[var(--color-primary)]'
                   }`}
                 />
-                <span className="text-2xl font-bold text-[#FF8C42]">%</span>
+                <span className="text-2xl font-bold text-[var(--color-primary)]">%</span>
               </div>
               {commissionError && (
                 <p className="text-xs text-red-400 mt-2 flex items-center gap-1">
@@ -491,9 +491,9 @@ const WalletConfigPanel = () => {
                     <p className="text-xs text-gray-500">Payment</p>
                     <p className="text-sm font-semibold text-white">₱{preview.exampleAmount.toLocaleString()}</p>
                   </div>
-                  <div className="p-2 bg-[#FF8C42]/10 rounded">
+                  <div className="p-2 bg-[var(--color-primary)]/10 rounded">
                     <p className="text-xs text-gray-500">Commission</p>
-                    <p className="text-sm font-semibold text-[#FF8C42]">₱{preview.commission.toLocaleString()}</p>
+                    <p className="text-sm font-semibold text-[var(--color-primary)]">₱{preview.commission.toLocaleString()}</p>
                   </div>
                   <div className="p-2 bg-green-500/10 rounded">
                     <p className="text-xs text-gray-500">Branch Gets</p>
@@ -508,8 +508,8 @@ const WalletConfigPanel = () => {
         {/* Settlement Parameters Card - Story 21.5 */}
         <div className="p-4 bg-[#0A0A0A] rounded-lg border border-[#2A2A2A]">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-[#FF8C42]/10 rounded-lg flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-[#FF8C42]" />
+            <div className="w-10 h-10 bg-[var(--color-primary)]/10 rounded-lg flex items-center justify-center">
+              <Calendar className="w-5 h-5 text-[var(--color-primary)]" />
             </div>
             <div>
               <p className="text-white font-medium">Settlement Parameters</p>
@@ -535,7 +535,7 @@ const WalletConfigPanel = () => {
                   onClick={() => handleValueChange('default_settlement_frequency', freq.value)}
                   className={`flex flex-col items-center gap-1 p-3 rounded-lg border transition-colors ${
                     formValues.default_settlement_frequency === freq.value
-                      ? 'bg-[#FF8C42]/10 border-[#FF8C42] text-[#FF8C42]'
+                      ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)] text-[var(--color-primary)]'
                       : 'bg-[#1A1A1A] border-[#2A2A2A] text-gray-400 hover:border-gray-500'
                   }`}
                 >
@@ -553,13 +553,13 @@ const WalletConfigPanel = () => {
               Minimum Settlement Amount
             </label>
             <div className="flex items-center gap-2">
-              <span className="text-xl font-bold text-[#FF8C42]">₱</span>
+              <span className="text-xl font-bold text-[var(--color-primary)]">₱</span>
               <input
                 type="number"
                 min="0"
                 value={formValues.min_settlement_amount}
                 onChange={(e) => handleValueChange('min_settlement_amount', Number(e.target.value))}
-                className="w-32 px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-white text-lg font-semibold focus:border-[#FF8C42] focus:outline-none"
+                className="w-32 px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-white text-lg font-semibold focus:border-[var(--color-primary)] focus:outline-none"
               />
             </div>
             <p className="text-xs text-gray-500 mt-2">Branches cannot request settlement below this amount</p>
@@ -570,8 +570,8 @@ const WalletConfigPanel = () => {
         <div className="p-4 bg-[#0A0A0A] rounded-lg border border-[#2A2A2A]">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#FF8C42]/10 rounded-lg flex items-center justify-center">
-                <Gift className="w-5 h-5 text-[#FF8C42]" />
+              <div className="w-10 h-10 bg-[var(--color-primary)]/10 rounded-lg flex items-center justify-center">
+                <Gift className="w-5 h-5 text-[var(--color-primary)]" />
               </div>
               <div>
                 <p className="text-white font-medium">Top-up Bonus Tiers</p>
@@ -581,7 +581,7 @@ const WalletConfigPanel = () => {
             <button
               type="button"
               onClick={addBonusTier}
-              className="flex items-center gap-1 px-3 py-1.5 bg-[#FF8C42]/10 hover:bg-[#FF8C42]/20 text-[#FF8C42] text-sm font-medium rounded-lg transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 bg-[var(--color-primary)]/10 hover:bg-[var(--color-primary)]/20 text-[var(--color-primary)] text-sm font-medium rounded-lg transition-colors"
             >
               <Plus className="w-4 h-4" />
               Add Tier
@@ -595,13 +595,13 @@ const WalletConfigPanel = () => {
               Monthly Bonus Cap
             </label>
             <div className="flex items-center gap-2">
-              <span className="text-xl font-bold text-[#FF8C42]">₱</span>
+              <span className="text-xl font-bold text-[var(--color-primary)]">₱</span>
               <input
                 type="number"
                 min="0"
                 value={formValues.monthly_bonus_cap}
                 onChange={(e) => handleValueChange('monthly_bonus_cap', Number(e.target.value))}
-                className="w-32 px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-white text-lg font-semibold focus:border-[#FF8C42] focus:outline-none"
+                className="w-32 px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-white text-lg font-semibold focus:border-[var(--color-primary)] focus:outline-none"
                 placeholder="0"
               />
               <span className="text-sm text-gray-400">/ month</span>
@@ -645,13 +645,13 @@ const WalletConfigPanel = () => {
                       <div>
                         <label className="block text-xs text-gray-500 mb-1">Min Top-up</label>
                         <div className="flex items-center gap-1">
-                          <span className="text-sm font-medium text-[#FF8C42]">₱</span>
+                          <span className="text-sm font-medium text-[var(--color-primary)]">₱</span>
                           <input
                             type="number"
                             min="1"
                             value={tier.minAmount}
                             onChange={(e) => updateBonusTier(tier.id, 'minAmount', e.target.value)}
-                            className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white text-sm focus:border-[#FF8C42] focus:outline-none"
+                            className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white text-sm focus:border-[var(--color-primary)] focus:outline-none"
                           />
                         </div>
                       </div>
@@ -665,7 +665,7 @@ const WalletConfigPanel = () => {
                             min="0"
                             value={tier.bonus}
                             onChange={(e) => updateBonusTier(tier.id, 'bonus', e.target.value)}
-                            className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white text-sm focus:border-[#FF8C42] focus:outline-none"
+                            className="w-full px-2 py-1.5 bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white text-sm focus:border-[var(--color-primary)] focus:outline-none"
                           />
                         </div>
                       </div>
@@ -717,7 +717,7 @@ const WalletConfigPanel = () => {
         <button
           onClick={handleSave}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-[#FF8C42] hover:bg-[#FF7A2E] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
         >
           {loading ? (
             <>

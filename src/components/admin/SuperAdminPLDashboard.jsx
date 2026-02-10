@@ -23,6 +23,7 @@ import {
   Landmark,
   Pencil,
 } from "lucide-react";
+import { useAppModal } from "../../context/AppModalContext";
 
 // Format currency
 const formatCurrency = (amount) => {
@@ -52,14 +53,14 @@ const MetricCard = ({ title, value, icon: Icon, color, subtitle, isLoading }) =>
   const colorClasses = {
     green: "text-green-400 bg-green-500/10",
     red: "text-red-400 bg-red-500/10",
-    orange: "text-[#FF8C42] bg-[#FF8C42]/10",
+    orange: "text-[var(--color-primary)] bg-[var(--color-primary)]/10",
     blue: "text-blue-400 bg-blue-500/10",
     purple: "text-purple-400 bg-purple-500/10",
     yellow: "text-yellow-400 bg-yellow-500/10",
   };
 
   return (
-    <div className="bg-[#1A1A1A] rounded-xl p-4 sm:p-6 border border-[#333333] hover:border-[#FF8C42]/30 transition-colors">
+    <div className="bg-[#1A1A1A] rounded-xl p-4 sm:p-6 border border-[#333333] hover:border-[var(--color-primary)]/30 transition-colors">
       <div className="flex items-center justify-between mb-3">
         <span className="text-gray-400 text-sm">{title}</span>
         <div className={`p-2 rounded-lg ${colorClasses[color] || colorClasses.orange}`}>
@@ -91,7 +92,7 @@ const BreakdownCard = ({ title, icon: Icon, items, total, isExpanded, onToggle, 
   }
 
   const colorClasses = {
-    orange: "bg-[#FF8C42]/10 text-[#FF8C42]",
+    orange: "bg-[var(--color-primary)]/10 text-[var(--color-primary)]",
     green: "bg-green-500/10 text-green-400",
     red: "bg-red-500/10 text-red-400",
     yellow: "bg-yellow-500/10 text-yellow-400",
@@ -185,7 +186,7 @@ const DateRangePicker = ({ selectedRange, onRangeChange, customStart, customEnd,
             onClick={() => onRangeChange(range.id)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               selectedRange === range.id
-                ? "bg-[#FF8C42] text-white"
+                ? "bg-[var(--color-primary)] text-white"
                 : "bg-[#1A1A1A] text-gray-400 hover:text-white border border-[#333333]"
             }`}
           >
@@ -574,7 +575,7 @@ const exportToPDF = (data, period) => {
       <title>Super Admin P&L Report</title>
       <style>
         body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
-        h1 { color: #FF8C42; border-bottom: 2px solid #FF8C42; padding-bottom: 10px; }
+        h1 { color: var(--color-primary); border-bottom: 2px solid var(--color-primary); padding-bottom: 10px; }
         h2 { color: #666; margin-top: 30px; }
         table { width: 100%; border-collapse: collapse; margin: 20px 0; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
@@ -634,6 +635,7 @@ const exportToPDF = (data, period) => {
 // Main Component
 const SuperAdminPLDashboard = () => {
   const { user } = useCurrentUser();
+  const { showAlert, showConfirm } = useAppModal();
   const [selectedRange, setSelectedRange] = useState("this_month");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
@@ -809,20 +811,22 @@ const SuperAdminPLDashboard = () => {
       setEditingRevenue(null);
     } catch (error) {
       console.error("Error saving entry:", error);
-      alert("Error: " + error.message);
+      showAlert({ title: 'Error', message: "Error: " + error.message, type: 'error' });
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleDeleteRevenue = async (id) => {
-    if (confirm("Delete this revenue entry?")) {
+    const confirmed = await showConfirm({ title: 'Delete Revenue', message: "Delete this revenue entry?", type: 'warning' });
+    if (confirmed) {
       await deleteRevenue({ id });
     }
   };
 
   const handleDeleteExpense = async (id) => {
-    if (confirm("Delete this expense entry?")) {
+    const confirmed = await showConfirm({ title: 'Delete Expense', message: "Delete this expense entry?", type: 'warning' });
+    if (confirmed) {
       await deleteExpense({ id });
     }
   };
@@ -885,7 +889,7 @@ const SuperAdminPLDashboard = () => {
             <button
               onClick={() => plSummary && exportToCSV(plSummary, `super-admin-pl-${dateRange.label}`)}
               disabled={isLoading}
-              className="p-2 bg-[#1A1A1A] border border-[#333333] rounded-lg hover:border-[#FF8C42] transition-colors disabled:opacity-50"
+              className="p-2 bg-[#1A1A1A] border border-[#333333] rounded-lg hover:border-[var(--color-primary)] transition-colors disabled:opacity-50"
               title="Export to CSV"
             >
               <Download className="w-5 h-5 text-gray-400" />
@@ -893,7 +897,7 @@ const SuperAdminPLDashboard = () => {
             <button
               onClick={() => plSummary && exportToPDF(plSummary, dateRange.label)}
               disabled={isLoading}
-              className="p-2 bg-[#1A1A1A] border border-[#333333] rounded-lg hover:border-[#FF8C42] transition-colors disabled:opacity-50"
+              className="p-2 bg-[#1A1A1A] border border-[#333333] rounded-lg hover:border-[var(--color-primary)] transition-colors disabled:opacity-50"
               title="Export to PDF"
             >
               <FileText className="w-5 h-5 text-gray-400" />
@@ -959,10 +963,10 @@ const SuperAdminPLDashboard = () => {
                 <p>Paid (with date): <span className="text-green-400">{orderPaymentDebug.summary.paidWithPaidAt}</span></p>
                 <p>Paid (no date): <span className="text-yellow-400">{orderPaymentDebug.summary.paidWithoutPaidAt}</span></p>
                 <p>Received but NOT Paid: <span className="text-red-400">{orderPaymentDebug.summary.receivedButUnpaid}</span></p>
-                <p>Pending Payment (approved/shipped): <span className="text-amber-400">{orderPaymentDebug.summary.pendingPayment}</span></p>
+                <p>Pending Payment (approved/shipped): <span className="text-[var(--color-primary)]">{orderPaymentDebug.summary.pendingPayment}</span></p>
               </div>
               {orderPaymentDebug.summary.receivedButUnpaid > 0 && (
-                <p className="text-amber-400 text-sm mt-3">
+                <p className="text-[var(--color-primary)] text-sm mt-3">
                   ⚠️ Go to <strong>Product Catalog → Branch Orders</strong> tab and click "Mark All Received as Paid" to include these in P&L.
                 </p>
               )}
@@ -1049,8 +1053,8 @@ const SuperAdminPLDashboard = () => {
             ))}
           </div>
           {royaltySummary?.total_pending > 0 && (
-            <div className="mt-4 p-3 bg-orange-500/10 border border-orange-500/30 rounded-lg">
-              <p className="text-orange-400 text-sm">
+            <div className="mt-4 p-3 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 rounded-lg">
+              <p className="text-[var(--color-primary)] text-sm">
                 <span className="font-medium">Pending Royalties: </span>
                 {formatCurrency(royaltySummary.total_pending)}
               </p>
@@ -1111,7 +1115,7 @@ const SuperAdminPLDashboard = () => {
                       setEditingRevenue(entry);
                       setShowAddModal("revenue");
                     }}
-                    className="p-1 text-gray-400 hover:text-[#FF8C42] transition-colors"
+                    className="p-1 text-gray-400 hover:text-[var(--color-primary)] transition-colors"
                     title="Edit revenue"
                   >
                     <Pencil className="w-4 h-4" />
@@ -1163,7 +1167,7 @@ const SuperAdminPLDashboard = () => {
                       setEditingExpense(entry);
                       setShowAddModal("expense");
                     }}
-                    className="p-1 text-gray-400 hover:text-[#FF8C42] transition-colors"
+                    className="p-1 text-gray-400 hover:text-[var(--color-primary)] transition-colors"
                     title="Edit expense"
                   >
                     <Pencil className="w-4 h-4" />
@@ -1189,7 +1193,7 @@ const SuperAdminPLDashboard = () => {
           className="flex items-center justify-between w-full"
         >
           <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-[#FF8C42]" />
+            <FileText className="w-5 h-5 text-[var(--color-primary)]" />
             <h3 className="font-medium text-white">Transaction History</h3>
           </div>
           <div className="flex items-center gap-2">
@@ -1248,7 +1252,7 @@ const SuperAdminPLDashboard = () => {
                                   setEditingRevenue(entry);
                                   setShowAddModal("revenue");
                                 }}
-                                className="p-1 text-gray-400 hover:text-[#FF8C42]"
+                                className="p-1 text-gray-400 hover:text-[var(--color-primary)]"
                                 title="Edit"
                               >
                                 <Pencil className="w-4 h-4" />
@@ -1318,7 +1322,7 @@ const SuperAdminPLDashboard = () => {
                                   setEditingExpense(entry);
                                   setShowAddModal("expense");
                                 }}
-                                className="p-1 text-gray-400 hover:text-[#FF8C42]"
+                                className="p-1 text-gray-400 hover:text-[var(--color-primary)]"
                                 title="Edit"
                               >
                                 <Pencil className="w-4 h-4" />

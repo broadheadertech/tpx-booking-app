@@ -44,7 +44,7 @@ export default function BranchSelection({ onBranchSelect, selectedBranchId }) {
             key={branch._id}
             className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
               selectedBranchId === branch._id
-                ? 'ring-2 ring-blue-500 shadow-lg'
+                ? 'ring-2 ring-[var(--color-primary)] shadow-lg'
                 : 'hover:shadow-md'
             }`}
             onClick={() => handleSelectBranch(branch)}
@@ -60,7 +60,7 @@ export default function BranchSelection({ onBranchSelect, selectedBranchId }) {
                   </span>
                 </div>
                 {selectedBranchId === branch._id && (
-                  <div className="text-blue-500">
+                  <div className="text-[var(--color-primary)]">
                     <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                     </svg>

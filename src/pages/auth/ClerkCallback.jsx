@@ -170,7 +170,7 @@ function ClerkCallback() {
             <div className="text-center">
               {/* Spinner */}
               <div className="flex justify-center mb-6">
-                <div className="w-12 h-12 border-4 border-[#FF8C42]/30 border-t-[#FF8C42] rounded-full animate-spin"></div>
+                <div className="w-12 h-12 border-4 border-[var(--color-primary)]/30 border-t-[var(--color-primary)] rounded-full animate-spin"></div>
               </div>
 
               <h2 className="text-xl font-semibold text-white mb-2">
@@ -192,7 +192,7 @@ function ClerkCallback() {
                 <div className="mt-6">
                   <div className="w-full bg-[#2A2A2A] rounded-full h-1.5">
                     <div
-                      className="bg-[#FF8C42] h-1.5 rounded-full transition-all duration-300"
+                      className="bg-[var(--color-primary)] h-1.5 rounded-full transition-all duration-300"
                       style={{ width: status === "creating" ? "100%" : `${(pollCount / MAX_POLLS) * 100}%` }}
                     ></div>
                   </div>
@@ -232,7 +232,7 @@ function ClerkCallback() {
               <div className="space-y-3">
                 <button
                   onClick={handleRetry}
-                  className="w-full h-12 bg-gradient-to-r from-[#FF8C42] to-[#E67E3C] hover:from-[#E67E3C] hover:brightness-110 text-white font-semibold rounded-2xl transition-all duration-200"
+                  className="w-full h-12 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:brightness-110 text-white font-semibold rounded-2xl transition-all duration-200"
                 >
                   Try Again
                 </button>
@@ -282,7 +282,7 @@ function ClerkCallback() {
         {/* Help text */}
         <p className="text-center text-xs text-gray-600 mt-6">
           Having trouble?{" "}
-          <a href="mailto:support@tipunox.com" className="text-[#FF8C42] hover:text-[#E67E3C]">
+          <a href="mailto:support@tipunox.com" className="text-[var(--color-primary)] hover:text-[var(--color-accent)]">
             Contact support
           </a>
         </p>

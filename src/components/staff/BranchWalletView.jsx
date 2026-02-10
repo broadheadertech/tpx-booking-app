@@ -71,7 +71,7 @@ const BranchWalletView = () => {
   if (effectiveCommission === undefined || effectiveFrequency === undefined) {
     return (
       <div className="text-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF8C42] mx-auto"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mx-auto"></div>
         <p className="mt-4 text-gray-400">Loading wallet settings...</p>
       </div>
     )
@@ -101,8 +101,8 @@ const BranchWalletView = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-12 h-12 bg-[#FF8C42]/10 rounded-xl flex items-center justify-center">
-          <Wallet className="w-6 h-6 text-[#FF8C42]" />
+        <div className="w-12 h-12 bg-[var(--color-primary)]/10 rounded-xl flex items-center justify-center">
+          <Wallet className="w-6 h-6 text-[var(--color-primary)]" />
         </div>
         <div>
           <h2 className="text-xl font-bold text-white">Branch Wallet Settings</h2>
@@ -128,8 +128,8 @@ const BranchWalletView = () => {
         <div className="p-5 bg-[#1A1A1A] rounded-xl border border-[#2A2A2A]">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#FF8C42]/10 rounded-lg flex items-center justify-center">
-                <Percent className="w-5 h-5 text-[#FF8C42]" />
+              <div className="w-10 h-10 bg-[var(--color-primary)]/10 rounded-lg flex items-center justify-center">
+                <Percent className="w-5 h-5 text-[var(--color-primary)]" />
               </div>
               <div>
                 <p className="text-white font-medium">Commission Rate</p>
@@ -137,7 +137,7 @@ const BranchWalletView = () => {
               </div>
             </div>
             {effectiveCommission?.is_override && (
-              <span className="px-2 py-1 text-xs font-medium bg-[#FF8C42]/20 text-[#FF8C42] rounded">
+              <span className="px-2 py-1 text-xs font-medium bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded">
                 Custom
               </span>
             )}
@@ -145,7 +145,7 @@ const BranchWalletView = () => {
 
           <div className="flex items-baseline gap-2 mb-3">
             <span className="text-4xl font-black text-white">{effectiveCommission?.commission_percent || 5}</span>
-            <span className="text-2xl font-bold text-[#FF8C42]">%</span>
+            <span className="text-2xl font-bold text-[var(--color-primary)]">%</span>
           </div>
 
           <p className="text-sm text-gray-400">
@@ -166,7 +166,7 @@ const BranchWalletView = () => {
               </div>
               <div>
                 <p className="text-xs text-gray-500">Commission</p>
-                <p className="text-sm font-semibold text-[#FF8C42]">
+                <p className="text-sm font-semibold text-[var(--color-primary)]">
                   ₱{Math.round(1000 * ((effectiveCommission?.commission_percent || 5) / 100))}
                 </p>
               </div>
@@ -184,8 +184,8 @@ const BranchWalletView = () => {
         <div className="p-5 bg-[#1A1A1A] rounded-xl border border-[#2A2A2A]">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#FF8C42]/10 rounded-lg flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-[#FF8C42]" />
+              <div className="w-10 h-10 bg-[var(--color-primary)]/10 rounded-lg flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-[var(--color-primary)]" />
               </div>
               <div>
                 <p className="text-white font-medium">Settlement Frequency</p>
@@ -193,14 +193,14 @@ const BranchWalletView = () => {
               </div>
             </div>
             {effectiveFrequency?.is_override && (
-              <span className="px-2 py-1 text-xs font-medium bg-[#FF8C42]/20 text-[#FF8C42] rounded">
+              <span className="px-2 py-1 text-xs font-medium bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded">
                 Custom
               </span>
             )}
           </div>
 
           <div className="flex items-center gap-3 mb-3">
-            <Clock className="w-6 h-6 text-[#FF8C42]" />
+            <Clock className="w-6 h-6 text-[var(--color-primary)]" />
             <span className="text-2xl font-bold text-white">
               {formatFrequency(effectiveFrequency?.frequency)}
             </span>
@@ -230,8 +230,8 @@ const BranchWalletView = () => {
         <div className="p-5 bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#FF8C42]/10 rounded-lg flex items-center justify-center">
-                <CreditCard className="w-5 h-5 text-[#FF8C42]" />
+              <div className="w-10 h-10 bg-[var(--color-primary)]/10 rounded-lg flex items-center justify-center">
+                <CreditCard className="w-5 h-5 text-[var(--color-primary)]" />
               </div>
               <div>
                 <p className="text-white font-medium">Payout Details</p>

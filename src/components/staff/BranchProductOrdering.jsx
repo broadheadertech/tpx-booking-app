@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useAppModal } from '../../context/AppModalContext'
 import {
   Package,
   ShoppingCart,
@@ -96,6 +97,7 @@ const StockBadge = ({ stock, minStock }) => {
 }
 
 const BranchProductOrdering = ({ user, onRefresh }) => {
+  const { showAlert, showConfirm } = useAppModal()
   const [activeTab, setActiveTab] = useState('catalog') // 'catalog' | 'cart' | 'orders'
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('all')
@@ -196,7 +198,7 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
       onRefresh?.()
     } catch (error) {
       console.error('Error creating order:', error)
-      alert(error.message || 'Failed to create order')
+      showAlert({ title: 'Order Error', message: error.message || 'Failed to create order', type: 'error' })
     } finally {
       setIsSubmitting(false)
     }
@@ -204,7 +206,8 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
 
   // Cancel order
   const handleCancelOrder = async (orderId) => {
-    if (!confirm('Are you sure you want to cancel this order?')) return
+    const confirmed = await showConfirm({ title: 'Cancel Order', message: 'Are you sure you want to cancel this order?', type: 'warning' })
+    if (!confirmed) return
 
     try {
       await cancelOrder({
@@ -215,13 +218,14 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
       onRefresh?.()
     } catch (error) {
       console.error('Error cancelling order:', error)
-      alert(error.message || 'Failed to cancel order')
+      showAlert({ title: 'Error', message: error.message || 'Failed to cancel order', type: 'error' })
     }
   }
 
   // Receive order (confirm receipt)
   const handleReceiveOrder = async (orderId) => {
-    if (!confirm('Confirm that you have received this order?')) return
+    const confirmed = await showConfirm({ title: 'Confirm Receipt', message: 'Confirm that you have received this order?', type: 'warning' })
+    if (!confirmed) return
 
     try {
       await receiveOrder({
@@ -231,7 +235,7 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
       onRefresh?.()
     } catch (error) {
       console.error('Error receiving order:', error)
-      alert(error.message || 'Failed to confirm receipt')
+      showAlert({ title: 'Error', message: error.message || 'Failed to confirm receipt', type: 'error' })
     }
   }
 

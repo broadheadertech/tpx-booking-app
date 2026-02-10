@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import ReactDOM from "react-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { useAppModal } from '../../context/AppModalContext';
 import { AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import {
   DollarSign,
@@ -59,14 +60,14 @@ const MetricCard = ({ title, value, icon: Icon, color, subtitle, isLoading }) =>
   const colorClasses = {
     green: "text-green-400 bg-green-500/10",
     red: "text-red-400 bg-red-500/10",
-    orange: "text-[#FF8C42] bg-[#FF8C42]/10",
+    orange: "text-[var(--color-primary)] bg-[var(--color-primary)]/10",
     blue: "text-blue-400 bg-blue-500/10",
     purple: "text-purple-400 bg-purple-500/10",
     yellow: "text-yellow-400 bg-yellow-500/10",
   };
 
   return (
-    <div className="bg-[#1A1A1A] rounded-xl p-4 sm:p-6 border border-[#333333] hover:border-[#FF8C42]/30 transition-colors">
+    <div className="bg-[#1A1A1A] rounded-xl p-4 sm:p-6 border border-[#333333] hover:border-[var(--color-primary)]/30 transition-colors">
       <div className="flex items-center justify-between mb-3">
         <span className="text-gray-400 text-sm">{title}</span>
         <div className={`p-2 rounded-lg ${colorClasses[color] || colorClasses.orange}`}>
@@ -100,7 +101,7 @@ const BreakdownCard = ({ title, icon: Icon, items, total, isExpanded, onToggle, 
   }
 
   const colorClasses = {
-    orange: "bg-[#FF8C42]/10 text-[#FF8C42]",
+    orange: "bg-[var(--color-primary)]/10 text-[var(--color-primary)]",
     green: "bg-green-500/10 text-green-400",
     red: "bg-red-500/10 text-red-400",
     yellow: "bg-yellow-500/10 text-yellow-400",
@@ -146,7 +147,7 @@ const BreakdownCard = ({ title, icon: Icon, items, total, isExpanded, onToggle, 
               </span>
               <span className={`font-medium ${
                 item.value < 0 ? 'text-red-400' :
-                item.isTotal ? 'text-orange-400' :
+                item.isTotal ? 'text-[var(--color-primary)]' :
                 item.isSubItem ? 'text-gray-400' : 'text-white'
               }`}>
                 {item.value < 0 ? '-' : ''}{formatCurrency(Math.abs(item.value))}
@@ -180,7 +181,7 @@ const BarberRevenueCard = ({ barbers, isLoading }) => {
   return (
     <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4">
       <div className="flex items-center gap-2 mb-4">
-        <Users className="w-5 h-5 text-[#FF8C42]" />
+        <Users className="w-5 h-5 text-[var(--color-primary)]" />
         <h3 className="font-medium text-white">Revenue by Barber</h3>
       </div>
       <div className="space-y-3">
@@ -197,7 +198,7 @@ const BarberRevenueCard = ({ barbers, isLoading }) => {
               </div>
               <div className="w-full bg-[#333333] rounded-full h-2">
                 <div
-                  className="bg-[#FF8C42] h-2 rounded-full transition-all duration-500"
+                  className="bg-[var(--color-primary)] h-2 rounded-full transition-all duration-500"
                   style={{ width: `${barber.percentage}%` }}
                 ></div>
               </div>
@@ -248,7 +249,7 @@ const PaymentMethodCard = ({ methods, isLoading }) => {
   return (
     <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4">
       <div className="flex items-center gap-2 mb-4">
-        <PieChart className="w-5 h-5 text-[#FF8C42]" />
+        <PieChart className="w-5 h-5 text-[var(--color-primary)]" />
         <h3 className="font-medium text-white">Payment Methods</h3>
       </div>
       <div className="space-y-3">
@@ -292,7 +293,7 @@ const DateRangePicker = ({ selectedRange, onRangeChange, customStart, customEnd,
             onClick={() => onRangeChange(range.id)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               selectedRange === range.id
-                ? "bg-[#FF8C42] text-white"
+                ? "bg-[var(--color-primary)] text-white"
                 : "bg-[#1A1A1A] text-gray-400 hover:text-white border border-[#333333]"
             }`}
           >
@@ -446,7 +447,7 @@ const AddEntryModal = ({ type, onClose, onSave, isLoading, editEntry, branchId }
             <select
               value={formData.category}
               onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="w-full bg-[#252525] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#252525] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
             >
               {(type === "revenue" ? revenueCategories : expenseCategories).map((cat) => (
                 <option key={cat.value} value={cat.value}>{cat.label}</option>
@@ -461,7 +462,7 @@ const AddEntryModal = ({ type, onClose, onSave, isLoading, editEntry, branchId }
               <select
                 value={formData.expense_type}
                 onChange={(e) => setFormData({ ...formData, expense_type: e.target.value })}
-                className="w-full bg-[#252525] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#252525] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               >
                 <option value="fixed">Fixed (Monthly)</option>
                 <option value="operating">Operating (Variable)</option>
@@ -476,7 +477,7 @@ const AddEntryModal = ({ type, onClose, onSave, isLoading, editEntry, branchId }
               type="text"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full bg-[#252525] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#252525] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               placeholder="Enter description..."
               required
             />
@@ -489,7 +490,7 @@ const AddEntryModal = ({ type, onClose, onSave, isLoading, editEntry, branchId }
               type="number"
               value={formData.amount}
               onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-              className="w-full bg-[#252525] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#252525] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               placeholder="0"
               min="0"
               step="0.01"
@@ -504,7 +505,7 @@ const AddEntryModal = ({ type, onClose, onSave, isLoading, editEntry, branchId }
               type="date"
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="w-full bg-[#252525] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#252525] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               required
             />
           </div>
@@ -515,7 +516,7 @@ const AddEntryModal = ({ type, onClose, onSave, isLoading, editEntry, branchId }
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full bg-[#252525] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none resize-none"
+              className="w-full bg-[#252525] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none resize-none"
               rows={2}
               placeholder="Additional notes..."
             />
@@ -533,7 +534,7 @@ const AddEntryModal = ({ type, onClose, onSave, isLoading, editEntry, branchId }
               <select
                 value={formData.payment_destination}
                 onChange={(e) => setFormData({ ...formData, payment_destination: e.target.value })}
-                className="w-full bg-[#252525] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#252525] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               >
                 <option value="none">-- Not tracked (won't affect Balance Sheet) --</option>
                 <option value="cash">Cash on Hand</option>
@@ -568,7 +569,7 @@ const AddEntryModal = ({ type, onClose, onSave, isLoading, editEntry, branchId }
                 <select
                   value={formData.payment_source}
                   onChange={(e) => setFormData({ ...formData, payment_source: e.target.value })}
-                  className="w-full bg-[#252525] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                  className="w-full bg-[#252525] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 >
                   <option value="none">-- Not tracked (won't affect Balance Sheet) --</option>
                   {paymentAssets && paymentAssets.length > 0 && (
@@ -612,7 +613,7 @@ const AddEntryModal = ({ type, onClose, onSave, isLoading, editEntry, branchId }
             <button
               type="submit"
               disabled={isLoading}
-              className="flex-1 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-colors disabled:opacity-50"
             >
               {isLoading ? "Saving..." : isEditing ? "Update" : "Save"}
             </button>
@@ -672,7 +673,7 @@ const exportToPDF = (data, branchName, period) => {
       <title>P&L Report - ${branchName}</title>
       <style>
         body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
-        h1 { color: #FF8C42; border-bottom: 2px solid #FF8C42; padding-bottom: 10px; }
+        h1 { color: var(--color-primary); border-bottom: 2px solid var(--color-primary); padding-bottom: 10px; }
         h2 { color: #666; margin-top: 30px; }
         table { width: 100%; border-collapse: collapse; margin: 20px 0; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
@@ -728,6 +729,7 @@ const exportToPDF = (data, branchName, period) => {
 // Main AccountingDashboard Component
 // ============================================================================
 const AccountingDashboard = ({ user, onRefresh }) => {
+  const { showAlert, showConfirm } = useAppModal();
   const [selectedRange, setSelectedRange] = useState("this_month");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
@@ -964,20 +966,22 @@ const AccountingDashboard = ({ user, onRefresh }) => {
       setEditingEntry(null);
     } catch (error) {
       console.error("Error saving entry:", error);
-      alert("Error: " + error.message);
+      showAlert({ title: 'Error', message: error.message, type: 'error' });
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleDeleteRevenue = async (id) => {
-    if (confirm("Delete this revenue entry?")) {
+    const confirmed = await showConfirm({ title: 'Delete Revenue', message: 'Delete this revenue entry?', type: 'warning' });
+    if (confirmed) {
       await deleteRevenue({ revenue_id: id });
     }
   };
 
   const handleDeleteExpense = async (id) => {
-    if (confirm("Delete this expense entry?")) {
+    const confirmed = await showConfirm({ title: 'Delete Expense', message: 'Delete this expense entry?', type: 'warning' });
+    if (confirmed) {
       await deleteExpense({ expense_id: id });
     }
   };
@@ -1044,7 +1048,7 @@ const AccountingDashboard = ({ user, onRefresh }) => {
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-            <PieChart className="w-6 h-6 text-[#FF8C42]" />
+            <PieChart className="w-6 h-6 text-[var(--color-primary)]" />
             Profit & Loss
           </h2>
           <p className="text-gray-400 text-sm">{dateRange.label}</p>
@@ -1072,7 +1076,7 @@ const AccountingDashboard = ({ user, onRefresh }) => {
             <button
               onClick={() => plSummary && exportToCSV({ ...plSummary, manual_revenue_total: manualRevenueTotal }, `pl-report-${dateRange.label}`)}
               disabled={isLoading}
-              className="p-2 bg-[#1A1A1A] border border-[#333333] rounded-lg hover:border-[#FF8C42] transition-colors disabled:opacity-50"
+              className="p-2 bg-[#1A1A1A] border border-[#333333] rounded-lg hover:border-[var(--color-primary)] transition-colors disabled:opacity-50"
               title="Export to CSV"
             >
               <Download className="w-5 h-5 text-gray-400" />
@@ -1080,7 +1084,7 @@ const AccountingDashboard = ({ user, onRefresh }) => {
             <button
               onClick={() => plSummary && exportToPDF({ ...plSummary, manual_revenue_total: manualRevenueTotal }, branch?.name || "Branch", dateRange.label)}
               disabled={isLoading}
-              className="p-2 bg-[#1A1A1A] border border-[#333333] rounded-lg hover:border-[#FF8C42] transition-colors disabled:opacity-50"
+              className="p-2 bg-[#1A1A1A] border border-[#333333] rounded-lg hover:border-[var(--color-primary)] transition-colors disabled:opacity-50"
               title="Export to PDF"
             >
               <FileText className="w-5 h-5 text-gray-400" />
@@ -1271,7 +1275,7 @@ const AccountingDashboard = ({ user, onRefresh }) => {
                       setEditingEntry(entry);
                       setShowAddModal("revenue");
                     }}
-                    className="p-1 text-gray-400 hover:text-[#FF8C42] transition-colors"
+                    className="p-1 text-gray-400 hover:text-[var(--color-primary)] transition-colors"
                     title="Edit revenue"
                   >
                     <Pencil className="w-4 h-4" />
@@ -1322,7 +1326,7 @@ const AccountingDashboard = ({ user, onRefresh }) => {
                       setEditingEntry(entry);
                       setShowAddModal("expense");
                     }}
-                    className="p-1 text-gray-400 hover:text-[#FF8C42] transition-colors"
+                    className="p-1 text-gray-400 hover:text-[var(--color-primary)] transition-colors"
                     title="Edit expense"
                   >
                     <Pencil className="w-4 h-4" />
@@ -1348,7 +1352,7 @@ const AccountingDashboard = ({ user, onRefresh }) => {
           className="flex items-center justify-between w-full"
         >
           <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-[#FF8C42]" />
+            <FileText className="w-5 h-5 text-[var(--color-primary)]" />
             <h3 className="font-medium text-white">Transaction History</h3>
           </div>
           <div className="flex items-center gap-2">
@@ -1407,7 +1411,7 @@ const AccountingDashboard = ({ user, onRefresh }) => {
                                   setEditingEntry(entry);
                                   setShowAddModal("revenue");
                                 }}
-                                className="p-1 text-gray-400 hover:text-[#FF8C42]"
+                                className="p-1 text-gray-400 hover:text-[var(--color-primary)]"
                                 title="Edit"
                               >
                                 <Pencil className="w-4 h-4" />
@@ -1477,7 +1481,7 @@ const AccountingDashboard = ({ user, onRefresh }) => {
                                   setEditingEntry(entry);
                                   setShowAddModal("expense");
                                 }}
-                                className="p-1 text-gray-400 hover:text-[#FF8C42]"
+                                className="p-1 text-gray-400 hover:text-[var(--color-primary)]"
                                 title="Edit"
                               >
                                 <Pencil className="w-4 h-4" />

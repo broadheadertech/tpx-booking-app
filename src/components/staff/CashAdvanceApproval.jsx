@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { useAppModal } from "../../context/AppModalContext";
 import {
   DollarSign,
   Clock,
@@ -301,6 +302,7 @@ const HistoryRow = ({ advance, onMarkAsPaidOut, isProcessing }) => {
 // MAIN COMPONENT
 // ============================================================================
 const CashAdvanceApproval = ({ user, onRefresh }) => {
+  const { showAlert } = useAppModal();
   const { user: authUser } = useCurrentUser();
   const currentUser = user || authUser;
 
@@ -351,7 +353,7 @@ const CashAdvanceApproval = ({ user, onRefresh }) => {
       }
     } catch (error) {
       console.error("Error processing advance:", error);
-      alert(error.message || "Failed to process advance");
+      showAlert({ title: 'Advance Error', message: error.message || "Failed to process advance", type: 'error' });
     } finally {
       setProcessingId(null);
     }
@@ -367,7 +369,7 @@ const CashAdvanceApproval = ({ user, onRefresh }) => {
       });
     } catch (error) {
       console.error("Error rejecting advance:", error);
-      alert(error.message || "Failed to reject advance");
+      showAlert({ title: 'Rejection Error', message: error.message || "Failed to reject advance", type: 'error' });
     } finally {
       setProcessingId(null);
     }

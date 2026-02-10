@@ -71,13 +71,20 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const [savingServiceRates, setSavingServiceRates] = useState(false);
   const [savingProductRates, setSavingProductRates] = useState(false);
   const [savingDailyRates, setSavingDailyRates] = useState(false);
+  // Zero-day claim state
+  const [zeroDayInputs, setZeroDayInputs] = useState({}); // { barberId: { days: 0, notes: '' } }
+  const [zeroDaySubmitting, setZeroDaySubmitting] = useState(null); // barberId being submitted
+  const [showRejectModal, setShowRejectModal] = useState(null); // claim being rejected
+  const [rejectReason, setRejectReason] = useState("");
+  const [scanningAttendance, setScanningAttendance] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
 
   // Check if user is available
   if (!user) {
     return (
       <div className="space-y-6">
         <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mx-auto mb-4"></div>
           <p className="text-gray-300">Loading user data...</p>
           <p className="text-xs text-gray-500 mt-2">
             Please ensure you are logged in
@@ -122,6 +129,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     late_fee_percentage: 100,
     include_convenience_fee: false,
     convenience_fee_percentage: 100,
+    zero_day_source: "disabled",
   });
 
   // Convex queries - branch-scoped for staff
@@ -241,6 +249,24 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const deletePayrollPeriodMutation = useMutation(
     api.services.payroll.deletePayrollPeriod,
   );
+  const addZeroDayClaimMutation = useMutation(
+    api.services.payroll.addZeroDayClaim,
+  );
+  const approveZeroDayClaimMutation = useMutation(
+    api.services.payroll.approveZeroDayClaim,
+  );
+  const rejectZeroDayClaimMutation = useMutation(
+    api.services.payroll.rejectZeroDayClaim,
+  );
+  const autoPopulateZeroDayClaimsMutation = useMutation(
+    api.services.payroll.autoPopulateZeroDayClaims,
+  );
+
+  // Zero-day claims query
+  const zeroDayClaims = useQuery(
+    api.services.payroll.getZeroDayClaimsByPeriod,
+    selectedPeriod ? { payroll_period_id: selectedPeriod._id } : "skip",
+  );
 
   // Initialize settings from data
   useEffect(() => {
@@ -256,6 +282,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
         late_fee_percentage: payrollSettingsData.late_fee_percentage ?? 100,
         include_convenience_fee: payrollSettingsData.include_convenience_fee || false,
         convenience_fee_percentage: payrollSettingsData.convenience_fee_percentage ?? 100,
+        zero_day_source: payrollSettingsData.zero_day_source || "disabled",
       });
     }
   }, [payrollSettingsData]);
@@ -396,6 +423,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
         late_fee_percentage: payrollSettings.late_fee_percentage,
         include_convenience_fee: payrollSettings.include_convenience_fee,
         convenience_fee_percentage: payrollSettings.convenience_fee_percentage,
+        zero_day_source: payrollSettings.zero_day_source,
         created_by: user._id,
       });
       setShowSettings(false);
@@ -691,6 +719,13 @@ const PayrollManagement = ({ onRefresh, user }) => {
     }).format(amount);
   };
 
+  const formatMinutesAsHoursMinutes = (mins) => {
+    if (!mins || mins <= 0) return "0m";
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return h === 0 ? `${m}m` : m === 0 ? `${h}h` : `${h}h ${m}m`;
+  };
+
   // Format date
   const formatDate = (timestamp) => {
     return new Date(timestamp).toLocaleDateString("en-US", {
@@ -709,7 +744,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     .grid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
     .row{display:flex; justify-content:space-between; margin:6px 0}
     .muted{color:#9ca3af}
-    .accent{color:#ff8c42; font-weight:700}
+    .accent{color:var(--color-primary); font-weight:700}
     hr{border:0; border-top:1px solid #2b2b2b; margin:12px 0}
     .service-summary{margin-top:20px;}
     .service-table{border:1px solid #2b2b2b; border-radius:4px; padding:12px; background:#1a1a1a;}
@@ -940,7 +975,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     const totalLateFeesFromDaily = barberLateFees;
 
     const grandTotalCard = `
-      <div class="card" style="background:#222; border:2px solid #ff8c42;">
+      <div class="card" style="background:#222; border:2px solid var(--color-primary);">
         <div class="header">
           <div>
             <div class="title">${record.barber_name} - PERIOD SUMMARY</div>
@@ -1459,7 +1494,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     const calculatedNetPay = finalDailySalaryWithFees - (record.tax_deduction || 0) - (record.other_deductions || 0) - (record.cash_advance_deduction || 0);
 
     return `
-      <div class="card" style="background:#fff; border:2px solid #ff8c42; color: #000; max-width: 600px; margin: 0 auto;">
+      <div class="card" style="background:#fff; border:2px solid var(--color-primary); color: #000; max-width: 600px; margin: 0 auto;">
         <div class="header">
           <div>
             <div class="title" style="font-size: 16px; font-weight: 800; color: #000;">${record.barber_name} - PERIOD SUMMARY</div>
@@ -1536,7 +1571,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     const customStyles = `
       ${printStyles}
       body { background: #fff; color: #000; }
-      .card { background: #fff !important; color: #000 !important; border-color: #ff8c42 !important; box-shadow: none !important; }
+      .card { background: #fff !important; color: #000 !important; border-color: var(--color-primary) !important; box-shadow: none !important; }
       .muted { color: #555 !important; }
       .accent { color: #000 !important; }
       hr { border-color: #000 !important; }
@@ -1985,6 +2020,50 @@ const PayrollManagement = ({ onRefresh, user }) => {
                 </div>
               </div>
 
+              {/* Zero-Service Day Pay */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-300 mb-3">
+                  Zero-Service Day Pay
+                </h4>
+                <div className="p-3 rounded-lg bg-[#1A1A1A] border border-[#2A2A2A] space-y-2">
+                  <p className="text-xs text-gray-500 mb-2">
+                    Allow claiming pay for days with no services (requires branch admin approval)
+                  </p>
+                  {[
+                    { value: "disabled", label: "Disabled", desc: "Zero-day pay is off" },
+                    { value: "manual", label: "Manual", desc: "Staff manually submits zero-day claims per barber" },
+                    { value: "attendance", label: "Attendance-Based", desc: "Auto-calculate from clock-in records vs bookings" },
+                  ].map((opt) => (
+                    <label
+                      key={opt.value}
+                      className={`flex items-center space-x-3 cursor-pointer p-2 rounded-lg border transition-all ${
+                        payrollSettings.zero_day_source === opt.value
+                          ? "border-[var(--color-primary)]/50 bg-[var(--color-primary)]/10"
+                          : "border-transparent hover:bg-[#2A2A2A]/50"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="zero_day_source"
+                        value={opt.value}
+                        checked={payrollSettings.zero_day_source === opt.value}
+                        onChange={(e) =>
+                          setPayrollSettings((prev) => ({
+                            ...prev,
+                            zero_day_source: e.target.value,
+                          }))
+                        }
+                        className="w-4 h-4 border-[#2A2A2A] bg-[#1A1A1A] text-[var(--color-primary)] focus:ring-[var(--color-primary)] focus:ring-offset-0"
+                      />
+                      <div>
+                        <span className="text-sm font-medium text-gray-300">{opt.label}</span>
+                        <p className="text-xs text-gray-500 mt-0.5">{opt.desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex space-x-3 mt-6">
                 <button
                   onClick={() => setShowSettings(false)}
@@ -2125,7 +2204,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
             <div className="p-6 space-y-4">
               {bookingsForRecord === undefined && (
                 <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mx-auto"></div>
                   <p className="mt-2 text-gray-500">Loading bookings…</p>
                 </div>
               )}
@@ -3040,7 +3119,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     if (payrollSettingsData === undefined) {
       return (
         <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mx-auto"></div>
           <p className="mt-2 text-gray-500">Loading payroll settings...</p>
         </div>
       );
@@ -3120,7 +3199,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     ) {
       return (
         <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mx-auto"></div>
           <p className="mt-2 text-gray-500">Loading payroll data...</p>
         </div>
       );
@@ -3398,6 +3477,33 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   </span>
                 </button>
               )}
+              {/* Scan Attendance Button - attendance mode only */}
+              {payrollSettings.zero_day_source === "attendance" &&
+                selectedPeriod.status !== "paid" &&
+                !selectedPeriod.is_locked && (
+                <button
+                  onClick={async () => {
+                    try {
+                      setScanningAttendance(true);
+                      setScanResult(null);
+                      const result = await autoPopulateZeroDayClaimsMutation({
+                        payroll_period_id: selectedPeriod._id,
+                        requested_by: user._id,
+                      });
+                      setScanResult(result);
+                    } catch (err) {
+                      setError(err.message || "Failed to scan attendance");
+                    } finally {
+                      setScanningAttendance(false);
+                    }
+                  }}
+                  disabled={scanningAttendance || loading}
+                  className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)]/20 text-[var(--color-primary)] border border-[var(--color-primary)]/30 rounded-lg hover:bg-[var(--color-primary)]/30 transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Clock className="h-4 w-4" />
+                  <span>{scanningAttendance ? "Scanning..." : "Scan Attendance"}</span>
+                </button>
+              )}
               {/* Lock/Unlock Button */}
               {selectedPeriod.status === "calculated" && (
                 selectedPeriod.is_locked ? (
@@ -3471,6 +3577,25 @@ const PayrollManagement = ({ onRefresh, user }) => {
               </button>
             </div>
           </div>
+
+          {/* Scan Attendance Result Banner */}
+          {scanResult && (
+            <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 mb-4">
+              <div className="text-sm">
+                <span className="text-[var(--color-primary)] font-medium">Attendance Scan Complete: </span>
+                <span className="text-gray-300">
+                  {scanResult.claims_created} claim{scanResult.claims_created !== 1 ? 's' : ''} created,{' '}
+                  {scanResult.total_zero_days} total zero-service day{scanResult.total_zero_days !== 1 ? 's' : ''} found
+                </span>
+              </div>
+              <button
+                onClick={() => setScanResult(null)}
+                className="text-gray-500 hover:text-gray-300 ml-3"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
           {/* Period Summary */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -3754,8 +3879,23 @@ const PayrollManagement = ({ onRefresh, user }) => {
                               </span>
                               <span className="text-white">
                                 {record.days_worked || 0}
+                                {(record.zero_service_days || 0) > 0 && (
+                                  <span className="text-[var(--color-primary)] text-xs ml-1">
+                                    (incl. {record.zero_service_days} zero-day{record.zero_service_days > 1 ? 's' : ''})
+                                  </span>
+                                )}
                               </span>
                             </div>
+                            {(record.zero_day_pay || 0) > 0 && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-400">
+                                  Zero-Day Pay:
+                                </span>
+                                <span className="text-[var(--color-primary)]">
+                                  +{formatCurrency(record.zero_day_pay)}
+                                </span>
+                              </div>
+                            )}
                             <div className="flex justify-between">
                               <span className="text-gray-400">
                                 Total Sales:
@@ -3765,7 +3905,346 @@ const PayrollManagement = ({ onRefresh, user }) => {
                               </span>
                             </div>
                           </div>
+
+                          {/* Zero-Service Day Claim Section */}
+                          {payrollSettings.zero_day_source !== "disabled" && selectedPeriod?.status !== "paid" && (
+                            <div className="mt-4 pt-3 border-t border-[#2A2A2A]/50">
+                              <h6 className="text-xs font-medium text-[var(--color-primary)] mb-2">
+                                Zero-Service Day Claim
+                                <span className="text-[10px] text-gray-500 ml-2 font-normal">
+                                  ({payrollSettings.zero_day_source === "attendance" ? "Attendance-Based" : "Manual"})
+                                </span>
+                              </h6>
+                              {(() => {
+                                const currentSource = payrollSettings.zero_day_source;
+                                const claim = (zeroDayClaims || []).find(c =>
+                                  c.barber_id === record.barber_id &&
+                                  (c.source === currentSource || (!c.source && currentSource === "manual"))
+                                );
+                                const input = zeroDayInputs[record.barber_id] || { days: '', notes: '' };
+                                const isAttendanceMode = currentSource === "attendance";
+
+                                if (claim && claim.status === "approved") {
+                                  return (
+                                    <div className="flex items-center justify-between p-2 rounded-lg bg-green-500/10 border border-green-500/30">
+                                      <div>
+                                        <span className="text-xs font-medium text-green-400">Approved</span>
+                                        <p className="text-xs text-gray-400">
+                                          {claim.zero_days} day{claim.zero_days > 1 ? 's' : ''} x {formatCurrency(claim.daily_rate_applied)} = {formatCurrency(claim.total_amount)}
+                                        </p>
+                                        {claim.notes && <p className="text-xs text-gray-500 mt-0.5">{claim.notes}</p>}
+                                      </div>
+                                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-green-500/20 text-green-400">
+                                        APPROVED
+                                      </span>
+                                    </div>
+                                  );
+                                }
+
+                                if (claim && claim.status === "pending") {
+                                  return (
+                                    <div className="space-y-2">
+                                      <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30">
+                                        <div>
+                                          <span className="text-xs font-medium text-[var(--color-primary)]">Pending Approval</span>
+                                          <p className="text-xs text-gray-400">
+                                            {claim.zero_days} day{claim.zero_days > 1 ? 's' : ''} x {formatCurrency(claim.daily_rate_applied)} = {formatCurrency(claim.total_amount)}
+                                          </p>
+                                          {claim.notes && <p className="text-xs text-gray-500 mt-0.5">{claim.notes}</p>}
+                                        </div>
+                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[var(--color-primary)]/20 text-[var(--color-primary)]">
+                                          PENDING
+                                        </span>
+                                      </div>
+                                      {/* Approve/Reject buttons for branch_admin */}
+                                      {(user.role === "branch_admin" || user.role === "super_admin") && (
+                                        <div className="flex gap-2">
+                                          <button
+                                            onClick={async () => {
+                                              try {
+                                                await approveZeroDayClaimMutation({
+                                                  claim_id: claim._id,
+                                                  approved_by: user._id,
+                                                });
+                                              } catch (err) {
+                                                console.error("Approve error:", err);
+                                              }
+                                            }}
+                                            className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/30 transition-colors"
+                                          >
+                                            <Check className="w-3 h-3 inline mr-1" />
+                                            Approve
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              setShowRejectModal(claim);
+                                              setRejectReason("");
+                                            }}
+                                            className="flex-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/30 transition-colors"
+                                          >
+                                            <X className="w-3 h-3 inline mr-1" />
+                                            Reject
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                }
+
+                                if (claim && claim.status === "rejected") {
+                                  return (
+                                    <div className="space-y-2">
+                                      <div className="flex items-center justify-between p-2 rounded-lg bg-red-500/10 border border-red-500/30">
+                                        <div>
+                                          <span className="text-xs font-medium text-red-400">Rejected</span>
+                                          {claim.rejection_reason && (
+                                            <p className="text-xs text-gray-500 mt-0.5">Reason: {claim.rejection_reason}</p>
+                                          )}
+                                        </div>
+                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-500/20 text-red-400">
+                                          REJECTED
+                                        </span>
+                                      </div>
+                                      {/* Manual mode: allow resubmit / Attendance mode: re-scan needed */}
+                                      {isAttendanceMode ? (
+                                        <p className="text-xs text-gray-500 italic">Re-scan attendance to update this claim</p>
+                                      ) : (
+                                        <div className="flex gap-2 items-end">
+                                          <div className="flex-1">
+                                            <input
+                                              type="number"
+                                              min="1"
+                                              placeholder="Days"
+                                              value={input.days}
+                                              onChange={(e) => setZeroDayInputs(prev => ({
+                                                ...prev,
+                                                [record.barber_id]: { ...input, days: e.target.value }
+                                              }))}
+                                              className="w-full px-2 py-1.5 text-xs bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white"
+                                            />
+                                          </div>
+                                          <div className="flex-[2]">
+                                            <input
+                                              type="text"
+                                              placeholder="Notes (optional)"
+                                              value={input.notes}
+                                              onChange={(e) => setZeroDayInputs(prev => ({
+                                                ...prev,
+                                                [record.barber_id]: { ...input, notes: e.target.value }
+                                              }))}
+                                              className="w-full px-2 py-1.5 text-xs bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white"
+                                            />
+                                          </div>
+                                          <button
+                                            disabled={!input.days || parseInt(input.days) <= 0 || zeroDaySubmitting === record.barber_id}
+                                            onClick={async () => {
+                                              try {
+                                                setZeroDaySubmitting(record.barber_id);
+                                                await addZeroDayClaimMutation({
+                                                  payroll_period_id: selectedPeriod._id,
+                                                  barber_id: record.barber_id,
+                                                  zero_days: parseInt(input.days),
+                                                  notes: input.notes || undefined,
+                                                  requested_by: user._id,
+                                                });
+                                                setZeroDayInputs(prev => ({ ...prev, [record.barber_id]: { days: '', notes: '' } }));
+                                              } catch (err) {
+                                                console.error("Resubmit error:", err);
+                                              } finally {
+                                                setZeroDaySubmitting(null);
+                                              }
+                                            }}
+                                            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/30 border border-[var(--color-primary)]/30 transition-colors disabled:opacity-50"
+                                          >
+                                            Resubmit
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                }
+
+                                // No claim yet
+                                if (isAttendanceMode) {
+                                  return (
+                                    <p className="text-xs text-gray-500 italic">
+                                      Click "Scan Attendance" above to auto-detect zero-service days
+                                    </p>
+                                  );
+                                }
+
+                                // Manual mode — show input
+                                return (
+                                  <div className="flex gap-2 items-end">
+                                    <div className="flex-1">
+                                      <label className="text-[10px] text-gray-500 mb-0.5 block">Days</label>
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        placeholder="0"
+                                        value={input.days}
+                                        onChange={(e) => setZeroDayInputs(prev => ({
+                                          ...prev,
+                                          [record.barber_id]: { ...input, days: e.target.value }
+                                        }))}
+                                        className="w-full px-2 py-1.5 text-xs bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white"
+                                      />
+                                    </div>
+                                    <div className="flex-[2]">
+                                      <label className="text-[10px] text-gray-500 mb-0.5 block">Notes</label>
+                                      <input
+                                        type="text"
+                                        placeholder="Optional reason"
+                                        value={input.notes}
+                                        onChange={(e) => setZeroDayInputs(prev => ({
+                                          ...prev,
+                                          [record.barber_id]: { ...input, notes: e.target.value }
+                                        }))}
+                                        className="w-full px-2 py-1.5 text-xs bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white"
+                                      />
+                                    </div>
+                                    <button
+                                      disabled={!input.days || parseInt(input.days) <= 0 || zeroDaySubmitting === record.barber_id}
+                                      onClick={async () => {
+                                        try {
+                                          setZeroDaySubmitting(record.barber_id);
+                                          await addZeroDayClaimMutation({
+                                            payroll_period_id: selectedPeriod._id,
+                                            barber_id: record.barber_id,
+                                            zero_days: parseInt(input.days),
+                                            notes: input.notes || undefined,
+                                            requested_by: user._id,
+                                          });
+                                          setZeroDayInputs(prev => ({ ...prev, [record.barber_id]: { days: '', notes: '' } }));
+                                        } catch (err) {
+                                          console.error("Submit error:", err);
+                                        } finally {
+                                          setZeroDaySubmitting(null);
+                                        }
+                                      }}
+                                      className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/30 border border-[var(--color-primary)]/30 transition-colors disabled:opacity-50"
+                                    >
+                                      {zeroDaySubmitting === record.barber_id ? "..." : "Submit"}
+                                    </button>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          )}
                         </div>
+
+                        {/* Attendance Summary (OT/UT/Late) */}
+                        {record.attendance_summary && (
+                          <div className="mt-4 pt-3 border-t border-[#2A2A2A]/50">
+                            <h6 className="text-xs font-medium text-gray-400 mb-3 uppercase tracking-wide flex items-center">
+                              <Clock className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
+                              Attendance (OT / UT / Late)
+                            </h6>
+
+                            {/* Summary cards */}
+                            <div className="grid grid-cols-3 gap-3 mb-3">
+                              <div className="p-2.5 rounded-lg bg-red-500/10 border border-red-500/20">
+                                <div className="text-[10px] text-gray-400 mb-0.5">Late</div>
+                                <div className="text-sm font-semibold text-red-400">
+                                  {formatMinutesAsHoursMinutes(record.attendance_summary.total_late_minutes)}
+                                </div>
+                                <div className="text-[10px] text-gray-500">
+                                  {record.attendance_summary.days_late} day{record.attendance_summary.days_late !== 1 ? "s" : ""}
+                                  {record.attendance_summary.total_late_penalty > 0 && (
+                                    <span className="ml-1 text-red-400">
+                                      • -{formatCurrency(record.attendance_summary.total_late_penalty)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="p-2.5 rounded-lg bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20">
+                                <div className="text-[10px] text-gray-400 mb-0.5">Undertime</div>
+                                <div className="text-sm font-semibold text-[var(--color-primary)]">
+                                  {formatMinutesAsHoursMinutes(record.attendance_summary.total_undertime_minutes)}
+                                </div>
+                                <div className="text-[10px] text-gray-500">
+                                  {record.attendance_summary.days_undertime} day{record.attendance_summary.days_undertime !== 1 ? "s" : ""}
+                                  {record.attendance_summary.total_ut_penalty > 0 && (
+                                    <span className="ml-1 text-[var(--color-primary)]">
+                                      • -{formatCurrency(record.attendance_summary.total_ut_penalty)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="p-2.5 rounded-lg bg-green-500/10 border border-green-500/20">
+                                <div className="text-[10px] text-gray-400 mb-0.5">Overtime</div>
+                                <div className="text-sm font-semibold text-green-400">
+                                  {formatMinutesAsHoursMinutes(record.attendance_summary.total_overtime_minutes)}
+                                </div>
+                                <div className="text-[10px] text-gray-500">
+                                  {record.attendance_summary.days_overtime} day{record.attendance_summary.days_overtime !== 1 ? "s" : ""}
+                                  {record.attendance_summary.total_ot_pay > 0 && (
+                                    <span className="ml-1 text-green-400">
+                                      • +{formatCurrency(record.attendance_summary.total_ot_pay)}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Daily details table */}
+                            {record.attendance_summary.daily_details.length > 0 && (
+                              <div className="overflow-x-auto rounded-lg border border-[#2A2A2A]/50">
+                                <table className="w-full text-[11px]">
+                                  <thead>
+                                    <tr className="text-gray-500 bg-[#0A0A0A]">
+                                      <th className="text-left py-1.5 px-2">Date</th>
+                                      <th className="text-left py-1.5 px-2">Sched</th>
+                                      <th className="text-left py-1.5 px-2">In</th>
+                                      <th className="text-left py-1.5 px-2">Out</th>
+                                      <th className="text-right py-1.5 px-2">Late</th>
+                                      <th className="text-right py-1.5 px-2">UT</th>
+                                      <th className="text-right py-1.5 px-2">OT</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {record.attendance_summary.daily_details.map((day) => (
+                                      <tr key={day.date} className="border-t border-[#2A2A2A]/30">
+                                        <td className="py-1 px-2 text-gray-300">
+                                          {new Date(day.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", weekday: "short" })}
+                                        </td>
+                                        <td className="py-1 px-2 text-gray-500">
+                                          {day.scheduled_start}-{day.scheduled_end}
+                                        </td>
+                                        <td className={`py-1 px-2 ${day.late_minutes > 0 ? "text-red-400 font-medium" : "text-gray-300"}`}>
+                                          {day.actual_clock_in}
+                                        </td>
+                                        <td className={`py-1 px-2 ${day.overtime_minutes > 0 ? "text-green-400 font-medium" : day.undertime_minutes > 0 ? "text-[var(--color-primary)] font-medium" : "text-gray-300"}`}>
+                                          {day.actual_clock_out}
+                                        </td>
+                                        <td className="py-1 px-2 text-right text-red-400">
+                                          {day.late_minutes > 0 ? `${day.late_minutes}m` : "-"}
+                                        </td>
+                                        <td className="py-1 px-2 text-right text-[var(--color-primary)]">
+                                          {day.undertime_minutes > 0 ? `${day.undertime_minutes}m` : "-"}
+                                        </td>
+                                        <td className="py-1 px-2 text-right text-green-400">
+                                          {day.overtime_minutes > 0 ? `${day.overtime_minutes}m` : "-"}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+
+                            {(record.attendance_summary.total_ot_pay > 0 || record.attendance_summary.total_penalty > 0) && (
+                              <p className="text-[10px] text-gray-600 mt-2 italic">
+                                {record.attendance_summary.total_ot_pay > 0 && (
+                                  <span>OT pay (+{formatCurrency(record.attendance_summary.total_ot_pay)}) added to daily pay. </span>
+                                )}
+                                {record.attendance_summary.total_penalty > 0 && (
+                                  <span>Late/UT penalty (-{formatCurrency(record.attendance_summary.total_penalty)}) deducted from net pay.</span>
+                                )}
+                              </p>
+                            )}
+                          </div>
+                        )}
 
                         {/* Final Summary */}
                         <div className="space-y-4">
@@ -4151,6 +4630,55 @@ const PayrollManagement = ({ onRefresh, user }) => {
           setRecalculatePeriod(null);
         }}
       />
+
+      {/* Zero-Day Claim Reject Modal */}
+      {showRejectModal && createPortal(
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-white mb-2">Reject Claim</h3>
+            <p className="text-sm text-gray-400 mb-4">
+              Reject zero-day claim for {showRejectModal.barber_name}?
+            </p>
+            <textarea
+              placeholder="Reason for rejection (optional)"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="w-full px-3 py-2 text-sm bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-white mb-4 resize-none"
+              rows={3}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowRejectModal(null);
+                  setRejectReason("");
+                }}
+                className="flex-1 px-4 py-2 text-sm bg-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#3A3A3A] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await rejectZeroDayClaimMutation({
+                      claim_id: showRejectModal._id,
+                      rejected_by: user._id,
+                      rejection_reason: rejectReason || undefined,
+                    });
+                    setShowRejectModal(null);
+                    setRejectReason("");
+                  } catch (err) {
+                    console.error("Reject error:", err);
+                  }
+                }}
+                className="flex-1 px-4 py-2 text-sm bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 border border-red-500/30 transition-colors"
+              >
+                Reject
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

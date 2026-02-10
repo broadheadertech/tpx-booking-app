@@ -31,11 +31,13 @@ import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useBranding } from "../../context/BrandingContext";
+import { useAppModal } from "../../context/AppModalContext";
 
 const MyBookings = ({ onBack }) => {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useCurrentUser();
   const { branding } = useBranding();
+  const { showAlert } = useAppModal();
   const [activeFilter, setActiveFilter] = useState("all");
   const [showQRCode, setShowQRCode] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(null);
@@ -105,7 +107,7 @@ const MyBookings = ({ onBack }) => {
       setTimeout(() => document.body.removeChild(successMsg), 3000);
     } catch (error) {
       console.error("Error cancelling booking:", error);
-      alert(error.message || "Failed to cancel booking. Please try again.");
+      showAlert({ title: 'Cancellation Failed', message: error.message || 'Failed to cancel booking. Please try again.', type: 'error' });
     } finally {
       setCancelLoading(false);
     }
@@ -119,7 +121,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
 
   const handleSubmit = () => {
     if (selectedRating === 0) {
-      alert("Please select a rating");
+      showAlert({ title: 'Rating Required', message: 'Please select a rating', type: 'warning' });
       return;
     }
     onSubmit(booking, selectedRating, feedback);
@@ -319,7 +321,7 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
       setTimeout(() => document.body.removeChild(successMsg), 3000);
     } catch (error) {
       console.error("Error submitting rating:", error);
-      alert(error.message || "Failed to submit rating. Please try again.");
+      showAlert({ title: 'Rating Failed', message: error.message || 'Failed to submit rating. Please try again.', type: 'error' });
     } finally {
       setRatingLoading(false);
     }
@@ -945,12 +947,13 @@ const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
 };
 
 const RatingModal = ({ booking, onSubmit, onClose, loading }) => {
+const { showAlert } = useAppModal();
 const [rating, setRating] = useState(0);
 const [feedback, setFeedback] = useState("");
 
 const handleSubmit = () => {
   if (rating === 0) {
-    alert("Please select a rating");
+    showAlert({ title: 'Rating Required', message: 'Please select a rating', type: 'warning' });
     return;
   }
   onSubmit(booking, rating, feedback);

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { useAppModal } from '../../context/AppModalContext'
 import {
   Plus,
   Image as ImageIcon,
@@ -25,6 +26,7 @@ import CreateBranchPostModal from './CreateBranchPostModal'
  * Shows barber's posts with status and ability to create new ones
  */
 const MyBranchPosts = ({ barber }) => {
+  const { showConfirm, showAlert } = useAppModal()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [deletingPostId, setDeletingPostId] = useState(null)
@@ -38,14 +40,15 @@ const MyBranchPosts = ({ barber }) => {
   const deletePost = useMutation(api.services.branchPosts.deletePost)
 
   const handleDelete = async (postId) => {
-    if (!confirm('Are you sure you want to delete this post?')) return
+    const confirmed = await showConfirm({ title: 'Delete Post', message: 'Are you sure you want to delete this post?', type: 'warning' })
+    if (!confirmed) return
 
     setDeletingPostId(postId)
     try {
       await deletePost({ postId })
     } catch (error) {
       console.error('Failed to delete post:', error)
-      alert('Failed to delete post: ' + error.message)
+      showAlert({ title: 'Error', message: 'Failed to delete post: ' + error.message, type: 'error' })
     } finally {
       setDeletingPostId(null)
     }

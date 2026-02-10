@@ -3,10 +3,12 @@ import { Gift, Calendar, DollarSign, CheckCircle, Clock, QrCode } from 'lucide-r
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
+import { useAppModal } from '../../context/AppModalContext'
 import QRCode from 'qrcode'
 
 const CustomerVouchers = () => {
   const { user } = useCurrentUser()
+  const { showAlert } = useAppModal()
   const [selectedVoucher, setSelectedVoucher] = useState(null)
   const [qrCodeUrl, setQrCodeUrl] = useState('')
   const [showQRModal, setShowQRModal] = useState(false)
@@ -49,10 +51,10 @@ const CustomerVouchers = () => {
         code: voucher.code,
         user_id: user.id,
       })
-      alert('Voucher redeemed successfully!')
+      showAlert({ title: 'Voucher Redeemed', message: 'Voucher redeemed successfully!', type: 'success' })
     } catch (err) {
       console.error('Failed to redeem voucher:', err)
-      alert(err.message || 'Failed to redeem voucher')
+      showAlert({ title: 'Redemption Failed', message: err.message || 'Failed to redeem voucher', type: 'error' })
     }
   }
 

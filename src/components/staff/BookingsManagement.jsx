@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode, CreditCard, Receipt, DollarSign, Eye, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Check, Ban, Settings, Banknote } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { useAppModal } from '../../context/AppModalContext'
 import QRCode from 'qrcode'
 import { createPortal } from 'react-dom'
 import CreateBookingModal from './CreateBookingModal'
@@ -10,6 +11,7 @@ import BookingSettingsModal from './BookingSettingsModal'
 import PaymentHistory from './PaymentHistory'
 
 const BookingsManagement = ({ onRefresh, user }) => {
+  const { showAlert } = useAppModal()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('date')
@@ -460,9 +462,9 @@ const BookingsManagement = ({ onRefresh, user }) => {
     // For now, we'll mark the payment as paid
     try {
       await handlePaymentStatusChange(booking, 'paid')
-      alert('Payment processed successfully!')
+      showAlert({ title: 'Success', message: 'Payment processed successfully!', type: 'success' })
     } catch (error) {
-      alert('Failed to process payment. Please try again.')
+      showAlert({ title: 'Error', message: 'Failed to process payment. Please try again.', type: 'error' })
     }
   }
 

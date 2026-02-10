@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import Modal from '../common/Modal'
 import { CreditCard, DollarSign, Calculator, Receipt, CheckCircle } from 'lucide-react'
+import { useAppModal } from '../../context/AppModalContext'
 
 const PaymentConfirmationModal = ({ isOpen, onClose, onConfirm, transactionData, paymentMethod, setPaymentMethod }) => {
+  const { showAlert } = useAppModal()
   const [cashReceived, setCashReceived] = useState('')
   const [change, setChange] = useState(0)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -22,7 +24,7 @@ const PaymentConfirmationModal = ({ isOpen, onClose, onConfirm, transactionData,
     if (paymentMethod === 'cash') {
       const received = parseFloat(cashReceived) || 0
       if (received < transactionData.total_amount) {
-        alert('Cash received is less than the total amount')
+        showAlert({ title: 'Insufficient Cash', message: 'Cash received is less than the total amount', type: 'error' })
         return
       }
     }

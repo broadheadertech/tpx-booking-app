@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { useAppModal } from '../../context/AppModalContext'
 import {
   FileText, Users, Clock, CheckCircle, XCircle, AlertCircle,
   Search, Filter, Plus, Edit, Trash2, Eye, Phone, Mail,
@@ -14,6 +15,7 @@ import { sendCustomBookingStatusUpdate } from '../../services/emailService'
 
 const CustomBookingsManagement = ({ onRefresh, user }) => {
   const { sessionToken } = useCurrentUser()
+  const { showConfirm } = useAppModal()
   const [activeTab, setActiveTab] = useState('submissions') // 'submissions' | 'forms'
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
@@ -254,7 +256,8 @@ const CustomBookingsManagement = ({ onRefresh, user }) => {
 
   // Delete form
   const handleDeleteForm = async (form) => {
-    if (!confirm('Are you sure you want to delete this form? This cannot be undone.')) return
+    const confirmed = await showConfirm({ title: 'Delete Form', message: 'Are you sure you want to delete this form? This cannot be undone.', type: 'warning' })
+    if (!confirmed) return
 
     setLoading(true)
     try {
@@ -339,7 +342,8 @@ const CustomBookingsManagement = ({ onRefresh, user }) => {
 
   // Delete submission
   const handleDeleteSubmission = async (submission) => {
-    if (!confirm('Are you sure you want to delete this submission?')) return
+    const confirmed = await showConfirm({ title: 'Delete Submission', message: 'Are you sure you want to delete this submission?', type: 'warning' })
+    if (!confirmed) return
 
     setLoading(true)
     try {

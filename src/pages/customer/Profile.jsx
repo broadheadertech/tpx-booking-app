@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { APP_VERSION } from '../../config/version'
 import { useBranding } from '../../context/BrandingContext'
 import StarRewardsCard from '../../components/common/StarRewardsCard'
+import { useAppModal } from '../../context/AppModalContext'
 
 // Bottom Navigation
 const NAV_SECTIONS = [
@@ -55,6 +56,7 @@ const getMemberTenure = (createdAt) => {
 }
 
 const Profile = () => {
+  const { showAlert } = useAppModal()
   const { logout: authLogout, sessionToken } = useCurrentUser()
   const { user: clerkUser, isLoaded: clerkLoaded } = useUser()
   const { signOut } = useClerk()
@@ -1004,7 +1006,7 @@ const Profile = () => {
                   // Copy to clipboard functionality
                   const text = `Check out my Style DNA at ${branding?.display_name || 'TPX'}! I'm "${styleDNA?.personality || 'a valued member'}" with ${greetingData?.completedBookings || 0} cuts and a ${greetingData?.streak || 0}-month streak! 💈🔥`
                   navigator.clipboard.writeText(text)
-                  alert('Copied to clipboard!')
+                  showAlert({ title: 'Copied', message: 'Copied to clipboard!', type: 'success' })
                 }}
                 className="flex-1 py-3 bg-[#2A2A2A] text-white font-semibold rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all"
               >
@@ -1021,7 +1023,7 @@ const Profile = () => {
                       url: window.location.origin,
                     })
                   } else {
-                    alert('Share not supported on this device. Screenshot the card instead!')
+                    showAlert({ title: 'Share Unavailable', message: 'Share not supported on this device. Screenshot the card instead!', type: 'info' })
                   }
                 }}
                 className="flex-1 py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-semibold rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all"

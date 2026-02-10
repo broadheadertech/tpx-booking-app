@@ -38,6 +38,7 @@ import Skeleton from "../common/Skeleton";
 import Modal from "../common/Modal";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useToast } from "../common/ToastNotification";
+import { useAppModal } from "../../context/AppModalContext";
 
 /**
  * Product categories aligned with branch-level products
@@ -141,7 +142,7 @@ const PaymentBadge = ({ isPaid, paidAt }) => {
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">
+    <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-[var(--color-primary)]/20 text-[var(--color-primary)] border border-[var(--color-primary)]/30">
       <CreditCard className="w-3 h-3" />
       Unpaid
     </span>
@@ -173,8 +174,8 @@ const SummaryCard = ({ icon: Icon, label, value, subValue, variant = "default" }
   return (
     <div className={`bg-[#1A1A1A] border ${variants[variant]} rounded-xl p-4`}>
       <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-lg ${variant === "warning" ? "bg-yellow-500/20" : variant === "danger" ? "bg-red-500/20" : variant === "success" ? "bg-green-500/20" : "bg-[#FF8C42]/20"}`}>
-          <Icon className={`w-5 h-5 ${variant === "warning" ? "text-yellow-400" : variant === "danger" ? "text-red-400" : variant === "success" ? "text-green-400" : "text-[#FF8C42]"}`} />
+        <div className={`p-2 rounded-lg ${variant === "warning" ? "bg-yellow-500/20" : variant === "danger" ? "bg-red-500/20" : variant === "success" ? "bg-green-500/20" : "bg-[var(--color-primary)]/20"}`}>
+          <Icon className={`w-5 h-5 ${variant === "warning" ? "text-yellow-400" : variant === "danger" ? "text-red-400" : variant === "success" ? "text-green-400" : "text-[var(--color-primary)]"}`} />
         </div>
         <div>
           <p className="text-gray-400 text-sm">{label}</p>
@@ -194,7 +195,7 @@ const InventoryProductCard = ({ product, onReceiveStock, onViewBatches, onEdit, 
   const stockPercent = product.minStock > 0 ? Math.min((product.stock / (product.minStock * 2)) * 100, 100) : 100;
 
   return (
-    <div className="bg-[#1A1A1A] border border-[#333333] rounded-xl overflow-hidden hover:border-[#FF8C42]/50 transition-colors group">
+    <div className="bg-[#1A1A1A] border border-[#333333] rounded-xl overflow-hidden hover:border-[var(--color-primary)]/50 transition-colors group">
       {/* Product Image */}
       <div className="aspect-square bg-[#111111] relative">
         {imageUrl ? (
@@ -271,7 +272,7 @@ const InventoryProductCard = ({ product, onReceiveStock, onViewBatches, onEdit, 
         </div>
 
         <div className="flex items-center justify-between pt-2 border-t border-[#333333]">
-          <span className="text-[#FF8C42] font-bold">{formatPrice(product.price)}</span>
+          <span className="text-[var(--color-primary)] font-bold">{formatPrice(product.price)}</span>
           <div className="flex gap-2">
             <button
               onClick={() => onViewBatches(product)}
@@ -282,7 +283,7 @@ const InventoryProductCard = ({ product, onReceiveStock, onViewBatches, onEdit, 
             </button>
             <button
               onClick={() => onReceiveStock(product)}
-              className="p-2 bg-[#FF8C42]/20 rounded-lg hover:bg-[#FF8C42]/30 transition-colors text-[#FF8C42]"
+              className="p-2 bg-[var(--color-primary)]/20 rounded-lg hover:bg-[var(--color-primary)]/30 transition-colors text-[var(--color-primary)]"
               title="Receive Stock"
             >
               <Plus className="w-4 h-4" />
@@ -461,7 +462,7 @@ const AddProductModal = ({ isOpen, onClose }) => {
         {/* Image Upload */}
         <div className="bg-[#252525] rounded-xl p-4 border border-[#333333]">
           <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-            <Camera className="w-4 h-4 text-[#FF8C42]" />
+            <Camera className="w-4 h-4 text-[var(--color-primary)]" />
             Product Image
           </h3>
           <div className="flex flex-col sm:flex-row gap-4">
@@ -476,8 +477,8 @@ const AddProductModal = ({ isOpen, onClose }) => {
                   </div>
                 </div>
               ) : (
-                <div onClick={() => fileInputRef.current?.click()} className="w-full h-32 border-2 border-dashed border-[#444444] rounded-xl flex flex-col items-center justify-center bg-[#1A1A1A] hover:border-[#FF8C42]/50 cursor-pointer">
-                  <Upload className="w-6 h-6 text-[#FF8C42] mb-1" />
+                <div onClick={() => fileInputRef.current?.click()} className="w-full h-32 border-2 border-dashed border-[#444444] rounded-xl flex flex-col items-center justify-center bg-[#1A1A1A] hover:border-[var(--color-primary)]/50 cursor-pointer">
+                  <Upload className="w-6 h-6 text-[var(--color-primary)] mb-1" />
                   <p className="text-xs text-gray-400">Click to upload</p>
                 </div>
               )}
@@ -548,7 +549,7 @@ const AddProductModal = ({ isOpen, onClose }) => {
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-4 border-t border-[#333333]">
           <button type="button" onClick={handleCloseModal} disabled={isSubmitting} className="px-4 py-2 text-gray-400 hover:text-white">Cancel</button>
-          <button type="submit" disabled={isSubmitting || uploadingImage} className="px-6 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 disabled:opacity-50 flex items-center gap-2">
+          <button type="submit" disabled={isSubmitting || uploadingImage} className="px-6 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 disabled:opacity-50 flex items-center gap-2">
             {isSubmitting ? <><RefreshCw className="w-4 h-4 animate-spin" /> Adding...</> : <><Plus className="w-4 h-4" /> Add Product</>}
           </button>
         </div>
@@ -633,7 +634,7 @@ const ReceiveStockModal = ({ isOpen, onClose, product }) => {
 
         <div className="flex justify-end gap-3 pt-4 border-t border-[#333333]">
           <button type="button" onClick={handleClose} className="px-4 py-2 text-gray-400 hover:text-white">Cancel</button>
-          <button type="submit" disabled={isSubmitting} className="px-6 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 disabled:opacity-50 flex items-center gap-2">
+          <button type="submit" disabled={isSubmitting} className="px-6 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 disabled:opacity-50 flex items-center gap-2">
             {isSubmitting ? <><RefreshCw className="w-4 h-4 animate-spin" /> Receiving...</> : <><Plus className="w-4 h-4" /> Receive Stock</>}
           </button>
         </div>
@@ -828,7 +829,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
         {/* Image Upload */}
         <div className="bg-[#252525] rounded-xl p-4 border border-[#333333]">
           <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-            <Camera className="w-4 h-4 text-[#FF8C42]" />
+            <Camera className="w-4 h-4 text-[var(--color-primary)]" />
             Product Image
           </h3>
           <div className="flex flex-col sm:flex-row gap-4">
@@ -843,8 +844,8 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
                   </div>
                 </div>
               ) : (
-                <div onClick={() => fileInputRef.current?.click()} className="w-full h-32 border-2 border-dashed border-[#444444] rounded-xl flex flex-col items-center justify-center bg-[#1A1A1A] hover:border-[#FF8C42]/50 cursor-pointer">
-                  <Upload className="w-6 h-6 text-[#FF8C42] mb-1" />
+                <div onClick={() => fileInputRef.current?.click()} className="w-full h-32 border-2 border-dashed border-[#444444] rounded-xl flex flex-col items-center justify-center bg-[#1A1A1A] hover:border-[var(--color-primary)]/50 cursor-pointer">
+                  <Upload className="w-6 h-6 text-[var(--color-primary)] mb-1" />
                   <p className="text-xs text-gray-400">Click to upload</p>
                 </div>
               )}
@@ -931,9 +932,9 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
         </div>
 
         {/* Promo/Discount Section */}
-        <div className="bg-gradient-to-br from-[#2A1810] to-[#252525] rounded-xl p-4 border border-orange-500/30">
+        <div className="bg-gradient-to-br from-[#1A1A1A] to-[#252525] rounded-xl p-4 border border-[var(--color-primary)]/30">
           <h3 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-orange-400" />
+            <TrendingUp className="w-4 h-4 text-[var(--color-primary)]" />
             Promotion Settings
           </h3>
 
@@ -981,7 +982,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
                     onClick={() => handleChange("promo_label", label)}
                     className={`px-2 py-1 rounded-lg text-[10px] font-medium transition-colors ${
                       formData.promo_label === label
-                        ? "bg-orange-500 text-white"
+                        ? "bg-[var(--color-primary)] text-white"
                         : "bg-[#333333] text-gray-400 hover:bg-[#444444]"
                     }`}
                   >
@@ -1033,12 +1034,12 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
             <div className="mt-4 p-3 bg-[#1A1A1A] rounded-lg border border-[#333333]">
               <p className="text-xs text-gray-500 mb-2">Price Preview:</p>
               <div className="flex items-baseline gap-2">
-                <span className="text-lg font-bold text-orange-400">₱{formData.price || "0"}</span>
+                <span className="text-lg font-bold text-[var(--color-primary)]">₱{formData.price || "0"}</span>
                 {formData.original_price && (
                   <span className="text-sm text-gray-500 line-through">₱{formData.original_price}</span>
                 )}
                 {formData.discount_percent && (
-                  <span className="px-2 py-0.5 bg-orange-500 rounded text-xs font-bold text-white">
+                  <span className="px-2 py-0.5 bg-[var(--color-primary)] rounded text-xs font-bold text-white">
                     -{formData.discount_percent}%
                   </span>
                 )}
@@ -1050,7 +1051,7 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
         {/* Actions */}
         <div className="flex justify-end gap-3 pt-4 border-t border-[#333333]">
           <button type="button" onClick={handleCloseModal} disabled={isSubmitting} className="px-4 py-2 text-gray-400 hover:text-white">Cancel</button>
-          <button type="submit" disabled={isSubmitting || uploadingImage} className="px-6 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 disabled:opacity-50 flex items-center gap-2">
+          <button type="submit" disabled={isSubmitting || uploadingImage} className="px-6 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 disabled:opacity-50 flex items-center gap-2">
             {isSubmitting ? <><RefreshCw className="w-4 h-4 animate-spin" /> Saving...</> : <><Edit2 className="w-4 h-4" /> Save Changes</>}
           </button>
         </div>
@@ -1263,7 +1264,7 @@ const MyInventoryTab = () => {
               <input type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2 bg-[#111111] border border-[#333333] text-white rounded-lg w-full lg:w-48 text-sm" />
             </div>
             {/* Add Product Button */}
-            <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 bg-[#FF8C42] text-white px-4 py-2 rounded-lg hover:bg-[#FF8C42]/90 whitespace-nowrap">
+            <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-primary)]/90 whitespace-nowrap">
               <Plus className="w-4 h-4" /> Add Product
             </button>
           </div>
@@ -1279,7 +1280,7 @@ const MyInventoryTab = () => {
           <h3 className="text-white font-semibold text-lg mb-2">No Products Found</h3>
           <p className="text-gray-500 mb-6">{products.length === 0 ? "Start building your inventory" : "No products match your filters"}</p>
           {products.length === 0 && (
-            <button onClick={() => setShowAddModal(true)} className="inline-flex items-center gap-2 bg-[#FF8C42] text-white px-6 py-3 rounded-lg">
+            <button onClick={() => setShowAddModal(true)} className="inline-flex items-center gap-2 bg-[var(--color-primary)] text-white px-6 py-3 rounded-lg">
               <Plus className="w-5 h-5" /> Add First Product
             </button>
           )}
@@ -1369,7 +1370,7 @@ const MarkAsPaidModal = ({ isOpen, onClose, order, onSuccess }) => {
               <p className="text-gray-400 text-sm">{order.branch_name}</p>
             </div>
             <div className="text-right">
-              <p className="text-[#FF8C42] font-bold text-xl">{formatPrice(order.total_amount)}</p>
+              <p className="text-[var(--color-primary)] font-bold text-xl">{formatPrice(order.total_amount)}</p>
               <p className="text-gray-500 text-xs">{order.items.length} item(s)</p>
             </div>
           </div>
@@ -1557,13 +1558,13 @@ const ManualOrderModal = ({ isOpen, onClose }) => {
                   <button type="button" onClick={() => updateQuantity(item.catalog_product_id, item.quantity - 1)} className="w-6 h-6 bg-[#333] rounded text-white">-</button>
                   <span className="text-white w-8 text-center">{item.quantity}</span>
                   <button type="button" onClick={() => updateQuantity(item.catalog_product_id, item.quantity + 1)} className="w-6 h-6 bg-[#333] rounded text-white">+</button>
-                  <span className="text-[#FF8C42] font-semibold ml-2 w-20 text-right">{formatPrice(item.unit_price * item.quantity)}</span>
+                  <span className="text-[var(--color-primary)] font-semibold ml-2 w-20 text-right">{formatPrice(item.unit_price * item.quantity)}</span>
                 </div>
               </div>
             ))}
             <div className="flex justify-between pt-2 border-t border-[#333333]">
               <span className="text-gray-400">Total</span>
-              <span className="text-[#FF8C42] font-bold">{formatPrice(totalAmount)}</span>
+              <span className="text-[var(--color-primary)] font-bold">{formatPrice(totalAmount)}</span>
             </div>
           </div>
         )}
@@ -1642,7 +1643,7 @@ const ManualOrderModal = ({ isOpen, onClose }) => {
           <button
             type="submit"
             disabled={isSubmitting || !formData.branch_id || orderItems.length === 0}
-            className="px-6 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 disabled:opacity-50 flex items-center gap-2"
+            className="px-6 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 disabled:opacity-50 flex items-center gap-2"
           >
             {isSubmitting ? <><RefreshCw className="w-4 h-4 animate-spin" /> Creating...</> : <><Plus className="w-4 h-4" /> Create Order</>}
           </button>
@@ -1658,6 +1659,7 @@ const ManualOrderModal = ({ isOpen, onClose }) => {
 const BranchOrdersTab = () => {
   const { user } = useCurrentUser();
   const toast = useToast();
+  const { showConfirm } = useAppModal();
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [orderToMarkPaid, setOrderToMarkPaid] = useState(null);
@@ -1682,7 +1684,8 @@ const BranchOrdersTab = () => {
 
   const handleBackfillPayments = async () => {
     if (!user) return;
-    if (!confirm("This will mark all 'Received' orders as 'Paid' using their received date. Continue?")) return;
+    const confirmed = await showConfirm({ title: 'Backfill Payments', message: "This will mark all 'Received' orders as 'Paid' using their received date. Continue?", type: 'warning' });
+    if (!confirmed) return;
     setIsBackfilling(true);
     try {
       const result = await backfillPayments({ admin_id: user._id });
@@ -1756,11 +1759,11 @@ const BranchOrdersTab = () => {
 
       {/* Backfill Alert - Show if there are received but unpaid orders */}
       {paymentDebug && paymentDebug.summary.receivedButUnpaid > 0 && (
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
+        <div className="bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 rounded-xl p-4">
           <div className="flex items-start gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" />
+            <AlertTriangle className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" />
             <div className="flex-1">
-              <p className="text-amber-400 font-medium">Received Orders Need Payment Status</p>
+              <p className="text-[var(--color-primary)] font-medium">Received Orders Need Payment Status</p>
               <p className="text-gray-400 text-sm mt-1">
                 {paymentDebug.summary.receivedButUnpaid} order(s) are marked as "Received" but don't have payment status.
                 These orders won't appear in P&L until marked as paid.
@@ -1768,7 +1771,7 @@ const BranchOrdersTab = () => {
               <button
                 onClick={handleBackfillPayments}
                 disabled={isBackfilling}
-                className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 transition-colors disabled:opacity-50"
+                className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary)]/30 transition-colors disabled:opacity-50"
               >
                 <RefreshCw className={`w-4 h-4 ${isBackfilling ? "animate-spin" : ""}`} />
                 {isBackfilling ? "Processing..." : "Mark All Received as Paid"}
@@ -1784,7 +1787,7 @@ const BranchOrdersTab = () => {
           {/* Filter */}
           <div className="flex flex-wrap gap-2">
             {["all", "pending", "approved", "shipped", "received", "rejected"].map((status) => (
-              <button key={status} onClick={() => setFilterStatus(status)} className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${filterStatus === status ? "bg-[#FF8C42] text-white" : "bg-[#111111] text-gray-400 hover:text-white"}`}>
+              <button key={status} onClick={() => setFilterStatus(status)} className={`px-4 py-2 rounded-lg text-sm font-medium capitalize ${filterStatus === status ? "bg-[var(--color-primary)] text-white" : "bg-[#111111] text-gray-400 hover:text-white"}`}>
                 {status === "all" ? "All Orders" : status}
               </button>
             ))}
@@ -1835,7 +1838,7 @@ const BranchOrdersTab = () => {
                     {order.is_manual_order ? "Created by admin" : `Requested by ${order.requested_by_name}`} on {formatDate(order.created_at)}
                   </p>
                   <p className="text-gray-400 text-sm mt-1">
-                    {order.items.length} item(s) - <span className="text-[#FF8C42] font-semibold">{formatPrice(order.total_amount)}</span>
+                    {order.items.length} item(s) - <span className="text-[var(--color-primary)] font-semibold">{formatPrice(order.total_amount)}</span>
                   </p>
                 </div>
 
@@ -1922,7 +1925,7 @@ const BranchOrdersTab = () => {
                     </div>
                     <div className="text-right">
                       <p className="text-white">x{item.quantity_approved || item.quantity_requested}</p>
-                      <p className="text-[#FF8C42]">{formatPrice(item.unit_price * (item.quantity_approved || item.quantity_requested))}</p>
+                      <p className="text-[var(--color-primary)]">{formatPrice(item.unit_price * (item.quantity_approved || item.quantity_requested))}</p>
                     </div>
                   </div>
                 ))}
@@ -1931,7 +1934,7 @@ const BranchOrdersTab = () => {
 
             <div className="border-t border-[#333333] pt-4 flex justify-between">
               <span className="text-gray-400">Total</span>
-              <span className="text-[#FF8C42] font-bold text-xl">{formatPrice(selectedOrder.total_amount)}</span>
+              <span className="text-[var(--color-primary)] font-bold text-xl">{formatPrice(selectedOrder.total_amount)}</span>
             </div>
 
             {/* Action buttons in modal */}
@@ -1972,7 +1975,7 @@ const BranchOrdersTab = () => {
                 <div>
                   <h4 className="text-white font-semibold">Approve Order #{orderToApprove.order_number}?</h4>
                   <p className="text-gray-400 text-sm mt-1">
-                    This will approve the order from <span className="text-white font-medium">{orderToApprove.branch_name}</span> for {orderToApprove.items?.length || 0} item(s) totaling <span className="text-[#FF8C42] font-semibold">{formatPrice(orderToApprove.total_amount)}</span>.
+                    This will approve the order from <span className="text-white font-medium">{orderToApprove.branch_name}</span> for {orderToApprove.items?.length || 0} item(s) totaling <span className="text-[var(--color-primary)] font-semibold">{formatPrice(orderToApprove.total_amount)}</span>.
                   </p>
                 </div>
               </div>
@@ -2098,7 +2101,7 @@ const BranchOrdersTab = () => {
               </div>
               <div className="border-t border-[#333333] mt-2 pt-2 flex justify-between text-sm font-semibold">
                 <span className="text-gray-300">Total</span>
-                <span className="text-[#FF8C42]">{formatPrice(orderToShip.total_amount)}</span>
+                <span className="text-[var(--color-primary)]">{formatPrice(orderToShip.total_amount)}</span>
               </div>
             </div>
 
@@ -2180,7 +2183,7 @@ const BranchInventoryTab = () => {
                 <div
                   key={branch.branch_id}
                   onClick={() => setSelectedBranch(branch.branch_id)}
-                  className={`bg-[#1A1A1A] border ${branch.hasLowStockAlert ? "border-yellow-500/30" : "border-[#333333]"} rounded-xl p-4 cursor-pointer hover:border-[#FF8C42]/50 transition-colors`}
+                  className={`bg-[#1A1A1A] border ${branch.hasLowStockAlert ? "border-yellow-500/30" : "border-[#333333]"} rounded-xl p-4 cursor-pointer hover:border-[var(--color-primary)]/50 transition-colors`}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
@@ -2295,7 +2298,7 @@ const BranchInventoryTab = () => {
                     <h4 className="text-white font-medium text-sm line-clamp-1">{product.name}</h4>
                     {product.brand && <p className="text-gray-500 text-xs">{product.brand}</p>}
                     <div className="flex justify-between items-center mt-2">
-                      <span className="text-[#FF8C42] font-semibold">{formatPrice(product.price)}</span>
+                      <span className="text-[var(--color-primary)] font-semibold">{formatPrice(product.price)}</span>
                       <span className={`text-sm font-medium ${product.stock <= product.minStock ? "text-yellow-400" : "text-green-400"}`}>
                         Stock: {product.stock}
                       </span>
@@ -2339,7 +2342,7 @@ const ProductCatalogManager = () => {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${
-              activeTab === tab.id ? "bg-[#FF8C42] text-white" : "text-gray-400 hover:text-white hover:bg-[#222222]"
+              activeTab === tab.id ? "bg-[var(--color-primary)] text-white" : "text-gray-400 hover:text-white hover:bg-[#222222]"
             }`}
           >
             <tab.icon className="w-5 h-5" />

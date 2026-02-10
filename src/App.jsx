@@ -9,6 +9,7 @@ import { BrandingProvider } from "./context/BrandingContext";
 import { BranchProvider } from "./context/BranchContext";
 import { CartProvider } from "./context/CartContext";
 import { ToastProvider } from "./components/common/ToastNotification";
+import { AppModalProvider } from "./context/AppModalContext";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import AuthRedirect from "./components/common/AuthRedirect";
 import Landing from "./pages/Landing";
@@ -37,6 +38,8 @@ import BarberDashboard from "./components/barber/BarberDashboard";
 import BarbersList from "./pages/barbers/BarbersList";
 import BarberProfile from "./pages/barbers/BarberProfile";
 import BranchProfile from "./pages/b/BranchProfile";
+import LiveQueue from "./pages/b/LiveQueue";
+import WalkInForm from "./pages/b/WalkInForm";
 import Kiosk from "./pages/Kiosk";
 import PaymentSuccess from "./pages/booking/payment/success.jsx";
 import PaymentFailure from "./pages/booking/payment/failure.jsx";
@@ -45,6 +48,7 @@ import AccountDeletion from "./pages/AccountDeletion.jsx";
 import EmailTest from "./pages/EmailTest.jsx";
 import DownloadApp from "./pages/DownloadApp.jsx";
 import ErrorBoundary from "./components/common/ErrorBoundary";
+import MaintenanceGuard from "./components/common/MaintenanceGuard";
 import { getInitialRoute } from "./utils/platform";
 
 function App() {
@@ -54,10 +58,12 @@ function App() {
   return (
     <AuthProvider>
       <ToastProvider>
+        <AppModalProvider>
         <BrandingProvider>
           <BranchProvider>
             <CartProvider>
         <Router>
+          <MaintenanceGuard>
           <div className="min-h-screen bg-[var(--color-bg)]">
             <Routes>
               <Route
@@ -78,6 +84,8 @@ function App() {
               <Route path="/barbers/:barberSlug" element={<BarberProfile />} />
               {/* Public Branch Profile */}
               <Route path="/b/:slug" element={<BranchProfile />} />
+              <Route path="/b/:slug/queue" element={<LiveQueue />} />
+              <Route path="/b/:slug/walkin" element={<WalkInForm />} />
               <Route
                 path="/platform-selection"
                 element={<PlatformSelection />}
@@ -311,10 +319,12 @@ function App() {
               <Route path="/download-app" element={<DownloadApp />} />
               </Routes>
           </div>
+          </MaintenanceGuard>
         </Router>
             </CartProvider>
           </BranchProvider>
         </BrandingProvider>
+        </AppModalProvider>
       </ToastProvider>
     </AuthProvider>
   );

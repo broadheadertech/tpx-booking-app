@@ -113,11 +113,11 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
 
                   <Link
                     to="/kiosk"
-                    className="bg-blue-500/15 backdrop-blur-sm rounded-xl flex items-center justify-start space-x-1 px-3 py-2 hover:bg-blue-500/25 active:scale-95 transition-all duration-200 border border-blue-500/25 group touch-manipulation min-w-[44px] h-[44px]"
+                    className="bg-[var(--color-primary)]/15 backdrop-blur-sm rounded-xl flex items-center justify-start space-x-1 px-3 py-2 hover:bg-[var(--color-primary)]/25 active:scale-95 transition-all duration-200 border border-[var(--color-primary)]/25 group touch-manipulation min-w-[44px] h-[44px]"
                     title="Kiosk Mode"
                   >
-                    <Monitor className="w-5 h-5 text-blue-400 group-hover:text-blue-300 transition-colors duration-200 flex-shrink-0" />
-                    <span className="text-blue-400 group-hover:text-blue-300 font-semibold text-xs transition-colors duration-200">Kiosk</span>
+                    <Monitor className="w-5 h-5 text-[var(--color-primary)] group-hover:text-[var(--color-primary)] transition-colors duration-200 flex-shrink-0" />
+                    <span className="text-[var(--color-primary)] group-hover:text-[var(--color-primary)] font-semibold text-xs transition-colors duration-200">Kiosk</span>
                   </Link>
                 </>
               )}
@@ -265,10 +265,10 @@ const DashboardHeader = ({ onLogout, user, onOpenNotifications }) => {
                     <Link
                       to="/kiosk"
                       onClick={() => setShowMobileMenu(false)}
-                      className="w-full flex items-center space-x-4 px-4 py-4 bg-gradient-to-r from-blue-500/10 to-blue-500/5 rounded-xl border border-blue-500/20 hover:border-blue-500/40 transition-all duration-200 touch-manipulation active:scale-[0.98]"
+                      className="w-full flex items-center space-x-4 px-4 py-4 bg-gradient-to-r from-[var(--color-primary)]/10 to-[var(--color-primary)]/5 rounded-xl border border-[var(--color-primary)]/20 hover:border-[var(--color-primary)]/40 transition-all duration-200 touch-manipulation active:scale-[0.98]"
                     >
-                      <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Monitor className="w-6 h-6 text-blue-400" />
+                      <div className="w-12 h-12 bg-[var(--color-primary)]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <Monitor className="w-6 h-6 text-[var(--color-primary)]" />
                       </div>
                       <div className="flex-1">
                         <p className="text-white font-semibold text-base">Kiosk Mode</p>
