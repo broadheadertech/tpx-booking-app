@@ -44,8 +44,8 @@ const BarberBookings = () => {
   // Get bookings for this barber - only from their branch
   // Added pagination limits to avoid Convex byte limit errors
   const allBookingsData = user?.branch_id
-    ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id, limit: 100 })
-    : useQuery(api.services.bookings.getAllBookings, { limit: 100 })
+    ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id, limit: 5000 })
+    : useQuery(api.services.bookings.getAllBookings, { limit: 5000 })
   const allBookings = allBookingsData?.bookings || []
   const barberBookings = allBookings.filter(booking =>
     booking.barber === currentBarber?._id
