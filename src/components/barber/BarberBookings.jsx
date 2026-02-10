@@ -51,6 +51,13 @@ const BarberBookings = () => {
     booking.barber === currentBarber?._id
   )
 
+  // Debug logs - remove after fixing
+  console.log('allBookings:', allBookings.length)
+  console.log('barberBookings:', barberBookings.length)
+  console.log('barber dates:', barberBookings.map(b => b.date))
+  console.log('selectedDate:', selectedDate)
+  console.log('currentBarber ID:', currentBarber?._id)
+
   // Filter bookings
   const filteredBookings = barberBookings.filter(booking => {
     const matchesDate = booking.date === selectedDate
