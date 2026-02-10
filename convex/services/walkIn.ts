@@ -76,48 +76,46 @@ export const createWalkIn = mutation({
       }
       console.log("[createWalkIn] All validations passed, branch_id:", branch_id);
 
-      // Get the highest queue number for ALL walk-ins in this branch today (regardless of status)
+      // Calculate queue position based on ALL entries (bookings + walk-ins) for this barber today
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
       const todayStartTimestamp = todayStart.getTime();
+      const todayDate = new Date().toISOString().split("T")[0];
 
-      console.log("[createWalkIn] Calculating queue number for branch:", branch_id);
+      console.log("[createWalkIn] Calculating queue number for barber:", args.barberId);
 
       let nextQueueNumber = 1;
 
-      // Query ALL walk-ins for this branch to get the max queue number today
-      // This ensures queue numbers continue incrementing regardless of status
       try {
-        console.log("[createWalkIn] Querying all walk-ins for queue calculation...");
-        const allWalkInsQuery = await ctx.db.query("walkIns").collect();
+        // Count today's active bookings for this barber
+        const allBookings = await ctx.db.query("bookings").collect();
+        const todaysBarberBookings = allBookings.filter(
+          (b: any) =>
+            b.branch_id === branch_id &&
+            b.barber === args.barberId &&
+            b.date === todayDate &&
+            b.status !== "cancelled" &&
+            b.status !== "completed"
+        );
 
-        console.log("[createWalkIn] All walk-ins fetched:", allWalkInsQuery?.length || 0);
+        // Count today's active walk-ins for this barber
+        const allWalkIns = await ctx.db.query("walkIns").collect();
+        const todaysBarberWalkIns = allWalkIns.filter(
+          (w: any) =>
+            w.branch_id === branch_id &&
+            w.barberId === args.barberId &&
+            w.createdAt >= todayStartTimestamp &&
+            w.status !== "cancelled" &&
+            w.status !== "completed"
+        );
 
-        // Filter for this branch and today's walk-ins only (all statuses)
-        if (Array.isArray(allWalkInsQuery) && allWalkInsQuery.length > 0) {
-          const todaysBranchWalkIns = allWalkInsQuery.filter(
-            (walkIn) =>
-              walkIn.branch_id === branch_id &&
-              walkIn.createdAt >= todayStartTimestamp
-          );
+        // Queue number = total existing entries + 1
+        nextQueueNumber = todaysBarberBookings.length + todaysBarberWalkIns.length + 1;
 
-          console.log("[createWalkIn] Today's walk-ins for this branch (all statuses):", todaysBranchWalkIns.length);
-
-          if (todaysBranchWalkIns.length > 0) {
-            const queueNumbers = todaysBranchWalkIns
-              .map((w) => w.queueNumber)
-              .filter((num) => typeof num === "number" && !isNaN(num));
-
-            if (queueNumbers.length > 0) {
-              nextQueueNumber = Math.max(...queueNumbers) + 1;
-            }
-          }
-        }
-      } catch (queryError) {
-        // If query fails, log the error but proceed with queue number 1
-        // This handles the case where the walkIns table might not exist yet or has issues
-        console.warn("[createWalkIn] Query failed (this might be the first walk-in):", queryError?.message || queryError);
-        console.log("[createWalkIn] Proceeding with default queue number:", nextQueueNumber);
+        console.log("[createWalkIn] Bookings for barber today:", todaysBarberBookings.length);
+        console.log("[createWalkIn] Walk-ins for barber today:", todaysBarberWalkIns.length);
+      } catch (queryError: any) {
+        console.warn("[createWalkIn] Queue calculation failed:", queryError?.message || queryError);
       }
 
       console.log("[createWalkIn] Final queue number:", nextQueueNumber);

@@ -38,6 +38,7 @@ import BarbersList from "./pages/barbers/BarbersList";
 import BarberProfile from "./pages/barbers/BarberProfile";
 import BranchProfile from "./pages/b/BranchProfile";
 import LiveQueue from "./pages/b/LiveQueue";
+import WalkInForm from "./pages/b/WalkInForm";
 import Kiosk from "./pages/Kiosk";
 import PaymentSuccess from "./pages/booking/payment/success.jsx";
 import PaymentFailure from "./pages/booking/payment/failure.jsx";
@@ -82,6 +83,7 @@ function App() {
               {/* Public Branch Profile */}
               <Route path="/b/:slug" element={<BranchProfile />} />
               <Route path="/b/:slug/queue" element={<LiveQueue />} />
+              <Route path="/b/:slug/walkin" element={<WalkInForm />} />
               <Route
                 path="/platform-selection"
                 element={<PlatformSelection />}

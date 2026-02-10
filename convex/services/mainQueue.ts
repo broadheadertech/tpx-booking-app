@@ -321,16 +321,16 @@ export const getMainQueue = query({
         return a.createdAt - b.createdAt;
       }
 
-      // 1hr insertion rule: walk-in within 60min before a booking goes first
+      // 30min insertion rule: walk-in within 30min before a booking goes first
       if (a.isWalkIn && !b.isWalkIn) {
         // a is walk-in, b is booking
         const diff = bMinutes - aMinutes;
-        if (diff > 0 && diff <= 60) return -1; // walk-in is within 1hr before booking → walk-in first
+        if (diff > 0 && diff <= 30) return -1; // walk-in is within 30min before booking → walk-in first
       }
       if (!a.isWalkIn && b.isWalkIn) {
         // a is booking, b is walk-in
         const diff = aMinutes - bMinutes;
-        if (diff > 0 && diff <= 60) return 1; // walk-in is within 1hr before booking → walk-in first
+        if (diff > 0 && diff <= 30) return 1; // walk-in is within 30min before booking → walk-in first
       }
 
       // Default: sort by time ascending
