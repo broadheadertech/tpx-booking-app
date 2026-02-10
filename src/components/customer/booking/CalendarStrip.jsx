@@ -16,6 +16,8 @@ const CalendarStrip = ({
   selectedDate,
   onDateSelect,
   availableDates = [], // Array of 'YYYY-MM-DD' strings
+  blockedDates = [], // Array of 'YYYY-MM-DD' strings (barber day off / vacation)
+  offDays = [], // Array of weekday numbers (0=Sun..6=Sat) where barber doesn't work
   minDate = null, // Minimum selectable date
   maxMonthsAhead = 12 // How many months ahead to allow
 }) => {
@@ -293,6 +295,8 @@ const CalendarStrip = ({
             const today = isToday(date)
             const past = isPast(date)
             const available = isDateAvailable(date)
+            const blocked = blockedDates.includes(dateKey)
+            const offDay = offDays.includes(date.getDay())
             const disabled = past || !available
 
             return (
@@ -336,8 +340,15 @@ const CalendarStrip = ({
                   </span>
                 )}
 
+                {/* Blocked / vacation / off-day indicator */}
+                {!today && (blocked || offDay) && !disabled && (
+                  <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${
+                    selected ? 'bg-white/60' : 'bg-amber-500'
+                  }`} />
+                )}
+
                 {/* Availability dot */}
-                {!today && !disabled && available && (
+                {!today && !disabled && available && !blocked && !offDay && (
                   <div className={`w-1 h-1 rounded-full mt-1 ${
                     selected ? 'bg-white/60' : 'bg-green-500'
                   }`} />

@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query } from "../_generated/server";
+import { api } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import { DEFAULT_TIERS } from "./tiers";
 
@@ -17,6 +18,12 @@ import { DEFAULT_TIERS } from "./tiers";
  * - Groups customers by barber
  * - Validates unique time slots per barber
  */
+
+// Helper: "HH:MM" → minutes since midnight
+function timeStringToMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + (m || 0);
+}
 
 // Helper function to format time for display
 function formatTime(timeString: string): string {
@@ -116,13 +123,21 @@ export const getMainQueue = query({
     // Get service details for walk-ins
     const walkInsWithServices = await Promise.all(
       todaysWalkIns.map(async (walkIn) => {
-        // Determine service name from notes or use default
+        // Determine service name — first try service_id, then notes, then default
         let serviceName = "Walk-in Service";
         let serviceDuration = 30;
         let servicePrice = 0;
 
-        if (walkIn.notes) {
-          // Try to extract service info from notes
+        if (walkIn.service_id) {
+          try {
+            const svc = await ctx.db.get(walkIn.service_id);
+            if (svc) {
+              serviceName = svc.name;
+              serviceDuration = svc.duration_minutes || 30;
+              servicePrice = svc.price || 0;
+            }
+          } catch (_) {}
+        } else if (walkIn.notes) {
           const serviceMatch = walkIn.notes.match(/Service:\s*([^\n,]+)/);
           if (serviceMatch) {
             serviceName = serviceMatch[1].trim();
@@ -232,9 +247,9 @@ export const getMainQueue = query({
         phone: w.number,
         service: w.serviceName,
         servicePrice: w.servicePrice,
-        startTime: w.startTime ? formatTime(w.startTime) : null,
+        startTime: w.scheduled_time ? formatTime(w.scheduled_time) : (w.startTime ? formatTime(w.startTime) : null),
         date: new Date(w.createdAt).toISOString().split('T')[0],
-        time: w.startTime || null,
+        time: w.scheduled_time || w.startTime || null,
         waitTime: w.waitTime || "Waiting",
         status: w.status,
         barberId: w.barberId,
@@ -279,32 +294,47 @@ export const getMainQueue = query({
       })),
     ];
 
-    // Sort with priority: signed-in users (bookings) first, then walk-ins
-    // Within each category, sort by time/queue number
+    // Sort by scheduled time with 1hr insertion rule for walk-ins
+    // Walk-ins arriving within 1hr before a booking are placed before it
     const sortedCustomers = allCustomers.sort((a, b) => {
-      // Priority 1: Signed-in users (hasAccount) come before walk-ins
-      if (a.hasAccount !== b.hasAccount) {
-        return a.hasAccount ? -1 : 1;
-      }
+      const aTime = a.time || null; // "HH:MM" from booking or walk-in scheduled_time
+      const bTime = b.time || null;
 
-      // Priority 2: For signed-in users, sort by time
-      if (a.hasAccount && b.hasAccount) {
-        if (a.time && b.time) {
-          return a.time.localeCompare(b.time);
-        }
-        if (a.time) return -1;
-        if (b.time) return 1;
-      }
-
-      // Priority 3: For walk-ins, sort by queue number
-      if (a.isWalkIn && b.isWalkIn) {
+      // Customers without a time go to the end
+      if (!aTime && !bTime) {
+        // Both have no time — sort by queue number then creation
         if (a.queueNumber !== null && b.queueNumber !== null) {
           return a.queueNumber - b.queueNumber;
         }
+        return a.createdAt - b.createdAt;
+      }
+      if (!aTime) return 1;
+      if (!bTime) return -1;
+
+      // Both have times — compare
+      const aMinutes = timeStringToMinutes(aTime);
+      const bMinutes = timeStringToMinutes(bTime);
+
+      // If same time: bookings (signed-in) have priority over walk-ins
+      if (aMinutes === bMinutes) {
+        if (a.hasAccount !== b.hasAccount) return a.hasAccount ? -1 : 1;
+        return a.createdAt - b.createdAt;
       }
 
-      // Priority 4: Finally, sort by creation time (oldest first)
-      return a.createdAt - b.createdAt;
+      // 1hr insertion rule: walk-in within 60min before a booking goes first
+      if (a.isWalkIn && !b.isWalkIn) {
+        // a is walk-in, b is booking
+        const diff = bMinutes - aMinutes;
+        if (diff > 0 && diff <= 60) return -1; // walk-in is within 1hr before booking → walk-in first
+      }
+      if (!a.isWalkIn && b.isWalkIn) {
+        // a is booking, b is walk-in
+        const diff = aMinutes - bMinutes;
+        if (diff > 0 && diff <= 60) return 1; // walk-in is within 1hr before booking → walk-in first
+      }
+
+      // Default: sort by time ascending
+      return aMinutes - bMinutes;
     });
 
     // Group by barber
@@ -546,3 +576,60 @@ function getBarberColor(barberId: Id<"barbers">): string {
 
   return colors[Math.abs(hash) % colors.length];
 }
+
+/**
+ * Public queue — sanitised data, no auth required.
+ * Shows first name only, service, time, status. No phone/payment info.
+ */
+export const getPublicQueue = query({
+  args: {
+    branch_id: v.id("branches"),
+  },
+  handler: async (ctx, args) => {
+    // Reuse getMainQueue for the heavy lifting
+    const mainQueue = await ctx.runQuery(api.services.mainQueue.getMainQueue, {
+      branch_id: args.branch_id,
+    });
+
+    // Get branch name
+    const branch = await ctx.db.get(args.branch_id);
+
+    // Strip sensitive data
+    const queueByBarber = mainQueue.queueByBarber.map((bq: any) => ({
+      barberId: bq.barberId,
+      barberName: bq.barberName,
+      barberAvatar: bq.barberAvatar,
+      barberColor: bq.barberColor,
+      customers: bq.customers
+        .filter((c: any) => c.status !== "completed" && c.status !== "cancelled")
+        .map((c: any, idx: number) => ({
+          id: c.id,
+          firstName: c.name?.split(" ")[0] || "Customer",
+          service: c.service,
+          startTime: c.startTime,
+          time: c.time,
+          status: c.status,
+          isWalkIn: c.isWalkIn,
+          position: idx + 1,
+        })),
+      stats: {
+        total: bq.stats.total,
+        active: bq.stats.active,
+        waiting: bq.stats.waiting,
+      },
+    }));
+
+    return {
+      branch_id: args.branch_id,
+      branch_name: branch?.name || "Unknown",
+      date: mainQueue.date,
+      queueByBarber,
+      stats: {
+        totalCustomers: mainQueue.stats.totalCustomers,
+        active: mainQueue.stats.active,
+        waiting: mainQueue.stats.waiting,
+        totalBarbers: mainQueue.stats.totalBarbers,
+      },
+    };
+  },
+});

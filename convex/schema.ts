@@ -396,6 +396,12 @@ export default defineSchema({
         })
       )
     ),
+    // Shift settings for attendance/payroll tracking (separate from booking schedule)
+    shift_start: v.optional(v.string()),    // "09:00" — expected clock-in time
+    shift_end: v.optional(v.string()),      // "18:00" — expected clock-out time
+    ot_hourly_rate: v.optional(v.number()), // OT pay per hour (e.g., 50)
+    penalty_hourly_rate: v.optional(v.number()), // Late/UT penalty deduction per hour (e.g., 30)
+
     // Custom booking feature - allows barbers to have a custom form instead of regular booking
     custom_booking_enabled: v.optional(v.boolean()),
     custom_booking_form_id: v.optional(v.id("custom_booking_forms")),
@@ -530,6 +536,8 @@ export default defineSchema({
     barberId: v.id("barbers"), // Reference to the barber
     branch_id: v.id("branches"),
     queueNumber: v.number(), // Auto-assigned queue number for FIFO ordering
+    service_id: v.optional(v.id("services")), // Selected service
+    scheduled_time: v.optional(v.string()), // "HH:MM" assigned time slot
     notes: v.optional(v.string()),
     status: v.string(), // 'active', 'completed', 'cancelled'
     completedAt: v.optional(v.number()),
@@ -918,6 +926,7 @@ export default defineSchema({
     late_fee_percentage: v.optional(v.number()), // Percentage of late fee for barber (default 100%)
     include_convenience_fee: v.optional(v.boolean()), // Whether to include convenience fees in payroll
     convenience_fee_percentage: v.optional(v.number()), // Percentage of convenience fee for barber (default 100%)
+    zero_day_source: v.optional(v.string()), // "disabled" | "manual" | "attendance"
     is_active: v.boolean(),
     created_by: v.id("users"),
     createdAt: v.number(),
@@ -998,6 +1007,32 @@ export default defineSchema({
     daily_rate: v.optional(v.number()), // Daily base rate applied
     days_worked: v.optional(v.number()), // Distinct days with qualifying work
     daily_pay: v.optional(v.number()), // Calculated daily rate pay
+    zero_service_days: v.optional(v.number()), // Approved zero-service days included
+    zero_day_pay: v.optional(v.number()), // Amount added for zero-service days
+
+    // Attendance time tracking (OT/UT/Late) — only when zero_day_source is "attendance"
+    attendance_summary: v.optional(v.object({
+      total_late_minutes: v.number(),
+      total_undertime_minutes: v.number(),
+      total_overtime_minutes: v.number(),
+      total_ot_pay: v.number(),
+      total_late_penalty: v.number(),
+      total_ut_penalty: v.number(),
+      total_penalty: v.number(),
+      days_late: v.number(),
+      days_undertime: v.number(),
+      days_overtime: v.number(),
+      daily_details: v.array(v.object({
+        date: v.string(),
+        scheduled_start: v.string(),
+        scheduled_end: v.string(),
+        actual_clock_in: v.string(),
+        actual_clock_out: v.string(),
+        late_minutes: v.number(),
+        undertime_minutes: v.number(),
+        overtime_minutes: v.number(),
+      })),
+    })),
 
     // Transaction earnings breakdown (POS)
     total_transactions: v.number(), // Number of POS transactions
@@ -3036,4 +3071,37 @@ export default defineSchema({
     .index("by_type", ["type"])
     .index("by_sort_order", ["sort_order"])
     .index("by_active_sort", ["is_active", "sort_order"]),
+
+  // Maintenance Mode Configuration - Singleton
+  maintenanceConfig: defineTable({
+    is_enabled: v.boolean(),
+    end_time: v.optional(v.number()),
+    message: v.optional(v.string()),
+    updated_at: v.number(),
+    updated_by: v.optional(v.id("users")),
+  }),
+
+  // Payroll zero-service day claims (branch_admin approval required)
+  payroll_zero_day_claims: defineTable({
+    payroll_period_id: v.id("payroll_periods"),
+    barber_id: v.id("barbers"),
+    branch_id: v.id("branches"),
+    zero_days: v.number(), // Number of zero-service days claimed
+    daily_rate_applied: v.number(), // Daily rate snapshot at time of claim
+    total_amount: v.number(), // zero_days * daily_rate_applied
+    source: v.optional(v.string()), // "manual" | "attendance"
+    notes: v.optional(v.string()),
+    status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
+    requested_by: v.id("users"),
+    approved_by: v.optional(v.id("users")),
+    approved_at: v.optional(v.number()),
+    rejection_reason: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_period", ["payroll_period_id"])
+    .index("by_barber", ["barber_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_period_barber", ["payroll_period_id", "barber_id"])
+    .index("by_status", ["status"]),
 });

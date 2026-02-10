@@ -18,6 +18,7 @@ export function ClockButton({ barberId, barberName, branchId, compact = false })
   const [showAutoCloseNotice, setShowAutoCloseNotice] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showConfirmClockOut, setShowConfirmClockOut] = useState(false);
 
   // Query clock status (now includes pendingRequest)
   const status = useQuery(
@@ -150,18 +151,52 @@ export function ClockButton({ barberId, barberName, branchId, compact = false })
     // Clocked in (approved)
     if (isClockedIn) {
       return (
-        <button
-          onClick={handleClockOut}
-          disabled={isLoading}
-          className="flex items-center gap-1.5 px-3 py-2 bg-green-500/20 border border-green-500/30 text-green-400 text-xs font-semibold rounded-xl active:scale-95 transition-all disabled:opacity-50"
-        >
-          {isLoading ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Clock className="w-3.5 h-3.5" />
+        <div className="relative">
+          <button
+            onClick={() => setShowConfirmClockOut(true)}
+            disabled={isLoading}
+            className="flex items-center gap-1.5 px-3 py-2 bg-green-500/20 border border-green-500/30 text-green-400 text-xs font-semibold rounded-xl active:scale-95 transition-all disabled:opacity-50"
+          >
+            {isLoading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Clock className="w-3.5 h-3.5" />
+            )}
+            <span>{formatDuration(duration)}</span>
+          </button>
+          {showConfirmClockOut && (
+            <div className="absolute right-0 top-full mt-2 z-50 w-64 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl shadow-2xl p-4 animate-fade-in">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                <span className="text-sm font-semibold text-white">End your shift?</span>
+              </div>
+              <p className="text-xs text-gray-400 mb-3">You've been working for <strong className="text-white">{formatDuration(duration)}</strong>. This will submit a clock-out request for approval.</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowConfirmClockOut(false)}
+                  className="flex-1 px-3 py-2 text-xs font-medium rounded-lg bg-[#2A2A2A] text-gray-300 hover:bg-[#3A3A3A] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => { setShowConfirmClockOut(false); handleClockOut(); }}
+                  disabled={isLoading}
+                  className="flex-1 px-3 py-2 text-xs font-medium rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
+                >
+                  {isLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <LogOut className="w-3 h-3" />}
+                  Clock Out
+                </button>
+              </div>
+            </div>
           )}
-          <span>{formatDuration(duration)}</span>
-        </button>
+          <style>{`
+            @keyframes fade-in {
+              from { opacity: 0; transform: translateY(-4px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+            .animate-fade-in { animation: fade-in 0.2s ease-out; }
+          `}</style>
+        </div>
       );
     }
 
@@ -333,19 +368,52 @@ export function ClockButton({ barberId, barberName, branchId, compact = false })
           </span>
         </div>
 
-        {/* Clock Out Button */}
-        <button
-          onClick={handleClockOut}
-          disabled={isLoading}
-          className="h-14 w-full bg-red-500 hover:bg-red-600 active:scale-[0.98] text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-all min-w-[200px] shadow-lg shadow-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <LogOut className="w-5 h-5" />
-          )}
-          {isLoading ? "Clocking Out..." : "Clock Out"}
-        </button>
+        {/* Clock Out Confirmation */}
+        {showConfirmClockOut ? (
+          <div className="w-full bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl p-4 animate-fade-in">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="w-5 h-5 text-amber-400 flex-shrink-0" />
+              <span className="text-base font-semibold text-white">End your shift?</span>
+            </div>
+            <p className="text-sm text-gray-400 mb-4">
+              You've been working for <strong className="text-white">{formatDuration(duration)}</strong>. Are you sure you want to clock out? This will submit a request for staff approval.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowConfirmClockOut(false)}
+                className="flex-1 h-12 rounded-xl bg-[#2A2A2A] text-gray-300 font-medium hover:bg-[#3A3A3A] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { setShowConfirmClockOut(false); handleClockOut(); }}
+                disabled={isLoading}
+                className="flex-1 h-12 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold flex items-center justify-center gap-2 transition-all disabled:opacity-50 shadow-lg shadow-red-500/20"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <LogOut className="w-5 h-5" />
+                )}
+                Yes, Clock Out
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* Clock Out Button */
+          <button
+            onClick={() => setShowConfirmClockOut(true)}
+            disabled={isLoading}
+            className="h-14 w-full bg-red-500 hover:bg-red-600 active:scale-[0.98] text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-all min-w-[200px] shadow-lg shadow-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <LogOut className="w-5 h-5" />
+            )}
+            {isLoading ? "Clocking Out..." : "Clock Out"}
+          </button>
+        )}
 
         <style>{`
           @keyframes fade-in {

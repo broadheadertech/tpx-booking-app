@@ -363,6 +363,9 @@ export const getBarberStatusForBranch = query({
         isPending: status === "pending_in" || !!pendingOut,
         clockInTime: activeShift?.clock_in || pendingOut?.clock_in || null,
         status: pendingOut ? "pending_out" : status,
+        schedule: barber.schedule || null,
+        ot_hourly_rate: barber.ot_hourly_rate || null,
+        penalty_hourly_rate: barber.penalty_hourly_rate || null,
       };
     });
 

@@ -4,6 +4,160 @@ import { api } from "../_generated/api";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { Id } from "../_generated/dataModel";
 
+// ============================================================================
+// ATTENDANCE OT/UT/LATE HELPERS
+// ============================================================================
+
+const PHT_OFFSET = 8 * 60 * 60 * 1000; // UTC+8 in ms
+
+/** Convert "HH:MM" to minutes since midnight */
+function timeStringToMinutes(timeStr: string): number {
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+/** Convert UTC ms timestamp to "HH:MM" in PHT */
+function timestampToPHTTimeString(timestamp: number): string {
+  const phtDate = new Date(timestamp + PHT_OFFSET);
+  const h = String(phtDate.getUTCHours()).padStart(2, "0");
+  const m = String(phtDate.getUTCMinutes()).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+/** Convert UTC ms timestamp to "YYYY-MM-DD" in PHT */
+function timestampToPHTDateString(timestamp: number): string {
+  const phtDate = new Date(timestamp + PHT_OFFSET);
+  return phtDate.toISOString().split("T")[0];
+}
+
+interface DailyAttendanceDetail {
+  date: string;
+  scheduled_start: string;
+  scheduled_end: string;
+  actual_clock_in: string;
+  actual_clock_out: string;
+  late_minutes: number;
+  undertime_minutes: number;
+  overtime_minutes: number;
+}
+
+interface AttendanceSummary {
+  total_late_minutes: number;
+  total_undertime_minutes: number;
+  total_overtime_minutes: number;
+  total_ot_pay: number;
+  total_late_penalty: number;
+  total_ut_penalty: number;
+  total_penalty: number;
+  days_late: number;
+  days_undertime: number;
+  days_overtime: number;
+  daily_details: DailyAttendanceDetail[];
+}
+
+/** Map a PHT date string to its lowercase weekday name for schedule lookup */
+const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"] as const;
+
+function getWeekdayName(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return DAY_NAMES[date.getUTCDay()];
+}
+
+interface BarberSchedule {
+  [day: string]: { available: boolean; start: string; end: string };
+}
+
+/**
+ * Calculate OT/UT/Late for a barber over approved attendance records.
+ * Uses the barber's per-day booking schedule (from BarberManagement) as shift reference.
+ * Groups by PHT date, takes earliest clock_in and latest clock_out per day.
+ */
+function calculateAttendanceSummary(
+  approvedRecords: Array<{ clock_in: number; clock_out?: number }>,
+  schedule: BarberSchedule,
+  otHourlyRate: number,
+  penaltyHourlyRate: number,
+): AttendanceSummary {
+  // Group by PHT date: earliest clock_in, latest clock_out
+  const byDate = new Map<string, { earliestIn: number; latestOut: number }>();
+
+  for (const record of approvedRecords) {
+    if (!record.clock_out) continue;
+    const dateKey = timestampToPHTDateString(record.clock_in);
+    const existing = byDate.get(dateKey);
+    if (existing) {
+      existing.earliestIn = Math.min(existing.earliestIn, record.clock_in);
+      existing.latestOut = Math.max(existing.latestOut, record.clock_out);
+    } else {
+      byDate.set(dateKey, { earliestIn: record.clock_in, latestOut: record.clock_out });
+    }
+  }
+
+  const dailyDetails: DailyAttendanceDetail[] = [];
+  let totalLate = 0, totalUT = 0, totalOT = 0;
+  let daysLate = 0, daysUT = 0, daysOT = 0;
+
+  for (const [dateStr, { earliestIn, latestOut }] of byDate) {
+    // Look up this day's scheduled shift from the barber's booking schedule
+    const dayName = getWeekdayName(dateStr);
+    const daySchedule = schedule[dayName];
+
+    // Skip days where the barber has no schedule or is marked unavailable
+    if (!daySchedule || !daySchedule.available) continue;
+
+    const schedStartMin = timeStringToMinutes(daySchedule.start);
+    const schedEndMin = timeStringToMinutes(daySchedule.end);
+
+    const actualInMin = timeStringToMinutes(timestampToPHTTimeString(earliestIn));
+    const actualOutMin = timeStringToMinutes(timestampToPHTTimeString(latestOut));
+
+    const lateMin = Math.max(0, actualInMin - schedStartMin);
+    const undertimeMin = Math.max(0, schedEndMin - actualOutMin);
+    const overtimeMin = Math.max(0, actualOutMin - schedEndMin);
+
+    if (lateMin > 0) daysLate++;
+    if (undertimeMin > 0) daysUT++;
+    if (overtimeMin > 0) daysOT++;
+
+    totalLate += lateMin;
+    totalUT += undertimeMin;
+    totalOT += overtimeMin;
+
+    dailyDetails.push({
+      date: dateStr,
+      scheduled_start: daySchedule.start,
+      scheduled_end: daySchedule.end,
+      actual_clock_in: timestampToPHTTimeString(earliestIn),
+      actual_clock_out: timestampToPHTTimeString(latestOut),
+      late_minutes: lateMin,
+      undertime_minutes: undertimeMin,
+      overtime_minutes: overtimeMin,
+    });
+  }
+
+  dailyDetails.sort((a, b) => a.date.localeCompare(b.date));
+
+  const totalOtPay = (totalOT / 60) * otHourlyRate;
+  const totalLatePenalty = (totalLate / 60) * penaltyHourlyRate;
+  const totalUtPenalty = (totalUT / 60) * penaltyHourlyRate;
+  const totalPenalty = totalLatePenalty + totalUtPenalty;
+
+  return {
+    total_late_minutes: totalLate,
+    total_undertime_minutes: totalUT,
+    total_overtime_minutes: totalOT,
+    total_ot_pay: Math.round(totalOtPay * 100) / 100,
+    total_late_penalty: Math.round(totalLatePenalty * 100) / 100,
+    total_ut_penalty: Math.round(totalUtPenalty * 100) / 100,
+    total_penalty: Math.round(totalPenalty * 100) / 100,
+    days_late: daysLate,
+    days_undertime: daysUT,
+    days_overtime: daysOT,
+    daily_details: dailyDetails,
+  };
+}
+
 // PAYROLL SETTINGS MANAGEMENT
 
 // Get payroll settings by branch
@@ -38,6 +192,7 @@ export const createOrUpdatePayrollSettings = mutation({
     late_fee_percentage: v.optional(v.number()), // Percentage for barber (default 100%)
     include_convenience_fee: v.optional(v.boolean()),
     convenience_fee_percentage: v.optional(v.number()), // Percentage for barber (default 100%)
+    zero_day_source: v.optional(v.string()), // "disabled" | "manual" | "attendance"
     created_by: v.id("users"),
   },
   handler: async (ctx, args) => {
@@ -107,6 +262,7 @@ export const createOrUpdatePayrollSettings = mutation({
         late_fee_percentage: args.late_fee_percentage,
         include_convenience_fee: args.include_convenience_fee,
         convenience_fee_percentage: args.convenience_fee_percentage,
+        zero_day_source: args.zero_day_source,
         updatedAt: timestamp,
       });
       return existingSettings._id;
@@ -123,6 +279,7 @@ export const createOrUpdatePayrollSettings = mutation({
         late_fee_percentage: args.late_fee_percentage ?? 100, // Default 100% to barber
         include_convenience_fee: args.include_convenience_fee || false,
         convenience_fee_percentage: args.convenience_fee_percentage ?? 100, // Default 100% to barber
+        zero_day_source: args.zero_day_source || "disabled",
         is_active: true,
         created_by: args.created_by,
         createdAt: timestamp,
@@ -1313,6 +1470,14 @@ export const calculatePayrollForPeriod = mutation({
       existingRecords.map((record) => [record.barber_id, record]),
     );
 
+    // Load payroll settings for zero-day pay check
+    const payrollSettings = await ctx.db
+      .query("payroll_settings")
+      .withIndex("by_branch", (q) => q.eq("branch_id", period.branch_id))
+      .filter((q) => q.eq(q.field("is_active"), true))
+      .first();
+    const zeroDayPayEnabled = payrollSettings?.zero_day_source === "manual" || payrollSettings?.zero_day_source === "attendance";
+
     let totalEarnings = 0;
     let totalServiceRevenue = 0;
     let totalProductRevenue = 0;
@@ -1337,10 +1502,70 @@ export const calculatePayrollForPeriod = mutation({
         { barber_id: barber._id },
       );
 
+      // Check for approved zero-day claims matching current mode
+      let zeroDayPay = 0;
+      let zeroServiceDays = 0;
+      if (zeroDayPayEnabled) {
+        const currentSource = payrollSettings?.zero_day_source; // "manual" | "attendance"
+        const zeroDayClaims = await ctx.db
+          .query("payroll_zero_day_claims")
+          .withIndex("by_period_barber", (q) =>
+            q
+              .eq("payroll_period_id", args.payroll_period_id)
+              .eq("barber_id", barber._id),
+          )
+          .collect();
+
+        // Only use claims whose source matches the current mode
+        const zeroDayClaim = zeroDayClaims.find(
+          (c) => c.status === "approved" && (c.source === currentSource || (!c.source && currentSource === "manual"))
+        );
+
+        if (zeroDayClaim) {
+          zeroServiceDays = zeroDayClaim.zero_days;
+          zeroDayPay = zeroDayClaim.total_amount;
+        }
+      }
+
+      // --- OT/UT/Late calculation (attendance mode only, barber must have a schedule) ---
+      let attendanceSummary: AttendanceSummary | undefined = undefined;
+      let otPay = 0;
+      if (
+        payrollSettings?.zero_day_source === "attendance" &&
+        barber.schedule
+      ) {
+        const allAttendance = await ctx.db
+          .query("timeAttendance")
+          .withIndex("by_barber", (q) => q.eq("barber_id", barber._id))
+          .collect();
+
+        const approvedRecords = allAttendance.filter((r: any) => {
+          const status = r.status || (r.clock_out ? "approved_out" : "approved_in");
+          return (
+            status === "approved_out" &&
+            r.clock_out &&
+            r.clock_in >= period.period_start &&
+            r.clock_in <= period.period_end
+          );
+        });
+
+        if (approvedRecords.length > 0) {
+          attendanceSummary = calculateAttendanceSummary(
+            approvedRecords,
+            barber.schedule as BarberSchedule,
+            barber.ot_hourly_rate || 0,
+            barber.penalty_hourly_rate || 0,
+          );
+          otPay = attendanceSummary.total_ot_pay;
+        }
+      }
+
       // Calculate totals including cash advance (using installment amount for this period)
       const cashAdvanceDeduction = cashAdvanceData.installmentTotal;
-      const totalDeductionsWithAdvance = earnings.total_deductions + cashAdvanceDeduction;
-      const netPayWithAdvance = earnings.daily_pay - totalDeductionsWithAdvance;
+      const penaltyDeduction = attendanceSummary?.total_penalty || 0;
+      const dailyPayWithZeroDays = earnings.daily_pay + zeroDayPay + otPay;
+      const totalDeductionsWithAdvance = earnings.total_deductions + cashAdvanceDeduction + penaltyDeduction;
+      const netPayWithAdvance = dailyPayWithZeroDays - totalDeductionsWithAdvance;
 
       // Map cash advance details to schema-compatible format
       // Using only base fields for backward compatibility with older schema versions
@@ -1366,8 +1591,11 @@ export const calculatePayrollForPeriod = mutation({
         bookings_detail: earnings.bookings_detail,
         products_detail: earnings.products_detail || [],
         daily_rate: earnings.daily_rate,
-        days_worked: earnings.days_worked,
-        daily_pay: earnings.daily_pay,
+        days_worked: earnings.days_worked + zeroServiceDays,
+        daily_pay: dailyPayWithZeroDays,
+        zero_service_days: zeroServiceDays,
+        zero_day_pay: zeroDayPay,
+        attendance_summary: attendanceSummary,
         total_booking_fees: earnings.total_booking_fees,
         total_late_fees: earnings.total_late_fees,
         total_convenience_fees: earnings.total_convenience_fees,
@@ -1407,8 +1635,8 @@ export const calculatePayrollForPeriod = mutation({
         earnings.total_service_revenue + earnings.total_transaction_revenue + (earnings.total_product_revenue || 0);
       totalServiceRevenue += earnings.total_service_revenue || 0;
       totalProductRevenue += earnings.total_product_revenue || 0;
-      // New rule: commissions total equals the final daily salary total (not commission + daily rate)
-      totalCommissions += earnings.daily_pay || 0;
+      // New rule: commissions total equals the final daily salary total (including zero-day pay)
+      totalCommissions += dailyPayWithZeroDays || 0;
       totalDeductions += earnings.total_deductions;
     }
 
@@ -2364,6 +2592,426 @@ export const processCashAdvanceRepayment = mutation({
       message: `Repaid ${activeAdvances.length} advance(s)`,
       repaid: totalRepaid,
       count: activeAdvances.length,
+    };
+  },
+});
+
+// ─── Zero-Service Day Claims ─────────────────────────────────────────────────
+
+/**
+ * Get zero-day claims for a payroll period
+ */
+export const getZeroDayClaimsByPeriod = query({
+  args: {
+    payroll_period_id: v.id("payroll_periods"),
+  },
+  handler: async (ctx, args) => {
+    const claims = await ctx.db
+      .query("payroll_zero_day_claims")
+      .withIndex("by_period", (q) =>
+        q.eq("payroll_period_id", args.payroll_period_id),
+      )
+      .collect();
+
+    // Enrich with barber names
+    const enriched = await Promise.all(
+      claims.map(async (claim) => {
+        const barber = await ctx.db.get(claim.barber_id);
+        return {
+          ...claim,
+          barber_name: barber?.full_name || "Unknown",
+        };
+      }),
+    );
+
+    return enriched;
+  },
+});
+
+/**
+ * Add or update a zero-service day claim for a barber in a payroll period.
+ * One claim per barber per period — upserts if a pending/rejected claim exists.
+ */
+export const addZeroDayClaim = mutation({
+  args: {
+    payroll_period_id: v.id("payroll_periods"),
+    barber_id: v.id("barbers"),
+    zero_days: v.number(),
+    notes: v.optional(v.string()),
+    requested_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    if (args.zero_days <= 0) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Zero-service days must be greater than 0.",
+      );
+    }
+
+    // Validate period exists and is not paid/locked
+    const period = await ctx.db.get(args.payroll_period_id);
+    if (!period) {
+      throwUserError(ERROR_CODES.PAYROLL_PERIOD_NOT_FOUND);
+    }
+    if (period.status === "paid") {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Cannot add zero-day claims to a paid payroll period.",
+      );
+    }
+    if (period.is_locked) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Cannot add zero-day claims to a locked payroll period.",
+      );
+    }
+
+    // Validate barber exists
+    const barber = await ctx.db.get(args.barber_id);
+    if (!barber) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Barber not found.");
+    }
+
+    // Look up barber's current daily rate
+    const barberDailyRates = await ctx.db
+      .query("barber_daily_rates")
+      .withIndex("by_barber_active", (q) =>
+        q.eq("barber_id", args.barber_id).eq("is_active", true),
+      )
+      .collect();
+
+    const latestRate = barberDailyRates
+      .slice()
+      .sort((a, b) => b.effective_from - a.effective_from)[0];
+    const dailyRate = latestRate?.daily_rate || 0;
+
+    if (dailyRate === 0) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Barber has no active daily rate configured. Set a daily rate first.",
+      );
+    }
+
+    const totalAmount = args.zero_days * dailyRate;
+    const now = Date.now();
+
+    // Check for existing claim (upsert pattern)
+    const existingClaim = await ctx.db
+      .query("payroll_zero_day_claims")
+      .withIndex("by_period_barber", (q) =>
+        q
+          .eq("payroll_period_id", args.payroll_period_id)
+          .eq("barber_id", args.barber_id),
+      )
+      .first();
+
+    if (existingClaim) {
+      // Can only update pending or rejected claims
+      if (existingClaim.status === "approved") {
+        throwUserError(
+          ERROR_CODES.INVALID_INPUT,
+          "An approved claim already exists for this barber. Reject or delete it first.",
+        );
+      }
+
+      await ctx.db.patch(existingClaim._id, {
+        zero_days: args.zero_days,
+        daily_rate_applied: dailyRate,
+        total_amount: totalAmount,
+        source: "manual",
+        notes: args.notes,
+        status: "pending",
+        requested_by: args.requested_by,
+        rejection_reason: undefined,
+        updatedAt: now,
+      });
+
+      return {
+        success: true,
+        claim_id: existingClaim._id,
+        is_update: true,
+        total_amount: totalAmount,
+        daily_rate: dailyRate,
+      };
+    }
+
+    const claimId = await ctx.db.insert("payroll_zero_day_claims", {
+      payroll_period_id: args.payroll_period_id,
+      barber_id: args.barber_id,
+      branch_id: period.branch_id,
+      zero_days: args.zero_days,
+      daily_rate_applied: dailyRate,
+      total_amount: totalAmount,
+      source: "manual",
+      notes: args.notes,
+      status: "pending",
+      requested_by: args.requested_by,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return {
+      success: true,
+      claim_id: claimId,
+      is_update: false,
+      total_amount: totalAmount,
+      daily_rate: dailyRate,
+    };
+  },
+});
+
+/**
+ * Approve a pending zero-day claim (branch_admin only)
+ */
+export const approveZeroDayClaim = mutation({
+  args: {
+    claim_id: v.id("payroll_zero_day_claims"),
+    approved_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const claim = await ctx.db.get(args.claim_id);
+    if (!claim) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Claim not found.");
+    }
+
+    if (claim.status !== "pending") {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        `Cannot approve a claim with status "${claim.status}".`,
+      );
+    }
+
+    const now = Date.now();
+    await ctx.db.patch(args.claim_id, {
+      status: "approved",
+      approved_by: args.approved_by,
+      approved_at: now,
+      updatedAt: now,
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Reject a pending zero-day claim
+ */
+export const rejectZeroDayClaim = mutation({
+  args: {
+    claim_id: v.id("payroll_zero_day_claims"),
+    rejected_by: v.id("users"),
+    rejection_reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const claim = await ctx.db.get(args.claim_id);
+    if (!claim) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Claim not found.");
+    }
+
+    if (claim.status !== "pending") {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        `Cannot reject a claim with status "${claim.status}".`,
+      );
+    }
+
+    const now = Date.now();
+    await ctx.db.patch(args.claim_id, {
+      status: "rejected",
+      approved_by: args.rejected_by,
+      rejection_reason: args.rejection_reason,
+      updatedAt: now,
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Auto-populate zero-day claims from attendance records.
+ * Cross-references timeAttendance (approved clock-ins) with bookings/products
+ * to find days barbers were present but had no completed services.
+ */
+export const autoPopulateZeroDayClaims = mutation({
+  args: {
+    payroll_period_id: v.id("payroll_periods"),
+    requested_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const period = await ctx.db.get(args.payroll_period_id);
+    if (!period) {
+      throwUserError(ERROR_CODES.PAYROLL_PERIOD_NOT_FOUND);
+    }
+    if (period.status === "paid") {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Cannot add claims to a paid payroll period.",
+      );
+    }
+    if (period.is_locked) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Cannot add claims to a locked payroll period.",
+      );
+    }
+
+    // Get all active barbers in the branch
+    const barbers = await ctx.db
+      .query("barbers")
+      .withIndex("by_branch", (q) => q.eq("branch_id", period.branch_id))
+      .filter((q) => q.eq(q.field("is_active"), true))
+      .collect();
+
+    const now = Date.now();
+    let totalClaimsCreated = 0;
+    let totalZeroDays = 0;
+    const claimSummary: { barber_name: string; zero_days: number }[] = [];
+
+    for (const barber of barbers) {
+      // 1. Get approved attendance records for this barber within the period
+      const attendanceRecords = await ctx.db
+        .query("timeAttendance")
+        .withIndex("by_barber", (q) => q.eq("barber_id", barber._id))
+        .collect();
+
+      // Filter to approved records within the period
+      const approvedInPeriod = attendanceRecords.filter((r) => {
+        const status = r.status || (r.clock_out ? "approved_out" : "approved_in");
+        const isApproved = status === "approved_in" || status === "approved_out";
+        const inPeriod =
+          r.clock_in >= period.period_start && r.clock_in <= period.period_end;
+        return isApproved && inPeriod;
+      });
+
+      // Extract unique attendance dates (YYYY-MM-DD in PHT / UTC+8)
+      const attendanceDates = new Set<string>();
+      for (const record of approvedInPeriod) {
+        const dateObj = new Date(record.clock_in + 8 * 60 * 60 * 1000);
+        const dateKey = dateObj.toISOString().split("T")[0];
+        attendanceDates.add(dateKey);
+      }
+
+      if (attendanceDates.size === 0) continue;
+
+      // 2. Get completed bookings for this barber within the period
+      const allBookings = await ctx.db
+        .query("bookings")
+        .withIndex("by_barber", (q) => q.eq("barber", barber._id))
+        .collect();
+
+      const workDates = new Set<string>();
+      for (const b of allBookings) {
+        if (b.status !== "completed" || b.payment_status !== "paid") continue;
+
+        let bookingDateTimestamp = b.updatedAt;
+        if (b.date) {
+          try {
+            bookingDateTimestamp = new Date(b.date + "T00:00:00.000Z").getTime();
+          } catch {
+            // fallback
+          }
+        }
+
+        if (
+          bookingDateTimestamp >= period.period_start &&
+          bookingDateTimestamp <= period.period_end
+        ) {
+          if (b.date) workDates.add(b.date);
+        }
+      }
+
+      // 3. Get product transaction dates for this barber within the period
+      const allTransactions = await ctx.db
+        .query("transactions")
+        .withIndex("by_barber", (q) => q.eq("barber", barber._id))
+        .collect();
+
+      for (const t of allTransactions) {
+        if (t.payment_status !== "completed") continue;
+        if (t.createdAt < period.period_start || t.createdAt > period.period_end) continue;
+        if (t.products && t.products.length > 0) {
+          const dateKey = new Date(t.createdAt).toISOString().split("T")[0];
+          workDates.add(dateKey);
+        }
+      }
+
+      // 4. Zero-service days = attendance dates minus work dates
+      const zeroDays = [...attendanceDates].filter(
+        (date) => !workDates.has(date),
+      );
+
+      if (zeroDays.length === 0) continue;
+
+      // 5. Look up barber's daily rate
+      const barberDailyRates = await ctx.db
+        .query("barber_daily_rates")
+        .withIndex("by_barber_active", (q) =>
+          q.eq("barber_id", barber._id).eq("is_active", true),
+        )
+        .collect();
+
+      const latestRate = barberDailyRates
+        .slice()
+        .sort((a, b) => b.effective_from - a.effective_from)[0];
+      const dailyRate = latestRate?.daily_rate || 0;
+
+      if (dailyRate === 0) continue;
+
+      const totalAmount = zeroDays.length * dailyRate;
+
+      // 6. Upsert claim (one per barber per period)
+      const existingClaim = await ctx.db
+        .query("payroll_zero_day_claims")
+        .withIndex("by_period_barber", (q) =>
+          q
+            .eq("payroll_period_id", args.payroll_period_id)
+            .eq("barber_id", barber._id),
+        )
+        .first();
+
+      if (existingClaim) {
+        if (existingClaim.status === "approved") continue;
+        await ctx.db.patch(existingClaim._id, {
+          zero_days: zeroDays.length,
+          daily_rate_applied: dailyRate,
+          total_amount: totalAmount,
+          source: "attendance",
+          notes: `Auto: ${zeroDays.length} attendance day(s) with no services`,
+          status: "pending",
+          requested_by: args.requested_by,
+          rejection_reason: undefined,
+          updatedAt: now,
+        });
+      } else {
+        await ctx.db.insert("payroll_zero_day_claims", {
+          payroll_period_id: args.payroll_period_id,
+          barber_id: barber._id,
+          branch_id: period.branch_id,
+          zero_days: zeroDays.length,
+          daily_rate_applied: dailyRate,
+          total_amount: totalAmount,
+          source: "attendance",
+          notes: `Auto: ${zeroDays.length} attendance day(s) with no services`,
+          status: "pending",
+          requested_by: args.requested_by,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+
+      totalClaimsCreated++;
+      totalZeroDays += zeroDays.length;
+      claimSummary.push({
+        barber_name: barber.full_name,
+        zero_days: zeroDays.length,
+      });
+    }
+
+    return {
+      success: true,
+      claims_created: totalClaimsCreated,
+      total_zero_days: totalZeroDays,
+      summary: claimSummary,
     };
   },
 });
