@@ -41,22 +41,11 @@ const BarberBookings = () => {
     }
   }, [user, barbers, currentBarber, createBarberProfile])
 
-  // Get bookings for this barber - only from their branch
-  // Added pagination limits to avoid Convex byte limit errors
-  const allBookingsData = user?.branch_id
-    ? useQuery(api.services.bookings.getBookingsByBranch, { branch_id: user.branch_id, limit: 5000 })
-    : useQuery(api.services.bookings.getAllBookings, { limit: 5000 })
-  const allBookings = allBookingsData?.bookings || []
-  const barberBookings = allBookings.filter(booking =>
-    booking.barber === currentBarber?._id
-  )
-
-  // Debug logs - remove after fixing
-  console.log('allBookings:', allBookings.length)
-  console.log('barberBookings:', barberBookings.length)
-  console.log('barber dates:', barberBookings.map(b => b.date))
-  console.log('selectedDate:', selectedDate)
-  console.log('currentBarber ID:', currentBarber?._id)
+  // Get bookings directly for this barber - no pagination limit issues
+  const barberBookings = useQuery(
+    api.services.bookings.getBookingsByBarber,
+    currentBarber?._id ? { barberId: currentBarber._id } : "skip"
+  ) || []
 
   // Filter bookings
   const filteredBookings = barberBookings.filter(booking => {
