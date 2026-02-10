@@ -266,7 +266,6 @@ export const AuthProvider = ({ children }) => {
   const loginMutation = useMutation(api.services.auth.loginUser)
   const facebookLoginAction = useAction(api.services.auth.loginWithFacebook)
   const logoutMutation = useMutation(api.services.auth.logoutUser)
-  const requestPasswordResetMutation = useMutation(api.services.auth.requestPasswordReset)
   const sendPasswordResetEmailAction = useAction(api.services.auth.sendPasswordResetEmail)
   const resetPasswordMutation = useMutation(api.services.auth.resetPassword)
 
@@ -405,20 +404,8 @@ export const AuthProvider = ({ children }) => {
 
   const requestPasswordReset = async (email) => {
     try {
-      const result = await requestPasswordResetMutation({ email })
-
-      if (result.success && result.token && result.email) {
-        // Send email with reset link
-        const emailResult = await sendPasswordResetEmailAction({
-          email: result.email,
-          token: result.token
-        });
-
-        if (!emailResult.success) {
-          console.error('Failed to send reset email:', emailResult.error);
-        }
-      }
-
+      // Action handles both token generation and email sending server-side
+      await sendPasswordResetEmailAction({ email })
       return { success: true }
     } catch (error) {
       console.error('Request password reset error:', error)

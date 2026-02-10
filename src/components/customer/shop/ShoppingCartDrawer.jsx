@@ -921,7 +921,7 @@ function CheckoutModal({ itemCount, subtotal, deliveryFee, totalAmount, paymentM
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Delivery Fee</span>
-            {qualifiesForFreeDelivery ? (
+            {deliveryFee === 0 ? (
               <span className="text-green-400">FREE</span>
             ) : (
               <span className="text-white">₱{deliveryFee.toLocaleString()}</span>

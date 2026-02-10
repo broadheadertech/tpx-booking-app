@@ -3,15 +3,17 @@ import { mutation, query, action, internalMutation } from "../_generated/server"
 // import { api } from "../_generated/api"; // Removed to break circular dependency
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { hashPassword, verifyPassword } from "../utils/password";
-import { requireAuthenticatedUser } from "../lib/unifiedAuth";
+import { requireAuthenticatedUser, getAuthenticatedUser } from "../lib/unifiedAuth";
 
 import { Resend } from 'resend';
 
 
 
-// Generate a simple session token (in production, use proper JWT or similar)
+// Generate a cryptographically secure session token
 function generateSessionToken() {
-  return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 // User registration mutation
@@ -121,12 +123,9 @@ export const loginUser = mutation({
       throwUserError(ERROR_CODES.AUTH_ACCOUNT_INACTIVE);
     }
 
-    // Check password - assume it's hashed (new standard)
+    // Check password - hashed passwords only (secure)
     if (!verifyPassword(args.password, user.password)) {
-      // If hash verification fails, try plain text as fallback for legacy accounts
-      if (args.password !== user.password) {
-        throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
-      }
+      throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS);
     }
 
     // Create new session
@@ -995,6 +994,16 @@ export const getAllUsers = query({
     branch_id: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
+    // Auth guard: if authenticated (Clerk), verify caller has staff/admin role
+    // For legacy session auth (no Clerk JWT), allow through for backward compatibility
+    const currentUser = await getAuthenticatedUser(ctx);
+    if (currentUser) {
+      const allowedRoles = ["staff", "admin", "branch_admin", "super_admin", "barber"];
+      if (!allowedRoles.includes(currentUser.role)) {
+        return [];
+      }
+    }
+
     const limit = args.limit || 1000; // Increased default to 1000 users
 
     let usersQuery = ctx.db.query("users").order("desc");
@@ -1069,7 +1078,9 @@ export const requestPasswordReset = mutation({
       return { success: true };
     }
 
-    const token = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const array = new Uint8Array(32);
+    crypto.getRandomValues(array);
+    const token = Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
     const expiresInMs = 1000 * 60 * 15; // 15 minutes
     await ctx.db.patch(user._id, {
       password_reset_token: token,
@@ -1077,20 +1088,33 @@ export const requestPasswordReset = mutation({
       updatedAt: Date.now(),
     });
 
-    return { success: true, token, email: user.email };
+    // Token returned for server-side use only (action calls this mutation internally)
+    // Frontend callers should use sendPasswordResetEmail action instead
+    return { success: true, token };
   },
 });
 
 const resend = new Resend(process.env.RESEND_API_KEY || 'missing_key');
 
 // Send password reset email with Resend
+// Handles the full flow: generates token server-side and sends email (token never exposed to frontend)
 export const sendPasswordResetEmail = action({
   args: {
     email: v.string(),
-    token: v.string(),
+    token: v.optional(v.string()), // Deprecated: token is now generated server-side
   },
   handler: async (ctx, args) => {
     const { api } = require("../_generated/api");
+
+    // Generate reset token server-side (never expose to frontend)
+    const resetResult = await ctx.runMutation(api.services.auth.requestPasswordReset, {
+      email: args.email,
+    });
+    if (!resetResult.success || !resetResult.token) {
+      // User not found or no token - return success anyway (don't reveal if email exists)
+      return { success: true };
+    }
+    const token = resetResult.token;
 
     // Fetch branding and email template
     const branding = await ctx.runQuery(api.services.branding.getGlobalBranding, {});
@@ -1110,7 +1134,7 @@ export const sendPasswordResetEmail = action({
     const ctaText = template?.cta_text || 'Reset Password';
     const footerText = template?.footer_text || 'This link will expire in 15 minutes for your security. If you didn\'t request a password reset, you can safely ignore this email.';
 
-    const resetUrl = `https://tipunox.broadheader.com/auth/reset-password?token=${args.token}`;
+    const resetUrl = `https://tipunox.broadheader.com/auth/reset-password?token=${token}`;
 
     const emailData = {
       from: `${brandName} <no-reply@tipunox.broadheader.com>`,

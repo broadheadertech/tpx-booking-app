@@ -7,10 +7,10 @@ import { useToast } from '../../components/common/ToastNotification'
 import { useUser } from '@clerk/clerk-react'
 import { WalletHub } from '../../components/customer/wallet'
 
-// Auto-polling interval for pending transactions (5 seconds)
-const AUTO_POLL_INTERVAL = 5000
-// Max auto-poll attempts before stopping
-const MAX_AUTO_POLL_ATTEMPTS = 12 // 1 minute total
+// Auto-polling interval for pending transactions (10 seconds)
+const AUTO_POLL_INTERVAL = 10000
+// Max auto-poll attempts before stopping (5 minutes total)
+const MAX_AUTO_POLL_ATTEMPTS = 30
 
 function Wallet() {
   const navigate = useNavigate()
@@ -156,10 +156,10 @@ function Wallet() {
         setIsProcessingReturn(false)
       }
 
-      // Small delay to ensure pendingTopups query is loaded
+      // Wait before first poll — PayMongo needs time to process the payment after redirect
       setTimeout(() => {
         processPendingTopups()
-      }, 500)
+      }, 3000)
 
       // Also handle legacy paymongo source flow for backwards compatibility
       if (user?._id && txs) {
