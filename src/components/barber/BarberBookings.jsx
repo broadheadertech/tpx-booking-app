@@ -41,20 +41,21 @@ const BarberBookings = () => {
     }
   }, [user, barbers, currentBarber, createBarberProfile])
 
-  // Get bookings directly for this barber filtered by selected date
+  // Get bookings directly for this barber - no pagination limit issues
   const barberBookings = useQuery(
-    api.services.bookings.getBookingsByBarberAndDateFull,
-    currentBarber?._id ? { barberId: currentBarber._id, date: selectedDate } : "skip"
+    api.services.bookings.getBookingsByBarber,
+    currentBarber?._id ? { barberId: currentBarber._id } : "skip"
   ) || []
 
-  // Filter bookings - date is already filtered by the backend query
+  // Filter bookings
   const filteredBookings = barberBookings.filter(booking => {
+    const matchesDate = booking.date === selectedDate
     const matchesStatus = statusFilter === 'all' || booking.status === statusFilter
     const matchesSearch = searchTerm === '' || 
       booking.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       booking.service_name?.toLowerCase().includes(searchTerm.toLowerCase())
     
-    return matchesStatus && matchesSearch
+    return matchesDate && matchesStatus && matchesSearch
   })
 
   // Mutations for booking management
