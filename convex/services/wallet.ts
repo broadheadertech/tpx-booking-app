@@ -11,13 +11,24 @@ import {
 } from "../lib/walletBonus";
 import { toStorageFormat } from "../lib/points";
 import { decryptApiKey } from "../lib/encryption";
-
+import { getAuthenticatedUser } from "../lib/unifiedAuth";
 // Encryption key for SA wallet credentials
 const PAYMONGO_ENCRYPTION_KEY = process.env.PAYMONGO_ENCRYPTION_KEY || "";
 
 export const getWallet = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
+    // Soft auth guard: only enforced when Clerk JWT is present
+    // Legacy session auth (no JWT) passes through for backward compatibility
+    const currentUser = await getAuthenticatedUser(ctx);
+    if (currentUser) {
+      const isOwner = currentUser._id === args.userId;
+      const isStaffOrAdmin = ["customer", "staff", "admin", "branch_admin", "super_admin", "barber"].includes(currentUser.role);
+      if (!isOwner && !isStaffOrAdmin) {
+        throw new ConvexError({ code: "FORBIDDEN", message: "You can only view your own wallet" });
+      }
+    }
+
     const wallet = await ctx.db
       .query("wallets")
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
@@ -49,6 +60,16 @@ export const ensureWallet = mutation({
 export const listTransactions = query({
   args: { userId: v.id("users"), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
+    // Soft auth guard: only enforced when Clerk JWT is present
+    const currentUser = await getAuthenticatedUser(ctx);
+    if (currentUser) {
+      const isOwner = currentUser._id === args.userId;
+      const isStaffOrAdmin = ["customer", "staff", "admin", "branch_admin", "super_admin", "barber"].includes(currentUser.role);
+      if (!isOwner && !isStaffOrAdmin) {
+        throw new ConvexError({ code: "FORBIDDEN", message: "You can only view your own transactions" });
+      }
+    }
+
     const items = await ctx.db
       .query("wallet_transactions")
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
@@ -347,9 +368,13 @@ export const getTransactionBySource = query({
  * Get pending wallet top-up transactions for a user
  * Used to show "Check Payment Status" option on wallet page
  */
+// 5 minutes in milliseconds - pending topups older than this are auto-expired
+const PENDING_TOPUP_EXPIRY_MS = 5 * 60 * 1000;
+
 export const getPendingTopups = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
+    const now = Date.now();
     const transactions = await ctx.db
       .query("wallet_transactions")
       .withIndex("by_user", (q) => q.eq("user_id", args.userId))
@@ -360,9 +385,10 @@ export const getPendingTopups = query({
         )
       )
       .order("desc")
-      .take(5); // Limit to recent 5 pending
+      .take(5);
 
-    return transactions;
+    // Filter out expired pending topups (older than 5 minutes)
+    return transactions.filter((t) => now - t.createdAt < PENDING_TOPUP_EXPIRY_MS);
   },
 });
 
@@ -992,7 +1018,7 @@ export const createWalletTopupWithSACredentials = action({
               currency: "PHP",
             },
           ],
-          payment_method_types: ["gcash", "paymaya", "card", "grab_pay"],
+          payment_method_types: ["gcash", "card", "grab_pay"],
           success_url: successUrl,
           cancel_url: cancelUrl,
           description: `Wallet Top-up ₱${args.amount}`,
@@ -1445,7 +1471,21 @@ export const checkAndProcessWalletTopupStatus = action({
         error: "Payment session has expired",
       };
     } else {
-      // Still pending
+      // Still pending — check if it's been more than 5 minutes
+      const ageMs = Date.now() - pending.createdAt;
+      if (ageMs > PENDING_TOPUP_EXPIRY_MS) {
+        console.log("[WALLET_TOPUP_CHECK] Pending topup expired after 5 minutes, marking as failed");
+        await ctx.runMutation(internal.services.wallet.updateTransactionStatus, {
+          transactionId: pending._id,
+          status: "failed",
+        });
+        return {
+          success: false,
+          status: "expired",
+          error: "Payment was not completed within 5 minutes",
+        };
+      }
+
       return {
         success: true,
         status: "pending",

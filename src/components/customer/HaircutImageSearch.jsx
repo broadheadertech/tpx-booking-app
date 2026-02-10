@@ -6,6 +6,7 @@ const HaircutImageSearch = ({ searchQuery = '', onImageSelect = null }) => {
   const [images, setImages] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [brokenImages, setBrokenImages] = useState(new Set())
 
   // Google Custom Search Engine ID from the provided snippet
   const SEARCH_ENGINE_ID = '732e1b0a9174d4473'
@@ -23,6 +24,7 @@ const HaircutImageSearch = ({ searchQuery = '', onImageSelect = null }) => {
     
     setIsLoading(true)
     setError(null)
+    setBrokenImages(new Set())
     
     try {
       // Use Google Custom Search API with the provided search engine ID
@@ -137,25 +139,23 @@ const HaircutImageSearch = ({ searchQuery = '', onImageSelect = null }) => {
                 onClick={() => handleImageClick(image)}
               >
                 <div className="aspect-square relative">
-                  <img
-                    src={image.thumbnail}
-                    alt={image.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                    onError={(e) => {
-                      e.target.parentElement.innerHTML = `
-                        <div class="w-full h-full flex items-center justify-center bg-gray-700/50">
-                          <div class="text-gray-400 text-xs text-center p-2">
-                            <div class="w-8 h-8 mx-auto mb-2 opacity-50">
-                              <svg fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
-                              </svg>
-                            </div>
-                            Image unavailable
-                          </div>
-                        </div>
-                      `
-                    }}
-                  />
+                  {brokenImages.has(image.id) ? (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-700/50">
+                      <div className="text-gray-400 text-xs text-center p-2">
+                        <Image className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        Image unavailable
+                      </div>
+                    </div>
+                  ) : (
+                    <img
+                      src={image.thumbnail}
+                      alt={image.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      onError={() => {
+                        setBrokenImages(prev => new Set([...prev, image.id]))
+                      }}
+                    />
+                  )}
                   
                   {/* Overlay */}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200" />

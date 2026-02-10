@@ -4,7 +4,6 @@ import { Id } from "../_generated/dataModel";
 import { api } from "../_generated/api";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { toStorageFormat } from "../lib/points";
-
 // Helper function to get or create a walk-in customer
 async function getOrCreateWalkInCustomer(ctx: any, branch_id: Id<"branches">, customerName?: string, customerPhone?: string): Promise<Id<"users"> | undefined> {
   // Retry mechanism for walk-in customer creation
@@ -161,6 +160,8 @@ export const createTransaction = mutation({
     estimated_delivery: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // TODO: Add Clerk auth guard after full Clerk migration
+
     console.log('[TRANSACTION] Starting transaction creation with args:', args);
 
     // Validate walk-in customer has a name
