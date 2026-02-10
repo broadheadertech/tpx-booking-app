@@ -197,11 +197,11 @@ const PaymentOptionsModal = ({
   const getColorClasses = (color, isSelected) => {
     const colors = {
       purple: {
-        border: isSelected ? 'border-purple-500' : 'border-[#444444]',
-        bg: isSelected ? 'bg-purple-500/10' : 'bg-[#0A0A0A]',
-        icon: 'text-purple-400',
-        ring: 'ring-purple-500',
-        dot: 'bg-purple-500',
+        border: isSelected ? 'border-[var(--color-primary)]' : 'border-[#444444]',
+        bg: isSelected ? 'bg-[var(--color-primary)]/10' : 'bg-[#0A0A0A]',
+        icon: 'text-[var(--color-primary)]',
+        ring: 'ring-[var(--color-primary)]',
+        dot: 'bg-[var(--color-primary)]',
       },
       green: {
         border: isSelected ? 'border-green-500' : 'border-[#444444]',
@@ -218,11 +218,11 @@ const PaymentOptionsModal = ({
         dot: 'bg-yellow-500',
       },
       blue: {
-        border: isSelected ? 'border-blue-500' : 'border-[#444444]',
-        bg: isSelected ? 'bg-blue-500/10' : 'bg-[#0A0A0A]',
-        icon: 'text-blue-400',
-        ring: 'ring-blue-500',
-        dot: 'bg-blue-500',
+        border: isSelected ? 'border-[var(--color-primary)]' : 'border-[#444444]',
+        bg: isSelected ? 'bg-[var(--color-primary)]/10' : 'bg-[#0A0A0A]',
+        icon: 'text-[var(--color-primary)]',
+        ring: 'ring-[var(--color-primary)]',
+        dot: 'bg-[var(--color-primary)]',
       },
     };
     return colors[color] || colors.blue;

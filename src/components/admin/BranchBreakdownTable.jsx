@@ -234,7 +234,7 @@ export function BranchBreakdownTable() {
                 placeholder="Search branches..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-2 bg-[#0F0F0F] border border-[#2A2A2A] rounded-xl text-white text-sm placeholder:text-gray-500 focus:outline-none focus:border-blue-500 w-48"
+                className="pl-9 pr-4 py-2 bg-[#0F0F0F] border border-[#2A2A2A] rounded-xl text-white text-sm placeholder:text-gray-500 focus:outline-none focus:border-[var(--color-primary)] w-48"
                 aria-label="Search branches"
               />
             </div>

@@ -2787,7 +2787,7 @@ const GuestServiceBooking = ({ onBack }) => {
               }
             }}
             disabled={checkingPaymentManually}
-            className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg flex items-center justify-center gap-2"
+            className="w-full py-4 bg-[var(--color-primary)] hover:bg-[var(--color-accent)] disabled:bg-[var(--color-primary)]/50 text-white font-bold rounded-2xl transition-all duration-200 shadow-lg flex items-center justify-center gap-2"
           >
             {checkingPaymentManually ? (
               <>
