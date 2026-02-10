@@ -205,26 +205,10 @@ const BranchProfile = () => {
       />
 
       {/* Quick Actions */}
-      <div className="max-w-3xl mx-auto px-4 py-3 flex gap-3">
-        <Link
-          to={`/b/${slug}/walkin`}
-          className="flex-1 flex items-center justify-between px-4 py-3 bg-[var(--color-primary)] rounded-xl hover:opacity-90 transition-opacity group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-white/15 rounded-lg flex items-center justify-center">
-              <Users className="w-4 h-4 text-white" />
-            </div>
-            <div className="text-left">
-              <p className="text-white text-sm font-medium">Walk In</p>
-              <p className="text-white/60 text-xs">Join the queue</p>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-white/60" />
-        </Link>
-
+      <div className="max-w-3xl mx-auto px-4 py-3">
         <Link
           to={`/b/${slug}/queue`}
-          className="flex items-center px-4 py-3 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl hover:border-[var(--color-primary)]/40 transition-colors group"
+          className="flex items-center justify-between px-4 py-3 bg-[#1A1A1A] border border-[#2A2A2A] rounded-xl hover:border-[var(--color-primary)]/40 transition-colors group"
         >
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 bg-[var(--color-primary)]/15 rounded-lg flex items-center justify-center">
@@ -235,6 +219,7 @@ const BranchProfile = () => {
               <p className="text-gray-500 text-xs">See who's waiting</p>
             </div>
           </div>
+          <ChevronRight className="w-4 h-4 text-gray-500" />
         </Link>
       </div>
 
