@@ -39,8 +39,8 @@ function ForgotPassword() {
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
       <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
+        <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 30% 20%, ${(() => { const h = branding?.primary_color || '#000000'; const r = parseInt(h.slice(1,3),16); const g = parseInt(h.slice(3,5),16); const b = parseInt(h.slice(5,7),16); return `rgba(${r},${g},${b},0.03)`; })()}, transparent 50%)` }}></div>
+        <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 70% 80%, ${(() => { const h = branding?.primary_color || '#000000'; const r = parseInt(h.slice(1,3),16); const g = parseInt(h.slice(3,5),16); const b = parseInt(h.slice(5,7),16); return `rgba(${r},${g},${b},0.02)`; })()}, transparent 50%)` }}></div>
         <div 
           className="h-full bg-cover bg-center bg-no-repeat opacity-5"
           style={{ backgroundImage: `url(${bannerImage})`, filter: 'brightness(0.3)' }}

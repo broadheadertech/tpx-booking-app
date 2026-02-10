@@ -114,13 +114,22 @@ function UnifiedLogin() {
     )
   }
 
+  // Derive rgba from branding hex for subtle gradients
+  const primaryHex = branding?.primary_color || "#000000";
+  const toRgba = (hex, a) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${a})`;
+  };
+
   // Show both options during migration period
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
       {/* Background */}
       <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,140,66,0.03),transparent_50%)]"></div>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(255,140,66,0.02),transparent_50%)]"></div>
+        <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 30% 20%, ${toRgba(primaryHex, 0.03)}, transparent 50%)` }}></div>
+        <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 70% 80%, ${toRgba(primaryHex, 0.02)}, transparent 50%)` }}></div>
         <div
           className="h-full bg-cover bg-center bg-no-repeat opacity-5"
           style={{ backgroundImage: `url(${bannerImage})`, filter: 'brightness(0.3)' }}
@@ -202,7 +211,7 @@ function ClerkLoginContent({ branding, onGuestLogin }) {
       <SignIn
         appearance={{
           variables: {
-            colorPrimary: '#FF8C42',
+            colorPrimary: branding?.primary_color || '#000000',
             colorBackground: '#1A1A1A',
             colorInputBackground: '#2A2A2A',
             colorInputText: '#FFFFFF',
@@ -222,9 +231,9 @@ function ClerkLoginContent({ branding, onGuestLogin }) {
             dividerLine: 'bg-[#3A3A3A]',
             dividerText: 'text-gray-500',
             formFieldLabel: 'text-gray-300 text-sm',
-            formFieldInput: 'bg-[#2A2A2A] border-[#3A3A3A] text-white placeholder-gray-500 rounded-2xl h-14 focus:ring-2 focus:ring-[#FF8C42]/50 focus:border-[#FF8C42]',
-            formButtonPrimary: 'bg-gradient-to-r from-[#FF8C42] to-[#E67E3C] hover:from-[#E67E3C] hover:brightness-110 text-white font-semibold rounded-2xl h-14 shadow-lg',
-            footerActionLink: 'text-[#FF8C42] hover:text-[#E67E3C] font-semibold',
+            formFieldInput: 'bg-[#2A2A2A] border-[#3A3A3A] text-white placeholder-gray-500 rounded-2xl h-14 focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)]',
+            formButtonPrimary: 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:brightness-110 text-white font-semibold rounded-2xl h-14 shadow-lg',
+            footerActionLink: 'text-[var(--color-primary)] hover:text-[var(--color-accent)] font-semibold',
           },
         }}
         afterSignInUrl="/auth/clerk-callback"
