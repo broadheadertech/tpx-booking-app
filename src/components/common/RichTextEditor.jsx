@@ -13,6 +13,7 @@ import {
   Type,
   RotateCcw
 } from 'lucide-react'
+import { useAppModal } from '../../context/AppModalContext'
 
 const RichTextEditor = ({ 
   value = '', 
@@ -23,8 +24,9 @@ const RichTextEditor = ({
 }) => {
   const [isFocused, setIsFocused] = useState(false)
   const textareaRef = useRef(null)
+  const { showPrompt } = useAppModal()
 
-  const executeCommand = (command, value = null) => {
+  const executeCommand = async (command, value = null) => {
     const textarea = textareaRef.current
     if (!textarea) return
 
@@ -49,7 +51,7 @@ const RichTextEditor = ({
         newCursorPos = start + 3
         break
       case 'link':
-        const url = prompt('Enter URL:')
+        const url = await showPrompt({ title: 'Insert Link', message: 'Enter URL:', placeholder: 'https://...' })
         if (url) {
           newText = `[${selectedText}](${url})`
           newCursorPos = start + 1
@@ -58,7 +60,7 @@ const RichTextEditor = ({
         }
         break
       case 'image':
-        const imageUrl = prompt('Enter image URL:')
+        const imageUrl = await showPrompt({ title: 'Insert Image', message: 'Enter image URL:', placeholder: 'https://...' })
         if (imageUrl) {
           newText = `![${selectedText}](${imageUrl})`
           newCursorPos = start + 2

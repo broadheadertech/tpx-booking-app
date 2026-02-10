@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { useAppModal } from "../../context/AppModalContext";
 import {
   DollarSign,
   Clock,
@@ -290,6 +291,7 @@ const RequestModal = ({ isOpen, onClose, maxAmount, userId, branchId }) => {
 
 // Main Component
 const CashAdvanceSection = () => {
+  const { showConfirm } = useAppModal();
   const { user } = useCurrentUser();
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -319,7 +321,8 @@ const CashAdvanceSection = () => {
 
   const handleCancelAdvance = async () => {
     if (!activeAdvance || activeAdvance.status !== "pending") return;
-    if (!confirm("Are you sure you want to cancel this request?")) return;
+    const confirmed = await showConfirm({ title: 'Cancel Request', message: 'Are you sure you want to cancel this request?', type: 'warning' });
+    if (!confirmed) return;
 
     try {
       await cancelAdvance({

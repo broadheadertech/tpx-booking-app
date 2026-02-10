@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
+import { useAppModal } from '../../context/AppModalContext'
 import {
   Mail,
   Send,
@@ -190,6 +191,7 @@ const DEFAULT_FROM_EMAIL = 'noreply@tpxbarber.com' // Will be handled by EmailJS
 
 const EmailMarketing = memo(({ onRefresh }) => {
   const { user } = useCurrentUser()
+  const { showAlert, showConfirm } = useAppModal()
   const [activeTab, setActiveTab] = useState('campaigns')
   const [showCreate, setShowCreate] = useState(false)
   const [showTemplate, setShowTemplate] = useState(false)
@@ -434,9 +436,9 @@ const EmailMarketing = memo(({ onRefresh }) => {
 
       if (sendResult.failed > 0) {
         const message = sendResult.errors?.map(e => `${e.email}: ${e.error}`).join('\n') || 'Some emails failed to send.'
-        alert(`Campaign sent with ${sendResult.failed} failures.\n${message}`)
+        showAlert({ title: 'Partial Failure', message: `Campaign sent with ${sendResult.failed} failures.\n${message}`, type: 'warning' })
       } else {
-        alert(`Campaign sent to ${sendResult.sent} recipients!`)
+        showAlert({ title: 'Success', message: `Campaign sent to ${sendResult.sent} recipients!`, type: 'success' })
       }
 
     } catch (error) {
@@ -590,19 +592,19 @@ const EmailMarketing = memo(({ onRefresh }) => {
       })
 
       if (result.success) {
-        alert('Test email sent successfully!')
+        showAlert({ title: 'Success', message: 'Test email sent successfully!', type: 'success' })
       } else {
-        alert('Failed to send test email: ' + result.error)
+        showAlert({ title: 'Error', message: 'Failed to send test email: ' + result.error, type: 'error' })
       }
     } catch (error) {
       console.error('Test email failed:', error)
-      alert('Failed to send test email')
+      showAlert({ title: 'Error', message: 'Failed to send test email', type: 'error' })
     }
   }
 
   const handleDeleteCampaign = useCallback(async (campaign) => {
     if (!campaign) return
-    const confirmed = window.confirm(`Delete campaign "${campaign.name}"? This cannot be undone.`)
+    const confirmed = await showConfirm({ title: 'Delete Campaign', message: `Delete campaign "${campaign.name}"? This cannot be undone.`, type: 'warning' })
     if (!confirmed) return
 
     try {
@@ -613,9 +615,9 @@ const EmailMarketing = memo(({ onRefresh }) => {
       onRefresh?.()
     } catch (error) {
       console.error('Failed to delete campaign:', error)
-      alert('Failed to delete campaign. Please try again.')
+      showAlert({ title: 'Error', message: 'Failed to delete campaign. Please try again.', type: 'error' })
     }
-  }, [deleteCampaignMutation, onRefresh, selectedCampaign])
+  }, [deleteCampaignMutation, onRefresh, selectedCampaign, showConfirm, showAlert])
 
   // Template selection
   const templates = [

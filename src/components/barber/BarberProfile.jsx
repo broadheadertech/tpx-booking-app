@@ -6,8 +6,10 @@ import {
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
+import { useAppModal } from '../../context/AppModalContext'
 
 const BarberProfile = () => {
+  const { showConfirm } = useAppModal()
   const { user, logout } = useCurrentUser()
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -209,13 +211,13 @@ const BarberProfile = () => {
   }
 
   const handleLogout = async () => {
-    if (window.confirm('Are you sure you want to logout?')) {
-      try {
-        await logout()
-        window.location.href = '/auth/login'
-      } catch (error) {
-        window.location.href = '/auth/login'
-      }
+    const confirmed = await showConfirm({ title: 'Logout', message: 'Are you sure you want to logout?', type: 'warning', confirmText: 'Logout' })
+    if (!confirmed) return
+    try {
+      await logout()
+      window.location.href = '/auth/login'
+    } catch (error) {
+      window.location.href = '/auth/login'
     }
   }
 

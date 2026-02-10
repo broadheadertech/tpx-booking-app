@@ -28,9 +28,11 @@ import {
   FileText,
 } from 'lucide-react';
 import { formatErrorForDisplay } from '../../utils/errorHandler';
+import { useAppModal } from '../../context/AppModalContext';
 
 export default function RoyaltyManagement() {
   const { user } = useCurrentUser();
+  const { showConfirm, showPrompt } = useAppModal();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -153,7 +155,8 @@ export default function RoyaltyManagement() {
   };
 
   const handleDeactivate = async (branchId) => {
-    if (!confirm('Are you sure you want to deactivate this royalty configuration?')) return;
+    const confirmed = await showConfirm({ title: 'Deactivate Config', message: 'Are you sure you want to deactivate this royalty configuration?', type: 'warning' });
+    if (!confirmed) return;
 
     try {
       await deactivateConfig({ branch_id: branchId });
@@ -165,7 +168,8 @@ export default function RoyaltyManagement() {
   };
 
   const handleDelete = async (configId) => {
-    if (!confirm('Are you sure you want to delete this royalty configuration? This cannot be undone.')) return;
+    const confirmed = await showConfirm({ title: 'Delete Config', message: 'Are you sure you want to delete this royalty configuration? This cannot be undone.', type: 'warning' });
+    if (!confirmed) return;
 
     try {
       await deleteConfig({ config_id: configId });
@@ -178,7 +182,8 @@ export default function RoyaltyManagement() {
   };
 
   const handleGenerateRoyalties = async () => {
-    if (!confirm('Generate royalty payments for all configured branches for the previous billing period?')) return;
+    const confirmed = await showConfirm({ title: 'Generate Payments', message: 'Generate royalty payments for all configured branches for the previous billing period?', type: 'warning' });
+    if (!confirmed) return;
 
     setLoading(true);
     setError('');
@@ -300,7 +305,7 @@ export default function RoyaltyManagement() {
   };
 
   const handleWaivePayment = async (paymentId, branchName) => {
-    const reason = prompt(`Enter reason for waiving royalty payment for ${branchName}:`);
+    const reason = await showPrompt({ title: 'Waive Payment', message: `Enter reason for waiving royalty payment for ${branchName}:`, placeholder: 'Type reason here...' });
     if (!reason) return;
 
     setLoading(true);
@@ -412,7 +417,7 @@ export default function RoyaltyManagement() {
           onClick={() => setActiveTab('dashboard')}
           className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
             activeTab === 'dashboard'
-              ? 'text-orange-400 border-b-2 border-orange-400'
+              ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
               : 'text-gray-400 hover:text-white'
           }`}
         >
@@ -423,7 +428,7 @@ export default function RoyaltyManagement() {
           onClick={() => setActiveTab('config')}
           className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
             activeTab === 'config'
-              ? 'text-orange-400 border-b-2 border-orange-400'
+              ? 'text-[var(--color-primary)] border-b-2 border-[var(--color-primary)]'
               : 'text-gray-400 hover:text-white'
           }`}
         >
@@ -503,12 +508,12 @@ export default function RoyaltyManagement() {
             </div>
             <div className="bg-gradient-to-br from-[#2A2A2A] to-[#1E1E1E] rounded-xl p-4 border border-[#333]">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-500/20 rounded-lg">
-                  <DollarSign className="w-5 h-5 text-orange-400" />
+                <div className="p-2 bg-[var(--color-primary)]/20 rounded-lg">
+                  <DollarSign className="w-5 h-5 text-[var(--color-primary)]" />
                 </div>
                 <div>
                   <p className="text-gray-400 text-xs">Pending</p>
-                  <p className="text-lg font-bold text-orange-400">{formatCurrency(dashboardStats.totalDueAmount)}</p>
+                  <p className="text-lg font-bold text-[var(--color-primary)]">{formatCurrency(dashboardStats.totalDueAmount)}</p>
                 </div>
               </div>
             </div>
@@ -530,7 +535,7 @@ export default function RoyaltyManagement() {
             <button
               onClick={handleGenerateRoyalties}
               disabled={loading || allRoyaltyConfigs.filter(c => c.is_active).length === 0}
-              className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary)] text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Zap className="w-4 h-4" />
               Generate Royalties
@@ -556,7 +561,7 @@ export default function RoyaltyManagement() {
                     onClick={() => setStatusFilter(status)}
                     className={`px-3 py-1 text-sm rounded-lg transition-colors capitalize ${
                       statusFilter === status
-                        ? 'bg-orange-500 text-white'
+                        ? 'bg-[var(--color-primary)] text-white'
                         : 'bg-[#333] text-gray-400 hover:text-white'
                     }`}
                   >
@@ -713,8 +718,8 @@ export default function RoyaltyManagement() {
             </div>
             <div className="bg-gradient-to-br from-[#2A2A2A] to-[#1E1E1E] rounded-xl p-4 border border-[#333]">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-500/20 rounded-lg">
-                  <DollarSign className="w-5 h-5 text-orange-400" />
+                <div className="p-2 bg-[var(--color-primary)]/20 rounded-lg">
+                  <DollarSign className="w-5 h-5 text-[var(--color-primary)]" />
                 </div>
                 <div>
                   <p className="text-gray-400 text-sm">Fixed Amount Type</p>
@@ -728,7 +733,7 @@ export default function RoyaltyManagement() {
             {/* Branch Selection & Configuration Form */}
             <div className="bg-gradient-to-br from-[#2A2A2A] to-[#1E1E1E] rounded-xl p-6 border border-[#333]">
               <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                <Settings className="w-5 h-5 text-orange-400" />
+                <Settings className="w-5 h-5 text-[var(--color-primary)]" />
                 Configure Royalty
               </h3>
 
@@ -742,13 +747,13 @@ export default function RoyaltyManagement() {
                     placeholder="Search branches..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                   />
                 </div>
                 <select
                   value={selectedBranchId}
                   onChange={(e) => setSelectedBranchId(e.target.value)}
-                  className="w-full px-4 py-2 bg-[#1A1A1A] border border-[#444] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-4 py-2 bg-[#1A1A1A] border border-[#444] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                 >
                   <option value="">-- Select a branch --</option>
                   {filteredBranches.map((branch) => (
@@ -773,7 +778,7 @@ export default function RoyaltyManagement() {
                           value="percentage"
                           checked={formData.royalty_type === 'percentage'}
                           onChange={(e) => setFormData({ ...formData, royalty_type: e.target.value })}
-                          className="text-orange-500 focus:ring-orange-500"
+                          className="text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                         />
                         <span className="text-white">Percentage of Revenue</span>
                       </label>
@@ -784,7 +789,7 @@ export default function RoyaltyManagement() {
                           value="fixed"
                           checked={formData.royalty_type === 'fixed'}
                           onChange={(e) => setFormData({ ...formData, royalty_type: e.target.value })}
-                          className="text-orange-500 focus:ring-orange-500"
+                          className="text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                         />
                         <span className="text-white">Fixed Amount</span>
                       </label>
@@ -809,7 +814,7 @@ export default function RoyaltyManagement() {
                         value={formData.rate}
                         onChange={(e) => setFormData({ ...formData, rate: e.target.value })}
                         placeholder={formData.royalty_type === 'percentage' ? 'e.g., 10' : 'e.g., 20000'}
-                        className="w-full pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        className="w-full pl-10 pr-4 py-2 bg-[#1A1A1A] border border-[#444] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                       />
                     </div>
                   </div>
@@ -820,7 +825,7 @@ export default function RoyaltyManagement() {
                     <select
                       value={formData.billing_cycle}
                       onChange={(e) => setFormData({ ...formData, billing_cycle: e.target.value })}
-                      className="w-full px-4 py-2 bg-[#1A1A1A] border border-[#444] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      className="w-full px-4 py-2 bg-[#1A1A1A] border border-[#444] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                     >
                       <option value="monthly">Monthly</option>
                       <option value="quarterly">Quarterly</option>
@@ -838,7 +843,7 @@ export default function RoyaltyManagement() {
                         max="28"
                         value={formData.billing_day}
                         onChange={(e) => setFormData({ ...formData, billing_day: e.target.value })}
-                        className="w-full px-4 py-2 bg-[#1A1A1A] border border-[#444] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        className="w-full px-4 py-2 bg-[#1A1A1A] border border-[#444] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                       />
                     </div>
                     <div>
@@ -849,7 +854,7 @@ export default function RoyaltyManagement() {
                         max="30"
                         value={formData.grace_period_days}
                         onChange={(e) => setFormData({ ...formData, grace_period_days: e.target.value })}
-                        className="w-full px-4 py-2 bg-[#1A1A1A] border border-[#444] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                        className="w-full px-4 py-2 bg-[#1A1A1A] border border-[#444] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                       />
                     </div>
                   </div>
@@ -864,7 +869,7 @@ export default function RoyaltyManagement() {
                       max="50"
                       value={formData.late_fee_rate}
                       onChange={(e) => setFormData({ ...formData, late_fee_rate: e.target.value })}
-                      className="w-full px-4 py-2 bg-[#1A1A1A] border border-[#444] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      className="w-full px-4 py-2 bg-[#1A1A1A] border border-[#444] rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                     />
                   </div>
 
@@ -876,7 +881,7 @@ export default function RoyaltyManagement() {
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       placeholder="Any additional notes..."
                       rows={2}
-                      className="w-full px-4 py-2 bg-[#1A1A1A] border border-[#444] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      className="w-full px-4 py-2 bg-[#1A1A1A] border border-[#444] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                     />
                   </div>
 
@@ -884,7 +889,7 @@ export default function RoyaltyManagement() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary)] text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? (
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -958,7 +963,7 @@ export default function RoyaltyManagement() {
                       onClick={() => setSelectedBranchId(config.branch_id)}
                       className={`p-4 rounded-lg border cursor-pointer transition-all ${
                         selectedBranchId === config.branch_id
-                          ? 'bg-orange-500/20 border-orange-500'
+                          ? 'bg-[var(--color-primary)]/20 border-[var(--color-primary)]'
                           : 'bg-[#1A1A1A] border-[#444] hover:border-[#555]'
                       }`}
                     >
@@ -987,7 +992,7 @@ export default function RoyaltyManagement() {
                             </>
                           ) : (
                             <>
-                              <span className="text-orange-400">₱</span>
+                              <span className="text-[var(--color-primary)]">₱</span>
                               <span className="text-gray-300">{config.rate.toLocaleString()}</span>
                             </>
                           )}
@@ -1039,7 +1044,7 @@ export default function RoyaltyManagement() {
                 </div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-gray-400">Amount Due</span>
-                  <span className="text-orange-400 font-bold">{formatCurrency(paymentModal.payment.total_due)}</span>
+                  <span className="text-[var(--color-primary)] font-bold">{formatCurrency(paymentModal.payment.total_due)}</span>
                 </div>
                 {paymentModal.payment.late_fee > 0 && (
                   <div className="flex justify-between items-center text-sm">

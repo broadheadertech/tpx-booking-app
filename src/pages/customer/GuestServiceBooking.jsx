@@ -26,6 +26,7 @@ import { useBranding } from "../../context/BrandingContext";
 import { formatTime } from "../../utils/dateUtils";
 import { sendCustomBookingConfirmation, sendBarberBookingNotification } from "../../services/emailService";
 import PaymentOptionsModal from "../../components/customer/PaymentOptionsModal";
+import { useAppModal } from "../../context/AppModalContext";
 import {
   // Phase 1: Quick Wins
   CalendarStrip, TimeSlotPills, StepProgressDots, SuccessConfetti,
@@ -106,6 +107,7 @@ const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
 
 const GuestServiceBooking = ({ onBack }) => {
   const { branding } = useBranding();
+  const { showAlert, showConfirm } = useAppModal();
   const [guestData, setGuestData] = useState({
     name: "",
     email: "",
@@ -718,13 +720,13 @@ const GuestServiceBooking = ({ onBack }) => {
     paymentMethod = null
   ) => {
     if (!selectedService || !selectedDate || !selectedTime) {
-      alert("Please fill in all booking details");
+      showAlert({ title: 'Missing Details', message: 'Please fill in all booking details', type: 'warning' });
       return;
     }
 
     // Validate availability against existing bookings
     if (existingBookings === undefined) {
-      alert("Please wait while we verify availability...");
+      showAlert({ title: 'Please Wait', message: 'Please wait while we verify availability...', type: 'info' });
       return;
     }
 
@@ -736,9 +738,11 @@ const GuestServiceBooking = ({ onBack }) => {
     );
 
     if (isSlotTaken) {
-      alert(
-        "This time slot is no longer available. Please select another time."
-      );
+      showAlert({
+        title: 'Slot Unavailable',
+        message: 'This time slot is no longer available. Please select another time.',
+        type: 'warning'
+      });
       setStep(4); // Return to Date & Time selection
       return;
     }
@@ -746,7 +750,7 @@ const GuestServiceBooking = ({ onBack }) => {
     // Ensure we have a user ID from guest account creation
     const userId = sessionStorage.getItem("user_id");
     if (!userId) {
-      alert("Guest account not created properly. Please try again.");
+      showAlert({ title: 'Account Error', message: 'Guest account not created properly. Please try again.', type: 'error' });
       setStep(4); // Go back to guest info step
       return;
     }
@@ -899,14 +903,16 @@ const GuestServiceBooking = ({ onBack }) => {
           });
           // Log the error but don't break the booking flow
           // The booking is still successful, but notify user about voucher issue
-          alert(
-            `Booking confirmed! Note: Voucher status update encountered an issue. Please refresh to see the updated status.`
-          );
+          showAlert({
+            title: 'Booking Confirmed',
+            message: 'Booking confirmed! Note: Voucher status update encountered an issue. Please refresh to see the updated status.',
+            type: 'warning'
+          });
         }
       }
     } catch (error) {
       console.error("Error creating booking:", error);
-      alert(error.message || "Failed to create booking. Please try again.");
+      showAlert({ title: 'Booking Failed', message: error.message || 'Failed to create booking. Please try again.', type: 'error' });
     } finally {
       setBookingLoading(false);
     }
@@ -971,9 +977,11 @@ const GuestServiceBooking = ({ onBack }) => {
       }
     } catch (error) {
       console.error("Payment processing error:", error);
-      alert(
-        `Payment failed: ${error.message}. Please try again or choose pay later.`
-      );
+      showAlert({
+        title: 'Payment Failed',
+        message: `Payment failed: ${error.message}. Please try again or choose pay later.`,
+        type: 'error'
+      });
       return false; // Payment failed, don't proceed
     }
   };
@@ -1288,9 +1296,13 @@ const GuestServiceBooking = ({ onBack }) => {
           console.error("Payment link creation failed:", paymentError);
 
           // Offer Pay at Shop fallback (FR22)
-          const fallbackConfirmed = window.confirm(
-            `Payment processing failed: ${paymentError.message || "Unknown error"}\n\nWould you like to proceed with "Pay at Shop" instead? You can pay the full amount when you arrive at the branch.`
-          );
+          const fallbackConfirmed = await showConfirm({
+            title: 'Payment Failed',
+            message: `Payment processing failed: ${paymentError.message || "Unknown error"}\n\nWould you like to proceed with "Pay at Shop" instead? You can pay the full amount when you arrive at the branch.`,
+            type: 'warning',
+            confirmText: 'Pay at Shop',
+            cancelText: 'Try Again'
+          });
 
           if (fallbackConfirmed) {
             // Create booking with pay_at_shop flow
@@ -2770,18 +2782,18 @@ const GuestServiceBooking = ({ onBack }) => {
                   setStep(7); // Success step
                 } else if (result.status === 'pending') {
                   // Still pending - inform user
-                  window.alert('Payment is still processing. Please complete the payment in the payment window and try again.');
+                  showAlert({ title: 'Payment Pending', message: 'Payment is still processing. Please complete the payment in the payment window and try again.', type: 'info' });
                 } else if (result.status === 'expired') {
-                  window.alert('Payment session has expired. Please start a new booking.');
+                  showAlert({ title: 'Session Expired', message: 'Payment session has expired. Please start a new booking.', type: 'error' });
                   setPendingPaymentSessionId(null);
                   localStorage.removeItem('pendingPaymongoSessionId');
                   setStep(6);
                 } else {
-                  window.alert(result.error || 'Could not verify payment status. Please try again.');
+                  showAlert({ title: 'Verification Failed', message: result.error || 'Could not verify payment status. Please try again.', type: 'error' });
                 }
               } catch (err) {
                 console.error('[GuestServiceBooking] Manual check error:', err);
-                window.alert('Error checking payment: ' + (err.message || 'Unknown error'));
+                showAlert({ title: 'Error', message: 'Error checking payment: ' + (err.message || 'Unknown error'), type: 'error' });
               } finally {
                 setCheckingPaymentManually(false);
               }

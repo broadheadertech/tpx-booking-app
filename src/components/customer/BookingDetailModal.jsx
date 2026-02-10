@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useBranding } from '../../context/BrandingContext'
+import { useAppModal } from '../../context/AppModalContext'
 import {
   X,
   Calendar,
@@ -29,6 +30,7 @@ import QRCode from 'qrcode'
  */
 const BookingDetailModal = ({ booking, onClose, onRebook, onCancel }) => {
   const { branding } = useBranding()
+  const { showAlert } = useAppModal()
   const [qrCodeUrl, setQrCodeUrl] = useState(null)
   const [copied, setCopied] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
@@ -93,7 +95,7 @@ const BookingDetailModal = ({ booking, onClose, onRebook, onCancel }) => {
       onClose()
     } catch (error) {
       console.error('Failed to cancel booking:', error)
-      alert('Failed to cancel booking. Please try again.')
+      showAlert({ title: 'Cancellation Failed', message: 'Failed to cancel booking. Please try again.', type: 'error' })
     } finally {
       setCancelling(false)
       setShowCancelConfirm(false)

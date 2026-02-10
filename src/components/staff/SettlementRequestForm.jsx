@@ -233,13 +233,13 @@ export function SettlementRequestForm({
 
           {/* Pending settlement warning */}
           {pendingSettlement?.hasPending && (
-            <div className="bg-orange-900/30 border border-orange-700 rounded-xl p-3 flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 text-orange-400 flex-shrink-0 mt-0.5" />
+            <div className="bg-[var(--color-primary)]/10 border border-[var(--color-primary)] rounded-xl p-3 flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 text-[var(--color-primary)] flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-orange-300 text-sm font-medium">
+                <p className="text-[var(--color-primary)] text-sm font-medium">
                   Settlement Already Pending
                 </p>
-                <p className="text-orange-400/80 text-xs mt-1">
+                <p className="text-[var(--color-primary)]/80 text-xs mt-1">
                   Status: {pendingSettlement.settlement?.status} •{" "}
                   {formatCurrency(pendingSettlement.settlement?.amount)}
                 </p>
@@ -268,7 +268,7 @@ export function SettlementRequestForm({
               </div>
               <div className="flex justify-between text-xs">
                 <span className="text-gray-500">Commission Deducted</span>
-                <span className="text-orange-400">
+                <span className="text-[var(--color-primary)]">
                   -{formatCurrency(pendingTotal?.totalCommission)}
                 </span>
               </div>
@@ -311,11 +311,11 @@ export function SettlementRequestForm({
                 </div>
               </div>
             ) : (
-              <div className="flex items-start gap-2 text-orange-400">
+              <div className="flex items-start gap-2 text-[var(--color-primary)]">
                 <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium">Payout Details Not Configured</p>
-                  <p className="text-xs text-orange-400/80 mt-1">
+                  <p className="text-xs text-[var(--color-primary)]/80 mt-1">
                     Please contact your Super Admin to configure payout details
                     before requesting settlement.
                   </p>

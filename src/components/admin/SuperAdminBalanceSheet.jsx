@@ -3,6 +3,7 @@ import ReactDOM from "react-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { useAppModal } from "../../context/AppModalContext";
 import {
   DollarSign,
   TrendingUp,
@@ -107,8 +108,8 @@ const SummaryCard = ({ title, value, subtitle, icon: Icon, trend, trendValue, co
     green: "bg-green-500/10 text-green-400",
     red: "bg-red-500/10 text-red-400",
     purple: "bg-purple-500/10 text-purple-400",
-    amber: "bg-amber-500/10 text-amber-400",
-    orange: "bg-[#FF8C42]/10 text-[#FF8C42]",
+    amber: "bg-[var(--color-primary)]/10 text-[var(--color-primary)]",
+    orange: "bg-[var(--color-primary)]/10 text-[var(--color-primary)]",
   };
 
   const valueColors = {
@@ -116,12 +117,12 @@ const SummaryCard = ({ title, value, subtitle, icon: Icon, trend, trendValue, co
     green: "text-green-400",
     red: "text-red-400",
     purple: "text-purple-400",
-    amber: "text-amber-400",
-    orange: "text-[#FF8C42]",
+    amber: "text-[var(--color-primary)]",
+    orange: "text-[var(--color-primary)]",
   };
 
   return (
-    <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[#FF8C42]/30 transition-colors">
+    <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[var(--color-primary)]/30 transition-colors">
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm text-gray-400">{title}</span>
         <div className={`p-2 rounded-lg ${colorClasses[color]}`}>
@@ -144,7 +145,7 @@ const SummaryCard = ({ title, value, subtitle, icon: Icon, trend, trendValue, co
 const RatioCard = ({ title, value, description, status }) => {
   const statusColors = {
     good: "text-green-400 bg-green-500/10",
-    warning: "text-amber-400 bg-amber-500/10",
+    warning: "text-[var(--color-primary)] bg-[var(--color-primary)]/10",
     danger: "text-red-400 bg-red-500/10",
     neutral: "text-gray-300 bg-gray-500/10",
   };
@@ -187,7 +188,7 @@ const AssetCard = ({ asset, onEdit, onDelete }) => {
   const Icon = categoryInfo.icon;
 
   return (
-    <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[#FF8C42]/30 transition-all group">
+    <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[var(--color-primary)]/30 transition-all group">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-green-500/10 text-green-400">
@@ -261,7 +262,7 @@ const LiabilityCard = ({ liability, onEdit, onDelete }) => {
   const categoryInfo = LIABILITY_CATEGORIES[liability.category] || { label: liability.category };
 
   return (
-    <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[#FF8C42]/30 transition-all group">
+    <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[var(--color-primary)]/30 transition-all group">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-red-500/10 text-red-400">
@@ -341,7 +342,7 @@ const EquityCard = ({ entry, onEdit, onDelete, isAutomated }) => {
   const isNegative = entry.amount < 0;
 
   return (
-    <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[#FF8C42]/30 transition-colors group">
+    <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[var(--color-primary)]/30 transition-colors group">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-purple-500/10 text-purple-400">
@@ -351,7 +352,7 @@ const EquityCard = ({ entry, onEdit, onDelete, isAutomated }) => {
             <div className="font-medium text-white flex items-center gap-2">
               {entry.description}
               {isAutomated && (
-                <span className="text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded">Auto</span>
+                <span className="text-xs bg-[var(--color-primary)]/20 text-[var(--color-primary)] px-2 py-0.5 rounded">Auto</span>
               )}
             </div>
             <div className="text-xs text-gray-500">{typeInfo.label}</div>
@@ -488,7 +489,7 @@ const AssetModal = ({ isOpen, onClose, asset, userId }) => {
                   const firstCategory = Object.entries(ASSET_CATEGORIES).find(([, info]) => info.type === type)?.[0] || "other";
                   setFormData({ ...formData, asset_type: type, category: firstCategory });
                 }}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               >
                 <option value="current">Current Assets</option>
                 <option value="fixed">Fixed Assets</option>
@@ -501,7 +502,7 @@ const AssetModal = ({ isOpen, onClose, asset, userId }) => {
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               >
                 {currentCategories.map(([key, info]) => (
                   <option key={key} value={key}>{info.label}</option>
@@ -516,7 +517,7 @@ const AssetModal = ({ isOpen, onClose, asset, userId }) => {
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               placeholder="e.g., Office Equipment"
               required
             />
@@ -529,7 +530,7 @@ const AssetModal = ({ isOpen, onClose, asset, userId }) => {
                 type="number"
                 value={formData.purchase_value}
                 onChange={(e) => setFormData({ ...formData, purchase_value: e.target.value })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 min="0"
                 required
               />
@@ -541,7 +542,7 @@ const AssetModal = ({ isOpen, onClose, asset, userId }) => {
                 type="number"
                 value={formData.current_value}
                 onChange={(e) => setFormData({ ...formData, current_value: e.target.value })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 min="0"
                 required
               />
@@ -555,7 +556,7 @@ const AssetModal = ({ isOpen, onClose, asset, userId }) => {
                 type="date"
                 value={formData.purchase_date}
                 onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               />
             </div>
 
@@ -565,7 +566,7 @@ const AssetModal = ({ isOpen, onClose, asset, userId }) => {
                 type="number"
                 value={formData.depreciation_rate}
                 onChange={(e) => setFormData({ ...formData, depreciation_rate: e.target.value })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 min="0"
                 max="100"
                 placeholder="0"
@@ -578,7 +579,7 @@ const AssetModal = ({ isOpen, onClose, asset, userId }) => {
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none resize-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none resize-none"
               rows={2}
               placeholder="Additional notes..."
             />
@@ -713,7 +714,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, userId }) => {
                   const firstCategory = Object.entries(LIABILITY_CATEGORIES).find(([, info]) => info.type === type)?.[0] || "other";
                   setFormData({ ...formData, liability_type: type, category: firstCategory });
                 }}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               >
                 <option value="current">Current (Due within 1 year)</option>
                 <option value="long_term">Long-term (Due after 1 year)</option>
@@ -725,7 +726,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, userId }) => {
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               >
                 {currentCategories.map(([key, info]) => (
                   <option key={key} value={key}>{info.label}</option>
@@ -740,7 +741,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, userId }) => {
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               placeholder="e.g., Bank Loan - BDO"
               required
             />
@@ -753,7 +754,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, userId }) => {
                 type="number"
                 value={formData.original_amount}
                 onChange={(e) => setFormData({ ...formData, original_amount: e.target.value })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 min="0"
                 required
               />
@@ -765,7 +766,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, userId }) => {
                 type="number"
                 value={formData.current_balance}
                 onChange={(e) => setFormData({ ...formData, current_balance: e.target.value })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 min="0"
                 required
               />
@@ -779,7 +780,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, userId }) => {
                 type="number"
                 value={formData.interest_rate}
                 onChange={(e) => setFormData({ ...formData, interest_rate: e.target.value })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 min="0"
                 max="100"
                 step="0.01"
@@ -793,7 +794,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, userId }) => {
                 type="date"
                 value={formData.due_date}
                 onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               />
             </div>
           </div>
@@ -804,7 +805,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, userId }) => {
               type="text"
               value={formData.creditor}
               onChange={(e) => setFormData({ ...formData, creditor: e.target.value })}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               placeholder="e.g., BDO, Metrobank"
             />
           </div>
@@ -814,7 +815,7 @@ const LiabilityModal = ({ isOpen, onClose, liability, userId }) => {
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none resize-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none resize-none"
               rows={2}
               placeholder="Additional notes..."
             />
@@ -927,7 +928,7 @@ const EquityModal = ({ isOpen, onClose, entry, userId }) => {
             <select
               value={formData.equity_type}
               onChange={(e) => setFormData({ ...formData, equity_type: e.target.value })}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
             >
               {Object.entries(EQUITY_TYPES)
                 .filter(([key]) => key !== "retained_earnings")
@@ -946,7 +947,7 @@ const EquityModal = ({ isOpen, onClose, entry, userId }) => {
               type="text"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               placeholder="e.g., Initial capital investment"
               required
             />
@@ -957,14 +958,14 @@ const EquityModal = ({ isOpen, onClose, entry, userId }) => {
               <label className="block text-sm font-medium text-gray-400 mb-1">
                 Amount (PHP)
                 {formData.equity_type === "drawings" && (
-                  <span className="text-amber-400 ml-1">(will be negative)</span>
+                  <span className="text-[var(--color-primary)] ml-1">(will be negative)</span>
                 )}
               </label>
               <input
                 type="number"
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 min="0"
                 required
               />
@@ -976,7 +977,7 @@ const EquityModal = ({ isOpen, onClose, entry, userId }) => {
                 type="date"
                 value={formData.transaction_date}
                 onChange={(e) => setFormData({ ...formData, transaction_date: e.target.value })}
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 required
               />
             </div>
@@ -987,7 +988,7 @@ const EquityModal = ({ isOpen, onClose, entry, userId }) => {
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none resize-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none resize-none"
               rows={2}
               placeholder="Additional notes..."
             />
@@ -1018,6 +1019,7 @@ const EquityModal = ({ isOpen, onClose, entry, userId }) => {
 
 // Add/Edit Period Modal
 const PeriodModal = ({ isOpen, onClose, userId }) => {
+  const { showAlert } = useAppModal();
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [customMode, setCustomMode] = useState(false);
@@ -1048,7 +1050,7 @@ const PeriodModal = ({ isOpen, onClose, userId }) => {
       onClose();
     } catch (error) {
       console.error("Error creating period:", error);
-      alert(error.message || "Failed to create period");
+      showAlert({ title: 'Error', message: error.message || "Failed to create period", type: 'error' });
     }
   };
 
@@ -1066,7 +1068,7 @@ const PeriodModal = ({ isOpen, onClose, userId }) => {
       onClose();
     } catch (error) {
       console.error("Error creating period:", error);
-      alert(error.message || "Failed to create period");
+      showAlert({ title: 'Error', message: error.message || "Failed to create period", type: 'error' });
     }
   };
 
@@ -1087,13 +1089,13 @@ const PeriodModal = ({ isOpen, onClose, userId }) => {
           <div className="flex gap-2 mb-4">
             <button
               onClick={() => setCustomMode(false)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!customMode ? "bg-[#FF8C42] text-white" : "bg-[#333333] text-gray-400 hover:text-white"}`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${!customMode ? "bg-[var(--color-primary)] text-white" : "bg-[#333333] text-gray-400 hover:text-white"}`}
             >
               Quick Select
             </button>
             <button
               onClick={() => setCustomMode(true)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${customMode ? "bg-[#FF8C42] text-white" : "bg-[#333333] text-gray-400 hover:text-white"}`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${customMode ? "bg-[var(--color-primary)] text-white" : "bg-[#333333] text-gray-400 hover:text-white"}`}
             >
               Custom Period
             </button>
@@ -1135,7 +1137,7 @@ const PeriodModal = ({ isOpen, onClose, userId }) => {
                             className={`p-2 rounded-lg text-sm border transition-colors ${
                               suggestion.exists
                                 ? "bg-[#0A0A0A] text-gray-600 cursor-not-allowed border-[#333333]"
-                                : "bg-[#0A0A0A] text-gray-300 hover:bg-[#FF8C42]/20 hover:border-[#FF8C42]/50 border-[#333333]"
+                                : "bg-[#0A0A0A] text-gray-300 hover:bg-[var(--color-primary)]/20 hover:border-[var(--color-primary)]/50 border-[#333333]"
                             }`}
                           >
                             {suggestion.period_name.split(" ")[0].substring(0, 3)}
@@ -1159,7 +1161,7 @@ const PeriodModal = ({ isOpen, onClose, userId }) => {
                             className={`p-2 rounded-lg text-sm border transition-colors ${
                               suggestion.exists
                                 ? "bg-[#0A0A0A] text-gray-600 cursor-not-allowed border-[#333333]"
-                                : "bg-[#0A0A0A] text-gray-300 hover:bg-[#FF8C42]/20 hover:border-[#FF8C42]/50 border-[#333333]"
+                                : "bg-[#0A0A0A] text-gray-300 hover:bg-[var(--color-primary)]/20 hover:border-[var(--color-primary)]/50 border-[#333333]"
                             }`}
                           >
                             {suggestion.period_name}
@@ -1183,7 +1185,7 @@ const PeriodModal = ({ isOpen, onClose, userId }) => {
                             className={`p-2 rounded-lg text-sm border transition-colors ${
                               suggestion.exists
                                 ? "bg-[#0A0A0A] text-gray-600 cursor-not-allowed border-[#333333]"
-                                : "bg-[#0A0A0A] text-gray-300 hover:bg-[#FF8C42]/20 hover:border-[#FF8C42]/50 border-[#333333]"
+                                : "bg-[#0A0A0A] text-gray-300 hover:bg-[var(--color-primary)]/20 hover:border-[var(--color-primary)]/50 border-[#333333]"
                             }`}
                           >
                             {suggestion.period_name}
@@ -1204,7 +1206,7 @@ const PeriodModal = ({ isOpen, onClose, userId }) => {
                   type="text"
                   value={formData.period_name}
                   onChange={(e) => setFormData({ ...formData, period_name: e.target.value })}
-                  className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                  className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                   placeholder="e.g., January 2026, Q1 2026"
                   required
                 />
@@ -1215,7 +1217,7 @@ const PeriodModal = ({ isOpen, onClose, userId }) => {
                 <select
                   value={formData.period_type}
                   onChange={(e) => setFormData({ ...formData, period_type: e.target.value })}
-                  className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                  className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                 >
                   <option value="monthly">Monthly</option>
                   <option value="quarterly">Quarterly</option>
@@ -1230,7 +1232,7 @@ const PeriodModal = ({ isOpen, onClose, userId }) => {
                     type="date"
                     value={formData.start_date ? new Date(formData.start_date).toISOString().split("T")[0] : ""}
                     onChange={(e) => setFormData({ ...formData, start_date: new Date(e.target.value).getTime() })}
-                    className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                    className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                     required
                   />
                 </div>
@@ -1240,7 +1242,7 @@ const PeriodModal = ({ isOpen, onClose, userId }) => {
                     type="date"
                     value={formData.end_date ? new Date(formData.end_date).toISOString().split("T")[0] : ""}
                     onChange={(e) => setFormData({ ...formData, end_date: new Date(e.target.value).getTime() })}
-                    className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                    className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
                     required
                   />
                 </div>
@@ -1251,7 +1253,7 @@ const PeriodModal = ({ isOpen, onClose, userId }) => {
                 <textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none resize-none"
+                  className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none resize-none"
                   rows={2}
                   placeholder="Additional notes..."
                 />
@@ -1276,7 +1278,7 @@ const PeriodModal = ({ isOpen, onClose, userId }) => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/80 transition-colors"
+                  className="flex-1 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/80 transition-colors"
                 >
                   Create Period
                 </button>
@@ -1317,7 +1319,7 @@ const exportToPDF = (data, assets, liabilities) => {
       <title>Super Admin Balance Sheet</title>
       <style>
         body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
-        h1 { color: #FF8C42; border-bottom: 2px solid #FF8C42; padding-bottom: 10px; }
+        h1 { color: var(--color-primary); border-bottom: 2px solid var(--color-primary); padding-bottom: 10px; }
         h2 { color: #666; margin-top: 30px; }
         table { width: 100%; border-collapse: collapse; margin: 20px 0; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
@@ -1504,6 +1506,7 @@ const exportToCSV = (data, assets, liabilities, filename) => {
 
 // Close Period Modal
 const ClosePeriodModal = ({ isOpen, onClose, period, userId, closePeriodMutation }) => {
+  const { showAlert } = useAppModal();
   const [isClosing, setIsClosing] = useState(false);
 
   const handleClose = async () => {
@@ -1513,7 +1516,7 @@ const ClosePeriodModal = ({ isOpen, onClose, period, userId, closePeriodMutation
       onClose();
     } catch (error) {
       console.error("Error closing period:", error);
-      alert(error.message || "Failed to close period");
+      showAlert({ title: 'Error', message: error.message || "Failed to close period", type: 'error' });
     } finally {
       setIsClosing(false);
     }
@@ -1529,12 +1532,12 @@ const ClosePeriodModal = ({ isOpen, onClose, period, userId, closePeriodMutation
         </div>
 
         <div className="p-4 space-y-4">
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+          <div className="bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <AlertCircle className="text-amber-400 mt-0.5" size={20} />
+              <AlertCircle className="text-[var(--color-primary)] mt-0.5" size={20} />
               <div>
-                <h4 className="font-medium text-amber-400">Warning</h4>
-                <p className="text-sm text-amber-400/80 mt-1">
+                <h4 className="font-medium text-[var(--color-primary)]">Warning</h4>
+                <p className="text-sm text-[var(--color-primary)]/80 mt-1">
                   Closing this period will lock all transactions within the date range.
                   This action can be undone by reopening the period.
                 </p>
@@ -1561,7 +1564,7 @@ const ClosePeriodModal = ({ isOpen, onClose, period, userId, closePeriodMutation
             <button
               onClick={handleClose}
               disabled={isClosing}
-              className="flex-1 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/80 flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/80 flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
             >
               <Lock size={16} />
               {isClosing ? "Closing..." : "Close Period"}
@@ -1576,12 +1579,13 @@ const ClosePeriodModal = ({ isOpen, onClose, period, userId, closePeriodMutation
 
 // Reopen Period Modal
 const ReopenPeriodModal = ({ isOpen, onClose, period, userId, reopenPeriodMutation }) => {
+  const { showAlert } = useAppModal();
   const [reason, setReason] = useState("");
   const [isReopening, setIsReopening] = useState(false);
 
   const handleReopen = async () => {
     if (!reason.trim()) {
-      alert("Please provide a reason for reopening");
+      showAlert({ title: 'Missing Reason', message: "Please provide a reason for reopening", type: 'warning' });
       return;
     }
 
@@ -1596,7 +1600,7 @@ const ReopenPeriodModal = ({ isOpen, onClose, period, userId, reopenPeriodMutati
       onClose();
     } catch (error) {
       console.error("Error reopening period:", error);
-      alert(error.message || "Failed to reopen period");
+      showAlert({ title: 'Error', message: error.message || "Failed to reopen period", type: 'error' });
     } finally {
       setIsReopening(false);
     }
@@ -1640,7 +1644,7 @@ const ReopenPeriodModal = ({ isOpen, onClose, period, userId, reopenPeriodMutati
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none resize-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none resize-none"
               rows={3}
               placeholder="Explain why this period needs to be reopened..."
               required
@@ -1658,7 +1662,7 @@ const ReopenPeriodModal = ({ isOpen, onClose, period, userId, reopenPeriodMutati
             <button
               onClick={handleReopen}
               disabled={isReopening || !reason.trim()}
-              className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-amber-700 flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
             >
               <Unlock size={16} />
               {isReopening ? "Reopening..." : "Reopen Period"}
@@ -1725,7 +1729,7 @@ const PeriodComparisonModal = ({ isOpen, onClose, period }) => {
             <select
               value={compareToPeriodId || ""}
               onChange={(e) => setCompareToPeriodId(e.target.value || null)}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
             >
               <option value="">Select a period to compare</option>
               {closedPeriods.map((p) => (
@@ -1742,7 +1746,7 @@ const PeriodComparisonModal = ({ isOpen, onClose, period }) => {
               <div className="grid grid-cols-3 gap-4 text-sm font-medium">
                 <div></div>
                 <div className="text-center text-gray-400">{comparison.period_1.name}</div>
-                <div className="text-center text-[#FF8C42]">{comparison.period_2.name}</div>
+                <div className="text-center text-[var(--color-primary)]">{comparison.period_2.name}</div>
               </div>
 
               {/* Comparison Rows */}
@@ -1789,6 +1793,7 @@ const PeriodComparisonModal = ({ isOpen, onClose, period }) => {
 // Main Component
 const SuperAdminBalanceSheet = () => {
   const { user } = useCurrentUser();
+  const { showConfirm, showAlert } = useAppModal();
   const [activeTab, setActiveTab] = useState("overview");
   const [assetModal, setAssetModal] = useState({ open: false, asset: null });
   const [liabilityModal, setLiabilityModal] = useState({ open: false, liability: null });
@@ -1828,7 +1833,8 @@ const SuperAdminBalanceSheet = () => {
 
   // Handle delete
   const handleDeleteAsset = async (id) => {
-    if (!confirm("Are you sure you want to remove this asset?")) return;
+    const confirmed = await showConfirm({ title: 'Remove Asset', message: "Are you sure you want to remove this asset?", type: 'warning' });
+    if (!confirmed) return;
     try {
       await deactivateAsset({ id });
     } catch (error) {
@@ -1837,7 +1843,8 @@ const SuperAdminBalanceSheet = () => {
   };
 
   const handleDeleteLiability = async (id) => {
-    if (!confirm("Are you sure you want to remove this liability?")) return;
+    const confirmed = await showConfirm({ title: 'Remove Liability', message: "Are you sure you want to remove this liability?", type: 'warning' });
+    if (!confirmed) return;
     try {
       await deactivateLiability({ id });
     } catch (error) {
@@ -1846,7 +1853,8 @@ const SuperAdminBalanceSheet = () => {
   };
 
   const handleDeleteEquity = async (id) => {
-    if (!confirm("Are you sure you want to delete this equity entry?")) return;
+    const confirmed = await showConfirm({ title: 'Delete Equity Entry', message: "Are you sure you want to delete this equity entry?", type: 'warning' });
+    if (!confirmed) return;
     try {
       await deleteEquity({ id });
     } catch (error) {
@@ -1887,14 +1895,14 @@ const SuperAdminBalanceSheet = () => {
           <div className="flex gap-2">
             <button
               onClick={() => balanceSheet && exportToCSV(balanceSheet, assets, liabilities, `balance-sheet-${new Date().toISOString().split('T')[0]}`)}
-              className="p-2 bg-[#1A1A1A] border border-[#333333] rounded-lg hover:border-[#FF8C42] transition-colors"
+              className="p-2 bg-[#1A1A1A] border border-[#333333] rounded-lg hover:border-[var(--color-primary)] transition-colors"
               title="Export to CSV"
             >
               <Download className="w-5 h-5 text-gray-400" />
             </button>
             <button
               onClick={() => balanceSheet && exportToPDF(balanceSheet, assets, liabilities)}
-              className="p-2 bg-[#1A1A1A] border border-[#333333] rounded-lg hover:border-[#FF8C42] transition-colors"
+              className="p-2 bg-[#1A1A1A] border border-[#333333] rounded-lg hover:border-[var(--color-primary)] transition-colors"
               title="Export to PDF"
             >
               <FileText className="w-5 h-5 text-gray-400" />
@@ -1922,7 +1930,7 @@ const SuperAdminBalanceSheet = () => {
             <span>Equity</span>
           </div>
           {!balanceSheet?.is_balanced && (
-            <p className="text-amber-400 text-xs mt-2">
+            <p className="text-[var(--color-primary)] text-xs mt-2">
               ⚠️ Balance sheet is not balanced. Please review entries.
             </p>
           )}
@@ -2052,10 +2060,10 @@ const SuperAdminBalanceSheet = () => {
 
       {/* Automated Receivables - Unpaid Royalties & Product Orders */}
       {(balanceSheet?.assets?.royalty_receivables > 0 || balanceSheet?.assets?.order_receivables > 0) && (
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
+        <div className="bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 rounded-xl p-4">
           <div className="flex items-start gap-3">
-            <div className="p-2 bg-amber-500/20 rounded-lg">
-              <RefreshCw className="w-5 h-5 text-amber-400" />
+            <div className="p-2 bg-[var(--color-primary)]/20 rounded-lg">
+              <RefreshCw className="w-5 h-5 text-[var(--color-primary)]" />
             </div>
             <div className="flex-1">
               <p className="text-white font-medium">Automated Receivables (Assets)</p>
@@ -2064,16 +2072,16 @@ const SuperAdminBalanceSheet = () => {
               </p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
-                  <Percent className="w-4 h-4 text-amber-400" />
+                  <Percent className="w-4 h-4 text-[var(--color-primary)]" />
                   <div>
-                    <p className="text-amber-400 font-bold">{formatCurrency(balanceSheet.assets.royalty_receivables)}</p>
+                    <p className="text-[var(--color-primary)] font-bold">{formatCurrency(balanceSheet.assets.royalty_receivables)}</p>
                     <p className="text-gray-500 text-xs">{balanceSheet.pending_royalty_count} unpaid royalties</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Package className="w-4 h-4 text-amber-400" />
+                  <Package className="w-4 h-4 text-[var(--color-primary)]" />
                   <div>
-                    <p className="text-amber-400 font-bold">{formatCurrency(balanceSheet.assets.order_receivables)}</p>
+                    <p className="text-[var(--color-primary)] font-bold">{formatCurrency(balanceSheet.assets.order_receivables)}</p>
                     <p className="text-gray-500 text-xs">{balanceSheet.pending_order_count} pending orders</p>
                   </div>
                 </div>
@@ -2097,7 +2105,7 @@ const SuperAdminBalanceSheet = () => {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors whitespace-nowrap ${
               activeTab === tab.id
-                ? "border-[#FF8C42] text-[#FF8C42]"
+                ? "border-[var(--color-primary)] text-[var(--color-primary)]"
                 : "border-transparent text-gray-400 hover:text-white"
             }`}
           >
@@ -2155,13 +2163,13 @@ const SuperAdminBalanceSheet = () => {
               {/* Automated Receivables Breakdown */}
               {(balanceSheet?.assets?.royalty_receivables > 0 || balanceSheet?.assets?.order_receivables > 0) && (
                 <>
-                  <div className="flex justify-between text-sm pl-3 border-l-2 border-amber-500/30">
-                    <span className="text-amber-400">↳ Royalty Receivables</span>
-                    <span className="text-amber-400">{formatCurrency(balanceSheet?.assets?.royalty_receivables)}</span>
+                  <div className="flex justify-between text-sm pl-3 border-l-2 border-[var(--color-primary)]/30">
+                    <span className="text-[var(--color-primary)]">↳ Royalty Receivables</span>
+                    <span className="text-[var(--color-primary)]">{formatCurrency(balanceSheet?.assets?.royalty_receivables)}</span>
                   </div>
-                  <div className="flex justify-between text-sm pl-3 border-l-2 border-amber-500/30">
-                    <span className="text-amber-400">↳ Order Receivables</span>
-                    <span className="text-amber-400">{formatCurrency(balanceSheet?.assets?.order_receivables)}</span>
+                  <div className="flex justify-between text-sm pl-3 border-l-2 border-[var(--color-primary)]/30">
+                    <span className="text-[var(--color-primary)]">↳ Order Receivables</span>
+                    <span className="text-[var(--color-primary)]">{formatCurrency(balanceSheet?.assets?.order_receivables)}</span>
                   </div>
                 </>
               )}
@@ -2245,7 +2253,7 @@ const SuperAdminBalanceSheet = () => {
                 <p>No assets recorded yet</p>
                 <button
                   onClick={() => setAssetModal({ open: true, asset: null })}
-                  className="mt-4 text-[#FF8C42] hover:underline"
+                  className="mt-4 text-[var(--color-primary)] hover:underline"
                 >
                   Add your first asset
                 </button>
@@ -2282,7 +2290,7 @@ const SuperAdminBalanceSheet = () => {
                 <p>No liabilities recorded yet</p>
                 <button
                   onClick={() => setLiabilityModal({ open: true, liability: null })}
-                  className="mt-4 text-[#FF8C42] hover:underline"
+                  className="mt-4 text-[var(--color-primary)] hover:underline"
                 >
                   Add your first liability
                 </button>
@@ -2334,7 +2342,7 @@ const SuperAdminBalanceSheet = () => {
                 <p>No equity entries recorded yet</p>
                 <button
                   onClick={() => setEquityModal({ open: true, entry: null })}
-                  className="mt-4 text-[#FF8C42] hover:underline"
+                  className="mt-4 text-[var(--color-primary)] hover:underline"
                 >
                   Add your first equity entry
                 </button>
@@ -2353,7 +2361,7 @@ const SuperAdminBalanceSheet = () => {
             </div>
             <button
               onClick={() => setPeriodModal({ open: true })}
-              className="flex items-center gap-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#E67A32] transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)] transition-colors"
             >
               <Plus size={18} />
               New Period
@@ -2387,7 +2395,7 @@ const SuperAdminBalanceSheet = () => {
               return (
                 <div
                   key={period._id}
-                  className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[#FF8C42]/30 transition-all"
+                  className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4 hover:border-[var(--color-primary)]/30 transition-all"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -2407,7 +2415,7 @@ const SuperAdminBalanceSheet = () => {
                         period.status === "open"
                           ? "bg-green-500/20 text-green-400"
                           : period.status === "closing"
-                          ? "bg-amber-500/20 text-amber-400"
+                          ? "bg-[var(--color-primary)]/20 text-[var(--color-primary)]"
                           : "bg-gray-500/20 text-gray-400"
                       }`}>
                         {period.status === "open" && <Unlock size={12} />}
@@ -2489,7 +2497,7 @@ const SuperAdminBalanceSheet = () => {
                         {period.status === "open" && (
                           <button
                             onClick={() => setClosePeriodModal({ open: true, period })}
-                            className="flex items-center gap-1 px-3 py-1.5 text-sm bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/80 transition-colors"
+                            className="flex items-center gap-1 px-3 py-1.5 text-sm bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/80 transition-colors"
                           >
                             <Lock size={14} />
                             Close Period
@@ -2499,7 +2507,7 @@ const SuperAdminBalanceSheet = () => {
                           <>
                             <button
                               onClick={() => setReopenPeriodModal({ open: true, period })}
-                              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 transition-colors"
+                              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary)]/30 transition-colors"
                             >
                               <Unlock size={14} />
                               Reopen
@@ -2516,12 +2524,13 @@ const SuperAdminBalanceSheet = () => {
                         {period.status !== "closed" && (
                           <button
                             onClick={async () => {
-                              if (!confirm("Are you sure you want to delete this period?")) return;
+                              const confirmed = await showConfirm({ title: 'Delete Period', message: "Are you sure you want to delete this period?", type: 'warning' });
+                              if (!confirmed) return;
                               try {
                                 await deletePeriod({ period_id: period._id });
                               } catch (error) {
                                 console.error("Error deleting period:", error);
-                                alert("Error: " + error.message);
+                                showAlert({ title: 'Error', message: "Error: " + error.message, type: 'error' });
                               }
                             }}
                             className="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
@@ -2543,7 +2552,7 @@ const SuperAdminBalanceSheet = () => {
                 <p className="text-sm mt-2">Create periods to lock historical financial data</p>
                 <button
                   onClick={() => setPeriodModal({ open: true })}
-                  className="mt-4 text-[#FF8C42] hover:underline"
+                  className="mt-4 text-[var(--color-primary)] hover:underline"
                 >
                   Create your first period
                 </button>

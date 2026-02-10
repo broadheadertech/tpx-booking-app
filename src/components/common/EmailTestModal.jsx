@@ -2,15 +2,17 @@ import React, { useState } from 'react'
 import { Mail, Send, Loader2, X, CheckCircle, AlertCircle } from 'lucide-react'
 import Modal from './Modal'
 import { sendTestEmail } from '../../services/resendService'
+import { useAppModal } from '../../context/AppModalContext'
 
 const EmailTestModal = ({ isOpen, onClose }) => {
   const [testEmail, setTestEmail] = useState('')
   const [isTesting, setIsTesting] = useState(false)
   const [testResult, setTestResult] = useState(null)
+  const { showAlert } = useAppModal()
 
   const handleTestEmail = async () => {
     if (!testEmail || !testEmail.includes('@')) {
-      alert('Please enter a valid email address')
+      showAlert({ title: 'Invalid Email', message: 'Please enter a valid email address', type: 'error' })
       return
     }
 

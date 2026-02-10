@@ -219,8 +219,8 @@ const BranchWalletSettingsPanel = () => {
     <div className="bg-[#1A1A1A] rounded-xl p-6 border border-[#2A2A2A]">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 bg-[#FF8C42]/10 rounded-lg flex items-center justify-center">
-          <Building className="w-5 h-5 text-[#FF8C42]" />
+        <div className="w-10 h-10 bg-[var(--color-primary)]/10 rounded-lg flex items-center justify-center">
+          <Building className="w-5 h-5 text-[var(--color-primary)]" />
         </div>
         <div>
           <h2 className="text-lg font-semibold text-white">Branch Wallet Settings</h2>
@@ -251,7 +251,7 @@ const BranchWalletSettingsPanel = () => {
           <select
             value={selectedBranchId || ''}
             onChange={(e) => setSelectedBranchId(e.target.value || null)}
-            className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-white focus:border-[#FF8C42] focus:outline-none appearance-none"
+            className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-white focus:border-[var(--color-primary)] focus:outline-none appearance-none"
           >
             <option value="">-- Select a branch --</option>
             {branchList?.map(branch => (
@@ -271,14 +271,14 @@ const BranchWalletSettingsPanel = () => {
           <div className="p-4 bg-[#0A0A0A] rounded-lg border border-[#2A2A2A]">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#FF8C42]/10 rounded-lg flex items-center justify-center">
-                  <Percent className="w-5 h-5 text-[#FF8C42]" />
+                <div className="w-10 h-10 bg-[var(--color-primary)]/10 rounded-lg flex items-center justify-center">
+                  <Percent className="w-5 h-5 text-[var(--color-primary)]" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-white font-medium">Commission Override</p>
                     {formValues.use_commission_override && (
-                      <span className="px-2 py-0.5 text-xs font-medium bg-[#FF8C42]/20 text-[#FF8C42] rounded">
+                      <span className="px-2 py-0.5 text-xs font-medium bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded">
                         Custom
                       </span>
                     )}
@@ -319,7 +319,7 @@ const BranchWalletSettingsPanel = () => {
                 type="button"
                 onClick={handleToggleCommissionOverride}
                 className={`relative w-12 h-6 rounded-full transition-colors ${
-                  formValues.use_commission_override ? 'bg-[#FF8C42]' : 'bg-[#2A2A2A]'
+                  formValues.use_commission_override ? 'bg-[var(--color-primary)]' : 'bg-[#2A2A2A]'
                 }`}
               >
                 <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
@@ -338,10 +338,10 @@ const BranchWalletSettingsPanel = () => {
                     className={`w-20 px-3 py-2 bg-[#1A1A1A] border rounded-lg text-white focus:outline-none ${
                       errors.commission_override
                         ? 'border-red-500'
-                        : 'border-[#2A2A2A] focus:border-[#FF8C42]'
+                        : 'border-[#2A2A2A] focus:border-[var(--color-primary)]'
                     }`}
                   />
-                  <span className="text-[#FF8C42] font-bold">%</span>
+                  <span className="text-[var(--color-primary)] font-bold">%</span>
                   <button
                     type="button"
                     onClick={() => handleValueChange('commission_override', globalCommission.toString())}
@@ -366,14 +366,14 @@ const BranchWalletSettingsPanel = () => {
           <div className="p-4 bg-[#0A0A0A] rounded-lg border border-[#2A2A2A]">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-[#FF8C42]/10 rounded-lg flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-[#FF8C42]" />
+                <div className="w-10 h-10 bg-[var(--color-primary)]/10 rounded-lg flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-[var(--color-primary)]" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <p className="text-white font-medium">Settlement Frequency</p>
                     {formValues.use_settlement_override && (
-                      <span className="px-2 py-0.5 text-xs font-medium bg-[#FF8C42]/20 text-[#FF8C42] rounded">
+                      <span className="px-2 py-0.5 text-xs font-medium bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded">
                         Custom
                       </span>
                     )}
@@ -401,7 +401,7 @@ const BranchWalletSettingsPanel = () => {
                   }
                 }}
                 className={`relative w-12 h-6 rounded-full transition-colors ${
-                  formValues.use_settlement_override ? 'bg-[#FF8C42]' : 'bg-[#2A2A2A]'
+                  formValues.use_settlement_override ? 'bg-[var(--color-primary)]' : 'bg-[#2A2A2A]'
                 }`}
               >
                 <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
@@ -427,7 +427,7 @@ const BranchWalletSettingsPanel = () => {
                     onClick={() => handleValueChange('settlement_frequency', freq.value)}
                     className={`flex items-center justify-center gap-2 p-3 rounded-lg border transition-colors ${
                       formValues.settlement_frequency === freq.value
-                        ? 'bg-[#FF8C42]/10 border-[#FF8C42] text-[#FF8C42]'
+                        ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)] text-[var(--color-primary)]'
                         : 'bg-[#1A1A1A] border-[#2A2A2A] text-gray-400 hover:border-gray-500'
                     }`}
                   >
@@ -442,8 +442,8 @@ const BranchWalletSettingsPanel = () => {
           {/* Payout Details Card */}
           <div className="p-4 bg-[#0A0A0A] rounded-lg border border-[#2A2A2A]">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-[#FF8C42]/10 rounded-lg flex items-center justify-center">
-                <CreditCard className="w-5 h-5 text-[#FF8C42]" />
+              <div className="w-10 h-10 bg-[var(--color-primary)]/10 rounded-lg flex items-center justify-center">
+                <CreditCard className="w-5 h-5 text-[var(--color-primary)]" />
               </div>
               <div>
                 <p className="text-white font-medium">Payout Details</p>
@@ -467,7 +467,7 @@ const BranchWalletSettingsPanel = () => {
                       onClick={() => handleValueChange('payout_method', method.value)}
                       className={`flex flex-col items-center gap-2 p-3 rounded-lg border transition-colors ${
                         formValues.payout_method === method.value
-                          ? 'bg-[#FF8C42]/10 border-[#FF8C42] text-[#FF8C42]'
+                          ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)] text-[var(--color-primary)]'
                           : 'bg-[#1A1A1A] border-[#2A2A2A] text-gray-400 hover:border-gray-500'
                       }`}
                     >
@@ -495,7 +495,7 @@ const BranchWalletSettingsPanel = () => {
                       className={`w-full px-4 py-3 bg-[#1A1A1A] border rounded-lg text-white placeholder-gray-500 focus:outline-none ${
                         errors.payout_account_number
                           ? 'border-red-500'
-                          : 'border-[#2A2A2A] focus:border-[#FF8C42]'
+                          : 'border-[#2A2A2A] focus:border-[var(--color-primary)]'
                       }`}
                     />
                     {errors.payout_account_number && (
@@ -520,7 +520,7 @@ const BranchWalletSettingsPanel = () => {
                       className={`w-full px-4 py-3 bg-[#1A1A1A] border rounded-lg text-white placeholder-gray-500 focus:outline-none ${
                         errors.payout_account_name
                           ? 'border-red-500'
-                          : 'border-[#2A2A2A] focus:border-[#FF8C42]'
+                          : 'border-[#2A2A2A] focus:border-[var(--color-primary)]'
                       }`}
                     />
                     {errors.payout_account_name && (
@@ -546,7 +546,7 @@ const BranchWalletSettingsPanel = () => {
                         className={`w-full px-4 py-3 bg-[#1A1A1A] border rounded-lg text-white placeholder-gray-500 focus:outline-none ${
                           errors.payout_bank_name
                             ? 'border-red-500'
-                            : 'border-[#2A2A2A] focus:border-[#FF8C42]'
+                            : 'border-[#2A2A2A] focus:border-[var(--color-primary)]'
                         }`}
                       />
                       {errors.payout_bank_name && (
@@ -566,7 +566,7 @@ const BranchWalletSettingsPanel = () => {
           <button
             onClick={handleSave}
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-[#FF8C42] hover:bg-[#FF7A2E] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary)] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors"
           >
             {loading ? (
               <>

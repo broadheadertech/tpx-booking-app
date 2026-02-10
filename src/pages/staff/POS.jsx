@@ -13,6 +13,7 @@ import ReceiptModal from '../../components/staff/ReceiptModal'
 import Modal from '../../components/common/Modal'
 import { sendWelcomeEmail, isEmailServiceConfigured, sendBarberBookingNotification } from '../../services/emailService'
 import { APP_VERSION } from '../../config/version'
+import { useAppModal } from '../../context/AppModalContext'
 
 // Barber Avatar Component for POS
 const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
@@ -45,6 +46,7 @@ const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
 }
 
 const POS = () => {
+  const { showAlert, showPrompt } = useAppModal()
   const { user, loading } = useCurrentUser()
   const [selectedBarber, setSelectedBarber] = useState(null)
   const [currentTransaction, setCurrentTransaction] = useState({
@@ -1155,7 +1157,7 @@ const POS = () => {
         }
       }
 
-      alert(errorMessage)
+      showAlert({ title: 'Transaction Failed', message: errorMessage, type: 'error' })
       setActiveModal(null)
     }
   }
@@ -2948,7 +2950,7 @@ const POS = () => {
                 {currentBranch?.enable_late_fee && currentTransaction.late_fee === 0 && (
                   <div className="flex justify-end pt-1 pb-1">
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         const lateFeeType = currentBranch.late_fee_type || 'fixed';
                         const feeAmount = currentBranch.late_fee_amount || 0;
 
@@ -2957,7 +2959,7 @@ const POS = () => {
                         } else {
                           // Prompt for duration
                           const unit = lateFeeType === 'per_minute' ? 'minutes' : 'hours';
-                          const duration = prompt(`Enter number of ${unit} late:`);
+                          const duration = await showPrompt({ title: 'Late Fee Duration', message: `Enter number of ${unit} late:`, placeholder: `Number of ${unit}`, inputType: 'number' });
                           if (duration && !isNaN(duration) && duration > 0) {
                             const fee = feeAmount * parseFloat(duration);
                             setCurrentTransaction(prev => ({

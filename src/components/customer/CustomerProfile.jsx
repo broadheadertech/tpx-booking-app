@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
 import { ArrowLeft, User, Edit3, Save, X, Phone, Mail, Calendar, MapPin, Camera } from 'lucide-react'
+import { useAppModal } from '../../context/AppModalContext'
 
 const CustomerProfile = ({ onBack, customerData }) => {
+  const { showAlert } = useAppModal()
   const [isEditing, setIsEditing] = useState(false)
   const [profileData, setProfileData] = useState({
     firstName: 'John',
@@ -49,7 +51,7 @@ const CustomerProfile = ({ onBack, customerData }) => {
     setProfileData(editForm)
     setIsEditing(false)
     // Here you would typically make an API call to save the data
-    alert('Profile updated successfully!')
+    showAlert({ title: 'Profile Updated', message: 'Profile updated successfully!', type: 'success' })
   }
 
   const handleCancel = () => {

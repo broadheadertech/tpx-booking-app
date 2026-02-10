@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Crown, Plus, Edit2, Trash2, Users, Gift, AlertTriangle, CheckCircle, RefreshCw, X } from 'lucide-react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { useAppModal } from '../../context/AppModalContext'
 
 /**
  * Tier Management Panel
@@ -15,6 +16,7 @@ import { api } from '../../../convex/_generated/api'
  * Story 19.2: Tier Management Interface
  */
 const TierManagementPanel = () => {
+  const { showConfirm } = useAppModal()
   const [editingTier, setEditingTier] = useState(null)
   const [showNewTierModal, setShowNewTierModal] = useState(false)
   const [showPromotionDialog, setShowPromotionDialog] = useState(false)
@@ -95,7 +97,8 @@ const TierManagementPanel = () => {
 
   // Handle tier deletion
   const handleDeleteTier = async (tierId, tierName) => {
-    if (!confirm(`Are you sure you want to delete the "${tierName}" tier?`)) return
+    const confirmed = await showConfirm({ title: 'Delete Tier', message: `Are you sure you want to delete the "${tierName}" tier?`, type: 'warning' })
+    if (!confirmed) return
 
     setLoading(true)
     try {
@@ -130,7 +133,8 @@ const TierManagementPanel = () => {
 
   // Handle remove benefit
   const handleRemoveBenefit = async (benefitId) => {
-    if (!confirm('Remove this benefit?')) return
+    const confirmed = await showConfirm({ title: 'Remove Benefit', message: 'Remove this benefit?', type: 'warning' })
+    if (!confirmed) return
 
     setLoading(true)
     try {

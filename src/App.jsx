@@ -9,6 +9,7 @@ import { BrandingProvider } from "./context/BrandingContext";
 import { BranchProvider } from "./context/BranchContext";
 import { CartProvider } from "./context/CartContext";
 import { ToastProvider } from "./components/common/ToastNotification";
+import { AppModalProvider } from "./context/AppModalContext";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import AuthRedirect from "./components/common/AuthRedirect";
 import Landing from "./pages/Landing";
@@ -57,6 +58,7 @@ function App() {
   return (
     <AuthProvider>
       <ToastProvider>
+        <AppModalProvider>
         <BrandingProvider>
           <BranchProvider>
             <CartProvider>
@@ -322,6 +324,7 @@ function App() {
             </CartProvider>
           </BranchProvider>
         </BrandingProvider>
+        </AppModalProvider>
       </ToastProvider>
     </AuthProvider>
   );

@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react'
 import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw, Grid, List, ChevronLeft, ChevronRight, Download } from 'lucide-react'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { useAppModal } from '../../context/AppModalContext'
 import CreateServiceModal from './CreateServiceModal'
 
 const ServicesManagement = ({ services = [], onRefresh, user }) => {
+  const { showAlert, showConfirm } = useAppModal()
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('name')
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -20,18 +22,19 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
 
   const handleLoadDefaults = async () => {
     if (!user?.branch_id) return
-    if (!confirm('This will load the default services into your branch. Continue?')) return
+    const confirmed = await showConfirm({ title: 'Load Defaults', message: 'This will load the default services into your branch. Continue?', type: 'warning' })
+    if (!confirmed) return
     setLoading(true)
     try {
       const result = await copyDefaults({ branch_id: user.branch_id })
       if (result.success) {
         onRefresh()
       } else {
-        alert(result.message || 'No default services available.')
+        showAlert({ title: 'No Defaults', message: result.message || 'No default services available.', type: 'error' })
       }
     } catch (err) {
       console.error('Failed to load default services:', err)
-      alert('Failed to load default services. Please try again.')
+      showAlert({ title: 'Error', message: 'Failed to load default services. Please try again.', type: 'error' })
     } finally {
       setLoading(false)
     }
@@ -97,7 +100,8 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
   }
 
   const handleDelete = async (service) => {
-    if (!confirm(`Are you sure you want to delete "${service.name}"?`)) return
+    const confirmed = await showConfirm({ title: 'Delete Service', message: `Are you sure you want to delete "${service.name}"?`, type: 'warning' })
+    if (!confirmed) return
 
     setLoading(true)
     try {
@@ -105,7 +109,7 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
       onRefresh()
     } catch (err) {
       console.error('Failed to delete service:', err)
-      alert('Failed to delete service. Please try again.')
+      showAlert({ title: 'Error', message: 'Failed to delete service. Please try again.', type: 'error' })
     } finally {
       setLoading(false)
     }

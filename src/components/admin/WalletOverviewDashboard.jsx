@@ -152,10 +152,10 @@ function PrimaryMetricCard({ title, value, subtitle, icon: Icon, variant = "defa
       valueColor: "text-blue-400",
     },
     warning: {
-      border: "border-orange-700",
-      iconBg: "bg-orange-900/50",
-      iconColor: "text-orange-400",
-      valueColor: "text-orange-400",
+      border: "border-[var(--color-primary)]",
+      iconBg: "bg-[var(--color-primary)]/15",
+      iconColor: "text-[var(--color-primary)]",
+      valueColor: "text-[var(--color-primary)]",
     },
     success: {
       border: "border-green-700",

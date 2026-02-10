@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
+import { useAppModal } from '../../context/AppModalContext'
 import {
   Plus,
   Edit2,
@@ -51,6 +52,7 @@ const GRADIENT_PRESETS = [
 
 function ShopBannerManagement() {
   const { user } = useCurrentUser()
+  const { showConfirm } = useAppModal()
   const [showModal, setShowModal] = useState(false)
   const [editingBanner, setEditingBanner] = useState(null)
   const [showAnalytics, setShowAnalytics] = useState(false)
@@ -77,7 +79,8 @@ function ShopBannerManagement() {
   }
 
   const handleDelete = async (bannerId) => {
-    if (confirm('Are you sure you want to delete this banner?')) {
+    const confirmed = await showConfirm({ title: 'Delete Banner', message: 'Are you sure you want to delete this banner?', type: 'warning' })
+    if (confirmed) {
       await deleteBanner({ banner_id: bannerId })
     }
   }

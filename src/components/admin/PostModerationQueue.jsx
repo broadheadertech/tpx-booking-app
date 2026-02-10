@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { useAppModal } from '../../context/AppModalContext'
 import {
   CheckCircle,
   XCircle,
@@ -30,6 +31,7 @@ import {
  * Admin component to review/approve/reject pending posts + create new posts
  */
 const PostModerationQueue = ({ branchId, user }) => {
+  const { showAlert, showConfirm } = useAppModal()
   const [rejectingPostId, setRejectingPostId] = useState(null)
   const [rejectReason, setRejectReason] = useState('')
   const [processingPostId, setProcessingPostId] = useState(null)
@@ -61,7 +63,7 @@ const PostModerationQueue = ({ branchId, user }) => {
       })
     } catch (error) {
       console.error('Failed to approve post:', error)
-      alert('Failed to approve post: ' + error.message)
+      showAlert({ title: 'Error', message: 'Failed to approve post: ' + error.message, type: 'error' })
     } finally {
       setProcessingPostId(null)
     }
@@ -69,7 +71,7 @@ const PostModerationQueue = ({ branchId, user }) => {
 
   const handleReject = async (postId) => {
     if (!rejectReason.trim()) {
-      alert('Please provide a reason for rejection')
+      showAlert({ title: 'Missing Reason', message: 'Please provide a reason for rejection', type: 'warning' })
       return
     }
 
@@ -84,20 +86,21 @@ const PostModerationQueue = ({ branchId, user }) => {
       setRejectReason('')
     } catch (error) {
       console.error('Failed to reject post:', error)
-      alert('Failed to reject post: ' + error.message)
+      showAlert({ title: 'Error', message: 'Failed to reject post: ' + error.message, type: 'error' })
     } finally {
       setProcessingPostId(null)
     }
   }
 
   const handleDelete = async (postId) => {
-    if (!confirm('Are you sure you want to delete this post?')) return
+    const confirmed = await showConfirm({ title: 'Delete Post', message: 'Are you sure you want to delete this post?', type: 'warning' })
+    if (!confirmed) return
     setProcessingPostId(postId)
     try {
       await deletePost({ postId })
     } catch (error) {
       console.error('Failed to delete post:', error)
-      alert('Failed to delete post: ' + error.message)
+      showAlert({ title: 'Error', message: 'Failed to delete post: ' + error.message, type: 'error' })
     } finally {
       setProcessingPostId(null)
     }

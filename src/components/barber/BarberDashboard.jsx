@@ -70,6 +70,7 @@ import LoadingSpinner from "../common/LoadingSpinner";
 import ClockButton from "../common/ClockButton";
 import { formatTime } from "../../utils/dateUtils";
 import { useBranding } from "../../context/BrandingContext";
+import { useAppModal } from "../../context/AppModalContext";
 
 // Notification Panel Component
 const NotificationPanel = ({ isOpen, onClose, userId }) => {
@@ -340,6 +341,7 @@ const StatCard = ({ icon: Icon, label, value, subValue, trend, trendUp }) => (
 );
 
 const BarberDashboard = () => {
+  const { showConfirm } = useAppModal();
   const { user, loading: authLoading } = useCurrentUser();
   const location = useLocation();
   const navigate = useNavigate();
@@ -2589,7 +2591,8 @@ const BarberDashboard = () => {
 
   // Handle delete portfolio item
   const handleDeletePortfolio = async (itemId) => {
-    if (!confirm("Delete this portfolio image?")) return;
+    const confirmed = await showConfirm({ title: 'Delete Portfolio Image', message: 'Delete this portfolio image?', type: 'warning' });
+    if (!confirmed) return;
     try {
       await deletePortfolioItem({ id: itemId });
     } catch (error) {

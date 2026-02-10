@@ -3,6 +3,7 @@ import { Clock, User, Phone, MoreVertical, CheckCircle, Users, X } from 'lucide-
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
+import { useAppModal } from '../../context/AppModalContext'
 import WelcomeBackCard from './WelcomeBackCard'
 import ServiceHistoryCard from './ServiceHistoryCard'
 import POSWalletPayment from './POSWalletPayment'
@@ -10,6 +11,7 @@ import WalletPaymentConfirmDialog from './WalletPaymentConfirmDialog'
 import ComboPaymentDialog from './ComboPaymentDialog'
 
 const QueueSection = () => {
+  const { showAlert } = useAppModal()
   const { user } = useCurrentUser()
   const branchId = user?.branch_id
   const [selectedCustomer, setSelectedCustomer] = useState(null)
@@ -556,7 +558,7 @@ const QueueSection = () => {
             // Show success toast/alert with new balance
             const newBalance = result?.walletDebit?.remainingBalance || 0;
             const pointsEarned = result?.pointsEarned?.totalPoints || Math.floor(walletPaymentData.amount);
-            alert(`✅ Payment successful!\n\nPaid: ₱${walletPaymentData.amount.toLocaleString()}\nPoints earned: +${pointsEarned}\n\nNew wallet balance: ₱${newBalance.toLocaleString()}`);
+            showAlert({ title: 'Payment Successful', message: `Paid: ₱${walletPaymentData.amount.toLocaleString()}\nPoints earned: +${pointsEarned}\n\nNew wallet balance: ₱${newBalance.toLocaleString()}`, type: 'success' });
           }}
           onInsufficientBalance={() => {
             // Handle insufficient balance - offer combo payment (Story 24.3)
@@ -605,7 +607,7 @@ const QueueSection = () => {
             const remainderPart = result?.remainderPortion?.amount || 0;
             const remainderMethod = result?.remainderPortion?.method?.toUpperCase() || 'CASH';
             const pointsEarned = result?.pointsEarned || Math.floor(walletPart);
-            alert(`✅ Combo payment successful!\n\nWallet: ₱${walletPart.toLocaleString()}\n${remainderMethod}: ₱${remainderPart.toLocaleString()}\nTotal: ₱${(walletPart + remainderPart).toLocaleString()}\n\nPoints earned: +${pointsEarned}`);
+            showAlert({ title: 'Combo Payment Successful', message: `Wallet: ₱${walletPart.toLocaleString()}\n${remainderMethod}: ₱${remainderPart.toLocaleString()}\nTotal: ₱${(walletPart + remainderPart).toLocaleString()}\n\nPoints earned: +${pointsEarned}`, type: 'success' });
           }}
           customerId={comboPaymentData.customerId}
           customerName={comboPaymentData.customerName}

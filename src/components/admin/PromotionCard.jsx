@@ -10,6 +10,7 @@
 import React from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
+import { useAppModal } from '../../context/AppModalContext';
 import { Zap, Gift, Wallet, Clock, Users, MapPin, MoreVertical, Play, Square, Edit, BarChart3 } from 'lucide-react';
 
 const STATUS_STYLES = {
@@ -27,6 +28,7 @@ const TYPE_ICONS = {
 };
 
 export default function PromotionCard({ promotion, onEdit, onViewStats }) {
+  const { showConfirm, showAlert } = useAppModal();
   const [showMenu, setShowMenu] = React.useState(false);
 
   const endPromotion = useMutation(api.services.promotions.endPromotion);
@@ -78,11 +80,12 @@ export default function PromotionCard({ promotion, onEdit, onViewStats }) {
   };
 
   const handleEnd = async () => {
-    if (!confirm('Are you sure you want to end this promotion? This cannot be undone.')) return;
+    const confirmed = await showConfirm({ title: 'End Promotion', message: 'Are you sure you want to end this promotion? This cannot be undone.', type: 'warning' });
+    if (!confirmed) return;
     try {
       await endPromotion({ promoId: promotion._id });
     } catch (error) {
-      alert('Failed to end promotion: ' + error.message);
+      showAlert({ title: 'Error', message: 'Failed to end promotion: ' + error.message, type: 'error' });
     }
     setShowMenu(false);
   };
@@ -91,7 +94,7 @@ export default function PromotionCard({ promotion, onEdit, onViewStats }) {
     try {
       await updatePromotion({ promoId: promotion._id, status: 'active' });
     } catch (error) {
-      alert('Failed to activate promotion: ' + error.message);
+      showAlert({ title: 'Error', message: 'Failed to activate promotion: ' + error.message, type: 'error' });
     }
     setShowMenu(false);
   };

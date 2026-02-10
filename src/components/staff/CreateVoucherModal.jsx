@@ -6,9 +6,11 @@ import QRCode from 'qrcode'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
+import { useAppModal } from '../../context/AppModalContext'
 
 const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
   const { user } = useCurrentUser()
+  const { showAlert } = useAppModal()
   const [formData, setFormData] = useState({
     code: '',
     value: '',
@@ -69,7 +71,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
 
     try {
       if (!user?.id) {
-        alert('You must be logged in to create vouchers')
+        showAlert({ title: 'Authentication Required', message: 'You must be logged in to create vouchers', type: 'warning' })
         return
       }
 
@@ -106,7 +108,7 @@ const CreateVoucherModal = ({ isOpen, onClose, onSubmit }) => {
       onClose()
     } catch (error) {
       console.error('Failed to create voucher:', error)
-      alert('Failed to create voucher. Please try again.')
+      showAlert({ title: 'Creation Failed', message: 'Failed to create voucher. Please try again.', type: 'error' })
     } finally {
       setIsLoading(false)
     }

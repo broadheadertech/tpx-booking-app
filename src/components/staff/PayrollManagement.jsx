@@ -84,7 +84,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     return (
       <div className="space-y-6">
         <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-8 text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mx-auto mb-4"></div>
           <p className="text-gray-300">Loading user data...</p>
           <p className="text-xs text-gray-500 mt-2">
             Please ensure you are logged in
@@ -744,7 +744,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     .grid{display:grid; grid-template-columns:1fr 1fr; gap:16px}
     .row{display:flex; justify-content:space-between; margin:6px 0}
     .muted{color:#9ca3af}
-    .accent{color:#ff8c42; font-weight:700}
+    .accent{color:var(--color-primary); font-weight:700}
     hr{border:0; border-top:1px solid #2b2b2b; margin:12px 0}
     .service-summary{margin-top:20px;}
     .service-table{border:1px solid #2b2b2b; border-radius:4px; padding:12px; background:#1a1a1a;}
@@ -975,7 +975,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     const totalLateFeesFromDaily = barberLateFees;
 
     const grandTotalCard = `
-      <div class="card" style="background:#222; border:2px solid #ff8c42;">
+      <div class="card" style="background:#222; border:2px solid var(--color-primary);">
         <div class="header">
           <div>
             <div class="title">${record.barber_name} - PERIOD SUMMARY</div>
@@ -1494,7 +1494,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     const calculatedNetPay = finalDailySalaryWithFees - (record.tax_deduction || 0) - (record.other_deductions || 0) - (record.cash_advance_deduction || 0);
 
     return `
-      <div class="card" style="background:#fff; border:2px solid #ff8c42; color: #000; max-width: 600px; margin: 0 auto;">
+      <div class="card" style="background:#fff; border:2px solid var(--color-primary); color: #000; max-width: 600px; margin: 0 auto;">
         <div class="header">
           <div>
             <div class="title" style="font-size: 16px; font-weight: 800; color: #000;">${record.barber_name} - PERIOD SUMMARY</div>
@@ -1571,7 +1571,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     const customStyles = `
       ${printStyles}
       body { background: #fff; color: #000; }
-      .card { background: #fff !important; color: #000 !important; border-color: #ff8c42 !important; box-shadow: none !important; }
+      .card { background: #fff !important; color: #000 !important; border-color: var(--color-primary) !important; box-shadow: none !important; }
       .muted { color: #555 !important; }
       .accent { color: #000 !important; }
       hr { border-color: #000 !important; }
@@ -2204,7 +2204,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
             <div className="p-6 space-y-4">
               {bookingsForRecord === undefined && (
                 <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mx-auto"></div>
                   <p className="mt-2 text-gray-500">Loading bookings…</p>
                 </div>
               )}
@@ -3119,7 +3119,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     if (payrollSettingsData === undefined) {
       return (
         <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mx-auto"></div>
           <p className="mt-2 text-gray-500">Loading payroll settings...</p>
         </div>
       );
@@ -3199,7 +3199,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
     ) {
       return (
         <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mx-auto"></div>
           <p className="mt-2 text-gray-500">Loading payroll data...</p>
         </div>
       );
@@ -3498,7 +3498,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                     }
                   }}
                   disabled={scanningAttendance || loading}
-                  className="flex items-center space-x-2 px-4 py-2 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-lg hover:bg-amber-500/30 transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)]/20 text-[var(--color-primary)] border border-[var(--color-primary)]/30 rounded-lg hover:bg-[var(--color-primary)]/30 transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Clock className="h-4 w-4" />
                   <span>{scanningAttendance ? "Scanning..." : "Scan Attendance"}</span>
@@ -3580,9 +3580,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
 
           {/* Scan Attendance Result Banner */}
           {scanResult && (
-            <div className="flex items-center justify-between p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 mb-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 mb-4">
               <div className="text-sm">
-                <span className="text-amber-400 font-medium">Attendance Scan Complete: </span>
+                <span className="text-[var(--color-primary)] font-medium">Attendance Scan Complete: </span>
                 <span className="text-gray-300">
                   {scanResult.claims_created} claim{scanResult.claims_created !== 1 ? 's' : ''} created,{' '}
                   {scanResult.total_zero_days} total zero-service day{scanResult.total_zero_days !== 1 ? 's' : ''} found
@@ -3880,7 +3880,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                               <span className="text-white">
                                 {record.days_worked || 0}
                                 {(record.zero_service_days || 0) > 0 && (
-                                  <span className="text-amber-400 text-xs ml-1">
+                                  <span className="text-[var(--color-primary)] text-xs ml-1">
                                     (incl. {record.zero_service_days} zero-day{record.zero_service_days > 1 ? 's' : ''})
                                   </span>
                                 )}
@@ -3891,7 +3891,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                 <span className="text-gray-400">
                                   Zero-Day Pay:
                                 </span>
-                                <span className="text-amber-400">
+                                <span className="text-[var(--color-primary)]">
                                   +{formatCurrency(record.zero_day_pay)}
                                 </span>
                               </div>
@@ -3909,7 +3909,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                           {/* Zero-Service Day Claim Section */}
                           {payrollSettings.zero_day_source !== "disabled" && selectedPeriod?.status !== "paid" && (
                             <div className="mt-4 pt-3 border-t border-[#2A2A2A]/50">
-                              <h6 className="text-xs font-medium text-amber-400 mb-2">
+                              <h6 className="text-xs font-medium text-[var(--color-primary)] mb-2">
                                 Zero-Service Day Claim
                                 <span className="text-[10px] text-gray-500 ml-2 font-normal">
                                   ({payrollSettings.zero_day_source === "attendance" ? "Attendance-Based" : "Manual"})
@@ -3944,15 +3944,15 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                 if (claim && claim.status === "pending") {
                                   return (
                                     <div className="space-y-2">
-                                      <div className="flex items-center justify-between p-2 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                                      <div className="flex items-center justify-between p-2 rounded-lg bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30">
                                         <div>
-                                          <span className="text-xs font-medium text-amber-400">Pending Approval</span>
+                                          <span className="text-xs font-medium text-[var(--color-primary)]">Pending Approval</span>
                                           <p className="text-xs text-gray-400">
                                             {claim.zero_days} day{claim.zero_days > 1 ? 's' : ''} x {formatCurrency(claim.daily_rate_applied)} = {formatCurrency(claim.total_amount)}
                                           </p>
                                           {claim.notes && <p className="text-xs text-gray-500 mt-0.5">{claim.notes}</p>}
                                         </div>
-                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/20 text-amber-400">
+                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[var(--color-primary)]/20 text-[var(--color-primary)]">
                                           PENDING
                                         </span>
                                       </div>
@@ -4054,7 +4054,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                                 setZeroDaySubmitting(null);
                                               }
                                             }}
-                                            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 border border-amber-500/30 transition-colors disabled:opacity-50"
+                                            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/30 border border-[var(--color-primary)]/30 transition-colors disabled:opacity-50"
                                           >
                                             Resubmit
                                           </button>
@@ -4137,7 +4137,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                         {record.attendance_summary && (
                           <div className="mt-4 pt-3 border-t border-[#2A2A2A]/50">
                             <h6 className="text-xs font-medium text-gray-400 mb-3 uppercase tracking-wide flex items-center">
-                              <Clock className="w-4 h-4 mr-2 text-orange-400" />
+                              <Clock className="w-4 h-4 mr-2 text-[var(--color-primary)]" />
                               Attendance (OT / UT / Late)
                             </h6>
 
@@ -4157,15 +4157,15 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                   )}
                                 </div>
                               </div>
-                              <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                              <div className="p-2.5 rounded-lg bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/20">
                                 <div className="text-[10px] text-gray-400 mb-0.5">Undertime</div>
-                                <div className="text-sm font-semibold text-amber-400">
+                                <div className="text-sm font-semibold text-[var(--color-primary)]">
                                   {formatMinutesAsHoursMinutes(record.attendance_summary.total_undertime_minutes)}
                                 </div>
                                 <div className="text-[10px] text-gray-500">
                                   {record.attendance_summary.days_undertime} day{record.attendance_summary.days_undertime !== 1 ? "s" : ""}
                                   {record.attendance_summary.total_ut_penalty > 0 && (
-                                    <span className="ml-1 text-amber-400">
+                                    <span className="ml-1 text-[var(--color-primary)]">
                                       • -{formatCurrency(record.attendance_summary.total_ut_penalty)}
                                     </span>
                                   )}
@@ -4214,13 +4214,13 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                         <td className={`py-1 px-2 ${day.late_minutes > 0 ? "text-red-400 font-medium" : "text-gray-300"}`}>
                                           {day.actual_clock_in}
                                         </td>
-                                        <td className={`py-1 px-2 ${day.overtime_minutes > 0 ? "text-green-400 font-medium" : day.undertime_minutes > 0 ? "text-amber-400 font-medium" : "text-gray-300"}`}>
+                                        <td className={`py-1 px-2 ${day.overtime_minutes > 0 ? "text-green-400 font-medium" : day.undertime_minutes > 0 ? "text-[var(--color-primary)] font-medium" : "text-gray-300"}`}>
                                           {day.actual_clock_out}
                                         </td>
                                         <td className="py-1 px-2 text-right text-red-400">
                                           {day.late_minutes > 0 ? `${day.late_minutes}m` : "-"}
                                         </td>
-                                        <td className="py-1 px-2 text-right text-amber-400">
+                                        <td className="py-1 px-2 text-right text-[var(--color-primary)]">
                                           {day.undertime_minutes > 0 ? `${day.undertime_minutes}m` : "-"}
                                         </td>
                                         <td className="py-1 px-2 text-right text-green-400">

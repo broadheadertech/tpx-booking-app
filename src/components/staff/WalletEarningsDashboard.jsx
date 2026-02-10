@@ -62,10 +62,10 @@ function SummaryCard({ title, value, subtitle, icon: Icon, variant = "default" }
       valueColor: "text-green-400",
     },
     warning: {
-      border: "border-orange-700",
-      iconBg: "bg-orange-900/50",
-      iconColor: "text-orange-400",
-      valueColor: "text-orange-400",
+      border: "border-[var(--color-primary)]",
+      iconBg: "bg-[var(--color-primary)]/15",
+      iconColor: "text-[var(--color-primary)]",
+      valueColor: "text-[var(--color-primary)]",
     },
   };
 
@@ -181,7 +181,7 @@ function TabButton({ active, onClick, icon: Icon, label }) {
       onClick={onClick}
       className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all min-h-[44px] ${
         active
-          ? "bg-orange-600 text-white"
+          ? "bg-[var(--color-primary)] text-white"
           : "bg-[#1A1A1A] text-gray-400 hover:text-white hover:bg-[#2A2A2A]"
       }`}
     >
@@ -267,7 +267,7 @@ export function WalletEarningsDashboard({ branchId: propBranchId }) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Wallet className="w-6 h-6 text-orange-500" />
+            <Wallet className="w-6 h-6 text-[var(--color-primary)]" />
             Wallet Earnings
           </h1>
           <p className="text-sm text-gray-400 mt-1">
@@ -347,9 +347,9 @@ export function WalletEarningsDashboard({ branchId: propBranchId }) {
 
                 {/* Settlement Button - AC #1, #5 */}
                 {pendingSettlement?.hasPending ? (
-                  <div className="flex items-center gap-2 px-4 py-2 bg-orange-900/30 border border-orange-700 rounded-xl">
-                    <Clock className="w-4 h-4 text-orange-400" />
-                    <span className="text-sm text-orange-300">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)]/10 border border-[var(--color-primary)] rounded-xl">
+                    <Clock className="w-4 h-4 text-[var(--color-primary)]" />
+                    <span className="text-sm text-[var(--color-primary)]">
                       Settlement {pendingSettlement.settlement?.status}
                     </span>
                   </div>

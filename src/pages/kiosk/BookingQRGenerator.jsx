@@ -3,6 +3,7 @@ import QRCode from 'qrcode'
 import { QrCode, RefreshCw, CheckCircle, ArrowLeft, Clock, User, Calendar, Scissors, Star, Crown, Sparkles, Shield, Zap, XCircle } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { useAppModal } from '../../context/AppModalContext'
 
 // Barber Avatar Component
 const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
@@ -37,6 +38,7 @@ const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
 }
 
 function BookingQRGenerator() {
+  const { showAlert } = useAppModal()
   const [selectedService, setSelectedService] = useState(null)
   const [selectedBarber, setSelectedBarber] = useState(null)
   const [selectedTime, setSelectedTime] = useState(null)
@@ -249,7 +251,7 @@ function BookingQRGenerator() {
 
   const handleCreateBooking = async () => {
     if (!selectedService || !selectedTime || !selectedBarber || !customerName.trim()) {
-      alert("Please fill in all required booking details including customer name");
+      showAlert({ title: 'Missing Information', message: 'Please fill in all required booking details including customer name', type: 'warning' });
       return;
     }
 
@@ -295,7 +297,7 @@ function BookingQRGenerator() {
 
     } catch (error) {
       console.error("Error creating booking:", error);
-      alert(error.message || "Failed to create booking. Please try again.");
+      showAlert({ title: 'Booking Failed', message: error.message || 'Failed to create booking. Please try again.', type: 'error' });
     } finally {
       setIsGeneratingBooking(false);
     }

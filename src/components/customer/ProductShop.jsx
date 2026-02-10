@@ -3,8 +3,10 @@ import { ArrowLeft, Search, Filter, ShoppingCart, Package, Star, Plus, Minus } f
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import ProductDetails from './ProductDetails'
+import { useAppModal } from '../../context/AppModalContext'
 
 const ProductShop = ({ onBack }) => {
+  const { showAlert } = useAppModal()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [cart, setCart] = useState([])
@@ -358,7 +360,7 @@ const ProductShop = ({ onBack }) => {
                       className="w-full py-3 rounded-lg text-white font-bold transition-colors duration-200 bg-[var(--color-primary)] hover:bg-[var(--color-accent)]"
                       onClick={() => {
                         // TODO: Implement checkout functionality
-                        alert('Checkout functionality coming soon!')
+                        showAlert({ title: 'Coming Soon', message: 'Checkout functionality coming soon!', type: 'info' })
                       }}
                     >
                       Checkout ({getCartItemCount()} items)

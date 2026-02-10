@@ -5,6 +5,7 @@ import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import CreateBarberModal from './CreateBarberModal'
 import BarberModal from './BarberModal'
+import { useAppModal } from '../../context/AppModalContext'
 
 // Separate component to handle barber avatar display
 const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
@@ -37,6 +38,7 @@ const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
 }
 
 const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
+  const { showAlert } = useAppModal()
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('name')
@@ -99,13 +101,13 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file')
+      showAlert({ title: 'Invalid File', message: 'Please select an image file', type: 'warning' })
       return
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert('File size must be less than 5MB')
+      showAlert({ title: 'File Too Large', message: 'File size must be less than 5MB', type: 'warning' })
       return
     }
 
@@ -117,7 +119,7 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
       })
       onRefresh()
     } catch (error) {
-      alert('Failed to upload image. Please try again.')
+      showAlert({ title: 'Upload Failed', message: 'Failed to upload image. Please try again.', type: 'error' })
     }
   }
 

@@ -5,8 +5,10 @@ import { api } from '../../../convex/_generated/api'
 import { aiBarberService } from '../../services/aiBarberService'
 import { faceDetectionService } from '../../services/faceDetectionService'
 import HaircutImageSearch from './HaircutImageSearch'
+import { useAppModal } from '../../context/AppModalContext'
 
 const AIBarberAssistant = ({ onNavigateToBooking }) => {
+  const { showAlert } = useAppModal()
   const [currentStep, setCurrentStep] = useState(0)
   const [uploadedImage, setUploadedImage] = useState(null)
   const [userPreferences, setUserPreferences] = useState({
@@ -691,7 +693,7 @@ const AIBarberAssistant = ({ onNavigateToBooking }) => {
     const handleBookLater = () => {
       // Save recommendation for later (could store in localStorage or state)
       localStorage.setItem('savedRecommendation', JSON.stringify(selectedRecommendation));
-      alert('Recommendation saved! You can book this style anytime from your dashboard.');
+      showAlert({ title: 'Saved', message: 'Recommendation saved! You can book this style anytime from your dashboard.', type: 'success' });
     };
 
     return (

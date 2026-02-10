@@ -17,6 +17,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { fromStorageFormat } from '../../../convex/lib/points';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
+import { useAppModal } from '../../context/AppModalContext';
 import { Clock, AlertTriangle, Calendar, Users, Play, Settings, CheckCircle } from 'lucide-react';
 
 /**
@@ -29,6 +30,7 @@ const formatPoints = (points) => {
 
 export default function PointsExpiryPanel() {
   const { user } = useCurrentUser();
+  const { showConfirm } = useAppModal();
 
   // Local state for form
   const [expiryEnabled, setExpiryEnabled] = useState(null);
@@ -119,7 +121,8 @@ export default function PointsExpiryPanel() {
 
   // Process actual expiry
   const handleProcessExpiry = async () => {
-    if (!confirm('Are you sure you want to expire points for all inactive accounts? This action cannot be undone.')) {
+    const confirmed = await showConfirm({ title: 'Process Points Expiry', message: 'Are you sure you want to expire points for all inactive accounts? This action cannot be undone.', type: 'warning' });
+    if (!confirmed) {
       return;
     }
 

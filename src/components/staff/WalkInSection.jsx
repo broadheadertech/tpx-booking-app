@@ -2,9 +2,11 @@ import React, { useState, useMemo } from 'react'
 import { UserPlus, Search, Filter, Plus, Clock, User, Phone, Calendar, CheckCircle, XCircle, Trash2, Play } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
+import { useAppModal } from '../../context/AppModalContext'
 import AddWalkInModal from './AddWalkInModal'
 
 export default function WalkInSection() {
+  const { showAlert, showConfirm } = useAppModal()
   const [searchTerm, setSearchTerm] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [dateFilter, setDateFilter] = useState('today')
@@ -104,29 +106,32 @@ export default function WalkInSection() {
   }
 
   const handleStartService = async (walkInId) => {
-    if (!confirm('Start serving this walk-in customer?')) return
+    const confirmed = await showConfirm({ title: 'Start Service', message: 'Start serving this walk-in customer?', type: 'warning' })
+    if (!confirmed) return
     try {
       await startWalkIn({ walkInId })
     } catch (error) {
-      alert(error.message || 'Failed to start service')
+      showAlert({ title: 'Error', message: error.message || 'Failed to start service', type: 'error' })
     }
   }
 
   const handleComplete = async (walkInId) => {
-    if (!confirm('Mark this walk-in as completed?')) return
+    const confirmed = await showConfirm({ title: 'Complete Walk-In', message: 'Mark this walk-in as completed?', type: 'warning' })
+    if (!confirmed) return
     try {
       await completeWalkIn({ walkInId })
     } catch (error) {
-      alert(error.message || 'Failed to complete walk-in')
+      showAlert({ title: 'Error', message: error.message || 'Failed to complete walk-in', type: 'error' })
     }
   }
 
   const handleCancel = async (walkInId) => {
-    if (!confirm('Cancel this walk-in?')) return
+    const confirmed = await showConfirm({ title: 'Cancel Walk-In', message: 'Cancel this walk-in?', type: 'warning' })
+    if (!confirmed) return
     try {
       await cancelWalkIn({ walkInId })
     } catch (error) {
-      alert(error.message || 'Failed to cancel walk-in')
+      showAlert({ title: 'Error', message: error.message || 'Failed to cancel walk-in', type: 'error' })
     }
   }
 
@@ -141,13 +146,14 @@ export default function WalkInSection() {
   }
 
   const handleManualCleanup = async () => {
-    if (!confirm('This will permanently delete all walk-ins from yesterday and older. Continue?')) return
+    const confirmed = await showConfirm({ title: 'Cleanup Old Walk-Ins', message: 'This will permanently delete all walk-ins from yesterday and older. Continue?', type: 'warning' })
+    if (!confirmed) return
     setCleaningUp(true)
     try {
       const result = await manualCleanup({})
-      alert(result.message || 'Cleanup completed successfully')
+      showAlert({ title: 'Cleanup Complete', message: result.message || 'Cleanup completed successfully', type: 'success' })
     } catch (error) {
-      alert(error.message || 'Failed to cleanup old walk-ins')
+      showAlert({ title: 'Error', message: error.message || 'Failed to cleanup old walk-ins', type: 'error' })
     } finally {
       setCleaningUp(false)
     }

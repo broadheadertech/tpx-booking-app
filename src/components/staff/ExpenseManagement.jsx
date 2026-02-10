@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
+import { useAppModal } from '../../context/AppModalContext';
 import {
   Plus,
   Edit2,
@@ -174,7 +175,7 @@ const AddExpenseModal = ({ isOpen, onClose, user, editingExpense = null }) => {
             <select
               value={formData.category}
               onChange={(e) => handleChange("category", e.target.value)}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
             >
               <optgroup label="Fixed Expenses">
                 <option value="rent">Rent</option>
@@ -202,7 +203,7 @@ const AddExpenseModal = ({ isOpen, onClose, user, editingExpense = null }) => {
               value={formData.description}
               onChange={(e) => handleChange("description", e.target.value)}
               placeholder="e.g., Monthly rent payment"
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               required
             />
           </div>
@@ -217,7 +218,7 @@ const AddExpenseModal = ({ isOpen, onClose, user, editingExpense = null }) => {
               placeholder="0.00"
               min="0"
               step="0.01"
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               required
             />
           </div>
@@ -233,7 +234,7 @@ const AddExpenseModal = ({ isOpen, onClose, user, editingExpense = null }) => {
             <select
               value={formData.paid_from_asset_id}
               onChange={(e) => handleChange("paid_from_asset_id", e.target.value)}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
             >
               <option value="">-- No asset deduction (manual) --</option>
               {paymentAssets && paymentAssets.length > 0 ? (
@@ -258,7 +259,7 @@ const AddExpenseModal = ({ isOpen, onClose, user, editingExpense = null }) => {
               type="date"
               value={formData.expense_date}
               onChange={(e) => handleChange("expense_date", e.target.value)}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               required
             />
           </div>
@@ -271,7 +272,7 @@ const AddExpenseModal = ({ isOpen, onClose, user, editingExpense = null }) => {
               onChange={(e) => handleChange("notes", e.target.value)}
               placeholder="Additional notes..."
               rows={2}
-              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none resize-none"
+              className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none resize-none"
             />
           </div>
 
@@ -285,7 +286,7 @@ const AddExpenseModal = ({ isOpen, onClose, user, editingExpense = null }) => {
               type="button"
               onClick={() => handleChange("is_recurring", !formData.is_recurring)}
               className={`relative w-12 h-6 rounded-full transition-colors ${
-                formData.is_recurring ? "bg-[#FF8C42]" : "bg-[#333333]"
+                formData.is_recurring ? "bg-[var(--color-primary)]" : "bg-[#333333]"
               }`}
             >
               <span
@@ -305,7 +306,7 @@ const AddExpenseModal = ({ isOpen, onClose, user, editingExpense = null }) => {
                 onChange={(e) => handleChange("recurring_day", parseInt(e.target.value))}
                 min="1"
                 max="31"
-                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[#FF8C42] focus:outline-none"
+                className="w-full bg-[#0A0A0A] border border-[#333333] rounded-lg px-3 py-2 text-white focus:border-[var(--color-primary)] focus:outline-none"
               />
             </div>
           )}
@@ -314,7 +315,7 @@ const AddExpenseModal = ({ isOpen, onClose, user, editingExpense = null }) => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-3 bg-[#FF8C42] text-white font-medium rounded-lg hover:bg-[#FF8C42]/90 transition-colors disabled:opacity-50"
+            className="w-full py-3 bg-[var(--color-primary)] text-white font-medium rounded-lg hover:bg-[var(--color-primary)]/90 transition-colors disabled:opacity-50"
           >
             {isSubmitting ? "Saving..." : editingExpense ? "Update Expense" : "Add Expense"}
           </button>
@@ -338,7 +339,7 @@ const ExpenseCard = ({ expense, onEdit, onDelete, paymentAssets }) => {
     : null;
 
   return (
-    <div className="bg-[#1A1A1A] rounded-lg border border-[#333333] p-4 hover:border-[#FF8C42]/30 transition-colors group">
+    <div className="bg-[#1A1A1A] rounded-lg border border-[#333333] p-4 hover:border-[var(--color-primary)]/30 transition-colors group">
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-3">
           <div
@@ -358,7 +359,7 @@ const ExpenseCard = ({ expense, onEdit, onDelete, paymentAssets }) => {
             <p className="text-xs text-gray-600 mt-1">
               {new Date(expense.expense_date).toLocaleDateString()}
               {expense.is_recurring && (
-                <span className="ml-2 text-[#FF8C42]">
+                <span className="ml-2 text-[var(--color-primary)]">
                   <RefreshCw className="w-3 h-3 inline mr-1" />
                   Recurring
                 </span>
@@ -401,6 +402,7 @@ const ExpenseCard = ({ expense, onEdit, onDelete, paymentAssets }) => {
 // Main ExpenseManagement Component
 // ============================================================================
 const ExpenseManagement = ({ user, onRefresh }) => {
+  const { showConfirm } = useAppModal();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
   const [filter, setFilter] = useState("all"); // all, fixed, operating
@@ -453,7 +455,8 @@ const ExpenseManagement = ({ user, onRefresh }) => {
   };
 
   const handleDelete = async (expense) => {
-    if (confirm(`Delete "${expense.description}"?`)) {
+    const confirmed = await showConfirm({ title: 'Delete Expense', message: `Delete "${expense.description}"?`, type: 'warning' });
+    if (confirmed) {
       await deleteExpense({ expense_id: expense._id });
     }
   };
@@ -489,7 +492,7 @@ const ExpenseManagement = ({ user, onRefresh }) => {
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#FF8C42] text-white rounded-lg hover:bg-[#FF8C42]/90 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-colors"
         >
           <Plus className="w-5 h-5" />
           Add Expense
@@ -524,8 +527,8 @@ const ExpenseManagement = ({ user, onRefresh }) => {
 
         <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#333333]">
           <div className="flex items-center gap-2 mb-2">
-            <div className="p-2 rounded-lg bg-[#FF8C42]/10">
-              <DollarSign className="w-5 h-5 text-[#FF8C42]" />
+            <div className="p-2 rounded-lg bg-[var(--color-primary)]/10">
+              <DollarSign className="w-5 h-5 text-[var(--color-primary)]" />
             </div>
             <span className="text-gray-400 text-sm">Total Expenses</span>
           </div>
@@ -548,7 +551,7 @@ const ExpenseManagement = ({ user, onRefresh }) => {
               onClick={() => setFilter(f.id)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 filter === f.id
-                  ? "bg-[#FF8C42] text-white"
+                  ? "bg-[var(--color-primary)] text-white"
                   : "bg-[#1A1A1A] text-gray-400 hover:text-white border border-[#333333]"
               }`}
             >
@@ -561,7 +564,7 @@ const ExpenseManagement = ({ user, onRefresh }) => {
           type="month"
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
-          className="px-3 py-1.5 bg-[#1A1A1A] border border-[#333333] rounded-lg text-white text-sm focus:border-[#FF8C42] focus:outline-none"
+          className="px-3 py-1.5 bg-[#1A1A1A] border border-[#333333] rounded-lg text-white text-sm focus:border-[var(--color-primary)] focus:outline-none"
         />
       </div>
 
@@ -573,7 +576,7 @@ const ExpenseManagement = ({ user, onRefresh }) => {
             <p className="text-gray-400">No expenses found for this period</p>
             <button
               onClick={() => setShowAddModal(true)}
-              className="mt-4 text-[#FF8C42] hover:underline"
+              className="mt-4 text-[var(--color-primary)] hover:underline"
             >
               Add your first expense
             </button>
