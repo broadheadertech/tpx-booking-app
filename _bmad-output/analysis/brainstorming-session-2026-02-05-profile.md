@@ -1,7 +1,7 @@
 ---
 stepsCompleted: [1, 2, 3]
 inputDocuments: []
-session_topic: 'Customer Profile Page for TPX Barbershop Booking App'
+session_topic: 'Customer Profile Page for TipunoX Barbershop Booking App'
 session_goals: 'Modern, engaging profile page with innovative features for customer experience and engagement'
 selected_approach: 'ai-recommended'
 techniques_used: ['Cross-Pollination', 'Role Playing', 'SCAMPER Method']
@@ -20,7 +20,7 @@ context_file: ''
 
 ## Session Overview
 
-**Topic:** Customer Profile Page for TPX Barbershop Booking App
+**Topic:** Customer Profile Page for TipunoX Barbershop Booking App
 **Goals:** Create a modern, engaging profile page with innovative features that enhance customer experience and engagement
 
 ### Current State
@@ -63,7 +63,7 @@ _Novelty_: Turns every share into potential revenue; viral loop built into vanit
 
 **[Profile #7]: Grooming Journey Timeline**
 _Concept_: Visual timeline showing every visit with photos, styles tried, and barbers - swipeable history like Instagram memories
-_Novelty_: Customers see their style evolution; creates emotional attachment to TPX as part of their story
+_Novelty_: Customers see their style evolution; creates emotional attachment to TipunoX as part of their story
 
 **[Profile #8]: Visit Streak Tracker**
 _Concept_: "🔥 8-visit streak!" with rewards for maintaining consistency - break the streak, lose the bonus multiplier
@@ -102,14 +102,14 @@ _Concept_: Right after appointment ends, app asks "Fresh cut? 🔥 Share it!" wi
 _Novelty_: Catches them at peak confidence moment; converts haircut high into content
 
 **[Profile #14]: Haircut Photocard Generator**
-_Concept_: Upload your cut photo → app generates fire IG Story card with style name, barber credit, TPX branding
+_Concept_: Upload your cut photo → app generates fire IG Story card with style name, barber credit, TipunoX branding
 _Novelty_: Does the design work FOR them; makes their content look premium without effort
 
 ### Persona 3: The Loyal Regular (OG)
 > 52 years old. Been coming for 15 years. Knows all the barbers by name.
 
 **[Profile #15]: OG Status Recognition**
-_Concept_: "Member Since 2011 • 15 Years with TPX" - prominent badge that honors tenure, not activity
+_Concept_: "Member Since 2011 • 15 Years with TipunoX" - prominent badge that honors tenure, not activity
 _Novelty_: Loyalty measured by TIME, not points; veterans feel seen without grinding for badges
 
 **[Profile #16]: Gentle Reminder (Permission-Based)**
@@ -117,7 +117,7 @@ _Concept_: "Remind me when it's time to cut" toggle - simple SMS/notification on
 _Novelty_: Respects his autonomy; doesn't spam, just helpful nudge when allowed
 
 ### Persona 4: The First-Timer
-> 24 years old. Never been to TPX before. Nervous about trying a new place.
+> 24 years old. Never been to TipunoX before. Nervous about trying a new place.
 
 **[Profile #17]: First-Timer Welcome Offer**
 _Concept_: Profile shows "🎉 Welcome! Your first cut is 20% off" - prominent, can't miss it
@@ -133,7 +133,7 @@ _Novelty_: Removes the "who do I pick?" anxiety; feels personalized from day one
 
 **[Profile #20]: Social Proof Section**
 _Concept_: "Your friend @JenReferred you • She's been with us 2 years" + reviews from similar customers
-_Novelty_: Trust through connection; sees real people like her who love TPX
+_Novelty_: Trust through connection; sees real people like her who love TipunoX
 
 **[Profile #21]: "What to Expect" Guide**
 _Concept_: First-timer tooltip: "Here's what happens at your first visit" - arrival, consultation, cut, payment flow

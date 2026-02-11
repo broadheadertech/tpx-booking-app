@@ -6,7 +6,7 @@ export const generateMarketingEmailHtml = (templateData) => {
     mainContent = 'We have an amazing offer just for you.',
     buttonText = 'Book Now',
     buttonUrl = '#',
-    branchName = 'TPX Barber',
+    branchName = 'TipunoX Barber',
     branchAddress = '123 Main St, City',
     branchPhone = '+1234567890',
     footerText = 'Thank you for choosing us!',
@@ -91,7 +91,7 @@ export const generatePromotionalEmailHtml = (templateData) => {
     discountPercentage = '20',
     promoCode = 'SAVE20',
     validUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
-    branchName = 'TPX Barber',
+    branchName = 'TipunoX Barber',
     bookingUrl = '#'
   } = templateData || {}
 

@@ -26,9 +26,9 @@ classification:
 
 ## Executive Summary
 
-TPX Booking App is a **proprietary franchise management system** for the TPX barbershop network. This PRD defines enhancements to transform the existing booking system into a complete franchise operations platform.
+TipunoX Booking App is a **proprietary franchise management system** for the TipunoX barbershop network. This PRD defines enhancements to transform the existing booking system into a complete franchise operations platform.
 
-**Product Differentiator:** Unlike competitors focused on single-shop operations, TPX is built for multi-branch franchise operations with clear franchisor/franchisee separation, automated royalty management, and centralized product control.
+**Product Differentiator:** Unlike competitors focused on single-shop operations, TipunoX is built for multi-branch franchise operations with clear franchisor/franchisee separation, automated royalty management, and centralized product control.
 
 **MVP Scope:** 5 new capabilities targeting 1-week delivery:
 1. **Accounting** - Branch-level P&L dashboards with BIR-compliant exports
@@ -181,9 +181,9 @@ TPX Booking App is a **proprietary franchise management system** for the TPX bar
 
 ### Detected Innovation Areas
 
-**Franchise-Ready Architecture:** Unlike competitors that focus on single-shop operations, TPX is built from the ground up for multi-branch franchise operations with clear franchisor/franchisee separation.
+**Franchise-Ready Architecture:** Unlike competitors that focus on single-shop operations, TipunoX is built from the ground up for multi-branch franchise operations with clear franchisor/franchisee separation.
 
-| Competitor Approach | TPX Approach |
+| Competitor Approach | TipunoX Approach |
 |---------------------|--------------|
 | Single-shop POS | Multi-branch with data isolation |
 | No royalty tracking | Automated royalty billing + email |
@@ -193,11 +193,11 @@ TPX Booking App is a **proprietary franchise management system** for the TPX bar
 
 ### Market Context & Competitive Landscape
 
-Philippine barbershop software market primarily serves independent shops. No dominant player offers integrated franchise management (royalty, centralized products, HQ consolidated reporting). TPX fills this gap by targeting barbershop franchise operators or shops planning to scale.
+Philippine barbershop software market primarily serves independent shops. No dominant player offers integrated franchise management (royalty, centralized products, HQ consolidated reporting). TipunoX fills this gap by targeting barbershop franchise operators or shops planning to scale.
 
 ### Validation Approach
 
-- Test with existing TPX branches first (dogfooding)
+- Test with existing TipunoX branches first (dogfooding)
 - Measure time saved on royalty tracking and P&L generation
 - Survey franchisees on cash advance feature adoption
 
@@ -205,10 +205,10 @@ Philippine barbershop software market primarily serves independent shops. No dom
 
 ### Project-Type Overview
 
-TPX is a **proprietary franchise management system** built exclusively for the TPX barbershop franchise network. Unlike commercial SaaS products targeting the general market, this is an internal tool designed specifically for the franchise's operational needs.
+TipunoX is a **proprietary franchise management system** built exclusively for the TipunoX barbershop franchise network. Unlike commercial SaaS products targeting the general market, this is an internal tool designed specifically for the franchise's operational needs.
 
 **Deployment Model:** Single-tenant, proprietary system
-**Target Users:** TPX franchise network only (franchisor + franchisees)
+**Target Users:** TipunoX franchise network only (franchisor + franchisees)
 **No External Sales:** Not intended for licensing or resale
 
 ### Compliance Requirements

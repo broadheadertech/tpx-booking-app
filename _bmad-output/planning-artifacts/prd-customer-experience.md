@@ -25,7 +25,7 @@ classification:
 
 ## Executive Summary
 
-**TPX Customer Experience** enhances the existing barbershop booking system with a self-funding loyalty program. Customers earn points (displayed with peso value) and advance through Bronze→Platinum tiers. Wallet payments earn 1.5x bonus points, with top-up bonuses funding the redemption costs. The system supports multi-branch recognition where VIP customers are known at any location.
+**TipunoX Customer Experience** enhances the existing barbershop booking system with a self-funding loyalty program. Customers earn points (displayed with peso value) and advance through Bronze→Platinum tiers. Wallet payments earn 1.5x bonus points, with top-up bonuses funding the redemption costs. The system supports multi-branch recognition where VIP customers are known at any location.
 
 **Core Value:** Transform anonymous repeat customers into recognized VIP members who feel they belong.
 
@@ -40,7 +40,7 @@ classification:
 | **Project Type** | SaaS B2B Web App (extending existing platform) |
 | **Domain** | SMB Retail/Service with Fintech elements |
 | **Complexity** | Medium-High (wallet, points, multi-branch) |
-| **Project Context** | Brownfield (adding to existing TPX system) |
+| **Project Context** | Brownfield (adding to existing TipunoX system) |
 
 ---
 
@@ -158,9 +158,9 @@ classification:
 **Persona:** Juan, 28, marketing professional in Makati, values appearance, busy schedule
 
 #### Opening Scene
-Juan finishes a long Thursday at work. His hair is overdue for a cut - he's got a client presentation Monday. He opens the TPX app on his commute home.
+Juan finishes a long Thursday at work. His hair is overdue for a cut - he's got a client presentation Monday. He opens the TipunoX app on his commute home.
 
-**Current pain:** He's been coming to TPX for 6 months but doesn't feel "recognized" - just another customer.
+**Current pain:** He's been coming to TipunoX for 6 months but doesn't feel "recognized" - just another customer.
 
 #### Rising Action
 Juan sees something new on his home screen:
@@ -189,7 +189,7 @@ Juan screenshots his Silver badge and shares it. He books his next appointment b
 **Persona:** Marco, 32, 8 years experience, top barber at BGC branch
 
 #### Opening Scene
-Marco arrives at TPX BGC branch at 8:45am. He logs into the staff tablet to see his appointments for the day.
+Marco arrives at TipunoX BGC branch at 8:45am. He logs into the staff tablet to see his appointments for the day.
 
 **Current pain:** He sometimes doesn't know which customers are "regulars" until they sit down. He worries that free haircut redemptions might hurt his commission.
 
@@ -216,7 +216,7 @@ By end of day, Marco served 3 VIP customers who tipped generously and 2 redempti
 
 ### Journey 3: Diane the Branch Admin (Admin User)
 
-**Persona:** Diane, 38, manages TPX Makati with 6 barbers
+**Persona:** Diane, 38, manages TipunoX Makati with 6 barbers
 
 #### Opening Scene
 It's the last Monday of the month - time to review numbers. Diane opens the admin dashboard, worried about the "free haircuts" the loyalty program is giving away.
@@ -248,7 +248,7 @@ At month-end, Diane presents to the franchise owner with confidence: wallet floa
 
 ### Journey 4: Paolo the Super Admin (Franchise Owner)
 
-**Persona:** Paolo, 45, owns 5 TPX franchise branches
+**Persona:** Paolo, 45, owns 5 TipunoX franchise branches
 
 #### Opening Scene
 Paolo reviews the monthly franchise report from his home office. He needs to know if the new Customer Experience features are worth the investment.
@@ -289,7 +289,7 @@ Within 2 months, all branches reach 60%+ wallet adoption. The loyalty program ge
 ### Compliance & Regulatory
 
 **Wallet & Payment (Philippines Context):**
-- **Closed-Loop System:** Wallet is prepaid stored value usable only at TPX branches - not regulated e-money transfer
+- **Closed-Loop System:** Wallet is prepaid stored value usable only at TipunoX branches - not regulated e-money transfer
 - **Points Currency:** Points with peso display ("450 = ₱45") is informational only - no actual conversion/withdrawal
 - **Data Privacy Act (RA 10173):** Customer transaction data, wallet balances, and usage patterns require proper consent and protection
 
@@ -344,7 +344,7 @@ Within 2 months, all branches reach 60%+ wallet adoption. The loyalty program ge
 
 ### Project-Type Overview
 
-This is a **brownfield enhancement** to the existing TPX Booking System, adding Customer Experience features (loyalty points, wallet enhancements, VIP tiers) to an established multi-branch SaaS platform.
+This is a **brownfield enhancement** to the existing TipunoX Booking System, adding Customer Experience features (loyalty points, wallet enhancements, VIP tiers) to an established multi-branch SaaS platform.
 
 **Existing Architecture Leveraged:**
 - Multi-branch tenant isolation (branch_id filtering)

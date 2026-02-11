@@ -1,7 +1,7 @@
 ---
 stepsCompleted: [1, 2, 3]
 inputDocuments: []
-session_topic: 'Multi-branch TPX Wallet Payment Architecture'
+session_topic: 'Multi-branch TipunoX Wallet Payment Architecture'
 session_goals: 'Design money flow for branches, enable POS wallet payments, solve deposit routing and settlement'
 selected_approach: 'AI-Recommended Techniques'
 techniques_used: ['Six Thinking Hats', 'First Principles Thinking', 'Cross-Pollination']
@@ -17,13 +17,13 @@ status: 'completed'
 
 ## Session Overview
 
-**Topic:** Multi-branch TPX Wallet Payment Architecture
+**Topic:** Multi-branch TipunoX Wallet Payment Architecture
 
 **Goals:**
 - Determine where wallet top-up deposits should go (branch vs central)
 - Design settlement flow for branches when customers pay with wallet
 - Align wallet deposits with branch-specific PayMongo configuration
-- Enable POS to accept TPX wallet payments
+- Enable POS to accept TipunoX wallet payments
 
 ### Key Challenges Identified
 
@@ -130,7 +130,7 @@ status: 'completed'
 
 ### Industry Parallels Analyzed
 
-| System | Pattern | Applied to TPX |
+| System | Pattern | Applied to TipunoX |
 |--------|---------|----------------|
 | **Starbucks Card** | Central wallet, any store | ✅ Same model |
 | **GrabPay Merchants** | Central → daily/weekly payout | ✅ Settlement model |
@@ -177,7 +177,7 @@ Branch A Requests Settlement ─────→ Super Admin Approves
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     TPX WALLET ARCHITECTURE                      │
+│                     TipunoX WALLET ARCHITECTURE                      │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
 │  ┌──────────┐    TOP-UP     ┌──────────────┐                    │

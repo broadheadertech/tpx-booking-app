@@ -3104,4 +3104,15 @@ export default defineSchema({
     .index("by_branch", ["branch_id"])
     .index("by_period_barber", ["payroll_period_id", "barber_id"])
     .index("by_status", ["status"]),
+
+  // Push notification tokens for Capacitor native apps
+  push_tokens: defineTable({
+    user_id: v.id("users"),
+    token: v.string(), // FCM/APNs token
+    platform: v.string(), // 'android' | 'ios'
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user_id", ["user_id"])
+    .index("by_token", ["token"]),
 });

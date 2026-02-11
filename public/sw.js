@@ -1,4 +1,4 @@
-// Service Worker for TPX Booking App - PWA + Notifications
+// Service Worker for TipunoX Booking App - PWA + Notifications
 
 const CACHE_NAME = 'tpx-v1';
 

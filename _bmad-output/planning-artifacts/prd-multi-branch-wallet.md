@@ -1,4 +1,4 @@
-# Product Requirements Document: Multi-branch TPX Wallet Payment Architecture
+# Product Requirements Document: Multi-branch TipunoX Wallet Payment Architecture
 
 **Version:** 1.0
 **Date:** 2026-01-30
@@ -10,7 +10,7 @@
 
 ## Executive Summary
 
-This PRD defines the architecture for extending TPX Wallet to support multi-branch operations. The system enables customers to top up their wallet once and use the balance at any branch, while ensuring branches receive their fair share through a centralized settlement process.
+This PRD defines the architecture for extending TipunoX Wallet to support multi-branch operations. The system enables customers to top up their wallet once and use the balance at any branch, while ensuring branches receive their fair share through a centralized settlement process.
 
 ### Key Architecture Decisions
 
@@ -27,7 +27,7 @@ This PRD defines the architecture for extending TPX Wallet to support multi-bran
 ## 1. Problem Statement
 
 ### Current State
-- TPX has 15-20 branches, each with their own PayMongo account
+- TipunoX has 15-20 branches, each with their own PayMongo account
 - Wallet top-ups currently go to... (unclear/not implemented for multi-branch)
 - No system exists to settle wallet payments with branches
 - POS cannot accept wallet payments
@@ -609,7 +609,7 @@ export const getBranchWalletSummary = query(...);    // Per-branch summary
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     TPX WALLET ARCHITECTURE                      │
+│                     TipunoX WALLET ARCHITECTURE                      │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                  │
 │  ┌──────────┐    TOP-UP     ┌──────────────┐                    │

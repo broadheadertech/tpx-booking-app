@@ -5,7 +5,7 @@ inputDocuments:
   - docs/project_details.md
   - docs/CONVEX_DATABASE_SCHEMA.md
   - convex/services/payroll.ts
-session_topic: 'Financial Management Features for TPX Booking App'
+session_topic: 'Financial Management Features for TipunoX Booking App'
 session_goals: 'Branch accounting, royalty system, cash advances, external revenue tracking, HQ consolidated view'
 selected_approach: 'AI-Recommended Techniques'
 techniques_used:
@@ -16,7 +16,7 @@ ideas_generated: 5
 context_file: 'docs/index.md'
 ---
 
-# Brainstorming Session - TPX Booking App Financial Features
+# Brainstorming Session - TipunoX Booking App Financial Features
 
 **Session Date:** 2026-01-25
 **Facilitator:** Claude (Analyst Agent)
@@ -24,12 +24,12 @@ context_file: 'docs/index.md'
 
 ## Session Overview
 
-**Topic:** Financial Management Features for TPX Barbershop Booking System
+**Topic:** Financial Management Features for TipunoX Barbershop Booking System
 **Goals:** Design comprehensive financial tracking including accounting, royalties, cash advances, and consolidated reporting
 
 ### Context Guidance
 
-This is a **brownfield project** enhancement to the existing TPX Booking App. The system currently has:
+This is a **brownfield project** enhancement to the existing TipunoX Booking App. The system currently has:
 - 24 database tables in Convex
 - Existing payroll system (`convex/services/payroll.ts`)
 - Multi-branch architecture with role-based access

@@ -16,7 +16,7 @@ context_file: ''
 
 ## Session Overview
 
-**Topic:** Clerk Authentication + RBAC Implementation for TPX Booking App
+**Topic:** Clerk Authentication + RBAC Implementation for TipunoX Booking App
 **Goals:** Implement robust security with Page Access Permissions for 6 user types
 
 ### Session Context

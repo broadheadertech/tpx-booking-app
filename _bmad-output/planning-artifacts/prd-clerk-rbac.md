@@ -24,7 +24,7 @@ classification:
 
 ## Executive Summary
 
-TPX Booking App requires a security upgrade to replace custom authentication with Clerk and implement comprehensive Role-Based Access Control (RBAC) for 6 user types across a multi-branch franchise network.
+TipunoX Booking App requires a security upgrade to replace custom authentication with Clerk and implement comprehensive Role-Based Access Control (RBAC) for 6 user types across a multi-branch franchise network.
 
 **Product Differentiator:** Unlike simple auth integrations, this implementation uses Clerk Organizations to map directly to franchise branches, enabling true multi-tenant data isolation with granular page-level and action-level permissions.
 
@@ -118,15 +118,15 @@ TPX Booking App requires a security upgrade to replace custom authentication wit
 
 ### Journey 1: Maria - Super Admin Onboards a New Branch
 
-**Who:** Maria, TPX franchise owner, manages 5 branches across Metro Manila
+**Who:** Maria, TipunoX franchise owner, manages 5 branches across Metro Manila
 
 **Opening Scene:** Maria just signed a new franchisee in Cebu. She needs to set up their branch, create their admin account, and ensure they can only see Cebu data.
 
 **The Journey:**
 1. Maria logs in via Clerk (SSO with her Google account)
-2. Creates new Branch "TPX Cebu" in the system
+2. Creates new Branch "TipunoX Cebu" in the system
 3. System automatically creates matching Clerk Organization
-4. Creates "Juan" as Branch Admin, assigns to TPX Cebu
+4. Creates "Juan" as Branch Admin, assigns to TipunoX Cebu
 5. Juan receives Clerk invite email, sets up password + MFA
 6. Juan logs in - sees ONLY Cebu branch in his dashboard
 
@@ -138,14 +138,14 @@ TPX Booking App requires a security upgrade to replace custom authentication wit
 
 ### Journey 2: Lisa - Admin Staff Handles Cross-Branch Support
 
-**Who:** Lisa, operations manager at TPX head office, supports all branches
+**Who:** Lisa, operations manager at TipunoX head office, supports all branches
 
 **Opening Scene:** Lisa receives a call from Juan (Cebu Branch Admin) who can't figure out why a barber's payroll looks wrong.
 
 **The Journey:**
 1. Lisa logs in via Clerk at head office
 2. Dashboard shows branch selector - she can see ALL branches
-3. Switches to "TPX Cebu" view to investigate
+3. Switches to "TipunoX Cebu" view to investigate
 4. Navigates to Payroll, reviews Ben's records
 5. Finds the issue, edits the payroll record to fix it
 6. Tries to delete Juan's user account → "Access Denied" (only Super Admin can delete users)
@@ -159,13 +159,13 @@ TPX Booking App requires a security upgrade to replace custom authentication wit
 
 ### Journey 3: Juan - Branch Admin's First Day
 
-**Who:** Juan, new franchisee, first time using TPX system
+**Who:** Juan, new franchisee, first time using TipunoX system
 
 **Opening Scene:** Juan received his Clerk invite. He's nervous about managing the system.
 
 **The Journey:**
 1. Clicks Clerk invite link, sets password, enables MFA
-2. First login - dashboard shows "Welcome to TPX Cebu"
+2. First login - dashboard shows "Welcome to TipunoX Cebu"
 3. Navigation shows: Overview, Bookings, Barbers, Payroll, Reports...
 4. Notices NO "Branches" or "Settings" tabs (those are Super Admin only)
 5. Goes to Users tab, can create Staff and assign page_access
@@ -179,7 +179,7 @@ TPX Booking App requires a security upgrade to replace custom authentication wit
 
 ### Journey 4: Ana - Staff With Limited Permissions
 
-**Who:** Ana, cashier at TPX Cebu, tech-savvy but new to TPX
+**Who:** Ana, cashier at TipunoX Cebu, tech-savvy but new to TipunoX
 
 **Opening Scene:** Ana was just hired. Juan gave her a Clerk invite.
 
@@ -199,12 +199,12 @@ TPX Booking App requires a security upgrade to replace custom authentication wit
 
 ### Journey 5: Carlo - Customer Cancels Booking
 
-**Who:** Carlo, regular customer at TPX Cebu
+**Who:** Carlo, regular customer at TipunoX Cebu
 
 **Opening Scene:** Carlo booked a haircut for tomorrow but just got called into an emergency meeting
 
 **The Journey:**
-1. Opens TPX app, logs in via Clerk (saved session)
+1. Opens TipunoX app, logs in via Clerk (saved session)
 2. Goes to "My Bookings", sees tomorrow's appointment
 3. Clicks "Cancel" → System checks: is it 2+ hours before? ✓
 4. Confirmation modal shows branch's cancel policy
@@ -219,7 +219,7 @@ TPX Booking App requires a security upgrade to replace custom authentication wit
 
 ### Journey 6: Ben - Barber Views Schedule & Requests Cash Advance
 
-**Who:** Ben, senior barber at TPX Cebu, been with franchise 2 years
+**Who:** Ben, senior barber at TipunoX Cebu, been with franchise 2 years
 
 **Opening Scene:** Ben needs to check his schedule and request a cash advance for an emergency
 

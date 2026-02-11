@@ -65,7 +65,7 @@ class DownloadService {
 
       // Generate filename with timestamp
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const finalFileName = `TPX-Barbershop-${timestamp}.apk`;
+      const finalFileName = `TipunoX-Barbershop-${timestamp}.apk`;
 
       // Save the file
       saveAs(blob, finalFileName);

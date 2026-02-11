@@ -12,7 +12,6 @@ import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { Navigate } from 'react-router-dom'
 import { getRoleRedirectPath } from '../../utils/roleRedirect'
-import LoadingScreen from './LoadingScreen'
 
 const AuthRedirect = ({ children }) => {
   // Legacy auth
@@ -29,28 +28,20 @@ const AuthRedirect = ({ children }) => {
       : "skip"
   )
 
-  // Determine loading state
-  const isClerkLoading = !clerkLoaded || (clerkSignedIn && clerkConvexUser === undefined)
-  const loading = legacyLoading || isClerkLoading
-
   // Check if authenticated via either method
   const isAuthenticated = legacyAuthenticated || (clerkSignedIn && clerkConvexUser !== null)
 
   // Get the active user (prefer Clerk user if signed in via Clerk)
   const user = (clerkSignedIn && clerkConvexUser) ? clerkConvexUser : legacyUser
 
-  // Show loading while checking authentication
-  if (loading) {
-    return <LoadingScreen message="Checking authentication..." />
-  }
-
-  // Redirect authenticated users to their dashboard based on role
+  // For auth pages (login/register), don't block on loading — show the form immediately.
+  // If the user turns out to be authenticated, redirect once loading completes.
   if (isAuthenticated && user) {
     const redirectPath = getRoleRedirectPath(user.role)
     return <Navigate to={redirectPath} replace />
   }
 
-  // Show login/register page for unauthenticated users
+  // Show login/register page immediately (don't wait for Clerk to load)
   return children
 }
 

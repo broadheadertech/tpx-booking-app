@@ -26,7 +26,7 @@ const versionFilePath = path.join(__dirname, '../src/config/version.js');
 const packageJsonPath = path.join(__dirname, '../package.json');
 
 console.log('\n╔════════════════════════════════════════════════════════════════╗');
-console.log('║          🚀 DEPLOYING TPX BARBERSHOP APPLICATION 🚀          ║');
+console.log('║          🚀 DEPLOYING TipunoX BARBERSHOP APPLICATION 🚀          ║');
 console.log('╚════════════════════════════════════════════════════════════════╝\n');
 
 try {

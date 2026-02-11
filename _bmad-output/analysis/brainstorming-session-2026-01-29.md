@@ -22,7 +22,7 @@ workflow_completed: true
 
 ## Session Overview
 
-**Topic:** Customer Experience features for barbershop booking app (TPX Booking App)
+**Topic:** Customer Experience features for barbershop booking app (TipunoX Booking App)
 
 **Goals:** Define comprehensive implementation roadmap for customer engagement features including e-wallet enhancements, loyalty points system, VIP tiers, and gamification.
 
@@ -72,14 +72,14 @@ All features explored and expanded into 67 actionable ideas organized across 9 t
 
 | # | Idea | Description | Novelty |
 |---|------|-------------|---------|
-| 8 | Wallet Payments Earn Bonus Points | Pay with TPX Wallet = earn 1.5x points | Creates closed ecosystem |
+| 8 | Wallet Payments Earn Bonus Points | Pay with TipunoX Wallet = earn 1.5x points | Creates closed ecosystem |
 | 9 | Top-Up Bonus Tiers | ₱500→₱550 (+10%), ₱1000→₱1150 (+15%) | Larger commitment = larger reward |
 | 10 | No Auto-Reload | Skip auto-reload - customers find it hassle | Removing a feature is sometimes right |
 | 11 | Pay with Wallet + Points Combo | "Use 200 points (₱20) + ₱330 wallet = ₱350" | Points become spendable currency |
 | 23 | Wallet Float Covers Loyalty Costs | Unspent wallet balances offset free haircut redemptions | Self-funding loyalty program |
 | 35 | Keep Wallet & Points Separate | Wallet = real money, Points = earned rewards | Avoids confusion |
 | 43 | Minimum Top-Up = ₱300 | Exactly enough for one service | Removes "how much?" anxiety |
-| 46 | Gift Wallet Balance | "Send ₱300 to Miguel's TPX Wallet" | Turns customers into gift-givers |
+| 46 | Gift Wallet Balance | "Send ₱300 to Miguel's TipunoX Wallet" | Turns customers into gift-givers |
 | 54 | Wallet Cashback Bonus | 5% back as points on wallet payments | Double incentive from GCash playbook |
 | 55 | Voucher Badge Alert | Red badge "🎁 3" for unredeemed rewards | Creates urgency to USE rewards |
 | 56 | QR Code Quick Pay | Customer shows QR → staff scans → 3 seconds | Fastest possible checkout |
