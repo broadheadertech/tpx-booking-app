@@ -26,6 +26,22 @@ body {
   background-color: #0A0A0A;
 }
 
+/* Clerk SignIn dark theme fix — prevent white/black flash between steps */
+.clerk-login-container .cl-rootBox,
+.clerk-login-container .cl-card,
+.clerk-login-container .cl-signIn-root,
+.clerk-login-container .cl-signUp-root,
+.clerk-login-container .cl-internal-b3fm6y {
+  background-color: #1A1A1A !important;
+}
+.clerk-login-container .cl-main {
+  background-color: #1A1A1A !important;
+  min-height: 200px;
+}
+.clerk-login-container .cl-footer {
+  background-color: #1A1A1A !important;
+}
+
 /* Custom scrollbar utilities */
 .scrollbar-hide {
   -ms-overflow-style: none;

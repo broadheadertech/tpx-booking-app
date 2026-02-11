@@ -11,9 +11,12 @@
 export default {
   providers: [
     {
-      // Clerk domain from .env.local VITE_CLERK_PUBLISHABLE_KEY
-      // The domain is extracted from the publishable key format: pk_test_{base64_domain}
-      // For proper-feline-8.clerk.accounts.dev
+      // Production Clerk domain (clerk.broadheader.com)
+      domain: "https://clerk.broadheader.com",
+      applicationID: "convex",
+    },
+    {
+      // Development Clerk domain (proper-feline-8.clerk.accounts.dev)
       domain: "https://proper-feline-8.clerk.accounts.dev",
       applicationID: "convex",
     },

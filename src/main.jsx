@@ -40,7 +40,7 @@ createRoot(document.getElementById("root")).render(
     {isClerkConfigured ? (
       <ClerkProvider
         publishableKey={clerkPubKey}
-        allowedRedirectOrigins={["https://broadheader.com", "https://localhost", "capacitor://localhost", "http://localhost"]}
+        allowedRedirectOrigins={["https://broadheader.com", "https://tpx.broadheader.com", "https://localhost", "capacitor://localhost", "http://localhost"]}
       >
         <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
           <App />
