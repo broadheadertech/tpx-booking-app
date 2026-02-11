@@ -1,6 +1,6 @@
 {
-  "name": "TPX Booking App",
-  "short_name": "TPX",
+  "name": "TipunoX Booking App",
+  "short_name": "TipunoX",
   "description": "Premium barbershop booking and management",
   "start_url": "/",
   "display": "standalone",

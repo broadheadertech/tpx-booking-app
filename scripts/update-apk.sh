@@ -202,7 +202,7 @@ EOF
 </head>
 <body>
     <div class="download-card">
-        <div class="app-icon">TPX</div>
+        <div class="app-icon">TipunoX</div>
         <h1>Barbershop</h1>
         <div class="version">Version 1.0 • Android App</div>
 

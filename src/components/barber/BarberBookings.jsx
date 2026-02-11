@@ -474,6 +474,7 @@ const BookingDetailsSheet = ({ booking, onClose, getStatusColor, getStatusIcon }
           </div>
         </div>
       </div>
+      
 
       <style>{`
         @keyframes slide-up {

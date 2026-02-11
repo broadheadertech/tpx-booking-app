@@ -1,7 +1,7 @@
 ---
 stepsCompleted: [1, 2, 3, 4]
 inputDocuments: []
-session_topic: 'PayMongo Payment Integration for TPX Booking App'
+session_topic: 'PayMongo Payment Integration for TipunoX Booking App'
 session_goals: 'Online deposits, full payments, pay now/later, branch tracking, all PayMongo methods, per-branch API keys, per-branch QR setup'
 selected_approach: 'AI-Recommended Techniques'
 techniques_used:
@@ -20,12 +20,12 @@ workflow_completed: true
 
 ## Session Overview
 
-**Topic:** PayMongo Payment Integration for TPX Barbershop Booking System
+**Topic:** PayMongo Payment Integration for TipunoX Barbershop Booking System
 **Goals:** Design comprehensive online payment system with branch-level configuration and tracking
 
 ### Context Guidance
 
-This is a **brownfield project** enhancement to the existing TPX Booking App. The system currently has:
+This is a **brownfield project** enhancement to the existing TipunoX Booking App. The system currently has:
 - Multi-branch architecture with role-based access
 - Existing booking and appointment system
 - Branch-specific configurations
@@ -92,12 +92,12 @@ _Novelty_: Different refund rules based on payment type creates behavioral incen
 
 ### Idea #5: Decentralized Payment Accounts
 **Category:** Architecture
-_Concept_: Each branch owns their PayMongo relationship - they create their account, get their API keys, generate their QR. TPX just stores and uses their credentials. No central payment processing bottleneck.
+_Concept_: Each branch owns their PayMongo relationship - they create their account, get their API keys, generate their QR. TipunoX just stores and uses their credentials. No central payment processing bottleneck.
 _Novelty_: Branches are financially independent - funds go directly to THEIR PayMongo, not through HQ. This simplifies accounting and gives branches autonomy.
 
 ### Idea #6: Self-Service Branch Payment Setup
 **Category:** Onboarding
-_Concept_: Branch admin creates PayMongo account -> copies API key into TPX -> generates QR from PayMongo -> inputs QR link into TPX. No Super Admin involvement needed.
+_Concept_: Branch admin creates PayMongo account -> copies API key into TipunoX -> generates QR from PayMongo -> inputs QR link into TipunoX. No Super Admin involvement needed.
 _Novelty_: Reduces HQ operational burden - branches onboard themselves for payments.
 
 ### Idea #7: Hybrid Final Payment Collection
@@ -171,8 +171,8 @@ booking_payment_status:
 3. System calculates total: Service Amount
 4. Customer redirected to PayMongo (using BRANCH's API key)
 5. Customer pays via GCash/Maya/Card/GrabPay/Bank
-6. PayMongo webhook notifies TPX of successful payment
-7. TPX records payment transaction
+6. PayMongo webhook notifies TipunoX of successful payment
+7. TipunoX records payment transaction
 8. Booking confirmed as PAID
 9. Customer receives confirmation
 ```
@@ -185,12 +185,12 @@ booking_payment_status:
 4. Customer shown: "Service: P500 | Convenience Fee: P50 (non-refundable)"
 5. Customer redirected to PayMongo for fee payment only
 6. Customer pays fee via GCash/Maya/Card/GrabPay/Bank
-7. PayMongo webhook notifies TPX
-8. TPX records fee payment, splits between barber/shop
+7. PayMongo webhook notifies TipunoX
+8. TipunoX records fee payment, splits between barber/shop
 9. Booking confirmed as RESERVED (owes service amount)
 10. At shop arrival: Customer pays remaining balance
     - Option A: Scan branch QR -> PayMongo -> auto-recorded
-    - Option B: Pay cash -> Staff marks as paid in TPX
+    - Option B: Pay cash -> Staff marks as paid in TipunoX
 11. Booking marked as FULLY PAID
 ```
 

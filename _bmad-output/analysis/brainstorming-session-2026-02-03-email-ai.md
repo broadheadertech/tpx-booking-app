@@ -50,13 +50,13 @@
 
 #### Email Platform Leaders (Mailchimp, HubSpot, Klaviyo)
 
-| # | AI Feature | Adaptation for TPX Barber |
+| # | AI Feature | Adaptation for TipunoX Barber |
 |---|-----------|---------------------------|
 | 1 | Subject Line Generator | AI writes compelling subjects for promos, reminders, newsletters |
 | 2 | AI Email Body Writer | Generate full email copy from simple prompt |
 | 3 | Send Time Optimization | Learn when each customer opens emails, send at their peak time |
 | 4 | Content Optimizer | AI reviews draft and suggests improvements for engagement |
-| 5 | Creative Assistant | Auto-generate email designs matching TPX brand |
+| 5 | Creative Assistant | Auto-generate email designs matching TipunoX brand |
 | 6 | Predictive Demographics | Infer customer preferences from booking history |
 | 7 | Engagement Scoring | Predict which customers will open/click |
 | 8 | A/B Test Recommender | Suggest what to test based on historical performance |
@@ -69,7 +69,7 @@
 
 #### Adjacent Industries (E-Commerce, Fitness, Restaurants)
 
-| # | AI Feature | Adaptation for TPX Barber |
+| # | AI Feature | Adaptation for TipunoX Barber |
 |---|-----------|---------------------------|
 | 15 | Abandoned Booking Recovery | Email when customer starts booking but doesn't finish |
 | 16 | Service Recommendations | "Based on your history, try our new beard sculpting" |
@@ -86,7 +86,7 @@
 
 #### Wild Industries (Banking, Gaming, Streaming, Healthcare)
 
-| # | AI Feature | Adaptation for TPX Barber |
+| # | AI Feature | Adaptation for TipunoX Barber |
 |---|-----------|---------------------------|
 | 27 | Spending Insights Email | "Your grooming summary: 6 visits, ₱3,200 spent, saved ₱480" |
 | 28 | Wallet Balance Alerts | "Your wallet balance is low - top up for your next visit!" |

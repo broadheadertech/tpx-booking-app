@@ -446,7 +446,7 @@ const Profile = () => {
                 <Gift className="w-5 h-5 text-green-400" />
               </div>
               <div className="flex-1">
-                <p className="text-green-400 font-bold">Welcome to TPX! 🎉</p>
+                <p className="text-green-400 font-bold">Welcome to TipunoX! 🎉</p>
                 <p className="text-green-300/80 text-sm mt-1">
                   Book your first appointment and enjoy our premium grooming experience.
                 </p>
@@ -895,7 +895,7 @@ const Profile = () => {
 
         {/* App Info */}
         <div className="text-center pt-4">
-          <p className="text-xs text-gray-500">{branding?.display_name || 'TPX Booking'}</p>
+          <p className="text-xs text-gray-500">{branding?.display_name || 'TipunoX Booking'}</p>
           <p className="text-xs text-gray-600 mt-1">Version {APP_VERSION}</p>
           {isClerkAuth && (
             <p className="text-xs text-[var(--color-primary)] mt-2 flex items-center justify-center gap-1">
@@ -925,11 +925,11 @@ const Profile = () => {
               id="share-card"
               className="bg-gradient-to-br from-[#1A1A1A] via-[#2A2A2A] to-[#1A1A1A] rounded-[24px] p-6 border border-[#3A3A3A] shadow-2xl"
             >
-              {/* TPX Branding */}
+              {/* TipunoX Branding */}
               <div className="text-center mb-4">
                 <p className="text-xs text-gray-500 uppercase tracking-wider">My Style DNA</p>
                 <h3 className="text-2xl font-black bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] bg-clip-text text-transparent">
-                  {branding?.display_name || 'TPX'}
+                  {branding?.display_name || 'TipunoX'}
                 </h3>
               </div>
 
@@ -1004,7 +1004,7 @@ const Profile = () => {
               <button
                 onClick={() => {
                   // Copy to clipboard functionality
-                  const text = `Check out my Style DNA at ${branding?.display_name || 'TPX'}! I'm "${styleDNA?.personality || 'a valued member'}" with ${greetingData?.completedBookings || 0} cuts and a ${greetingData?.streak || 0}-month streak! 💈🔥`
+                  const text = `Check out my Style DNA at ${branding?.display_name || 'TipunoX'}! I'm "${styleDNA?.personality || 'a valued member'}" with ${greetingData?.completedBookings || 0} cuts and a ${greetingData?.streak || 0}-month streak! 💈🔥`
                   navigator.clipboard.writeText(text)
                   showAlert({ title: 'Copied', message: 'Copied to clipboard!', type: 'success' })
                 }}
@@ -1018,8 +1018,8 @@ const Profile = () => {
                   // Share via Web Share API if available
                   if (navigator.share) {
                     navigator.share({
-                      title: `My ${branding?.display_name || 'TPX'} Style DNA`,
-                      text: `I'm "${styleDNA?.personality || 'a valued member'}" at ${branding?.display_name || 'TPX'}! ${greetingData?.completedBookings || 0} cuts, ${greetingData?.streak || 0}-month streak 💈🔥`,
+                      title: `My ${branding?.display_name || 'TipunoX'} Style DNA`,
+                      text: `I'm "${styleDNA?.personality || 'a valued member'}" at ${branding?.display_name || 'TipunoX'}! ${greetingData?.completedBookings || 0} cuts, ${greetingData?.streak || 0}-month streak 💈🔥`,
                       url: window.location.origin,
                     })
                   } else {

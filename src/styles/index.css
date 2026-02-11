@@ -13,6 +13,17 @@
   --color-card-hover: #242424;
   --color-border: #2A2A2A;
   --color-gold: #CBA258;
+
+  /* Safe area insets for Capacitor full-screen mode */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Full-screen safe area padding for native apps */
+body {
+  padding-top: var(--safe-area-top);
+  padding-bottom: var(--safe-area-bottom);
+  background-color: #0A0A0A;
 }
 
 /* Custom scrollbar utilities */

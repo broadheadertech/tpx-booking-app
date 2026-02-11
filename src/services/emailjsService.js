@@ -46,7 +46,7 @@ export const sendEmailViaEmailJS = async (emailData) => {
       subject: emailData.subject,
       html_content: emailData.html_content,
       text_content: emailData.text_content || emailData.html_content?.replace(/<[^>]*>/g, '') || '',
-      company_name: 'TPX Barber',
+      company_name: 'TipunoX Barber',
       current_year: new Date().getFullYear()
     }
 
@@ -83,7 +83,7 @@ export const sendTestEmail = async (testEmail) => {
   return sendEmailViaEmailJS({
     to: testEmail,
     to_name: 'Test User',
-    subject: '🧪 TPX Barber - Test Email',
+    subject: '🧪 TipunoX Barber - Test Email',
     html_content: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #ff8c42 0%, #ff7a2b 100%); padding: 30px; text-align: center; border-radius: 10px;">
@@ -93,7 +93,7 @@ export const sendTestEmail = async (testEmail) => {
         <div style="padding: 30px 20px; background: #1a1a1a; border-radius: 0 0 10px 10px;">
           <p style="color: #e5e5e5; margin: 0 0 20px;">Hello!</p>
           <p style="color: #e5e5e5; margin: 0 0 20px;">
-            This test email confirms your TPX Barber email system is properly configured with EmailJS.
+            This test email confirms your TipunoX Barber email system is properly configured with EmailJS.
           </p>
           <p style="color: #e5e5e5; margin: 0;">
             If you received this email, everything is working correctly! 🎉
@@ -101,7 +101,7 @@ export const sendTestEmail = async (testEmail) => {
         </div>
       </div>
     `,
-    text_content: 'Test email from TPX Barber. Your EmailJS integration is working!'
+    text_content: 'Test email from TipunoX Barber. Your EmailJS integration is working!'
   })
 }
 

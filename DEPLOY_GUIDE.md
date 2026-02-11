@@ -130,7 +130,7 @@ Examples:
 $ npm run deploy
 
 ╔════════════════════════════════════════════════════════════════╗
-║          🚀 DEPLOYING TPX BARBERSHOP APPLICATION 🚀          ║
+║          🚀 DEPLOYING TipunoX BARBERSHOP APPLICATION 🚀          ║
 ╚════════════════════════════════════════════════════════════════╝
 
 📖 Reading current version...

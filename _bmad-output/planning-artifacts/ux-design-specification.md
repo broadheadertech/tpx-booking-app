@@ -21,7 +21,7 @@ inputDocuments:
 
 ### Project Vision
 
-TPX Booking App enhancement to transform from a booking-focused system into a comprehensive franchise management platform. The UX must integrate 5 new capabilities (Accounting, Royalty, Cash Advance, Product Catalog, Time Tracking) into the existing dashboard without disrupting current user workflows.
+TipunoX Booking App enhancement to transform from a booking-focused system into a comprehensive franchise management platform. The UX must integrate 5 new capabilities (Accounting, Royalty, Cash Advance, Product Catalog, Time Tracking) into the existing dashboard without disrupting current user workflows.
 
 ### Target Users
 
@@ -158,7 +158,7 @@ TPX Booking App enhancement to transform from a booking-focused system into a co
 
 ### Design Inspiration Strategy
 
-Focus on proven patterns from apps users already know. Prioritize familiarity and speed over novelty. New features should feel like natural extensions of the existing TPX experience.
+Focus on proven patterns from apps users already know. Prioritize familiarity and speed over novelty. New features should feel like natural extensions of the existing TipunoX experience.
 
 ## Design System Foundation
 
@@ -326,7 +326,7 @@ Each core interaction follows: **Initiation → Interaction → Feedback → Com
 
 ### Design Directions Explored
 
-**Brownfield Constraint Acknowledged:** TPX Booking App has an established visual identity. New features (Accounting, Royalty, Cash Advance, Product Catalog, Time Tracking) must integrate seamlessly rather than introducing competing aesthetics.
+**Brownfield Constraint Acknowledged:** TipunoX Booking App has an established visual identity. New features (Accounting, Royalty, Cash Advance, Product Catalog, Time Tracking) must integrate seamlessly rather than introducing competing aesthetics.
 
 **Direction Explored: Unified Extension**
 - Extend existing card-based layouts for financial data
@@ -355,7 +355,7 @@ Each core interaction follows: **Initiation → Interaction → Feedback → Com
 
 ### Design Rationale
 
-1. **Consistency Over Novelty:** Users already know the TPX interface. New features should feel native, not "bolted on."
+1. **Consistency Over Novelty:** Users already know the TipunoX interface. New features should feel native, not "bolted on."
 
 2. **1-Week Timeline:** No time for user learning curve. Familiar patterns reduce friction.
 
@@ -375,8 +375,8 @@ Each core interaction follows: **Initiation → Interaction → Feedback → Com
 | Summary Card | shadcn/ui Card | Dark variant + orange accent |
 | Data Table | shadcn/ui Table | Dark striped rows |
 | Status Badge | shadcn/ui Badge | Semantic color variants |
-| Form Inputs | Existing TPX inputs | No changes needed |
-| Buttons | Existing TPX buttons | No changes needed |
+| Form Inputs | Existing TipunoX inputs | No changes needed |
+| Buttons | Existing TipunoX buttons | No changes needed |
 | Modal/Dialog | shadcn/ui Dialog | Dark variant |
 
 **No HTML Mockup Generated:** Given brownfield constraints and established visual system, detailed mockups would duplicate existing patterns. Implementation should reference current app components directly.
@@ -557,7 +557,7 @@ flowchart TD
 | Input/Select | All form fields | Dark variant, orange focus |
 | Toast | Success/error notifications | Semantic colors |
 
-**Existing TPX Components (Reuse):**
+**Existing TipunoX Components (Reuse):**
 - Navigation (bottom tabs, header)
 - User Avatar
 - Date Picker (react-datepicker)
@@ -942,7 +942,7 @@ flowchart TD
 
 **Mobile-First Approach (Primary):**
 
-TPX is mobile-first because:
+TipunoX is mobile-first because:
 - Barbers use phones exclusively for time clock
 - Branch Admins often check P&L on-the-go
 - Capacitor wraps the same React app for iOS/Android

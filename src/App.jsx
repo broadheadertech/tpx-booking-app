@@ -1,9 +1,11 @@
+import { useEffect } from "react";
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
 } from "react-router-dom";
+import { Capacitor } from "@capacitor/core";
 import { AuthProvider } from "./context/AuthContext";
 import { BrandingProvider } from "./context/BrandingContext";
 import { BranchProvider } from "./context/BranchContext";
@@ -55,6 +57,29 @@ function App() {
   // Determine initial route based on platform
   const initialRoute = getInitialRoute();
 
+  // Initialize Capacitor native plugins on app start
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      // Set status bar to overlay mode (full screen) with dark text
+      import("@capacitor/status-bar").then(({ StatusBar, Style }) => {
+        StatusBar.setOverlaysWebView({ overlay: true });
+        StatusBar.setStyle({ style: Style.Dark });
+        StatusBar.setBackgroundColor({ color: "#00000000" });
+      }).catch(() => {});
+
+      // Handle deep links for Clerk OAuth redirects
+      import("@capacitor/app").then(({ App: CapApp }) => {
+        CapApp.addListener("appUrlOpen", (event) => {
+          const url = new URL(event.url);
+          const path = url.pathname + url.search;
+          if (path) {
+            window.location.hash = path;
+          }
+        });
+      }).catch(() => {});
+    }
+  }, []);
+
   return (
     <AuthProvider>
       <ToastProvider>
@@ -97,7 +122,11 @@ function App() {
               {/* Clerk uses sub-routes for multi-step auth (factor-one, factor-two, etc.) */}
               <Route
                 path="/auth/login/*"
-                element={<ClerkLogin />}
+                element={
+                  <AuthRedirect>
+                    <ClerkLogin />
+                  </AuthRedirect>
+                }
               />
               {/* Legacy login redirect to Clerk */}
               <Route
@@ -145,7 +174,11 @@ function App() {
               {/* Clerk uses sub-routes for multi-step signup (verification, etc.) */}
               <Route
                 path="/auth/register/*"
-                element={<ClerkSignUp />}
+                element={
+                  <AuthRedirect>
+                    <ClerkSignUp />
+                  </AuthRedirect>
+                }
               />
               <Route
                 path="/admin"

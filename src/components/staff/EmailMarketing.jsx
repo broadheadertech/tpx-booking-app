@@ -629,7 +629,7 @@ const EmailMarketing = memo(({ onRefresh }) => {
   const defaultTemplateData = (id) => {
     switch (id) {
       case 'marketing':
-        return { mainContent: 'We have an amazing offer just for you.', buttonText: 'Book Now', buttonUrl: '#', branchName: 'TPX Barber', branchAddress: '123 Main St, City', branchPhone: '+1234567890', footerText: 'Thank you for choosing us!' }
+        return { mainContent: 'We have an amazing offer just for you.', buttonText: 'Book Now', buttonUrl: '#', branchName: 'TipunoX Barber', branchAddress: '123 Main St, City', branchPhone: '+1234567890', footerText: 'Thank you for choosing us!' }
       case 'promotional':
         return { discountPercentage: '25', promoCode: 'SUMMER25', validUntil: new Date(Date.now() + 7*24*60*60*1000).toISOString().slice(0,10), bookingUrl: '#' }
       case 'newsletter':

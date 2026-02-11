@@ -10,7 +10,7 @@ import { Resend } from "resend";
 const resend = new Resend(process.env.RESEND_API_KEY || "missing_key");
 
 // Default sender - configured with verified Resend domain
-const DEFAULT_FROM = "TPX Barber <noreply@tipunox.broadheader.com>";
+const DEFAULT_FROM = "TipunoX Barber <noreply@tipunox.broadheader.com>";
 
 /**
  * Send a single marketing email via Resend
@@ -153,7 +153,7 @@ export const sendTestEmail = action({
       const result = await resend.emails.send({
         from: DEFAULT_FROM,
         to: args.to,
-        subject: "🧪 TPX Barber - Test Email",
+        subject: "🧪 TipunoX Barber - Test Email",
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%); padding: 30px; text-align: center; border-radius: 16px;">
@@ -163,18 +163,18 @@ export const sendTestEmail = action({
             <div style="padding: 30px 20px; background: #1a1a1a; border-radius: 0 0 16px 16px;">
               <p style="color: #e5e5e5; margin: 0 0 20px;">Hello!</p>
               <p style="color: #e5e5e5; margin: 0 0 20px;">
-                This test email confirms your TPX Barber AI Email Marketing system is properly configured with Resend.
+                This test email confirms your TipunoX Barber AI Email Marketing system is properly configured with Resend.
               </p>
               <p style="color: #e5e5e5; margin: 0;">
                 If you received this email, everything is working correctly! 🎉
               </p>
             </div>
             <p style="text-align: center; color: #666; font-size: 12px; margin-top: 20px;">
-              Sent via TPX Barber Email AI • Powered by Resend
+              Sent via TipunoX Barber Email AI • Powered by Resend
             </p>
           </div>
         `,
-        text: "Test email from TPX Barber. Your Resend integration is working!",
+        text: "Test email from TipunoX Barber. Your Resend integration is working!",
       });
 
       if (result.error) {
@@ -293,7 +293,7 @@ export const generateEmailHtml = action({
                 © ${new Date().getFullYear()} ${args.brandName}. All rights reserved.
               </p>
               <p style="color: #444; font-size: 11px; margin: 10px 0 0;">
-                Sent via TPX Barber Email AI
+                Sent via TipunoX Barber Email AI
               </p>
             </td>
           </tr>

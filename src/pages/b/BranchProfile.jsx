@@ -132,7 +132,7 @@ const BranchProfile = () => {
     updateMetaTag('twitter:description', description)
 
     return () => {
-      document.title = 'TPX Booking'
+      document.title = 'TipunoX Booking'
     }
   }, [profileData])
 

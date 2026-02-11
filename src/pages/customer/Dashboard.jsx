@@ -227,7 +227,7 @@ const Dashboard = ({ initialSection = 'home' }) => {
                   alt={branding?.display_name || 'Logo'}
                   className="w-10 h-10 object-contain"
                 />
-                <span className="text-lg font-bold text-white">{branding?.display_name || 'TPX'}</span>
+                <span className="text-lg font-bold text-white">{branding?.display_name || 'TipunoX'}</span>
               </div>
 
               {/* Right - Actions */}

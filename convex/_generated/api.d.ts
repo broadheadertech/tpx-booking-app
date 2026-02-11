@@ -68,6 +68,7 @@ import type * as services_productCatalog from "../services/productCatalog.js";
 import type * as services_productOrders from "../services/productOrders.js";
 import type * as services_products from "../services/products.js";
 import type * as services_promotions from "../services/promotions.js";
+import type * as services_pushTokens from "../services/pushTokens.js";
 import type * as services_ratings from "../services/ratings.js";
 import type * as services_rbac from "../services/rbac.js";
 import type * as services_resendEmail from "../services/resendEmail.js";
@@ -156,6 +157,7 @@ declare const fullApi: ApiFromModules<{
   "services/productOrders": typeof services_productOrders;
   "services/products": typeof services_products;
   "services/promotions": typeof services_promotions;
+  "services/pushTokens": typeof services_pushTokens;
   "services/ratings": typeof services_ratings;
   "services/rbac": typeof services_rbac;
   "services/resendEmail": typeof services_resendEmail;

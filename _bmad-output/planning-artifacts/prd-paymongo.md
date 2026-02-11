@@ -27,10 +27,10 @@ classification:
 
 ## Executive Summary
 
-TPX Booking integrates PayMongo to enable automated online payments for barbershop appointments across multiple branches. This integration addresses two critical problems: **no-shows** that waste barber time, and **manual payment friction** that limits online booking adoption.
+TipunoX Booking integrates PayMongo to enable automated online payments for barbershop appointments across multiple branches. This integration addresses two critical problems: **no-shows** that waste barber time, and **manual payment friction** that limits online booking adoption.
 
 **Key Differentiators:**
-- **Automated End-to-End**: Unlike competitors using manual bank transfers, TPX offers instant payment confirmation with no human intervention
+- **Automated End-to-End**: Unlike competitors using manual bank transfers, TipunoX offers instant payment confirmation with no human intervention
 - **Commitment-Based No-Show Prevention**: Convenience fee (₱50-100) acts as psychological commitment, not just revenue
 - **Branch Autonomy**: Each branch controls their own PayMongo account, fees, and payment policies
 - **Multi-Tenant Isolation**: Full data separation between branches with shared infrastructure efficiency
@@ -92,7 +92,7 @@ This section provides a high-level overview. See [Project Scoping & Phased Devel
 
 **Situation:** It's 10 PM and Maria realizes her hair needs attention before tomorrow's important client meeting. Salons are closed and she can't call to reserve.
 
-**Opening Scene:** Maria searches online and discovers TPX Booking. She's skeptical about booking online with an unknown shop but needs a solution fast.
+**Opening Scene:** Maria searches online and discovers TipunoX Booking. She's skeptical about booking online with an unknown shop but needs a solution fast.
 
 **Rising Action:**
 1. She selects the Makati branch (closest to her office)
@@ -107,7 +107,7 @@ This section provides a high-level overview. See [Project Scoping & Phased Devel
 
 She chooses Pay Now. GCash opens, she confirms, and within seconds sees: *"Your 9:00 AM slot is secured. Show this QR code at the branch."*
 
-**Resolution:** Maria arrives at 8:55 AM, shows her QR code to the receptionist, and is served immediately without waiting. She makes her meeting looking professional. She bookmarks TPX Booking for future appointments.
+**Resolution:** Maria arrives at 8:55 AM, shows her QR code to the receptionist, and is served immediately without waiting. She makes her meeting looking professional. She bookmarks TipunoX Booking for future appointments.
 
 **Requirements Revealed:**
 - GCash/Maya payment integration
@@ -123,7 +123,7 @@ She chooses Pay Now. GCash opens, she confirms, and within seconds sees: *"Your 
 
 **Situation:** Carlo needs a haircut for his graduation photo shoot next Saturday. He wants to book early before slots fill up, but his Maya wallet won't have funds until Friday.
 
-**Opening Scene:** Carlo browses TPX Booking looking for affordable options. He finds the Basic Haircut at ₱150 at the QC branch.
+**Opening Scene:** Carlo browses TipunoX Booking looking for affordable options. He finds the Basic Haircut at ₱150 at the QC branch.
 
 **Rising Action:**
 1. Selects QC branch and a barber with available Saturday slots
@@ -150,7 +150,7 @@ Confirmation shows: *"Appointment secured! Pay ₱150 at the branch after your s
 
 ### Journey 3: Jasmine - Branch Staff Collecting Payment (POS)
 
-**Persona:** Jasmine, 24, receptionist at TPX Makati branch. Handles walk-ins and online bookings daily.
+**Persona:** Jasmine, 24, receptionist at TipunoX Makati branch. Handles walk-ins and online bookings daily.
 
 **Situation:** A customer arrives and shows a QR code on their phone. Jasmine needs to check them in and collect any remaining payment.
 
@@ -176,15 +176,15 @@ Confirmation shows: *"Appointment secured! Pay ₱150 at the branch after your s
 
 ### Journey 4: Dennis - Branch Admin Setting Up PayMongo
 
-**Persona:** Dennis, 35, manager of a newly opened TPX branch. Responsible for branch operations and finances.
+**Persona:** Dennis, 35, manager of a newly opened TipunoX branch. Responsible for branch operations and finances.
 
 **Situation:** Super Admin tells Dennis he needs to set up his own PayMongo account so his branch can accept online payments. He's never configured payment systems before.
 
-**Opening Scene:** Dennis logs into the TPX admin panel and navigates to Branch Settings. He sees a "Payment Configuration" section that's currently empty.
+**Opening Scene:** Dennis logs into the TipunoX admin panel and navigates to Branch Settings. He sees a "Payment Configuration" section that's currently empty.
 
 **Rising Action:**
 1. He creates a PayMongo account at paymongo.com and completes their verification
-2. Back in TPX, he enters his PayMongo Public Key and Secret Key
+2. Back in TipunoX, he enters his PayMongo Public Key and Secret Key
 3. He sets the convenience fee to ₱100 (his branch's preference)
 4. He enables the "Pay Later" option
 5. He sets a reschedule penalty of ₱50
@@ -205,11 +205,11 @@ Confirmation shows: *"Appointment secured! Pay ₱150 at the branch after your s
 
 ### Journey 5: Sofia - Authenticated Customer Rebooking (Edge Case)
 
-**Persona:** Sofia, 30, loyal TPX customer with an account. Has a booking history and saved preferences.
+**Persona:** Sofia, 30, loyal TipunoX customer with an account. Has a booking history and saved preferences.
 
 **Situation:** Sofia booked and paid in full (Pay Now) for Saturday 10 AM. But her work schedule changed - she needs to move it to Sunday.
 
-**Opening Scene:** Sofia opens the TPX app and goes to "My Bookings." She sees her Saturday appointment marked "Paid - ₱450."
+**Opening Scene:** Sofia opens the TipunoX app and goes to "My Bookings." She sees her Saturday appointment marked "Paid - ₱450."
 
 **Rising Action:**
 1. She taps "Reschedule" on her booking
@@ -251,7 +251,7 @@ Confirmation shows: *"Appointment secured! Pay ₱150 at the branch after your s
 ### Compliance & Regulatory
 
 - **PCI-DSS Compliance**: PayMongo handles all card data - we never store or process card numbers
-- **BSP Licensing**: PayMongo is the licensed payment processor; TPX operates as merchant
+- **BSP Licensing**: PayMongo is the licensed payment processor; TipunoX operates as merchant
 - **Data Privacy Act (Philippines)**: Customer payment data handled per DPA requirements
 
 ### Technical Constraints
@@ -298,7 +298,7 @@ Confirmation shows: *"Appointment secured! Pay ₱150 at the branch after your s
 
 #### 1. Market Innovation: Automated Payment Integration
 - **Current State**: Philippine barbershops with online payments use **manual processes** (chat, manual bank transfer verification)
-- **TPX Innovation**: Fully automated end-to-end payment flow with real-time confirmation
+- **TipunoX Innovation**: Fully automated end-to-end payment flow with real-time confirmation
 - **Differentiation**: No human intervention needed between customer payment and booking confirmation
 
 #### 2. Behavioral Design: Commitment-Based No-Show Prevention
@@ -310,12 +310,12 @@ Confirmation shows: *"Appointment secured! Pay ₱150 at the branch after your s
 
 #### 3. Operational Innovation: Service Provider Time Protection
 - **Traditional Model**: Barbershop absorbs 100% of no-show cost (barber's wasted time)
-- **TPX Model**: Financial commitment from customer protects barber's time value
+- **TipunoX Model**: Financial commitment from customer protects barber's time value
 - **Branch Autonomy**: Each branch sets their own fee based on local no-show rates and market conditions
 
 ### Market Context & Competitive Landscape
 
-| Feature | Traditional PH Barbershops | TPX with PayMongo |
+| Feature | Traditional PH Barbershops | TipunoX with PayMongo |
 |---------|---------------------------|-------------------|
 | Online Booking | Some offer | Yes |
 | Online Payment | Manual (bank transfer) | Automated (GCash/Maya/Cards) |
@@ -341,7 +341,7 @@ Confirmation shows: *"Appointment secured! Pay ₱150 at the branch after your s
 
 ### Project-Type Overview
 
-TPX Booking is a **multi-tenant SaaS platform** serving barbershop/salon businesses across multiple branches. The PayMongo integration extends the platform's B2B capabilities by enabling per-branch payment processing with full tenant isolation.
+TipunoX Booking is a **multi-tenant SaaS platform** serving barbershop/salon businesses across multiple branches. The PayMongo integration extends the platform's B2B capabilities by enabling per-branch payment processing with full tenant isolation.
 
 ### Multi-Tenant Payment Architecture
 

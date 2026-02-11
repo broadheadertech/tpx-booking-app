@@ -38,7 +38,10 @@ if ('serviceWorker' in navigator) {
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     {isClerkConfigured ? (
-      <ClerkProvider publishableKey={clerkPubKey}>
+      <ClerkProvider
+        publishableKey={clerkPubKey}
+        allowedRedirectOrigins={["https://broadheader.com", "https://localhost", "capacitor://localhost", "http://localhost"]}
+      >
         <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
           <App />
         </ConvexProviderWithClerk>

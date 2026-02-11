@@ -1304,7 +1304,7 @@ export default function SAEmailMarketing() {
   const branches = useQuery(api.services.branches.getAllBranches) || []
 
   // Brand info
-  const brandName = branding?.display_name || 'TPX Barber'
+  const brandName = branding?.display_name || 'TipunoX Barber'
   const brandColor = branding?.primary_color || '#8B5CF6'
 
   // Filter to get only customers

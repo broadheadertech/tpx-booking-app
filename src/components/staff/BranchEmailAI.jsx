@@ -1229,7 +1229,7 @@ export default function BranchEmailAI({ user }) {
   )
 
   // Brand info
-  const brandName = branding?.display_name || 'TPX Barber'
+  const brandName = branding?.display_name || 'TipunoX Barber'
   const brandColor = branding?.primary_color || '#8B5CF6'
 
   // Filter to customers with email (exclude guests without email)
