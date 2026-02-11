@@ -41,7 +41,7 @@ function ClerkCallback() {
       });
       return user;
     } catch (err) {
-      console.error("[ClerkCallback] Error querying user:", err);
+      console.error("[ClerkCallback] Error querying user:", err?.message || err);
       return null;
     }
   }, [clerkUser?.id, convex]);
@@ -54,10 +54,22 @@ function ClerkCallback() {
     setStatus("creating");
 
     try {
-      console.log("[ClerkCallback] Creating user directly via ensureUserFromClerk...");
+      // Get email from multiple sources (Google OAuth may use emailAddresses array)
+      const email =
+        clerkUser.primaryEmailAddress?.emailAddress ||
+        clerkUser.emailAddresses?.[0]?.emailAddress ||
+        `${clerkUser.id}@clerk.local`;
+
+      console.log("[ClerkCallback] Creating user directly via ensureUserFromClerk...", {
+        clerk_user_id: clerkUser.id,
+        email,
+        first_name: clerkUser.firstName,
+        last_name: clerkUser.lastName,
+      });
+
       const user = await ensureUserFromClerk({
         clerk_user_id: clerkUser.id,
-        email: clerkUser.primaryEmailAddress?.emailAddress || `${clerkUser.id}@clerk.local`,
+        email,
         first_name: clerkUser.firstName || undefined,
         last_name: clerkUser.lastName || undefined,
         image_url: clerkUser.imageUrl || undefined,
@@ -66,7 +78,7 @@ function ClerkCallback() {
       return user;
     } catch (err) {
       console.error("[ClerkCallback] Error creating user:", err);
-      return null;
+      return { _error: err?.message || err?.data?.message || "Unable to set up your account. Please try again." };
     } finally {
       isCreatingRef.current = false;
     }
@@ -113,17 +125,15 @@ function ClerkCallback() {
           // Webhook hasn't processed yet - create user directly
           console.log("[ClerkCallback] User not found after polling, creating directly...");
 
-          createUserDirectly().then((createdUser) => {
-            if (createdUser) {
+          createUserDirectly().then((result) => {
+            if (result && !result._error) {
               setStatus("redirecting");
-              const redirectPath = getRoleRedirectPath(createdUser.role || "customer");
+              const redirectPath = getRoleRedirectPath(result.role || "customer");
               console.log("[ClerkCallback] User created, redirecting to:", redirectPath);
               navigate(redirectPath, { replace: true });
             } else {
               setStatus("error");
-              setError(
-                "Unable to set up your account. Please try again."
-              );
+              setError(result?._error || "Unable to set up your account. Please try again.");
             }
           });
 
