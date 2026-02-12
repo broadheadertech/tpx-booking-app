@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
@@ -26,13 +26,18 @@ import {
   CreditCard,
   X,
   FileText,
+  HelpCircle,
 } from 'lucide-react';
 import { formatErrorForDisplay } from '../../utils/errorHandler';
 import { useAppModal } from '../../context/AppModalContext';
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { royaltySteps } from '../../config/walkthroughSteps'
 
 export default function RoyaltyManagement() {
   const { user } = useCurrentUser();
   const { showConfirm, showPrompt } = useAppModal();
+  const [showTutorial, setShowTutorial] = useState(false)
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -404,15 +409,20 @@ export default function RoyaltyManagement() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Royalty Management</h2>
-          <p className="text-gray-400 mt-1">Configure and track royalty payments from franchises</p>
+      <div data-tour="royalty-header" className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div>
+            <h2 className="text-2xl font-bold text-white">Royalty Management</h2>
+            <p className="text-gray-400 mt-1">Configure and track royalty payments from franchises</p>
+          </div>
+          <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+            <HelpCircle className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex gap-2 border-b border-[#333]">
+      <div data-tour="royalty-tabs" className="flex gap-2 border-b border-[#333]">
         <button
           onClick={() => setActiveTab('dashboard')}
           className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
@@ -461,7 +471,7 @@ export default function RoyaltyManagement() {
       {activeTab === 'dashboard' && (
         <div className="space-y-6">
           {/* Dashboard Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div data-tour="royalty-stats" className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             <div className="bg-gradient-to-br from-[#2A2A2A] to-[#1E1E1E] rounded-xl p-4 border border-[#333]">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-500/20 rounded-lg">
@@ -1154,6 +1164,10 @@ export default function RoyaltyManagement() {
             </div>
           </div>
         </div>
+      )}
+
+      {showTutorial && (
+        <WalkthroughOverlay steps={royaltySteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
       )}
     </div>
   );

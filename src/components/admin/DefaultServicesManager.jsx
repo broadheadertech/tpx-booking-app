@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react'
-import { Scissors, Clock, DollarSign, Search, Plus, Edit, Trash2, RotateCcw, Save, X, Sparkles } from 'lucide-react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { Scissors, Clock, DollarSign, Search, Plus, Edit, Trash2, RotateCcw, Save, X, Sparkles, HelpCircle } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAppModal } from '../../context/AppModalContext'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { defaultServicesSteps } from '../../config/walkthroughSteps'
 
 const CATEGORIES = [
   { value: 'haircut', label: 'Haircut' },
@@ -15,6 +17,8 @@ const CATEGORIES = [
 
 export default function DefaultServicesManager() {
   const { showConfirm } = useAppModal()
+  const [showTutorial, setShowTutorial] = useState(false)
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
   const services = useQuery(api.services.defaultServices.getAllDefaultServices) || []
   const createService = useMutation(api.services.defaultServices.createDefaultService)
   const updateService = useMutation(api.services.defaultServices.updateDefaultService)
@@ -153,6 +157,9 @@ export default function DefaultServicesManager() {
           <h2 className="text-lg font-bold text-white">Default Services</h2>
           <p className="text-sm text-gray-400">Template services auto-added when creating new branches</p>
         </div>
+        <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+          <HelpCircle className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Alerts */}
@@ -164,7 +171,7 @@ export default function DefaultServicesManager() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div data-tour="services-stats" className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50">
           <p className="text-xs font-medium text-gray-400">Total</p>
           <p className="text-xl font-bold text-[var(--color-primary)]">{stats.total}</p>
@@ -184,7 +191,7 @@ export default function DefaultServicesManager() {
       </div>
 
       {/* Controls */}
-      <div className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50">
+      <div data-tour="services-controls" className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
@@ -208,6 +215,7 @@ export default function DefaultServicesManager() {
               </button>
             )}
             <button
+              data-tour="services-add-btn"
               onClick={() => { resetForm(); setShowForm(true) }}
               className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-md hover:brightness-110 transition-colors text-sm"
             >
@@ -326,9 +334,12 @@ export default function DefaultServicesManager() {
         </div>
       )}
 
+      {/* Walkthrough */}
+      <WalkthroughOverlay steps={defaultServicesSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
+
       {/* Services Table */}
       {filteredServices.length > 0 ? (
-        <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 overflow-hidden">
+        <div data-tour="services-table" className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-[#2A2A2A]">
               <thead className="bg-[#0A0A0A]">

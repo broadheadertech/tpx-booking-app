@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Package, ShoppingCart, Gift, Scissors } from 'lucide-react'
 import ProductsManagement from '../ProductsManagement'
 import BranchProductOrdering from '../BranchProductOrdering'
@@ -9,15 +9,36 @@ import ServicesManagement from '../ServicesManagement'
  * Products Hub - Consolidated products & services management
  * Groups: Services, Products, Order Products, Vouchers
  */
+// Map section id → page_access_v2 key (only where they differ)
+const PERM_MAP = { order: 'order_products' }
+
 const ProductsHub = ({ user, services = [], vouchers = [], onRefresh, onCreateVoucher }) => {
   const [activeSection, setActiveSection] = useState('services')
 
-  const sections = [
+  const allSections = [
     { id: 'services', label: 'Services', icon: Scissors },
     { id: 'products', label: 'Products', icon: Package },
     { id: 'order', label: 'Order Products', icon: ShoppingCart },
     { id: 'vouchers', label: 'Vouchers', icon: Gift },
   ]
+
+  // Filter sections by page_access_v2 permissions
+  // If hub is enabled but no sub-section keys are configured, show all sub-sections
+  const SUB_KEYS = ['services', 'order_products', 'vouchers']
+  const hasV2 = user?.page_access_v2 && Object.keys(user.page_access_v2).length > 0
+  const hasSubConfig = hasV2 && SUB_KEYS.some(k => k in user.page_access_v2)
+  const sections = hasV2 && hasSubConfig
+    ? allSections.filter(s => {
+        const key = PERM_MAP[s.id] || s.id
+        return user.page_access_v2[key]?.view === true
+      })
+    : allSections
+
+  useEffect(() => {
+    if (sections.length > 0 && !sections.find(s => s.id === activeSection)) {
+      setActiveSection(sections[0].id)
+    }
+  }, [sections, activeSection])
 
   const renderContent = () => {
     switch (activeSection) {

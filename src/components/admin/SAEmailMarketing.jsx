@@ -42,7 +42,10 @@ import {
   Play,
   X,
   Loader2,
+  HelpCircle,
 } from 'lucide-react'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { emailMarketingSteps } from '../../config/walkthroughSteps'
 import {
   suggestSubjectLines,
   generateEmailFromTemplate,
@@ -1297,6 +1300,8 @@ const ContentAnalyzer = () => {
 export default function SAEmailMarketing() {
   const { user } = useCurrentUser()
   const { branding } = useBranding()
+  const [showTutorial, setShowTutorial] = useState(false)
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
   const [activeTab, setActiveTab] = useState('overview')
 
   // Queries
@@ -1371,13 +1376,18 @@ export default function SAEmailMarketing() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div data-tour="email-ai-header" className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-purple-400 text-sm font-semibold mb-1">
             <Brain className="w-4 h-4" />
             AI-POWERED
           </div>
-          <h2 className="text-3xl font-bold text-white">Email Marketing Intelligence</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-3xl font-bold text-white">Email Marketing Intelligence</h2>
+            <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+              <HelpCircle className="w-4 h-4" />
+            </button>
+          </div>
           <p className="text-gray-400 mt-1">
             FREE AI tools for smarter email campaigns - no external API costs
           </p>
@@ -1389,7 +1399,7 @@ export default function SAEmailMarketing() {
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-2xl border border-white/10">
+      <div data-tour="email-ai-tabs" className="flex flex-wrap gap-2 p-1 bg-white/5 rounded-2xl border border-white/10">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -1410,7 +1420,7 @@ export default function SAEmailMarketing() {
       </div>
 
       {/* Tab Content */}
-      <div className="bg-gradient-to-br from-[#1A1A1A] to-[#222222] rounded-3xl border border-white/10 p-6">
+      <div data-tour="email-ai-content" className="bg-gradient-to-br from-[#1A1A1A] to-[#222222] rounded-3xl border border-white/10 p-6">
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* DEBUG PANEL - Remove after fixing */}
@@ -1562,6 +1572,10 @@ export default function SAEmailMarketing() {
         {activeTab === 'rfm' && <RFMSegments customers={customerList} />}
         {activeTab === 'content' && <ContentAnalyzer />}
       </div>
+
+      {showTutorial && (
+        <WalkthroughOverlay steps={emailMarketingSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
+      )}
     </div>
   )
 }

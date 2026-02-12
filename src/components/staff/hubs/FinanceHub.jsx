@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { DollarSign, Banknote, Percent, PieChart, Scale, Receipt, TrendingUp } from 'lucide-react'
 import PayrollManagement from '../PayrollManagement'
 import CashAdvanceApproval from '../CashAdvanceApproval'
@@ -15,7 +15,7 @@ import WalletEarningsDashboard from '../WalletEarningsDashboard'
 const FinanceHub = ({ user, onRefresh, pendingAdvancesCount = 0 }) => {
   const [activeSection, setActiveSection] = useState('accounting')
 
-  const sections = [
+  const allSections = [
     { id: 'accounting', label: 'P&L', icon: PieChart },
     { id: 'balance_sheet', label: 'Balance Sheet', icon: Scale },
     { id: 'payroll', label: 'Payroll', icon: DollarSign },
@@ -30,6 +30,21 @@ const FinanceHub = ({ user, onRefresh, pendingAdvancesCount = 0 }) => {
     { id: 'payments', label: 'Payments', icon: Receipt },
     { id: 'wallet_earnings', label: 'Wallet', icon: TrendingUp },
   ]
+
+  // Filter sections by page_access_v2 permissions
+  // If hub is enabled but no sub-section keys are configured, show all sub-sections
+  const SUB_KEYS = ['accounting', 'balance_sheet', 'payroll', 'cash_advances', 'royalty', 'payments', 'wallet_earnings']
+  const hasV2 = user?.page_access_v2 && Object.keys(user.page_access_v2).length > 0
+  const hasSubConfig = hasV2 && SUB_KEYS.some(k => k in user.page_access_v2)
+  const sections = hasV2 && hasSubConfig
+    ? allSections.filter(s => user.page_access_v2[s.id]?.view === true)
+    : allSections
+
+  useEffect(() => {
+    if (sections.length > 0 && !sections.find(s => s.id === activeSection)) {
+      setActiveSection(sections[0].id)
+    }
+  }, [sections, activeSection])
 
   const renderContent = () => {
     switch (activeSection) {

@@ -8,7 +8,7 @@
  * ACs: #1 (key metrics), #2 (monthly metrics), #3 (date filter),
  *      #4 (real-time), #5 (skeleton loaders)
  */
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { AlertCircle } from "lucide-react";
@@ -27,7 +27,10 @@ import {
   Activity,
   ChevronDown,
   Gift,
+  HelpCircle,
 } from "lucide-react";
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { walletAnalyticsSteps } from '../../config/walkthroughSteps'
 
 /**
  * Format currency as Philippine Peso
@@ -266,6 +269,8 @@ function ErrorState({ message }) {
  * Main WalletOverviewDashboard Component
  */
 export function WalletOverviewDashboard() {
+  const [showTutorial, setShowTutorial] = useState(false)
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
   // AC #3: Period selection state
   const [selectedPeriod, setSelectedPeriod] = useState("this_month");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -319,15 +324,20 @@ export function WalletOverviewDashboard() {
   return (
     <div className="space-y-6">
       {/* Header with period selector */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Wallet className="w-6 h-6 text-blue-500" />
-            Wallet System Overview
-          </h1>
-          <p className="text-sm text-gray-400 mt-1">
-            Monitor wallet float, branch earnings, and system health
-          </p>
+      <div data-tour="wallet-analytics-header" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Wallet className="w-6 h-6 text-blue-500" />
+              Wallet System Overview
+            </h1>
+            <p className="text-sm text-gray-400 mt-1">
+              Monitor wallet float, branch earnings, and system health
+            </p>
+          </div>
+          <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+            <HelpCircle className="w-4 h-4" />
+          </button>
         </div>
 
         {/* AC #3: Period selector dropdown */}
@@ -373,7 +383,7 @@ export function WalletOverviewDashboard() {
 
       {/* Quick stats badges */}
       {quickStats && (
-        <div className="flex flex-wrap gap-2">
+        <div data-tour="wallet-analytics-quick" className="flex flex-wrap gap-2">
           <QuickStatBadge
             label="Active Wallets"
             value={quickStats.activeWallets}
@@ -398,7 +408,7 @@ export function WalletOverviewDashboard() {
       )}
 
       {/* AC #1: Primary metrics - Float, Outstanding, Available */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div data-tour="wallet-analytics-metrics" className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {isLoading ? (
           <>
             <MetricCardSkeleton />
@@ -433,7 +443,7 @@ export function WalletOverviewDashboard() {
       </div>
 
       {/* AC #2: Monthly activity metrics */}
-      <div className="space-y-4">
+      <div data-tour="wallet-analytics-monthly" className="space-y-4">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <Receipt className="w-5 h-5 text-gray-400" />
           {currentPeriodLabel} Activity
@@ -542,6 +552,10 @@ export function WalletOverviewDashboard() {
 
       {/* Story 26.2: Branch Wallet Performance Table */}
       <BranchBreakdownTable />
+
+      {showTutorial && (
+        <WalkthroughOverlay steps={walletAnalyticsSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
+      )}
     </div>
   );
 }

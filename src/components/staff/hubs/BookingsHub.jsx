@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Calendar, FileText, CalendarDays, UserPlus, ClipboardList } from 'lucide-react'
 import BookingsManagement from '../BookingsManagement'
 import CustomBookingsManagement from '../CustomBookingsManagement'
@@ -10,10 +10,15 @@ import QueueSection from '../QueueSection'
  * Bookings Hub - Consolidated bookings management
  * Groups: Bookings, Custom Bookings, Calendar, Walk-ins, Queue
  */
+// Map section id → page_access_v2 key (only where they differ)
+const PERM_MAP = { custom: 'custom_bookings' }
+// Sub-section keys (excluding the hub-level "bookings" key itself)
+const SUB_KEYS = ['custom_bookings', 'calendar', 'walkins', 'queue']
+
 const BookingsHub = ({ user, onRefresh, incompleteBookingsCount = 0, waitingWalkInsCount = 0 }) => {
   const [activeSection, setActiveSection] = useState('bookings')
 
-  const sections = [
+  const allSections = [
     {
       id: 'bookings',
       label: 'Bookings',
@@ -32,6 +37,24 @@ const BookingsHub = ({ user, onRefresh, incompleteBookingsCount = 0, waitingWalk
     },
     { id: 'queue', label: 'Queue', icon: ClipboardList },
   ]
+
+  // Filter sections by page_access_v2 permissions
+  // If hub is enabled but no sub-section keys are configured, show all sub-sections
+  const hasV2 = user?.page_access_v2 && Object.keys(user.page_access_v2).length > 0
+  const hasSubConfig = hasV2 && SUB_KEYS.some(k => k in user.page_access_v2)
+  const sections = hasV2 && hasSubConfig
+    ? allSections.filter(s => {
+        const key = PERM_MAP[s.id] || s.id
+        return user.page_access_v2[key]?.view === true
+      })
+    : allSections
+
+  // If active section was filtered out, reset to first available
+  useEffect(() => {
+    if (sections.length > 0 && !sections.find(s => s.id === activeSection)) {
+      setActiveSection(sections[0].id)
+    }
+  }, [sections, activeSection])
 
   const renderContent = () => {
     switch (activeSection) {

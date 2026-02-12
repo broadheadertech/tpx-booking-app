@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode, CreditCard, Receipt, DollarSign, Eye, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Check, Ban, Settings, Banknote } from 'lucide-react'
+import { Calendar, Clock, User, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Save, X, QrCode, CreditCard, Receipt, DollarSign, Eye, ChevronLeft, ChevronRight, MessageSquare, MoreVertical, Check, Ban, Settings, Banknote, HelpCircle } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAppModal } from '../../context/AppModalContext'
@@ -9,6 +9,8 @@ import CreateBookingModal from './CreateBookingModal'
 import Modal from '../common/Modal'
 import BookingSettingsModal from './BookingSettingsModal'
 import PaymentHistory from './PaymentHistory'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { bookingsManagementSteps } from '../../config/walkthroughSteps'
 
 const BookingsManagement = ({ onRefresh, user }) => {
   const { showAlert } = useAppModal()
@@ -43,6 +45,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
   const [sendSms, setSendSms] = useState(false)
   const [dropdownState, setDropdownState] = useState({ id: null, position: null })
   const [currentTime, setCurrentTime] = useState(Date.now())
+  const [showTutorial, setShowTutorial] = useState(false)
 
   // Update time every minute for countdown timers
   useEffect(() => {
@@ -1844,7 +1847,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
   return (
     <div className="space-y-3 sm:space-y-4">
       {/* Ultra Compact Stats Bar */}
-      <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] px-4 py-2.5">
+      <div data-tour="bm-stats" className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] px-4 py-2.5">
         <div className="flex items-center justify-between gap-6 flex-wrap">
           {/* Left: Booking Stats */}
           <div className="flex items-center gap-4 flex-wrap">
@@ -1917,7 +1920,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
 
 
       {/* Compact Filters Bar */}
-      <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] px-3 py-2">
+      <div data-tour="bm-filters" className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A] px-3 py-2">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           {/* Left: Search & Filters */}
           <div className="flex items-center gap-2 flex-wrap flex-1 min-w-[250px]">
@@ -2006,12 +2009,16 @@ const BookingsManagement = ({ onRefresh, user }) => {
               <span className="hidden sm:inline">Booking Settings</span>
             </button>
             <button
+              data-tour="bm-create-btn"
               onClick={handleCreate}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-md hover:from-[var(--color-accent)] hover:brightness-110 transition-all text-xs font-medium shadow-sm"
             >
               <Plus className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">New Booking</span>
               <span className="sm:hidden">New</span>
+            </button>
+            <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+              <HelpCircle className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -2021,7 +2028,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
       <EditBookingModal />
 
       {/* Tab Navigation */}
-      <div className="bg-[#1A1A1A] p-2 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
+      <div data-tour="bm-tabs" className="bg-[#1A1A1A] p-2 rounded-lg border border-[#2A2A2A]/50 shadow-lg">
         <div className="flex space-x-1">
           <button
             onClick={() => setActiveTab('bookings')}
@@ -2060,7 +2067,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
       {activeTab === 'bookings' ? (
         <>
           {/* Main Content */}
-          <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-lg overflow-hidden">
+          <div data-tour="bm-table" className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-lg overflow-hidden">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-[#2A2A2A]/30">
                 <thead className="bg-[#0A0A0A]">
@@ -2659,6 +2666,7 @@ const BookingsManagement = ({ onRefresh, user }) => {
         onClose={() => setShowSettingsModal(false)}
         branchId={user?.branch_id}
       />
+      <WalkthroughOverlay steps={bookingsManagementSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   )
 }

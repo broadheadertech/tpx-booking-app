@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import DashboardHeader from '../../components/admin/DashboardHeader'
 import StatsCards from '../../components/admin/StatsCards'
 import RecentActivity from '../../components/admin/RecentActivity'
@@ -29,10 +29,13 @@ import ShopBannerManagement from '../../components/admin/ShopBannerManagement'
 import ShopConfigPanel from '../../components/admin/ShopConfigPanel'
 // SuperAdminPaymentHistory removed - payments managed in staff dashboard
 // SuperAdminExpenseManagement removed - expenses now managed in P&L dashboard
-import { useQuery } from 'convex/react'
+import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { useNavigate } from 'react-router-dom'
+import WalkthroughOverlay from '../../components/common/WalkthroughOverlay'
+import { superAdminSteps } from '../../config/walkthroughSteps'
+import { HelpCircle } from 'lucide-react'
 
 function AdminDashboard() {
   // Use unified hook that supports both Clerk and legacy auth
@@ -41,6 +44,23 @@ function AdminDashboard() {
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('admin_dashboard_active_tab') || 'overview'
   })
+  const [showWalkthrough, setShowWalkthrough] = useState(false)
+  const markTutorialComplete = useMutation(api.services.auth.markTutorialComplete)
+
+  // Show walkthrough tutorial for first-time users
+  useEffect(() => {
+    if (user?._id && !user.has_seen_tutorial && activeTab === 'overview') {
+      const timer = setTimeout(() => setShowWalkthrough(true), 800)
+      return () => clearTimeout(timer)
+    }
+  }, [user, activeTab])
+
+  const handleWalkthroughDone = useCallback(async () => {
+    setShowWalkthrough(false)
+    if (user?._id) {
+      try { await markTutorialComplete({ user_id: user._id }) } catch (e) { console.error('[Walkthrough]', e) }
+    }
+  }, [user?._id, markTutorialComplete])
 
   // Save active tab to localStorage whenever it changes
   useEffect(() => {
@@ -349,6 +369,25 @@ function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Walkthrough Tutorial */}
+      <WalkthroughOverlay
+        steps={superAdminSteps}
+        isVisible={showWalkthrough}
+        onComplete={handleWalkthroughDone}
+        onSkip={handleWalkthroughDone}
+      />
+
+      {/* Help button to re-trigger tutorial */}
+      {!showWalkthrough && user?.has_seen_tutorial && (
+        <button
+          onClick={() => setShowWalkthrough(true)}
+          className="fixed bottom-6 right-6 z-40 w-10 h-10 rounded-full bg-[#1A1A1A] border border-[#2A2A2A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all shadow-lg shadow-black/40"
+          title="Show tutorial"
+        >
+          <HelpCircle className="w-5 h-5" />
+        </button>
+      )}
     </div>
   )
 }

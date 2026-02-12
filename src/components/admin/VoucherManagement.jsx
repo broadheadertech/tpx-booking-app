@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import {
@@ -11,11 +11,16 @@ import {
     ChevronDown,
     ShieldCheck,
     ShieldAlert,
+    HelpCircle,
 } from "lucide-react";
 import Modal from "../common/Modal";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
+import WalkthroughOverlay from "../common/WalkthroughOverlay";
+import { voucherManagementSteps } from "../../config/walkthroughSteps";
 
 const AdminVoucherManagement = () => {
+    const [showTutorial, setShowTutorial] = useState(false);
+    const handleTutorialDone = useCallback(() => setShowTutorial(false), []);
     const [selectedBranchId, setSelectedBranchId] = useState("");
     const [filterStatus, setFilterStatus] = useState("pending_approval");
     const [searchTerm, setSearchTerm] = useState("");
@@ -131,16 +136,21 @@ const AdminVoucherManagement = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h2 className="text-2xl font-bold text-white">Voucher Approvals</h2>
-                    <p className="text-gray-400 text-sm">
-                        Manage and approve vouchers created by staff
-                    </p>
+            <div data-tour="voucher-header" className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex items-center gap-3">
+                    <div>
+                        <h2 className="text-2xl font-bold text-white">Voucher Approvals</h2>
+                        <p className="text-gray-400 text-sm">
+                            Manage and approve vouchers created by staff
+                        </p>
+                    </div>
+                    <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+                        <HelpCircle className="w-4 h-4" />
+                    </button>
                 </div>
 
                 {/* Branch Selector */}
-                <div className="relative min-w-[200px]">
+                <div data-tour="voucher-branch-select" className="relative min-w-[200px]">
                     <select
                         value={selectedBranchId}
                         onChange={(e) => setSelectedBranchId(e.target.value)}
@@ -163,7 +173,7 @@ const AdminVoucherManagement = () => {
             <div className="bg-[#1A1A1A] p-4 rounded-xl border border-[#333333]">
                 <div className="flex flex-col md:flex-row gap-4 justify-between">
                     {/* Tabs */}
-                    <div className="flex space-x-2 bg-[#111111] p-1 rounded-lg w-fit">
+                    <div data-tour="voucher-status-tabs" className="flex space-x-2 bg-[#111111] p-1 rounded-lg w-fit">
                         {[
                             { id: "pending_approval", label: "Pending" },
                             { id: "active", label: "Active" },
@@ -198,7 +208,7 @@ const AdminVoucherManagement = () => {
             </div>
 
             {/* Table */}
-            <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] overflow-hidden">
+            <div data-tour="voucher-table" className="bg-[#1A1A1A] rounded-xl border border-[#333333] overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-[#333333]">
                         <thead className="bg-[#111111]">
@@ -428,6 +438,7 @@ const AdminVoucherManagement = () => {
                     </div>
                 </Modal>
             )}
+            <WalkthroughOverlay steps={voucherManagementSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
         </div>
     );
 };

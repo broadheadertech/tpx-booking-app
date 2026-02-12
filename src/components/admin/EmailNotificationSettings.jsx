@@ -1,22 +1,25 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useBranding } from '../../context/BrandingContext'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
-import { 
-  Mail, 
-  RefreshCw, 
-  Save, 
-  Undo2, 
-  Eye, 
-  AlertCircle, 
+import {
+  Mail,
+  RefreshCw,
+  Save,
+  Undo2,
+  Eye,
+  AlertCircle,
   CheckCircle,
   FileText,
   Gift,
   Calendar,
   Bell,
-  UserPlus
+  UserPlus,
+  HelpCircle
 } from 'lucide-react'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { emailTemplatesSteps } from '../../config/walkthroughSteps'
 
 const TEMPLATE_CONFIG = {
   password_reset: {
@@ -103,6 +106,8 @@ export default function EmailNotificationSettings() {
   // Use unified auth hook for user data (supports both Clerk and legacy auth)
   const { user: currentUser, isAuthenticated, sessionToken } = useCurrentUser()
   const { branding } = useBranding()
+  const [showTutorial, setShowTutorial] = useState(false)
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
 
   const isSuperAdmin = currentUser?.role === 'super_admin'
 
@@ -330,15 +335,20 @@ export default function EmailNotificationSettings() {
   return (
     <section className="space-y-8">
       {/* Header */}
-      <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <header data-tour="email-templates-header" className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-sm font-semibold text-[var(--color-primary)] uppercase tracking-wide">Email Customization</p>
-          <h2 className="mt-2 flex items-center gap-3 text-3xl font-extrabold text-white">
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg">
-              <Mail className="h-6 w-6" />
-            </span>
-            Email Notification Settings
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="mt-2 flex items-center gap-3 text-3xl font-extrabold text-white">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg">
+                <Mail className="h-6 w-6" />
+              </span>
+              Email Notification Settings
+            </h2>
+            <button onClick={() => setShowTutorial(true)} className="mt-2 w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+              <HelpCircle className="w-4 h-4" />
+            </button>
+          </div>
           <p className="mt-2 text-sm text-gray-400">
             Customize the content of system emails. Colors are automatically applied from your branding settings.
           </p>
@@ -379,7 +389,7 @@ export default function EmailNotificationSettings() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Template Selector */}
-        <div className="rounded-3xl border border-white/10 bg-[var(--color-bg)]/40 p-6 shadow-xl">
+        <div data-tour="email-templates-selector" className="rounded-3xl border border-white/10 bg-[var(--color-bg)]/40 p-6 shadow-xl">
           <p className="text-sm font-semibold text-gray-400 mb-4">Email Templates</p>
           <div className="space-y-2">
             {Object.entries(TEMPLATE_CONFIG).map(([type, config]) => {
@@ -413,7 +423,7 @@ export default function EmailNotificationSettings() {
         </div>
 
         {/* Editor Panel */}
-        <div className="lg:col-span-2 space-y-6">
+        <div data-tour="email-templates-editor" className="lg:col-span-2 space-y-6">
           {/* Template Info */}
           <div className="rounded-3xl border border-white/10 bg-[var(--color-bg)]/40 p-6 shadow-xl">
             <div className="flex items-start justify-between mb-6">
@@ -555,6 +565,10 @@ export default function EmailNotificationSettings() {
           )}
         </div>
       </div>
+
+      {showTutorial && (
+        <WalkthroughOverlay steps={emailTemplatesSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
+      )}
     </section>
   )
 }

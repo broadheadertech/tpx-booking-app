@@ -142,6 +142,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
             return (
               <div key={tab.id} className="relative">
                 <button
+                  data-tour={`staff-tab-${tab.id}`}
                   onClick={() => handleTabClick(tab.id)}
                   className={`relative flex items-center space-x-2 px-3 py-2.5 rounded-md font-medium text-xs transition-all duration-250 group min-w-0 ${activeTab === tab.id
                     ? 'bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-md shadow-[var(--color-primary)]/20'
@@ -281,6 +282,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange, incompleteBookingsCount =
             return (
               <div key={tab.id} className="relative">
                 <button
+                  data-tour={`staff-tab-${tab.id}`}
                   onClick={() => handleTabClick(tab.id)}
                   className={`flex flex-col items-center justify-center px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-lg sm:rounded-xl font-medium text-xs transition-all duration-200 whitespace-nowrap relative flex-shrink-0 min-w-[60px] sm:min-w-[70px] touch-manipulation ${activeTab === tab.id
                     ? 'bg-gradient-to-b from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg scale-105'

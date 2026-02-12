@@ -106,9 +106,14 @@ const ProtectedRoute = ({ children, requireStaff = false, requireBarber = false,
 
   // Check specific page access for staff/admin
   if (requirePageAccess && user?.role !== 'super_admin' && user?.role !== 'admin') {
-    // If user has page_access defined, check if required page is included
-    if (user?.page_access && Array.isArray(user.page_access) && !user.page_access.includes(requirePageAccess)) {
-      // Redirect to dashboard if access denied
+    // Check page_access_v2 first (new RBAC system)
+    if (user?.page_access_v2 && Object.keys(user.page_access_v2).length > 0) {
+      if (!user.page_access_v2[requirePageAccess]?.view) {
+        return <Navigate to="/staff/dashboard" replace />
+      }
+    }
+    // Fallback to legacy page_access
+    else if (user?.page_access && Array.isArray(user.page_access) && !user.page_access.includes(requirePageAccess)) {
       return <Navigate to="/staff/dashboard" replace />
     }
   }

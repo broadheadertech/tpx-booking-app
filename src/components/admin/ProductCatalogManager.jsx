@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import {
@@ -33,12 +33,15 @@ import {
   Banknote,
   Star,
   Zap,
+  HelpCircle,
 } from "lucide-react";
 import Skeleton from "../common/Skeleton";
 import Modal from "../common/Modal";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useToast } from "../common/ToastNotification";
 import { useAppModal } from "../../context/AppModalContext";
+import WalkthroughOverlay from "../common/WalkthroughOverlay";
+import { productCatalogSteps } from "../../config/walkthroughSteps";
 
 /**
  * Product categories aligned with branch-level products
@@ -1232,7 +1235,7 @@ const MyInventoryTab = () => {
     <div className="space-y-6">
       {/* Summary Cards */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div data-tour="catalog-stats" className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <SummaryCard icon={Package} label="Total Products" value={summary.totalProducts} />
           <SummaryCard icon={CheckCircle} label="In Stock" value={summary.inStock} variant="success" />
           <SummaryCard icon={AlertTriangle} label="Low Stock" value={summary.lowStock} variant="warning" />
@@ -1241,7 +1244,7 @@ const MyInventoryTab = () => {
       )}
 
       {/* Controls */}
-      <div className="bg-[#1A1A1A] p-4 rounded-xl border border-[#333333]">
+      <div data-tour="catalog-controls" className="bg-[#1A1A1A] p-4 rounded-xl border border-[#333333]">
         <div className="flex flex-col lg:flex-row gap-4 justify-between">
           {/* Filters */}
           <div className="flex flex-wrap gap-2">
@@ -1264,7 +1267,7 @@ const MyInventoryTab = () => {
               <input type="text" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2 bg-[#111111] border border-[#333333] text-white rounded-lg w-full lg:w-48 text-sm" />
             </div>
             {/* Add Product Button */}
-            <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-primary)]/90 whitespace-nowrap">
+            <button data-tour="catalog-add-btn" onClick={() => setShowAddModal(true)} className="flex items-center gap-2 bg-[var(--color-primary)] text-white px-4 py-2 rounded-lg hover:bg-[var(--color-primary)]/90 whitespace-nowrap">
               <Plus className="w-4 h-4" /> Add Product
             </button>
           </div>
@@ -1286,7 +1289,7 @@ const MyInventoryTab = () => {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div data-tour="catalog-grid" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredProducts.map((product) => (
             <InventoryProductCard
               key={product._id}
@@ -1748,7 +1751,7 @@ const BranchOrdersTab = () => {
     <div className="space-y-6">
       {/* Summary Cards */}
       {ordersSummary && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div data-tour="orders-stats" className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <SummaryCard icon={Clock} label="Pending" value={ordersSummary.pending} variant={ordersSummary.pending > 0 ? "warning" : "default"} />
           <SummaryCard icon={CheckCircle} label="Approved" value={ordersSummary.approved} />
           <SummaryCard icon={Truck} label="Shipped" value={ordersSummary.shipped} />
@@ -1782,7 +1785,7 @@ const BranchOrdersTab = () => {
       )}
 
       {/* Controls */}
-      <div className="bg-[#1A1A1A] p-4 rounded-xl border border-[#333333]">
+      <div data-tour="orders-controls" className="bg-[#1A1A1A] p-4 rounded-xl border border-[#333333]">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           {/* Filter */}
           <div className="flex flex-wrap gap-2">
@@ -1794,6 +1797,7 @@ const BranchOrdersTab = () => {
           </div>
           {/* Manual Order Button */}
           <button
+            data-tour="orders-manual-btn"
             onClick={() => setShowManualOrderModal(true)}
             className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
           >
@@ -2148,7 +2152,7 @@ const BranchInventoryTab = () => {
   return (
     <div className="space-y-6">
       {/* Branch Selector */}
-      <div className="bg-[#1A1A1A] p-4 rounded-xl border border-[#333333]">
+      <div data-tour="branch-inv-selector" className="bg-[#1A1A1A] p-4 rounded-xl border border-[#333333]">
         <label className="block text-sm font-medium text-gray-400 mb-2">Select Branch</label>
         <select
           value={selectedBranch || ""}
@@ -2166,7 +2170,7 @@ const BranchInventoryTab = () => {
 
       {/* Branch Summary Cards */}
       {!selectedBranch ? (
-        <div className="space-y-4">
+        <div data-tour="branch-inv-overview" className="space-y-4">
           <h3 className="text-white font-semibold">All Branches Overview</h3>
           {branchSummaries === undefined ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -2319,6 +2323,8 @@ const BranchInventoryTab = () => {
 // ============================================
 const ProductCatalogManager = () => {
   const [activeTab, setActiveTab] = useState("inventory");
+  const [showTutorial, setShowTutorial] = useState(false);
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), []);
   const pendingOrdersCount = useQuery(api.services.productOrders.getPendingOrdersCount);
 
   const tabs = [
@@ -2330,13 +2336,18 @@ const ProductCatalogManager = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-white">Inventory Management</h2>
-        <p className="text-gray-400 text-sm">Manage central warehouse, branch orders, and monitor branch inventory</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Inventory Management</h2>
+          <p className="text-gray-400 text-sm">Manage central warehouse, branch orders, and monitor branch inventory</p>
+        </div>
+        <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+          <HelpCircle className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-[#1A1A1A] p-2 rounded-xl border border-[#333333] flex gap-2">
+      <div data-tour="catalog-tabs" className="bg-[#1A1A1A] p-2 rounded-xl border border-[#333333] flex gap-2">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -2360,6 +2371,8 @@ const ProductCatalogManager = () => {
       {activeTab === "inventory" && <MyInventoryTab />}
       {activeTab === "orders" && <BranchOrdersTab />}
       {activeTab === "branches" && <BranchInventoryTab />}
+
+      <WalkthroughOverlay steps={productCatalogSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
     </div>
   );
 };

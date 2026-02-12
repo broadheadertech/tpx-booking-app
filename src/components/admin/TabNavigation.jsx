@@ -168,6 +168,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
           return (
             <button
               key={tab.id}
+              data-tour={`admin-subtab-${tab.id}`}
               onClick={() => handleSubTabClick(tab.id)}
               className={`w-full flex items-center space-x-3 px-4 py-2.5 text-left transition-all duration-200 ${
                 activeTab === tab.id
@@ -211,6 +212,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
               return (
                 <div key={cat.id} className="relative flex-shrink-0">
                   <button
+                    data-tour={`admin-tab-${cat.id}`}
                     onClick={() => handleCategoryClick(cat)}
                     className={`relative flex items-center space-x-2 px-3 py-3 rounded-lg font-semibold text-sm transition-all duration-300 group min-w-0 ${
                       isActive
@@ -261,6 +263,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
             return (
               <div key={cat.id} className="relative">
                 <button
+                  data-tour={`admin-tab-${cat.id}`}
                   onClick={() => handleCategoryClick(cat)}
                   className={`flex flex-col items-center justify-center px-3 py-3 rounded-lg font-medium text-xs transition-all duration-200 whitespace-nowrap relative flex-shrink-0 min-w-[60px] ${
                     isActive

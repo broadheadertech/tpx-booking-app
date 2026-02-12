@@ -26,20 +26,78 @@ body {
   background-color: #0A0A0A;
 }
 
-/* Clerk SignIn dark theme fix — prevent white/black flash between steps */
+/* Clerk SignIn/SignUp dark theme fix — prevent black flash between steps */
+.clerk-login-container,
+.clerk-signup-container {
+  background-color: #1A1A1A;
+  border-radius: 1.5rem;
+  min-height: 300px;
+  overflow: hidden;
+}
+
+/* Force dark background on all Clerk structural elements */
+.clerk-login-container div,
+.clerk-signup-container div {
+  border-color: #2A2A2A !important;
+}
+
 .clerk-login-container .cl-rootBox,
 .clerk-login-container .cl-card,
+.clerk-login-container .cl-cardBox,
 .clerk-login-container .cl-signIn-root,
-.clerk-login-container .cl-signUp-root,
-.clerk-login-container .cl-internal-b3fm6y {
+.clerk-login-container .cl-main,
+.clerk-login-container .cl-footer,
+.clerk-login-container .cl-form,
+.clerk-login-container .cl-formContainer,
+.clerk-login-container .cl-headerTitle,
+.clerk-login-container .cl-headerSubtitle,
+.clerk-signup-container .cl-rootBox,
+.clerk-signup-container .cl-card,
+.clerk-signup-container .cl-cardBox,
+.clerk-signup-container .cl-signUp-root,
+.clerk-signup-container .cl-main,
+.clerk-signup-container .cl-footer,
+.clerk-signup-container .cl-form,
+.clerk-signup-container .cl-formContainer,
+.clerk-signup-container .cl-headerTitle,
+.clerk-signup-container .cl-headerSubtitle {
   background-color: #1A1A1A !important;
 }
-.clerk-login-container .cl-main {
-  background-color: #1A1A1A !important;
+
+/* Fix the step transition: Clerk briefly shows a blank div while switching steps */
+.clerk-login-container .cl-main,
+.clerk-signup-container .cl-main {
   min-height: 200px;
 }
-.clerk-login-container .cl-footer {
+
+/* Ensure the page background behind Clerk never shows through as black.
+   Covers ALL Clerk step screens (email, password, factor, code, reset, etc.) */
+.clerk-login-container .cl-signIn-start,
+.clerk-login-container .cl-signIn-password,
+.clerk-login-container .cl-signIn-forgotPassword,
+.clerk-login-container .cl-signIn-alternativeMethods,
+.clerk-login-container .cl-signIn-havingTrouble,
+.clerk-login-container .cl-signIn-factor-one,
+.clerk-login-container .cl-signIn-factor-two,
+.clerk-login-container .cl-signIn-emailCode,
+.clerk-login-container .cl-signIn-phoneCode,
+.clerk-login-container .cl-signIn-chooseFactor,
+.clerk-login-container .cl-signIn-resetPassword,
+.clerk-login-container .cl-signIn-resetPasswordMfa,
+.clerk-login-container .cl-signIn-ssoCallback,
+.clerk-login-container [class*="cl-signIn-"],
+.clerk-signup-container .cl-signUp-start,
+.clerk-signup-container .cl-signUp-continue,
+.clerk-signup-container .cl-signUp-verifyEmailAddress,
+.clerk-signup-container .cl-signUp-verifyPhoneNumber,
+.clerk-signup-container [class*="cl-signUp-"] {
   background-color: #1A1A1A !important;
+}
+
+/* Smooth step transitions — prevent flash between Clerk steps */
+.clerk-login-container .cl-main > *,
+.clerk-signup-container .cl-main > * {
+  animation: none !important;
 }
 
 /* Custom scrollbar utilities */

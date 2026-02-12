@@ -1,9 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { User, UserPlus, Edit, Trash2, Shield, Building, Users, Search, Filter, CheckCircle, AlertCircle } from 'lucide-react'
+import { User, UserPlus, Edit, Trash2, Shield, Building, Users, Search, Filter, CheckCircle, AlertCircle, HelpCircle } from 'lucide-react'
 import UserFormModal from './UserFormModal'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { userManagementSteps } from '../../config/walkthroughSteps'
 
 export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -27,6 +29,9 @@ export default function UserManagement() {
   const [successMessage, setSuccessMessage] = useState('')
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [pendingUpdate, setPendingUpdate] = useState(null)
+  const [showTutorial, setShowTutorial] = useState(false)
+
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
 
   // Queries
   const users = useQuery(api.services.auth.getAllUsers, {
@@ -101,8 +106,45 @@ export default function UserManagement() {
     setShowCreateModal(true)
   }
 
+  // Role-based page access defaults (mirrors UserFormModal's ROLE_PAGE_DEFAULTS / PAGE_CATEGORIES)
+  const ROLE_PAGE_DEFAULTS = {
+    branch_admin: [
+      // Standalone
+      'overview','reports','pos','settings',
+      // Bookings hub + sub-sections
+      'bookings','custom_bookings','calendar','walkins','queue',
+      // Team hub + sub-sections
+      'team','barbers','users','attendance',
+      // Customers hub + sub-sections
+      'customers','customer_analytics',
+      // Products hub + sub-sections
+      'products','services','vouchers','order_products',
+      // Finance hub + sub-sections
+      'finance','accounting','balance_sheet','payroll','cash_advances','royalty','payments','payment_history','branch_wallet','wallet_earnings',
+      // Marketing hub + sub-sections
+      'marketing','email_marketing','post_moderation','events','notifications',
+    ],
+    staff: [
+      'overview','bookings','pos','customers','products',
+      'services','barbers','calendar','notifications',
+      'queue','walkins','payments','payment_history','attendance',
+    ],
+  }
+
   const handleEdit = (user) => {
     setSelectedUser(user)
+
+    // Resolve existing page access: page_access_v2 > page_access > role defaults
+    let resolvedPageAccess = []
+    if (user.page_access_v2 && Object.keys(user.page_access_v2).length > 0) {
+      resolvedPageAccess = Object.keys(user.page_access_v2).filter(k => user.page_access_v2[k]?.view)
+    } else if (user.page_access && user.page_access.length > 0) {
+      resolvedPageAccess = [...user.page_access]
+    } else if (ROLE_PAGE_DEFAULTS[user.role]) {
+      // No explicit permissions set — use role defaults so checkboxes reflect actual access
+      resolvedPageAccess = ROLE_PAGE_DEFAULTS[user.role]
+    }
+
     setFormData({
       username: user.username,
       email: user.email,
@@ -111,7 +153,7 @@ export default function UserManagement() {
       address: user.address || '',
       role: user.role,
       branch_id: user.branch_id || '',
-      page_access: user.page_access || []
+      page_access: resolvedPageAccess
     })
     setShowEditModal(true)
   }
@@ -277,6 +319,18 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-white">User Management</h2>
+        <button
+          onClick={() => setShowTutorial(true)}
+          className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all"
+          title="Show tutorial"
+        >
+          <HelpCircle className="w-4 h-4" />
+        </button>
+      </div>
+
       {/* Success Message */}
       {successMessage && (
         <div className="bg-green-400/20 border border-green-400/30 rounded-lg p-4 flex items-center space-x-2">
@@ -286,7 +340,7 @@ export default function UserManagement() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div data-tour="admin-users-stats" className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -344,7 +398,7 @@ export default function UserManagement() {
       <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
-            <div className="relative">
+            <div className="relative" data-tour="admin-users-search">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
               <input
                 type="text"
@@ -355,7 +409,7 @@ export default function UserManagement() {
               />
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2" data-tour="admin-users-role-filter">
               <Filter className="h-4 w-4 text-gray-500" />
               <select
                 value={filterRole}
@@ -385,6 +439,7 @@ export default function UserManagement() {
           </div>
 
           <button
+            data-tour="admin-users-create-btn"
             onClick={handleCreate}
             className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-accent)] transition-colors text-sm"
           >
@@ -395,7 +450,7 @@ export default function UserManagement() {
       </div>
 
       {/* Users Table */}
-      <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
+      <div data-tour="admin-users-table" className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-lg border border-[#444444]/50 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-[#444444]/30">
             <thead className="bg-gradient-to-r from-[#1A1A1A] to-[#2A2A2A]">
@@ -408,6 +463,9 @@ export default function UserManagement() {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Contact
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  Page Access
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Created
@@ -461,6 +519,18 @@ export default function UserManagement() {
                           {user.address}
                         </div>
                       )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {user.role === 'super_admin' ? (
+                        <span className="text-xs text-emerald-400 font-medium">Full Access</span>
+                      ) : (() => {
+                        const count = user.page_access_v2
+                          ? Object.keys(user.page_access_v2).filter(k => user.page_access_v2[k]?.view).length
+                          : (user.page_access?.length || 0)
+                        return count > 0
+                          ? <span className="text-xs text-gray-300">{count} pages</span>
+                          : <span className="text-xs text-yellow-400">Not set</span>
+                      })()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-white">
@@ -537,6 +607,14 @@ export default function UserManagement() {
         loading={loading}
         branches={branches}
         isEditMode={true}
+      />
+
+      {/* User Management Tutorial */}
+      <WalkthroughOverlay
+        steps={userManagementSteps}
+        isVisible={showTutorial}
+        onComplete={handleTutorialDone}
+        onSkip={handleTutorialDone}
       />
 
       {/* Confirmation Dialog */}

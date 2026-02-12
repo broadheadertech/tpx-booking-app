@@ -1,13 +1,17 @@
-import React, { useState, useMemo } from 'react'
-import { BarChart3, TrendingUp, Download, Calendar, Building, Users, DollarSign, Activity, Filter, ArrowUp, ArrowDown, Zap, CheckCircle, AlertCircle, Package, Scissors, Award, Target, PieChart, Clock, Star, ShoppingBag, FileText, Trophy, Crown, Medal, Sparkles, Brain, Lightbulb, TrendingDown, Wallet, GitBranch, AlertTriangle, Rocket, ChevronDown, ChevronUp } from 'lucide-react'
+import React, { useState, useMemo, useCallback } from 'react'
+import { BarChart3, TrendingUp, Download, Calendar, Building, Users, DollarSign, Activity, Filter, ArrowUp, ArrowDown, Zap, CheckCircle, AlertCircle, Package, Scissors, Award, Target, PieChart, Clock, Star, ShoppingBag, FileText, Trophy, Crown, Medal, Sparkles, Brain, Lightbulb, TrendingDown, Wallet, GitBranch, AlertTriangle, Rocket, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import AIAnalyticsDashboard from './AIAnalyticsDashboard'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { systemReportsSteps } from '../../config/walkthroughSteps'
 
 const SystemReports = ({ onRefresh }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('month')
   const [selectedBranch, setSelectedBranch] = useState('all')
   const [activeTab, setActiveTab] = useState('overview')
+  const [showTutorial, setShowTutorial] = useState(false)
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
   // Branch Summary state
   const [summaryBranchId, setSummaryBranchId] = useState('')
   const [summaryMonth, setSummaryMonth] = useState(() => {
@@ -309,13 +313,16 @@ const SystemReports = ({ onRefresh }) => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+      <div data-tour="reports-header" className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
           <h2 className="text-2xl font-bold text-white flex items-center space-x-3">
             <div className="w-8 h-8 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg flex items-center justify-center">
               <BarChart3 className="w-4 h-4 text-white" />
             </div>
             <span>System Reports</span>
+            <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center hover:bg-[#3A3A3A] transition-colors" title="Start guided tour">
+              <HelpCircle className="w-4 h-4 text-gray-400" />
+            </button>
           </h2>
           <p className="text-gray-400 mt-1">Comprehensive analytics across all branches</p>
         </div>
@@ -357,7 +364,7 @@ const SystemReports = ({ onRefresh }) => {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex space-x-4 border-b border-[#333333] overflow-x-auto scrollbar-hide">
+      <div data-tour="reports-tabs" className="flex space-x-4 border-b border-[#333333] overflow-x-auto scrollbar-hide">
         {[
           { id: 'overview', label: 'Overview', icon: BarChart3 },
           { id: 'ddpp', label: 'DDPP Analytics', icon: Brain },
@@ -383,6 +390,7 @@ const SystemReports = ({ onRefresh }) => {
       </div>
 
       {/* Content */}
+      <div data-tour="reports-content">
       {activeTab === 'overview' && renderOverview()}
       {activeTab === 'ddpp' && (
         <SADDPPAnalytics
@@ -412,6 +420,9 @@ const SystemReports = ({ onRefresh }) => {
         recognitionYear={recognitionYear}
         setRecognitionYear={setRecognitionYear}
       />}
+      </div>
+
+      <WalkthroughOverlay steps={systemReportsSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
     </div>
   )
 }

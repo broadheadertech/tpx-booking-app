@@ -287,7 +287,8 @@ export const AuthProvider = ({ children }) => {
           avatar: currentUser.avatar,
           is_staff: currentUser.role === 'staff' || currentUser.role === 'admin' || currentUser.role === 'super_admin' || currentUser.role === 'branch_admin',
           branch_id: currentUser.branch_id,
-          page_access: currentUser.page_access
+          page_access: currentUser.page_access,
+          page_access_v2: currentUser.page_access_v2
         })
       } else {
         // Invalid session, clear it
@@ -322,7 +323,8 @@ export const AuthProvider = ({ children }) => {
           avatar: result.user.avatar,
           is_staff: result.user.role === 'staff' || result.user.role === 'admin' || result.user.role === 'super_admin' || result.user.role === 'branch_admin',
           branch_id: result.user.branch_id,
-          page_access: result.user.page_access
+          page_access: result.user.page_access,
+          page_access_v2: result.user.page_access_v2
         }
         setIsAuthenticated(true)
         setUser(userData)

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   Settings,
   Save,
@@ -20,8 +20,11 @@ import {
   Gift,
   Plus,
   Trash2,
-  Sparkles
+  Sparkles,
+  HelpCircle
 } from 'lucide-react'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { walletConfigSteps } from '../../config/walkthroughSteps'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
@@ -41,6 +44,8 @@ import { useCurrentUser } from '../../hooks/useCurrentUser'
  */
 const WalletConfigPanel = () => {
   const { user } = useCurrentUser()
+  const [showTutorial, setShowTutorial] = useState(false)
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
   const [showSecretKey, setShowSecretKey] = useState(false)
@@ -282,7 +287,7 @@ const WalletConfigPanel = () => {
   return (
     <div className="bg-[#1A1A1A] rounded-xl p-6 border border-[#2A2A2A]">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
+      <div data-tour="wallet-config-header" className="flex items-center gap-3 mb-6">
         <div className="w-10 h-10 bg-[var(--color-primary)]/10 rounded-lg flex items-center justify-center">
           <Wallet className="w-5 h-5 text-[var(--color-primary)]" />
         </div>
@@ -290,6 +295,9 @@ const WalletConfigPanel = () => {
           <h2 className="text-lg font-semibold text-white">Wallet Configuration</h2>
           <p className="text-sm text-gray-400">Configure PayMongo for wallet top-ups</p>
         </div>
+        <button onClick={() => setShowTutorial(true)} className="ml-auto w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+          <HelpCircle className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Status Message */}
@@ -310,7 +318,7 @@ const WalletConfigPanel = () => {
 
       {/* Configuration Status */}
       {config && (
-        <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${
+        <div data-tour="wallet-config-status" className={`mb-4 p-3 rounded-lg flex items-center gap-2 ${
           config.has_secrets_configured
             ? 'bg-green-500/10 text-green-400 border border-green-500/20'
             : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
@@ -325,7 +333,7 @@ const WalletConfigPanel = () => {
         </div>
       )}
 
-      <div className="space-y-6">
+      <div data-tour="wallet-config-form" className="space-y-6">
         {/* Test Mode Toggle */}
         <div className="flex items-center justify-between p-4 bg-[#0A0A0A] rounded-lg border border-[#2A2A2A]">
           <div className="flex items-center gap-3">
@@ -732,6 +740,10 @@ const WalletConfigPanel = () => {
           )}
         </button>
       </div>
+
+      {showTutorial && (
+        <WalkthroughOverlay steps={walletConfigSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
+      )}
     </div>
   )
 }

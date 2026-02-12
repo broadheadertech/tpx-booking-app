@@ -1,7 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { Palette, RefreshCw, Eye, Undo2, Sparkles, Image as ImageIcon, ToggleLeft, ShieldCheck, Clock3, History, Download, Upload, AlertCircle, X } from 'lucide-react'
+import { Palette, RefreshCw, Eye, Undo2, Sparkles, Image as ImageIcon, ToggleLeft, ShieldCheck, Clock3, History, Download, Upload, AlertCircle, X, HelpCircle } from 'lucide-react'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { brandingSteps } from '../../config/walkthroughSteps'
 import { useBranding } from '../../context/BrandingContext'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import ConfirmDialog from '../common/ConfirmDialog'
@@ -215,6 +217,8 @@ const formatTimestamp = (timestamp) => {
 export default function BrandingManagement() {
   // Use unified auth hook for user data (supports both Clerk and legacy auth)
   const { user: currentUser, authMethod, isAuthenticated, sessionToken } = useCurrentUser()
+  const [showTutorial, setShowTutorial] = useState(false)
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
   const { branding: activeBranding, loading: brandingLoading, error: brandingError, refresh: refreshBranding } = useBranding()
 
   // Define canEdit - requires super_admin role (backend now supports both Clerk and legacy auth)
@@ -558,15 +562,20 @@ export default function BrandingManagement() {
         </div>
       )}
 
-      <header className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <header data-tour="branding-header" className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-sm font-semibold text-[var(--color-primary)] uppercase tracking-wide">Branding Control</p>
-          <h2 className="mt-2 flex items-center gap-3 text-3xl font-extrabold text-white">
-            <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg">
-              <Palette className="h-6 w-6" />
-            </span>
-            Global Branding Management
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="mt-2 flex items-center gap-3 text-3xl font-extrabold text-white">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)] text-white shadow-lg">
+                <Palette className="h-6 w-6" />
+              </span>
+              Global Branding Management
+            </h2>
+            <button onClick={() => setShowTutorial(true)} className="mt-2 w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+              <HelpCircle className="w-4 h-4" />
+            </button>
+          </div>
           <p className="mt-2 text-sm text-gray-400">Configure the single source of truth for colors, media assets, and feature toggles across every experience.</p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -655,7 +664,7 @@ export default function BrandingManagement() {
       )}
 
       {/* Summary Cards */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div data-tour="branding-summary" className="grid gap-6 lg:grid-cols-3">
         <div className="rounded-3xl border border-white/10 bg-[var(--color-bg)]/40 p-6 shadow-xl">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-gray-400">Display</p>
@@ -727,7 +736,7 @@ export default function BrandingManagement() {
       </div>
 
       {/* Editor */}
-      <div className="rounded-3xl border border-white/10 bg-[var(--color-bg)]/60 p-6 shadow-2xl">
+      <div data-tour="branding-editor" className="rounded-3xl border border-white/10 bg-[var(--color-bg)]/60 p-6 shadow-2xl">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-gray-400">Editor</p>
@@ -903,6 +912,10 @@ export default function BrandingManagement() {
           </div>
         )}
       </div>
+
+      {showTutorial && (
+        <WalkthroughOverlay steps={brandingSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
+      )}
     </section>
   )
 }

@@ -30,7 +30,7 @@ const PAGE_CATEGORIES = {
   },
   staff: {
     label: "Staff & Services",
-    pages: ["barbers", "users", "services", "customers"],
+    pages: ["team", "barbers", "users", "services", "customers", "customer_analytics"],
   },
   products: {
     label: "Products & Inventory",
@@ -38,15 +38,15 @@ const PAGE_CATEGORIES = {
   },
   finance: {
     label: "Finance & Accounting",
-    pages: ["payroll", "cash_advances", "royalty", "accounting", "balance_sheet", "payments", "payment_history"],
+    pages: ["finance", "payroll", "cash_advances", "royalty", "accounting", "balance_sheet", "payments", "payment_history", "branch_wallet", "wallet_earnings"],
   },
   hr: {
     label: "HR & Events",
     pages: ["attendance", "events"],
   },
   communications: {
-    label: "Communications",
-    pages: ["notifications", "email_marketing"],
+    label: "Communications & Marketing",
+    pages: ["marketing", "notifications", "email_marketing", "post_moderation"],
   },
   admin: {
     label: "Admin Settings",
@@ -84,6 +84,13 @@ const PAGE_LABELS = {
   events: "Events",
   notifications: "Notifications",
   email_marketing: "Email Marketing",
+  team: "Team",
+  finance: "Finance",
+  marketing: "Marketing",
+  branch_wallet: "Branch Wallet",
+  wallet_earnings: "Wallet Earnings",
+  customer_analytics: "Customer Analytics",
+  post_moderation: "Post Moderation",
   branches: "Branches",
   catalog: "Product Catalog",
   branding: "Branding",

@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react'
-import { UserPlus, Search, Filter, Plus, Clock, User, Phone, Calendar, CheckCircle, XCircle, Trash2, Play } from 'lucide-react'
+import { UserPlus, Search, Filter, Plus, Clock, User, Phone, Calendar, CheckCircle, XCircle, Trash2, Play, HelpCircle } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAppModal } from '../../context/AppModalContext'
 import AddWalkInModal from './AddWalkInModal'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { walkInSteps } from '../../config/walkthroughSteps'
 
 export default function WalkInSection() {
   const { showAlert, showConfirm } = useAppModal()
@@ -13,6 +15,7 @@ export default function WalkInSection() {
   const [customDate, setCustomDate] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [cleaningUp, setCleaningUp] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(false)
 
   // Get walk-ins data from API with filters
   const allWalkIns = useQuery(
@@ -162,18 +165,23 @@ export default function WalkInSection() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
-        <div className="flex items-center space-x-3">
-          <UserPlus className="h-6 w-6 text-[var(--color-primary)]" />
-          <div>
-            <h3 className="text-lg font-semibold text-white">Walk-ins</h3>
-            <p className="text-sm text-gray-400">Manage walk-in customers</p>
+      <div data-tour="wi-header" className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <UserPlus className="h-6 w-6 text-[var(--color-primary)]" />
+            <div>
+              <h3 className="text-lg font-semibold text-white">Walk-ins</h3>
+              <p className="text-sm text-gray-400">Manage walk-in customers</p>
+            </div>
           </div>
+          <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+            <HelpCircle className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div data-tour="wi-stats" className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -226,7 +234,7 @@ export default function WalkInSection() {
       </div>
 
       {/* Controls */}
-      <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
+      <div data-tour="wi-controls" className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex flex-col space-y-4">
           {/* Search and Add Button Row */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 gap-3">
@@ -309,7 +317,7 @@ export default function WalkInSection() {
       </div>
 
       {/* Walk-ins Table */}
-      <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm overflow-hidden">
+      <div data-tour="wi-table" className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-[#444444]/30">
             <thead className="bg-[#0A0A0A]">
@@ -451,6 +459,7 @@ export default function WalkInSection() {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
       />
+      <WalkthroughOverlay steps={walkInSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   )
 }

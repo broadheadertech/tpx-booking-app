@@ -97,11 +97,17 @@ function ClerkCallback() {
       return;
     }
 
-    // Start polling for user
+    // Guard: prevent double-execution from StrictMode
+    let cancelled = false;
+    let timeoutId = null;
     setStatus("polling");
+    setPollCount(0);
 
     const poll = async () => {
+      if (cancelled) return;
+
       const user = await pollForUser();
+      if (cancelled) return;
 
       if (user) {
         // User found - redirect to appropriate dashboard
@@ -126,6 +132,7 @@ function ClerkCallback() {
           console.log("[ClerkCallback] User not found after polling, creating directly...");
 
           createUserDirectly().then((result) => {
+            if (cancelled) return;
             if (result && !result._error) {
               setStatus("redirecting");
               const redirectPath = getRoleRedirectPath(result.role || "customer");
@@ -141,12 +148,19 @@ function ClerkCallback() {
         }
 
         // Continue polling
-        setTimeout(poll, POLL_INTERVAL);
+        if (!cancelled) {
+          timeoutId = setTimeout(poll, POLL_INTERVAL);
+        }
         return newCount;
       });
     };
 
     poll();
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [clerkLoaded, isSignedIn, clerkUser?.id, navigate, pollForUser, createUserDirectly]);
 
   // Handle retry
