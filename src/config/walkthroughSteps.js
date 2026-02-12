@@ -923,6 +923,52 @@ export const auditTrailSteps = [
   },
 ]
 
+// ─── POS (Point of Sale) ────────────────────────────────────────────
+export const posSteps = [
+  {
+    target: '[data-tour="pos-mode-toggle"]',
+    title: 'Service / Retail Mode',
+    message: 'Switch between Service Mode (barber + services) and Retail Mode (product-only sales, no barber needed).',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="pos-barber-selection"]',
+    title: 'Select Barber',
+    message: 'In Service Mode, pick the barber who will perform the service. This is required before processing.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="pos-catalog"]',
+    title: 'Service & Product Catalog',
+    message: 'Browse services and products. Use the tabs, search bar, and categories to find items. Click "Add" to add them to the order.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="pos-customer"]',
+    title: 'Customer Selection',
+    message: 'Select a registered customer via search or QR scan, or add a walk-in customer with their details.',
+    position: 'left',
+  },
+  {
+    target: '[data-tour="pos-bookings"]',
+    title: 'Today\'s Bookings',
+    message: 'View today\'s bookings and attach one to the current transaction. This pre-fills services and customer info.',
+    position: 'left',
+  },
+  {
+    target: '[data-tour="pos-order-summary"]',
+    title: 'Order Summary',
+    message: 'Review all added services and products. Adjust quantities or remove items before checkout.',
+    position: 'left',
+  },
+  {
+    target: '[data-tour="pos-payment"]',
+    title: 'Payment',
+    message: 'See the total breakdown, select a payment method (Cash, Card, Wallet), and process the payment.',
+    position: 'left',
+  },
+]
+
 // ─── Bookings Hub: Bookings Management ─────────────────────────────
 export const bookingsManagementSteps = [
   {
@@ -1053,6 +1099,124 @@ export const queueSteps = [
     target: '[data-tour="q-board"]',
     title: 'Barber Queues',
     message: 'Kanban-style board — each column represents a barber with their assigned customers. Click a customer for details.',
+    position: 'top',
+  },
+]
+
+// ─── Team Hub ─────────────────────────────────────────────────────
+export const teamHubSteps = [
+  {
+    target: '[data-tour="th-tabs"]',
+    title: 'Team Sections',
+    message: 'Switch between Barbers, Staff Users, and Attendance management from these tabs.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="th-barbers-tab"]',
+    title: 'Barbers',
+    message: 'View, add, and manage barber profiles — schedules, services, ratings, and availability.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="th-users-tab"]',
+    title: 'Staff Users',
+    message: 'Manage branch staff accounts — add users, assign roles, and configure permissions.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="th-attendance-tab"]',
+    title: 'Attendance',
+    message: 'Track clock-in/out, overtime, late penalties, and export attendance reports.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="th-content"]',
+    title: 'Content Area',
+    message: 'The selected section\'s content appears here. Each section has its own search, filters, and actions.',
+    position: 'top',
+  },
+]
+
+// ─── Team Hub: Barbers Management ─────────────────────────────────
+export const barbersManagementSteps = [
+  {
+    target: '[data-tour="barbers-stats"]',
+    title: 'Barber Stats',
+    message: 'Overview of your barber team — total count, active, inactive, and average customer rating.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="barbers-controls"]',
+    title: 'Search & Filters',
+    message: 'Search barbers by name, filter by active/inactive status, and sort by name, rating, or bookings.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="barbers-add-btn"]',
+    title: 'Add Barber',
+    message: 'Create a new barber profile with contact info, services, schedule, and specialties.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="barbers-table"]',
+    title: 'Barbers Table',
+    message: 'View all barbers with their contact, schedule, and status. Click a row to view full profile, edit, or remove.',
+    position: 'top',
+  },
+]
+
+// ─── Team Hub: Branch User Management ─────────────────────────────
+export const branchUserSteps = [
+  {
+    target: '[data-tour="bu-header"]',
+    title: 'Branch Info',
+    message: 'Shows which branch you are managing staff for, along with the branch code.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="bu-stats"]',
+    title: 'Staff Stats',
+    message: 'Quick count of total staff members and how many are currently active.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="bu-controls"]',
+    title: 'Search & Add User',
+    message: 'Search staff by name or email, filter by role, and add new users to this branch.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="bu-table"]',
+    title: 'Staff Table',
+    message: 'View all branch staff with role, contact, and creation date. Use actions to edit, manage permissions, or delete.',
+    position: 'top',
+  },
+]
+
+// ─── Team Hub: Attendance ─────────────────────────────────────────
+export const attendanceSteps = [
+  {
+    target: '[data-tour="att-header"]',
+    title: 'Attendance',
+    message: 'Track barber clock-in/out times. Switch between table and card views, or export reports to CSV.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="att-live-status"]',
+    title: 'Live Status',
+    message: 'Real-time view of which barbers are clocked in, with live overtime and late detection.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="att-date-filters"]',
+    title: 'Date Filters',
+    message: 'Filter records by Today, Yesterday, This Week, This Month, This Year, or a custom date range.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="att-records"]',
+    title: 'Attendance Records',
+    message: 'Detailed log of clock-in/out times, total hours, overtime, late minutes, and penalties per barber.',
     position: 'top',
   },
 ]

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight, X, AlertCircle, Banknote, Store, Calendar, Clock, ChevronDown, ChevronUp, Filter, ShoppingBag, History } from 'lucide-react'
+import { ArrowLeft, User, UserPlus, QrCode, CreditCard, Receipt, Trash2, Plus, Minus, Search, Scissors, Package, Gift, Calculator, CheckCircle, Grid3X3, List, ChevronLeft, ChevronRight, X, AlertCircle, Banknote, Store, Calendar, Clock, ChevronDown, ChevronUp, Filter, ShoppingBag, History, HelpCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
@@ -14,6 +14,8 @@ import Modal from '../../components/common/Modal'
 import { sendWelcomeEmail, isEmailServiceConfigured, sendBarberBookingNotification } from '../../services/emailService'
 import { APP_VERSION } from '../../config/version'
 import { useAppModal } from '../../context/AppModalContext'
+import WalkthroughOverlay from '../../components/common/WalkthroughOverlay'
+import { posSteps } from '../../config/walkthroughSteps'
 
 // Barber Avatar Component for POS
 const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
@@ -83,6 +85,7 @@ const POS = () => {
   const [unpaidBalanceWarning, setUnpaidBalanceWarning] = useState(null) // Unpaid balance warning data
   const [showTodaysBookings, setShowTodaysBookings] = useState(false) // Today's Bookings section (Story 8.4)
   const [todaysBookingsFilter, setTodaysBookingsFilter] = useState('all') // Payment status filter
+  const [showTutorial, setShowTutorial] = useState(false)
   const [showProductHistory, setShowProductHistory] = useState(false) // Product transaction history
 
   // Mobile-specific states
@@ -993,7 +996,7 @@ const POS = () => {
 
       // Check if this transaction is for a booking payment
       const posBooking = sessionStorage.getItem('posBooking')
-      const isBookingPayment = posBooking && currentTransaction.services.length > 0
+      const isBookingPayment = !!posBooking && currentTransaction.services.length > 0
       // Skip booking creation for retail mode or if it's a booking payment
       const shouldSkipBookingCreation = posMode === 'retail' || isBookingPayment
 
@@ -2036,11 +2039,11 @@ const POS = () => {
                 </Link>
 
                 <button
-                  onClick={() => setActiveModal(null)}
+                  onClick={() => setShowTutorial(true)}
                   className="w-7 h-7 sm:w-9 sm:h-9 bg-white/5 backdrop-blur-sm rounded-lg flex items-center justify-center hover:bg-white/10 transition-all duration-200 border border-white/10 group"
-                  title="Help"
+                  title="Show tutorial"
                 >
-                  <span className="text-gray-400 group-hover:text-white text-sm font-bold transition-colors duration-200">?</span>
+                  <HelpCircle className="w-4 h-4 text-gray-400 group-hover:text-white transition-colors duration-200" />
                 </button>
               </div>
             </div>
@@ -2054,7 +2057,7 @@ const POS = () => {
           {/* Left Panel - Product/Service Selection */}
           <div className="lg:col-span-2 space-y-6">
             {/* POS Mode Toggle - Desktop */}
-            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-4">
+            <div data-tour="pos-mode-toggle" className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-4">
               <div className="flex gap-3">
                 <button
                   onClick={() => handleModeSwitch('service')}
@@ -2083,7 +2086,7 @@ const POS = () => {
 
             {/* Barber Selection - Only in Service Mode */}
             {posMode === 'service' && (
-              <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
+              <div data-tour="pos-barber-selection" className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
                 <h3 className="text-lg font-bold text-white mb-4">Select Barber</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                   {activeBarbers.map((barber) => (
@@ -2123,7 +2126,7 @@ const POS = () => {
             )}
 
             {/* Search and Tabs */}
-            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
+            <div data-tour="pos-catalog" className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
               <div className="flex flex-col space-y-4 mb-6">
                 {/* Top row: Tabs and View Mode Toggle */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
@@ -2428,7 +2431,7 @@ const POS = () => {
           {/* Right Panel - Transaction Summary */}
           <div className="space-y-6">
             {/* Customer Selection */}
-            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
+            <div data-tour="pos-customer" className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-white">Customer</h3>
                 <div className="flex space-x-2">
@@ -2564,7 +2567,7 @@ const POS = () => {
             </div>
 
             {/* Today's Bookings Section (Story 8.4 - FR17) */}
-            <div className="mt-4">
+            <div data-tour="pos-bookings" className="mt-4">
               <button
                 onClick={() => setShowTodaysBookings(!showTodaysBookings)}
                 className="w-full flex items-center justify-between p-3 bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-xl shadow-lg border border-[#444444]/50 hover:border-[var(--color-primary)]/30 transition-all duration-200"
@@ -2731,7 +2734,7 @@ const POS = () => {
             </div>
 
             {/* Transaction Items */}
-            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
+            <div data-tour="pos-order-summary" className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-white">Order Summary</h3>
                 {(currentTransaction.services.length > 0 || currentTransaction.products.length > 0) && (
@@ -2837,7 +2840,7 @@ const POS = () => {
             )}
 
             {/* Payment Summary */}
-            <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
+            <div data-tour="pos-payment" className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] rounded-2xl shadow-lg border border-[#444444]/50 p-6">
               <h3 className="text-lg font-bold text-white mb-4">Payment</h3>
 
               {/* Booking Payment Details (if booking attached) */}
@@ -3336,6 +3339,7 @@ const POS = () => {
           </div>
         </Modal>
       )}
+      <WalkthroughOverlay steps={posSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   )
 }
