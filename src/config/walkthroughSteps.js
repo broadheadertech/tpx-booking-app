@@ -852,6 +852,56 @@ export const emailTemplatesSteps = [
   },
 ]
 
+// ─── Customers Hub ──────────────────────────────────────────────────
+export const customersHubSteps = [
+  {
+    target: '[data-tour="ch-tabs"]',
+    title: 'Customer Sections',
+    message: 'Switch between the Customers list and Analytics dashboard from these tabs.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="ch-customers-tab"]',
+    title: 'Customers',
+    message: 'View all customers — search, filter by status, see wallet balances, and contact them directly.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="ch-analytics-tab"]',
+    title: 'Analytics',
+    message: 'Track churn risk, at-risk customers, top spenders, and retention metrics for your branch.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="ch-content"]',
+    title: 'Content Area',
+    message: 'The selected section\'s content appears here. Each tab has its own tutorial (? icon).',
+    position: 'top',
+  },
+]
+
+// ─── Customers: Customers Management ────────────────────────────────
+export const customersManagementSteps = [
+  {
+    target: '[data-tour="cm-stats"]',
+    title: 'Customer Stats',
+    message: 'Quick overview of total, active, new, inactive customer counts and total revenue.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="cm-controls"]',
+    title: 'Search & Filters',
+    message: 'Search by name, email, or phone. Filter by status and sort by name, email, join date, or bookings.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="cm-table"]',
+    title: 'Customer Table',
+    message: 'Full customer list with contact info, wallet balance, and status. Tap View for details or Contact to reach out.',
+    position: 'top',
+  },
+]
+
 export const customerAnalyticsSteps = [
   {
     target: '[data-tour="analytics-header"]',
@@ -1217,6 +1267,146 @@ export const attendanceSteps = [
     target: '[data-tour="att-records"]',
     title: 'Attendance Records',
     message: 'Detailed log of clock-in/out times, total hours, overtime, late minutes, and penalties per barber.',
+    position: 'top',
+  },
+]
+
+// ─── Customer: Dashboard Home Feed ──────────────────────────────────
+export const customerHomeFeedSteps = [
+  {
+    target: '[data-tour="home-greeting"]',
+    title: 'Smart Greeting',
+    message: 'Personalized greeting based on the time of day, with a quick-book button.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="home-stories"]',
+    title: 'Stories',
+    message: 'Tap to watch branch stories — promos, behind-the-scenes, and barber highlights.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="home-promos"]',
+    title: 'Active Promotions',
+    message: 'Current flash promotions and bonus point events at your favorite branches.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="home-feed"]',
+    title: 'Social Feed',
+    message: 'Browse posts from barbers and branches — inspiration, tips, and portfolio shots.',
+    position: 'top',
+  },
+]
+
+// ─── Customer: Booking Hub ──────────────────────────────────────────
+export const customerBookingHubSteps = [
+  {
+    target: '[data-tour="bh-tabs"]',
+    title: 'Booking Tabs',
+    message: 'Switch between My Bookings, Book Now, and History.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="bh-quick-action"]',
+    title: 'Quick Book',
+    message: 'Tap here to start a new appointment — pick a branch, barber, service, and time slot.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="bh-upcoming"]',
+    title: 'Upcoming Bookings',
+    message: 'Your next appointments with live countdown timers and QR codes for check-in.',
+    position: 'top',
+  },
+]
+
+// ─── Customer: Wallet Hub ───────────────────────────────────────────
+export const customerWalletHubSteps = [
+  {
+    target: '[data-tour="wh-balance"]',
+    title: 'Wallet Balance',
+    message: 'Your current wallet balance. Top up to pay cashlessly at checkout.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="wh-tabs"]',
+    title: 'Wallet Sections',
+    message: 'Pay — quick actions & top-up. Activity — transaction history. Rewards — loyalty tiers & points.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="wh-content"]',
+    title: 'Tab Content',
+    message: 'The selected section appears here. Use Pay to top up, Activity to review, Rewards to redeem.',
+    position: 'top',
+  },
+]
+
+// ─── Customer: Shop ─────────────────────────────────────────────────
+export const customerShopSteps = [
+  {
+    target: '[data-tour="shop-search"]',
+    title: 'Search Products',
+    message: 'Search by product name or brand to find grooming essentials quickly.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="shop-cart"]',
+    title: 'Shopping Cart',
+    message: 'View items in your cart and proceed to checkout.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="shop-tabs"]',
+    title: 'Shop / Wishlist / Orders',
+    message: 'Browse products, check your wishlist, or view past orders.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="shop-categories"]',
+    title: 'Categories',
+    message: 'Filter by category — Hair Care, Beard, Shaving, Tools, or Extras.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="shop-products"]',
+    title: 'Product Grid',
+    message: 'Tap a product for details, or hit + to add it to your cart instantly.',
+    position: 'top',
+  },
+]
+
+// ─── Customer: Profile ──────────────────────────────────────────────
+export const customerProfileSteps = [
+  {
+    target: '[data-tour="profile-header"]',
+    title: 'Your Profile',
+    message: 'Your avatar, name, member status, and badges at a glance.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="profile-rewards"]',
+    title: 'Star Rewards',
+    message: 'Track your loyalty tier, earned points, and available rewards.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="profile-activity"]',
+    title: 'Recent Activity',
+    message: 'Your latest bookings and visit streak — keep the streak going!',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="profile-info"]',
+    title: 'Personal Info',
+    message: 'Edit your nickname, phone number, and birthday. Tap Edit to update.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="profile-settings"]',
+    title: 'Settings',
+    message: 'Manage notifications, get help, or sign out.',
     position: 'top',
   },
 ]

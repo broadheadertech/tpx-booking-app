@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { User, Edit2, LogOut, Settings, ChevronRight, Shield, Bell, HelpCircle, Star, Sparkles, Home, Scissors, Wallet, ShoppingBag, Calendar, Clock, Gift, Crown, Flame, Award, Dna, Share2, Download } from 'lucide-react'
+import WalkthroughOverlay from '../../components/common/WalkthroughOverlay'
+import { customerProfileSteps } from '../../config/walkthroughSteps'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { useUser, useClerk } from '@clerk/clerk-react'
 import { useMutation, useQuery } from 'convex/react'
@@ -66,6 +68,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [isNavHidden, setIsNavHidden] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(false)
   const lastScrollY = useRef(0)
 
   // Scroll-aware navigation - hide on scroll down, show on scroll up
@@ -405,8 +408,12 @@ const Profile = () => {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[#0A0A0A]/98 backdrop-blur-2xl border-b border-[#1A1A1A]">
         <div className="max-w-md mx-auto px-4">
-          <div className="flex items-center justify-center py-4">
+          <div className="flex items-center justify-between py-4">
+            <div className="w-9" />
             <h1 className="text-lg font-bold text-white">Account</h1>
+            <button onClick={() => setShowTutorial(true)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-[#2A2A2A] transition-colors" title="Show tutorial">
+              <HelpCircle className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </div>
@@ -462,7 +469,7 @@ const Profile = () => {
         )}
 
         {/* Profile Header Card */}
-        <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)]">
+        <div data-tour="profile-header" className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-accent)]">
           {/* Decorative elements */}
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
 
@@ -575,7 +582,7 @@ const Profile = () => {
 
         {/* Star Rewards Card */}
         {user?._id && (
-          <div>
+          <div data-tour="profile-rewards">
             <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-[var(--color-primary)]" />
               Your Rewards
@@ -586,7 +593,7 @@ const Profile = () => {
 
         {/* Recent Bookings with Relative Time */}
         {bookings && bookings.length > 0 && (
-          <div>
+          <div data-tour="profile-activity">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <Clock className="w-4 h-4 text-[var(--color-primary)]" />
@@ -748,7 +755,7 @@ const Profile = () => {
         )}
 
         {/* Personal Information */}
-        <div>
+        <div data-tour="profile-info">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-bold text-white flex items-center gap-2">
               <User className="w-4 h-4 text-[var(--color-primary)]" />
@@ -849,7 +856,7 @@ const Profile = () => {
         </div>
 
         {/* Quick Links */}
-        <div>
+        <div data-tour="profile-settings">
           <h3 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
             <Settings className="w-4 h-4 text-[var(--color-primary)]" />
             Settings
@@ -1065,6 +1072,8 @@ const Profile = () => {
           </div>
         </div>
       </div>
+
+      <WalkthroughOverlay steps={customerProfileSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   )
 }

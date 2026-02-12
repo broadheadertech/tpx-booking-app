@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Wallet as WalletIcon, CreditCard, Clock, Gift, Home, Scissors, ShoppingBag, User } from 'lucide-react'
+import { Wallet as WalletIcon, CreditCard, Clock, Gift, Home, Scissors, ShoppingBag, User, HelpCircle } from 'lucide-react'
+import WalkthroughOverlay from '../../common/WalkthroughOverlay'
+import { customerWalletHubSteps } from '../../../config/walkthroughSteps'
 import PayTab from './PayTab'
 import ActivityTab from './ActivityTab'
 import RewardsTab from './RewardsTab'
@@ -35,6 +37,7 @@ function WalletHub({
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [isNavHidden, setIsNavHidden] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(false)
   const lastScrollY = useRef(0)
 
   // Scroll-aware navigation - hide on scroll down, show on scroll up
@@ -93,25 +96,30 @@ function WalletHub({
       <div className="sticky top-0 z-40 bg-[#0A0A0A]/98 backdrop-blur-2xl">
         {/* Compact Header */}
         <div className="max-w-md mx-auto px-4 pt-4 pb-2">
-          <div className="flex items-center justify-between">
+          <div data-tour="wh-balance" className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-[var(--color-primary)]/20 flex items-center justify-center">
                 <WalletIcon className="w-4 h-4 text-[var(--color-primary)]" />
               </div>
               <span className="text-lg font-bold text-white">Wallet</span>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-400">Balance</p>
-              <p className="text-lg font-bold text-white">
-                ₱{totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-xs text-gray-400">Balance</p>
+                <p className="text-lg font-bold text-white">
+                  ₱{totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              </div>
+              <button onClick={() => setShowTutorial(true)} className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-[#2A2A2A] transition-colors" title="Show tutorial">
+                <HelpCircle className="w-4 h-4" />
+              </button>
             </div>
           </div>
         </div>
 
         {/* Tab Navigation */}
         <div className="max-w-md mx-auto px-4 pb-2">
-          <div className="flex bg-[#1A1A1A] rounded-2xl p-1">
+          <div data-tour="wh-tabs" className="flex bg-[#1A1A1A] rounded-2xl p-1">
             {TABS.map((tab) => {
               const Icon = tab.icon
               const isActive = activeTab === tab.id
@@ -138,7 +146,7 @@ function WalletHub({
       </div>
 
       {/* Tab Content */}
-      <div className="max-w-md mx-auto pb-32">
+      <div data-tour="wh-content" className="max-w-md mx-auto pb-32">
         {activeTab === 'pay' && (
           <PayTab
             user={user}
@@ -171,6 +179,8 @@ function WalletHub({
 
       {/* Bottom Navigation */}
       <BottomNavigation navigate={navigate} activeSection="wallet" isNavHidden={isNavHidden} />
+
+      <WalkthroughOverlay steps={customerWalletHubSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   )
 }

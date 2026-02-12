@@ -26,7 +26,10 @@ import {
   ArrowDownNarrowWide,
   ArrowUpNarrowWide,
   AlertTriangle,
+  HelpCircle,
 } from 'lucide-react'
+import WalkthroughOverlay from '../../components/common/WalkthroughOverlay'
+import { customerShopSteps } from '../../config/walkthroughSteps'
 import ShoppingCartDrawer from '../../components/customer/shop/ShoppingCartDrawer'
 import ProductDetailModal from '../../components/customer/shop/ProductDetailModal'
 import OrderHistory from '../../components/customer/shop/OrderHistory'
@@ -87,6 +90,7 @@ function Shop() {
   const [showSortMenu, setShowSortMenu] = useState(false)
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false)
   const [hideNavbar, setHideNavbar] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(false)
   const lastScrollY = useRef(0)
 
   // Hide navbar on scroll down, show on scroll up
@@ -256,7 +260,7 @@ function Shop() {
           <div className="flex items-center gap-3">
             {/* Search Bar - only show in shop tab */}
             {activeTab === 'shop' ? (
-              <div className="flex-1 relative">
+              <div data-tour="shop-search" className="flex-1 relative">
                 <div className="flex items-center gap-2 bg-[#1A1A1A] rounded-xl px-4 py-3">
                   <Search className="w-5 h-5 text-gray-500" />
                   <input
@@ -327,6 +331,7 @@ function Shop() {
             )}
             {/* Cart Button */}
             <button
+              data-tour="shop-cart"
               onClick={openCart}
               className="relative w-12 h-12 rounded-xl bg-[#1A1A1A] flex items-center justify-center"
             >
@@ -337,12 +342,15 @@ function Shop() {
                 </span>
               )}
             </button>
+            <button onClick={() => setShowTutorial(true)} className="w-10 h-10 rounded-xl bg-[#1A1A1A] flex items-center justify-center text-gray-500 hover:text-white transition-colors" title="Show tutorial">
+              <HelpCircle className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
         {/* Tab Navigation */}
         <div className="max-w-md mx-auto px-4 pb-3">
-          <div className="flex bg-[#1A1A1A] rounded-2xl p-1">
+          <div data-tour="shop-tabs" className="flex bg-[#1A1A1A] rounded-2xl p-1">
             {SHOP_TABS.map((tab) => {
               const Icon = tab.icon
               const isActive = activeTab === tab.id
@@ -382,7 +390,7 @@ function Shop() {
             />
 
             {/* Category Grid */}
-            <div className="px-4 py-4">
+            <div data-tour="shop-categories" className="px-4 py-4">
               <div className="grid grid-cols-6 gap-2">
                 {CATEGORY_ITEMS.map((cat) => {
                   const isActive = selectedCategory === cat.id
@@ -492,7 +500,7 @@ function Shop() {
             </div>
 
             {/* Products Grid */}
-            <div className="px-4">
+            <div data-tour="shop-products" className="px-4">
               {filteredProducts.length === 0 ? (
                 <EmptyState />
               ) : (
@@ -573,6 +581,8 @@ function Shop() {
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
+
+      <WalkthroughOverlay steps={customerShopSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   )
 }
