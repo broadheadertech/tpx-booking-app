@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import {
@@ -13,8 +13,11 @@ import {
   ChevronDown,
   ChevronUp,
   RefreshCw,
-  Filter
+  Filter,
+  HelpCircle,
 } from 'lucide-react'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { deliveryOrdersSteps } from '../../config/walkthroughSteps'
 
 const STATUS_CONFIG = {
   pending: {
@@ -47,6 +50,8 @@ const STATUS_CONFIG = {
 const STATUS_FLOW = ['pending', 'preparing', 'out_for_delivery', 'delivered']
 
 function DeliveryOrdersManagement() {
+  const [showTutorial, setShowTutorial] = useState(false)
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
   const [statusFilter, setStatusFilter] = useState('all')
   const [expandedOrder, setExpandedOrder] = useState(null)
   const [updatingOrder, setUpdatingOrder] = useState(null)
@@ -112,10 +117,15 @@ function DeliveryOrdersManagement() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Delivery Orders</h2>
-          <p className="text-gray-400 mt-1">Manage and track delivery orders</p>
+      <div data-tour="delivery-header" className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div>
+            <h2 className="text-2xl font-bold text-white">Delivery Orders</h2>
+            <p className="text-gray-400 mt-1">Manage and track delivery orders</p>
+          </div>
+          <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+            <HelpCircle className="w-4 h-4" />
+          </button>
         </div>
         <button
           onClick={() => window.location.reload()}
@@ -127,7 +137,7 @@ function DeliveryOrdersManagement() {
       </div>
 
       {/* Status Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div data-tour="delivery-status-cards" className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {Object.entries(STATUS_CONFIG).map(([status, config]) => {
           const Icon = config.icon
           const count = statusCounts[status] || 0
@@ -156,7 +166,7 @@ function DeliveryOrdersManagement() {
       </div>
 
       {/* Filter Bar */}
-      <div className="flex items-center gap-4 p-4 bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A]">
+      <div data-tour="delivery-filter" className="flex items-center gap-4 p-4 bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A]">
         <Filter size={18} className="text-gray-400" />
         <span className="text-gray-400 text-sm">Filter:</span>
         <select
@@ -175,7 +185,7 @@ function DeliveryOrdersManagement() {
       </div>
 
       {/* Orders List */}
-      <div className="space-y-4">
+      <div data-tour="delivery-list" className="space-y-4">
         {deliveryOrders.length === 0 ? (
           <div className="text-center py-16 bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A]">
             <Truck size={48} className="mx-auto text-gray-600 mb-4" />
@@ -355,6 +365,8 @@ function DeliveryOrdersManagement() {
           })
         )}
       </div>
+
+      <WalkthroughOverlay steps={deliveryOrdersSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
     </div>
   )
 }

@@ -1,13 +1,13 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Home, ShoppingBag, User, Wallet, Scissors } from 'lucide-react'
+import { Home, ShoppingBag, User, Wallet, Scissors, HelpCircle } from 'lucide-react'
 import VoucherManagement from '../../components/customer/VoucherManagement'
 import LoyaltyPoints from '../../components/customer/LoyaltyPoints'
 import MyBookings from '../../components/customer/MyBookings'
 import PremiumOnboarding from '../../components/customer/PremiumOnboarding'
 import AIBarberAssistant from '../../components/customer/AIBarberAssistant'
 import Profile from './Profile'
-import { useQuery } from 'convex/react'
+import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useEnsureClerkUser } from '../../hooks/useEnsureClerkUser'
 import { useBranding } from '../../context/BrandingContext'
@@ -20,6 +20,8 @@ import SocialFeed from '../../components/common/SocialFeed'
 import SmartGreeting from '../../components/customer/SmartGreeting'
 import StoriesCarousel from '../../components/customer/StoriesCarousel'
 import StickyAppointmentCard from '../../components/customer/StickyAppointmentCard'
+import WalkthroughOverlay from '../../components/common/WalkthroughOverlay'
+import { customerSteps } from '../../config/walkthroughSteps'
 
 const Dashboard = ({ initialSection = 'home' }) => {
   // Use the hook that ensures Clerk users have Convex records
@@ -31,9 +33,13 @@ const Dashboard = ({ initialSection = 'home' }) => {
   const [isViewingStory, setIsViewingStory] = useState(false)
   const [isNavHidden, setIsNavHidden] = useState(false)
   const [showStickyAppointment, setShowStickyAppointment] = useState(false)
+  const [showWalkthrough, setShowWalkthrough] = useState(false)
   const lastScrollY = useRef(0)
   const scrollThreshold = 10 // Minimum scroll distance to trigger hide/show
   const stickyCardThreshold = 200 // Show sticky card after scrolling this far
+
+  // Tutorial completion mutation
+  const markTutorialComplete = useMutation(api.services.auth.markTutorialComplete)
 
   // Determine authentication status
   const isAuthenticated = !!user
@@ -58,6 +64,29 @@ const Dashboard = ({ initialSection = 'home' }) => {
       }
     }
   }, [isAuthenticated, user])
+
+  // Show walkthrough tutorial for first-time users
+  useEffect(() => {
+    if (isAuthenticated && user?._id && !user.has_seen_tutorial && !showOnboarding && activeSection === 'home') {
+      // Small delay so the page renders first and nav targets exist
+      const timer = setTimeout(() => setShowWalkthrough(true), 800)
+      return () => clearTimeout(timer)
+    }
+  }, [isAuthenticated, user, showOnboarding, activeSection])
+
+  const handleWalkthroughComplete = useCallback(async () => {
+    setShowWalkthrough(false)
+    if (user?._id) {
+      try { await markTutorialComplete({ user_id: user._id }) } catch (e) { console.error('[Walkthrough] Error saving:', e) }
+    }
+  }, [user?._id, markTutorialComplete])
+
+  const handleWalkthroughSkip = useCallback(async () => {
+    setShowWalkthrough(false)
+    if (user?._id) {
+      try { await markTutorialComplete({ user_id: user._id }) } catch (e) { console.error('[Walkthrough] Error saving:', e) }
+    }
+  }, [user?._id, markTutorialComplete])
 
   // Listen for custom event to switch to bookings tab
   useEffect(() => {
@@ -280,6 +309,7 @@ const Dashboard = ({ initialSection = 'home' }) => {
                 return (
                   <button
                     key={section.id}
+                    data-tour={`customer-nav-${section.id}`}
                     onClick={() => {
                       if (section.id === 'home') {
                         navigate('/customer/dashboard')
@@ -308,6 +338,25 @@ const Dashboard = ({ initialSection = 'home' }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Walkthrough Tutorial Overlay */}
+      <WalkthroughOverlay
+        steps={customerSteps}
+        isVisible={showWalkthrough}
+        onComplete={handleWalkthroughComplete}
+        onSkip={handleWalkthroughSkip}
+      />
+
+      {/* Floating Help Button — re-trigger walkthrough */}
+      {!showWalkthrough && !showOnboarding && !isViewingStory && activeSection === 'home' && user?.has_seen_tutorial && (
+        <button
+          onClick={() => setShowWalkthrough(true)}
+          className="fixed bottom-20 right-4 z-40 w-10 h-10 rounded-full bg-[#1A1A1A] border border-[#2A2A2A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all shadow-lg shadow-black/40"
+          title="Show tutorial"
+        >
+          <HelpCircle className="w-5 h-5" />
+        </button>
       )}
     </div>
   )

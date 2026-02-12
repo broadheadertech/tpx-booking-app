@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
@@ -22,8 +22,11 @@ import {
   Wallet,
   Landmark,
   Pencil,
+  HelpCircle,
 } from "lucide-react";
 import { useAppModal } from "../../context/AppModalContext";
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { plDashboardSteps } from '../../config/walkthroughSteps'
 
 // Format currency
 const formatCurrency = (amount) => {
@@ -636,6 +639,8 @@ const exportToPDF = (data, period) => {
 const SuperAdminPLDashboard = () => {
   const { user } = useCurrentUser();
   const { showAlert, showConfirm } = useAppModal();
+  const [showTutorial, setShowTutorial] = useState(false)
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
   const [selectedRange, setSelectedRange] = useState("this_month");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
@@ -858,13 +863,18 @@ const SuperAdminPLDashboard = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-            <PieChart className="w-6 h-6 text-[var(--color-primary)]" />
-            Super Admin P&L
-          </h2>
-          <p className="text-gray-400 text-sm">{dateRange.label}</p>
+      <div data-tour="pl-header" className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+              <PieChart className="w-6 h-6 text-[var(--color-primary)]" />
+              Super Admin P&L
+            </h2>
+            <p className="text-gray-400 text-sm">{dateRange.label}</p>
+          </div>
+          <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+            <HelpCircle className="w-4 h-4" />
+          </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -907,16 +917,18 @@ const SuperAdminPLDashboard = () => {
       </div>
 
       {/* Date Range Picker */}
-      <DateRangePicker
-        selectedRange={selectedRange}
-        onRangeChange={setSelectedRange}
-        customStart={customStart}
-        customEnd={customEnd}
-        onCustomChange={handleCustomChange}
-      />
+      <div data-tour="pl-date-range">
+        <DateRangePicker
+          selectedRange={selectedRange}
+          onRangeChange={setSelectedRange}
+          customStart={customStart}
+          customEnd={customEnd}
+          onCustomChange={handleCustomChange}
+        />
+      </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div data-tour="pl-summary" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Royalty Income"
           value={plSummary?.revenue_breakdown?.royalty_income || 0}
@@ -984,7 +996,7 @@ const SuperAdminPLDashboard = () => {
       )}
 
       {/* Secondary Metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div data-tour="pl-secondary" className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#333333]">
           <span className="text-gray-400 text-xs">Total Revenue</span>
           <p className="text-lg font-bold text-white">
@@ -1362,6 +1374,10 @@ const SuperAdminPLDashboard = () => {
           isLoading={isSaving}
           editEntry={showAddModal === "expense" ? editingExpense : editingRevenue}
         />
+      )}
+
+      {showTutorial && (
+        <WalkthroughOverlay steps={plDashboardSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
       )}
     </div>
   );

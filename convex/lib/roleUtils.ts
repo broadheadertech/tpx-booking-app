@@ -74,6 +74,14 @@ export const ALL_PAGES = {
     "events",
     "notifications",
     "email_marketing",
+    "team",
+    "finance",
+    "marketing",
+    "accounting",
+    "branch_wallet",
+    "wallet_earnings",
+    "customer_analytics",
+    "post_moderation",
   ] as const,
 
   // Admin Dashboard Pages (5 additional)

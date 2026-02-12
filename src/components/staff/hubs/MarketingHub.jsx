@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { MessageSquare, CalendarDays, Bell, Brain } from 'lucide-react'
 import PostModerationQueue from '../../admin/PostModerationQueue'
 import BranchEmailAI from '../BranchEmailAI'
@@ -9,15 +9,36 @@ import NotificationsManagement from '../NotificationsManagement'
  * Marketing Hub - Consolidated marketing & communications management
  * Groups: AI Email, Posts, Events, Notifications
  */
+// Map section id → page_access_v2 key (only where they differ)
+const PERM_MAP = { ai: 'email_marketing', posts: 'post_moderation' }
+
 const MarketingHub = ({ user, events = [], onRefresh }) => {
   const [activeSection, setActiveSection] = useState('ai')
 
-  const sections = [
+  const allSections = [
     { id: 'ai', label: 'AI Email', icon: Brain },
     { id: 'posts', label: 'Posts', icon: MessageSquare },
     { id: 'events', label: 'Events', icon: CalendarDays },
     { id: 'notifications', label: 'Notifications', icon: Bell },
   ]
+
+  // Filter sections by page_access_v2 permissions
+  // If hub is enabled but no sub-section keys are configured, show all sub-sections
+  const SUB_KEYS = ['email_marketing', 'post_moderation', 'events', 'notifications']
+  const hasV2 = user?.page_access_v2 && Object.keys(user.page_access_v2).length > 0
+  const hasSubConfig = hasV2 && SUB_KEYS.some(k => k in user.page_access_v2)
+  const sections = hasV2 && hasSubConfig
+    ? allSections.filter(s => {
+        const key = PERM_MAP[s.id] || s.id
+        return user.page_access_v2[key]?.view === true
+      })
+    : allSections
+
+  useEffect(() => {
+    if (sections.length > 0 && !sections.find(s => s.id === activeSection)) {
+      setActiveSection(sections[0].id)
+    }
+  }, [sections, activeSection])
 
   const renderContent = () => {
     switch (activeSection) {

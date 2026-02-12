@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import DashboardHeader from "../../components/staff/DashboardHeader";
 import QuickActions from "../../components/staff/QuickActions";
 import StatsCards from "../../components/staff/StatsCards";
@@ -18,12 +18,15 @@ import {
   NotificationModal,
   NotificationBell,
 } from "../../components/common/NotificationSystem";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useNavigate } from "react-router-dom";
 import { useRealtimeNotifications } from "../../hooks/useRealtimeNotifications";
 import { useBookingNotificationListener } from "../../utils/bookingNotifications";
+import WalkthroughOverlay from "../../components/common/WalkthroughOverlay";
+import { getStepsForRole } from "../../config/walkthroughSteps";
+import { HelpCircle } from "lucide-react";
 
 function StaffDashboard() {
   // Use unified hook that supports both Clerk and legacy auth
@@ -35,12 +38,29 @@ function StaffDashboard() {
   });
   const [activeModal, setActiveModal] = useState(null);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
+  const markTutorialComplete = useMutation(api.services.auth.markTutorialComplete);
 
   // Hook for real-time notifications with toast alerts
   const { unreadCount } = useRealtimeNotifications();
 
   // Hook for booking notification events
   useBookingNotificationListener();
+
+  // Show walkthrough tutorial for first-time users
+  useEffect(() => {
+    if (user?._id && !user.has_seen_tutorial && activeTab === "overview") {
+      const timer = setTimeout(() => setShowWalkthrough(true), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [user, activeTab]);
+
+  const handleWalkthroughDone = useCallback(async () => {
+    setShowWalkthrough(false);
+    if (user?._id) {
+      try { await markTutorialComplete({ user_id: user._id }); } catch (e) { console.error("[Walkthrough]", e); }
+    }
+  }, [user?._id, markTutorialComplete]);
 
   // Save active tab to localStorage whenever it changes
   useEffect(() => {
@@ -227,8 +247,10 @@ function StaffDashboard() {
     if (user?.role !== "super_admin" && user?.role !== "admin_staff") {
       // Always allow always-accessible tabs
       if (!alwaysAccessiblePages.includes(activeTab)) {
-        // branch_admin has full staff dashboard access
-        if (user?.role !== "branch_admin") {
+        // branch_admin: bypass only if no explicit permissions are set
+        if (user?.role === "branch_admin" && (!user?.page_access_v2 || Object.keys(user.page_access_v2).length === 0)) {
+          // No explicit permissions — full access (backward compat)
+        } else {
           // Check page_access_v2 first
           if (user?.page_access_v2) {
             if (!user.page_access_v2[activeTab]?.view) {
@@ -370,7 +392,7 @@ function StaffDashboard() {
   ];
 
   // Always accessible pages (bypass permission checks)
-  const alwaysAccessiblePages = ["overview", "bookings"];
+  const alwaysAccessiblePages = ["overview"];
 
   // Filter tabs based on user permissions (Story 11-4: Navigation Filtering)
   // Priority: page_access_v2 (new) > page_access (legacy) > role defaults
@@ -380,8 +402,14 @@ function StaffDashboard() {
       return baseTabs;
     }
 
-    // branch_admin has full staff dashboard access
+    // branch_admin: full access by default, but respect explicit permissions if set
     if (user?.role === "branch_admin") {
+      if (user?.page_access_v2 && Object.keys(user.page_access_v2).length > 0) {
+        return baseTabs.filter((t) => {
+          if (alwaysAccessiblePages.includes(t.id)) return true;
+          return user.page_access_v2[t.id]?.view === true;
+        });
+      }
       return baseTabs;
     }
 
@@ -470,6 +498,25 @@ function StaffDashboard() {
         onClose={() => setShowNotifications(false)}
         userRole={user?.role}
       />
+
+      {/* Walkthrough Tutorial */}
+      <WalkthroughOverlay
+        steps={getStepsForRole(user?.role)}
+        isVisible={showWalkthrough}
+        onComplete={handleWalkthroughDone}
+        onSkip={handleWalkthroughDone}
+      />
+
+      {/* Help button to re-trigger tutorial */}
+      {!showWalkthrough && user?.has_seen_tutorial && (
+        <button
+          onClick={() => setShowWalkthrough(true)}
+          className="fixed bottom-6 right-6 z-40 w-10 h-10 rounded-full bg-[#1A1A1A] border border-[#2A2A2A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all shadow-lg shadow-black/40"
+          title="Show tutorial"
+        >
+          <HelpCircle className="w-5 h-5" />
+        </button>
+      )}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import {
@@ -11,9 +11,12 @@ import {
   Loader2,
   ChevronRight,
   FileText,
-  RefreshCw
+  RefreshCw,
+  HelpCircle
 } from 'lucide-react';
 import SettlementDetailModal from './SettlementDetailModal';
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { settlementSteps } from '../../config/walkthroughSteps'
 
 /**
  * SettlementApprovalQueue Component (Story 25.2)
@@ -62,6 +65,8 @@ const getStatusIcon = (status) => {
 export default function SettlementApprovalQueue() {
   const [activeTab, setActiveTab] = useState('pending');
   const [selectedSettlementId, setSelectedSettlementId] = useState(null);
+  const [showTutorial, setShowTutorial] = useState(false)
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
 
   // Query settlements by status (real-time via Convex)
   const settlements = useQuery(api.services.settlements.getAllSettlements, {
@@ -97,17 +102,22 @@ export default function SettlementApprovalQueue() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-            <div className="p-2 bg-green-500/20 rounded-lg">
-              <Wallet className="w-6 h-6 text-green-400" />
-            </div>
-            Settlement Queue
-          </h2>
-          <p className="text-gray-400 text-sm mt-1">
-            Review and process branch settlement requests
-          </p>
+      <div data-tour="settlement-header" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div>
+            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+              <div className="p-2 bg-green-500/20 rounded-lg">
+                <Wallet className="w-6 h-6 text-green-400" />
+              </div>
+              Settlement Queue
+            </h2>
+            <p className="text-gray-400 text-sm mt-1">
+              Review and process branch settlement requests
+            </p>
+          </div>
+          <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+            <HelpCircle className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Summary Stats */}
@@ -124,7 +134,7 @@ export default function SettlementApprovalQueue() {
       </div>
 
       {/* Status Tabs */}
-      <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl border border-[#333333] p-1">
+      <div data-tour="settlement-tabs" className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl border border-[#333333] p-1">
         <div className="flex flex-wrap gap-1">
           {SETTLEMENT_TABS.map((tab) => {
             const count = getTabCount(tab.key);
@@ -161,7 +171,7 @@ export default function SettlementApprovalQueue() {
       </div>
 
       {/* Settlement List */}
-      <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl border border-[#333333] overflow-hidden">
+      <div data-tour="settlement-list" className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl border border-[#333333] overflow-hidden">
         {/* Desktop Table */}
         <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
@@ -368,6 +378,10 @@ export default function SettlementApprovalQueue() {
           settlementId={selectedSettlementId}
           onClose={() => setSelectedSettlementId(null)}
         />
+      )}
+
+      {showTutorial && (
+        <WalkthroughOverlay steps={settlementSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
       )}
     </div>
   );

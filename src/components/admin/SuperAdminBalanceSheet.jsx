@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import ReactDOM from "react-dom";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
@@ -41,7 +41,10 @@ import {
   CheckCircle,
   AlertCircle,
   History,
+  HelpCircle,
 } from "lucide-react";
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { balanceSheetSteps } from '../../config/walkthroughSteps'
 
 // Category display mappings
 const ASSET_CATEGORIES = {
@@ -1794,6 +1797,8 @@ const PeriodComparisonModal = ({ isOpen, onClose, period }) => {
 const SuperAdminBalanceSheet = () => {
   const { user } = useCurrentUser();
   const { showConfirm, showAlert } = useAppModal();
+  const [showTutorial, setShowTutorial] = useState(false)
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
   const [activeTab, setActiveTab] = useState("overview");
   const [assetModal, setAssetModal] = useState({ open: false, asset: null });
   const [liabilityModal, setLiabilityModal] = useState({ open: false, liability: null });
@@ -1880,15 +1885,20 @@ const SuperAdminBalanceSheet = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
-            <Scale className="w-6 h-6 text-[var(--color-primary)]" />
-            Super Admin Balance Sheet
-          </h2>
-          <p className="text-gray-400 text-sm">
-            As of {formatDate(balanceSheet?.as_of_date || Date.now())} • Headquarters Financial Position
-          </p>
+      <div data-tour="bs-header" className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+              <Scale className="w-6 h-6 text-[var(--color-primary)]" />
+              Super Admin Balance Sheet
+            </h2>
+            <p className="text-gray-400 text-sm">
+              As of {formatDate(balanceSheet?.as_of_date || Date.now())} • Headquarters Financial Position
+            </p>
+          </div>
+          <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+            <HelpCircle className="w-4 h-4" />
+          </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -1912,7 +1922,7 @@ const SuperAdminBalanceSheet = () => {
       </div>
 
       {/* Accounting Equation */}
-      <div className="bg-gradient-to-r from-[#1E1E1E] to-[#2A2A2A] rounded-xl border border-[#333333] p-6">
+      <div data-tour="bs-equation" className="bg-gradient-to-r from-[#1E1E1E] to-[#2A2A2A] rounded-xl border border-[#333333] p-6">
         <div className="text-center">
           <p className="text-gray-400 text-sm mb-2">Accounting Equation</p>
           <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-lg sm:text-xl font-bold">
@@ -1938,7 +1948,7 @@ const SuperAdminBalanceSheet = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div data-tour="bs-summary" className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <SummaryCard
           title="Total Assets"
           value={balanceSheet?.total_assets || 0}
@@ -2619,6 +2629,10 @@ const SuperAdminBalanceSheet = () => {
         onClose={() => setComparisonModal({ open: false, period: null })}
         period={comparisonModal.period}
       />
+
+      {showTutorial && (
+        <WalkthroughOverlay steps={balanceSheetSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
+      )}
     </div>
   );
 };

@@ -150,6 +150,7 @@ export const loginUser = mutation({
         role: user.role,
         branch_id: user.branch_id,
         page_access: user.page_access,
+        page_access_v2: user.page_access_v2,
         is_active: user.is_active,
       }
     };
@@ -189,7 +190,7 @@ export const getCurrentUser = query({
       nickname: user.nickname,
       mobile_number: user.mobile_number,
       birthday: user.birthday,
-      role: user.role,
+      role: user.role || "customer",
       branch_id: user.branch_id,
       is_active: user.is_active,
       avatar: user.avatar,
@@ -197,6 +198,8 @@ export const getCurrentUser = query({
       skills: user.skills,
       isVerified: user.isVerified,
       page_access: user.page_access,
+      page_access_v2: user.page_access_v2,
+      has_seen_tutorial: user.has_seen_tutorial,
     };
   },
 });
@@ -359,6 +362,7 @@ export const loginWithFacebookInternal = mutation({
         role: user.role,
         branch_id: user.branch_id,
         page_access: user.page_access,
+        page_access_v2: user.page_access_v2,
         is_active: user.is_active,
         avatar: user.avatar,
       },
@@ -467,6 +471,15 @@ export const createUser = mutation({
       throwUserError(ERROR_CODES.AUTH_USERNAME_EXISTS);
     }
 
+    // Build page_access_v2 from page_access array
+    let pageAccessV2: Record<string, { view: boolean; create: boolean; edit: boolean; delete: boolean; approve: boolean }> | undefined;
+    if (args.page_access && args.page_access.length > 0) {
+      pageAccessV2 = {};
+      for (const pageId of args.page_access) {
+        pageAccessV2[pageId] = { view: true, create: true, edit: true, delete: true, approve: true };
+      }
+    }
+
     // Create new user
     const userId = await ctx.db.insert("users", {
       username: args.username,
@@ -479,6 +492,7 @@ export const createUser = mutation({
       role: args.role,
       branch_id: args.branch_id,
       page_access: args.page_access,
+      page_access_v2: pageAccessV2,
       is_active: true,
       avatar: undefined,
       bio: undefined,
@@ -936,7 +950,15 @@ export const updateUser = mutation({
     if (updateData.address !== undefined) fieldsToUpdate.address = updateData.address;
     if (updateData.role !== undefined) fieldsToUpdate.role = updateData.role as "staff" | "customer" | "admin" | "barber" | "super_admin" | "branch_admin";
     if (updateData.branch_id !== undefined) fieldsToUpdate.branch_id = updateData.branch_id;
-    if (updateData.page_access !== undefined) fieldsToUpdate.page_access = updateData.page_access;
+    if (updateData.page_access !== undefined) {
+      fieldsToUpdate.page_access = updateData.page_access;
+      // Sync page_access_v2 so the new RBAC system reflects the same permissions
+      const pageAccessV2: Record<string, { view: boolean; create: boolean; edit: boolean; delete: boolean; approve: boolean }> = {};
+      for (const pageId of updateData.page_access) {
+        pageAccessV2[pageId] = { view: true, create: true, edit: true, delete: true, approve: true };
+      }
+      fieldsToUpdate.page_access_v2 = pageAccessV2;
+    }
     if (updateData.is_active !== undefined) fieldsToUpdate.is_active = updateData.is_active;
 
     // Update user
@@ -1053,6 +1075,8 @@ export const getAllUsers = query({
       is_active: user.is_active,
       isVerified: user.isVerified,
       createdAt: user._creationTime,
+      page_access: user.page_access,
+      page_access_v2: user.page_access_v2,
       // Customer analytics fields for AI Email Marketing segmentation
       lastBookingDate: user.lastBookingDate,
       totalBookings: user.totalBookings,
@@ -1448,12 +1472,13 @@ export const ensureUserFromClerk = mutation({
         nickname: existingByClerkId.nickname,
         mobile_number: existingByClerkId.mobile_number,
         birthday: existingByClerkId.birthday,
-        role: existingByClerkId.role,
+        role: existingByClerkId.role || "customer",
         branch_id: existingByClerkId.branch_id,
         is_active: existingByClerkId.is_active,
         avatar: existingByClerkId.avatar,
         isVerified: existingByClerkId.isVerified,
         clerk_user_id: existingByClerkId.clerk_user_id,
+        has_seen_tutorial: existingByClerkId.has_seen_tutorial,
         action: "exists",
       };
     }
@@ -1489,12 +1514,13 @@ export const ensureUserFromClerk = mutation({
         nickname: fullName,
         mobile_number: existingByEmail.mobile_number,
         birthday: existingByEmail.birthday,
-        role: existingByEmail.role,
+        role: existingByEmail.role || "customer",
         branch_id: existingByEmail.branch_id,
         is_active: existingByEmail.is_active,
         avatar: image_url || existingByEmail.avatar,
         isVerified: true,
         clerk_user_id,
+        has_seen_tutorial: existingByEmail.has_seen_tutorial,
         action: wasGuest ? "guest_converted" : "linked",
       };
     }
@@ -1571,6 +1597,7 @@ export const ensureUserFromClerk = mutation({
       avatar: user?.avatar,
       isVerified: user?.isVerified,
       clerk_user_id,
+      has_seen_tutorial: false,
       action: "created",
     };
   },
@@ -1608,7 +1635,7 @@ export const getUserByClerkId = query({
       nickname: user.nickname,
       mobile_number: user.mobile_number,
       birthday: user.birthday,
-      role: user.role,
+      role: user.role || "customer",
       branch_id: user.branch_id,
       is_active: user.is_active,
       avatar: user.avatar,
@@ -1616,8 +1643,58 @@ export const getUserByClerkId = query({
       skills: user.skills,
       isVerified: user.isVerified,
       page_access: user.page_access,
+      page_access_v2: user.page_access_v2,
       clerk_user_id: user.clerk_user_id,
+      has_seen_tutorial: user.has_seen_tutorial,
     };
+  },
+});
+
+/**
+ * Admin utility: set or fix the role on a user document.
+ * Use this to patch users that are missing the role field.
+ */
+export const adminSetUserRole = mutation({
+  args: {
+    user_id: v.id("users"),
+    role: v.union(
+      v.literal("staff"),
+      v.literal("customer"),
+      v.literal("admin"),
+      v.literal("barber"),
+      v.literal("super_admin"),
+      v.literal("branch_admin")
+    ),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.user_id);
+    if (!user) throw new Error("User not found");
+
+    await ctx.db.patch(args.user_id, {
+      role: args.role,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true, userId: args.user_id, newRole: args.role };
+  },
+});
+
+/**
+ * Mark tutorial as completed for a user
+ */
+export const markTutorialComplete = mutation({
+  args: { user_id: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.user_id);
+    if (!user) throw new Error("User not found");
+
+    await ctx.db.patch(args.user_id, {
+      has_seen_tutorial: true,
+      tutorial_completed_at: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
   },
 });
 

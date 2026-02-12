@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import {
   Users,
   UserCheck,
@@ -17,8 +17,11 @@ import {
   Send,
   ChevronDown,
   ChevronUp,
-  Target
+  Target,
+  HelpCircle
 } from 'lucide-react'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { customerAnalyticsSteps } from '../../config/walkthroughSteps'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
@@ -39,6 +42,8 @@ import { useCurrentUser } from '../../hooks/useCurrentUser'
  */
 const BranchCustomerAnalytics = ({ branchId }) => {
   const { user } = useCurrentUser()
+  const [showTutorial, setShowTutorial] = useState(false)
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [showAtRiskList, setShowAtRiskList] = useState(true)
   const [showTopCustomers, setShowTopCustomers] = useState(true)
@@ -148,15 +153,20 @@ const BranchCustomerAnalytics = ({ branchId }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Target className="w-6 h-6 text-[var(--color-primary)]" />
-            Customer Analytics
-          </h2>
-          <p className="text-gray-400 text-sm mt-1">
-            Track customer activity, identify churn risk, and optimize retention
-          </p>
+      <div data-tour="analytics-header" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div>
+            <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+              <Target className="w-6 h-6 text-[var(--color-primary)]" />
+              Customer Analytics
+            </h2>
+            <p className="text-gray-400 text-sm mt-1">
+              Track customer activity, identify churn risk, and optimize retention
+            </p>
+          </div>
+          <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+            <HelpCircle className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Branch Selector for Super Admin */}
@@ -188,7 +198,7 @@ const BranchCustomerAnalytics = ({ branchId }) => {
       </div>
 
       {/* Status Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div data-tour="analytics-status-cards" className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {/* Total Customers */}
         <div className="bg-gradient-to-br from-[#1A1A1A] to-[#252525] rounded-xl p-4 border border-[#333]">
           <div className="flex items-center justify-between mb-2">
@@ -519,7 +529,7 @@ const BranchCustomerAnalytics = ({ branchId }) => {
 
       {/* Filtered Customers List (when status is selected) */}
       {selectedStatus !== 'all' && filteredCustomers && (
-        <div className="bg-gradient-to-br from-[#1A1A1A] to-[#252525] rounded-xl border border-[#333] overflow-hidden">
+        <div data-tour="analytics-table" className="bg-gradient-to-br from-[#1A1A1A] to-[#252525] rounded-xl border border-[#333] overflow-hidden">
           <div className="flex items-center justify-between p-4 border-b border-[#333]">
             <div className="flex items-center gap-3">
               {getStatusIcon(selectedStatus)}
@@ -582,6 +592,10 @@ const BranchCustomerAnalytics = ({ branchId }) => {
             </table>
           </div>
         </div>
+      )}
+
+      {showTutorial && (
+        <WalkthroughOverlay steps={customerAnalyticsSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
       )}
     </div>
   )

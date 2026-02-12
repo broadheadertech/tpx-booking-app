@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Clock, User, Phone, MoreVertical, CheckCircle, Users, X } from 'lucide-react'
+import { Clock, User, Phone, MoreVertical, CheckCircle, Users, X, HelpCircle } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
@@ -9,6 +9,8 @@ import ServiceHistoryCard from './ServiceHistoryCard'
 import POSWalletPayment from './POSWalletPayment'
 import WalletPaymentConfirmDialog from './WalletPaymentConfirmDialog'
 import ComboPaymentDialog from './ComboPaymentDialog'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { queueSteps } from '../../config/walkthroughSteps'
 
 const QueueSection = () => {
   const { showAlert } = useAppModal()
@@ -21,6 +23,7 @@ const QueueSection = () => {
   // Story 24-3: Combo payment dialog state
   const [showComboPayment, setShowComboPayment] = useState(false)
   const [comboPaymentData, setComboPaymentData] = useState(null)
+  const [showTutorial, setShowTutorial] = useState(false)
 
   // Fetch main queue data from backend
   const mainQueueData = useQuery(
@@ -200,7 +203,7 @@ const QueueSection = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
+      <div data-tour="q-header" className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="h-10 w-10 rounded-lg bg-[var(--color-primary)]/20 flex items-center justify-center">
@@ -211,15 +214,20 @@ const QueueSection = () => {
               <p className="text-sm text-gray-400">Real-time queue management</p>
             </div>
           </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+              <HelpCircle className="w-4 h-4" />
+            </button>
           <div className="flex items-center space-x-2 bg-blue-400/20 border border-blue-400/30 px-3 py-1.5 rounded-lg">
             <div className="h-2 w-2 bg-green-500 rounded-full animate-pulse"></div>
             <span className="text-blue-400 text-sm font-medium">Live</span>
+          </div>
           </div>
         </div>
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div data-tour="q-stats" className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -250,7 +258,7 @@ const QueueSection = () => {
       </div>
 
       {/* Kanban Board - Barber Queues */}
-      <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm overflow-hidden">
+      <div data-tour="q-board" className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm overflow-hidden">
         <div className="bg-[#0A0A0A] px-6 py-3 border-b border-[#444444]/30 flex items-center justify-between">
           <h3 className="text-sm font-medium text-gray-300 uppercase tracking-wider">Barber Queues</h3>
           <div className="flex items-center space-x-4 text-sm">
@@ -620,6 +628,7 @@ const QueueSection = () => {
           initialWalletAmount={comboPaymentData.walletAmount}
         />
       )}
+      <WalkthroughOverlay steps={queueSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   )
 }

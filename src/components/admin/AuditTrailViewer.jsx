@@ -6,7 +6,7 @@
  * Only accessible to super_admin role.
  */
 
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
@@ -20,7 +20,10 @@ import {
   ChevronUp,
   Search,
   RefreshCw,
+  HelpCircle,
 } from "lucide-react";
+import WalkthroughOverlay from "../common/WalkthroughOverlay";
+import { auditTrailSteps } from "../../config/walkthroughSteps";
 
 /**
  * Change type labels and colors
@@ -121,6 +124,8 @@ export default function AuditTrailViewer() {
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const pageSize = 20;
+  const [showTutorial, setShowTutorial] = useState(false);
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), []);
 
   // Query audit trail
   const auditData = useQuery(api.services.rbac.getAuditTrail, {
@@ -164,7 +169,7 @@ export default function AuditTrailViewer() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div data-tour="audit-header" className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-[var(--color-primary)]/10 rounded-xl flex items-center justify-center">
             <History className="w-5 h-5 text-[var(--color-primary)]" />
@@ -176,11 +181,14 @@ export default function AuditTrailViewer() {
             </p>
           </div>
         </div>
+        <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center hover:bg-[#3A3A3A] transition-colors" title="Start guided tour">
+          <HelpCircle className="w-4 h-4 text-gray-400" />
+        </button>
       </div>
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div data-tour="audit-stats" className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-[#1A1A1A] p-4 rounded-xl border border-[#2A2A2A]/50">
             <p className="text-xs text-gray-400 mb-1">Total Changes</p>
             <p className="text-2xl font-bold text-white">{stats.total}</p>
@@ -205,7 +213,7 @@ export default function AuditTrailViewer() {
       )}
 
       {/* Filters */}
-      <div className="bg-[#1A1A1A] p-4 rounded-xl border border-[#2A2A2A]/50">
+      <div data-tour="audit-filters" className="bg-[#1A1A1A] p-4 rounded-xl border border-[#2A2A2A]/50">
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           {/* Search */}
           <div className="relative flex-1">
@@ -242,7 +250,7 @@ export default function AuditTrailViewer() {
       </div>
 
       {/* Entries List */}
-      <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A]/50 overflow-hidden">
+      <div data-tour="audit-list" className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A]/50 overflow-hidden">
         {filteredEntries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
             <History className="w-12 h-12 text-gray-500 mb-4" />
@@ -361,6 +369,8 @@ export default function AuditTrailViewer() {
           </div>
         )}
       </div>
+
+      <WalkthroughOverlay steps={auditTrailSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
     </div>
   );
 }

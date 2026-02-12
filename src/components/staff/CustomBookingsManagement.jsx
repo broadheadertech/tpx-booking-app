@@ -6,12 +6,14 @@ import {
   Search, Filter, Plus, Edit, Trash2, Eye, Phone, Mail,
   Calendar, MessageSquare, MoreVertical, ChevronDown, ChevronUp,
   Settings, Copy, ToggleLeft, ToggleRight, GripVertical,
-  PlusCircle, MinusCircle, Save, X, ArrowRight, User, Send
+  PlusCircle, MinusCircle, Save, X, ArrowRight, User, Send, HelpCircle
 } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { sendCustomBookingStatusUpdate } from '../../services/emailService'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { customBookingsSteps } from '../../config/walkthroughSteps'
 
 const CustomBookingsManagement = ({ onRefresh, user }) => {
   const { sessionToken } = useCurrentUser()
@@ -34,6 +36,7 @@ const CustomBookingsManagement = ({ onRefresh, user }) => {
   const [notificationMessage, setNotificationMessage] = useState('')
   const [sendingNotification, setSendingNotification] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const dropdownRef = useRef(null)
@@ -443,7 +446,7 @@ const CustomBookingsManagement = ({ onRefresh, user }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div data-tour="cb-header" className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-white">Custom Bookings</h2>
           <p className="text-gray-400 text-sm mt-1">
@@ -451,6 +454,9 @@ const CustomBookingsManagement = ({ onRefresh, user }) => {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+            <HelpCircle className="w-4 h-4" />
+          </button>
           {pendingCount > 0 && (
             <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-sm font-medium">
               {pendingCount} pending
@@ -475,7 +481,7 @@ const CustomBookingsManagement = ({ onRefresh, user }) => {
 
       {/* Statistics */}
       {statistics && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div data-tour="cb-stats" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="bg-[#1A1A1A] rounded-xl p-4 border border-[#2A2A2A]">
             <p className="text-gray-400 text-xs uppercase tracking-wide">Total</p>
             <p className="text-2xl font-bold text-white mt-1">{statistics.total}</p>
@@ -504,7 +510,7 @@ const CustomBookingsManagement = ({ onRefresh, user }) => {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 bg-[#1A1A1A] p-1 rounded-xl w-fit">
+      <div data-tour="cb-tabs" className="flex gap-2 bg-[#1A1A1A] p-1 rounded-xl w-fit">
         <button
           onClick={() => setActiveTab('submissions')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -531,7 +537,7 @@ const CustomBookingsManagement = ({ onRefresh, user }) => {
       {activeTab === 'submissions' ? (
         <div className="space-y-4">
           {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div data-tour="cb-filters" className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -1417,6 +1423,7 @@ const CustomBookingsManagement = ({ onRefresh, user }) => {
         </div>,
         document.body
       )}
+      <WalkthroughOverlay steps={customBookingsSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   )
 }

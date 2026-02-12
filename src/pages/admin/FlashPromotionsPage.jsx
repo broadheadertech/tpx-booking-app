@@ -8,13 +8,15 @@
  * @module src/pages/admin/FlashPromotionsPage
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../convex/_generated/api';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
 import PromotionForm from '../../components/admin/PromotionForm';
 import PromotionCard from '../../components/admin/PromotionCard';
-import { Plus, Zap, Filter, RefreshCw, BarChart3 } from 'lucide-react';
+import { Plus, Zap, Filter, RefreshCw, BarChart3, HelpCircle } from 'lucide-react';
+import WalkthroughOverlay from '../../components/common/WalkthroughOverlay'
+import { flashPromotionsSteps } from '../../config/walkthroughSteps'
 import { fromStorageFormat } from '../../../convex/lib/points';
 
 const STATUS_FILTERS = [
@@ -27,6 +29,8 @@ const STATUS_FILTERS = [
 
 export default function FlashPromotionsPage() {
   const { user } = useCurrentUser();
+  const [showTutorial, setShowTutorial] = useState(false)
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
   const [statusFilter, setStatusFilter] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingPromo, setEditingPromo] = useState(null);
@@ -87,7 +91,7 @@ export default function FlashPromotionsPage() {
     <div className="min-h-screen bg-[#0A0A0A] p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div data-tour="promos-header" className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center">
               <Zap className="w-6 h-6 text-yellow-400" />
@@ -96,6 +100,9 @@ export default function FlashPromotionsPage() {
               <h1 className="text-2xl font-bold text-white">Flash Promotions</h1>
               <p className="text-sm text-gray-400">Create and manage time-limited promotional events</p>
             </div>
+            <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+              <HelpCircle className="w-4 h-4" />
+            </button>
           </div>
 
           <button
@@ -108,7 +115,7 @@ export default function FlashPromotionsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        <div data-tour="promos-stats" className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] p-4">
             <div className="text-gray-400 text-sm mb-1">Active Now</div>
             <div className="text-2xl font-bold text-green-400">{activeCount}</div>
@@ -136,7 +143,7 @@ export default function FlashPromotionsPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-4 mb-6">
+        <div data-tour="promos-filters" className="flex items-center gap-4 mb-6">
           <div className="flex items-center gap-2 text-gray-400">
             <Filter className="w-4 h-4" />
             <span className="text-sm">Filter:</span>
@@ -159,6 +166,7 @@ export default function FlashPromotionsPage() {
         </div>
 
         {/* Promotions Grid */}
+        <div data-tour="promos-grid">
         {promotions === undefined ? (
           <div className="flex items-center justify-center h-64">
             <RefreshCw className="w-8 h-8 animate-spin text-gray-400" />
@@ -193,6 +201,7 @@ export default function FlashPromotionsPage() {
             ))}
           </div>
         )}
+        </div>
       </div>
 
       {/* Promotion Form Modal */}
@@ -278,6 +287,10 @@ export default function FlashPromotionsPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {showTutorial && (
+        <WalkthroughOverlay steps={flashPromotionsSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
       )}
     </div>
   );

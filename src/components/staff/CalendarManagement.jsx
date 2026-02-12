@@ -33,11 +33,14 @@ import {
   X,
   CalendarDays,
   LayoutGrid,
-  AlertCircle
+  AlertCircle,
+  HelpCircle
 } from 'lucide-react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import Modal from '../common/Modal'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { calendarManagementSteps } from '../../config/walkthroughSteps'
 
 // Separate component to handle barber avatar display
 const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
@@ -74,6 +77,7 @@ const CalendarManagement = ({ user }) => {
   const [view, setView] = useState('day') // 'day' or 'month'
   const [selectedBooking, setSelectedBooking] = useState(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(false)
   const [actionError, setActionError] = useState(null)
 
   // Configuration
@@ -625,13 +629,13 @@ const CalendarManagement = ({ user }) => {
   return (
     <div className="h-full flex flex-col space-y-4">
       {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#1A1A1A] p-4 rounded-xl border border-[#2A2A2A]">
+      <div data-tour="cal-toolbar" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#1A1A1A] p-4 rounded-xl border border-[#2A2A2A]">
         <div className="flex items-center space-x-4">
           <h2 className="text-2xl font-black text-white">
             {format(currentDate, view === 'month' ? 'MMMM yyyy' : 'EEEE, MMM d, yyyy')}
           </h2>
-          <div className="flex items-center bg-[#2A2A2A] rounded-lg p-1 border border-[#333]">
-            <button 
+          <div data-tour="cal-nav" className="flex items-center bg-[#2A2A2A] rounded-lg p-1 border border-[#333]">
+            <button
               onClick={handlePrev}
               className="p-1 hover:bg-[#333] text-gray-400 hover:text-white rounded-md transition-colors"
             >
@@ -652,8 +656,12 @@ const CalendarManagement = ({ user }) => {
           </div>
         </div>
 
-        <div className="flex items-center bg-[#2A2A2A] rounded-lg p-1 border border-[#333]">
-           <button 
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+            <HelpCircle className="w-4 h-4" />
+          </button>
+          <div data-tour="cal-view-toggle" className="flex items-center bg-[#2A2A2A] rounded-lg p-1 border border-[#333]">
+           <button
             onClick={() => setView('day')}
             className={`flex items-center space-x-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
               view === 'day' 
@@ -675,6 +683,7 @@ const CalendarManagement = ({ user }) => {
              <CalendarDays className="w-4 h-4" />
              <span>Month View</span>
            </button>
+          </div>
         </div>
       </div>
 
@@ -685,6 +694,7 @@ const CalendarManagement = ({ user }) => {
 
       {/* Details Modal */}
       {showDetailModal && renderBookingDetails()}
+      <WalkthroughOverlay steps={calendarManagementSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   )
 }

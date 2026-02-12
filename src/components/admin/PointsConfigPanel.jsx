@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { Settings, Save, Coins, Wallet, Award, AlertCircle, CheckCircle, History, RefreshCw } from 'lucide-react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { Settings, Save, Coins, Wallet, Award, AlertCircle, CheckCircle, History, RefreshCw, HelpCircle } from 'lucide-react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
@@ -7,6 +7,8 @@ import TierManagementPanel from './TierManagementPanel'
 import LoyaltyAnalyticsDashboard from './LoyaltyAnalyticsDashboard'
 import ManualPointsAdjustment from './ManualPointsAdjustment'
 import PointsExpiryPanel from './PointsExpiryPanel'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { loyaltySteps } from '../../config/walkthroughSteps'
 
 /**
  * Points Configuration Panel
@@ -21,6 +23,8 @@ import PointsExpiryPanel from './PointsExpiryPanel'
  */
 const PointsConfigPanel = () => {
   const { user } = useCurrentUser()
+  const [showTutorial, setShowTutorial] = useState(false)
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState({ type: '', text: '' })
   const [showPreview, setShowPreview] = useState(false)
@@ -198,7 +202,7 @@ const PointsConfigPanel = () => {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div data-tour="loyalty-header" className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/20 flex items-center justify-center">
             <Coins className="w-6 h-6 text-[var(--color-primary)]" />
@@ -207,6 +211,9 @@ const PointsConfigPanel = () => {
             <h2 className="text-xl font-bold text-white">Loyalty Points Configuration</h2>
             <p className="text-sm text-gray-400">Configure point earning rates and bonuses</p>
           </div>
+          <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+            <HelpCircle className="w-4 h-4" />
+          </button>
         </div>
         <button
           onClick={saveAllConfigs}
@@ -231,7 +238,7 @@ const PointsConfigPanel = () => {
       )}
 
       {/* Preview Card */}
-      <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] p-4">
+      <div data-tour="loyalty-preview" className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] p-4">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-white flex items-center gap-2">
             <Award className="w-5 h-5 text-[var(--color-primary)]" />
@@ -258,7 +265,7 @@ const PointsConfigPanel = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div data-tour="loyalty-config" className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Point Earning Rates */}
         <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] p-5">
           <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
@@ -497,6 +504,10 @@ const PointsConfigPanel = () => {
           Reset to Defaults
         </button>
       </div>
+
+      {showTutorial && (
+        <WalkthroughOverlay steps={loyaltySteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
+      )}
     </div>
   )
 }

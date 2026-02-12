@@ -123,6 +123,7 @@ export const createBranch = mutation({
     email: v.string(),
     booking_start_hour: v.optional(v.number()),
     booking_end_hour: v.optional(v.number()),
+    slug: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // Validate inputs first
@@ -168,6 +169,7 @@ export const createBranch = mutation({
         is_active: true,
         booking_start_hour: args.booking_start_hour ?? 10, // Default 10am
         booking_end_hour: args.booking_end_hour ?? 20, // Default 8pm (20:00)
+        slug: args.slug,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });

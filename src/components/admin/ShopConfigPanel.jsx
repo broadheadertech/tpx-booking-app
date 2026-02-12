@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import {
@@ -11,7 +11,10 @@ import {
   Save,
   CheckCircle,
   AlertCircle,
+  HelpCircle,
 } from 'lucide-react'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { shopConfigSteps } from '../../config/walkthroughSteps'
 
 /**
  * ShopConfigPanel - Super Admin shop configuration
@@ -23,6 +26,8 @@ import {
  * - Enable/disable delivery & pickup
  */
 function ShopConfigPanel() {
+  const [showTutorial, setShowTutorial] = useState(false)
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
   const config = useQuery(api.services.shopConfig.getShopConfigAdmin)
   const saveConfig = useMutation(api.services.shopConfig.saveShopConfig)
 
@@ -87,7 +92,7 @@ function ShopConfigPanel() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div data-tour="shopconfig-header" className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-green-500/20 flex items-center justify-center">
             <ShoppingBag className="w-6 h-6 text-green-400" />
@@ -96,10 +101,14 @@ function ShopConfigPanel() {
             <h2 className="text-xl font-bold text-white">Shop Configuration</h2>
             <p className="text-sm text-gray-400">Configure delivery fees and order settings</p>
           </div>
+          <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+            <HelpCircle className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Save Button */}
         <button
+          data-tour="shopconfig-save"
           onClick={handleSave}
           disabled={isSaving}
           className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all ${
@@ -141,7 +150,7 @@ function ShopConfigPanel() {
       )}
 
       {/* Configuration Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div data-tour="shopconfig-cards" className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Delivery Fee */}
         <div className="bg-[#1A1A1A] rounded-2xl p-6 border border-[#2A2A2A]">
           <div className="flex items-center gap-3 mb-4">
@@ -242,7 +251,7 @@ function ShopConfigPanel() {
       </div>
 
       {/* Fulfillment Toggles */}
-      <div className="bg-[#1A1A1A] rounded-2xl p-6 border border-[#2A2A2A]">
+      <div data-tour="shopconfig-fulfillment" className="bg-[#1A1A1A] rounded-2xl p-6 border border-[#2A2A2A]">
         <h3 className="font-semibold text-white mb-4">Fulfillment Options</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Enable Delivery */}
@@ -331,6 +340,8 @@ function ShopConfigPanel() {
           </div>
         </div>
       </div>
+
+      <WalkthroughOverlay steps={shopConfigSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
     </div>
   )
 }

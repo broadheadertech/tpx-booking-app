@@ -278,6 +278,16 @@ export default defineSchema({
       events: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
       notifications: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
       email_marketing: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      // Hub tabs
+      team: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      finance: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      marketing: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      queue: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      accounting: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      branch_wallet: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      wallet_earnings: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      customer_analytics: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
+      post_moderation: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
       // Admin Dashboard Pages (5)
       branches: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
       catalog: v.optional(v.object({ view: v.boolean(), create: v.boolean(), edit: v.boolean(), delete: v.boolean(), approve: v.boolean() })),
@@ -303,6 +313,12 @@ export default defineSchema({
     lastBookingDate: v.optional(v.number()), // Timestamp of last booking/visit
     totalBookings: v.optional(v.number()),   // Total number of bookings
     totalSpent: v.optional(v.number()),      // Total amount spent (in centavos)
+
+    // ============================================================================
+    // WALKTHROUGH TUTORIAL FIELDS
+    // ============================================================================
+    has_seen_tutorial: v.optional(v.boolean()), // false/undefined = show tutorial
+    tutorial_completed_at: v.optional(v.number()), // Timestamp of tutorial completion
 
     createdAt: v.number(),
     updatedAt: v.number(),

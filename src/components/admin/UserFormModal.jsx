@@ -25,48 +25,90 @@ const UserFormModal = ({
   const [validationErrors, setValidationErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const AVAILABLE_PAGES = [
-    // Primary hub tabs
-    { id: 'overview', label: 'Overview' },
-    { id: 'reports', label: 'Reports' },
-    { id: 'bookings', label: 'Bookings' },
-    { id: 'pos', label: 'POS' },
-    { id: 'team', label: 'Team' },
-    { id: 'customers', label: 'Customers' },
-    { id: 'products', label: 'Products' },
-    { id: 'finance', label: 'Finance' },
-    { id: 'marketing', label: 'Marketing' },
-    { id: 'settings', label: 'Settings' },
-    // Sub-tabs / additional pages
-    { id: 'services', label: 'Services' },
-    { id: 'vouchers', label: 'Vouchers' },
-    { id: 'barbers', label: 'Barbers' },
-    { id: 'users', label: 'User Management' },
-    { id: 'events', label: 'Events' },
-    { id: 'calendar', label: 'Calendar' },
-    { id: 'notifications', label: 'Notifications' },
-    { id: 'payroll', label: 'Payroll' },
-    { id: 'email_marketing', label: 'Email Marketing' },
-    { id: 'custom_bookings', label: 'Custom Bookings' },
-    { id: 'walkins', label: 'Walk-ins' },
-    { id: 'cash_advances', label: 'Cash Advances' },
-    { id: 'royalty', label: 'Royalty' },
-    { id: 'accounting', label: 'Accounting' },
-    { id: 'balance_sheet', label: 'Balance Sheet' },
-    { id: 'attendance', label: 'Attendance' },
-    { id: 'order_products', label: 'Order Products' },
-    { id: 'queue', label: 'Queue' },
-    { id: 'payments', label: 'Payments' },
-    { id: 'payment_history', label: 'Payment History' },
-    { id: 'branch_wallet', label: 'Branch Wallet' },
-    { id: 'wallet_earnings', label: 'Wallet Earnings' },
-    { id: 'customer_analytics', label: 'Customer Analytics' },
-    { id: 'post_moderation', label: 'Post Moderation' },
+  // Pages grouped by hub category
+  const PAGE_CATEGORIES = [
+    {
+      label: 'Standalone Pages',
+      items: [
+        { id: 'overview', label: 'Overview' },
+        { id: 'reports', label: 'Reports' },
+        { id: 'pos', label: 'POS' },
+        { id: 'settings', label: 'Settings' },
+      ]
+    },
+    {
+      label: 'Bookings',
+      hubId: 'bookings',
+      items: [
+        { id: 'custom_bookings', label: 'Custom Bookings' },
+        { id: 'calendar', label: 'Calendar' },
+        { id: 'walkins', label: 'Walk-ins' },
+        { id: 'queue', label: 'Queue' },
+      ]
+    },
+    {
+      label: 'Team',
+      hubId: 'team',
+      items: [
+        { id: 'barbers', label: 'Barbers' },
+        { id: 'users', label: 'User Management' },
+        { id: 'attendance', label: 'Attendance' },
+      ]
+    },
+    {
+      label: 'Customers',
+      hubId: 'customers',
+      items: [
+        { id: 'customer_analytics', label: 'Customer Analytics' },
+      ]
+    },
+    {
+      label: 'Products',
+      hubId: 'products',
+      items: [
+        { id: 'services', label: 'Services' },
+        { id: 'vouchers', label: 'Vouchers' },
+        { id: 'order_products', label: 'Order Products' },
+      ]
+    },
+    {
+      label: 'Finance',
+      hubId: 'finance',
+      items: [
+        { id: 'accounting', label: 'P&L / Accounting' },
+        { id: 'balance_sheet', label: 'Balance Sheet' },
+        { id: 'payroll', label: 'Payroll' },
+        { id: 'cash_advances', label: 'Cash Advances' },
+        { id: 'royalty', label: 'Royalty' },
+        { id: 'payments', label: 'Payments' },
+        { id: 'payment_history', label: 'Payment History' },
+        { id: 'branch_wallet', label: 'Branch Wallet' },
+        { id: 'wallet_earnings', label: 'Wallet Earnings' },
+      ]
+    },
+    {
+      label: 'Marketing',
+      hubId: 'marketing',
+      items: [
+        { id: 'email_marketing', label: 'Email Marketing' },
+        { id: 'post_moderation', label: 'Post Moderation' },
+        { id: 'events', label: 'Events' },
+        { id: 'notifications', label: 'Notifications' },
+      ]
+    },
   ]
+
+  // Flat list of all page IDs (derived from categories)
+  const ALL_PAGE_IDS = PAGE_CATEGORIES.flatMap(cat =>
+    cat.hubId ? [cat.hubId, ...cat.items.map(i => i.id)] : cat.items.map(i => i.id)
+  )
+
+  // Legacy flat list for compatibility with ROLE_PAGE_DEFAULTS
+  const AVAILABLE_PAGES = ALL_PAGE_IDS.map(id => ({ id, label: id }))
 
   // Default page access presets per role
   const ROLE_PAGE_DEFAULTS = {
-    branch_admin: AVAILABLE_PAGES.map(p => p.id), // All pages
+    branch_admin: [...ALL_PAGE_IDS], // All pages
     staff: [
       'overview', 'bookings', 'pos', 'customers', 'products',
       'services', 'barbers', 'calendar', 'notifications',
@@ -195,7 +237,7 @@ const UserFormModal = ({
     } else {
       newAccess = [...currentAccess, pageId]
     }
-    
+
     // Simulate event for onInputChange
     onInputChange({
       target: {
@@ -203,6 +245,24 @@ const UserFormModal = ({
         value: newAccess
       }
     })
+  }
+
+  // Toggle hub + all its sub-sections together
+  const handleHubToggle = (hubId, subItems) => {
+    const currentAccess = formData.page_access || []
+    const allIds = [hubId, ...subItems.map(i => i.id)]
+    const allChecked = allIds.every(id => currentAccess.includes(id))
+
+    let newAccess
+    if (allChecked) {
+      // Uncheck hub and all sub-sections
+      newAccess = currentAccess.filter(id => !allIds.includes(id))
+    } else {
+      // Check hub and all sub-sections
+      newAccess = [...new Set([...currentAccess, ...allIds])]
+    }
+
+    onInputChange({ target: { name: 'page_access', value: newAccess } })
   }
 
   const handleInputChange = (e) => {
@@ -491,49 +551,101 @@ const UserFormModal = ({
               {/* Page Access Control - Only for staff/branch_admin */}
               {(formData.role === 'staff' || formData.role === 'branch_admin') && (
                 <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Page Access Permissions
-                    <span className="text-xs text-gray-500 ml-2 block sm:inline">
-                      (Select which pages this user can access)
-                    </span>
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-4 bg-[#1A1A1A] border border-[#444444] rounded-lg">
-                    {AVAILABLE_PAGES.map(page => (
-                      <label key={page.id} className="flex items-center space-x-2 cursor-pointer group">
-                        <div className="relative flex items-center">
-                          <input
-                            type="checkbox"
-                            checked={(formData.page_access || []).includes(page.id)}
-                            onChange={() => handlePageAccessChange(page.id)}
-                            className="peer h-4 w-4 rounded border-gray-500 bg-[#2A2A2A] text-[var(--color-primary)] focus:ring-[var(--color-primary)] focus:ring-offset-[#1A1A1A] transition-all duration-200 ease-in-out cursor-pointer"
-                          />
-                        </div>
-                        <span className="text-sm text-gray-300 group-hover:text-white transition-colors">
-                          {page.label}
-                        </span>
-                      </label>
-                    ))}
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-gray-300">
+                      Page Access Permissions
+                      <span className="text-xs text-gray-500 ml-2">
+                        ({(formData.page_access || []).length} of {ALL_PAGE_IDS.length} pages enabled)
+                      </span>
+                    </label>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => onInputChange({ target: { name: 'page_access', value: [...ALL_PAGE_IDS] } })}
+                        className="text-xs text-[var(--color-primary)] hover:underline"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onInputChange({ target: { name: 'page_access', value: [] } })}
+                        className="text-xs text-gray-400 hover:text-white hover:underline"
+                      >
+                        Deselect All
+                      </button>
+                    </div>
                   </div>
-                  <div className="mt-2 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const allPages = AVAILABLE_PAGES.map(p => p.id)
-                        onInputChange({ target: { name: 'page_access', value: allPages } })
-                      }}
-                      className="text-xs text-[var(--color-primary)] hover:underline mr-3"
-                    >
-                      Select All
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onInputChange({ target: { name: 'page_access', value: [] } })
-                      }}
-                      className="text-xs text-gray-400 hover:text-white hover:underline"
-                    >
-                      Deselect All
-                    </button>
+                  <div className="space-y-3 p-4 bg-[#1A1A1A] border border-[#444444] rounded-lg max-h-[340px] overflow-y-auto">
+                    {PAGE_CATEGORIES.map(cat => {
+                      const currentAccess = formData.page_access || []
+
+                      if (cat.hubId) {
+                        // Hub category — header checkbox + indented sub-items
+                        const allIds = [cat.hubId, ...cat.items.map(i => i.id)]
+                        const checkedCount = allIds.filter(id => currentAccess.includes(id)).length
+                        const allChecked = checkedCount === allIds.length
+                        const someChecked = checkedCount > 0 && !allChecked
+
+                        return (
+                          <div key={cat.hubId} className="border border-[#2A2A2A] rounded-lg overflow-hidden">
+                            {/* Hub header */}
+                            <label className="flex items-center gap-2 px-3 py-2 bg-[#2A2A2A] cursor-pointer group">
+                              <input
+                                type="checkbox"
+                                checked={allChecked}
+                                ref={el => { if (el) el.indeterminate = someChecked }}
+                                onChange={() => handleHubToggle(cat.hubId, cat.items)}
+                                className="h-4 w-4 rounded border-gray-500 bg-[#3A3A3A] text-[var(--color-primary)] focus:ring-[var(--color-primary)] focus:ring-offset-[#2A2A2A] cursor-pointer"
+                              />
+                              <span className="text-sm font-medium text-white group-hover:text-[var(--color-primary)] transition-colors">
+                                {cat.label}
+                              </span>
+                              <span className="text-[10px] text-gray-500 ml-auto">
+                                {checkedCount}/{allIds.length}
+                              </span>
+                            </label>
+                            {/* Sub-items */}
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1.5 px-3 py-2">
+                              {cat.items.map(page => (
+                                <label key={page.id} className="flex items-center gap-2 cursor-pointer group">
+                                  <input
+                                    type="checkbox"
+                                    checked={currentAccess.includes(page.id)}
+                                    onChange={() => handlePageAccessChange(page.id)}
+                                    className="h-3.5 w-3.5 rounded border-gray-500 bg-[#2A2A2A] text-[var(--color-primary)] focus:ring-[var(--color-primary)] focus:ring-offset-[#1A1A1A] cursor-pointer"
+                                  />
+                                  <span className="text-xs text-gray-400 group-hover:text-white transition-colors">
+                                    {page.label}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      }
+
+                      // Standalone category — no hub header
+                      return (
+                        <div key={cat.label}>
+                          <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wider mb-1.5">{cat.label}</p>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-3 gap-y-1.5">
+                            {cat.items.map(page => (
+                              <label key={page.id} className="flex items-center gap-2 cursor-pointer group">
+                                <input
+                                  type="checkbox"
+                                  checked={currentAccess.includes(page.id)}
+                                  onChange={() => handlePageAccessChange(page.id)}
+                                  className="h-3.5 w-3.5 rounded border-gray-500 bg-[#2A2A2A] text-[var(--color-primary)] focus:ring-[var(--color-primary)] focus:ring-offset-[#1A1A1A] cursor-pointer"
+                                />
+                                <span className="text-xs text-gray-400 group-hover:text-white transition-colors">
+                                  {page.label}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )}

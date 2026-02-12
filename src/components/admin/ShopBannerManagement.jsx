@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
@@ -24,7 +24,10 @@ import {
   Megaphone,
   ChevronUp,
   ChevronDown,
+  HelpCircle,
 } from 'lucide-react'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { shopBannerSteps } from '../../config/walkthroughSteps'
 
 const BANNER_TYPES = [
   { value: 'product_promo', label: 'Product Promo', icon: ShoppingBag, description: 'Feature a product from your catalog' },
@@ -56,6 +59,8 @@ function ShopBannerManagement() {
   const [showModal, setShowModal] = useState(false)
   const [editingBanner, setEditingBanner] = useState(null)
   const [showAnalytics, setShowAnalytics] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(false)
+  const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
 
   const banners = useQuery(api.services.shopBanners.getAllBanners) || []
   const analytics = useQuery(api.services.shopBanners.getBannerAnalytics)
@@ -108,13 +113,19 @@ function ShopBannerManagement() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Shop Banners</h2>
-          <p className="text-gray-400 mt-1">Manage promotional carousel banners for the customer shop</p>
+      <div data-tour="banner-header" className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div>
+            <h2 className="text-2xl font-bold text-white">Shop Banners</h2>
+            <p className="text-gray-400 mt-1">Manage promotional carousel banners for the customer shop</p>
+          </div>
+          <button onClick={() => setShowTutorial(true)} className="w-8 h-8 rounded-full bg-[#2A2A2A] border border-[#3A3A3A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all" title="Show tutorial">
+            <HelpCircle className="w-4 h-4" />
+          </button>
         </div>
         <div className="flex gap-3">
           <button
+            data-tour="banner-analytics-btn"
             onClick={() => setShowAnalytics(!showAnalytics)}
             className="flex items-center gap-2 px-4 py-2 bg-[#2A2A2A] hover:bg-[#3A3A3A] rounded-xl text-gray-300 transition-colors"
           >
@@ -122,6 +133,7 @@ function ShopBannerManagement() {
             Analytics
           </button>
           <button
+            data-tour="banner-add-btn"
             onClick={handleAddNew}
             className="flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/80 rounded-xl text-white font-medium transition-colors"
           >
@@ -165,7 +177,7 @@ function ShopBannerManagement() {
       </div>
 
       {/* Banners List */}
-      <div className="space-y-3">
+      <div data-tour="banner-list" className="space-y-3">
         {banners.length === 0 ? (
           <div className="text-center py-16 bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A]">
             <ImageIcon size={48} className="mx-auto text-gray-600 mb-4" />
@@ -304,6 +316,8 @@ function ShopBannerManagement() {
           generateUploadUrl={generateUploadUrl}
         />
       )}
+
+      <WalkthroughOverlay steps={shopBannerSteps} isVisible={showTutorial} onComplete={handleTutorialDone} onSkip={handleTutorialDone} />
     </div>
   )
 }

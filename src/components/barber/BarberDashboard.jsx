@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   Calendar,
@@ -71,6 +71,8 @@ import ClockButton from "../common/ClockButton";
 import { formatTime } from "../../utils/dateUtils";
 import { useBranding } from "../../context/BrandingContext";
 import { useAppModal } from "../../context/AppModalContext";
+import WalkthroughOverlay from "../common/WalkthroughOverlay";
+import { barberSteps } from "../../config/walkthroughSteps";
 
 // Notification Panel Component
 const NotificationPanel = ({ isOpen, onClose, userId }) => {
@@ -349,6 +351,8 @@ const BarberDashboard = () => {
   const { branding } = useBranding();
   const [statsPeriod, setStatsPeriod] = useState("monthly");
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
+  const markTutorialComplete = useMutation(api.services.auth.markTutorialComplete);
 
   // Map URL tab to internal tab names
   const tabMapping = {
@@ -368,6 +372,21 @@ const BarberDashboard = () => {
     const urlTab = Object.keys(tabMapping).find(key => tabMapping[key] === newTab) || "home";
     navigate(`/barber/${urlTab}`, { replace: true });
   };
+
+  // Show walkthrough tutorial for first-time users
+  useEffect(() => {
+    if (user?._id && !user.has_seen_tutorial && activeTab === "overview") {
+      const timer = setTimeout(() => setShowWalkthrough(true), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [user, activeTab]);
+
+  const handleWalkthroughDone = useCallback(async () => {
+    setShowWalkthrough(false);
+    if (user?._id) {
+      try { await markTutorialComplete({ user_id: user._id }); } catch (e) { console.error("[Walkthrough]", e); }
+    }
+  }, [user?._id, markTutorialComplete]);
 
   // Get notification unread count
   const notificationUnreadCount = useQuery(
@@ -3368,6 +3387,7 @@ const BarberDashboard = () => {
               return (
                 <button
                   key={tab.id}
+                  data-tour={`barber-nav-${tab.id}`}
                   onClick={() => navigate(`/barber/${tab.urlPath}`, { replace: true })}
                   className={`flex flex-col items-center justify-center py-2 md:py-3 transition-colors ${
                     isActive ? "text-[var(--color-primary)]" : "text-gray-600 hover:text-gray-400"
@@ -3381,6 +3401,25 @@ const BarberDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Walkthrough Tutorial */}
+      <WalkthroughOverlay
+        steps={barberSteps}
+        isVisible={showWalkthrough}
+        onComplete={handleWalkthroughDone}
+        onSkip={handleWalkthroughDone}
+      />
+
+      {/* Help button to re-trigger tutorial */}
+      {!showWalkthrough && user?.has_seen_tutorial && (
+        <button
+          onClick={() => setShowWalkthrough(true)}
+          className="fixed bottom-20 right-4 z-40 w-10 h-10 rounded-full bg-[#1A1A1A] border border-[#2A2A2A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all shadow-lg shadow-black/40"
+          title="Show tutorial"
+        >
+          <HelpCircle className="w-5 h-5" />
+        </button>
+      )}
     </div>
   );
 };

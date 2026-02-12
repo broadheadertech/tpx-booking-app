@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
 import { UserCheck, Users, Clock } from 'lucide-react'
@@ -20,11 +20,26 @@ const TeamHub = ({ user, barbers = [], onRefresh }) => {
   )
   const pendingCount = pendingRequests?.length || 0
 
-  const sections = [
+  const allSections = [
     { id: 'barbers', label: 'Barbers', icon: UserCheck },
     { id: 'users', label: 'Staff Users', icon: Users },
     { id: 'attendance', label: 'Attendance', icon: Clock, badge: pendingCount },
   ]
+
+  // Filter sections by page_access_v2 permissions
+  // If hub is enabled but no sub-section keys are configured, show all sub-sections
+  const SUB_KEYS = ['barbers', 'users', 'attendance']
+  const hasV2 = user?.page_access_v2 && Object.keys(user.page_access_v2).length > 0
+  const hasSubConfig = hasV2 && SUB_KEYS.some(k => k in user.page_access_v2)
+  const sections = hasV2 && hasSubConfig
+    ? allSections.filter(s => user.page_access_v2[s.id]?.view === true)
+    : allSections
+
+  useEffect(() => {
+    if (sections.length > 0 && !sections.find(s => s.id === activeSection)) {
+      setActiveSection(sections[0].id)
+    }
+  }, [sections, activeSection])
 
   const staffName = user?.nickname || user?.username || user?.full_name || "Staff"
 

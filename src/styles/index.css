@@ -70,16 +70,34 @@ body {
   min-height: 200px;
 }
 
-/* Ensure the page background behind Clerk never shows through as black */
+/* Ensure the page background behind Clerk never shows through as black.
+   Covers ALL Clerk step screens (email, password, factor, code, reset, etc.) */
 .clerk-login-container .cl-signIn-start,
 .clerk-login-container .cl-signIn-password,
 .clerk-login-container .cl-signIn-forgotPassword,
 .clerk-login-container .cl-signIn-alternativeMethods,
 .clerk-login-container .cl-signIn-havingTrouble,
+.clerk-login-container .cl-signIn-factor-one,
+.clerk-login-container .cl-signIn-factor-two,
+.clerk-login-container .cl-signIn-emailCode,
+.clerk-login-container .cl-signIn-phoneCode,
+.clerk-login-container .cl-signIn-chooseFactor,
+.clerk-login-container .cl-signIn-resetPassword,
+.clerk-login-container .cl-signIn-resetPasswordMfa,
+.clerk-login-container .cl-signIn-ssoCallback,
+.clerk-login-container [class*="cl-signIn-"],
 .clerk-signup-container .cl-signUp-start,
 .clerk-signup-container .cl-signUp-continue,
-.clerk-signup-container .cl-signUp-verifyEmailAddress {
+.clerk-signup-container .cl-signUp-verifyEmailAddress,
+.clerk-signup-container .cl-signUp-verifyPhoneNumber,
+.clerk-signup-container [class*="cl-signUp-"] {
   background-color: #1A1A1A !important;
+}
+
+/* Smooth step transitions — prevent flash between Clerk steps */
+.clerk-login-container .cl-main > *,
+.clerk-signup-container .cl-main > * {
+  animation: none !important;
 }
 
 /* Custom scrollbar utilities */

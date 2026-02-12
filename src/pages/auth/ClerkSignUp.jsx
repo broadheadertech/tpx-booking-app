@@ -4,6 +4,7 @@
  * Styled to match existing dark theme.
  */
 
+import { useMemo } from "react";
 import { SignUp } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import { useBranding } from "../../context/BrandingContext";
@@ -27,6 +28,43 @@ function ClerkSignUp() {
     const b = parseInt(hex.slice(5, 7), 16);
     return `rgba(${r},${g},${b},${a})`;
   };
+
+  // Memoize Clerk appearance to prevent re-renders from creating new objects
+  const clerkAppearance = useMemo(() => ({
+    variables: {
+      colorPrimary: branding?.primary_color || "#000000",
+      colorBackground: "#1A1A1A",
+      colorInputBackground: "#2A2A2A",
+      colorInputText: "#FFFFFF",
+      colorText: "#FFFFFF",
+      colorTextSecondary: "#9CA3AF",
+      colorDanger: "#EF4444",
+      borderRadius: "1rem",
+      fontFamily: "inherit",
+    },
+    elements: {
+      rootBox: "mx-auto w-full",
+      card: "bg-[#1A1A1A] shadow-2xl border border-[#2A2A2A]/50 rounded-3xl",
+      headerTitle: "text-white text-xl font-semibold",
+      headerSubtitle: "text-gray-400",
+      socialButtonsBlockButton:
+        "bg-[#2A2A2A] border-[#3A3A3A] text-white hover:bg-[#3A3A3A] rounded-2xl h-12",
+      socialButtonsBlockButtonText: "text-white font-medium",
+      dividerLine: "bg-[#3A3A3A]",
+      dividerText: "text-gray-500",
+      formFieldLabel: "text-gray-300 text-sm",
+      formFieldInput:
+        "bg-[#2A2A2A] border-[#3A3A3A] text-white placeholder-gray-500 rounded-2xl h-14 focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)]",
+      formButtonPrimary:
+        "bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:brightness-110 text-white font-semibold rounded-2xl h-14 shadow-lg hover:shadow-xl transition-all duration-200",
+      footerActionLink:
+        "text-[var(--color-primary)] hover:text-[var(--color-accent)] font-semibold",
+      identityPreviewEditButton: "text-[var(--color-primary)]",
+      formFieldInputShowPasswordButton: "text-gray-400",
+      alert: "bg-red-900/20 border-red-500/50 text-red-400",
+      alertText: "text-red-400",
+    },
+  }), [branding?.primary_color]);
 
   return (
     <div className="min-h-screen bg-[#0A0A0A]">
@@ -65,41 +103,7 @@ function ClerkSignUp() {
           {/* Clerk SignUp Component */}
           <div className="clerk-signup-container">
             <SignUp
-              appearance={{
-                variables: {
-                  colorPrimary: branding?.primary_color || "#000000",
-                  colorBackground: "#1A1A1A",
-                  colorInputBackground: "#2A2A2A",
-                  colorInputText: "#FFFFFF",
-                  colorText: "#FFFFFF",
-                  colorTextSecondary: "#9CA3AF",
-                  colorDanger: "#EF4444",
-                  borderRadius: "1rem",
-                  fontFamily: "inherit",
-                },
-                elements: {
-                  rootBox: "mx-auto w-full",
-                  card: "bg-[#1A1A1A] shadow-2xl border border-[#2A2A2A]/50 rounded-3xl",
-                  headerTitle: "text-white text-xl font-semibold",
-                  headerSubtitle: "text-gray-400",
-                  socialButtonsBlockButton:
-                    "bg-[#2A2A2A] border-[#3A3A3A] text-white hover:bg-[#3A3A3A] rounded-2xl h-12",
-                  socialButtonsBlockButtonText: "text-white font-medium",
-                  dividerLine: "bg-[#3A3A3A]",
-                  dividerText: "text-gray-500",
-                  formFieldLabel: "text-gray-300 text-sm",
-                  formFieldInput:
-                    "bg-[#2A2A2A] border-[#3A3A3A] text-white placeholder-gray-500 rounded-2xl h-14 focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)]",
-                  formButtonPrimary:
-                    "bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] hover:from-[var(--color-accent)] hover:brightness-110 text-white font-semibold rounded-2xl h-14 shadow-lg hover:shadow-xl transition-all duration-200",
-                  footerActionLink:
-                    "text-[var(--color-primary)] hover:text-[var(--color-accent)] font-semibold",
-                  identityPreviewEditButton: "text-[var(--color-primary)]",
-                  formFieldInputShowPasswordButton: "text-gray-400",
-                  alert: "bg-red-900/20 border-red-500/50 text-red-400",
-                  alertText: "text-red-400",
-                },
-              }}
+              appearance={clerkAppearance}
               afterSignUpUrl="/auth/clerk-callback"
               forceRedirectUrl="/auth/clerk-callback"
               routing="path"
