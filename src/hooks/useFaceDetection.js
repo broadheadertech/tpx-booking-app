@@ -230,22 +230,22 @@ export function useFaceDetection() {
     const reasons = []
     const box = detection.box
 
-    // Detection confidence > 0.9
-    if (detection.score < 0.9) reasons.push('Face not clear enough')
+    // Detection confidence > 0.8
+    if (detection.score < 0.8) reasons.push('Face not clear enough')
 
-    // Face covers at least 15% of frame
+    // Face covers at least 5% of frame (lowered for laptops/wide cameras)
     const faceArea = box.width * box.height
     const frameArea = videoWidth * videoHeight
-    if (faceArea / frameArea < 0.15) reasons.push('Move closer to camera')
+    if (faceArea / frameArea < 0.05) reasons.push('Move closer to camera')
 
-    // Face is roughly centered (center within 35% of frame center)
+    // Face is roughly centered (center within 40% of frame center)
     const faceCenterX = box.x + box.width / 2
     const faceCenterY = box.y + box.height / 2
     const frameCenterX = videoWidth / 2
     const frameCenterY = videoHeight / 2
     const offsetX = Math.abs(faceCenterX - frameCenterX) / videoWidth
     const offsetY = Math.abs(faceCenterY - frameCenterY) / videoHeight
-    if (offsetX > 0.35 || offsetY > 0.35) reasons.push('Center your face')
+    if (offsetX > 0.4 || offsetY > 0.4) reasons.push('Center your face')
 
     return { isGood: reasons.length === 0, reasons }
   }, [])
