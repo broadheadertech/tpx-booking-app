@@ -50,6 +50,27 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const [showPayslipModal, setShowPayslipModal] = useState(false);
   const [payslipTarget, setPayslipTarget] = useState("all");
 
+  // Staff payroll state
+  const [showStaffDailyRatesModal, setShowStaffDailyRatesModal] = useState(false);
+  const [showStaffScheduleModal, setShowStaffScheduleModal] = useState(false);
+  const [staffDailyRateEdits, setStaffDailyRateEdits] = useState({});
+  const [savingStaffDailyRates, setSavingStaffDailyRates] = useState(false);
+  const [selectedStaffUser, setSelectedStaffUser] = useState(null);
+  const [staffScheduleEdits, setStaffScheduleEdits] = useState(null);
+  const [savingStaffSchedule, setSavingStaffSchedule] = useState(false);
+  const [showStaffPaymentModal, setShowStaffPaymentModal] = useState(false);
+  const [selectedStaffRecord, setSelectedStaffRecord] = useState(null);
+  const [staffPaymentForm, setStaffPaymentForm] = useState({ payment_method: "cash", payment_reference: "", notes: "" });
+  const [submittingStaffPayment, setSubmittingStaffPayment] = useState(false);
+  const [staffPayRateEdits, setStaffPayRateEdits] = useState({ ot_hourly_rate: "", penalty_hourly_rate: "" });
+  const [showStaffPayslipModal, setShowStaffPayslipModal] = useState(false);
+  const [staffPayslipTarget, setStaffPayslipTarget] = useState("all");
+
+  // Unlock confirmation state
+  const [showUnlockConfirmModal, setShowUnlockConfirmModal] = useState(false);
+  const [unlockAdminPassword, setUnlockAdminPassword] = useState("");
+  const [unlockError, setUnlockError] = useState("");
+
   // Check if user is available
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteTargetPeriod, setDeleteTargetPeriod] = useState(null);
@@ -146,7 +167,12 @@ const PayrollManagement = ({ onRefresh, user }) => {
 
   const payrollSummary = useQuery(
     api.services.payroll.getPayrollSummaryByBranch,
-    user && user.branch_id ? { branch_id: user.branch_id, limit: 10 } : "skip",
+    user && user.branch_id ? { branch_id: user.branch_id, limit: 10, payroll_target: "barber" } : "skip",
+  );
+
+  const staffPayrollSummary = useQuery(
+    api.services.payroll.getPayrollSummaryByBranch,
+    user && user.branch_id ? { branch_id: user.branch_id, limit: 10, payroll_target: "staff" } : "skip",
   );
 
   const barbers = useQuery(
@@ -261,6 +287,38 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const autoPopulateZeroDayClaimsMutation = useMutation(
     api.services.payroll.autoPopulateZeroDayClaims,
   );
+
+  // Staff payroll queries & mutations
+  const staffUsers = useQuery(
+    api.services.auth.getUsersByRoleAndBranch,
+    user && user.branch_id ? { role: "staff", branch_id: user.branch_id } : "skip",
+  );
+  const staffDailyRates = useQuery(
+    api.services.payroll.getStaffDailyRatesByBranch,
+    user && user.branch_id ? { branch_id: user.branch_id } : "skip",
+  );
+  const staffPayrollRecords = useQuery(
+    api.services.payroll.getStaffPayrollRecordsByPeriod,
+    selectedPeriod ? { payroll_period_id: selectedPeriod._id } : "skip",
+  );
+  const setStaffDailyRateMutation = useMutation(api.services.payroll.setStaffDailyRate);
+  const calculateStaffPayroll = useMutation(api.services.payroll.calculateStaffPayrollForPeriod);
+  const markStaffAsPaid = useMutation(api.services.payroll.markStaffPayrollRecordAsPaid);
+  const updateStaffScheduleMutation = useMutation(api.services.payroll.updateStaffSchedule);
+  const updateStaffPayRatesMutation = useMutation(api.services.payroll.updateStaffPayRates);
+
+  // Staff daily rate map
+  const staffDailyRateMap = useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(staffDailyRates)) {
+      for (const rate of staffDailyRates) {
+        if (rate.is_active) {
+          map.set(rate.user_id, rate);
+        }
+      }
+    }
+    return map;
+  }, [staffDailyRates]);
 
   // Zero-day claims query
   const zeroDayClaims = useQuery(
@@ -464,6 +522,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
         period_end: endTimestamp,
         period_type: payrollSettingsData?.payout_frequency || "weekly",
         created_by: user._id,
+        payroll_target: activeView === "staff" ? "staff" : "barber",
       });
 
       setShowPeriodModal(false);
@@ -1641,6 +1700,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
   // Format period type
   const formatPeriodType = (type) => {
     switch (type) {
+      case "daily":
+        return "Daily";
       case "weekly":
         return "Weekly";
       case "bi_weekly":
@@ -1862,6 +1923,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
             </div>
             <div className="p-6">
               <div className="space-y-4">
+                {activeView !== "staff" && (
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Default Commission Rate (%)
@@ -1882,6 +1944,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                     className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                   />
                 </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -1897,6 +1960,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                     }
                     className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
                   >
+                    <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
                     <option value="bi_weekly">Bi-Weekly</option>
                     <option value="monthly">Monthly</option>
@@ -1948,6 +2012,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   />
                 </div>
 
+                {activeView !== "staff" && (
                 <div className="flex flex-col space-y-3 pt-2">
                   {/* Booking Fees */}
                   <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-[#1A1A1A] border border-[#2A2A2A]">
@@ -2060,9 +2125,10 @@ const PayrollManagement = ({ onRefresh, user }) => {
                     </div>
                   </div>
                 </div>
+                )}
               </div>
 
-              {/* Zero-Service Day Pay */}
+              {activeView !== "staff" && (
               <div>
                 <h4 className="text-sm font-medium text-gray-300 mb-3">
                   Zero-Service Day Pay
@@ -2105,6 +2171,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   ))}
                 </div>
               </div>
+              )}
 
               <div className="flex space-x-3 mt-6">
                 <button
@@ -2869,6 +2936,875 @@ const PayrollManagement = ({ onRefresh, user }) => {
     );
   };
 
+  // ============================================================================
+  // STAFF PAYROLL RENDER FUNCTIONS
+  // ============================================================================
+
+  const DEFAULT_SCHEDULE = {
+    monday: { available: true, start: "09:00", end: "18:00" },
+    tuesday: { available: true, start: "09:00", end: "18:00" },
+    wednesday: { available: true, start: "09:00", end: "18:00" },
+    thursday: { available: true, start: "09:00", end: "18:00" },
+    friday: { available: true, start: "09:00", end: "18:00" },
+    saturday: { available: false, start: "09:00", end: "18:00" },
+    sunday: { available: false, start: "09:00", end: "18:00" },
+  };
+
+  const handleCalculateStaffPayroll = async () => {
+    if (!selectedPeriod) {
+      setError("Please select a payroll period first (from Overview tab).");
+      return;
+    }
+    try {
+      setLoading(true);
+      await calculateStaffPayroll({
+        payroll_period_id: selectedPeriod._id,
+        calculated_by: user._id,
+      });
+    } catch (err) {
+      console.error(err);
+      setError("Failed to calculate staff payroll: " + (err.message || err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMarkStaffAsPaid = async () => {
+    if (!selectedStaffRecord) return;
+    try {
+      setSubmittingStaffPayment(true);
+      await markStaffAsPaid({
+        record_id: selectedStaffRecord._id,
+        payment_method: staffPaymentForm.payment_method,
+        payment_reference: staffPaymentForm.payment_reference || undefined,
+        paid_by: user._id,
+        notes: staffPaymentForm.notes || undefined,
+      });
+      setShowStaffPaymentModal(false);
+      setSelectedStaffRecord(null);
+      setStaffPaymentForm({ payment_method: "cash", payment_reference: "", notes: "" });
+    } catch (err) {
+      console.error(err);
+      setError("Failed to mark staff payment: " + (err.message || err));
+    } finally {
+      setSubmittingStaffPayment(false);
+    }
+  };
+
+  const generateStaffPayslipCard = (record) => {
+    const format = (amt) =>
+      new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", minimumFractionDigits: 0 }).format(amt || 0);
+    const dateRange = selectedPeriod
+      ? `${formatDate(selectedPeriod.period_start)} – ${formatDate(selectedPeriod.period_end)}`
+      : "";
+    const attn = record.attendance_summary;
+    const otPay = attn?.total_ot_pay || 0;
+    const penalty = attn?.total_penalty || 0;
+    const latePenalty = attn?.total_late_penalty || 0;
+    const utPenalty = attn?.total_ut_penalty || 0;
+    const cashAdv = record.cash_advance_deduction || 0;
+
+    const basePay = record.daily_rate * record.days_worked;
+
+    return `
+      <div class="card" style="background:#fff; border:2px solid var(--color-primary); color: #000; max-width: 600px; margin: 0 auto;">
+        <div class="header">
+          <div>
+            <div class="title" style="font-size: 16px; font-weight: 800; color: #000;">${record.staff_name} - PERIOD SUMMARY</div>
+            <div style="color: #555; font-size: 12px;">Payroll Period: ${dateRange}</div>
+          </div>
+          <div style="font-size: 20px; font-weight: 800; color: #000;">${format(record.net_pay)}</div>
+        </div>
+        <hr style="border-top: 2px solid #000; margin: 10px 0;"/>
+        <div style="font-size: 14px;">
+          <div class="row"><span style="color: #333;">Daily Rate</span><span style="font-weight: 600;">${format(record.daily_rate)}</span></div>
+          <div class="row"><span style="color: #333;">Days Worked</span><span style="font-weight: 600;">${record.days_worked}</span></div>
+          <div class="row"><span style="color: #333;">Base Pay (${format(record.daily_rate)} x ${record.days_worked} days)</span><span style="font-weight: 600;">${format(basePay)}</span></div>
+          ${otPay > 0 ? `<div class="row"><span style="color: #333;">Overtime Pay${attn?.total_ot_minutes ? ` (${attn.total_ot_minutes}min)` : ''}</span><span style="font-weight: 600; color: #2e7d32;">+${format(otPay)}</span></div>` : ''}
+          <div class="row"><span style="color: #333;">Base Daily Salary</span><span style="font-weight: 600;">${format(record.daily_pay)}</span></div>
+          ${latePenalty > 0 ? `<div class="row"><span style="color: #333;">Late Penalty${attn ? ` (${attn.total_late_minutes}min)` : ''}</span><span style="color: #d32f2f;">-${format(latePenalty)}</span></div>` : ''}
+          ${utPenalty > 0 ? `<div class="row"><span style="color: #333;">Undertime Penalty${attn ? ` (${attn.total_undertime_minutes}min)` : ''}</span><span style="color: #d32f2f;">-${format(utPenalty)}</span></div>` : ''}
+          ${cashAdv > 0 ? `<div class="row"><span style="color: #333;">Cash Advance Repayment</span><span style="color: #d32f2f;">-${format(cashAdv)}</span></div>` : ''}
+          ${(record.tax_deduction || 0) > 0 ? `<div class="row"><span style="color: #333;">Tax Deduction</span><span style="color: #d32f2f;">-${format(record.tax_deduction)}</span></div>` : ''}
+          ${(record.other_deductions || 0) > 0 ? `<div class="row"><span style="color: #333;">Other Deductions</span><span style="color: #d32f2f;">-${format(record.other_deductions)}</span></div>` : ''}
+          <hr style="border-top: 2px solid #000; margin: 10px 0;"/>
+          <div class="row" style="font-weight:800; font-size:16px; margin-top: 4px;"><span>GRAND TOTAL</span><span>${format(record.net_pay)}</span></div>
+        </div>
+        ${attn && attn.daily_details && attn.daily_details.length > 0 ? `
+          <hr style="border-top: 1px solid #ccc; margin: 10px 0;"/>
+          <div style="font-size: 11px; color: #555;">
+            <div style="font-weight: 600; margin-bottom: 4px;">Attendance Details</div>
+            ${attn.daily_details.map(d => `<div class="row" style="margin: 2px 0;"><span>${d.date} (${d.scheduled_start}–${d.scheduled_end})</span><span>In: ${d.actual_clock_in} Out: ${d.actual_clock_out}${d.late_minutes > 0 ? ` | Late: ${d.late_minutes}m` : ''}${d.overtime_minutes > 0 ? ` | OT: ${d.overtime_minutes}m` : ''}${d.undertime_minutes > 0 ? ` | UT: ${d.undertime_minutes}m` : ''}</span></div>`).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  };
+
+  const handleGenerateStaffPayslip = () => {
+    const records = Array.isArray(staffPayrollRecords) ? staffPayrollRecords : [];
+    let targetRecords = [];
+    if (staffPayslipTarget === "all") {
+      targetRecords = records;
+    } else {
+      targetRecords = records.filter(r => r.user_id === staffPayslipTarget);
+    }
+    if (targetRecords.length === 0) {
+      setShowStaffPayslipModal(false);
+      return;
+    }
+    const sections = targetRecords.map(r => generateStaffPayslipCard(r)).join("\n<div style='page-break-after: always; height: 40px;'></div>\n");
+    const title = `Staff Payslips – ${selectedPeriod ? formatDate(selectedPeriod.period_start) : ''}`;
+    const customStyles = `
+      ${printStyles}
+      body { background: #fff; color: #000; }
+      .card { background: #fff !important; color: #000 !important; border-color: var(--color-primary) !important; box-shadow: none !important; }
+      .muted { color: #555 !important; }
+      .accent { color: #000 !important; }
+      hr { border-color: #000 !important; }
+    `;
+    const html = `<!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>${title}</title>
+        <style>${customStyles}</style>
+      </head>
+      <body>
+        <div style="padding: 40px;">
+          ${sections}
+        </div>
+      </body>
+    </html>`;
+    printHtml(html);
+    setShowStaffPayslipModal(false);
+  };
+
+  const renderStaffPayslipModal = () => {
+    if (!showStaffPayslipModal) return null;
+    const records = Array.isArray(staffPayrollRecords) ? staffPayrollRecords : [];
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowStaffPayslipModal(false)} />
+          <div className="relative w-full max-w-md rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
+              <h2 className="text-xl font-bold text-white">Print Staff Payslip</h2>
+              <button onClick={() => setShowStaffPayslipModal(false)} className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center">
+                <X className="w-4 h-4 text-gray-400 hover:text-[var(--color-primary)]" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Select Target</label>
+                <select
+                  value={staffPayslipTarget}
+                  onChange={(e) => setStaffPayslipTarget(e.target.value)}
+                  className="w-full bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                >
+                  <option value="all">All Staff</option>
+                  {records.map(r => (
+                    <option key={r.user_id} value={r.user_id}>{r.staff_name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex space-x-3 mt-6">
+                <button onClick={() => setShowStaffPayslipModal(false)} className="flex-1 px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A]">Cancel</button>
+                <button onClick={handleGenerateStaffPayslip} className="flex-1 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90">Print</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    );
+  };
+
+  const renderStaffPayroll = () => {
+    const staffArray = Array.isArray(staffUsers) ? staffUsers.filter(u => u.is_active) : [];
+    const records = Array.isArray(staffPayrollRecords) ? staffPayrollRecords : [];
+    const periods = Array.isArray(staffPayrollSummary) ? staffPayrollSummary : [];
+
+    return (
+      <div className="space-y-6">
+        {/* Staff Members Overview */}
+        <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Users className="w-5 h-5 text-[var(--color-primary)]" />
+              Staff Members ({staffArray.length})
+            </h3>
+            <button
+              onClick={() => setShowStaffDailyRatesModal(true)}
+              className="px-3 py-1.5 bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-lg text-sm hover:bg-[var(--color-primary)]/30"
+            >
+              <DollarSign className="w-4 h-4 inline mr-1" />
+              Daily Rates
+            </button>
+          </div>
+
+          {staffArray.length === 0 ? (
+            <p className="text-gray-400 text-sm">No active staff members in this branch.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {staffArray.map((s) => {
+                const rateEntry = staffDailyRateMap.get(s._id);
+                const hasSchedule = !!s.schedule;
+                return (
+                  <div key={s._id} className="bg-[#0A0A0A] rounded-lg border border-[#2A2A2A]/30 p-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-medium text-sm">{s.username}</p>
+                        <p className="text-gray-500 text-xs">{s.email}</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedStaffUser(s);
+                          setStaffScheduleEdits(s.schedule || DEFAULT_SCHEDULE);
+                          setStaffPayRateEdits({
+                            ot_hourly_rate: s.ot_hourly_rate ?? "",
+                            penalty_hourly_rate: s.penalty_hourly_rate ?? "",
+                          });
+                          setShowStaffScheduleModal(true);
+                        }}
+                        className="text-gray-400 hover:text-[var(--color-primary)] p-1"
+                        title="Edit Schedule & Rates"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="mt-2 flex items-center gap-3 text-xs">
+                      <span className="text-gray-400">
+                        Daily: {rateEntry ? formatCurrency(rateEntry.daily_rate) : <span className="text-yellow-500">Not set</span>}
+                      </span>
+                      <span className={`${hasSchedule ? "text-green-400" : "text-yellow-500"}`}>
+                        {hasSchedule ? "Schedule set" : "No schedule"}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Payroll Periods Table */}
+        <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-white">
+                Payroll Periods
+              </h3>
+              <p className="text-sm text-gray-300">
+                Select a period to view staff payroll details
+              </p>
+            </div>
+            <button
+              onClick={handleOpenPeriodModal}
+              disabled={loading}
+              className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Create New Period</span>
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-[#2A2A2A]/50">
+                  <th className="text-left py-3 px-4 font-medium text-gray-300">Period</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-300">Type</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-300">Status</th>
+                  <th className="text-center py-3 px-4 font-medium text-gray-300">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {periods.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-8 text-center text-gray-400 text-sm">
+                      No payroll periods yet. Create one to get started.
+                    </td>
+                  </tr>
+                ) : (
+                  periods.map((period) => (
+                    <tr
+                      key={period._id}
+                      className={`border-b border-[#2A2A2A]/20 hover:bg-[#1A1A1A]/30 transition-colors ${selectedPeriod?._id === period._id ? "bg-[var(--color-primary)]/10 border-l-2 border-l-[var(--color-primary)]" : ""}`}
+                    >
+                      <td className="py-3 px-4">
+                        <div>
+                          <p className="text-white font-medium">
+                            {formatDate(period.period_start)} - {formatDate(period.period_end)}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            Created {formatDate(period.createdAt)}
+                          </p>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className="text-sm text-gray-300">
+                          {formatPeriodType(period.period_type)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${period.status === "paid"
+                              ? "bg-green-500/20 text-green-400"
+                              : period.status === "calculated"
+                                ? "bg-yellow-500/20 text-yellow-400"
+                                : "bg-gray-500/20 text-gray-400"
+                              }`}
+                          >
+                            {period.status === "paid"
+                              ? "Paid"
+                              : period.status === "calculated"
+                                ? "Calculated"
+                                : "Draft"}
+                          </span>
+                          {period.is_locked && (
+                            <Lock className="h-3.5 w-3.5 text-yellow-400" title="Locked" />
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => setSelectedPeriod(period)}
+                            className={`px-3 py-1 rounded text-xs transition-colors ${selectedPeriod?._id === period._id
+                              ? "bg-[var(--color-primary)] text-white"
+                              : "bg-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/30"
+                            }`}
+                          >
+                            {selectedPeriod?._id === period._id ? "Selected" : "View Details"}
+                          </button>
+                          {!(period.paid_records > 0) && !period.is_locked &&
+                            (user?.role === "branch_admin" ||
+                              user?.role === "super_admin") && (
+                              <button
+                                onClick={() => {
+                                  setDeleteTargetPeriod(period);
+                                  setDeleteConfirmText("");
+                                  setShowDeleteModal(true);
+                                }}
+                                className="px-3 py-1 bg-red-600/90 text-white rounded text-xs hover:bg-red-600 transition-colors"
+                              >
+                                Delete
+                              </button>
+                            )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Staff Period Details */}
+        {selectedPeriod && (
+          <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Calculator className="w-5 h-5 text-[var(--color-primary)]" />
+                Staff Payroll Records
+                <span className="text-xs text-gray-400 font-normal ml-2">
+                  Period: {formatDate(selectedPeriod.period_start)} – {formatDate(selectedPeriod.period_end)}
+                </span>
+                {selectedPeriod.is_locked && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-500/20 text-yellow-400 text-xs font-medium rounded-full">
+                    <Lock className="h-3 w-3" />
+                    Locked
+                  </span>
+                )}
+              </h3>
+              <div className="flex items-center gap-2">
+                {/* Unlock Button - admin only, resets all to unpaid */}
+                {selectedPeriod.is_locked && (user?.role === "branch_admin" || user?.role === "super_admin") && (
+                  <button
+                    onClick={() => setShowUnlockConfirmModal(true)}
+                    disabled={loading}
+                    className="px-3 py-1.5 bg-yellow-600 text-white rounded-lg text-sm hover:bg-yellow-700 disabled:opacity-50 flex items-center gap-1"
+                  >
+                    <Unlock className="w-4 h-4" />
+                    Unlock & Reset
+                  </button>
+                )}
+                {/* Lock Button - only when calculated and not locked */}
+                {selectedPeriod.status === "calculated" && !selectedPeriod.is_locked && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        setLoading(true);
+                        await lockPeriod({
+                          payroll_period_id: selectedPeriod._id,
+                          locked_by: user._id,
+                        });
+                      } catch (err) {
+                        setError(err.message || "Failed to lock period");
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    disabled={loading}
+                    className="px-3 py-1.5 bg-[#444444]/60 border border-[#2A2A2A] text-gray-200 rounded-lg text-sm hover:bg-[#2A2A2A] disabled:opacity-50 flex items-center gap-1"
+                  >
+                    <Lock className="w-4 h-4" />
+                    Lock Period
+                  </button>
+                )}
+                {records.length > 0 && (
+                  <button
+                    onClick={() => setShowStaffPayslipModal(true)}
+                    className="px-3 py-1.5 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg text-sm hover:bg-[#2A2A2A] flex items-center gap-1"
+                  >
+                    <Printer className="w-4 h-4" />
+                    Print Payslips
+                  </button>
+                )}
+                <button
+                  onClick={handleCalculateStaffPayroll}
+                  disabled={loading || selectedPeriod.is_locked}
+                  className="px-3 py-1.5 bg-[var(--color-primary)] text-white rounded-lg text-sm hover:bg-[var(--color-primary)]/90 disabled:opacity-50 flex items-center gap-1"
+                >
+                  <Calculator className="w-4 h-4" />
+                  {loading ? "Calculating..." : "Calculate Staff Payroll"}
+                </button>
+              </div>
+            </div>
+
+            {records.length === 0 ? (
+              <p className="text-gray-400 text-sm">No staff payroll records yet. Click "Calculate Staff Payroll" to generate.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-gray-400 border-b border-[#2A2A2A]/50">
+                      <th className="text-left py-2 px-2">Staff</th>
+                      <th className="text-right py-2 px-2">Daily Rate</th>
+                      <th className="text-right py-2 px-2">Days</th>
+                      <th className="text-right py-2 px-2">Daily Pay</th>
+                      <th className="text-right py-2 px-2">OT Pay</th>
+                      <th className="text-right py-2 px-2">Penalties</th>
+                      <th className="text-right py-2 px-2">Deductions</th>
+                      <th className="text-right py-2 px-2">Net Pay</th>
+                      <th className="text-center py-2 px-2">Status</th>
+                      <th className="text-center py-2 px-2">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {records.map((r) => {
+                      const attn = r.attendance_summary;
+                      return (
+                        <tr key={r._id} className="border-b border-[#2A2A2A]/20 hover:bg-[#2A2A2A]/20">
+                          <td className="py-2 px-2 text-white">{r.staff_name}</td>
+                          <td className="py-2 px-2 text-right text-gray-300">{formatCurrency(r.daily_rate)}</td>
+                          <td className="py-2 px-2 text-right text-gray-300">{r.days_worked}</td>
+                          <td className="py-2 px-2 text-right text-gray-300">{formatCurrency(r.daily_pay)}</td>
+                          <td className="py-2 px-2 text-right text-green-400">
+                            {attn ? formatCurrency(attn.total_ot_pay) : "—"}
+                          </td>
+                          <td className="py-2 px-2 text-right text-red-400">
+                            {attn ? formatCurrency(attn.total_penalty) : "—"}
+                          </td>
+                          <td className="py-2 px-2 text-right text-red-400">
+                            {r.total_deductions > 0 ? formatCurrency(r.total_deductions) : "—"}
+                          </td>
+                          <td className="py-2 px-2 text-right text-white font-semibold">{formatCurrency(r.net_pay)}</td>
+                          <td className="py-2 px-2 text-center">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              r.status === "paid"
+                                ? "bg-green-500/20 text-green-400"
+                                : "bg-yellow-500/20 text-yellow-400"
+                            }`}>
+                              {r.status === "paid" ? "Paid" : "Calculated"}
+                            </span>
+                          </td>
+                          <td className="py-2 px-2 text-center">
+                            {r.status === "calculated" && (
+                              <button
+                                onClick={() => {
+                                  setSelectedStaffRecord(r);
+                                  setShowStaffPaymentModal(true);
+                                }}
+                                className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs hover:bg-green-500/30"
+                              >
+                                Pay
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t border-[#2A2A2A]">
+                      <td colSpan={7} className="py-2 px-2 text-right text-gray-400 font-medium">Total Net Pay:</td>
+                      <td className="py-2 px-2 text-right text-white font-bold">
+                        {formatCurrency(records.reduce((sum, r) => sum + r.net_pay, 0))}
+                      </td>
+                      <td colSpan={2}></td>
+                    </tr>
+                  </tfoot>
+                </table>
+
+                {/* Attendance Details Expandable */}
+                {records.some(r => r.attendance_summary?.daily_details?.length > 0) && (
+                  <div className="mt-4 space-y-2">
+                    <h4 className="text-sm font-medium text-gray-400">Attendance Details</h4>
+                    {records.filter(r => r.attendance_summary?.daily_details?.length > 0).map((r) => (
+                      <details key={r._id} className="bg-[#0A0A0A] rounded-lg border border-[#2A2A2A]/30">
+                        <summary className="px-3 py-2 text-sm text-white cursor-pointer hover:bg-[#2A2A2A]/20">
+                          {r.staff_name} — {r.attendance_summary.daily_details.length} day(s)
+                          {r.attendance_summary.days_late > 0 && <span className="text-yellow-400 ml-2">Late: {r.attendance_summary.days_late}d</span>}
+                          {r.attendance_summary.days_overtime > 0 && <span className="text-green-400 ml-2">OT: {r.attendance_summary.days_overtime}d</span>}
+                          {r.attendance_summary.days_undertime > 0 && <span className="text-red-400 ml-2">UT: {r.attendance_summary.days_undertime}d</span>}
+                        </summary>
+                        <div className="px-3 pb-3">
+                          <table className="w-full text-xs mt-1">
+                            <thead>
+                              <tr className="text-gray-500">
+                                <th className="text-left py-1">Date</th>
+                                <th className="text-left py-1">Scheduled</th>
+                                <th className="text-left py-1">Actual</th>
+                                <th className="text-right py-1">Late</th>
+                                <th className="text-right py-1">UT</th>
+                                <th className="text-right py-1">OT</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {r.attendance_summary.daily_details.map((d, idx) => (
+                                <tr key={idx} className="border-t border-[#2A2A2A]/20">
+                                  <td className="py-1 text-gray-300">{d.date}</td>
+                                  <td className="py-1 text-gray-400">{d.scheduled_start}–{d.scheduled_end}</td>
+                                  <td className="py-1 text-gray-300">{d.actual_clock_in}–{d.actual_clock_out}</td>
+                                  <td className="py-1 text-right text-yellow-400">{d.late_minutes > 0 ? formatMinutesAsHoursMinutes(d.late_minutes) : "—"}</td>
+                                  <td className="py-1 text-right text-red-400">{d.undertime_minutes > 0 ? formatMinutesAsHoursMinutes(d.undertime_minutes) : "—"}</td>
+                                  <td className="py-1 text-right text-green-400">{d.overtime_minutes > 0 ? formatMinutesAsHoursMinutes(d.overtime_minutes) : "—"}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Staff Daily Rates Modal
+  const renderStaffDailyRatesModal = () => {
+    if (!showStaffDailyRatesModal) return null;
+    const staffArray = Array.isArray(staffUsers) ? staffUsers.filter(u => u.is_active) : [];
+
+    const handleSaveAll = async () => {
+      if (!user?.branch_id) return;
+      const entries = Object.entries(staffDailyRateEdits)
+        .map(([userId, val]) => ({ userId, rate: parseFloat(String(val)) }))
+        .filter((e) => !isNaN(e.rate))
+        .filter((e) => {
+          const existing = staffDailyRateMap.get(e.userId);
+          return !existing || Number(existing.daily_rate) !== Number(e.rate);
+        });
+
+      if (entries.length === 0) return;
+      setSavingStaffDailyRates(true);
+      try {
+        for (const e of entries) {
+          await setStaffDailyRateMutation({
+            user_id: e.userId,
+            branch_id: user.branch_id,
+            daily_rate: e.rate,
+            created_by: user._id,
+          });
+        }
+        setStaffDailyRateEdits({});
+      } catch (err) {
+        console.error(err);
+        setError("Failed to save some staff daily rates");
+      } finally {
+        setSavingStaffDailyRates(false);
+      }
+    };
+
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowStaffDailyRatesModal(false)} />
+          <div className="relative w-full max-w-2xl rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
+              <h2 className="text-xl font-bold text-white">Staff Daily Rates</h2>
+              <button onClick={() => setShowStaffDailyRatesModal(false)} className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center">
+                <X className="w-4 h-4 text-gray-400 hover:text-[var(--color-primary)]" />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="max-h-[60vh] overflow-y-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-gray-400 border-b border-[#2A2A2A]/50">
+                      <th className="text-left py-2 px-2">Staff</th>
+                      <th className="text-right py-2 px-2">Current Daily Rate</th>
+                      <th className="text-right py-2 px-2">New Daily Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {staffArray.map((s) => {
+                      const existing = staffDailyRateMap.get(s._id);
+                      const value = staffDailyRateEdits[s._id] ?? existing?.daily_rate ?? "";
+                      return (
+                        <tr key={s._id} className="border-b border-[#2A2A2A]/20">
+                          <td className="py-2 px-2 text-white">{s.username}</td>
+                          <td className="py-2 px-2 text-right text-gray-300">{existing ? formatCurrency(existing.daily_rate) : "—"}</td>
+                          <td className="py-2 px-2 text-right">
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={value}
+                              onChange={(e) => setStaffDailyRateEdits((prev) => ({ ...prev, [s._id]: e.target.value }))}
+                              className="w-28 bg-[#1A1A1A] border border-[#2A2A2A] text-white rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-right"
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <button onClick={() => setShowStaffDailyRatesModal(false)} className="px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] text-sm">Close</button>
+                <button
+                  onClick={handleSaveAll}
+                  disabled={savingStaffDailyRates || Object.keys(staffDailyRateEdits).length === 0}
+                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 disabled:opacity-50 text-sm"
+                >
+                  {savingStaffDailyRates ? "Saving…" : "Save All Changes"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    );
+  };
+
+  // Staff Schedule & Pay Rates Modal
+  const renderStaffScheduleModal = () => {
+    if (!showStaffScheduleModal || !selectedStaffUser || !staffScheduleEdits) return null;
+
+    const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+    const DAY_LABELS = { monday: "Mon", tuesday: "Tue", wednesday: "Wed", thursday: "Thu", friday: "Fri", saturday: "Sat", sunday: "Sun" };
+
+    const handleSaveSchedule = async () => {
+      setSavingStaffSchedule(true);
+      try {
+        await updateStaffScheduleMutation({
+          user_id: selectedStaffUser._id,
+          schedule: staffScheduleEdits,
+        });
+        const otRate = parseFloat(staffPayRateEdits.ot_hourly_rate);
+        const penaltyRate = parseFloat(staffPayRateEdits.penalty_hourly_rate);
+        if (!isNaN(otRate) || !isNaN(penaltyRate)) {
+          await updateStaffPayRatesMutation({
+            user_id: selectedStaffUser._id,
+            ot_hourly_rate: isNaN(otRate) ? 0 : otRate,
+            penalty_hourly_rate: isNaN(penaltyRate) ? 0 : penaltyRate,
+          });
+        }
+        setShowStaffScheduleModal(false);
+        setSelectedStaffUser(null);
+      } catch (err) {
+        console.error(err);
+        setError("Failed to save staff schedule: " + (err.message || err));
+      } finally {
+        setSavingStaffSchedule(false);
+      }
+    };
+
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowStaffScheduleModal(false)} />
+          <div className="relative w-full max-w-lg rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
+              <h2 className="text-xl font-bold text-white">{selectedStaffUser.username} — Schedule & Rates</h2>
+              <button onClick={() => setShowStaffScheduleModal(false)} className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center">
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              {/* Weekly Schedule */}
+              <h3 className="text-sm font-semibold text-gray-400 mb-3">Weekly Schedule</h3>
+              <div className="space-y-2 mb-6">
+                {DAYS.map((day) => {
+                  const dayData = staffScheduleEdits[day];
+                  return (
+                    <div key={day} className="flex items-center gap-3">
+                      <label className="flex items-center gap-2 w-16">
+                        <input
+                          type="checkbox"
+                          checked={dayData.available}
+                          onChange={(e) => setStaffScheduleEdits((prev) => ({
+                            ...prev,
+                            [day]: { ...prev[day], available: e.target.checked },
+                          }))}
+                          className="accent-[var(--color-primary)]"
+                        />
+                        <span className="text-white text-sm">{DAY_LABELS[day]}</span>
+                      </label>
+                      <input
+                        type="time"
+                        value={dayData.start}
+                        disabled={!dayData.available}
+                        onChange={(e) => setStaffScheduleEdits((prev) => ({
+                          ...prev,
+                          [day]: { ...prev[day], start: e.target.value },
+                        }))}
+                        className="bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded px-2 py-1 text-sm disabled:opacity-30"
+                      />
+                      <span className="text-gray-500">–</span>
+                      <input
+                        type="time"
+                        value={dayData.end}
+                        disabled={!dayData.available}
+                        onChange={(e) => setStaffScheduleEdits((prev) => ({
+                          ...prev,
+                          [day]: { ...prev[day], end: e.target.value },
+                        }))}
+                        className="bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded px-2 py-1 text-sm disabled:opacity-30"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* OT/Penalty Rates */}
+              <h3 className="text-sm font-semibold text-gray-400 mb-3">Hourly Rates</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-gray-500">OT Hourly Rate</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={staffPayRateEdits.ot_hourly_rate}
+                    onChange={(e) => setStaffPayRateEdits((prev) => ({ ...prev, ot_hourly_rate: e.target.value }))}
+                    className="w-full bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm mt-1"
+                    placeholder="e.g. 50"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500">Late/UT Penalty Rate</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={staffPayRateEdits.penalty_hourly_rate}
+                    onChange={(e) => setStaffPayRateEdits((prev) => ({ ...prev, penalty_hourly_rate: e.target.value }))}
+                    className="w-full bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm mt-1"
+                    placeholder="e.g. 30"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 p-6 border-t border-[#2A2A2A]/50">
+              <button onClick={() => setShowStaffScheduleModal(false)} className="px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] text-sm">Cancel</button>
+              <button
+                onClick={handleSaveSchedule}
+                disabled={savingStaffSchedule}
+                className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 disabled:opacity-50 text-sm"
+              >
+                {savingStaffSchedule ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    );
+  };
+
+  // Staff Payment Modal
+  const renderStaffPaymentModal = () => {
+    if (!showStaffPaymentModal || !selectedStaffRecord) return null;
+
+    return createPortal(
+      <div className="fixed inset-0 z-[9999] overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowStaffPaymentModal(false)} />
+          <div className="relative w-full max-w-md rounded-2xl bg-[#1A1A1A] border border-[#2A2A2A]/50 shadow-2xl z-[10000]">
+            <div className="flex items-center justify-between p-6 border-b border-[#2A2A2A]/50">
+              <h2 className="text-lg font-bold text-white">Mark Staff Payment</h2>
+              <button onClick={() => setShowStaffPaymentModal(false)} className="w-8 h-8 rounded-lg bg-[#444444]/50 hover:bg-[var(--color-primary)]/20 flex items-center justify-center">
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="bg-[#0A0A0A] rounded-lg p-3 border border-[#2A2A2A]/30">
+                <p className="text-white font-medium">{selectedStaffRecord.staff_name}</p>
+                <p className="text-[var(--color-primary)] text-lg font-bold">{formatCurrency(selectedStaffRecord.net_pay)}</p>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500">Payment Method</label>
+                <select
+                  value={staffPaymentForm.payment_method}
+                  onChange={(e) => setStaffPaymentForm((prev) => ({ ...prev, payment_method: e.target.value }))}
+                  className="w-full bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm mt-1"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="check">Check</option>
+                  <option value="digital_wallet">Digital Wallet</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500">Reference (optional)</label>
+                <input
+                  type="text"
+                  value={staffPaymentForm.payment_reference}
+                  onChange={(e) => setStaffPaymentForm((prev) => ({ ...prev, payment_reference: e.target.value }))}
+                  className="w-full bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm mt-1"
+                  placeholder="Transaction ref, check no., etc."
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500">Notes (optional)</label>
+                <textarea
+                  value={staffPaymentForm.notes}
+                  onChange={(e) => setStaffPaymentForm((prev) => ({ ...prev, notes: e.target.value }))}
+                  className="w-full bg-[#0A0A0A] border border-[#2A2A2A] text-white rounded-lg px-3 py-2 text-sm mt-1"
+                  rows={2}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setShowStaffPaymentModal(false)} className="px-4 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg text-sm">Cancel</button>
+                <button
+                  onClick={handleMarkStaffAsPaid}
+                  disabled={submittingStaffPayment}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm"
+                >
+                  {submittingStaffPayment ? "Processing…" : "Confirm Payment"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>,
+      document.body,
+    );
+  };
+
   // Render Daily Rates modal
   const renderDailyRatesModal = () => {
     if (!showDailyRatesModal) return null;
@@ -3445,7 +4381,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
                           >
                             View Details
                           </button>
-                          {period.status !== "paid" &&
+                          {!(period.paid_records > 0) && !period.is_locked &&
                             (user?.role === "branch_admin" ||
                               user?.role === "super_admin") && (
                               <button
@@ -3478,6 +4414,15 @@ const PayrollManagement = ({ onRefresh, user }) => {
 
     return (
       <div className="space-y-6">
+        {/* Back to Overview */}
+        <button
+          onClick={() => setActiveView("overview")}
+          className="text-sm text-gray-400 hover:text-white flex items-center gap-1 transition-colors"
+        >
+          <ChevronUp className="w-4 h-4 rotate-[-90deg]" />
+          Back to Overview
+        </button>
+
         {/* Period Header */}
         <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
@@ -3546,51 +4491,39 @@ const PayrollManagement = ({ onRefresh, user }) => {
                   <span>{scanningAttendance ? "Scanning..." : "Scan Attendance"}</span>
                 </button>
               )}
-              {/* Lock/Unlock Button */}
-              {selectedPeriod.status === "calculated" && (
-                selectedPeriod.is_locked ? (
-                  <button
-                    onClick={async () => {
-                      try {
-                        setLoading(true);
-                        await unlockPeriod({
-                          payroll_period_id: selectedPeriod._id,
-                          unlocked_by: user._id,
-                        });
-                      } catch (error) {
-                        setError(error.message || "Failed to unlock period");
-                      } finally {
-                        setLoading(false);
-                      }
-                    }}
-                    disabled={loading}
-                    className="flex items-center space-x-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Unlock className="h-4 w-4" />
-                    <span>Unlock</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={async () => {
-                      try {
-                        setLoading(true);
-                        await lockPeriod({
-                          payroll_period_id: selectedPeriod._id,
-                          locked_by: user._id,
-                        });
-                      } catch (error) {
-                        setError(error.message || "Failed to lock period");
-                      } finally {
-                        setLoading(false);
-                      }
-                    }}
-                    disabled={loading}
-                    className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/60 border border-[#2A2A2A] text-gray-200 rounded-lg hover:bg-[#2A2A2A] transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Lock className="h-4 w-4" />
-                    <span>Lock Period</span>
-                  </button>
-                )
+              {/* Unlock Button - admin only, resets all to unpaid */}
+              {selectedPeriod.is_locked && (user?.role === "branch_admin" || user?.role === "super_admin") && (
+                <button
+                  onClick={() => setShowUnlockConfirmModal(true)}
+                  disabled={loading}
+                  className="flex items-center space-x-2 px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Unlock className="h-4 w-4" />
+                  <span>Unlock & Reset</span>
+                </button>
+              )}
+              {/* Lock Button - only when calculated and not locked */}
+              {selectedPeriod.status === "calculated" && !selectedPeriod.is_locked && (
+                <button
+                  onClick={async () => {
+                    try {
+                      setLoading(true);
+                      await lockPeriod({
+                        payroll_period_id: selectedPeriod._id,
+                        locked_by: user._id,
+                      });
+                    } catch (error) {
+                      setError(error.message || "Failed to lock period");
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  disabled={loading}
+                  className="flex items-center space-x-2 px-4 py-2 bg-[#444444]/60 border border-[#2A2A2A] text-gray-200 rounded-lg hover:bg-[#2A2A2A] transition-colors text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Lock className="h-4 w-4" />
+                  <span>Lock Period</span>
+                </button>
               )}
               {Array.isArray(currentPeriodRecords) &&
                 currentPeriodRecords.length > 0 && (
@@ -4677,7 +5610,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
         <div>
           <h2 className="text-3xl font-black text-white">Payroll Management</h2>
           <p className="text-gray-300 mt-1">
-            Manage barber commissions and payroll processing
+            {activeView === "staff" ? "Manage staff payroll and salary processing" : "Manage barber commissions and payroll processing"}
           </p>
         </div>
 
@@ -4691,34 +5624,38 @@ const PayrollManagement = ({ onRefresh, user }) => {
             <span className="hidden xl:inline">Settings</span>
           </button>
 
-          <div className="h-6 w-px bg-[#2A2A2A]" />
+          {activeView !== "staff" && (
+          <>
+            <div className="h-6 w-px bg-[#2A2A2A]" />
 
-          <button
-            onClick={() => setShowServiceRatesModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
-            title="Service Commission Rates"
-          >
-            <Percent className="h-4 w-4" />
-            <span className="hidden xl:inline">Service</span>
-          </button>
+            <button
+              onClick={() => setShowServiceRatesModal(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
+              title="Service Commission Rates"
+            >
+              <Percent className="h-4 w-4" />
+              <span className="hidden xl:inline">Service</span>
+            </button>
 
-          <button
-            onClick={() => setShowProductRatesModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
-            title="Product Commission Rates"
-          >
-            <Percent className="h-4 w-4" />
-            <span className="hidden xl:inline">Product</span>
-          </button>
+            <button
+              onClick={() => setShowProductRatesModal(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
+              title="Product Commission Rates"
+            >
+              <Percent className="h-4 w-4" />
+              <span className="hidden xl:inline">Product</span>
+            </button>
 
-          <button
-            onClick={() => setShowDailyRatesModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
-            title="Daily Rates"
-          >
-            <DollarSign className="h-4 w-4" />
-            <span className="hidden xl:inline">Daily</span>
-          </button>
+            <button
+              onClick={() => setShowDailyRatesModal(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-[#444444]/50 border border-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#2A2A2A] transition-all duration-200 text-sm"
+              title="Daily Rates"
+            >
+              <DollarSign className="h-4 w-4" />
+              <span className="hidden xl:inline">Daily</span>
+            </button>
+          </>
+          )}
 
           <div className="h-6 w-px bg-[#2A2A2A]" />
 
@@ -4759,34 +5696,34 @@ const PayrollManagement = ({ onRefresh, user }) => {
         </div>
       )}
 
-      {/* View Navigation */}
+      {/* Main Tabs: Barber Payroll vs Staff Payroll */}
       <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex items-center space-x-4">
           <button
             onClick={() => setActiveView("overview")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeView === "overview"
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeView !== "staff"
               ? "bg-[var(--color-primary)] text-white"
               : "text-gray-300 hover:text-white hover:bg-[#1A1A1A]"
               }`}
           >
-            Overview
+            Barber Payroll
           </button>
-          {selectedPeriod && (
-            <button
-              onClick={() => setActiveView("period")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeView === "period"
-                ? "bg-[var(--color-primary)] text-white"
-                : "text-gray-300 hover:text-white hover:bg-[#1A1A1A]"
-                }`}
-            >
-              Period Details
-            </button>
-          )}
+          <button
+            onClick={() => setActiveView("staff")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeView === "staff"
+              ? "bg-[var(--color-primary)] text-white"
+              : "text-gray-300 hover:text-white hover:bg-[#1A1A1A]"
+              }`}
+          >
+            Staff Payroll
+          </button>
         </div>
       </div>
 
       {/* Content */}
-      {activeView === "overview" ? renderOverview() : renderPeriodDetails()}
+      {activeView === "staff" ? renderStaffPayroll()
+        : activeView === "period" ? renderPeriodDetails()
+        : renderOverview()}
 
       {/* Modals */}
       {renderPeriodModal()}
@@ -4799,6 +5736,79 @@ const PayrollManagement = ({ onRefresh, user }) => {
       {renderProductsModal()}
       {renderPayslipModal()}
       {renderDeleteModal()}
+      {renderStaffDailyRatesModal()}
+      {renderStaffScheduleModal()}
+      {renderStaffPaymentModal()}
+      {renderStaffPayslipModal()}
+
+      {/* Unlock Period Confirmation Modal - requires admin password */}
+      {showUnlockConfirmModal && selectedPeriod && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-2xl p-6 max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+              <Unlock className="w-5 h-5 text-yellow-400" />
+              Unlock & Reset Payroll
+            </h3>
+            <p className="text-sm text-gray-400 mb-1">
+              Period: {formatDate(selectedPeriod.period_start)} – {formatDate(selectedPeriod.period_end)}
+            </p>
+            <p className="text-sm text-yellow-400/80 mb-4">
+              This will unlock the period and reset all paid records back to unpaid. You will need to recalculate and repay.
+            </p>
+            <label className="block text-sm text-gray-300 mb-1">Admin Password</label>
+            <input
+              type="password"
+              value={unlockAdminPassword}
+              onChange={(e) => { setUnlockAdminPassword(e.target.value); setUnlockError(""); }}
+              placeholder="Enter your password to confirm"
+              className="w-full px-3 py-2 text-sm bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-white mb-2"
+              autoFocus
+            />
+            {unlockError && (
+              <p className="text-xs text-red-400 mb-2">{unlockError}</p>
+            )}
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => {
+                  setShowUnlockConfirmModal(false);
+                  setUnlockAdminPassword("");
+                  setUnlockError("");
+                }}
+                className="flex-1 px-4 py-2 text-sm bg-[#2A2A2A] text-gray-300 rounded-lg hover:bg-[#3A3A3A] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!unlockAdminPassword.trim()) {
+                    setUnlockError("Password is required");
+                    return;
+                  }
+                  try {
+                    setLoading(true);
+                    setUnlockError("");
+                    await unlockPeriod({
+                      payroll_period_id: selectedPeriod._id,
+                      unlocked_by: user._id,
+                      admin_password: unlockAdminPassword,
+                    });
+                    setShowUnlockConfirmModal(false);
+                    setUnlockAdminPassword("");
+                  } catch (err) {
+                    setUnlockError(err.message || "Failed to unlock period");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                disabled={loading || !unlockAdminPassword.trim()}
+                className="flex-1 px-4 py-2 text-sm bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50 transition-colors"
+              >
+                {loading ? "Unlocking..." : "Unlock & Reset"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Recalculate Confirmation Modal */}
       <AlertModal

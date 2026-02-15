@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, action } from "../_generated/server";
 import { api } from "../_generated/api";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
+import { verifyPassword } from "../utils/password";
 import { Id } from "../_generated/dataModel";
 
 // ============================================================================
@@ -1336,13 +1337,17 @@ export const createPayrollPeriod = mutation({
     period_start: v.number(),
     period_end: v.number(),
     period_type: v.union(
+      v.literal("daily"),
       v.literal("weekly"),
       v.literal("bi_weekly"),
       v.literal("monthly"),
     ),
     created_by: v.id("users"),
+    payroll_target: v.optional(v.union(v.literal("barber"), v.literal("staff"))),
   },
   handler: async (ctx, args) => {
+    const target = args.payroll_target || "barber";
+
     // Validate that period_start is before period_end
     if (args.period_start >= args.period_end) {
       throwUserError(
@@ -1351,14 +1356,17 @@ export const createPayrollPeriod = mutation({
       );
     }
 
-    // Check for overlapping periods to prevent double-pay
-    // Two periods overlap if: new_start <= existing_end AND new_end >= existing_start
+    // Check for overlapping periods to prevent double-pay (only within same target)
     const existingPeriods = await ctx.db
       .query("payroll_periods")
       .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
       .collect();
 
     for (const existing of existingPeriods) {
+      // Only check overlap within the same payroll target
+      const existingTarget = existing.payroll_target || "barber";
+      if (existingTarget !== target) continue;
+
       const hasOverlap =
         args.period_start <= existing.period_end &&
         args.period_end >= existing.period_start;
@@ -1372,7 +1380,7 @@ export const createPayrollPeriod = mutation({
 
         throwUserError(
           ERROR_CODES.INVALID_INPUT,
-          `Cannot create payroll period (${newStartDate} - ${newEndDate}) because it overlaps with an existing period (${existingStartDate} - ${existingEndDate}).`,
+          `Cannot create ${target} payroll period (${newStartDate} - ${newEndDate}) because it overlaps with an existing period (${existingStartDate} - ${existingEndDate}).`,
           "Please choose dates that don't overlap with existing payroll periods to prevent double payments.",
         );
       }
@@ -1385,6 +1393,7 @@ export const createPayrollPeriod = mutation({
       period_start: args.period_start,
       period_end: args.period_end,
       period_type: args.period_type,
+      payroll_target: target,
       status: "draft",
       total_earnings: 0,
       total_commissions: 0,
@@ -1707,39 +1716,66 @@ export const deletePayrollPeriod = mutation({
     if (!period) {
       throwUserError(ERROR_CODES.PAYROLL_PERIOD_NOT_FOUND);
     }
-    if (period.status === "paid") {
-      throwUserError(
-        ERROR_CODES.INVALID_INPUT,
-        "Cannot delete a paid payroll period",
-      );
-    }
     if (period.is_locked) {
       throwUserError(
         ERROR_CODES.INVALID_INPUT,
-        "Cannot delete a locked payroll period",
+        "Cannot delete a locked payroll period. Unlock it first.",
+      );
+    }
+    if (period.status === "paid") {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Cannot delete a paid payroll period. This data serves as a record for the barbershop.",
       );
     }
 
-    // Fetch all payroll records for this period
-    const records = await ctx.db
-      .query("payroll_records")
-      .withIndex("by_payroll_period", (q) =>
-        q.eq("payroll_period_id", args.payroll_period_id),
-      )
-      .collect();
+    const target = period.payroll_target || "barber";
 
-    // Delete adjustments for each record, then the record
-    for (const rec of records) {
-      const adjustments = await ctx.db
-        .query("payroll_adjustments")
-        .withIndex("by_payroll_record", (q) =>
-          q.eq("payroll_record_id", rec._id),
+    if (target === "staff") {
+      // Check if any staff record is paid
+      const staffRecords = await ctx.db
+        .query("staff_payroll_records")
+        .withIndex("by_payroll_period", (q) =>
+          q.eq("payroll_period_id", args.payroll_period_id),
         )
         .collect();
-      for (const adj of adjustments) {
-        await ctx.db.delete(adj._id);
+      if (staffRecords.some((r) => r.status === "paid")) {
+        throwUserError(
+          ERROR_CODES.INVALID_INPUT,
+          "Cannot delete this period because it contains paid staff records. This data serves as a record for the barbershop.",
+        );
       }
-      await ctx.db.delete(rec._id);
+      for (const rec of staffRecords) {
+        await ctx.db.delete(rec._id);
+      }
+    } else {
+      // Fetch all barber payroll records for this period
+      const records = await ctx.db
+        .query("payroll_records")
+        .withIndex("by_payroll_period", (q) =>
+          q.eq("payroll_period_id", args.payroll_period_id),
+        )
+        .collect();
+      if (records.some((r) => r.status === "paid")) {
+        throwUserError(
+          ERROR_CODES.INVALID_INPUT,
+          "Cannot delete this period because it contains paid barber records. This data serves as a record for the barbershop.",
+        );
+      }
+
+      // Delete adjustments for each record, then the record
+      for (const rec of records) {
+        const adjustments = await ctx.db
+          .query("payroll_adjustments")
+          .withIndex("by_payroll_record", (q) =>
+            q.eq("payroll_record_id", rec._id),
+          )
+          .collect();
+        for (const adj of adjustments) {
+          await ctx.db.delete(adj._id);
+        }
+        await ctx.db.delete(rec._id);
+      }
     }
 
     // Finally delete the period
@@ -1787,13 +1823,27 @@ export const lockPayrollPeriod = mutation({
   },
 });
 
-// Unlock a payroll period to allow recalculation (admin only)
+// Unlock a payroll period to allow recalculation (admin only, requires password)
+// Resets all paid records back to "calculated" so payroll can be recalculated
 export const unlockPayrollPeriod = mutation({
   args: {
     payroll_period_id: v.id("payroll_periods"),
     unlocked_by: v.id("users"),
+    admin_password: v.string(),
   },
   handler: async (ctx, args) => {
+    // Verify admin password
+    const adminUser = await ctx.db.get(args.unlocked_by);
+    if (!adminUser) {
+      throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS, "User not found.");
+    }
+    if (adminUser.role !== "branch_admin" && adminUser.role !== "super_admin") {
+      throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS, "Only branch admins can unlock payroll periods.");
+    }
+    if (!verifyPassword(args.admin_password, adminUser.password)) {
+      throwUserError(ERROR_CODES.AUTH_INVALID_CREDENTIALS, "Incorrect admin password.");
+    }
+
     const period = await ctx.db.get(args.payroll_period_id);
     if (!period) {
       throwUserError(ERROR_CODES.PAYROLL_PERIOD_NOT_FOUND);
@@ -1806,19 +1856,61 @@ export const unlockPayrollPeriod = mutation({
       );
     }
 
-    // Cannot unlock a paid period
-    if (period.status === "paid") {
-      throwUserError(
-        ERROR_CODES.INVALID_INPUT,
-        "Cannot unlock a paid payroll period.",
-      );
+    const timestamp = Date.now();
+    const target = period.payroll_target || "barber";
+
+    if (target === "staff") {
+      // Reset all staff payroll records back to "calculated"
+      const staffRecords = await ctx.db
+        .query("staff_payroll_records")
+        .withIndex("by_payroll_period", (q) =>
+          q.eq("payroll_period_id", args.payroll_period_id),
+        )
+        .collect();
+
+      for (const rec of staffRecords) {
+        if (rec.status === "paid") {
+          await ctx.db.patch(rec._id, {
+            status: "calculated",
+            payment_method: undefined,
+            payment_reference: undefined,
+            paid_at: undefined,
+            paid_by: undefined,
+            updatedAt: timestamp,
+          });
+        }
+      }
+    } else {
+      // Reset all barber payroll records back to "calculated"
+      const barberRecords = await ctx.db
+        .query("payroll_records")
+        .withIndex("by_payroll_period", (q) =>
+          q.eq("payroll_period_id", args.payroll_period_id),
+        )
+        .collect();
+
+      for (const rec of barberRecords) {
+        if (rec.status === "paid") {
+          await ctx.db.patch(rec._id, {
+            status: "calculated",
+            payment_method: undefined,
+            payment_reference: undefined,
+            paid_at: undefined,
+            paid_by: undefined,
+            updatedAt: timestamp,
+          });
+        }
+      }
     }
 
-    const timestamp = Date.now();
+    // Unlock the period and reset status to "calculated"
     await ctx.db.patch(args.payroll_period_id, {
       is_locked: false,
       locked_at: undefined,
       locked_by: undefined,
+      status: "calculated",
+      paid_at: undefined,
+      paid_by: undefined,
       updatedAt: timestamp,
     });
 
@@ -1895,6 +1987,17 @@ export const markPayrollRecordAsPaid = mutation({
       notes: args.notes,
       updatedAt: timestamp,
     });
+
+    // Auto-lock the period once any record is paid
+    const period = await ctx.db.get(record.payroll_period_id);
+    if (period && !period.is_locked) {
+      await ctx.db.patch(period._id, {
+        is_locked: true,
+        locked_at: timestamp,
+        locked_by: args.paid_by,
+        updatedAt: timestamp,
+      });
+    }
 
     // Process cash advance repayment if there was a deduction
     if (record.cash_advance_deduction && record.cash_advance_deduction > 0) {
@@ -2013,19 +2116,45 @@ export const getPayrollSummaryByBranch = query({
   args: {
     branch_id: v.id("branches"),
     limit: v.optional(v.number()),
+    payroll_target: v.optional(v.union(v.literal("barber"), v.literal("staff"))),
   },
   handler: async (ctx, args) => {
-    const query = ctx.db
+    const target = args.payroll_target || "barber";
+
+    const allPeriods = await ctx.db
       .query("payroll_periods")
       .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
-      .order("desc");
+      .order("desc")
+      .collect();
+
+    // Filter by payroll_target (default "barber" for old records without the field)
+    const filteredPeriods = allPeriods.filter(
+      (p) => (p.payroll_target || "barber") === target,
+    );
 
     const periods = args.limit
-      ? await query.take(args.limit || 10)
-      : await query.collect();
+      ? filteredPeriods.slice(0, args.limit)
+      : filteredPeriods;
 
     const summaryData = await Promise.all(
       periods.map(async (period) => {
+        if (target === "staff") {
+          const staffRecords = await ctx.db
+            .query("staff_payroll_records")
+            .withIndex("by_payroll_period", (q) =>
+              q.eq("payroll_period_id", period._id),
+            )
+            .collect();
+
+          return {
+            ...period,
+            total_barbers: staffRecords.length,
+            paid_records: staffRecords.filter((r) => r.status === "paid").length,
+            pending_records: staffRecords.filter((r) => r.status === "calculated")
+              .length,
+          };
+        }
+
         const records = await ctx.db
           .query("payroll_records")
           .withIndex("by_payroll_period", (q) =>
@@ -2111,20 +2240,25 @@ export const generateNextPayrollPeriod = mutation({
     if (lastPeriod) {
       periodStart = lastPeriod.period_end + 1; // Start after last period ends
     } else {
-      // First period - start from beginning of current week/month
+      // First period - start from beginning of current day/week/month
       const now = new Date();
-      if (settings.payout_frequency === "weekly") {
+      if (settings.payout_frequency === "daily") {
+        // Start from beginning of today
+        periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      } else if (settings.payout_frequency === "weekly") {
         const dayOfWeek = now.getDay();
         const daysToSubtract = (dayOfWeek - settings.payout_day + 7) % 7;
         periodStart = now.getTime() - daysToSubtract * 24 * 60 * 60 * 1000;
       } else {
-        // For monthly, start from first of current month
+        // For bi_weekly/monthly, start from first of current month
         periodStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
       }
     }
 
     // Calculate period end based on frequency
-    if (settings.payout_frequency === "weekly") {
+    if (settings.payout_frequency === "daily") {
+      periodEnd = periodStart + 1 * 24 * 60 * 60 * 1000 - 1;
+    } else if (settings.payout_frequency === "weekly") {
       periodEnd = periodStart + 7 * 24 * 60 * 60 * 1000 - 1;
     } else if (settings.payout_frequency === "bi_weekly") {
       periodEnd = periodStart + 14 * 24 * 60 * 60 * 1000 - 1;
@@ -3024,5 +3158,494 @@ export const autoPopulateZeroDayClaims = mutation({
       total_zero_days: totalZeroDays,
       summary: claimSummary,
     };
+  },
+});
+
+// ============================================================================
+// STAFF PAYROLL (Daily Rate Only — No Commission)
+// ============================================================================
+
+// Get active daily rate for a staff user
+export const getStaffDailyRate = query({
+  args: { user_id: v.id("users") },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    return await ctx.db
+      .query("staff_daily_rates")
+      .withIndex("by_user_active", (q) =>
+        q.eq("user_id", args.user_id).eq("is_active", true),
+      )
+      .filter((q) =>
+        q.and(
+          q.lte(q.field("effective_from"), now),
+          q.or(
+            q.eq(q.field("effective_until"), undefined),
+            q.gt(q.field("effective_until"), now),
+          ),
+        ),
+      )
+      .first();
+  },
+});
+
+// Set daily rate for a staff user (deactivates previous)
+export const setStaffDailyRate = mutation({
+  args: {
+    user_id: v.id("users"),
+    branch_id: v.id("branches"),
+    daily_rate: v.number(),
+    effective_from: v.optional(v.number()),
+    created_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    if (args.daily_rate < 0) {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "Daily rate must be non-negative");
+    }
+    const now = Date.now();
+    const effectiveFrom = args.effective_from || now;
+
+    // Deactivate existing active daily rates
+    const existing = await ctx.db
+      .query("staff_daily_rates")
+      .withIndex("by_user_active", (q) =>
+        q.eq("user_id", args.user_id).eq("is_active", true),
+      )
+      .collect();
+    for (const r of existing) {
+      await ctx.db.patch(r._id, {
+        is_active: false,
+        effective_until: effectiveFrom,
+        updatedAt: now,
+      });
+    }
+
+    return await ctx.db.insert("staff_daily_rates", {
+      user_id: args.user_id,
+      branch_id: args.branch_id,
+      daily_rate: args.daily_rate,
+      effective_from: effectiveFrom,
+      is_active: true,
+      created_by: args.created_by,
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
+// Get all staff daily rates for a branch
+export const getStaffDailyRatesByBranch = query({
+  args: { branch_id: v.id("branches") },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("staff_daily_rates")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+  },
+});
+
+// Update staff schedule (weekly)
+export const updateStaffSchedule = mutation({
+  args: {
+    user_id: v.id("users"),
+    schedule: v.object({
+      monday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      tuesday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      wednesday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      thursday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      friday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      saturday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      sunday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.user_id);
+    if (!user) {
+      throwUserError(ERROR_CODES.USER_NOT_FOUND, "Staff user not found");
+    }
+    await ctx.db.patch(args.user_id, {
+      schedule: args.schedule,
+      updatedAt: Date.now(),
+    });
+    return { success: true };
+  },
+});
+
+// Update staff OT/penalty hourly rates
+export const updateStaffPayRates = mutation({
+  args: {
+    user_id: v.id("users"),
+    ot_hourly_rate: v.number(),
+    penalty_hourly_rate: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.user_id);
+    if (!user) {
+      throwUserError(ERROR_CODES.USER_NOT_FOUND, "Staff user not found");
+    }
+    await ctx.db.patch(args.user_id, {
+      ot_hourly_rate: args.ot_hourly_rate,
+      penalty_hourly_rate: args.penalty_hourly_rate,
+      updatedAt: Date.now(),
+    });
+    return { success: true };
+  },
+});
+
+// Get cash advance deductions for a staff user (uses cashAdvances table with user_id as barber_id)
+export const getStaffCashAdvanceDeductions = query({
+  args: { user_id: v.id("users") },
+  handler: async (ctx, args) => {
+    const activeAdvances = await ctx.db
+      .query("cashAdvances")
+      .withIndex("by_barber", (q) => q.eq("barber_id", args.user_id))
+      .filter((q) => q.eq(q.field("status"), "paid_out"))
+      .collect();
+
+    let installmentTotal = 0;
+    const advancesWithInstallment = activeAdvances.map((adv) => {
+      const repaymentTerms = adv.repayment_terms || 1;
+      const installmentsPaid = adv.installments_paid || 0;
+      const remainingInstallments = repaymentTerms - installmentsPaid;
+      const totalRepaid = adv.total_repaid || 0;
+      const remainingAmount = adv.amount - totalRepaid;
+      let installmentAmount = adv.amount_per_installment || adv.amount;
+
+      if (remainingInstallments === 1) {
+        installmentAmount = remainingAmount;
+      }
+      installmentAmount = Math.min(installmentAmount, remainingAmount);
+
+      if (remainingInstallments > 0) {
+        installmentTotal += installmentAmount;
+      }
+
+      return {
+        id: adv._id,
+        amount: adv.amount,
+        installment_amount: installmentAmount,
+        repayment_terms: repaymentTerms,
+        installments_paid: installmentsPaid,
+        remaining_installments: remainingInstallments,
+        total_repaid: totalRepaid,
+        remaining_amount: remainingAmount,
+        requested_at: adv.requested_at,
+        paid_out_at: adv.paid_out_at,
+      };
+    }).filter(adv => adv.remaining_installments > 0);
+
+    return {
+      advances: advancesWithInstallment,
+      total: activeAdvances.reduce((sum, adv) => sum + adv.amount, 0),
+      installmentTotal,
+    };
+  },
+});
+
+// Calculate staff payroll for a period
+export const calculateStaffPayrollForPeriod = mutation({
+  args: {
+    payroll_period_id: v.id("payroll_periods"),
+    calculated_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const period = await ctx.db.get(args.payroll_period_id);
+    if (!period) {
+      throwUserError(ERROR_CODES.PAYROLL_PERIOD_NOT_FOUND);
+    }
+
+    if (period.status === "paid") {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Cannot recalculate a payroll period that has already been paid.",
+      );
+    }
+
+    if (period.is_locked) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Cannot recalculate a locked payroll period.",
+      );
+    }
+
+    // Load existing staff records for this period
+    const existingRecords = await ctx.db
+      .query("staff_payroll_records")
+      .withIndex("by_payroll_period", (q) =>
+        q.eq("payroll_period_id", args.payroll_period_id),
+      )
+      .collect();
+
+    const hasPaidRecords = existingRecords.some((r) => r.status === "paid");
+    if (hasPaidRecords) {
+      throwUserError(
+        ERROR_CODES.INVALID_INPUT,
+        "Cannot recalculate with paid staff records. Revert first.",
+      );
+    }
+
+    // Get active staff users in the branch
+    const staffUsers = await ctx.db
+      .query("users")
+      .withIndex("by_branch_role", (q) =>
+        q.eq("branch_id", period.branch_id).eq("role", "staff"),
+      )
+      .filter((q) => q.eq(q.field("is_active"), true))
+      .collect();
+
+    // Merge with staff who already have records
+    const staffMap = new Map(staffUsers.map((u) => [u._id, u]));
+    for (const record of existingRecords) {
+      if (!staffMap.has(record.user_id)) {
+        const user = await ctx.db.get(record.user_id);
+        if (user) staffMap.set(user._id, user);
+      }
+    }
+
+    const staffToCalculate = Array.from(staffMap.values());
+    const existingRecordMap = new Map(
+      existingRecords.map((r) => [r.user_id, r]),
+    );
+
+    const timestamp = Date.now();
+    let totalStaffPay = 0;
+
+    for (const staff of staffToCalculate) {
+      // Get active daily rate
+      const dailyRateRecord = await ctx.db
+        .query("staff_daily_rates")
+        .withIndex("by_user_active", (q) =>
+          q.eq("user_id", staff._id).eq("is_active", true),
+        )
+        .filter((q) =>
+          q.and(
+            q.lte(q.field("effective_from"), timestamp),
+            q.or(
+              q.eq(q.field("effective_until"), undefined),
+              q.gt(q.field("effective_until"), timestamp),
+            ),
+          ),
+        )
+        .first();
+
+      const dailyRate = dailyRateRecord?.daily_rate || 0;
+
+      // Count days worked from attendance (approved_out records in this period)
+      const allAttendance = await ctx.db
+        .query("timeAttendance")
+        .withIndex("by_user", (q) => q.eq("user_id", staff._id))
+        .collect();
+
+      const approvedRecords = allAttendance.filter((r: any) => {
+        const status = r.status || (r.clock_out ? "approved_out" : "approved_in");
+        return (
+          status === "approved_out" &&
+          r.clock_out &&
+          r.clock_in >= period.period_start &&
+          r.clock_in <= period.period_end
+        );
+      });
+
+      // Count distinct days worked
+      const workedDates = new Set<string>();
+      for (const r of approvedRecords) {
+        workedDates.add(timestampToPHTDateString(r.clock_in));
+      }
+      const daysWorked = workedDates.size;
+      const dailyPay = dailyRate * daysWorked;
+
+      // Attendance summary (OT/UT/Late)
+      let attendanceSummary: AttendanceSummary | undefined;
+      let otPay = 0;
+      let penaltyDeduction = 0;
+
+      if (staff.schedule && approvedRecords.length > 0) {
+        attendanceSummary = calculateAttendanceSummary(
+          approvedRecords,
+          staff.schedule as BarberSchedule,
+          (staff as any).ot_hourly_rate || 0,
+          (staff as any).penalty_hourly_rate || 0,
+        );
+        otPay = attendanceSummary.total_ot_pay;
+        penaltyDeduction = attendanceSummary.total_penalty;
+      }
+
+      // Cash advance deductions
+      const cashAdvanceData = await ctx.runQuery(
+        api.services.payroll.getStaffCashAdvanceDeductions,
+        { user_id: staff._id },
+      );
+      const cashAdvanceDeduction = cashAdvanceData.installmentTotal;
+
+      const cashAdvanceDetailsForSchema = cashAdvanceData.advances.map((adv: any) => ({
+        id: adv.id,
+        amount: adv.installment_amount || adv.amount,
+        requested_at: adv.requested_at,
+        paid_out_at: adv.paid_out_at,
+      }));
+
+      // Final calculations
+      const totalDeductions = penaltyDeduction + cashAdvanceDeduction;
+      const netPay = dailyPay + otPay - totalDeductions;
+
+      const recordPayload: any = {
+        daily_rate: dailyRate,
+        days_worked: daysWorked,
+        daily_pay: dailyPay + otPay,
+        attendance_summary: attendanceSummary,
+        cash_advance_deduction: cashAdvanceDeduction,
+        cash_advance_details: cashAdvanceDetailsForSchema.length > 0 ? cashAdvanceDetailsForSchema : undefined,
+        total_deductions: totalDeductions,
+        net_pay: Math.round(netPay * 100) / 100,
+        status: "calculated" as const,
+        updatedAt: timestamp,
+      };
+
+      const existingRecord = existingRecordMap.get(staff._id);
+      if (existingRecord) {
+        await ctx.db.patch(existingRecord._id, recordPayload);
+        existingRecordMap.delete(staff._id);
+      } else {
+        await ctx.db.insert("staff_payroll_records", {
+          payroll_period_id: args.payroll_period_id,
+          user_id: staff._id,
+          branch_id: period.branch_id,
+          ...recordPayload,
+          createdAt: timestamp,
+        });
+      }
+
+      totalStaffPay += netPay;
+    }
+
+    // Delete orphaned records (staff removed from branch)
+    for (const [, orphan] of existingRecordMap) {
+      await ctx.db.delete(orphan._id);
+    }
+
+    // Update period status to "calculated"
+    await ctx.db.patch(args.payroll_period_id, {
+      status: "calculated" as const,
+      total_commissions: Math.round(totalStaffPay * 100) / 100,
+      total_earnings: Math.round(totalStaffPay * 100) / 100,
+      calculated_at: timestamp,
+      calculated_by: args.calculated_by,
+      updatedAt: timestamp,
+    });
+
+    return {
+      success: true,
+      staff_count: staffToCalculate.length,
+      total_staff_pay: Math.round(totalStaffPay * 100) / 100,
+    };
+  },
+});
+
+// Get staff payroll records for a period
+export const getStaffPayrollRecordsByPeriod = query({
+  args: { payroll_period_id: v.id("payroll_periods") },
+  handler: async (ctx, args) => {
+    const records = await ctx.db
+      .query("staff_payroll_records")
+      .withIndex("by_payroll_period", (q) =>
+        q.eq("payroll_period_id", args.payroll_period_id),
+      )
+      .collect();
+
+    // Enrich with staff user info
+    const enriched = await Promise.all(
+      records.map(async (record) => {
+        const user = await ctx.db.get(record.user_id);
+        return {
+          ...record,
+          staff_name: user?.username || "Unknown",
+          staff_email: user?.email || "",
+        };
+      }),
+    );
+
+    return enriched;
+  },
+});
+
+// Mark staff payroll record as paid
+export const markStaffPayrollRecordAsPaid = mutation({
+  args: {
+    record_id: v.id("staff_payroll_records"),
+    payment_method: v.union(
+      v.literal("cash"),
+      v.literal("bank_transfer"),
+      v.literal("check"),
+      v.literal("digital_wallet"),
+    ),
+    payment_reference: v.optional(v.string()),
+    paid_by: v.id("users"),
+    notes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const record = await ctx.db.get(args.record_id);
+    if (!record) {
+      throwUserError(ERROR_CODES.PAYROLL_RECORD_NOT_FOUND);
+    }
+
+    if (record.status === "paid") {
+      throwUserError(ERROR_CODES.PAYROLL_RECORD_ALREADY_PAID);
+    }
+
+    const timestamp = Date.now();
+
+    await ctx.db.patch(args.record_id, {
+      status: "paid",
+      payment_method: args.payment_method,
+      payment_reference: args.payment_reference,
+      paid_at: timestamp,
+      paid_by: args.paid_by,
+      notes: args.notes,
+      updatedAt: timestamp,
+    });
+
+    // Auto-lock the period once any record is paid
+    const period = await ctx.db.get(record.payroll_period_id);
+    if (period && !period.is_locked) {
+      await ctx.db.patch(period._id, {
+        is_locked: true,
+        locked_at: timestamp,
+        locked_by: args.paid_by,
+        updatedAt: timestamp,
+      });
+    }
+
+    // Process cash advance repayment
+    if (record.cash_advance_deduction && record.cash_advance_deduction > 0) {
+      const activeAdvances = await ctx.db
+        .query("cashAdvances")
+        .withIndex("by_barber", (q) => q.eq("barber_id", record.user_id))
+        .filter((q) => q.eq(q.field("status"), "paid_out"))
+        .collect();
+
+      for (const advance of activeAdvances) {
+        const repaymentTerms = advance.repayment_terms || 1;
+        const installmentsPaid = (advance.installments_paid || 0) + 1;
+        const totalRepaid = (advance.total_repaid || 0) + (advance.amount_per_installment || advance.amount);
+        const isFullyRepaid = installmentsPaid >= repaymentTerms;
+
+        if (isFullyRepaid) {
+          await ctx.db.patch(advance._id, {
+            status: "repaid",
+            repaid_at: timestamp,
+            installments_paid: installmentsPaid,
+            total_repaid: advance.amount,
+            updated_at: timestamp,
+          });
+        } else {
+          await ctx.db.patch(advance._id, {
+            installments_paid: installmentsPaid,
+            total_repaid: Math.min(totalRepaid, advance.amount),
+            updated_at: timestamp,
+          });
+        }
+      }
+    }
+
+    return { success: true };
   },
 });

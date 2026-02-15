@@ -320,6 +320,21 @@ export default defineSchema({
     has_seen_tutorial: v.optional(v.boolean()), // false/undefined = show tutorial
     tutorial_completed_at: v.optional(v.number()), // Timestamp of tutorial completion
 
+    // ============================================================================
+    // STAFF SCHEDULE & PAYROLL FIELDS
+    // ============================================================================
+    schedule: v.optional(v.object({
+      monday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      tuesday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      wednesday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      thursday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      friday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      saturday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      sunday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+    })),
+    ot_hourly_rate: v.optional(v.number()), // OT pay per hour for staff
+    penalty_hourly_rate: v.optional(v.number()), // Late/UT penalty deduction per hour for staff
+
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -930,6 +945,7 @@ export default defineSchema({
     branch_id: v.id("branches"),
     default_commission_rate: v.number(), // Default commission percentage (e.g., 10 for 10%)
     payout_frequency: v.union(
+      v.literal("daily"),
       v.literal("weekly"),
       v.literal("bi_weekly"),
       v.literal("monthly")
@@ -975,6 +991,7 @@ export default defineSchema({
     period_start: v.number(), // Start timestamp of payroll period
     period_end: v.number(), // End timestamp of payroll period
     period_type: v.union(
+      v.literal("daily"),
       v.literal("weekly"),
       v.literal("bi_weekly"),
       v.literal("monthly")
@@ -999,6 +1016,8 @@ export default defineSchema({
     is_locked: v.optional(v.boolean()), // Whether period is locked from changes
     locked_at: v.optional(v.number()), // When period was locked
     locked_by: v.optional(v.id("users")), // Who locked the period
+    // Target: barber or staff (defaults to barber for backward compatibility)
+    payroll_target: v.optional(v.union(v.literal("barber"), v.literal("staff"))),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -3199,4 +3218,98 @@ export default defineSchema({
   })
     .index("by_branch", ["branch_id"])
     .index("by_fingerprint", ["device_fingerprint"]),
+
+  // ============================================================================
+  // STAFF PAYROLL TABLES
+  // ============================================================================
+
+  // Staff daily rates table (mirrors barber_daily_rates for non-barber staff)
+  staff_daily_rates: defineTable({
+    user_id: v.id("users"),
+    branch_id: v.id("branches"),
+    daily_rate: v.number(),
+    effective_from: v.number(),
+    effective_until: v.optional(v.number()),
+    is_active: v.boolean(),
+    created_by: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_user_active", ["user_id", "is_active"]),
+
+  // Staff payroll records (simplified: daily rate only, no commission)
+  staff_payroll_records: defineTable({
+    payroll_period_id: v.id("payroll_periods"),
+    user_id: v.id("users"),
+    branch_id: v.id("branches"),
+
+    // Daily pay
+    daily_rate: v.number(),
+    days_worked: v.number(),
+    daily_pay: v.number(),
+
+    // Attendance (OT/UT/Late)
+    attendance_summary: v.optional(v.object({
+      total_late_minutes: v.number(),
+      total_undertime_minutes: v.number(),
+      total_overtime_minutes: v.number(),
+      total_ot_pay: v.number(),
+      total_late_penalty: v.number(),
+      total_ut_penalty: v.number(),
+      total_penalty: v.number(),
+      days_late: v.number(),
+      days_undertime: v.number(),
+      days_overtime: v.number(),
+      daily_details: v.array(v.object({
+        date: v.string(),
+        scheduled_start: v.string(),
+        scheduled_end: v.string(),
+        actual_clock_in: v.string(),
+        actual_clock_out: v.string(),
+        late_minutes: v.number(),
+        undertime_minutes: v.number(),
+        overtime_minutes: v.number(),
+      })),
+    })),
+
+    // Deductions
+    cash_advance_deduction: v.optional(v.number()),
+    cash_advance_details: v.optional(v.array(v.object({
+      id: v.id("cashAdvances"),
+      amount: v.number(),
+      requested_at: v.number(),
+      paid_out_at: v.optional(v.number()),
+    }))),
+    total_deductions: v.number(),
+
+    // Final
+    net_pay: v.number(),
+
+    // Payment
+    payment_method: v.optional(v.union(
+      v.literal("cash"),
+      v.literal("bank_transfer"),
+      v.literal("check"),
+      v.literal("digital_wallet")
+    )),
+    payment_reference: v.optional(v.string()),
+    paid_at: v.optional(v.number()),
+    paid_by: v.optional(v.id("users")),
+
+    status: v.union(
+      v.literal("calculated"),
+      v.literal("paid"),
+      v.literal("cancelled")
+    ),
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_payroll_period", ["payroll_period_id"])
+    .index("by_user", ["user_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"])
+    .index("by_user_period", ["user_id", "payroll_period_id"]),
 });

@@ -555,11 +555,15 @@ export const createUserWithClerk = action({
     }
 
     try {
-      // Sanitize username for Clerk (only allows [a-zA-Z0-9_-])
-      const sanitizedUsername = args.username
+      // Sanitize username for Clerk (only allows [a-zA-Z0-9_-], min 4 chars)
+      let sanitizedUsername: string | undefined = args.username
         .replace(/[^a-zA-Z0-9_-]/g, '_')
         .replace(/_+/g, '_')
         .replace(/^_|_$/g, '') || undefined;
+      // Clerk requires username to be 4-64 chars; skip if too short
+      if (sanitizedUsername && (sanitizedUsername.length < 4 || sanitizedUsername.length > 64)) {
+        sanitizedUsername = undefined;
+      }
 
       const response = await fetch("https://api.clerk.com/v1/users", {
         method: "POST",
@@ -569,7 +573,7 @@ export const createUserWithClerk = action({
         },
         body: JSON.stringify({
           email_address: [args.email],
-          username: sanitizedUsername,
+          ...(sanitizedUsername ? { username: sanitizedUsername } : {}),
           password: args.password,
           skip_password_checks: true,
         }),
@@ -634,6 +638,96 @@ export const linkClerkToUser = mutation({
       migration_status: "completed",
       updatedAt: Date.now(),
     });
+  },
+});
+
+// Sync an existing Convex user to Clerk (retry for users who failed initial Clerk creation)
+export const syncUserToClerk = action({
+  args: {
+    userId: v.id("users"),
+    password: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { api } = require("../_generated/api");
+
+    // Get the user from Convex
+    const user = await ctx.runQuery(api.services.auth.getUserById, { userId: args.userId });
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (user.clerk_user_id) {
+      return { success: true, message: "User already synced to Clerk", clerk_user_id: user.clerk_user_id };
+    }
+
+    const clerkSecretKey = process.env.CLERK_SECRET_KEY;
+    if (!clerkSecretKey) {
+      throw new Error("CLERK_SECRET_KEY not configured in Convex environment");
+    }
+
+    // Sanitize username for Clerk (only allows [a-zA-Z0-9_-], min 4 chars)
+    let sanitizedUsername: string | undefined = user.username
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '') || undefined;
+    // Clerk requires username to be 4-64 chars; skip if too short
+    if (sanitizedUsername && (sanitizedUsername.length < 4 || sanitizedUsername.length > 64)) {
+      sanitizedUsername = undefined;
+    }
+
+    // Try to create in Clerk
+    const response = await fetch("https://api.clerk.com/v1/users", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${clerkSecretKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email_address: [user.email],
+        ...(sanitizedUsername ? { username: sanitizedUsername } : {}),
+        password: args.password,
+        skip_password_checks: true,
+      }),
+    });
+
+    let clerkUserId: string | null = null;
+
+    if (!response.ok) {
+      const errorData = await response.json();
+
+      // If user already exists in Clerk, find and link
+      if (errorData.errors?.[0]?.code === "form_identifier_exists") {
+        const findResponse = await fetch(
+          `https://api.clerk.com/v1/users?email_address=${encodeURIComponent(user.email)}`,
+          { headers: { Authorization: `Bearer ${clerkSecretKey}` } }
+        );
+        if (findResponse.ok) {
+          const existingUsers = await findResponse.json();
+          if (existingUsers[0]) {
+            clerkUserId = existingUsers[0].id;
+          }
+        }
+      }
+
+      if (!clerkUserId) {
+        const errMsg = errorData.errors?.[0]?.long_message || errorData.errors?.[0]?.message || JSON.stringify(errorData);
+        throw new Error(`Clerk API error: ${errMsg}`);
+      }
+    } else {
+      const clerkUser = await response.json();
+      clerkUserId = clerkUser.id;
+    }
+
+    // Link Clerk user ID to Convex user
+    if (clerkUserId) {
+      await ctx.runMutation(api.services.auth.linkClerkToUser, {
+        userId: args.userId,
+        clerk_user_id: clerkUserId,
+      });
+      return { success: true, message: "User synced to Clerk successfully", clerk_user_id: clerkUserId };
+    }
+
+    throw new Error("Failed to sync user to Clerk");
   },
 });
 
@@ -1395,6 +1489,14 @@ export const resetPassword = mutation({
   },
 });
 
+// Get a single user by ID
+export const getUserById = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.userId);
+  },
+});
+
 // Get users by branch (for branch admins/staff)
 export const getUsersByBranch = query({
   args: { branch_id: v.id("branches") },
@@ -1418,6 +1520,8 @@ export const getUsersByBranch = query({
       is_active: user.is_active,
       isVerified: user.isVerified,
       createdAt: user._creationTime,
+      clerk_user_id: user.clerk_user_id,
+      address: user.address,
       // Customer analytics fields for AI Email Marketing segmentation
       lastBookingDate: user.lastBookingDate,
       totalBookings: user.totalBookings,

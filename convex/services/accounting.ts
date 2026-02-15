@@ -105,6 +105,8 @@ export const getPLSummary = query({
     let bonusExpense = 0;
     let allowanceExpense = 0;
     let deductionsTotal = 0;
+    let staffPayrollExpense = 0;
+    let staffSalaryExpense = 0;
 
     for (const period of relevantPeriods) {
       // Only include records that have been marked as "paid"
@@ -135,7 +137,26 @@ export const getPLSummary = query({
         // Deductions
         deductionsTotal += record.total_deductions || 0;
       }
+
+      // Staff payroll records - also count as payroll expense
+      const staffRecords = await ctx.db
+        .query("staff_payroll_records")
+        .withIndex("by_payroll_period", (q) =>
+          q.eq("payroll_period_id", period._id)
+        )
+        .filter((q) => q.eq(q.field("status"), "paid"))
+        .collect();
+
+      for (const record of staffRecords) {
+        staffPayrollExpense += record.net_pay || 0;
+        staffSalaryExpense += record.daily_pay || 0;
+        deductionsTotal += record.total_deductions || 0;
+      }
     }
+
+    // Combine barber + staff payroll
+    payrollExpense += staffPayrollExpense;
+    salaryExpense += staffSalaryExpense;
 
     // IMPORTANT: Gross Payroll = Salary (daily_pay) + Allowances (fees)
     // Commission and bonus are NOT added because they're already included in daily_pay
@@ -199,6 +220,9 @@ export const getPLSummary = query({
           allowance: allowanceExpense,
           deductions: deductionsTotal,
           net_pay: payrollExpense,
+          // Staff payroll (separate from barber)
+          staff_payroll: staffPayrollExpense,
+          staff_salary: staffSalaryExpense,
         },
         fixed_expenses: fixedExpenses,
         operating_expenses: operatingExpenses,
