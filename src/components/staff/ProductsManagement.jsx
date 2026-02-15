@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Package, DollarSign, TrendingUp, TrendingDown, Plus, Edit, Trash2, Search, Filter, RefreshCw, Save, X, AlertCircle, Image, ShoppingCart, BarChart3, Upload, Camera, History, Clock, ChevronUp, ChevronDown } from 'lucide-react'
+import { Package, DollarSign, TrendingUp, TrendingDown, Plus, Edit, Trash2, Search, Filter, RefreshCw, Save, X, AlertCircle, Image, ShoppingCart, BarChart3, Upload, Camera, History, Clock, ChevronUp, ChevronDown, HelpCircle } from 'lucide-react'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { productsManagementSteps } from '../../config/walkthroughSteps'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAppModal } from '../../context/AppModalContext'
@@ -39,6 +41,7 @@ const ProductImage = ({ imageUrl, imageStorageId, productName, className }) => {
 
 const ProductsManagement = ({ onRefresh, user }) => {
   const { showConfirm } = useAppModal()
+  const [showTutorial, setShowTutorial] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('all')
   const [filterStock, setFilterStock] = useState('all')
@@ -360,7 +363,7 @@ const ProductsManagement = ({ onRefresh, user }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+      <div data-tour="prod-header" className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
         <div>
           <h2 className="text-3xl font-black text-white">Products & Inventory</h2>
           <p className="text-gray-400 mt-1">Manage your barbershop products and track inventory</p>
@@ -381,11 +384,14 @@ const ProductsManagement = ({ onRefresh, user }) => {
             <Plus className="h-4 w-4" />
             <span>New Product</span>
           </button>
+          <button onClick={() => setShowTutorial(true)} className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-[#2A2A2A] transition-colors" title="Show tutorial">
+            <HelpCircle className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div data-tour="prod-stats" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -549,7 +555,7 @@ const ProductsManagement = ({ onRefresh, user }) => {
       </div>
 
       {/* Controls */}
-      <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
+      <div data-tour="prod-controls" className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
             <div className="relative">
@@ -594,6 +600,7 @@ const ProductsManagement = ({ onRefresh, user }) => {
       </div>
 
       {/* Products Grid */}
+      <div data-tour="prod-grid">
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
@@ -740,6 +747,7 @@ const ProductsManagement = ({ onRefresh, user }) => {
           )}
         </div>
       )}
+      </div>
 
       {/* Create/Edit Product Modal */}
       <Modal
@@ -1107,6 +1115,8 @@ const ProductsManagement = ({ onRefresh, user }) => {
           </div>
         </form>
       </Modal>
+
+      <WalkthroughOverlay steps={productsManagementSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   )
 }

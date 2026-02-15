@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw, Grid, List, ChevronLeft, ChevronRight, Download } from 'lucide-react'
+import { Scissors, Clock, DollarSign, Search, Filter, Plus, Edit, Trash2, RotateCcw, Grid, List, ChevronLeft, ChevronRight, Download, HelpCircle } from 'lucide-react'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { servicesManagementSteps } from '../../config/walkthroughSteps'
 import { useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useAppModal } from '../../context/AppModalContext'
@@ -7,6 +9,7 @@ import CreateServiceModal from './CreateServiceModal'
 
 const ServicesManagement = ({ services = [], onRefresh, user }) => {
   const { showAlert, showConfirm } = useAppModal()
+  const [showTutorial, setShowTutorial] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortBy, setSortBy] = useState('name')
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -120,7 +123,7 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
   return (
     <div className="space-y-4">
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div data-tour="svc-stats" className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -163,7 +166,7 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
       </div>
 
       {/* Controls */}
-      <div className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
+      <div data-tour="svc-controls" className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-3 md:space-y-0 md:space-x-3">
             <div className="relative">
@@ -225,6 +228,9 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
               <Plus className="h-4 w-4" />
               <span>New Service</span>
             </button>
+            <button onClick={() => setShowTutorial(true)} className="p-2 rounded-md text-gray-500 hover:text-white hover:bg-[#2A2A2A] transition-colors border border-[#3A3A3A]" title="Show tutorial">
+              <HelpCircle className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -239,6 +245,7 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
       />
 
       {/* Services Display */}
+      <div data-tour="svc-list">
       {viewMode === 'card' ? (
         /* Card View */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -497,6 +504,9 @@ const ServicesManagement = ({ services = [], onRefresh, user }) => {
           </div>
         </div>
       )}
+      </div>
+
+      <WalkthroughOverlay steps={servicesManagementSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   )
 }

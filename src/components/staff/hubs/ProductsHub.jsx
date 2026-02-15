@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Package, ShoppingCart, Gift, Scissors } from 'lucide-react'
+import { Package, ShoppingCart, Gift, Scissors, HelpCircle } from 'lucide-react'
+import WalkthroughOverlay from '../../common/WalkthroughOverlay'
+import { productsHubSteps } from '../../../config/walkthroughSteps'
 import ProductsManagement from '../ProductsManagement'
 import BranchProductOrdering from '../BranchProductOrdering'
 import VoucherManagement from '../VoucherManagement'
@@ -14,6 +16,7 @@ const PERM_MAP = { order: 'order_products' }
 
 const ProductsHub = ({ user, services = [], vouchers = [], onRefresh, onCreateVoucher }) => {
   const [activeSection, setActiveSection] = useState('services')
+  const [showTutorial, setShowTutorial] = useState(false)
 
   const allSections = [
     { id: 'services', label: 'Services', icon: Scissors },
@@ -58,13 +61,14 @@ const ProductsHub = ({ user, services = [], vouchers = [], onRefresh, onCreateVo
   return (
     <div className="space-y-4">
       {/* Sub-navigation */}
-      <div className="flex flex-wrap gap-1.5 p-1.5 bg-[#1A1A1A] rounded-xl border border-[#333]">
+      <div data-tour="ph-tabs" className="flex flex-wrap gap-1.5 p-1.5 bg-[#1A1A1A] rounded-xl border border-[#333]">
         {sections.map((section) => {
           const Icon = section.icon
           const isActive = activeSection === section.id
           return (
             <button
               key={section.id}
+              data-tour={`ph-${section.id}-tab`}
               onClick={() => setActiveSection(section.id)}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                 isActive
@@ -77,10 +81,17 @@ const ProductsHub = ({ user, services = [], vouchers = [], onRefresh, onCreateVo
             </button>
           )
         })}
+        <button onClick={() => setShowTutorial(true)} className="ml-auto p-2 rounded-lg text-gray-500 hover:text-white hover:bg-[#2A2A2A] transition-colors" title="Show tutorial">
+          <HelpCircle className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Content */}
-      {renderContent()}
+      <div data-tour="ph-content">
+        {renderContent()}
+      </div>
+
+      <WalkthroughOverlay steps={productsHubSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   )
 }

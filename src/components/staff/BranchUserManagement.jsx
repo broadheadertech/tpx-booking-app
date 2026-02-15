@@ -2,9 +2,10 @@ import React, { useState } from 'react'
 import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
-import { User, UserPlus, Edit, Trash2, Building, Users, Search, Filter, X, AlertCircle, Shield, HelpCircle } from 'lucide-react'
+import { User, UserPlus, Edit, Trash2, Building, Users, Search, Filter, X, AlertCircle, Shield, HelpCircle, Scan } from 'lucide-react'
 import UserFormModal from '../admin/UserFormModal'
 import PermissionConfigModal from '../admin/PermissionConfigModal'
+import FaceEnrollment from './FaceEnrollment'
 import { createPortal } from 'react-dom'
 import WalkthroughOverlay from '../common/WalkthroughOverlay'
 import { branchUserSteps } from '../../config/walkthroughSteps'
@@ -110,6 +111,14 @@ export default function BranchUserManagement() {
   const [selectedUser, setSelectedUser] = useState(null)
   const [selectedUserForPermissions, setSelectedUserForPermissions] = useState(null)
   const [showTutorial, setShowTutorial] = useState(false)
+  const [enrollUser, setEnrollUser] = useState(null)
+
+  // Face enrollment status
+  const enrollments = user?.branch_id
+    ? useQuery(api.services.faceAttendance.getEnrollmentsByBranch, { branch_id: user.branch_id })
+    : null
+  const enrolledUserIds = new Set(enrollments?.filter(e => e.user_id).map(e => e.user_id) || [])
+
   const initialFormData = {
     username: '',
     email: '',
@@ -468,6 +477,14 @@ export default function BranchUserManagement() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
+                        {/* Face Enrollment */}
+                        <button
+                          onClick={() => setEnrollUser(branchUser)}
+                          className={`transition-colors ${enrolledUserIds.has(branchUser._id) ? 'text-green-400 hover:text-green-300' : 'text-amber-400 hover:text-amber-300'}`}
+                          title={enrolledUserIds.has(branchUser._id) ? 'Re-enroll face' : 'Enroll face'}
+                        >
+                          <Scan className="h-4 w-4" />
+                        </button>
                         {/* Configure Permissions - Story 12-3 */}
                         {branchUser.role === 'staff' && (user?.role === 'branch_admin' || user?.role === 'super_admin' || user?.role === 'admin_staff') && (
                           <button
@@ -587,6 +604,15 @@ export default function BranchUserManagement() {
           setShowPermissionsModal(false)
           setSelectedUserForPermissions(null)
         }}
+      />
+
+      {/* Face Enrollment Modal */}
+      <FaceEnrollment
+        isOpen={!!enrollUser}
+        onClose={() => setEnrollUser(null)}
+        userId={enrollUser?._id}
+        barberName={enrollUser?.nickname || enrollUser?.username || 'Staff'}
+        branchId={user?.branch_id}
       />
 
       <WalkthroughOverlay steps={branchUserSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />

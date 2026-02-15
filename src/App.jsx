@@ -48,6 +48,7 @@ import PaymentFailure from "./pages/booking/payment/failure.jsx";
 import Policy from "./pages/Policy.jsx";
 import AccountDeletion from "./pages/AccountDeletion.jsx";
 import EmailTest from "./pages/EmailTest.jsx";
+import FaceCheckIn from "./components/staff/FaceCheckIn";
 import DownloadApp from "./pages/DownloadApp.jsx";
 import ErrorBoundary from "./components/common/ErrorBoundary";
 import MaintenanceGuard from "./components/common/MaintenanceGuard";
@@ -209,6 +210,14 @@ function App() {
                 element={
                   <ProtectedRoute requireStaff={true} requirePageAccess="pos">
                     <POS />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/staff/face-attendance"
+                element={
+                  <ProtectedRoute requireStaff={true} requirePageAccess="attendance">
+                    <FaceCheckIn />
                   </ProtectedRoute>
                 }
               />

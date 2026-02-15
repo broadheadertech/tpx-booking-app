@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { User, Star, Clock, Calendar, DollarSign, Search, Filter, UserCheck, UserX, Phone, Mail, Scissors, Plus, Edit, Trash2, RotateCcw, Eye, BookOpen, X, Save, Camera, Upload, HelpCircle } from 'lucide-react'
+import { User, Star, Clock, Calendar, DollarSign, Search, Filter, UserCheck, UserX, Phone, Mail, Scissors, Plus, Edit, Trash2, RotateCcw, Eye, BookOpen, X, Save, Camera, Upload, HelpCircle, Scan } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import CreateBarberModal from './CreateBarberModal'
@@ -8,6 +8,7 @@ import BarberModal from './BarberModal'
 import { useAppModal } from '../../context/AppModalContext'
 import WalkthroughOverlay from '../common/WalkthroughOverlay'
 import { barbersManagementSteps } from '../../config/walkthroughSteps'
+import FaceEnrollment from './FaceEnrollment'
 
 // Separate component to handle barber avatar display
 const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
@@ -53,6 +54,7 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
   const [error, setError] = useState('')
   const [uploadingImage, setUploadingImage] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
+  const [enrollBarber, setEnrollBarber] = useState(null)
 
   // Convex queries - with pagination limits to avoid byte limit errors
   // Get services filtered by branch to avoid showing duplicates from other branches
@@ -63,6 +65,13 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
       : undefined
   const allBookingsData = useQuery(api.services.bookings.getAllBookings, { limit: 100 })
   const allBookings = allBookingsData?.bookings || []
+
+  // Face enrollment status for the branch
+  const enrollments = useQuery(
+    api.services.faceAttendance.getEnrollmentsByBranch,
+    user?.branch_id ? { branch_id: user.branch_id } : "skip"
+  )
+  const enrolledBarberIds = new Set(enrollments?.map(e => e.barber_id) || [])
 
   // Convex mutations
   const createBarber = useMutation(api.services.barbers.createBarber)
@@ -490,6 +499,13 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
                           <BookOpen className="h-4 w-4" />
                         </button>
                         <button
+                          onClick={() => setEnrollBarber(barber)}
+                          className={`p-1 rounded ${enrolledBarberIds.has(barber._id) ? 'text-green-400 hover:text-green-300' : 'text-amber-400 hover:text-amber-300'}`}
+                          title={enrolledBarberIds.has(barber._id) ? 'Re-enroll Face' : 'Enroll Face'}
+                        >
+                          <Scan className="h-4 w-4" />
+                        </button>
+                        <button
                           onClick={() => handleEdit(barber)}
                           className="text-gray-400 hover:text-gray-300 p-1 rounded"
                           title="Edit"
@@ -549,6 +565,17 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
           barber={showDeleteConfirm}
           onClose={() => setShowDeleteConfirm(null)}
           onConfirm={() => handleDelete(showDeleteConfirm)}
+        />
+      )}
+
+      {/* Face Enrollment Modal */}
+      {enrollBarber && (
+        <FaceEnrollment
+          isOpen={!!enrollBarber}
+          onClose={() => setEnrollBarber(null)}
+          barberId={enrollBarber._id}
+          barberName={enrollBarber.full_name}
+          branchId={user?.branch_id}
         />
       )}
 

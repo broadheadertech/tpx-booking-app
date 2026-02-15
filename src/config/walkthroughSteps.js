@@ -902,6 +902,140 @@ export const customersManagementSteps = [
   },
 ]
 
+// ─── Products Hub ───────────────────────────────────────────────────
+export const productsHubSteps = [
+  {
+    target: '[data-tour="ph-tabs"]',
+    title: 'Products & Services',
+    message: 'Switch between Services, Products, Order Products, and Vouchers from these tabs.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="ph-services-tab"]',
+    title: 'Services',
+    message: 'Manage your branch services — add, edit, price, and set durations.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="ph-products-tab"]',
+    title: 'Products',
+    message: 'Manage retail products — inventory, pricing, stock levels, and images.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="ph-order-tab"]',
+    title: 'Order Products',
+    message: 'Browse the central product catalog and place orders for your branch.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="ph-vouchers-tab"]',
+    title: 'Vouchers',
+    message: 'Create and manage discount vouchers — track redemptions and send to customers.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="ph-content"]',
+    title: 'Content Area',
+    message: 'The selected section\'s content appears here. Each tab has its own tutorial (? icon).',
+    position: 'top',
+  },
+]
+
+// ─── Products: Services Management ──────────────────────────────────
+export const servicesManagementSteps = [
+  {
+    target: '[data-tour="svc-stats"]',
+    title: 'Service Stats',
+    message: 'Overview of total services, average price, average duration, and total value.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="svc-controls"]',
+    title: 'Search & Actions',
+    message: 'Search services, sort by name/price/duration, toggle card or table view, and add new services.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="svc-list"]',
+    title: 'Services List',
+    message: 'All branch services with pricing, duration, and category. Edit or delete from here.',
+    position: 'top',
+  },
+]
+
+// ─── Products: Products Management ──────────────────────────────────
+export const productsManagementSteps = [
+  {
+    target: '[data-tour="prod-header"]',
+    title: 'Products Header',
+    message: 'Refresh data or add a new product with image, pricing, and inventory details.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="prod-stats"]',
+    title: 'Inventory Stats',
+    message: 'Total products, in-stock, low stock, out of stock, total inventory value, and sold this month.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="prod-controls"]',
+    title: 'Search & Filters',
+    message: 'Search by name, filter by category or stock level, and sort products.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="prod-grid"]',
+    title: 'Product Grid',
+    message: 'All products with images, pricing, stock bars, and profit margins. Edit or delete from here.',
+    position: 'top',
+  },
+]
+
+// ─── Products: Branch Product Ordering ──────────────────────────────
+export const branchOrderingSteps = [
+  {
+    target: '[data-tour="order-header"]',
+    title: 'Order Products',
+    message: 'Browse the central warehouse catalog and order products for your branch.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="order-tabs"]',
+    title: 'Catalog / Cart / Orders',
+    message: 'Browse the Product Catalog, review your Cart, or check My Orders history.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="order-content"]',
+    title: 'Tab Content',
+    message: 'Search products, add to cart, set quantities, then submit your order for approval.',
+    position: 'top',
+  },
+]
+
+// ─── Products: Branch Voucher Management ────────────────────────────
+export const branchVoucherSteps = [
+  {
+    target: '[data-tour="vouch-stats"]',
+    title: 'Voucher Stats',
+    message: 'Overview of total, active, redeemed, expired vouchers and total discount value.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="vouch-controls"]',
+    title: 'Search & Actions',
+    message: 'Search vouchers, filter by status, sort, toggle card or table view, and create new vouchers.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="vouch-list"]',
+    title: 'Vouchers List',
+    message: 'All vouchers with codes, discounts, expiry dates, and usage. Send, edit, or view assigned users.',
+    position: 'top',
+  },
+]
+
 export const customerAnalyticsSteps = [
   {
     target: '[data-tour="analytics-header"]',

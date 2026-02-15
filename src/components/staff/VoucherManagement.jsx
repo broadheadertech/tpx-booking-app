@@ -22,7 +22,10 @@ import {
   Grid,
   List,
   AlertCircle,
+  HelpCircle,
 } from "lucide-react";
+import WalkthroughOverlay from "../common/WalkthroughOverlay";
+import { branchVoucherSteps } from "../../config/walkthroughSteps";
 import QRCode from "qrcode";
 import Modal from "../common/Modal";
 import SendVoucherModal from "./SendVoucherModal";
@@ -34,6 +37,7 @@ import { useCurrentUser } from "../../hooks/useCurrentUser";
 import CreateVoucherModal from "../staff/CreateVoucherModal";
 
 const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
+  const [showTutorial, setShowTutorial] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -408,7 +412,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
   return (
     <div className="space-y-4">
       {/* Header with Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div data-tour="vouch-stats" className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -471,7 +475,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
       </div>
 
       {/* Controls */}
-      <div className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
+      <div data-tour="vouch-controls" className="bg-[#1A1A1A] p-3.5 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-3 md:space-y-0 md:space-x-3">
             {/* Search */}
@@ -554,11 +558,15 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
               <Plus className="h-4 w-4" />
               <span>New Voucher</span>
             </button>
+            <button onClick={() => setShowTutorial(true)} className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-[#2A2A2A] transition-colors" title="Show tutorial">
+              <HelpCircle className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>
 
       {/* Vouchers Display */}
+      <div data-tour="vouch-list">
       {viewMode === "card" ? (
         /* Card View */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -915,6 +923,7 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
           assignedUsers={assignedUsers || []}
         />
       )}
+      </div>
 
        {showCreateModal && (
             <CreateVoucherModal
@@ -987,6 +996,8 @@ const VoucherManagement = ({ vouchers = [], onRefresh, onCreateVoucher }) => {
           </button>
         </div>
       </Modal>
+
+      <WalkthroughOverlay steps={branchVoucherSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   );
 };

@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '../../../../convex/_generated/api'
-import { UserCheck, Users, Clock, HelpCircle } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { UserCheck, Users, Clock, HelpCircle, Camera, Settings } from 'lucide-react'
 import BarbersManagement from '../BarbersManagement'
 import BranchUserManagement from '../BranchUserManagement'
 import TimeAttendanceView from '../TimeAttendanceView'
 import WalkthroughOverlay from '../../common/WalkthroughOverlay'
+import AttendanceConfig from '../AttendanceConfig'
 import { teamHubSteps } from '../../../config/walkthroughSteps'
 
 /**
@@ -15,6 +17,8 @@ import { teamHubSteps } from '../../../config/walkthroughSteps'
 const TeamHub = ({ user, barbers = [], onRefresh }) => {
   const [activeSection, setActiveSection] = useState('barbers')
   const [showTutorial, setShowTutorial] = useState(false)
+  const [showAttendanceConfig, setShowAttendanceConfig] = useState(false)
+  const navigate = useNavigate()
 
   // Query pending attendance requests for badge
   const pendingRequests = useQuery(
@@ -53,6 +57,9 @@ const TeamHub = ({ user, barbers = [], onRefresh }) => {
       case 'users':
         return <BranchUserManagement onRefresh={onRefresh} />
       case 'attendance':
+        if (showAttendanceConfig) {
+          return <AttendanceConfig branchId={user?.branch_id} barbers={barbers} />
+        }
         return <TimeAttendanceView branchId={user?.branch_id} staffName={staffName} />
       default:
         return <BarbersManagement barbers={barbers} onRefresh={onRefresh} user={user} />
@@ -89,14 +96,34 @@ const TeamHub = ({ user, barbers = [], onRefresh }) => {
           )
         })}
 
-        {/* Help / Tutorial button */}
-        <button
-          onClick={() => setShowTutorial(true)}
-          className="ml-auto flex items-center gap-1 px-2 py-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-[#2A2A2A] transition-colors"
-          title="Show tutorial"
-        >
-          <HelpCircle className="w-4 h-4" />
-        </button>
+        {/* Action buttons */}
+        <div className="ml-auto flex items-center gap-1">
+          {activeSection === 'attendance' && (
+            <>
+              <button
+                onClick={() => navigate('/staff/face-attendance')}
+                className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-[#2A2A2A] transition-colors"
+                title="Launch Face Check-In Kiosk"
+              >
+                <Camera className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setShowAttendanceConfig(!showAttendanceConfig)}
+                className={`flex items-center gap-1 px-2 py-1.5 rounded-lg transition-colors ${showAttendanceConfig ? 'text-[var(--color-primary)] bg-[var(--color-primary)]/10' : 'text-gray-500 hover:text-white hover:bg-[#2A2A2A]'}`}
+                title="FR Settings"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            </>
+          )}
+          <button
+            onClick={() => setShowTutorial(true)}
+            className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-[#2A2A2A] transition-colors"
+            title="Show tutorial"
+          >
+            <HelpCircle className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Content */}

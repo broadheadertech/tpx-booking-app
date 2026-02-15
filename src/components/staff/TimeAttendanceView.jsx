@@ -294,7 +294,7 @@ function parseDateInput(dateStr) {
  */
 function exportToCSV(attendance, hoursByBarber, filterLabel) {
   // Detailed records CSV
-  const recordsHeader = ["Date", "Barber Name", "Clock In", "Clock Out", "Duration (Hours)", "Status"];
+  const recordsHeader = ["Date", "Barber Name", "Clock In", "Clock Out", "Duration (Hours)", "Status", "Method", "Confidence"];
   const recordsRows = attendance.map((record) => {
     const clockOut = record.clock_out || Date.now();
     const duration = clockOut - record.clock_in;
@@ -305,6 +305,8 @@ function exportToCSV(attendance, hoursByBarber, filterLabel) {
       record.clock_out ? formatTimeForCSV(record.clock_out) : "Active",
       formatDurationDecimal(duration),
       record.clock_out ? "Completed" : "Active",
+      record.method || "manual",
+      record.confidence_score ? `${Math.round(record.confidence_score * 100)}%` : "",
     ];
   });
 
@@ -698,7 +700,7 @@ export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
                   )}
                   <div>
                     <span className="text-white font-medium text-sm">{request.barber_name}</span>
-                    <div className="flex items-center gap-1.5 mt-0.5">
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                       {request.status === "pending_in" ? (
                         <><LogIn className="w-3 h-3 text-amber-400" /><span className="text-xs text-amber-400">Clock In</span></>
                       ) : (
@@ -707,6 +709,11 @@ export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
                       <span className="text-xs text-gray-500">
                         · {formatTime(request.status === "pending_in" ? request.clock_in : request.clock_out)}
                       </span>
+                      {request.method === "fr" && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                          FR {request.confidence_score ? `${Math.round(request.confidence_score * 100)}%` : ""}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -836,6 +843,7 @@ export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
                   <th className="text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider px-4 py-2.5">Out</th>
                   <th className="text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider px-4 py-2.5">Hours</th>
                   <th className="text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider px-4 py-2.5">Status</th>
+                  <th className="text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider px-4 py-2.5">Method</th>
                   <th className="text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider px-4 py-2.5">Insights</th>
                 </tr>
               </thead>
@@ -867,6 +875,17 @@ export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-500/10 text-green-500">
                           <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Active
                         </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {record.method === "fr" ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-400">
+                          FR {record.confidence_score ? `${Math.round(record.confidence_score * 100)}%` : ""}
+                        </span>
+                      ) : record.method === "pin" ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-400">PIN</span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-500/10 text-gray-500">Manual</span>
                       )}
                     </td>
                     <td className="px-4 py-2.5">

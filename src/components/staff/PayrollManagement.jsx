@@ -72,7 +72,7 @@ const PayrollManagement = ({ onRefresh, user }) => {
   const [savingProductRates, setSavingProductRates] = useState(false);
   const [savingDailyRates, setSavingDailyRates] = useState(false);
   // Zero-day claim state
-  const [zeroDayInputs, setZeroDayInputs] = useState({}); // { barberId: { days: 0, notes: '' } }
+  const [zeroDayInputs, setZeroDayInputs] = useState({}); // { barberId: { days: 0, notes: '', dates: [], dateInput: '' } }
   const [zeroDaySubmitting, setZeroDaySubmitting] = useState(null); // barberId being submitted
   const [showRejectModal, setShowRejectModal] = useState(null); // claim being rejected
   const [rejectReason, setRejectReason] = useState("");
@@ -789,8 +789,15 @@ const PayrollManagement = ({ onRefresh, user }) => {
       productsByDate[dateKey].push(p);
     });
 
-    // Get all unique dates and sort them
-    const allDates = new Set([...Object.keys(bookingsByDate), ...Object.keys(productsByDate)]);
+    // Get zero-day dates from the record
+    const zeroDayDates = Array.isArray(record.zero_day_dates) ? record.zero_day_dates : [];
+    const zeroDayDateSet = new Set(zeroDayDates);
+    const zeroDayPay = record.zero_day_pay || 0;
+    const zeroServiceDays = record.zero_service_days || 0;
+    const dailyRateForZero = record.daily_rate || 0;
+
+    // Get all unique dates and sort them (including zero-day dates)
+    const allDates = new Set([...Object.keys(bookingsByDate), ...Object.keys(productsByDate), ...zeroDayDates]);
     const sortedDates = Array.from(allDates).sort((a, b) => new Date(a) - new Date(b));
 
     // Calculate grand totals
@@ -804,6 +811,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
 
     // Generate daily cards
     const dailyCards = sortedDates.map((dateKey) => {
+      // Check if this is a zero-day (no bookings, no products, in zero_day_dates)
+      const isZeroDay = zeroDayDateSet.has(dateKey) && !bookingsByDate[dateKey] && !productsByDate[dateKey];
       const dateBookings = bookingsByDate[dateKey] || [];
       const dateProducts = productsByDate[dateKey] || [];
 
@@ -813,6 +822,29 @@ const PayrollManagement = ({ onRefresh, user }) => {
         year: "numeric",
         weekday: "short"
       });
+
+      // If this is a zero-day with no work, render a zero-day card
+      if (isZeroDay) {
+        grandTotalDailySalary += dailyRateForZero;
+        return `
+          <div class="card" style="border-left: 3px solid #f59e0b;">
+            <div class="header">
+              <div>
+                <div class="title">${record.barber_name}</div>
+                <div class="muted">${dateLabel}</div>
+              </div>
+              <div class="accent">${format(dailyRateForZero)}</div>
+            </div>
+            <hr/>
+            <div>
+              <div class="row"><span style="color: #f59e0b; font-weight: 600;">ZERO-SERVICE DAY</span><span class="muted">Daily Rate Applied</span></div>
+              <div class="row"><span class="muted">Present at work, no services/products</span><span></span></div>
+              <hr/>
+              <div class="row" style="font-weight:800"><span>Daily Rate</span><span class="accent">${format(dailyRateForZero)}</span></div>
+            </div>
+          </div>
+        `;
+      }
 
       // Calculate daily totals for services
       const dayServiceCount = dateBookings.length;
@@ -987,6 +1019,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
         <div>
           <div class="row"><span class="muted">Total Service Commission</span><span>${format(grandTotalServiceCommission)}</span></div>
           <div class="row"><span class="muted">Total Product Commission</span><span>${format(grandTotalProductCommission)}</span></div>
+          ${zeroServiceDays > 0 ? `<div class="row"><span style="color:#f59e0b;">Zero-Service Days (${zeroServiceDays} day${zeroServiceDays > 1 ? 's' : ''} x ${format(dailyRateForZero)})</span><span style="color:#f59e0b">+${format(zeroDayPay)}</span></div>` : ''}
+          ${zeroDayDates.length > 0 ? `<div class="row"><span class="muted" style="font-size:10px;">Zero-day dates: ${zeroDayDates.map(d => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" })).join(', ')}</span><span></span></div>` : ''}
           ${totalBookingFeesFromDaily > 0 ? `<div class="row"><span class="muted">Total Booking Fees (${bookingFeePercentage}%)</span><span style="color:#4ade80">+${format(totalBookingFeesFromDaily)}</span></div>` : ''}
           ${totalLateFeesFromDaily > 0 ? `<div class="row"><span class="muted">Total Late Fees (${lateFeePercentage}%)</span><span style="color:#4ade80">+${format(totalLateFeesFromDaily)}</span></div>` : ''}
           ${barberConvenienceFees > 0 ? `<div class="row"><span class="muted">Convenience Fees (${convenienceFeePercentage}%)</span><span style="color:#4ade80">+${format(barberConvenienceFees)}</span></div>` : ''}
@@ -1477,6 +1511,12 @@ const PayrollManagement = ({ onRefresh, user }) => {
       grandTotalDailySalary += dayTotalPay;
     });
 
+    // Zero-day data for payslip
+    const payslipZeroDayPay = record.zero_day_pay || 0;
+    const payslipZeroServiceDays = record.zero_service_days || 0;
+    const payslipZeroDayDates = Array.isArray(record.zero_day_dates) ? record.zero_day_dates : [];
+    const payslipDailyRateForZero = record.daily_rate || 0;
+
     // Add fees (booking, late, convenience) - use barber's share based on percentages
     const barberBookingFees = record.barber_booking_fees || 0;
     const barberLateFees = record.barber_late_fees || 0;
@@ -1488,8 +1528,8 @@ const PayrollManagement = ({ onRefresh, user }) => {
     const lateFeePercentage = record.late_fee_percentage ?? 100;
     const convenienceFeePercentage = record.convenience_fee_percentage ?? 100;
 
-    // Final daily salary includes the barber's share of fees
-    const finalDailySalaryWithFees = grandTotalDailySalary + totalBarberFees;
+    // Final daily salary includes the barber's share of fees + zero-day pay
+    const finalDailySalaryWithFees = grandTotalDailySalary + totalBarberFees + payslipZeroDayPay;
 
     const calculatedNetPay = finalDailySalaryWithFees - (record.tax_deduction || 0) - (record.other_deductions || 0) - (record.cash_advance_deduction || 0);
 
@@ -1506,7 +1546,9 @@ const PayrollManagement = ({ onRefresh, user }) => {
         <div style="font-size: 14px;">
           <div class="row"><span style="color: #333;">Total Service Commission</span><span style="font-weight: 600;">${format(grandTotalServiceCommission)}</span></div>
           <div class="row"><span style="color: #333;">Total Product Commission</span><span style="font-weight: 600;">${format(grandTotalProductCommission)}</span></div>
-          <div class="row"><span style="color: #333;">Base Daily Salary</span><span style="font-weight: 600;">${format(grandTotalDailySalary)}</span></div>
+          ${payslipZeroServiceDays > 0 ? `<div class="row"><span style="color: #b45309;">Zero-Service Days (${payslipZeroServiceDays} day${payslipZeroServiceDays > 1 ? 's' : ''} x ${format(payslipDailyRateForZero)})</span><span style="font-weight: 600; color: #b45309;">+${format(payslipZeroDayPay)}</span></div>` : ''}
+          ${payslipZeroDayDates.length > 0 ? `<div class="row"><span style="color: #888; font-size: 11px;">Zero-day dates: ${payslipZeroDayDates.map(d => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" })).join(', ')}</span><span></span></div>` : ''}
+          <div class="row"><span style="color: #333;">Base Daily Salary</span><span style="font-weight: 600;">${format(grandTotalDailySalary + payslipZeroDayPay)}</span></div>
           ${barberBookingFees > 0 ? `<div class="row"><span style="color: #333;">Booking Fees (${bookingFeePercentage}%)</span><span style="font-weight: 600; color: #2e7d32;">+${format(barberBookingFees)}</span></div>` : ''}
           ${barberLateFees > 0 ? `<div class="row"><span style="color: #333;">Late Fees (${lateFeePercentage}%)</span><span style="font-weight: 600; color: #2e7d32;">+${format(barberLateFees)}</span></div>` : ''}
           ${barberConvenienceFees > 0 ? `<div class="row"><span style="color: #333;">Convenience Fees (${convenienceFeePercentage}%)</span><span style="font-weight: 600; color: #2e7d32;">+${format(barberConvenienceFees)}</span></div>` : ''}
@@ -3896,6 +3938,18 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                 </span>
                               </div>
                             )}
+                            {Array.isArray(record.zero_day_dates) && record.zero_day_dates.length > 0 && (
+                              <div className="mt-1 mb-1">
+                                <span className="text-gray-500 text-[10px]">Zero-day dates: </span>
+                                <div className="flex flex-wrap gap-1 mt-0.5">
+                                  {record.zero_day_dates.map((d) => (
+                                    <span key={d} className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                      {new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                             <div className="flex justify-between">
                               <span className="text-gray-400">
                                 Total Sales:
@@ -3926,17 +3980,29 @@ const PayrollManagement = ({ onRefresh, user }) => {
 
                                 if (claim && claim.status === "approved") {
                                   return (
-                                    <div className="flex items-center justify-between p-2 rounded-lg bg-green-500/10 border border-green-500/30">
-                                      <div>
-                                        <span className="text-xs font-medium text-green-400">Approved</span>
-                                        <p className="text-xs text-gray-400">
-                                          {claim.zero_days} day{claim.zero_days > 1 ? 's' : ''} x {formatCurrency(claim.daily_rate_applied)} = {formatCurrency(claim.total_amount)}
-                                        </p>
-                                        {claim.notes && <p className="text-xs text-gray-500 mt-0.5">{claim.notes}</p>}
+                                    <div className="space-y-1.5">
+                                      <div className="flex items-center justify-between p-2 rounded-lg bg-green-500/10 border border-green-500/30">
+                                        <div>
+                                          <span className="text-xs font-medium text-green-400">Approved</span>
+                                          <p className="text-xs text-gray-400">
+                                            {claim.zero_days} day{claim.zero_days > 1 ? 's' : ''} x {formatCurrency(claim.daily_rate_applied)} = {formatCurrency(claim.total_amount)}
+                                          </p>
+                                          {claim.notes && <p className="text-xs text-gray-500 mt-0.5">{claim.notes}</p>}
+                                        </div>
+                                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-green-500/20 text-green-400">
+                                          APPROVED
+                                        </span>
                                       </div>
-                                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-green-500/20 text-green-400">
-                                        APPROVED
-                                      </span>
+                                      {Array.isArray(claim.zero_day_dates) && claim.zero_day_dates.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 px-2">
+                                          <span className="text-[10px] text-gray-500">Dates:</span>
+                                          {claim.zero_day_dates.map((d) => (
+                                            <span key={d} className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                              {new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
                                     </div>
                                   );
                                 }
@@ -3951,6 +4017,16 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                             {claim.zero_days} day{claim.zero_days > 1 ? 's' : ''} x {formatCurrency(claim.daily_rate_applied)} = {formatCurrency(claim.total_amount)}
                                           </p>
                                           {claim.notes && <p className="text-xs text-gray-500 mt-0.5">{claim.notes}</p>}
+                                          {Array.isArray(claim.zero_day_dates) && claim.zero_day_dates.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mt-1">
+                                              <span className="text-[10px] text-gray-500">Dates:</span>
+                                              {claim.zero_day_dates.map((d) => (
+                                                <span key={d} className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                                  {new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          )}
                                         </div>
                                         <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[var(--color-primary)]/20 text-[var(--color-primary)]">
                                           PENDING
@@ -4008,58 +4084,113 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                       {/* Manual mode: allow resubmit / Attendance mode: re-scan needed */}
                                       {isAttendanceMode ? (
                                         <p className="text-xs text-gray-500 italic">Re-scan attendance to update this claim</p>
-                                      ) : (
-                                        <div className="flex gap-2 items-end">
-                                          <div className="flex-1">
-                                            <input
-                                              type="number"
-                                              min="1"
-                                              placeholder="Days"
-                                              value={input.days}
-                                              onChange={(e) => setZeroDayInputs(prev => ({
-                                                ...prev,
-                                                [record.barber_id]: { ...input, days: e.target.value }
-                                              }))}
-                                              className="w-full px-2 py-1.5 text-xs bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white"
-                                            />
+                                      ) : (() => {
+                                        const resubmitDates = input.dates || [];
+                                        const resubmitDateInput = input.dateInput || '';
+                                        return (
+                                          <div className="space-y-2">
+                                            <div>
+                                              <label className="text-[10px] text-gray-500 mb-0.5 block">Label zero-day dates (optional)</label>
+                                              <div className="flex gap-1 items-center">
+                                                <input
+                                                  type="date"
+                                                  value={resubmitDateInput}
+                                                  min={selectedPeriod ? new Date(selectedPeriod.period_start).toISOString().split('T')[0] : undefined}
+                                                  max={selectedPeriod ? new Date(selectedPeriod.period_end).toISOString().split('T')[0] : undefined}
+                                                  onChange={(e) => setZeroDayInputs(prev => ({
+                                                    ...prev,
+                                                    [record.barber_id]: { ...input, dateInput: e.target.value }
+                                                  }))}
+                                                  className="flex-1 px-2 py-1 text-xs bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white"
+                                                />
+                                                <button
+                                                  disabled={!resubmitDateInput || resubmitDates.includes(resubmitDateInput)}
+                                                  onClick={() => {
+                                                    const newDates = [...resubmitDates, resubmitDateInput].sort();
+                                                    setZeroDayInputs(prev => ({
+                                                      ...prev,
+                                                      [record.barber_id]: { ...input, dates: newDates, days: String(newDates.length), dateInput: '' }
+                                                    }));
+                                                  }}
+                                                  className="px-2 py-1 text-xs rounded bg-[var(--color-primary)]/20 text-[var(--color-primary)] border border-[var(--color-primary)]/30 disabled:opacity-50"
+                                                >
+                                                  Add
+                                                </button>
+                                              </div>
+                                              {resubmitDates.length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                  {resubmitDates.map((d) => (
+                                                    <span key={d} className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                                                      {new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                                      <button
+                                                        onClick={() => {
+                                                          const newDates = resubmitDates.filter(x => x !== d);
+                                                          setZeroDayInputs(prev => ({
+                                                            ...prev,
+                                                            [record.barber_id]: { ...input, dates: newDates, days: String(newDates.length || '') }
+                                                          }));
+                                                        }}
+                                                        className="text-amber-400 hover:text-red-400"
+                                                      >x</button>
+                                                    </span>
+                                                  ))}
+                                                </div>
+                                              )}
+                                            </div>
+                                            <div className="flex gap-2 items-end">
+                                              <div className="flex-1">
+                                                <input
+                                                  type="number"
+                                                  min="1"
+                                                  placeholder="Days"
+                                                  value={input.days}
+                                                  onChange={(e) => setZeroDayInputs(prev => ({
+                                                    ...prev,
+                                                    [record.barber_id]: { ...input, days: e.target.value }
+                                                  }))}
+                                                  className="w-full px-2 py-1.5 text-xs bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white"
+                                                />
+                                              </div>
+                                              <div className="flex-[2]">
+                                                <input
+                                                  type="text"
+                                                  placeholder="Notes (optional)"
+                                                  value={input.notes}
+                                                  onChange={(e) => setZeroDayInputs(prev => ({
+                                                    ...prev,
+                                                    [record.barber_id]: { ...input, notes: e.target.value }
+                                                  }))}
+                                                  className="w-full px-2 py-1.5 text-xs bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white"
+                                                />
+                                              </div>
+                                              <button
+                                                disabled={!input.days || parseInt(input.days) <= 0 || zeroDaySubmitting === record.barber_id}
+                                                onClick={async () => {
+                                                  try {
+                                                    setZeroDaySubmitting(record.barber_id);
+                                                    await addZeroDayClaimMutation({
+                                                      payroll_period_id: selectedPeriod._id,
+                                                      barber_id: record.barber_id,
+                                                      zero_days: parseInt(input.days),
+                                                      zero_day_dates: resubmitDates.length > 0 ? resubmitDates : undefined,
+                                                      notes: input.notes || undefined,
+                                                      requested_by: user._id,
+                                                    });
+                                                    setZeroDayInputs(prev => ({ ...prev, [record.barber_id]: { days: '', notes: '', dates: [], dateInput: '' } }));
+                                                  } catch (err) {
+                                                    console.error("Resubmit error:", err);
+                                                  } finally {
+                                                    setZeroDaySubmitting(null);
+                                                  }
+                                                }}
+                                                className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/30 border border-[var(--color-primary)]/30 transition-colors disabled:opacity-50"
+                                              >
+                                                Resubmit
+                                              </button>
+                                            </div>
                                           </div>
-                                          <div className="flex-[2]">
-                                            <input
-                                              type="text"
-                                              placeholder="Notes (optional)"
-                                              value={input.notes}
-                                              onChange={(e) => setZeroDayInputs(prev => ({
-                                                ...prev,
-                                                [record.barber_id]: { ...input, notes: e.target.value }
-                                              }))}
-                                              className="w-full px-2 py-1.5 text-xs bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white"
-                                            />
-                                          </div>
-                                          <button
-                                            disabled={!input.days || parseInt(input.days) <= 0 || zeroDaySubmitting === record.barber_id}
-                                            onClick={async () => {
-                                              try {
-                                                setZeroDaySubmitting(record.barber_id);
-                                                await addZeroDayClaimMutation({
-                                                  payroll_period_id: selectedPeriod._id,
-                                                  barber_id: record.barber_id,
-                                                  zero_days: parseInt(input.days),
-                                                  notes: input.notes || undefined,
-                                                  requested_by: user._id,
-                                                });
-                                                setZeroDayInputs(prev => ({ ...prev, [record.barber_id]: { days: '', notes: '' } }));
-                                              } catch (err) {
-                                                console.error("Resubmit error:", err);
-                                              } finally {
-                                                setZeroDaySubmitting(null);
-                                              }
-                                            }}
-                                            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/30 border border-[var(--color-primary)]/30 transition-colors disabled:opacity-50"
-                                          >
-                                            Resubmit
-                                          </button>
-                                        </div>
-                                      )}
+                                        );
+                                      })()}
                                     </div>
                                   );
                                 }
@@ -4073,59 +4204,113 @@ const PayrollManagement = ({ onRefresh, user }) => {
                                   );
                                 }
 
-                                // Manual mode — show input
+                                // Manual mode — show input with date labeling
+                                const inputDates = input.dates || [];
+                                const inputDateInput = input.dateInput || '';
                                 return (
-                                  <div className="flex gap-2 items-end">
-                                    <div className="flex-1">
-                                      <label className="text-[10px] text-gray-500 mb-0.5 block">Days</label>
-                                      <input
-                                        type="number"
-                                        min="1"
-                                        placeholder="0"
-                                        value={input.days}
-                                        onChange={(e) => setZeroDayInputs(prev => ({
-                                          ...prev,
-                                          [record.barber_id]: { ...input, days: e.target.value }
-                                        }))}
-                                        className="w-full px-2 py-1.5 text-xs bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white"
-                                      />
+                                  <div className="space-y-2">
+                                    {/* Date labeling */}
+                                    <div>
+                                      <label className="text-[10px] text-gray-500 mb-0.5 block">Label zero-day dates (optional)</label>
+                                      <div className="flex gap-1 items-center">
+                                        <input
+                                          type="date"
+                                          value={inputDateInput}
+                                          min={selectedPeriod ? new Date(selectedPeriod.period_start).toISOString().split('T')[0] : undefined}
+                                          max={selectedPeriod ? new Date(selectedPeriod.period_end).toISOString().split('T')[0] : undefined}
+                                          onChange={(e) => setZeroDayInputs(prev => ({
+                                            ...prev,
+                                            [record.barber_id]: { ...input, dateInput: e.target.value }
+                                          }))}
+                                          className="flex-1 px-2 py-1 text-xs bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white"
+                                        />
+                                        <button
+                                          disabled={!inputDateInput || inputDates.includes(inputDateInput)}
+                                          onClick={() => {
+                                            const newDates = [...inputDates, inputDateInput].sort();
+                                            setZeroDayInputs(prev => ({
+                                              ...prev,
+                                              [record.barber_id]: { ...input, dates: newDates, days: String(newDates.length), dateInput: '' }
+                                            }));
+                                          }}
+                                          className="px-2 py-1 text-xs rounded bg-[var(--color-primary)]/20 text-[var(--color-primary)] border border-[var(--color-primary)]/30 disabled:opacity-50"
+                                        >
+                                          Add
+                                        </button>
+                                      </div>
+                                      {inputDates.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                          {inputDates.map((d) => (
+                                            <span key={d} className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                                              {new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                              <button
+                                                onClick={() => {
+                                                  const newDates = inputDates.filter(x => x !== d);
+                                                  setZeroDayInputs(prev => ({
+                                                    ...prev,
+                                                    [record.barber_id]: { ...input, dates: newDates, days: String(newDates.length || '') }
+                                                  }));
+                                                }}
+                                                className="text-amber-400 hover:text-red-400"
+                                              >x</button>
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
                                     </div>
-                                    <div className="flex-[2]">
-                                      <label className="text-[10px] text-gray-500 mb-0.5 block">Notes</label>
-                                      <input
-                                        type="text"
-                                        placeholder="Optional reason"
-                                        value={input.notes}
-                                        onChange={(e) => setZeroDayInputs(prev => ({
-                                          ...prev,
-                                          [record.barber_id]: { ...input, notes: e.target.value }
-                                        }))}
-                                        className="w-full px-2 py-1.5 text-xs bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white"
-                                      />
+                                    <div className="flex gap-2 items-end">
+                                      <div className="flex-1">
+                                        <label className="text-[10px] text-gray-500 mb-0.5 block">Days</label>
+                                        <input
+                                          type="number"
+                                          min="1"
+                                          placeholder="0"
+                                          value={input.days}
+                                          onChange={(e) => setZeroDayInputs(prev => ({
+                                            ...prev,
+                                            [record.barber_id]: { ...input, days: e.target.value }
+                                          }))}
+                                          className="w-full px-2 py-1.5 text-xs bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white"
+                                        />
+                                      </div>
+                                      <div className="flex-[2]">
+                                        <label className="text-[10px] text-gray-500 mb-0.5 block">Notes</label>
+                                        <input
+                                          type="text"
+                                          placeholder="Optional reason"
+                                          value={input.notes}
+                                          onChange={(e) => setZeroDayInputs(prev => ({
+                                            ...prev,
+                                            [record.barber_id]: { ...input, notes: e.target.value }
+                                          }))}
+                                          className="w-full px-2 py-1.5 text-xs bg-[#0A0A0A] border border-[#2A2A2A] rounded text-white"
+                                        />
+                                      </div>
+                                      <button
+                                        disabled={!input.days || parseInt(input.days) <= 0 || zeroDaySubmitting === record.barber_id}
+                                        onClick={async () => {
+                                          try {
+                                            setZeroDaySubmitting(record.barber_id);
+                                            await addZeroDayClaimMutation({
+                                              payroll_period_id: selectedPeriod._id,
+                                              barber_id: record.barber_id,
+                                              zero_days: parseInt(input.days),
+                                              zero_day_dates: inputDates.length > 0 ? inputDates : undefined,
+                                              notes: input.notes || undefined,
+                                              requested_by: user._id,
+                                            });
+                                            setZeroDayInputs(prev => ({ ...prev, [record.barber_id]: { days: '', notes: '', dates: [], dateInput: '' } }));
+                                          } catch (err) {
+                                            console.error("Submit error:", err);
+                                          } finally {
+                                            setZeroDaySubmitting(null);
+                                          }
+                                        }}
+                                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/30 border border-[var(--color-primary)]/30 transition-colors disabled:opacity-50"
+                                      >
+                                        {zeroDaySubmitting === record.barber_id ? "..." : "Submit"}
+                                      </button>
                                     </div>
-                                    <button
-                                      disabled={!input.days || parseInt(input.days) <= 0 || zeroDaySubmitting === record.barber_id}
-                                      onClick={async () => {
-                                        try {
-                                          setZeroDaySubmitting(record.barber_id);
-                                          await addZeroDayClaimMutation({
-                                            payroll_period_id: selectedPeriod._id,
-                                            barber_id: record.barber_id,
-                                            zero_days: parseInt(input.days),
-                                            notes: input.notes || undefined,
-                                            requested_by: user._id,
-                                          });
-                                          setZeroDayInputs(prev => ({ ...prev, [record.barber_id]: { days: '', notes: '' } }));
-                                        } catch (err) {
-                                          console.error("Submit error:", err);
-                                        } finally {
-                                          setZeroDaySubmitting(null);
-                                        }
-                                      }}
-                                      className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[var(--color-primary)]/20 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/30 border border-[var(--color-primary)]/30 transition-colors disabled:opacity-50"
-                                    >
-                                      {zeroDaySubmitting === record.barber_id ? "..." : "Submit"}
-                                    </button>
                                   </div>
                                 );
                               })()}

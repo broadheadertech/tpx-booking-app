@@ -1025,6 +1025,7 @@ export default defineSchema({
     daily_pay: v.optional(v.number()), // Calculated daily rate pay
     zero_service_days: v.optional(v.number()), // Approved zero-service days included
     zero_day_pay: v.optional(v.number()), // Amount added for zero-service days
+    zero_day_dates: v.optional(v.array(v.string())), // Specific zero-day dates (YYYY-MM-DD)
 
     // Attendance time tracking (OT/UT/Late) — only when zero_day_source is "attendance"
     attendance_summary: v.optional(v.object({
@@ -1664,7 +1665,8 @@ export default defineSchema({
 
   // Time attendance for barber clock in/out tracking
   timeAttendance: defineTable({
-    barber_id: v.id("barbers"),
+    barber_id: v.optional(v.id("barbers")),
+    user_id: v.optional(v.id("users")),
     branch_id: v.id("branches"),
     clock_in: v.number(), // Unix timestamp (ms)
     clock_out: v.optional(v.number()), // null until clocked out
@@ -1672,11 +1674,19 @@ export default defineSchema({
     reviewed_by: v.optional(v.string()), // staff user name who approved/rejected
     reviewed_at: v.optional(v.number()), // timestamp of approval/rejection
     created_at: v.number(),
+    // Facial recognition fields
+    confidence_score: v.optional(v.number()), // 0.0-1.0 FR match confidence
+    photo_storage_id: v.optional(v.id("_storage")), // snapshot at clock event
+    liveness_passed: v.optional(v.boolean()), // did liveness check pass
+    device_fingerprint: v.optional(v.string()), // which kiosk device was used
+    method: v.optional(v.string()), // "fr" | "manual" | "pin"
+    geofence_passed: v.optional(v.boolean()), // was within branch geofence
   })
     .index("by_barber", ["barber_id"])
     .index("by_branch", ["branch_id"])
     .index("by_date", ["clock_in"])
     .index("by_barber_date", ["barber_id", "clock_in"])
+    .index("by_user", ["user_id"])
     .index("by_branch_status", ["branch_id", "status"]),
 
   // Default service templates managed by Super Admin
@@ -3103,6 +3113,7 @@ export default defineSchema({
     barber_id: v.id("barbers"),
     branch_id: v.id("branches"),
     zero_days: v.number(), // Number of zero-service days claimed
+    zero_day_dates: v.optional(v.array(v.string())), // Specific dates (YYYY-MM-DD) that are zero-service days
     daily_rate_applied: v.number(), // Daily rate snapshot at time of claim
     total_amount: v.number(), // zero_days * daily_rate_applied
     source: v.optional(v.string()), // "manual" | "attendance"
@@ -3131,4 +3142,61 @@ export default defineSchema({
   })
     .index("by_user_id", ["user_id"])
     .index("by_token", ["token"]),
+
+  // ── Facial Recognition Attendance ──
+
+  // Face enrollment data for FR-based attendance
+  face_enrollments: defineTable({
+    barber_id: v.optional(v.id("barbers")),
+    user_id: v.optional(v.id("users")),
+    branch_id: v.id("branches"),
+    embeddings: v.array(v.array(v.number())), // 5 × 128-float descriptors
+    enrollment_photos: v.array(v.id("_storage")), // 5 Convex storage IDs
+    enrollment_status: v.string(), // "pending" | "active" | "revoked"
+    consent_given: v.boolean(),
+    consent_timestamp: v.optional(v.number()),
+    created_at: v.number(),
+    updated_at: v.optional(v.number()),
+  })
+    .index("by_barber", ["barber_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_user", ["user_id"])
+    .index("by_status", ["enrollment_status"]),
+
+  // Branch-level FR attendance configuration
+  attendance_config: defineTable({
+    branch_id: v.id("branches"),
+    fr_enabled: v.boolean(),
+    auto_approve_threshold: v.optional(v.number()), // default 0.95
+    admin_review_threshold: v.optional(v.number()), // default 0.80
+    liveness_required: v.optional(v.boolean()), // default true
+    geofence_enabled: v.optional(v.boolean()),
+    geofence_lat: v.optional(v.number()),
+    geofence_lng: v.optional(v.number()),
+    geofence_radius_meters: v.optional(v.number()), // default 100
+    device_lock_enabled: v.optional(v.boolean()),
+    barber_overrides: v.optional(v.array(v.object({
+      barber_id: v.id("barbers"),
+      fr_exempt: v.boolean(),
+    }))),
+    staff_overrides: v.optional(v.array(v.object({
+      user_id: v.id("users"),
+      fr_exempt: v.boolean(),
+    }))),
+    updated_at: v.number(),
+    updated_by: v.optional(v.string()),
+  })
+    .index("by_branch", ["branch_id"]),
+
+  // Registered kiosk devices for FR attendance
+  attendance_devices: defineTable({
+    branch_id: v.id("branches"),
+    device_fingerprint: v.string(),
+    device_name: v.string(),
+    is_active: v.boolean(),
+    registered_at: v.number(),
+    last_used: v.optional(v.number()),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_fingerprint", ["device_fingerprint"]),
 });

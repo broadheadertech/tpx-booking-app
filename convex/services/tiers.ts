@@ -1037,6 +1037,9 @@ export const countEligibleForPromotion = query({
       .collect();
 
     const activeTiers = tiers.filter((t) => t.is_active !== false);
+    if (activeTiers.length === 0) {
+      return { totalEligible: 0, summary: {}, details: [] };
+    }
     const sortedTiers = [...activeTiers].sort((a, b) => b.threshold - a.threshold);
 
     // Get all users with points ledger
