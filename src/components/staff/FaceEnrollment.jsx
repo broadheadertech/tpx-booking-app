@@ -20,6 +20,8 @@ const FaceEnrollment = ({ isOpen, onClose, barberId, userId, barberName, branchI
   const [error, setError] = useState(null)
 
   const detectionLoopRef = useRef(null)
+  const stageRef = useRef(stage)
+  stageRef.current = stage
 
   const {
     videoRef, isLoading, error: modelError,
@@ -46,7 +48,7 @@ const FaceEnrollment = ({ isOpen, onClose, barberId, userId, barberName, branchI
     if (detectionLoopRef.current) cancelAnimationFrame(detectionLoopRef.current)
 
     const loop = async () => {
-      if (stage !== 'capturing') return
+      if (stageRef.current !== 'capturing') return
 
       const result = await detectFace()
       if (result) {
@@ -80,7 +82,7 @@ const FaceEnrollment = ({ isOpen, onClose, barberId, userId, barberName, branchI
     }
 
     detectionLoopRef.current = requestAnimationFrame(loop)
-  }, [stage, detectFace, checkFaceQuality, capturePhoto, videoRef])
+  }, [detectFace, checkFaceQuality, capturePhoto, videoRef])
 
   const handleConsent = async () => {
     setStage('capturing')
