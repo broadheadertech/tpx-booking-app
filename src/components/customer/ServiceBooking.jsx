@@ -706,11 +706,14 @@ const ServiceBooking = ({ onBack, onComplete, prefillData }) => {
         reason = "booked";
       }
 
-      // Check if time slot is in the past (for today only)
-      // Block the slot if: the hour has passed, OR it's the current hour (since the slot time has technically started)
-      if (isToday && hour <= currentHour) {
-        available = false;
-        reason = "past";
+      // Block slots less than 2 hours from now (minimum advance booking)
+      if (isToday) {
+        const nowMinutes = currentHour * 60 + currentMinute;
+        const slotMinutes = hour * 60;
+        if (slotMinutes < nowMinutes + 120) {
+          available = false;
+          reason = "too_soon";
+        }
       }
 
       // Check blocked periods (Time Off)
@@ -762,6 +765,25 @@ const ServiceBooking = ({ onBack, onComplete, prefillData }) => {
 
     return slots;
   }, [selectedDate, selectedStaff, selectedBranch, existingBookings]);
+
+  // Auto-advance to tomorrow if today has no available slots (e.g., shift is over / 2-hour rule)
+  React.useEffect(() => {
+    const phTodayString = getPhilippineDateString();
+    if (selectedDate !== phTodayString || !selectedStaff || !selectedBranch) return;
+    if (timeSlots.length === 0) return; // Slots not generated yet
+
+    const hasAvailable = timeSlots.some(s => s.available);
+    if (!hasAvailable) {
+      // Move to tomorrow
+      const phNow = getPhilippineDate();
+      phNow.setDate(phNow.getDate() + 1);
+      const year = phNow.getFullYear();
+      const month = String(phNow.getMonth() + 1).padStart(2, '0');
+      const day = String(phNow.getDate()).padStart(2, '0');
+      setSelectedDate(`${year}-${month}-${day}`);
+      setSelectedTime(null);
+    }
+  }, [timeSlots, selectedDate, selectedStaff, selectedBranch]);
 
   // Compute blocked (full-day) dates for the selected barber
   const blockedDates = React.useMemo(() => {

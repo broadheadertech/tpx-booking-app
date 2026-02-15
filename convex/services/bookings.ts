@@ -854,16 +854,16 @@ export const createBooking = mutation({
         resolvedEmail: customerEmail,
       });
 
-      if (customerEmail) {
-        const branch = await ctx.db.get(args.branch_id);
-        const barberData = args.barber ? await ctx.db.get(args.barber) : null;
+      const branch = await ctx.db.get(args.branch_id);
+      const barberData = args.barber ? await ctx.db.get(args.barber) : null;
+      const customerName = args.customer_name?.trim() || customer?.nickname || customer?.username || 'Valued Customer';
 
+      if (customerEmail) {
         console.log("📧 Scheduling booking confirmation email to:", customerEmail);
 
-        // Schedule the action to run immediately after this mutation completes
         await ctx.scheduler.runAfter(0, api.services.auth.sendBookingConfirmationEmail, {
           email: customerEmail,
-          customerName: args.customer_name?.trim() || customer?.nickname || customer?.username || 'Valued Customer',
+          customerName,
           bookingCode: bookingCode,
           serviceName: service.name,
           servicePrice: finalPrice,
@@ -877,6 +877,27 @@ export const createBooking = mutation({
         console.log("📧 Booking confirmation email scheduled successfully");
       } else {
         console.log("📧 No customer email available, skipping email notification");
+      }
+
+      // Send booking notification email to barber (if assigned and has email)
+      if (barberData?.email) {
+        console.log("📧 Scheduling barber notification email to:", barberData.email);
+
+        await ctx.scheduler.runAfter(0, api.services.auth.sendBarberBookingNotificationEmail, {
+          email: barberData.email,
+          barberName: barberData.full_name || 'Barber',
+          customerName,
+          bookingCode: bookingCode,
+          serviceName: service.name,
+          servicePrice: finalPrice,
+          branchName: branch?.name || 'Our Branch',
+          branchAddress: branch?.address,
+          date: args.date,
+          time: args.time,
+        });
+        console.log("📧 Barber notification email scheduled successfully");
+      } else if (args.barber) {
+        console.log("📧 Barber has no email, skipping barber email notification");
       }
     } catch (error) {
       console.error("Failed to send booking notifications:", error);

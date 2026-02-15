@@ -2341,6 +2341,237 @@ export const sendBookingConfirmationEmail = action({
   },
 });
 
+// Send barber notification email when a new booking is assigned to them
+export const sendBarberBookingNotificationEmail = action({
+  args: {
+    email: v.string(),
+    barberName: v.string(),
+    customerName: v.string(),
+    bookingCode: v.string(),
+    serviceName: v.string(),
+    servicePrice: v.number(),
+    branchName: v.string(),
+    branchAddress: v.optional(v.string()),
+    date: v.string(),
+    time: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { api } = require("../_generated/api");
+
+    const branding = await ctx.runQuery(api.services.branding.getGlobalBranding, {});
+
+    const primaryColor = branding?.primary_color || '#000000';
+    const accentColor = branding?.accent_color || '#000000';
+    const brandName = branding?.display_name || '';
+    const primaryLight = `${primaryColor}1a`;
+    const primaryBorder = `${primaryColor}40`;
+
+    const formattedDate = new Date(args.date).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    const emailData = {
+      from: `${brandName} <no-reply@tipunox.broadheader.com>`,
+      to: args.email,
+      subject: `New Appointment - ${args.customerName} on ${formattedDate}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New Appointment - ${brandName}</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+              background-color: #f5f5f5;
+              color: #333;
+              line-height: 1.6;
+            }
+            .container {
+              max-width: 500px;
+              margin: 0 auto;
+              background: #ffffff;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+            .header {
+              background: linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%);
+              padding: 24px;
+              text-align: center;
+              color: white;
+            }
+            .header h1 {
+              font-size: 24px;
+              font-weight: 700;
+              margin: 0;
+              letter-spacing: -0.5px;
+            }
+            .body {
+              padding: 28px 24px;
+            }
+            .greeting {
+              font-size: 15px;
+              color: #555;
+              margin-bottom: 24px;
+              line-height: 1.5;
+              text-align: center;
+            }
+            .booking-card {
+              background: ${primaryLight};
+              border: 2px solid ${primaryBorder};
+              border-radius: 10px;
+              padding: 20px;
+              margin-bottom: 24px;
+            }
+            .booking-code {
+              font-size: 24px;
+              font-weight: 800;
+              color: ${primaryColor};
+              font-family: 'Courier New', monospace;
+              letter-spacing: 2px;
+              margin-bottom: 8px;
+              text-align: center;
+              word-break: break-all;
+            }
+            .booking-label {
+              font-size: 12px;
+              color: #999;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              font-weight: 600;
+              text-align: center;
+              margin-bottom: 16px;
+            }
+            .booking-details {
+              border-top: 1px solid ${primaryBorder};
+              padding-top: 16px;
+            }
+            .detail-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 8px 0;
+              border-bottom: 1px solid #f0f0f0;
+            }
+            .detail-row:last-child {
+              border-bottom: none;
+            }
+            .detail-label {
+              font-size: 13px;
+              color: #666;
+              font-weight: 500;
+            }
+            .detail-value {
+              font-size: 13px;
+              color: #333;
+              font-weight: 600;
+              text-align: right;
+            }
+            .footer {
+              background: #f9f9f9;
+              border-top: 1px solid #efefef;
+              padding: 16px 24px;
+              text-align: center;
+              font-size: 11px;
+              color: #999;
+            }
+            .footer p {
+              margin: 2px 0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>📋 New Appointment</h1>
+            </div>
+
+            <div class="body">
+              <div class="greeting">
+                Hi <strong>${args.barberName}</strong>! You have a new appointment booked.
+              </div>
+
+              <div class="booking-card">
+                <div class="booking-label">Booking Code</div>
+                <div class="booking-code">${args.bookingCode}</div>
+
+                <div class="booking-details">
+                  <div class="detail-row">
+                    <span class="detail-label">👤 Customer</span>
+                    <span class="detail-value">${args.customerName}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">📅 Date</span>
+                    <span class="detail-value">${formattedDate}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">🕐 Time</span>
+                    <span class="detail-value">${args.time}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">✂️ Service</span>
+                    <span class="detail-value">${args.serviceName}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">💰 Price</span>
+                    <span class="detail-value">₱${args.servicePrice.toLocaleString()}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">📍 Branch</span>
+                    <span class="detail-value">${args.branchName}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="footer">
+              <p><strong>${brandName}</strong></p>
+              ${args.branchAddress ? `<p>${args.branchAddress}</p>` : ''}
+              <p>This is an automated message. Please do not reply.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    try {
+      console.log('📧 Attempting to send barber booking notification email:', {
+        to: args.email,
+        barberName: args.barberName,
+        bookingCode: args.bookingCode,
+        service: args.serviceName,
+      });
+
+      const result = await resend.emails.send(emailData as any);
+
+      if (result.error) {
+        console.error('📧 Barber notification email service error:', result.error);
+        return { success: false, error: result.error.message };
+      }
+
+      console.log('📧 Barber notification email sent successfully:', {
+        messageId: result.data?.id,
+        to: args.email,
+      });
+      return { success: true, messageId: result.data?.id };
+    } catch (error: any) {
+      console.error('📧 Failed to send barber notification email:', {
+        error: error.message,
+        to: args.email,
+      });
+      return { success: false, error: error.message };
+    }
+  },
+});
+
 // ============================================================================
 // TEST DATA SEEDING
 // ============================================================================
