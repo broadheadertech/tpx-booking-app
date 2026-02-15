@@ -852,6 +852,190 @@ export const emailTemplatesSteps = [
   },
 ]
 
+// ─── Customers Hub ──────────────────────────────────────────────────
+export const customersHubSteps = [
+  {
+    target: '[data-tour="ch-tabs"]',
+    title: 'Customer Sections',
+    message: 'Switch between the Customers list and Analytics dashboard from these tabs.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="ch-customers-tab"]',
+    title: 'Customers',
+    message: 'View all customers — search, filter by status, see wallet balances, and contact them directly.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="ch-analytics-tab"]',
+    title: 'Analytics',
+    message: 'Track churn risk, at-risk customers, top spenders, and retention metrics for your branch.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="ch-content"]',
+    title: 'Content Area',
+    message: 'The selected section\'s content appears here. Each tab has its own tutorial (? icon).',
+    position: 'top',
+  },
+]
+
+// ─── Customers: Customers Management ────────────────────────────────
+export const customersManagementSteps = [
+  {
+    target: '[data-tour="cm-stats"]',
+    title: 'Customer Stats',
+    message: 'Quick overview of total, active, new, inactive customer counts and total revenue.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="cm-controls"]',
+    title: 'Search & Filters',
+    message: 'Search by name, email, or phone. Filter by status and sort by name, email, join date, or bookings.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="cm-table"]',
+    title: 'Customer Table',
+    message: 'Full customer list with contact info, wallet balance, and status. Tap View for details or Contact to reach out.',
+    position: 'top',
+  },
+]
+
+// ─── Products Hub ───────────────────────────────────────────────────
+export const productsHubSteps = [
+  {
+    target: '[data-tour="ph-tabs"]',
+    title: 'Products & Services',
+    message: 'Switch between Services, Products, Order Products, and Vouchers from these tabs.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="ph-services-tab"]',
+    title: 'Services',
+    message: 'Manage your branch services — add, edit, price, and set durations.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="ph-products-tab"]',
+    title: 'Products',
+    message: 'Manage retail products — inventory, pricing, stock levels, and images.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="ph-order-tab"]',
+    title: 'Order Products',
+    message: 'Browse the central product catalog and place orders for your branch.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="ph-vouchers-tab"]',
+    title: 'Vouchers',
+    message: 'Create and manage discount vouchers — track redemptions and send to customers.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="ph-content"]',
+    title: 'Content Area',
+    message: 'The selected section\'s content appears here. Each tab has its own tutorial (? icon).',
+    position: 'top',
+  },
+]
+
+// ─── Products: Services Management ──────────────────────────────────
+export const servicesManagementSteps = [
+  {
+    target: '[data-tour="svc-stats"]',
+    title: 'Service Stats',
+    message: 'Overview of total services, average price, average duration, and total value.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="svc-controls"]',
+    title: 'Search & Actions',
+    message: 'Search services, sort by name/price/duration, toggle card or table view, and add new services.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="svc-list"]',
+    title: 'Services List',
+    message: 'All branch services with pricing, duration, and category. Edit or delete from here.',
+    position: 'top',
+  },
+]
+
+// ─── Products: Products Management ──────────────────────────────────
+export const productsManagementSteps = [
+  {
+    target: '[data-tour="prod-header"]',
+    title: 'Products Header',
+    message: 'Refresh data or add a new product with image, pricing, and inventory details.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="prod-stats"]',
+    title: 'Inventory Stats',
+    message: 'Total products, in-stock, low stock, out of stock, total inventory value, and sold this month.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="prod-controls"]',
+    title: 'Search & Filters',
+    message: 'Search by name, filter by category or stock level, and sort products.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="prod-grid"]',
+    title: 'Product Grid',
+    message: 'All products with images, pricing, stock bars, and profit margins. Edit or delete from here.',
+    position: 'top',
+  },
+]
+
+// ─── Products: Branch Product Ordering ──────────────────────────────
+export const branchOrderingSteps = [
+  {
+    target: '[data-tour="order-header"]',
+    title: 'Order Products',
+    message: 'Browse the central warehouse catalog and order products for your branch.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="order-tabs"]',
+    title: 'Catalog / Cart / Orders',
+    message: 'Browse the Product Catalog, review your Cart, or check My Orders history.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="order-content"]',
+    title: 'Tab Content',
+    message: 'Search products, add to cart, set quantities, then submit your order for approval.',
+    position: 'top',
+  },
+]
+
+// ─── Products: Branch Voucher Management ────────────────────────────
+export const branchVoucherSteps = [
+  {
+    target: '[data-tour="vouch-stats"]',
+    title: 'Voucher Stats',
+    message: 'Overview of total, active, redeemed, expired vouchers and total discount value.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="vouch-controls"]',
+    title: 'Search & Actions',
+    message: 'Search vouchers, filter by status, sort, toggle card or table view, and create new vouchers.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="vouch-list"]',
+    title: 'Vouchers List',
+    message: 'All vouchers with codes, discounts, expiry dates, and usage. Send, edit, or view assigned users.',
+    position: 'top',
+  },
+]
+
 export const customerAnalyticsSteps = [
   {
     target: '[data-tour="analytics-header"]',
@@ -920,6 +1104,52 @@ export const auditTrailSteps = [
     title: 'Audit Entries',
     message: 'Chronological log of all changes. Expand any entry to see the before/after diff.',
     position: 'top',
+  },
+]
+
+// ─── POS (Point of Sale) ────────────────────────────────────────────
+export const posSteps = [
+  {
+    target: '[data-tour="pos-mode-toggle"]',
+    title: 'Service / Retail Mode',
+    message: 'Switch between Service Mode (barber + services) and Retail Mode (product-only sales, no barber needed).',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="pos-barber-selection"]',
+    title: 'Select Barber',
+    message: 'In Service Mode, pick the barber who will perform the service. This is required before processing.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="pos-catalog"]',
+    title: 'Service & Product Catalog',
+    message: 'Browse services and products. Use the tabs, search bar, and categories to find items. Click "Add" to add them to the order.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="pos-customer"]',
+    title: 'Customer Selection',
+    message: 'Select a registered customer via search or QR scan, or add a walk-in customer with their details.',
+    position: 'left',
+  },
+  {
+    target: '[data-tour="pos-bookings"]',
+    title: 'Today\'s Bookings',
+    message: 'View today\'s bookings and attach one to the current transaction. This pre-fills services and customer info.',
+    position: 'left',
+  },
+  {
+    target: '[data-tour="pos-order-summary"]',
+    title: 'Order Summary',
+    message: 'Review all added services and products. Adjust quantities or remove items before checkout.',
+    position: 'left',
+  },
+  {
+    target: '[data-tour="pos-payment"]',
+    title: 'Payment',
+    message: 'See the total breakdown, select a payment method (Cash, Card, Wallet), and process the payment.',
+    position: 'left',
   },
 ]
 
@@ -1053,6 +1283,264 @@ export const queueSteps = [
     target: '[data-tour="q-board"]',
     title: 'Barber Queues',
     message: 'Kanban-style board — each column represents a barber with their assigned customers. Click a customer for details.',
+    position: 'top',
+  },
+]
+
+// ─── Team Hub ─────────────────────────────────────────────────────
+export const teamHubSteps = [
+  {
+    target: '[data-tour="th-tabs"]',
+    title: 'Team Sections',
+    message: 'Switch between Barbers, Staff Users, and Attendance management from these tabs.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="th-barbers-tab"]',
+    title: 'Barbers',
+    message: 'View, add, and manage barber profiles — schedules, services, ratings, and availability.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="th-users-tab"]',
+    title: 'Staff Users',
+    message: 'Manage branch staff accounts — add users, assign roles, and configure permissions.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="th-attendance-tab"]',
+    title: 'Attendance',
+    message: 'Track clock-in/out, overtime, late penalties, and export attendance reports.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="th-content"]',
+    title: 'Content Area',
+    message: 'The selected section\'s content appears here. Each section has its own search, filters, and actions.',
+    position: 'top',
+  },
+]
+
+// ─── Team Hub: Barbers Management ─────────────────────────────────
+export const barbersManagementSteps = [
+  {
+    target: '[data-tour="barbers-stats"]',
+    title: 'Barber Stats',
+    message: 'Overview of your barber team — total count, active, inactive, and average customer rating.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="barbers-controls"]',
+    title: 'Search & Filters',
+    message: 'Search barbers by name, filter by active/inactive status, and sort by name, rating, or bookings.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="barbers-add-btn"]',
+    title: 'Add Barber',
+    message: 'Create a new barber profile with contact info, services, schedule, and specialties.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="barbers-table"]',
+    title: 'Barbers Table',
+    message: 'View all barbers with their contact, schedule, and status. Click a row to view full profile, edit, or remove.',
+    position: 'top',
+  },
+]
+
+// ─── Team Hub: Branch User Management ─────────────────────────────
+export const branchUserSteps = [
+  {
+    target: '[data-tour="bu-header"]',
+    title: 'Branch Info',
+    message: 'Shows which branch you are managing staff for, along with the branch code.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="bu-stats"]',
+    title: 'Staff Stats',
+    message: 'Quick count of total staff members and how many are currently active.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="bu-controls"]',
+    title: 'Search & Add User',
+    message: 'Search staff by name or email, filter by role, and add new users to this branch.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="bu-table"]',
+    title: 'Staff Table',
+    message: 'View all branch staff with role, contact, and creation date. Use actions to edit, manage permissions, or delete.',
+    position: 'top',
+  },
+]
+
+// ─── Team Hub: Attendance ─────────────────────────────────────────
+export const attendanceSteps = [
+  {
+    target: '[data-tour="att-header"]',
+    title: 'Attendance',
+    message: 'Track barber clock-in/out times. Switch between table and card views, or export reports to CSV.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="att-live-status"]',
+    title: 'Live Status',
+    message: 'Real-time view of which barbers are clocked in, with live overtime and late detection.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="att-date-filters"]',
+    title: 'Date Filters',
+    message: 'Filter records by Today, Yesterday, This Week, This Month, This Year, or a custom date range.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="att-records"]',
+    title: 'Attendance Records',
+    message: 'Detailed log of clock-in/out times, total hours, overtime, late minutes, and penalties per barber.',
+    position: 'top',
+  },
+]
+
+// ─── Customer: Dashboard Home Feed ──────────────────────────────────
+export const customerHomeFeedSteps = [
+  {
+    target: '[data-tour="home-greeting"]',
+    title: 'Smart Greeting',
+    message: 'Personalized greeting based on the time of day, with a quick-book button.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="home-stories"]',
+    title: 'Stories',
+    message: 'Tap to watch branch stories — promos, behind-the-scenes, and barber highlights.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="home-promos"]',
+    title: 'Active Promotions',
+    message: 'Current flash promotions and bonus point events at your favorite branches.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="home-feed"]',
+    title: 'Social Feed',
+    message: 'Browse posts from barbers and branches — inspiration, tips, and portfolio shots.',
+    position: 'top',
+  },
+]
+
+// ─── Customer: Booking Hub ──────────────────────────────────────────
+export const customerBookingHubSteps = [
+  {
+    target: '[data-tour="bh-tabs"]',
+    title: 'Booking Tabs',
+    message: 'Switch between My Bookings, Book Now, and History.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="bh-quick-action"]',
+    title: 'Quick Book',
+    message: 'Tap here to start a new appointment — pick a branch, barber, service, and time slot.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="bh-upcoming"]',
+    title: 'Upcoming Bookings',
+    message: 'Your next appointments with live countdown timers and QR codes for check-in.',
+    position: 'top',
+  },
+]
+
+// ─── Customer: Wallet Hub ───────────────────────────────────────────
+export const customerWalletHubSteps = [
+  {
+    target: '[data-tour="wh-balance"]',
+    title: 'Wallet Balance',
+    message: 'Your current wallet balance. Top up to pay cashlessly at checkout.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="wh-tabs"]',
+    title: 'Wallet Sections',
+    message: 'Pay — quick actions & top-up. Activity — transaction history. Rewards — loyalty tiers & points.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="wh-content"]',
+    title: 'Tab Content',
+    message: 'The selected section appears here. Use Pay to top up, Activity to review, Rewards to redeem.',
+    position: 'top',
+  },
+]
+
+// ─── Customer: Shop ─────────────────────────────────────────────────
+export const customerShopSteps = [
+  {
+    target: '[data-tour="shop-search"]',
+    title: 'Search Products',
+    message: 'Search by product name or brand to find grooming essentials quickly.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="shop-cart"]',
+    title: 'Shopping Cart',
+    message: 'View items in your cart and proceed to checkout.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="shop-tabs"]',
+    title: 'Shop / Wishlist / Orders',
+    message: 'Browse products, check your wishlist, or view past orders.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="shop-categories"]',
+    title: 'Categories',
+    message: 'Filter by category — Hair Care, Beard, Shaving, Tools, or Extras.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="shop-products"]',
+    title: 'Product Grid',
+    message: 'Tap a product for details, or hit + to add it to your cart instantly.',
+    position: 'top',
+  },
+]
+
+// ─── Customer: Profile ──────────────────────────────────────────────
+export const customerProfileSteps = [
+  {
+    target: '[data-tour="profile-header"]',
+    title: 'Your Profile',
+    message: 'Your avatar, name, member status, and badges at a glance.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="profile-rewards"]',
+    title: 'Star Rewards',
+    message: 'Track your loyalty tier, earned points, and available rewards.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="profile-activity"]',
+    title: 'Recent Activity',
+    message: 'Your latest bookings and visit streak — keep the streak going!',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="profile-info"]',
+    title: 'Personal Info',
+    message: 'Edit your nickname, phone number, and birthday. Tap Edit to update.',
+    position: 'bottom',
+  },
+  {
+    target: '[data-tour="profile-settings"]',
+    title: 'Settings',
+    message: 'Manage notifications, get help, or sign out.',
     position: 'top',
   },
 ]

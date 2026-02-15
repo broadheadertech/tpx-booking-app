@@ -29,6 +29,10 @@ export function ClockButton({ barberId, barberName, branchId, compact = false })
   // Mutations
   const clockIn = useMutation(api.services.timeAttendance.clockIn);
   const clockOut = useMutation(api.services.timeAttendance.clockOut);
+  const frConfig = useQuery(
+    api.services.faceAttendance.isFREnabled,
+    branchId ? { branch_id: branchId } : "skip"
+  );
 
   // Update local duration every second when clocked in
   const [duration, setDuration] = useState(0);
@@ -473,6 +477,11 @@ export function ClockButton({ barberId, barberName, branchId, compact = false })
       <p className="text-xs text-gray-500 text-center">
         Tap to request clock in (requires staff approval)
       </p>
+      {frConfig?.enabled && (
+        <p className="text-xs text-blue-400 text-center mt-1">
+          Face Check-In is also available at branch kiosk
+        </p>
+      )}
 
       {/* Animation styles */}
       <style>{`

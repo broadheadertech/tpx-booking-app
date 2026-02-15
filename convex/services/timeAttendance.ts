@@ -17,7 +17,7 @@ function effectiveStatus(record: { status?: string; clock_out?: number }): strin
 }
 
 /**
- * Clock in a barber - creates a pending attendance request
+ * Clock in a barber or staff user - creates a pending attendance request
  * The request must be approved by staff before it takes effect.
  *
  * Auto-close behavior: If an unclosed shift is older than 24 hours,
@@ -25,7 +25,8 @@ function effectiveStatus(record: { status?: string; clock_out?: number }): strin
  */
 export const clockIn = mutation({
   args: {
-    barber_id: v.id("barbers"),
+    barber_id: v.optional(v.id("barbers")),
+    user_id: v.optional(v.id("users")),
     branch_id: v.id("branches"),
   },
   handler: async (ctx, args) => {
@@ -33,11 +34,25 @@ export const clockIn = mutation({
     let autoClosedShiftId = null;
 
     // Check if already has an active or pending shift
-    const activeShifts = await ctx.db
-      .query("timeAttendance")
-      .withIndex("by_barber", (q) => q.eq("barber_id", args.barber_id))
-      .filter((q) => q.eq(q.field("clock_out"), undefined))
-      .collect();
+    let activeShifts;
+    if (args.barber_id) {
+      activeShifts = await ctx.db
+        .query("timeAttendance")
+        .withIndex("by_barber", (q) => q.eq("barber_id", args.barber_id!))
+        .filter((q) => q.eq(q.field("clock_out"), undefined))
+        .collect();
+    } else if (args.user_id) {
+      activeShifts = await ctx.db
+        .query("timeAttendance")
+        .withIndex("by_user", (q) => q.eq("user_id", args.user_id!))
+        .filter((q) => q.eq(q.field("clock_out"), undefined))
+        .collect();
+    } else {
+      throw new ConvexError({
+        code: "INVALID_ARGS",
+        message: "Either barber_id or user_id must be provided.",
+      });
+    }
 
     for (const activeShift of activeShifts) {
       const status = effectiveStatus(activeShift);
@@ -80,13 +95,23 @@ export const clockIn = mutation({
       }
     }
 
-    // Validate barber exists
-    const barber = await ctx.db.get(args.barber_id);
-    if (!barber) {
-      throw new ConvexError({
-        code: "BARBER_NOT_FOUND",
-        message: "Barber not found.",
-      });
+    // Validate the person exists
+    if (args.barber_id) {
+      const barber = await ctx.db.get(args.barber_id);
+      if (!barber) {
+        throw new ConvexError({
+          code: "BARBER_NOT_FOUND",
+          message: "Barber not found.",
+        });
+      }
+    } else if (args.user_id) {
+      const user = await ctx.db.get(args.user_id);
+      if (!user) {
+        throw new ConvexError({
+          code: "USER_NOT_FOUND",
+          message: "User not found.",
+        });
+      }
     }
 
     // Validate branch exists
@@ -99,13 +124,20 @@ export const clockIn = mutation({
     }
 
     const now = Date.now();
-    const shiftId = await ctx.db.insert("timeAttendance", {
-      barber_id: args.barber_id,
+    const insertData: Record<string, any> = {
       branch_id: args.branch_id,
       clock_in: now,
       status: "pending_in",
       created_at: now,
-    });
+    };
+    if (args.barber_id) {
+      insertData.barber_id = args.barber_id;
+    }
+    if (args.user_id) {
+      insertData.user_id = args.user_id;
+    }
+
+    const shiftId = await ctx.db.insert("timeAttendance", insertData as any);
 
     return {
       success: true,
@@ -204,20 +236,120 @@ export const getBarberClockStatus = query({
 });
 
 /**
- * Clock out a barber - creates a pending clock-out request
+ * Get the current clock status for a staff user
+ * Returns whether clocked in, active shift details, pending requests, and duration
+ */
+export const getUserClockStatus = query({
+  args: {
+    user_id: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Find active shift (no clock_out) — could be pending or approved
+    const activeShifts = await ctx.db
+      .query("timeAttendance")
+      .withIndex("by_user", (q) => q.eq("user_id", args.user_id))
+      .filter((q) => q.eq(q.field("clock_out"), undefined))
+      .collect();
+
+    // Check for pending_in
+    const pendingIn = activeShifts.find((s) => s.status === "pending_in");
+    if (pendingIn) {
+      return {
+        isClockedIn: false,
+        shift: null,
+        shiftDuration: null,
+        pendingRequest: {
+          _id: pendingIn._id,
+          type: "clock_in",
+          requestedAt: pendingIn.clock_in,
+        },
+      };
+    }
+
+    // Check for approved_in (including legacy records with no status)
+    const approvedIn = activeShifts.find((s) => effectiveStatus(s) === "approved_in");
+    if (approvedIn) {
+      // Check if there's a pending_out for this shift
+      const pendingOutShifts = await ctx.db
+        .query("timeAttendance")
+        .withIndex("by_user", (q) => q.eq("user_id", args.user_id))
+        .filter((q) => q.eq(q.field("status"), "pending_out"))
+        .collect();
+
+      const pendingOut = pendingOutShifts.length > 0 ? pendingOutShifts[0] : null;
+
+      return {
+        isClockedIn: true,
+        shift: approvedIn,
+        shiftDuration: Date.now() - approvedIn.clock_in,
+        pendingRequest: pendingOut
+          ? {
+              _id: pendingOut._id,
+              type: "clock_out",
+              requestedAt: pendingOut.clock_out || Date.now(),
+            }
+          : null,
+      };
+    }
+
+    // Check for most recent rejected request (show briefly)
+    const recentRecords = await ctx.db
+      .query("timeAttendance")
+      .withIndex("by_user", (q) => q.eq("user_id", args.user_id))
+      .order("desc")
+      .take(1);
+
+    const lastRecord = recentRecords[0];
+    const isRecentRejection =
+      lastRecord?.status === "rejected" &&
+      lastRecord.reviewed_at &&
+      Date.now() - lastRecord.reviewed_at < 60000; // show for 1 minute
+
+    return {
+      isClockedIn: false,
+      shift: null,
+      shiftDuration: null,
+      pendingRequest: isRecentRejection
+        ? {
+            _id: lastRecord._id,
+            type: "rejected",
+            requestedAt: lastRecord.reviewed_at!,
+          }
+        : null,
+    };
+  },
+});
+
+/**
+ * Clock out a barber or staff user - creates a pending clock-out request
  * The request must be approved by staff before it takes effect.
  */
 export const clockOut = mutation({
   args: {
-    barber_id: v.id("barbers"),
+    barber_id: v.optional(v.id("barbers")),
+    user_id: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
     // Find active approved shift
-    const activeShifts = await ctx.db
-      .query("timeAttendance")
-      .withIndex("by_barber", (q) => q.eq("barber_id", args.barber_id))
-      .filter((q) => q.eq(q.field("clock_out"), undefined))
-      .collect();
+    let activeShifts;
+    if (args.barber_id) {
+      activeShifts = await ctx.db
+        .query("timeAttendance")
+        .withIndex("by_barber", (q) => q.eq("barber_id", args.barber_id!))
+        .filter((q) => q.eq(q.field("clock_out"), undefined))
+        .collect();
+    } else if (args.user_id) {
+      activeShifts = await ctx.db
+        .query("timeAttendance")
+        .withIndex("by_user", (q) => q.eq("user_id", args.user_id!))
+        .filter((q) => q.eq(q.field("clock_out"), undefined))
+        .collect();
+    } else {
+      throw new ConvexError({
+        code: "INVALID_ARGS",
+        message: "Either barber_id or user_id must be provided.",
+      });
+    }
 
     const approvedShift = activeShifts.find((s) => effectiveStatus(s) === "approved_in");
 
@@ -229,11 +361,20 @@ export const clockOut = mutation({
     }
 
     // Check if there's already a pending_out request
-    const existingPendingOut = await ctx.db
-      .query("timeAttendance")
-      .withIndex("by_barber", (q) => q.eq("barber_id", args.barber_id))
-      .filter((q) => q.eq(q.field("status"), "pending_out"))
-      .first();
+    let existingPendingOut;
+    if (args.barber_id) {
+      existingPendingOut = await ctx.db
+        .query("timeAttendance")
+        .withIndex("by_barber", (q) => q.eq("barber_id", args.barber_id!))
+        .filter((q) => q.eq(q.field("status"), "pending_out"))
+        .first();
+    } else {
+      existingPendingOut = await ctx.db
+        .query("timeAttendance")
+        .withIndex("by_user", (q) => q.eq("user_id", args.user_id!))
+        .filter((q) => q.eq(q.field("status"), "pending_out"))
+        .first();
+    }
 
     if (existingPendingOut) {
       throw new ConvexError({
@@ -296,11 +437,23 @@ export const getAttendanceByBranch = query({
 
     const enrichedRecords = await Promise.all(
       records.map(async (record) => {
-        const barber = await ctx.db.get(record.barber_id);
+        let personName = "Unknown";
+        let personAvatar: string | null = null;
+
+        if (record.barber_id) {
+          const barber = await ctx.db.get(record.barber_id);
+          personName = barber?.full_name || "Unknown";
+          personAvatar = barber?.avatar || null;
+        } else if (record.user_id) {
+          const user = await ctx.db.get(record.user_id);
+          personName = user ? (user.nickname || user.username) : "Unknown";
+          personAvatar = user?.avatar || null;
+        }
+
         return {
           ...record,
-          barber_name: barber?.full_name || "Unknown",
-          barber_avatar: barber?.avatar || null,
+          barber_name: personName,
+          barber_avatar: personAvatar,
         };
       })
     );
@@ -310,7 +463,7 @@ export const getAttendanceByBranch = query({
 });
 
 /**
- * Get current clock status for all barbers in a branch
+ * Get current clock status for all barbers and staff in a branch
  * Optimized: single query for all active shifts
  */
 export const getBarberStatusForBranch = query({
@@ -339,26 +492,40 @@ export const getBarberStatusForBranch = query({
       )
       .collect();
 
-    // Maps for O(1) lookup
+    // Maps for O(1) lookup — barbers keyed by barber_id, staff keyed by user_id
     const activeShiftByBarber = new Map<string, typeof activeShifts[0]>();
     const pendingOutByBarber = new Map<string, typeof pendingOutShifts[0]>();
+    const activeShiftByUser = new Map<string, typeof activeShifts[0]>();
+    const pendingOutByUser = new Map<string, typeof pendingOutShifts[0]>();
 
     for (const shift of activeShifts) {
-      activeShiftByBarber.set(shift.barber_id.toString(), shift);
+      if (shift.barber_id) {
+        activeShiftByBarber.set(shift.barber_id.toString(), shift);
+      }
+      if (shift.user_id) {
+        activeShiftByUser.set(shift.user_id.toString(), shift);
+      }
     }
     for (const shift of pendingOutShifts) {
-      pendingOutByBarber.set(shift.barber_id.toString(), shift);
+      if (shift.barber_id) {
+        pendingOutByBarber.set(shift.barber_id.toString(), shift);
+      }
+      if (shift.user_id) {
+        pendingOutByUser.set(shift.user_id.toString(), shift);
+      }
     }
 
-    const statusList = barbers.map((barber) => {
+    const statusList: any[] = barbers.map((barber) => {
       const activeShift = activeShiftByBarber.get(barber._id.toString());
       const pendingOut = pendingOutByBarber.get(barber._id.toString());
       const status = activeShift ? effectiveStatus(activeShift) : null;
 
       return {
         barber_id: barber._id,
+        user_id: null,
         barber_name: barber.full_name,
         barber_avatar: barber.avatar || null,
+        person_type: "barber",
         isClockedIn: status === "approved_in" || (!!pendingOut),
         isPending: status === "pending_in" || !!pendingOut,
         clockInTime: activeShift?.clock_in || pendingOut?.clock_in || null,
@@ -368,6 +535,37 @@ export const getBarberStatusForBranch = query({
         penalty_hourly_rate: barber.penalty_hourly_rate || null,
       };
     });
+
+    // Also query staff users for this branch
+    const staffRoles = ["staff", "branch_admin", "admin_staff"];
+    const branchUsers = await ctx.db
+      .query("users")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .filter((q) => q.eq(q.field("is_active"), true))
+      .collect();
+
+    const staffUsers = branchUsers.filter((u) => staffRoles.includes(u.role));
+
+    for (const user of staffUsers) {
+      const activeShift = activeShiftByUser.get(user._id.toString());
+      const pendingOut = pendingOutByUser.get(user._id.toString());
+      const status = activeShift ? effectiveStatus(activeShift) : null;
+
+      statusList.push({
+        barber_id: null,
+        user_id: user._id,
+        barber_name: user.nickname || user.username,
+        barber_avatar: user.avatar || null,
+        person_type: "staff",
+        isClockedIn: status === "approved_in" || (!!pendingOut),
+        isPending: status === "pending_in" || !!pendingOut,
+        clockInTime: activeShift?.clock_in || pendingOut?.clock_in || null,
+        status: pendingOut ? "pending_out" : status,
+        schedule: null,
+        ot_hourly_rate: null,
+        penalty_hourly_rate: null,
+      });
+    }
 
     return statusList;
   },
@@ -441,14 +639,26 @@ export const getPendingRequests = query({
     // Sort by created_at desc (most recent first)
     allPending.sort((a, b) => b.created_at - a.created_at);
 
-    // Enrich with barber details
+    // Enrich with barber or user details
     const enriched = await Promise.all(
       allPending.map(async (record) => {
-        const barber = await ctx.db.get(record.barber_id);
+        let personName = "Unknown";
+        let personAvatar: string | null = null;
+
+        if (record.barber_id) {
+          const barber = await ctx.db.get(record.barber_id);
+          personName = barber?.full_name || "Unknown";
+          personAvatar = barber?.avatar || null;
+        } else if (record.user_id) {
+          const user = await ctx.db.get(record.user_id);
+          personName = user ? (user.nickname || user.username) : "Unknown";
+          personAvatar = user?.avatar || null;
+        }
+
         return {
           ...record,
-          barber_name: barber?.full_name || "Unknown",
-          barber_avatar: barber?.avatar || null,
+          barber_name: personName,
+          barber_avatar: personAvatar,
         };
       })
     );

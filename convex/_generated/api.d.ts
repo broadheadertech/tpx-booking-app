@@ -49,6 +49,7 @@ import type * as services_emailMarketing from "../services/emailMarketing.js";
 import type * as services_emailTemplates from "../services/emailTemplates.js";
 import type * as services_events from "../services/events.js";
 import type * as services_expenses from "../services/expenses.js";
+import type * as services_faceAttendance from "../services/faceAttendance.js";
 import type * as services_feed from "../services/feed.js";
 import type * as services_feedAlgorithm from "../services/feedAlgorithm.js";
 import type * as services_index from "../services/index.js";
@@ -138,6 +139,7 @@ declare const fullApi: ApiFromModules<{
   "services/emailTemplates": typeof services_emailTemplates;
   "services/events": typeof services_events;
   "services/expenses": typeof services_expenses;
+  "services/faceAttendance": typeof services_faceAttendance;
   "services/feed": typeof services_feed;
   "services/feedAlgorithm": typeof services_feedAlgorithm;
   "services/index": typeof services_index;

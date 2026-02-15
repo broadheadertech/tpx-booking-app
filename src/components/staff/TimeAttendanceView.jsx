@@ -3,7 +3,9 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { StatusBadge } from "../common/StatusBadge";
 import Skeleton from "../common/Skeleton";
-import { Calendar, Clock, Users, X, Download, Table, LayoutList, CheckCircle, XCircle, LogIn, LogOut, Hourglass, Loader2, Settings, Save, ChevronDown, ChevronUp, DollarSign, Info, AlertCircle } from "lucide-react";
+import WalkthroughOverlay from "../common/WalkthroughOverlay";
+import { attendanceSteps } from "../../config/walkthroughSteps";
+import { Calendar, Clock, Users, X, Download, Table, LayoutList, CheckCircle, XCircle, LogIn, LogOut, Hourglass, Loader2, Settings, Save, ChevronDown, ChevronUp, DollarSign, Info, AlertCircle, HelpCircle } from "lucide-react";
 
 // Philippines timezone offset: UTC+8
 const PHT_OFFSET_MS = 8 * 60 * 60 * 1000;
@@ -292,7 +294,7 @@ function parseDateInput(dateStr) {
  */
 function exportToCSV(attendance, hoursByBarber, filterLabel) {
   // Detailed records CSV
-  const recordsHeader = ["Date", "Barber Name", "Clock In", "Clock Out", "Duration (Hours)", "Status"];
+  const recordsHeader = ["Date", "Barber Name", "Clock In", "Clock Out", "Duration (Hours)", "Status", "Method", "Confidence"];
   const recordsRows = attendance.map((record) => {
     const clockOut = record.clock_out || Date.now();
     const duration = clockOut - record.clock_in;
@@ -303,6 +305,8 @@ function exportToCSV(attendance, hoursByBarber, filterLabel) {
       record.clock_out ? formatTimeForCSV(record.clock_out) : "Active",
       formatDurationDecimal(duration),
       record.clock_out ? "Completed" : "Active",
+      record.method || "manual",
+      record.confidence_score ? `${Math.round(record.confidence_score * 100)}%` : "",
     ];
   });
 
@@ -378,6 +382,7 @@ export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
   const [savingShift, setSavingShift] = useState(null);
   const [showShiftSettings, setShowShiftSettings] = useState(false);
   const [expandedBarber, setExpandedBarber] = useState(null);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // Approval mutations
   const approveAttendance = useMutation(api.services.timeAttendance.approveAttendance);
@@ -559,7 +564,7 @@ export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
     <div className="flex flex-col gap-4 p-4">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
+      <div data-tour="att-header" className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-xl font-semibold text-white">Attendance</h2>
         <div className="flex items-center gap-2">
           <div className="flex bg-[#1A1A1A] rounded-lg p-1">
@@ -586,12 +591,19 @@ export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
             <Download className="w-4 h-4" />
             <span className="hidden sm:inline">Export CSV</span>
           </button>
+          <button
+            onClick={() => setShowTutorial(true)}
+            className="flex items-center px-2 py-2 text-gray-500 hover:text-white hover:bg-[#2A2A2A] rounded-lg transition-colors"
+            title="Show tutorial"
+          >
+            <HelpCircle className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
       {/* ── Live Status Strip ── */}
       {barberStatus.length > 0 && (
-        <div className="bg-[#1A1A1A] rounded-xl p-3 border border-[#2A2A2A]">
+        <div data-tour="att-live-status" className="bg-[#1A1A1A] rounded-xl p-3 border border-[#2A2A2A]">
           <div className="flex items-center gap-2 mb-2.5">
             <Users className="w-4 h-4 text-[var(--color-primary)]" />
             <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Live Status</span>
@@ -688,7 +700,7 @@ export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
                   )}
                   <div>
                     <span className="text-white font-medium text-sm">{request.barber_name}</span>
-                    <div className="flex items-center gap-1.5 mt-0.5">
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                       {request.status === "pending_in" ? (
                         <><LogIn className="w-3 h-3 text-amber-400" /><span className="text-xs text-amber-400">Clock In</span></>
                       ) : (
@@ -697,6 +709,11 @@ export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
                       <span className="text-xs text-gray-500">
                         · {formatTime(request.status === "pending_in" ? request.clock_in : request.clock_out)}
                       </span>
+                      {request.method === "fr" && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                          FR {request.confidence_score ? `${Math.round(request.confidence_score * 100)}%` : ""}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -725,7 +742,7 @@ export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
       )}
 
       {/* ── Date Filters ── */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+      <div data-tour="att-date-filters" className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
         {DATE_FILTERS.map((filter) => (
           <button
             key={filter.id}
@@ -801,7 +818,7 @@ export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
       </div>
 
       {/* ── Attendance Records ── */}
-      <div className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] overflow-hidden">
+      <div data-tour="att-records" className="bg-[#1A1A1A] rounded-xl border border-[#2A2A2A] overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-[#2A2A2A]">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-[var(--color-primary)]" />
@@ -826,6 +843,7 @@ export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
                   <th className="text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider px-4 py-2.5">Out</th>
                   <th className="text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider px-4 py-2.5">Hours</th>
                   <th className="text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider px-4 py-2.5">Status</th>
+                  <th className="text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider px-4 py-2.5">Method</th>
                   <th className="text-left text-[10px] font-medium text-gray-500 uppercase tracking-wider px-4 py-2.5">Insights</th>
                 </tr>
               </thead>
@@ -857,6 +875,17 @@ export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-500/10 text-green-500">
                           <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Active
                         </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {record.method === "fr" ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-400">
+                          FR {record.confidence_score ? `${Math.round(record.confidence_score * 100)}%` : ""}
+                        </span>
+                      ) : record.method === "pin" ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-400">PIN</span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-500/10 text-gray-500">Manual</span>
                       )}
                     </td>
                     <td className="px-4 py-2.5">
@@ -1268,6 +1297,8 @@ export function TimeAttendanceView({ branchId, staffName = "Staff" }) {
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
+
+      <WalkthroughOverlay steps={attendanceSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   );
 }

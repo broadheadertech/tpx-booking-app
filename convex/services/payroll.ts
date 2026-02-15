@@ -1505,6 +1505,7 @@ export const calculatePayrollForPeriod = mutation({
       // Check for approved zero-day claims matching current mode
       let zeroDayPay = 0;
       let zeroServiceDays = 0;
+      let zeroDayDates: string[] = [];
       if (zeroDayPayEnabled) {
         const currentSource = payrollSettings?.zero_day_source; // "manual" | "attendance"
         const zeroDayClaims = await ctx.db
@@ -1524,6 +1525,7 @@ export const calculatePayrollForPeriod = mutation({
         if (zeroDayClaim) {
           zeroServiceDays = zeroDayClaim.zero_days;
           zeroDayPay = zeroDayClaim.total_amount;
+          zeroDayDates = zeroDayClaim.zero_day_dates || [];
         }
       }
 
@@ -1595,6 +1597,7 @@ export const calculatePayrollForPeriod = mutation({
         daily_pay: dailyPayWithZeroDays,
         zero_service_days: zeroServiceDays,
         zero_day_pay: zeroDayPay,
+        zero_day_dates: zeroDayDates.length > 0 ? zeroDayDates : undefined,
         attendance_summary: attendanceSummary,
         total_booking_fees: earnings.total_booking_fees,
         total_late_fees: earnings.total_late_fees,
@@ -2637,6 +2640,7 @@ export const addZeroDayClaim = mutation({
     payroll_period_id: v.id("payroll_periods"),
     barber_id: v.id("barbers"),
     zero_days: v.number(),
+    zero_day_dates: v.optional(v.array(v.string())), // Specific dates (YYYY-MM-DD) for manual labeling
     notes: v.optional(v.string()),
     requested_by: v.id("users"),
   },
@@ -2716,6 +2720,7 @@ export const addZeroDayClaim = mutation({
 
       await ctx.db.patch(existingClaim._id, {
         zero_days: args.zero_days,
+        zero_day_dates: args.zero_day_dates,
         daily_rate_applied: dailyRate,
         total_amount: totalAmount,
         source: "manual",
@@ -2740,6 +2745,7 @@ export const addZeroDayClaim = mutation({
       barber_id: args.barber_id,
       branch_id: period.branch_id,
       zero_days: args.zero_days,
+      zero_day_dates: args.zero_day_dates,
       daily_rate_applied: dailyRate,
       total_amount: totalAmount,
       source: "manual",
@@ -2969,10 +2975,14 @@ export const autoPopulateZeroDayClaims = mutation({
         )
         .first();
 
+      // Sort zero-day dates for consistent display
+      const sortedZeroDays = zeroDays.sort();
+
       if (existingClaim) {
         if (existingClaim.status === "approved") continue;
         await ctx.db.patch(existingClaim._id, {
           zero_days: zeroDays.length,
+          zero_day_dates: sortedZeroDays,
           daily_rate_applied: dailyRate,
           total_amount: totalAmount,
           source: "attendance",
@@ -2988,6 +2998,7 @@ export const autoPopulateZeroDayClaims = mutation({
           barber_id: barber._id,
           branch_id: period.branch_id,
           zero_days: zeroDays.length,
+          zero_day_dates: sortedZeroDays,
           daily_rate_applied: dailyRate,
           total_amount: totalAmount,
           source: "attendance",

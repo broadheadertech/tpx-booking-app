@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { User, Star, Clock, Calendar, DollarSign, Search, Filter, UserCheck, UserX, Phone, Mail, Scissors, Plus, Edit, Trash2, RotateCcw, Eye, BookOpen, X, Save, Camera, Upload } from 'lucide-react'
+import { User, Star, Clock, Calendar, DollarSign, Search, Filter, UserCheck, UserX, Phone, Mail, Scissors, Plus, Edit, Trash2, RotateCcw, Eye, BookOpen, X, Save, Camera, Upload, HelpCircle, Scan } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import CreateBarberModal from './CreateBarberModal'
 import BarberModal from './BarberModal'
 import { useAppModal } from '../../context/AppModalContext'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { barbersManagementSteps } from '../../config/walkthroughSteps'
+import FaceEnrollment from './FaceEnrollment'
 
 // Separate component to handle barber avatar display
 const BarberAvatar = ({ barber, className = "w-12 h-12" }) => {
@@ -50,6 +53,8 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(false)
+  const [enrollBarber, setEnrollBarber] = useState(null)
 
   // Convex queries - with pagination limits to avoid byte limit errors
   // Get services filtered by branch to avoid showing duplicates from other branches
@@ -60,6 +65,13 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
       : undefined
   const allBookingsData = useQuery(api.services.bookings.getAllBookings, { limit: 100 })
   const allBookings = allBookingsData?.bookings || []
+
+  // Face enrollment status for the branch
+  const enrollments = useQuery(
+    api.services.faceAttendance.getEnrollmentsByBranch,
+    user?.branch_id ? { branch_id: user.branch_id } : "skip"
+  )
+  const enrolledBarberIds = new Set(enrollments?.map(e => e.barber_id) || [])
 
   // Convex mutations
   const createBarber = useMutation(api.services.barbers.createBarber)
@@ -268,7 +280,7 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
   return (
     <div className="space-y-6">
       {/* Header with Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div data-tour="barbers-stats" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -312,7 +324,7 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
       </div>
 
       {/* Controls */}
-      <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
+      <div data-tour="barbers-controls" className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
             <div className="relative">
@@ -359,11 +371,19 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
               <span>Refresh</span>
             </button>
             <button
+              data-tour="barbers-add-btn"
               onClick={handleCreate}
               className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white rounded-lg hover:from-[var(--color-accent)] hover:brightness-110 transition-colors text-sm"
             >
               <Plus className="h-4 w-4" />
               <span>Add Barber</span>
+            </button>
+            <button
+              onClick={() => setShowTutorial(true)}
+              className="flex items-center space-x-2 px-2 py-2 text-gray-500 hover:text-white hover:bg-[#2A2A2A] rounded-lg transition-colors"
+              title="Show tutorial"
+            >
+              <HelpCircle className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -379,7 +399,7 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
       />
 
       {/* Barbers Table */}
-      <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm overflow-hidden">
+      <div data-tour="barbers-table" className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-[#444444]/30">
             <thead className="bg-[#0A0A0A]">
@@ -479,6 +499,13 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
                           <BookOpen className="h-4 w-4" />
                         </button>
                         <button
+                          onClick={() => setEnrollBarber(barber)}
+                          className={`p-1 rounded ${enrolledBarberIds.has(barber._id) ? 'text-green-400 hover:text-green-300' : 'text-amber-400 hover:text-amber-300'}`}
+                          title={enrolledBarberIds.has(barber._id) ? 'Re-enroll Face' : 'Enroll Face'}
+                        >
+                          <Scan className="h-4 w-4" />
+                        </button>
+                        <button
                           onClick={() => handleEdit(barber)}
                           className="text-gray-400 hover:text-gray-300 p-1 rounded"
                           title="Edit"
@@ -540,6 +567,19 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
           onConfirm={() => handleDelete(showDeleteConfirm)}
         />
       )}
+
+      {/* Face Enrollment Modal */}
+      {enrollBarber && (
+        <FaceEnrollment
+          isOpen={!!enrollBarber}
+          onClose={() => setEnrollBarber(null)}
+          barberId={enrollBarber._id}
+          barberName={enrollBarber.full_name}
+          branchId={user?.branch_id}
+        />
+      )}
+
+      <WalkthroughOverlay steps={barbersManagementSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   )
 }

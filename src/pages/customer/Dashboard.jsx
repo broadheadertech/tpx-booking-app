@@ -21,7 +21,7 @@ import SmartGreeting from '../../components/customer/SmartGreeting'
 import StoriesCarousel from '../../components/customer/StoriesCarousel'
 import StickyAppointmentCard from '../../components/customer/StickyAppointmentCard'
 import WalkthroughOverlay from '../../components/common/WalkthroughOverlay'
-import { customerSteps } from '../../config/walkthroughSteps'
+import { customerSteps, customerHomeFeedSteps } from '../../config/walkthroughSteps'
 
 const Dashboard = ({ initialSection = 'home' }) => {
   // Use the hook that ensures Clerk users have Convex records
@@ -34,6 +34,7 @@ const Dashboard = ({ initialSection = 'home' }) => {
   const [isNavHidden, setIsNavHidden] = useState(false)
   const [showStickyAppointment, setShowStickyAppointment] = useState(false)
   const [showWalkthrough, setShowWalkthrough] = useState(false)
+  const [showHomeTutorial, setShowHomeTutorial] = useState(false)
   const lastScrollY = useRef(0)
   const scrollThreshold = 10 // Minimum scroll distance to trigger hide/show
   const stickyCardThreshold = 200 // Show sticky card after scrolling this far
@@ -197,7 +198,7 @@ const Dashboard = ({ initialSection = 'home' }) => {
         return (
           <div className="space-y-4 pt-4">
             {/* Smart Greeting Card */}
-            <div className="px-4">
+            <div data-tour="home-greeting" className="px-4">
               <SmartGreeting
                 user={user}
                 onBookNow={() => navigate('/customer/booking?action=book')}
@@ -205,7 +206,7 @@ const Dashboard = ({ initialSection = 'home' }) => {
             </div>
 
             {/* Stories Carousel - Instagram Style */}
-            <div className="px-4">
+            <div data-tour="home-stories" className="px-4">
               <StoriesCarousel
                 onStoryOpen={() => setIsViewingStory(true)}
                 onStoryClose={() => setIsViewingStory(false)}
@@ -214,13 +215,13 @@ const Dashboard = ({ initialSection = 'home' }) => {
 
             {/* Active Promotions Banner - Compact */}
             {user?._id && currentBranch?._id && (
-              <div className="px-4">
+              <div data-tour="home-promos" className="px-4">
                 <ActivePromoBanner userId={user._id} branchId={currentBranch._id} />
               </div>
             )}
 
             {/* Social Feed - Feed Dominant Layout (all branches) */}
-            <div className="px-4 pb-4">
+            <div data-tour="home-feed" className="px-4 pb-4">
               <SocialFeed
                 userId={user?._id}
                 limit={20}
@@ -348,10 +349,18 @@ const Dashboard = ({ initialSection = 'home' }) => {
         onSkip={handleWalkthroughSkip}
       />
 
+      {/* Home Feed Tutorial Overlay */}
+      <WalkthroughOverlay
+        steps={customerHomeFeedSteps}
+        isVisible={showHomeTutorial}
+        onComplete={() => setShowHomeTutorial(false)}
+        onSkip={() => setShowHomeTutorial(false)}
+      />
+
       {/* Floating Help Button — re-trigger walkthrough */}
-      {!showWalkthrough && !showOnboarding && !isViewingStory && activeSection === 'home' && user?.has_seen_tutorial && (
+      {!showWalkthrough && !showHomeTutorial && !showOnboarding && !isViewingStory && activeSection === 'home' && user?.has_seen_tutorial && (
         <button
-          onClick={() => setShowWalkthrough(true)}
+          onClick={() => setShowHomeTutorial(true)}
           className="fixed bottom-20 right-4 z-40 w-10 h-10 rounded-full bg-[#1A1A1A] border border-[#2A2A2A] flex items-center justify-center text-gray-400 hover:text-white hover:border-[var(--color-primary)]/50 transition-all shadow-lg shadow-black/40"
           title="Show tutorial"
         >

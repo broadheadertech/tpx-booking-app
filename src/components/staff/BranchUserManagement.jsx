@@ -2,10 +2,13 @@ import React, { useState } from 'react'
 import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
-import { User, UserPlus, Edit, Trash2, Building, Users, Search, Filter, X, AlertCircle, Shield } from 'lucide-react'
+import { User, UserPlus, Edit, Trash2, Building, Users, Search, Filter, X, AlertCircle, Shield, HelpCircle, Scan } from 'lucide-react'
 import UserFormModal from '../admin/UserFormModal'
 import PermissionConfigModal from '../admin/PermissionConfigModal'
+import FaceEnrollment from './FaceEnrollment'
 import { createPortal } from 'react-dom'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { branchUserSteps } from '../../config/walkthroughSteps'
 
 // Delete User Modal Component
 const DeleteUserModal = React.memo(({ isOpen, onClose, onConfirm, user, loading, error }) => {
@@ -107,6 +110,15 @@ export default function BranchUserManagement() {
   const [showPermissionsModal, setShowPermissionsModal] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
   const [selectedUserForPermissions, setSelectedUserForPermissions] = useState(null)
+  const [showTutorial, setShowTutorial] = useState(false)
+  const [enrollUser, setEnrollUser] = useState(null)
+
+  // Face enrollment status
+  const enrollments = user?.branch_id
+    ? useQuery(api.services.faceAttendance.getEnrollmentsByBranch, { branch_id: user.branch_id })
+    : null
+  const enrolledUserIds = new Set(enrollments?.filter(e => e.user_id).map(e => e.user_id) || [])
+
   const initialFormData = {
     username: '',
     email: '',
@@ -319,18 +331,25 @@ export default function BranchUserManagement() {
   return (
     <div className="space-y-6">
       {/* Branch Info Header */}
-      <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
+      <div data-tour="bu-header" className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex items-center space-x-3">
           <Building className="h-6 w-6 text-[var(--color-primary)]" />
-          <div>
+          <div className="flex-1">
             <h3 className="text-lg font-semibold text-white">{currentBranch.name}</h3>
             <p className="text-sm text-gray-400">Branch Code: {currentBranch.branch_code} • Managing branch staff</p>
           </div>
+          <button
+            onClick={() => setShowTutorial(true)}
+            className="flex items-center px-2 py-2 text-gray-500 hover:text-white hover:bg-[#2A2A2A] rounded-lg transition-colors"
+            title="Show tutorial"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-4">
+      <div data-tour="bu-stats" className="grid grid-cols-2 gap-4">
         <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -353,7 +372,7 @@ export default function BranchUserManagement() {
       </div>
 
       {/* Controls */}
-      <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
+      <div data-tour="bu-controls" className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
             <div className="relative">
@@ -391,7 +410,7 @@ export default function BranchUserManagement() {
       </div>
 
       {/* Users Table */}
-      <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm overflow-hidden">
+      <div data-tour="bu-table" className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-[#444444]/30">
             <thead className="bg-[#0A0A0A]">
@@ -458,6 +477,14 @@ export default function BranchUserManagement() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
+                        {/* Face Enrollment */}
+                        <button
+                          onClick={() => setEnrollUser(branchUser)}
+                          className={`transition-colors ${enrolledUserIds.has(branchUser._id) ? 'text-green-400 hover:text-green-300' : 'text-amber-400 hover:text-amber-300'}`}
+                          title={enrolledUserIds.has(branchUser._id) ? 'Re-enroll face' : 'Enroll face'}
+                        >
+                          <Scan className="h-4 w-4" />
+                        </button>
                         {/* Configure Permissions - Story 12-3 */}
                         {branchUser.role === 'staff' && (user?.role === 'branch_admin' || user?.role === 'super_admin' || user?.role === 'admin_staff') && (
                           <button
@@ -578,6 +605,17 @@ export default function BranchUserManagement() {
           setSelectedUserForPermissions(null)
         }}
       />
+
+      {/* Face Enrollment Modal */}
+      <FaceEnrollment
+        isOpen={!!enrollUser}
+        onClose={() => setEnrollUser(null)}
+        userId={enrollUser?._id}
+        barberName={enrollUser?.nickname || enrollUser?.username || 'Staff'}
+        branchId={user?.branch_id}
+      />
+
+      <WalkthroughOverlay steps={branchUserSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   )
 }

@@ -18,8 +18,11 @@ import {
   X,
   FileText,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  HelpCircle
 } from 'lucide-react'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { branchOrderingSteps } from '../../config/walkthroughSteps'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import Modal from '../common/Modal'
@@ -98,6 +101,7 @@ const StockBadge = ({ stock, minStock }) => {
 
 const BranchProductOrdering = ({ user, onRefresh }) => {
   const { showAlert, showConfirm } = useAppModal()
+  const [showTutorial, setShowTutorial] = useState(false)
   const [activeTab, setActiveTab] = useState('catalog') // 'catalog' | 'cart' | 'orders'
   const [searchTerm, setSearchTerm] = useState('')
   const [filterCategory, setFilterCategory] = useState('all')
@@ -245,7 +249,7 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+      <div data-tour="order-header" className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
         <div>
           <h2 className="text-3xl font-black text-white">Order Products</h2>
           <p className="text-gray-400 mt-1">Order products from the central warehouse</p>
@@ -259,11 +263,14 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
             <RefreshCw className="h-4 w-4" />
             <span>Refresh</span>
           </button>
+          <button onClick={() => setShowTutorial(true)} className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-[#2A2A2A] transition-colors" title="Show tutorial">
+            <HelpCircle className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex space-x-1 bg-[#1A1A1A] p-1 rounded-xl border border-[#2A2A2A]">
+      <div data-tour="order-tabs" className="flex space-x-1 bg-[#1A1A1A] p-1 rounded-xl border border-[#2A2A2A]">
         <button
           onClick={() => setActiveTab('catalog')}
           className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
@@ -305,6 +312,7 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
       </div>
 
       {/* Tab Content */}
+      <div data-tour="order-content">
       {activeTab === 'catalog' && (
         <div className="space-y-6">
           {/* Search and Filter */}
@@ -752,6 +760,9 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
           )}
         </div>
       )}
+      </div>
+
+      <WalkthroughOverlay steps={branchOrderingSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   )
 }

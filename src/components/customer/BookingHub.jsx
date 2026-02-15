@@ -27,7 +27,10 @@ import {
   Home,
   Wallet,
   ShoppingBag,
+  HelpCircle,
 } from 'lucide-react'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { customerBookingHubSteps } from '../../config/walkthroughSteps'
 import QRCode from 'qrcode'
 
 /**
@@ -376,7 +379,7 @@ const QuickActionCard = ({ icon: Icon, title, description, onClick, gradient, ba
 // ============================================
 const TabNavigation = ({ activeTab, onTabChange, tabs }) => {
   return (
-    <div className="flex bg-[#1A1A1A] rounded-2xl p-1.5 gap-1">
+    <div data-tour="bh-tabs" className="flex bg-[#1A1A1A] rounded-2xl p-1.5 gap-1">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id
         return (
@@ -430,6 +433,7 @@ const BookingHub = ({ onStartBooking, onViewBookingDetails, defaultTab = 'upcomi
   const { branding } = useBranding()
   const [activeTab, setActiveTab] = useState(defaultTab)
   const [isNavHidden, setIsNavHidden] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(false)
   const lastScrollY = useRef(0)
 
   // Scroll-aware navigation - hide on scroll down, show on scroll up
@@ -560,7 +564,7 @@ const BookingHub = ({ onStartBooking, onViewBookingDetails, defaultTab = 'upcomi
         return (
           <div className="space-y-6">
             {/* Quick Actions */}
-            <div className="grid grid-cols-1 gap-3">
+            <div data-tour="bh-quick-action" className="grid grid-cols-1 gap-3">
               <QuickActionCard
                 icon={Sparkles}
                 title="Book New Appointment"
@@ -580,7 +584,7 @@ const BookingHub = ({ onStartBooking, onViewBookingDetails, defaultTab = 'upcomi
                 onAction={handleStartNewBooking}
               />
             ) : (
-              <div className="space-y-4">
+              <div data-tour="bh-upcoming" className="space-y-4">
                 <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wide px-1">
                   Upcoming ({upcomingBookings.length})
                 </h3>
@@ -666,7 +670,12 @@ const BookingHub = ({ onStartBooking, onViewBookingDetails, defaultTab = 'upcomi
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[var(--color-bg)]/95 backdrop-blur-xl border-b border-white/5">
         <div className="px-4 py-4">
-          <h1 className="text-2xl font-bold text-white mb-4">Bookings</h1>
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold text-white">Bookings</h1>
+            <button onClick={() => setShowTutorial(true)} className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-[#2A2A2A] transition-colors" title="Show tutorial">
+              <HelpCircle className="w-5 h-5" />
+            </button>
+          </div>
           <TabNavigation
             activeTab={activeTab}
             onTabChange={setActiveTab}
@@ -705,6 +714,8 @@ const BookingHub = ({ onStartBooking, onViewBookingDetails, defaultTab = 'upcomi
           </div>
         </div>
       </div>
+
+      <WalkthroughOverlay steps={customerBookingHubSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   )
 }

@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { User, Mail, Phone, Calendar, Search, Filter, RotateCcw, MessageCircle, MapPin, Star, CreditCard, Package, Wallet, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { User, Mail, Phone, Calendar, Search, Filter, RotateCcw, MessageCircle, MapPin, Star, CreditCard, Package, Wallet, ArrowUpRight, ArrowDownRight, HelpCircle } from 'lucide-react'
+import WalkthroughOverlay from '../common/WalkthroughOverlay'
+import { customersManagementSteps } from '../../config/walkthroughSteps'
 import Modal from '../common/Modal'
 import { useQuery } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
@@ -98,6 +100,7 @@ const WalletDetailsSection = ({ customerId }) => {
 
 const CustomersManagement = ({ customers = [], wallets = [], onRefresh }) => {
   const { showAlert } = useAppModal()
+  const [showTutorial, setShowTutorial] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
   const [sortBy, setSortBy] = useState('name')
@@ -225,7 +228,7 @@ const CustomersManagement = ({ customers = [], wallets = [], onRefresh }) => {
   return (
     <div className="space-y-6">
       {/* Header with Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+      <div data-tour="cm-stats" className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
         <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -278,7 +281,7 @@ const CustomersManagement = ({ customers = [], wallets = [], onRefresh }) => {
       </div>
 
       {/* Controls */}
-      <div className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
+      <div data-tour="cm-controls" className="bg-[#1A1A1A] p-4 rounded-lg border border-[#2A2A2A]/50 shadow-sm">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
             {/* Search */}
@@ -329,12 +332,15 @@ const CustomersManagement = ({ customers = [], wallets = [], onRefresh }) => {
               <RotateCcw className="h-4 w-4" />
               <span>Refresh</span>
             </button>
+            <button onClick={() => setShowTutorial(true)} className="p-2 rounded-lg text-gray-500 hover:text-white hover:bg-[#2A2A2A] transition-colors" title="Show tutorial">
+              <HelpCircle className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>
 
       {/* Customers Table */}
-      <div className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm overflow-hidden">
+      <div data-tour="cm-table" className="bg-[#1A1A1A] rounded-lg border border-[#2A2A2A]/50 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-[#0A0A0A] border-b border-[#444444]/50">
@@ -779,6 +785,8 @@ const CustomersManagement = ({ customers = [], wallets = [], onRefresh }) => {
           </div>
         </Modal>
       )}
+
+      <WalkthroughOverlay steps={customersManagementSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>
   )
 }
