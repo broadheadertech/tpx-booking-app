@@ -18,10 +18,13 @@ const FaceEnrollment = ({ isOpen, onClose, barberId, userId, barberName, branchI
   const [captures, setCaptures] = useState([]) // { blob, thumbnail, descriptor }[]
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [statusMsg, setStatusMsg] = useState('')
 
-  const detectionLoopRef = useRef(null)
+  const loopTimerRef = useRef(null)
   const stageRef = useRef(stage)
   stageRef.current = stage
+  const capturesRef = useRef(captures)
+  capturesRef.current = captures
 
   const {
     videoRef, isLoading, error: modelError,
@@ -31,65 +34,106 @@ const FaceEnrollment = ({ isOpen, onClose, barberId, userId, barberName, branchI
   const generateUploadUrl = useMutation(api.services.faceAttendance.generateUploadUrl)
   const saveEnrollment = useMutation(api.services.faceAttendance.saveEnrollment)
 
+  const stopLoop = useCallback(() => {
+    if (loopTimerRef.current) {
+      clearTimeout(loopTimerRef.current)
+      loopTimerRef.current = null
+    }
+  }, [])
+
   // Cleanup on close
   useEffect(() => {
     if (!isOpen) {
       stopCamera()
+      stopLoop()
       setStage('consent')
       setCurrentStep(0)
       setCaptures([])
       setError(null)
-      if (detectionLoopRef.current) cancelAnimationFrame(detectionLoopRef.current)
+      setStatusMsg('')
     }
-  }, [isOpen, stopCamera])
+  }, [isOpen, stopCamera, stopLoop])
 
-  // Start detection loop during capture
-  const startDetectionLoop = useCallback(() => {
-    if (detectionLoopRef.current) cancelAnimationFrame(detectionLoopRef.current)
+  // Detection loop using setTimeout for reliable async handling
+  const runDetectionLoop = useCallback(() => {
+    stopLoop()
 
-    const loop = async () => {
+    const tick = async () => {
       if (stageRef.current !== 'capturing') return
 
-      const result = await detectFace()
-      if (result) {
+      try {
+        const result = await detectFace()
+
+        if (!result) {
+          setStatusMsg('No face detected — position your face in the oval')
+          loopTimerRef.current = setTimeout(tick, 400)
+          return
+        }
+
         const video = videoRef.current
+        if (!video) {
+          loopTimerRef.current = setTimeout(tick, 400)
+          return
+        }
+
         const quality = checkFaceQuality(result.detection, video.videoWidth, video.videoHeight)
 
-        if (quality.isGood && result.score > 0.9) {
-          // Auto-capture this angle
-          const blob = await capturePhoto()
-          const thumbnail = URL.createObjectURL(blob)
-
-          setCaptures((prev) => {
-            const updated = [...prev, { blob, thumbnail, descriptor: result.descriptor }]
-
-            if (updated.length >= CAPTURE_STEPS.length) {
-              // All 5 angles captured
-              setStage('confirm')
-            } else {
-              setCurrentStep(updated.length)
-            }
-
-            return updated
-          })
-
-          // Pause briefly before next angle
-          await new Promise((r) => setTimeout(r, 1000))
+        if (!quality.isGood) {
+          setStatusMsg(quality.reasons.join(' • '))
+          loopTimerRef.current = setTimeout(tick, 400)
+          return
         }
-      }
 
-      detectionLoopRef.current = requestAnimationFrame(loop)
+        if (result.score < 0.8) {
+          setStatusMsg('Face not clear enough — improve lighting')
+          loopTimerRef.current = setTimeout(tick, 400)
+          return
+        }
+
+        // Quality passed — auto-capture
+        setStatusMsg('Captured!')
+        const blob = await capturePhoto()
+        const thumbnail = URL.createObjectURL(blob)
+
+        setCaptures((prev) => {
+          const updated = [...prev, { blob, thumbnail, descriptor: result.descriptor }]
+
+          if (updated.length >= CAPTURE_STEPS.length) {
+            setStage('confirm')
+          } else {
+            setCurrentStep(updated.length)
+          }
+
+          return updated
+        })
+
+        // Pause before next angle
+        await new Promise((r) => setTimeout(r, 1200))
+
+        if (stageRef.current === 'capturing') {
+          setStatusMsg('Get ready for the next angle...')
+          loopTimerRef.current = setTimeout(tick, 300)
+        }
+      } catch (err) {
+        console.error('[FaceEnrollment] Detection error:', err)
+        setStatusMsg('Detection error — retrying...')
+        loopTimerRef.current = setTimeout(tick, 1000)
+      }
     }
 
-    detectionLoopRef.current = requestAnimationFrame(loop)
-  }, [detectFace, checkFaceQuality, capturePhoto, videoRef])
+    loopTimerRef.current = setTimeout(tick, 300)
+  }, [detectFace, checkFaceQuality, capturePhoto, videoRef, stopLoop])
 
   const handleConsent = async () => {
     setStage('capturing')
+    setStatusMsg('Starting camera...')
     const ok = await startCamera()
     if (ok) {
       // Small delay to let camera warm up
-      setTimeout(() => startDetectionLoop(), 500)
+      setTimeout(() => {
+        setStatusMsg('Detecting face...')
+        runDetectionLoop()
+      }, 800)
     }
   }
 
@@ -97,7 +141,36 @@ const FaceEnrollment = ({ isOpen, onClose, barberId, userId, barberName, branchI
     setCaptures([])
     setCurrentStep(0)
     setStage('capturing')
-    startDetectionLoop()
+    setStatusMsg('Detecting face...')
+    runDetectionLoop()
+  }
+
+  // Manual capture fallback
+  const handleManualCapture = async () => {
+    try {
+      setStatusMsg('Capturing...')
+      const result = await detectFace()
+      if (!result) {
+        setStatusMsg('No face detected — try again')
+        return
+      }
+
+      const blob = await capturePhoto()
+      const thumbnail = URL.createObjectURL(blob)
+
+      setCaptures((prev) => {
+        const updated = [...prev, { blob, thumbnail, descriptor: result.descriptor }]
+        if (updated.length >= CAPTURE_STEPS.length) {
+          setStage('confirm')
+        } else {
+          setCurrentStep(updated.length)
+        }
+        return updated
+      })
+      setStatusMsg('Captured!')
+    } catch (err) {
+      setStatusMsg('Capture failed — try again')
+    }
   }
 
   const handleSave = async () => {
@@ -239,9 +312,23 @@ const FaceEnrollment = ({ isOpen, onClose, barberId, userId, barberName, branchI
                 <p className="text-gray-400 text-sm mt-1">{CAPTURE_STEPS[currentStep]?.instruction}</p>
               </div>
 
-              <p className="text-gray-500 text-xs text-center">
-                Photo {currentStep + 1} of {CAPTURE_STEPS.length} — Hold still, auto-capturing...
-              </p>
+              {/* Live status feedback */}
+              {statusMsg && (
+                <p className="text-amber-400 text-xs text-center animate-pulse">{statusMsg}</p>
+              )}
+
+              <div className="flex items-center justify-between">
+                <p className="text-gray-500 text-xs">
+                  Photo {currentStep + 1} of {CAPTURE_STEPS.length} — Hold still
+                </p>
+                <button
+                  onClick={handleManualCapture}
+                  className="px-3 py-1.5 rounded-lg bg-[#2A2A2A] text-gray-300 text-xs hover:bg-[#3A3A3A] transition-colors flex items-center gap-1"
+                >
+                  <Camera className="w-3 h-3" />
+                  Manual
+                </button>
+              </div>
             </div>
           )}
 

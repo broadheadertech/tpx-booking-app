@@ -6,9 +6,10 @@ const STALE_SHIFT_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 // Philippines timezone offset: UTC+8
 const PHT_OFFSET_MS = 8 * 60 * 60 * 1000;
 
-// Default confidence thresholds
-const DEFAULT_AUTO_APPROVE = 0.95;
-const DEFAULT_ADMIN_REVIEW = 0.80;
+// Default confidence thresholds (confidence = 1 - euclideanDistance / 1.2)
+// Standard face-api.js match: distance < 0.6 → confidence 0.50
+const DEFAULT_AUTO_APPROVE = 0.65; // distance < 0.42 (high confidence auto-approve)
+const DEFAULT_ADMIN_REVIEW = 0.50; // distance < 0.60 (standard face-api.js threshold)
 
 function effectiveStatus(record: { status?: string; clock_out?: number }): string {
   if (record.status) return record.status;

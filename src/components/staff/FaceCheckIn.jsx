@@ -120,18 +120,18 @@ const FaceCheckIn = () => {
   useEffect(() => {
     if (state !== STATES.LIVENESS) return
 
-    // 10-second timeout
+    // 20-second timeout for both blink + turn
     livenessTimeoutRef.current = setTimeout(() => {
       setError('Liveness check timed out. Please try again.')
       setState(STATES.IDLE)
-    }, 10000)
+    }, 20000)
 
     const loop = async () => {
       if (livenessStep === 'blink') {
         const blinked = await checkBlink()
         if (blinked) {
           setLivenessStep('turn')
-          loopRef.current = setTimeout(loop, 200)
+          loopRef.current = setTimeout(loop, 150)
           return
         }
       } else if (livenessStep === 'turn') {
@@ -142,7 +142,7 @@ const FaceCheckIn = () => {
           return
         }
       }
-      loopRef.current = setTimeout(loop, 200)
+      loopRef.current = setTimeout(loop, 150)
     }
 
     loop()
@@ -152,23 +152,58 @@ const FaceCheckIn = () => {
     }
   }, [state, livenessStep, turnDirection, checkBlink, checkHeadTurn])
 
-  // MATCHING: extract descriptor + find best match
+  // MATCHING: extract descriptor + find best match (multiple attempts)
   useEffect(() => {
     if (state !== STATES.MATCHING || !enrollments) return
 
     const match = async () => {
-      const result = await detectFace()
-      if (!result) {
+      // Wait briefly for user to return to neutral position after liveness
+      await new Promise((r) => setTimeout(r, 800))
+
+      // Take multiple detection attempts and use the best match
+      const MAX_ATTEMPTS = 5
+      let overallBest = null
+
+      for (let i = 0; i < MAX_ATTEMPTS; i++) {
+        const result = await detectFace()
+        if (!result) {
+          await new Promise((r) => setTimeout(r, 300))
+          continue
+        }
+
+        const candidate = findBestMatch(result.descriptor, enrollments)
+        if (candidate) {
+          console.log(`[FaceCheckIn] Attempt ${i + 1}: matched ${candidate.barber_name}, distance=${candidate.distance.toFixed(3)}, confidence=${(candidate.confidence * 100).toFixed(1)}%`)
+          if (!overallBest || candidate.confidence > overallBest.confidence) {
+            overallBest = candidate
+          }
+        } else {
+          console.log(`[FaceCheckIn] Attempt ${i + 1}: no match candidate`)
+        }
+
+        // Short delay between attempts
+        if (i < MAX_ATTEMPTS - 1) await new Promise((r) => setTimeout(r, 400))
+      }
+
+      if (!overallBest) {
+        console.log('[FaceCheckIn] No face detected across all attempts')
         setError('No face detected during matching.')
         setState(STATES.IDLE)
         return
       }
 
-      const best = findBestMatch(result.descriptor, enrollments)
-      if (!best || best.confidence < (config?.admin_review_threshold ?? 0.80)) {
+      // Standard face-api.js match: distance < 0.6 = confidence 0.50
+      // Use admin_review_threshold from config (default 0.50 = distance 0.6)
+      const matchThreshold = config?.admin_review_threshold ?? 0.50
+      console.log(`[FaceCheckIn] Best match: ${overallBest.barber_name}, confidence=${(overallBest.confidence * 100).toFixed(1)}%, threshold=${(matchThreshold * 100).toFixed(1)}%`)
+
+      if (overallBest.confidence < matchThreshold) {
+        console.log('[FaceCheckIn] REJECTED — below threshold')
         setState(STATES.REJECTED)
         return
       }
+
+      const best = overallBest
 
       setMatchResult(best)
 
@@ -349,6 +384,7 @@ const FaceCheckIn = () => {
             <div className="text-center">
               <Loader2 className="w-10 h-10 text-[var(--color-primary)] animate-spin mx-auto mb-3" />
               <p className="text-white font-medium">Verifying identity...</p>
+              <p className="text-white/60 text-sm mt-1">Look straight at the camera</p>
             </div>
           </div>
         )}
