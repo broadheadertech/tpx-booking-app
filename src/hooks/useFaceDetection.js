@@ -192,6 +192,8 @@ export function useFaceDetection() {
           bestDistance = distance
           bestMatch = {
             barber_id: enrollment.barber_id,
+            user_id: enrollment.user_id,
+            person_type: enrollment.person_type,
             barber_name: enrollment.barber_name,
             barber_avatar: enrollment.barber_avatar,
             distance,
@@ -265,20 +267,23 @@ export function useFaceDetection() {
     const ear = getEyeAspectRatio(result.landmarks)
     earHistoryRef.current.push(ear)
 
-    // Keep last 30 frames
-    if (earHistoryRef.current.length > 30) {
+    // Keep last 40 frames
+    if (earHistoryRef.current.length > 40) {
       earHistoryRef.current.shift()
     }
 
     const history = earHistoryRef.current
-    if (history.length < 5) return false
+    if (history.length < 4) return false
 
-    // Blink detected: EAR drops below 0.21 then rises above 0.25
-    const recent = history.slice(-5)
+    // Blink detected: EAR drops below threshold then rises back
+    // Use wider window (last 10 frames) and relaxed thresholds
+    const recent = history.slice(-10)
     const min = Math.min(...recent)
     const max = Math.max(...recent)
 
-    if (min < 0.21 && max > 0.25) {
+    // Relaxed: closed eyes < 0.25, open eyes > 0.27
+    // The key signal is a significant DROP (max - min > 0.04)
+    if (min < 0.25 && max > 0.27 && (max - min) > 0.04) {
       earHistoryRef.current = [] // Reset after detection
       return true
     }
@@ -311,8 +316,8 @@ export function useFaceDetection() {
     const recent = history.slice(-3)
     const avg = recent.reduce((a, b) => a + b, 0) / recent.length
 
-    // Threshold: head turn ratio > 0.15 for the correct direction
-    const threshold = 0.15
+    // Threshold: head turn ratio > 0.10 for the correct direction (relaxed for usability)
+    const threshold = 0.10
     const detected = direction === 'left' ? avg < -threshold : avg > threshold
 
     if (detected) {
