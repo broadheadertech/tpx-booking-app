@@ -1694,6 +1694,28 @@ export const cancelBooking = mutation({
       }
     } catch (e) { console.error("[BOOKINGS] Cancellation email failed:", e); }
 
+    // In-app notification for SA about cancellation
+    try {
+      const svc = await ctx.db.get(booking.service);
+      await ctx.db.insert("notifications", {
+        title: "Booking Cancelled",
+        message: `${booking.customer_name || "Customer"}'s ${svc?.name || "appointment"} on ${booking.date} at ${booking.time} was cancelled`,
+        type: "booking" as const,
+        priority: "medium" as const,
+        recipient_type: "admin" as const,
+        branch_id: booking.branch_id,
+        is_read: false,
+        is_archived: false,
+        metadata: {
+          booking_id: args.id,
+          booking_code: booking.booking_code,
+          reason: args.reason,
+        },
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    } catch (e) { console.error("[BOOKINGS] In-app cancellation notification failed:", e); }
+
     return { success: true, booking_id: args.id };
   },
 });

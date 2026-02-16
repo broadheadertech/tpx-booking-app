@@ -196,6 +196,27 @@ export const requestSettlement = mutation({
       });
     } catch (e) { console.error("[SETTLEMENTS] Email failed:", e); }
 
+    // In-app notification for SA
+    try {
+      await ctx.db.insert("notifications", {
+        title: "New Settlement Request",
+        message: `${branch.name} requested a settlement of ₱${pendingTotal.totalNet.toLocaleString()} (${pendingTotal.count} earnings)`,
+        type: "payment" as const,
+        priority: "high" as const,
+        recipient_type: "admin" as const,
+        is_read: false,
+        is_archived: false,
+        action_label: "Review Settlement",
+        metadata: {
+          settlement_id: settlementId,
+          branch_id: args.branch_id,
+          amount: pendingTotal.totalNet,
+        },
+        createdAt: now,
+        updatedAt: now,
+      });
+    } catch (e) { console.error("[SETTLEMENTS] In-app notification failed:", e); }
+
     return {
       settlementId,
       amount: pendingTotal.totalNet,

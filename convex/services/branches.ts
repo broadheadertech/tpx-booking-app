@@ -674,7 +674,7 @@ export const toggleBranchStatus = mutation({
       updatedAt: Date.now(),
     });
 
-    // Email SA + BA when branch goes offline
+    // Email + in-app when branch goes offline
     if (goingOffline) {
       try {
         await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationToRole, {
@@ -689,6 +689,22 @@ export const toggleBranchStatus = mutation({
           variables: { branch_name: branch.name || "Unknown Branch" },
         });
       } catch (e) { console.error("[BRANCHES] Offline email failed:", e); }
+
+      try {
+        await ctx.db.insert("notifications", {
+          title: "Branch Offline",
+          message: `${branch.name} has been marked as inactive`,
+          type: "alert" as const,
+          priority: "high" as const,
+          recipient_type: "admin" as const,
+          is_read: false,
+          is_archived: false,
+          action_label: "View Branch",
+          metadata: { branch_id: args.id, branch_name: branch.name },
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        });
+      } catch (e) { console.error("[BRANCHES] In-app notification failed:", e); }
     }
 
     return args.id;

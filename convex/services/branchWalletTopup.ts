@@ -430,6 +430,23 @@ export const processBranchWalletTopupWebhook = internalAction({
       newBalance: creditResult.newBalance,
     });
 
+    // In-app notification for SA about wallet top-up
+    try {
+      await ctx.runMutation(api.services.notifications.createNotification, {
+        title: "Branch Wallet Top-Up",
+        message: `Branch wallet topped up ₱${pending.amount.toLocaleString()} via ${args.paymentMethod}`,
+        type: "payment",
+        priority: "medium",
+        recipient_type: "admin",
+        metadata: {
+          branch_id: pending.branch_id,
+          amount: pending.amount,
+          payment_method: args.paymentMethod,
+          new_balance: creditResult.newBalance,
+        },
+      });
+    } catch (e) { console.error("[BRANCH_WALLET_WEBHOOK] In-app notification failed:", e); }
+
     // Email SA + BA about branch wallet top-up
     try {
       await ctx.runAction(api.services.emailNotifications.sendNotificationToRole, {

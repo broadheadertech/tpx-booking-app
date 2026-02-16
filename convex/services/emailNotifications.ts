@@ -699,6 +699,21 @@ export const sendLowStockAlerts = internalMutation({
 
     if (lowStock.length === 0) return { sent: 0 };
 
+    // In-app notification for SA
+    await ctx.db.insert("notifications", {
+      title: "Low Stock Alert",
+      message: `${lowStock.length} product${lowStock.length > 1 ? "s" : ""} below minimum stock threshold`,
+      type: "alert" as const,
+      priority: "high" as const,
+      recipient_type: "admin" as const,
+      is_read: false,
+      is_archived: false,
+      action_label: "View Inventory",
+      metadata: { product_count: lowStock.length },
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
     const productList = lowStock
       .map((p: any) => `• ${p.name}: ${p.stock} remaining (min: ${p.minStock})`)
       .join("\n");

@@ -175,6 +175,28 @@ export const createOrder = mutation({
       });
     } catch (e) { console.error("[PRODUCT_ORDERS] Email failed:", e); }
 
+    // In-app notification for SA
+    try {
+      await ctx.db.insert("notifications", {
+        title: "New Product Order",
+        message: `${branch.name} placed order #${orderNumber} — ₱${totalAmount.toLocaleString()} (${orderItems.length} items)`,
+        type: "alert" as const,
+        priority: "high" as const,
+        recipient_type: "admin" as const,
+        is_read: false,
+        is_archived: false,
+        action_label: "Review Order",
+        metadata: {
+          order_id: orderId,
+          order_number: orderNumber,
+          branch_id: args.branch_id,
+          total_amount: totalAmount,
+        },
+        createdAt: now,
+        updatedAt: now,
+      });
+    } catch (e) { console.error("[PRODUCT_ORDERS] In-app notification failed:", e); }
+
     return {
       success: true,
       orderId,
