@@ -25,6 +25,172 @@ import {
 } from 'lucide-react';
 
 /**
+ * Approve Settlement Dialog Component
+ * Extracted to prevent re-creation on parent re-render (fixes focus loss)
+ */
+function ApproveSettlementDialog({
+  settlement,
+  approvalNotes,
+  setApprovalNotes,
+  isSubmitting,
+  error,
+  onClose,
+  onApprove,
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[10000] p-4">
+      <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl max-w-md w-full border border-[#333333] shadow-2xl">
+        <div className="p-5 border-b border-[#333333]">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-green-500/20 rounded-lg">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+            </div>
+            <h4 className="text-lg font-bold text-white">Approve Settlement</h4>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <p className="text-gray-300">
+            Are you sure you want to approve this settlement of{' '}
+            <span className="text-green-400 font-bold">₱{settlement?.amount?.toLocaleString()}</span>{' '}
+            for <span className="text-white font-medium">{settlement?.branch_name}</span>?
+          </p>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">
+              Notes (optional)
+            </label>
+            <textarea
+              value={approvalNotes}
+              onChange={(e) => setApprovalNotes(e.target.value)}
+              placeholder="Add any notes for this approval..."
+              className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#333333] rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+              rows={3}
+              disabled={isSubmitting}
+            />
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="p-5 border-t border-[#333333] flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="flex-1 px-4 py-3 bg-[#333333] hover:bg-[#444444] text-white font-medium rounded-lg transition-colors disabled:opacity-50 min-h-[48px]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onApprove}
+            disabled={isSubmitting}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 min-h-[48px]"
+          >
+            {isSubmitting ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <CheckCircle className="w-5 h-5" />
+            )}
+            {isSubmitting ? 'Approving...' : 'Confirm Approval'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Reject Settlement Dialog Component
+ * Extracted to prevent re-creation on parent re-render (fixes focus loss)
+ */
+function RejectSettlementDialog({
+  settlement,
+  rejectionReason,
+  setRejectionReason,
+  isSubmitting,
+  error,
+  onClose,
+  onReject,
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[10000] p-4">
+      <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl max-w-md w-full border border-[#333333] shadow-2xl">
+        <div className="p-5 border-b border-[#333333]">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-red-500/20 rounded-lg">
+              <XCircle className="w-5 h-5 text-red-400" />
+            </div>
+            <h4 className="text-lg font-bold text-white">Reject Settlement</h4>
+          </div>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <p className="text-gray-300">
+            Are you sure you want to reject this settlement request from{' '}
+            <span className="text-white font-medium">{settlement?.branch_name}</span>?
+          </p>
+
+          <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+            <p className="text-yellow-400 text-sm">
+              The {settlement?.earnings?.length || 0} linked earnings will be released and can be included in a future settlement request.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm text-gray-400 mb-2">
+              Rejection Reason <span className="text-red-400">*</span>
+            </label>
+            <textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Please provide a reason for rejection..."
+              className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#333333] rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+              rows={3}
+              disabled={isSubmitting}
+              required
+            />
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+              <p className="text-red-400 text-sm">{error}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="p-5 border-t border-[#333333] flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="flex-1 px-4 py-3 bg-[#333333] hover:bg-[#444444] text-white font-medium rounded-lg transition-colors disabled:opacity-50 min-h-[48px]"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onReject}
+            disabled={isSubmitting || !rejectionReason.trim()}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 min-h-[48px]"
+          >
+            {isSubmitting ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <XCircle className="w-5 h-5" />
+            )}
+            {isSubmitting ? 'Rejecting...' : 'Confirm Rejection'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Complete Settlement Dialog Component
  * Extracted to prevent re-creation on parent re-render (fixes focus loss)
  */
@@ -327,153 +493,18 @@ export default function SettlementDetailModal({ settlementId, onClose }) {
 
   const isLoading = settlement === undefined;
 
-  // Approval Confirmation Dialog
-  const ApproveDialog = () => (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[10000] p-4">
-      <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl max-w-md w-full border border-[#333333] shadow-2xl">
-        <div className="p-5 border-b border-[#333333]">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-500/20 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-green-400" />
-            </div>
-            <h4 className="text-lg font-bold text-white">Approve Settlement</h4>
-          </div>
-        </div>
+  // Close handlers for extracted dialogs
+  const handleCloseApproveDialog = useCallback(() => {
+    setShowApproveDialog(false);
+    setApprovalNotes('');
+    setError(null);
+  }, []);
 
-        <div className="p-5 space-y-4">
-          <p className="text-gray-300">
-            Are you sure you want to approve this settlement of{' '}
-            <span className="text-green-400 font-bold">₱{settlement?.amount?.toLocaleString()}</span>{' '}
-            for <span className="text-white font-medium">{settlement?.branch_name}</span>?
-          </p>
-
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">
-              Notes (optional)
-            </label>
-            <textarea
-              value={approvalNotes}
-              onChange={(e) => setApprovalNotes(e.target.value)}
-              placeholder="Add any notes for this approval..."
-              className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#333333] rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
-              rows={3}
-              disabled={isSubmitting}
-            />
-          </div>
-
-          {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
-              <p className="text-red-400 text-sm">{error}</p>
-            </div>
-          )}
-        </div>
-
-        <div className="p-5 border-t border-[#333333] flex gap-3">
-          <button
-            onClick={() => {
-              setShowApproveDialog(false);
-              setApprovalNotes('');
-              setError(null);
-            }}
-            disabled={isSubmitting}
-            className="flex-1 px-4 py-3 bg-[#333333] hover:bg-[#444444] text-white font-medium rounded-lg transition-colors disabled:opacity-50 min-h-[48px]"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleApprove}
-            disabled={isSubmitting}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 min-h-[48px]"
-          >
-            {isSubmitting ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <CheckCircle className="w-5 h-5" />
-            )}
-            {isSubmitting ? 'Approving...' : 'Confirm Approval'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Rejection Dialog
-  const RejectDialog = () => (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[10000] p-4">
-      <div className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl max-w-md w-full border border-[#333333] shadow-2xl">
-        <div className="p-5 border-b border-[#333333]">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-500/20 rounded-lg">
-              <XCircle className="w-5 h-5 text-red-400" />
-            </div>
-            <h4 className="text-lg font-bold text-white">Reject Settlement</h4>
-          </div>
-        </div>
-
-        <div className="p-5 space-y-4">
-          <p className="text-gray-300">
-            Are you sure you want to reject this settlement request from{' '}
-            <span className="text-white font-medium">{settlement?.branch_name}</span>?
-          </p>
-
-          <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-            <p className="text-yellow-400 text-sm">
-              The {settlement?.earnings?.length || 0} linked earnings will be released and can be included in a future settlement request.
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-400 mb-2">
-              Rejection Reason <span className="text-red-400">*</span>
-            </label>
-            <textarea
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="Please provide a reason for rejection..."
-              className="w-full px-4 py-3 bg-[#0A0A0A] border border-[#333333] rounded-lg text-white placeholder-gray-500 focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
-              rows={3}
-              disabled={isSubmitting}
-              required
-            />
-          </div>
-
-          {error && (
-            <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
-              <p className="text-red-400 text-sm">{error}</p>
-            </div>
-          )}
-        </div>
-
-        <div className="p-5 border-t border-[#333333] flex gap-3">
-          <button
-            onClick={() => {
-              setShowRejectDialog(false);
-              setRejectionReason('');
-              setError(null);
-            }}
-            disabled={isSubmitting}
-            className="flex-1 px-4 py-3 bg-[#333333] hover:bg-[#444444] text-white font-medium rounded-lg transition-colors disabled:opacity-50 min-h-[48px]"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleReject}
-            disabled={isSubmitting || !rejectionReason.trim()}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 min-h-[48px]"
-          >
-            {isSubmitting ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <XCircle className="w-5 h-5" />
-            )}
-            {isSubmitting ? 'Rejecting...' : 'Confirm Rejection'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  const handleCloseRejectDialog = useCallback(() => {
+    setShowRejectDialog(false);
+    setRejectionReason('');
+    setError(null);
+  }, []);
 
   // Mark as Processing Dialog (Story 25.4)
   const ProcessingDialog = () => (
@@ -747,6 +778,9 @@ export default function SettlementDetailModal({ settlementId, onClose }) {
                           <th className="px-4 py-2 text-left text-xs font-semibold text-gray-400 uppercase">
                             Customer
                           </th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-400 uppercase">
+                            Source
+                          </th>
                           <th className="px-4 py-2 text-right text-xs font-semibold text-gray-400 uppercase">
                             Amount
                           </th>
@@ -763,6 +797,17 @@ export default function SettlementDetailModal({ settlementId, onClose }) {
                             </td>
                             <td className="px-4 py-3">
                               <p className="text-white text-sm">{earning.customer_name}</p>
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {earning.payment_source === 'online_paymongo' ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                                  Online
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-500/20 text-green-400 border border-green-500/30">
+                                  Wallet
+                                </span>
+                              )}
                             </td>
                             <td className="px-4 py-3 text-right">
                               <p className="text-green-400 font-medium">
@@ -916,8 +961,28 @@ export default function SettlementDetailModal({ settlementId, onClose }) {
       </div>
 
       {/* Confirmation Dialogs */}
-      {showApproveDialog && <ApproveDialog />}
-      {showRejectDialog && <RejectDialog />}
+      {showApproveDialog && (
+        <ApproveSettlementDialog
+          settlement={settlement}
+          approvalNotes={approvalNotes}
+          setApprovalNotes={setApprovalNotes}
+          isSubmitting={isSubmitting}
+          error={error}
+          onClose={handleCloseApproveDialog}
+          onApprove={handleApprove}
+        />
+      )}
+      {showRejectDialog && (
+        <RejectSettlementDialog
+          settlement={settlement}
+          rejectionReason={rejectionReason}
+          setRejectionReason={setRejectionReason}
+          isSubmitting={isSubmitting}
+          error={error}
+          onClose={handleCloseRejectDialog}
+          onReject={handleReject}
+        />
+      )}
       {showProcessingDialog && <ProcessingDialog />}
       {showCompleteDialog && (
         <CompleteSettlementDialog

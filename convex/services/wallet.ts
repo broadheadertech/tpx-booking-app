@@ -599,11 +599,28 @@ export const getAllCustomerWallets = query({
     // Get all wallets
     const wallets = await ctx.db.query("wallets").take(limit);
 
-    // Get user info for each wallet
+    // Get all branches for name lookup
+    const allBranches = await ctx.db.query("branches").collect();
+    const branchMap: Record<string, string> = {};
+    for (const b of allBranches) {
+      branchMap[b._id] = b.name;
+    }
+
+    // Get user info + branch info for each wallet
     const walletsWithUsers = await Promise.all(
       wallets.map(async (wallet) => {
         const user = await ctx.db.get(wallet.user_id);
         if (!user || user.role !== "customer") return null;
+
+        // Get customer's branch associations (primary = most bookings)
+        const activities = await ctx.db
+          .query("customer_branch_activity")
+          .withIndex("by_customer", (q) => q.eq("customer_id", wallet.user_id))
+          .collect();
+
+        // Sort by total_bookings desc to find primary branch
+        activities.sort((a, b) => b.total_bookings - a.total_bookings);
+        const primaryActivity = activities[0];
 
         return {
           walletId: wallet._id,
@@ -614,6 +631,10 @@ export const getAllCustomerWallets = query({
           currency: wallet.currency || "PHP",
           userName: user.nickname || user.username || "Unknown",
           userEmail: user.email,
+          // Branch info
+          primaryBranchId: primaryActivity?.branch_id || null,
+          primaryBranchName: primaryActivity ? (branchMap[primaryActivity.branch_id] || "Unknown") : null,
+          branchCount: activities.length,
         };
       })
     );
@@ -798,6 +819,8 @@ export const payBookingWithWallet = mutation({
             staff_id: args.staffId, // Staff who processed (POS) or undefined (self-service)
             service_name: args.serviceName || "Booking Payment",
             gross_amount: args.amount, // In whole pesos
+            processed_via: "branch",
+            payment_source: "wallet",
           }
         );
         console.log("[WALLET_PAY] Branch earning record created:", {

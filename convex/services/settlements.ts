@@ -884,6 +884,29 @@ export const completeSettlement = mutation({
       });
     }
 
+    // Step 4b: Record commission as SA income
+    const totalCommission = earnings.reduce(
+      (sum, e) => sum + (e.commission_amount || 0), 0
+    );
+
+    if (totalCommission > 0) {
+      const branch = await ctx.db.get(settlement.branch_id);
+      await ctx.db.insert("superAdminRevenue", {
+        category: "commission_income",
+        description: `Settlement commission from ${branch?.name || "branch"}`,
+        amount: totalCommission,
+        revenue_date: now,
+        reference_id: args.transfer_reference.trim(),
+        settlement_id: args.settlement_id,
+        notes: `${earnings.length} earnings settled`,
+        is_automated: true,
+        received_to_sales_cash: true,
+        created_by: args.completed_by,
+        created_at: now,
+        updated_at: now,
+      });
+    }
+
     // Step 5: Update settlement status
     await ctx.db.patch(args.settlement_id, {
       status: SETTLEMENT_STATUS.COMPLETED,
@@ -1023,6 +1046,43 @@ export const getBranchSettlementHistory = query({
     );
 
     return enriched;
+  },
+});
+
+/**
+ * Get pending earnings breakdown by payment source
+ * Returns totals split between online (PayMongo) and wallet payments
+ * Used in the settlement queue header for source visibility
+ */
+export const getPendingEarningsSourceSummary = query({
+  args: {},
+  handler: async (ctx) => {
+    const pendingEarnings = await ctx.db
+      .query("branchWalletEarnings")
+      .filter((q) => q.eq(q.field("status"), "pending"))
+      .collect();
+
+    let onlineTotal = 0;
+    let walletTotal = 0;
+    let onlineCount = 0;
+    let walletCount = 0;
+
+    for (const earning of pendingEarnings) {
+      if (earning.payment_source === "online_paymongo") {
+        onlineTotal += earning.net_amount;
+        onlineCount++;
+      } else {
+        // Default to wallet for existing records without payment_source
+        walletTotal += earning.net_amount;
+        walletCount++;
+      }
+    }
+
+    return {
+      online: { total: onlineTotal, count: onlineCount },
+      wallet: { total: walletTotal, count: walletCount },
+      combined: { total: onlineTotal + walletTotal, count: onlineCount + walletCount },
+    };
   },
 });
 

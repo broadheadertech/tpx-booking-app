@@ -20,8 +20,13 @@ import {
   ShoppingBag,
   Wallet,
   User,
+  Award,
+  Users,
 } from "lucide-react";
 import { useBranding } from "../../context/BrandingContext";
+import { normalizeCerts } from "../../utils/certifications";
+import CertificationTag from "../../components/common/CertificationTag";
+import CertificationLightbox from "../../components/common/CertificationLightbox";
 
 const NAV_SECTIONS = [
   { id: 'home', label: 'Home', icon: Home, path: '/customer/dashboard' },
@@ -37,6 +42,7 @@ const BarberProfile = () => {
   const { branding } = useBranding();
   const { isAuthenticated } = useCurrentUser();
   const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedCert, setSelectedCert] = useState(null);
   const [activeTab, setActiveTab] = useState("portfolio");
   const [isFavorite, setIsFavorite] = useState(false);
   const [isNavHidden, setIsNavHidden] = useState(false);
@@ -145,6 +151,9 @@ const BarberProfile = () => {
   };
 
   const getYearsExperience = () => {
+    if (barberProfile?.years_of_experience != null) {
+      return `${barberProfile.years_of_experience} year${barberProfile.years_of_experience !== 1 ? 's' : ''}`;
+    }
     if (!barberProfile?.experience) return "0 years";
     const exp = barberProfile.experience.toLowerCase();
     if (exp.includes("year")) return barberProfile.experience;
@@ -317,9 +326,43 @@ const BarberProfile = () => {
 
           {/* Bio */}
           {barberProfile.bio && (
-            <p className="text-gray-400 text-sm text-center max-w-md leading-relaxed pb-4">
+            <p className="text-gray-400 text-sm text-center max-w-md leading-relaxed">
               {barberProfile.bio}
             </p>
+          )}
+
+          {/* Specialties */}
+          {barberProfile.specialties?.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-1.5 mt-3">
+              {barberProfile.specialties.map((specialty, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center px-2.5 py-1 bg-[#1A1A1A] text-gray-300 rounded-full text-xs border border-[#2A2A2A] font-medium"
+                >
+                  <Scissors className="w-3 h-3 mr-1 text-[var(--color-primary)]" />
+                  {specialty}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {/* Certifications */}
+          {barberProfile.certifications?.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-1.5 mt-2 pb-4">
+              {normalizeCerts(barberProfile.certifications).map((cert, i) => (
+                <CertificationTag
+                  key={i}
+                  cert={cert}
+                  size="sm"
+                  onClick={setSelectedCert}
+                  className="rounded-full"
+                />
+              ))}
+            </div>
+          )}
+
+          {!barberProfile.bio && (!barberProfile.specialties || barberProfile.specialties.length === 0) && (!barberProfile.certifications || barberProfile.certifications.length === 0) && (
+            <div className="pb-4" />
           )}
         </div>
       </div>
@@ -553,6 +596,11 @@ const BarberProfile = () => {
             </div>
           )}
         </div>
+      )}
+
+      {/* Certification Lightbox */}
+      {selectedCert && (
+        <CertificationLightbox cert={selectedCert} onClose={() => setSelectedCert(null)} />
       )}
     </div>
   );

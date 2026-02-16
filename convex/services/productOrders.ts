@@ -73,6 +73,16 @@ export const createOrder = mutation({
         });
       }
 
+      // Validate stock availability (total stock minus reserved)
+      const reservedStock = product.reserved_stock ?? 0;
+      const availableStock = product.stock - reservedStock;
+      if (availableStock < item.quantity_requested) {
+        throw new ConvexError({
+          code: "INSUFFICIENT_STOCK",
+          message: `Insufficient stock for ${product.name}. Available: ${availableStock}, Requested: ${item.quantity_requested}`,
+        });
+      }
+
       const itemTotal = product.price * item.quantity_requested;
       totalAmount += itemTotal;
 
@@ -88,6 +98,51 @@ export const createOrder = mutation({
     const now = Date.now();
     const orderNumber = generateOrderNumber();
 
+    // Branch Wallet payment is mandatory — check balance and create escrow hold
+    const wallet = await ctx.db
+      .query("branch_wallets")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .first();
+
+    if (!wallet) {
+      throw new ConvexError({
+        code: "NO_WALLET",
+        message: "Branch wallet not found. Please top up your wallet first.",
+      });
+    }
+
+    if (wallet.balance < totalAmount) {
+      throw new ConvexError({
+        code: "INSUFFICIENT_BALANCE",
+        message: `Insufficient wallet balance. Available: ₱${wallet.balance.toLocaleString()}, Required: ₱${totalAmount.toLocaleString()}. Please top up your wallet.`,
+      });
+    }
+
+    // Create hold: move from balance to held_balance
+    const newBalance = wallet.balance - totalAmount;
+    const newHeld = wallet.held_balance + totalAmount;
+
+    await ctx.db.patch(wallet._id, {
+      balance: newBalance,
+      held_balance: newHeld,
+      updatedAt: now,
+    });
+
+    // Create hold transaction record
+    const walletTransactionId = await ctx.db.insert("branch_wallet_transactions", {
+      branch_id: args.branch_id,
+      wallet_id: wallet._id,
+      type: "hold",
+      amount: -totalAmount,
+      balance_after: newBalance,
+      held_balance_after: newHeld,
+      reference_type: "product_order",
+      reference_id: orderNumber,
+      description: `Hold for order ${orderNumber}`,
+      created_by: args.requested_by,
+      createdAt: now,
+    });
+
     const orderId = await ctx.db.insert("productOrders", {
       order_number: orderNumber,
       branch_id: args.branch_id,
@@ -102,6 +157,8 @@ export const createOrder = mutation({
       approved_by: undefined,
       shipped_at: undefined,
       received_at: undefined,
+      wallet_hold_amount: totalAmount,
+      wallet_transaction_id: walletTransactionId,
     });
 
     return {
@@ -165,6 +222,24 @@ export const approveOrder = mutation({
       }));
     }
 
+    // Validate stock availability for approved quantities
+    for (const item of updatedItems) {
+      const qty = item.quantity_approved ?? 0;
+      if (qty > 0) {
+        const product = await ctx.db.get(item.catalog_product_id);
+        if (product) {
+          const currentReserved = product.reserved_stock ?? 0;
+          const currentAvailable = product.stock - currentReserved;
+          if (currentAvailable < qty) {
+            throw new ConvexError({
+              code: "INSUFFICIENT_STOCK",
+              message: `Insufficient stock for ${item.product_name}. Available: ${currentAvailable}, Approved: ${qty}`,
+            });
+          }
+        }
+      }
+    }
+
     // Recalculate total based on approved quantities
     const newTotal = updatedItems.reduce(
       (sum, item) => sum + item.unit_price * (item.quantity_approved ?? 0),
@@ -172,13 +247,92 @@ export const approveOrder = mutation({
     );
 
     const now = Date.now();
+
+    // Adjust wallet hold if total changed
+    let updatedWalletHold = order.wallet_hold_amount;
+    if (order.wallet_hold_amount && newTotal !== order.wallet_hold_amount) {
+      const wallet = await ctx.db
+        .query("branch_wallets")
+        .withIndex("by_branch", (q) => q.eq("branch_id", order.branch_id))
+        .first();
+
+      if (wallet) {
+        const difference = order.wallet_hold_amount - newTotal;
+        if (difference > 0) {
+          // Total decreased: release excess hold back to balance
+          await ctx.db.patch(wallet._id, {
+            balance: wallet.balance + difference,
+            held_balance: wallet.held_balance - difference,
+            updatedAt: now,
+          });
+          await ctx.db.insert("branch_wallet_transactions", {
+            branch_id: order.branch_id,
+            wallet_id: wallet._id,
+            type: "release_hold",
+            amount: difference,
+            balance_after: wallet.balance + difference,
+            held_balance_after: wallet.held_balance - difference,
+            reference_type: "product_order",
+            reference_id: order.order_number,
+            description: `Hold adjusted: order ${order.order_number} total reduced to ₱${newTotal.toLocaleString()}`,
+            created_by: args.approved_by,
+            createdAt: now,
+          });
+        } else if (difference < 0) {
+          // Total increased: need to hold more
+          const additionalHold = Math.abs(difference);
+          if (wallet.balance < additionalHold) {
+            throw new ConvexError({
+              code: "INSUFFICIENT_BALANCE",
+              message: `Branch wallet has insufficient balance for the adjusted order total. Need additional ₱${additionalHold.toLocaleString()}, available: ₱${wallet.balance.toLocaleString()}`,
+            });
+          }
+          await ctx.db.patch(wallet._id, {
+            balance: wallet.balance - additionalHold,
+            held_balance: wallet.held_balance + additionalHold,
+            updatedAt: now,
+          });
+          await ctx.db.insert("branch_wallet_transactions", {
+            branch_id: order.branch_id,
+            wallet_id: wallet._id,
+            type: "hold",
+            amount: -additionalHold,
+            balance_after: wallet.balance - additionalHold,
+            held_balance_after: wallet.held_balance + additionalHold,
+            reference_type: "product_order",
+            reference_id: order.order_number,
+            description: `Additional hold: order ${order.order_number} total increased to ₱${newTotal.toLocaleString()}`,
+            created_by: args.approved_by,
+            createdAt: now,
+          });
+        }
+        updatedWalletHold = newTotal;
+      }
+    }
+
     await ctx.db.patch(args.order_id, {
       status: "approved",
       items: updatedItems,
       total_amount: newTotal,
       approved_at: now,
       approved_by: args.approved_by,
+      ...(updatedWalletHold !== undefined && updatedWalletHold !== order.wallet_hold_amount
+        ? { wallet_hold_amount: updatedWalletHold }
+        : {}),
     });
+
+    // Reserve stock for approved items in central warehouse
+    for (const item of updatedItems) {
+      const qty = item.quantity_approved ?? 0;
+      if (qty > 0) {
+        const product = await ctx.db.get(item.catalog_product_id);
+        if (product) {
+          await ctx.db.patch(item.catalog_product_id, {
+            reserved_stock: (product.reserved_stock ?? 0) + qty,
+          });
+        }
+      }
+    }
 
     return { success: true };
   },
@@ -209,11 +363,42 @@ export const rejectOrder = mutation({
       });
     }
 
+    const now = Date.now();
+
+    // Release wallet hold if applicable
+    if (order.wallet_hold_amount) {
+      const wallet = await ctx.db
+        .query("branch_wallets")
+        .withIndex("by_branch", (q) => q.eq("branch_id", order.branch_id))
+        .first();
+
+      if (wallet) {
+        await ctx.db.patch(wallet._id, {
+          balance: wallet.balance + order.wallet_hold_amount,
+          held_balance: wallet.held_balance - order.wallet_hold_amount,
+          updatedAt: now,
+        });
+        await ctx.db.insert("branch_wallet_transactions", {
+          branch_id: order.branch_id,
+          wallet_id: wallet._id,
+          type: "release_hold",
+          amount: order.wallet_hold_amount,
+          balance_after: wallet.balance + order.wallet_hold_amount,
+          held_balance_after: wallet.held_balance - order.wallet_hold_amount,
+          reference_type: "product_order",
+          reference_id: order.order_number,
+          description: `Hold released: order ${order.order_number} rejected`,
+          created_by: args.rejected_by,
+          createdAt: now,
+        });
+      }
+    }
+
     await ctx.db.patch(args.order_id, {
       status: "rejected",
       rejection_reason: args.rejection_reason.trim(),
       approved_by: args.rejected_by, // Using approved_by to track who handled it
-      approved_at: Date.now(),
+      approved_at: now,
     });
 
     return { success: true };
@@ -280,9 +465,10 @@ export const shipOrder = mutation({
         remaining -= take;
       }
 
-      // Update product stock
+      // Update product stock and release reservation
       await ctx.db.patch(item.catalog_product_id, {
         stock: product.stock - quantityToShip,
+        reserved_stock: Math.max(0, (product.reserved_stock ?? 0) - quantityToShip),
       });
     }
 
@@ -322,59 +508,138 @@ export const receiveOrder = mutation({
 
     const now = Date.now();
 
-    // Create inventory batches for the branch
+    // Create inventory batches for the branch and restock products
     for (const item of order.items) {
       const quantityReceived = item.quantity_approved ?? item.quantity_requested;
+      const catalogProduct = await ctx.db.get(item.catalog_product_id);
 
-      // Check if branch already has this product
-      const existingProducts = await ctx.db
+      // Find matching branch product by catalog_product_id (preferred) or name (fallback)
+      const branchProducts = await ctx.db
         .query("products")
         .withIndex("by_branch", (q) => q.eq("branch_id", order.branch_id))
         .collect();
 
-      // Find matching product by name (since branch products have different IDs)
-      const catalogProduct = await ctx.db.get(item.catalog_product_id);
-      const existingProduct = existingProducts.find(
-        (p) => p.name === item.product_name
+      let existingProduct = branchProducts.find(
+        (p) => p.catalog_product_id === item.catalog_product_id
       );
+      // Fallback to name matching for older products without catalog link
+      if (!existingProduct) {
+        existingProduct = branchProducts.find(
+          (p) => p.name === item.product_name
+        );
+      }
+
+      let productId: string;
 
       if (existingProduct) {
-        // Update existing product stock
+        // Restock: Update existing product stock
+        const newStock = existingProduct.stock + quantityReceived;
         await ctx.db.patch(existingProduct._id, {
-          stock: existingProduct.stock + quantityReceived,
+          stock: newStock,
+          status: newStock > 0 ? "active" : existingProduct.status,
+          updatedAt: now,
+        });
+        productId = existingProduct._id;
+      } else {
+        // Product doesn't exist in branch yet — create it with received stock
+        const VALID_CATEGORIES = ["hair-care", "beard-care", "shaving", "tools", "accessories"] as const;
+        type ProductCategory = (typeof VALID_CATEGORIES)[number];
+        const cat = (catalogProduct?.category ?? "accessories") as string;
+        const category = VALID_CATEGORIES.includes(cat as ProductCategory)
+          ? (cat as ProductCategory)
+          : ("accessories" as ProductCategory);
+
+        const buyingPrice = item.unit_price;
+        const defaultSellingPrice = Math.ceil(buyingPrice * 1.10); // 10% markup
+        productId = await ctx.db.insert("products", {
+          branch_id: order.branch_id,
+          catalog_product_id: item.catalog_product_id,
+          name: item.product_name,
+          description: catalogProduct?.description || "",
+          price: defaultSellingPrice, // Default selling price = buying + 10% (branch admin can change)
+          cost: buyingPrice, // Buying price = catalog price (what branch pays HQ)
+          category,
+          brand: catalogProduct?.brand || "",
+          sku: catalogProduct?.sku || "",
+          stock: quantityReceived,
+          minStock: catalogProduct?.minStock ?? 10,
+          imageUrl: catalogProduct?.image_url,
+          imageStorageId: catalogProduct?.image_storage_id,
+          status: "active",
+          soldThisMonth: 0,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+
+      // Create batch for FIFO tracking (labeled by batch)
+      const batchNumber = `BATCH-${new Date().getFullYear()}-${Math.floor(
+        Math.random() * 100000
+      )
+        .toString()
+        .padStart(5, "0")}`;
+
+      await ctx.db.insert("inventoryBatches", {
+        product_id: productId,
+        product_type: "branch",
+        branch_id: order.branch_id,
+        batch_number: batchNumber,
+        quantity: quantityReceived,
+        initial_quantity: quantityReceived,
+        received_at: now,
+        expiry_date: undefined,
+        cost_per_unit: catalogProduct?.cost,
+        supplier: "Central Warehouse",
+        notes: `From order ${order.order_number}`,
+        created_by: args.received_by,
+        created_at: now,
+      });
+    }
+
+    // Auto-deduct wallet payment on receipt
+    if (order.wallet_hold_amount) {
+      const wallet = await ctx.db
+        .query("branch_wallets")
+        .withIndex("by_branch", (q) => q.eq("branch_id", order.branch_id))
+        .first();
+
+      if (wallet) {
+        const deductAmount = order.wallet_hold_amount;
+        await ctx.db.patch(wallet._id, {
+          held_balance: wallet.held_balance - deductAmount,
+          total_spent: wallet.total_spent + deductAmount,
           updatedAt: now,
         });
 
-        // Create batch for FIFO tracking
-        const batchNumber = `BATCH-${new Date().getFullYear()}-${Math.floor(
-          Math.random() * 100000
-        )
-          .toString()
-          .padStart(5, "0")}`;
-
-        await ctx.db.insert("inventoryBatches", {
-          product_id: existingProduct._id,
-          product_type: "branch",
+        await ctx.db.insert("branch_wallet_transactions", {
           branch_id: order.branch_id,
-          batch_number: batchNumber,
-          quantity: quantityReceived,
-          initial_quantity: quantityReceived,
-          received_at: now,
-          expiry_date: undefined,
-          cost_per_unit: catalogProduct?.cost,
-          supplier: "Central Warehouse",
-          notes: `From order ${order.order_number}`,
+          wallet_id: wallet._id,
+          type: "payment",
+          amount: -deductAmount,
+          balance_after: wallet.balance,
+          held_balance_after: wallet.held_balance - deductAmount,
+          reference_type: "product_order",
+          reference_id: order.order_number,
+          description: `Payment for order ${order.order_number} (received & confirmed)`,
           created_by: args.received_by,
-          created_at: now,
+          createdAt: now,
         });
       }
-      // If product doesn't exist in branch, they need to create it first
-      // This is a design decision - branches manage their own product catalog
     }
 
     await ctx.db.patch(args.order_id, {
       status: "received",
       received_at: now,
+      // Auto-mark as paid if wallet-funded
+      ...(order.wallet_hold_amount
+        ? {
+            is_paid: true,
+            paid_at: now,
+            paid_by: args.received_by,
+            payment_method: "branch_wallet" as const,
+            payment_notes: "Auto-paid from branch wallet on receipt confirmation",
+          }
+        : {}),
     });
 
     return { success: true };
@@ -382,7 +647,7 @@ export const receiveOrder = mutation({
 });
 
 /**
- * Cancel an order (only pending orders can be cancelled)
+ * Cancel an order (pending or approved orders can be cancelled)
  */
 export const cancelOrder = mutation({
   args: {
@@ -399,11 +664,56 @@ export const cancelOrder = mutation({
       });
     }
 
-    if (order.status !== "pending") {
+    // Allow cancellation of pending and approved orders (not shipped/received)
+    if (order.status !== "pending" && order.status !== "approved") {
       throw new ConvexError({
         code: "INVALID_STATUS",
         message: `Cannot cancel order with status: ${order.status}`,
       });
+    }
+
+    const now = Date.now();
+
+    // Release stock reservation if order was approved
+    if (order.status === "approved") {
+      for (const item of order.items) {
+        const qty = item.quantity_approved ?? item.quantity_requested;
+        const product = await ctx.db.get(item.catalog_product_id);
+        if (product) {
+          await ctx.db.patch(item.catalog_product_id, {
+            reserved_stock: Math.max(0, (product.reserved_stock ?? 0) - qty),
+          });
+        }
+      }
+    }
+
+    // Release wallet hold if applicable
+    if (order.wallet_hold_amount) {
+      const wallet = await ctx.db
+        .query("branch_wallets")
+        .withIndex("by_branch", (q) => q.eq("branch_id", order.branch_id))
+        .first();
+
+      if (wallet) {
+        await ctx.db.patch(wallet._id, {
+          balance: wallet.balance + order.wallet_hold_amount,
+          held_balance: wallet.held_balance - order.wallet_hold_amount,
+          updatedAt: now,
+        });
+        await ctx.db.insert("branch_wallet_transactions", {
+          branch_id: order.branch_id,
+          wallet_id: wallet._id,
+          type: "release_hold",
+          amount: order.wallet_hold_amount,
+          balance_after: wallet.balance + order.wallet_hold_amount,
+          held_balance_after: wallet.held_balance - order.wallet_hold_amount,
+          reference_type: "product_order",
+          reference_id: order.order_number,
+          description: `Hold released: order ${order.order_number} cancelled`,
+          created_by: args.cancelled_by,
+          createdAt: now,
+        });
+      }
     }
 
     await ctx.db.patch(args.order_id, {
@@ -708,15 +1018,7 @@ export const markOrderAsPaid = mutation({
   args: {
     order_id: v.id("productOrders"),
     paid_by: v.id("users"),
-    payment_method: v.optional(
-      v.union(
-        v.literal("cash"),
-        v.literal("bank_transfer"),
-        v.literal("check"),
-        v.literal("gcash"),
-        v.literal("maya")
-      )
-    ),
+    payment_method: v.optional(v.literal("branch_wallet")),
     payment_reference: v.optional(v.string()),
     payment_notes: v.optional(v.string()),
   },
@@ -774,17 +1076,9 @@ export const createManualOrder = mutation({
     notes: v.optional(v.string()),
     // Option to auto-approve the order
     auto_approve: v.optional(v.boolean()),
-    // Option to mark as already paid
+    // Option to mark as already paid via branch wallet
     mark_as_paid: v.optional(v.boolean()),
-    payment_method: v.optional(
-      v.union(
-        v.literal("cash"),
-        v.literal("bank_transfer"),
-        v.literal("check"),
-        v.literal("gcash"),
-        v.literal("maya")
-      )
-    ),
+    payment_method: v.optional(v.literal("branch_wallet")),
     payment_reference: v.optional(v.string()),
   },
   handler: async (ctx, args) => {

@@ -18,6 +18,7 @@ import {
   Building2,
   ChevronRight,
   AlertCircle,
+  Wallet,
 } from "lucide-react";
 import BranchWalletDetailModal from "./BranchWalletDetailModal";
 
@@ -52,6 +53,15 @@ function TableRowSkeleton() {
     <tr className="border-b border-[#2A2A2A]">
       <td className="px-4 py-3">
         <div className="h-4 bg-gray-700 rounded w-32 animate-pulse" />
+      </td>
+      <td className="px-4 py-3">
+        <div className="h-4 bg-gray-700 rounded w-16 animate-pulse" />
+      </td>
+      <td className="px-4 py-3">
+        <div className="h-4 bg-gray-700 rounded w-16 animate-pulse" />
+      </td>
+      <td className="px-4 py-3">
+        <div className="h-4 bg-gray-700 rounded w-16 animate-pulse" />
       </td>
       <td className="px-4 py-3">
         <div className="h-4 bg-gray-700 rounded w-20 animate-pulse" />
@@ -159,6 +169,9 @@ export function BranchBreakdownTable() {
       // Build CSV content
       const headers = [
         "Branch Name",
+        "Wallet Balance",
+        "Total Top-Ups",
+        "On Hold",
         "Total Earnings",
         "Pending Amount",
         "Settled Amount",
@@ -169,6 +182,9 @@ export function BranchBreakdownTable() {
 
       const rows = filteredBranches.map((b) => [
         b.branchName,
+        formatCurrency(b.walletBalance || 0),
+        formatCurrency(b.walletTotalToppedUp || 0),
+        formatCurrency(b.walletHeldBalance || 0),
         formatCurrency(b.totalEarnings),
         formatCurrency(b.pendingAmount),
         formatCurrency(b.settledAmount),
@@ -277,6 +293,46 @@ export function BranchBreakdownTable() {
               </th>
               <th className="px-4 py-3">
                 <button
+                  onClick={() => handleSort("walletBalance")}
+                  className="flex items-center gap-1 text-sm font-semibold text-gray-400 hover:text-white transition-colors"
+                >
+                  <Wallet className="w-3.5 h-3.5" />
+                  Balance
+                  <SortIcon
+                    column="walletBalance"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                  />
+                </button>
+              </th>
+              <th className="px-4 py-3">
+                <button
+                  onClick={() => handleSort("walletTotalToppedUp")}
+                  className="flex items-center gap-1 text-sm font-semibold text-gray-400 hover:text-white transition-colors"
+                >
+                  Top-Ups
+                  <SortIcon
+                    column="walletTotalToppedUp"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                  />
+                </button>
+              </th>
+              <th className="px-4 py-3">
+                <button
+                  onClick={() => handleSort("walletHeldBalance")}
+                  className="flex items-center gap-1 text-sm font-semibold text-gray-400 hover:text-white transition-colors"
+                >
+                  On Hold
+                  <SortIcon
+                    column="walletHeldBalance"
+                    sortColumn={sortColumn}
+                    sortDirection={sortDirection}
+                  />
+                </button>
+              </th>
+              <th className="px-4 py-3">
+                <button
                   onClick={() => handleSort("totalEarnings")}
                   className="flex items-center gap-1 text-sm font-semibold text-gray-400 hover:text-white transition-colors"
                 >
@@ -343,7 +399,7 @@ export function BranchBreakdownTable() {
             ) : hasError ? (
               // Error state
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center">
+                <td colSpan={9} className="px-4 py-12 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <AlertCircle className="w-8 h-8 text-red-400" />
                     <p className="text-gray-400">Failed to load branch data</p>
@@ -356,7 +412,7 @@ export function BranchBreakdownTable() {
             ) : isEmpty ? (
               // Empty state
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center">
+                <td colSpan={9} className="px-4 py-12 text-center">
                   <div className="flex flex-col items-center gap-2">
                     <AlertCircle className="w-8 h-8 text-gray-600" />
                     <p className="text-gray-400">No branches with wallet activity found</p>
@@ -369,7 +425,7 @@ export function BranchBreakdownTable() {
             ) : filteredBranches.length === 0 ? (
               // No results from search
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center">
+                <td colSpan={9} className="px-4 py-8 text-center">
                   <p className="text-gray-400">No branches match "{searchQuery}"</p>
                 </td>
               </tr>
@@ -401,6 +457,21 @@ export function BranchBreakdownTable() {
                         </span>
                       )}
                     </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={branch.walletBalance > 0 ? "text-green-400 font-medium" : "text-gray-500"}>
+                      {formatCurrency(branch.walletBalance || 0)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={branch.walletTotalToppedUp > 0 ? "text-blue-400 font-medium" : "text-gray-500"}>
+                      {formatCurrency(branch.walletTotalToppedUp || 0)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={branch.walletHeldBalance > 0 ? "text-yellow-400 font-medium" : "text-gray-500"}>
+                      {formatCurrency(branch.walletHeldBalance || 0)}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-white font-medium">
@@ -442,7 +513,23 @@ export function BranchBreakdownTable() {
             <span className="text-gray-400">
               Showing {filteredBranches.length} of {branchData.totalBranches} branches
             </span>
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4 flex-wrap">
+              <span className="text-gray-400">
+                Wallet Balance:{" "}
+                <span className="text-green-400 font-semibold">
+                  {formatCurrency(
+                    filteredBranches.reduce((sum, b) => sum + (b.walletBalance || 0), 0)
+                  )}
+                </span>
+              </span>
+              <span className="text-gray-400">
+                Total Top-Ups:{" "}
+                <span className="text-blue-400 font-semibold">
+                  {formatCurrency(
+                    filteredBranches.reduce((sum, b) => sum + (b.walletTotalToppedUp || 0), 0)
+                  )}
+                </span>
+              </span>
               <span className="text-gray-400">
                 Total Earnings:{" "}
                 <span className="text-white font-semibold">
@@ -452,7 +539,7 @@ export function BranchBreakdownTable() {
                 </span>
               </span>
               <span className="text-gray-400">
-                Total Pending:{" "}
+                Pending:{" "}
                 <span className="text-orange-400 font-semibold">
                   {formatCurrency(
                     filteredBranches.reduce((sum, b) => sum + b.pendingAmount, 0)

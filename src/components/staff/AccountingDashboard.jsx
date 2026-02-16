@@ -142,11 +142,12 @@ const BreakdownCard = ({ title, icon: Icon, items, total, isExpanded, onToggle, 
                 item.isTotal ? 'border-t border-[#333333] pt-2 font-semibold' : ''
               }`}
             >
-              <span className={item.isSubItem ? "text-gray-500" : "text-gray-400"}>
+              <span className={item.isCapital ? "text-blue-400" : item.isSubItem ? "text-gray-500" : "text-gray-400"}>
                 {item.label}
               </span>
               <span className={`font-medium ${
                 item.value < 0 ? 'text-red-400' :
+                item.isCapital ? 'text-blue-400' :
                 item.isTotal ? 'text-[var(--color-primary)]' :
                 item.isSubItem ? 'text-gray-400' : 'text-white'
               }`}>
@@ -639,6 +640,7 @@ const exportToCSV = (data, filename) => {
     ["Late Fees", data.revenue_breakdown?.late_fees || 0],
     ["Discounts", -(data.revenue_breakdown?.discounts || 0)],
     ["Manual Revenue", data.manual_revenue_total || 0],
+    ["Wallet Top-Ups (Capital)", data.wallet_topup_total || 0],
     ["Net Revenue", data.revenue_breakdown?.net_revenue || 0],
     ["", ""],
     ["Expenses", ""],
@@ -696,6 +698,12 @@ const exportToPDF = (data, branchName, period) => {
         <tr><td>Products</td><td class="amount">₱${(data.revenue_breakdown?.products || 0).toLocaleString()}</td></tr>
         <tr><td>Manual Revenue</td><td class="amount">₱${(data.manual_revenue_total || 0).toLocaleString()}</td></tr>
         <tr class="total"><td>Total Revenue</td><td class="amount">₱${(data.total_revenue || 0).toLocaleString()}</td></tr>
+      </table>
+
+      <h2>Capital (Non-Operating)</h2>
+      <table>
+        <tr><th>Category</th><th class="amount">Amount</th></tr>
+        <tr><td>Wallet Top-Ups</td><td class="amount" style="color: #3b82f6;">₱${(data.wallet_topup_total || 0).toLocaleString()}</td></tr>
       </table>
 
       <h2>Expenses</h2>
@@ -998,8 +1006,11 @@ const AccountingDashboard = ({ user, onRefresh }) => {
     setExpandedCards((prev) => ({ ...prev, [card]: !prev[card] }));
   };
 
-  // Calculate manual revenue total
-  const manualRevenueTotal = revenueEntries?.reduce((sum, r) => sum + r.amount, 0) || 0;
+  // Calculate manual revenue total (excluding wallet top-ups)
+  const walletTopupEntries = revenueEntries?.filter((r) => r.category === "wallet_topup") || [];
+  const otherRevenueEntries = revenueEntries?.filter((r) => r.category !== "wallet_topup") || [];
+  const walletTopupTotal = walletTopupEntries.reduce((sum, r) => sum + r.amount, 0);
+  const manualRevenueTotal = otherRevenueEntries.reduce((sum, r) => sum + r.amount, 0);
 
   // Build revenue breakdown items
   const revenueItems = plSummary
@@ -1008,6 +1019,7 @@ const AccountingDashboard = ({ user, onRefresh }) => {
         { label: "Products (Auto)", value: plSummary.revenue_breakdown.products },
         { label: "Booking Fees (Auto)", value: plSummary.revenue_breakdown.booking_fees },
         { label: "Manual Revenue", value: manualRevenueTotal },
+        { label: "Wallet Top-Ups (Capital)", value: walletTopupTotal, isCapital: true },
         { label: "Discounts", value: -plSummary.revenue_breakdown.discounts },
       ]
     : [];
@@ -1074,7 +1086,7 @@ const AccountingDashboard = ({ user, onRefresh }) => {
           {/* Export Buttons */}
           <div className="flex gap-2">
             <button
-              onClick={() => plSummary && exportToCSV({ ...plSummary, manual_revenue_total: manualRevenueTotal }, `pl-report-${dateRange.label}`)}
+              onClick={() => plSummary && exportToCSV({ ...plSummary, manual_revenue_total: manualRevenueTotal, wallet_topup_total: walletTopupTotal }, `pl-report-${dateRange.label}`)}
               disabled={isLoading}
               className="p-2 bg-[#1A1A1A] border border-[#333333] rounded-lg hover:border-[var(--color-primary)] transition-colors disabled:opacity-50"
               title="Export to CSV"
@@ -1082,7 +1094,7 @@ const AccountingDashboard = ({ user, onRefresh }) => {
               <Download className="w-5 h-5 text-gray-400" />
             </button>
             <button
-              onClick={() => plSummary && exportToPDF({ ...plSummary, manual_revenue_total: manualRevenueTotal }, branch?.name || "Branch", dateRange.label)}
+              onClick={() => plSummary && exportToPDF({ ...plSummary, manual_revenue_total: manualRevenueTotal, wallet_topup_total: walletTopupTotal }, branch?.name || "Branch", dateRange.label)}
               disabled={isLoading}
               className="p-2 bg-[#1A1A1A] border border-[#333333] rounded-lg hover:border-[var(--color-primary)] transition-colors disabled:opacity-50"
               title="Export to PDF"
@@ -1151,15 +1163,15 @@ const AccountingDashboard = ({ user, onRefresh }) => {
           value={(plSummary?.total_revenue || 0) + manualRevenueTotal}
           icon={TrendingUp}
           color="green"
-          subtitle={`${plSummary?.transaction_count || 0} transactions + ${revenueEntries?.length || 0} manual`}
+          subtitle={`${plSummary?.transaction_count || 0} transactions + ${otherRevenueEntries.length} manual`}
           isLoading={isLoading}
         />
         <MetricCard
-          title="Manual Revenue"
-          value={manualRevenueTotal}
-          icon={DollarSign}
+          title="Wallet Top-Ups"
+          value={walletTopupTotal}
+          icon={Wallet}
           color="blue"
-          subtitle={`${revenueEntries?.length || 0} entries`}
+          subtitle={`${walletTopupEntries.length} top-up${walletTopupEntries.length !== 1 ? "s" : ""} (Capital)`}
           isLoading={isLoading}
         />
         <MetricCard
@@ -1214,7 +1226,7 @@ const AccountingDashboard = ({ user, onRefresh }) => {
           title="Revenue Breakdown"
           icon={TrendingUp}
           items={revenueItems}
-          total={(plSummary?.revenue_breakdown?.net_revenue || 0) + manualRevenueTotal}
+          total={(plSummary?.revenue_breakdown?.net_revenue || 0) + manualRevenueTotal + walletTopupTotal}
           isExpanded={expandedCards.revenue}
           onToggle={() => toggleCard("revenue")}
           isLoading={isLoading}
@@ -1244,8 +1256,36 @@ const AccountingDashboard = ({ user, onRefresh }) => {
         />
       </div>
 
+      {/* Wallet Top-Up Entries */}
+      {walletTopupEntries.length > 0 && (
+        <div className="bg-[#1A1A1A] rounded-xl border border-blue-500/30 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-blue-400" />
+              <h3 className="font-medium text-white">Wallet Top-Ups (Capital)</h3>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400">Auto-tracked</span>
+            </div>
+            <span className="text-blue-400 font-bold text-sm">{formatCurrency(walletTopupTotal)}</span>
+          </div>
+          <div className="space-y-2">
+            {walletTopupEntries.map((entry) => (
+              <div key={entry._id} className="flex items-center justify-between p-3 bg-[#252525] rounded-lg border border-blue-500/10">
+                <div>
+                  <p className="text-white font-medium">{entry.description}</p>
+                  <p className="text-gray-500 text-xs">
+                    {new Date(entry.revenue_date).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    {entry.notes && ` • ${entry.notes}`}
+                  </p>
+                </div>
+                <span className="text-blue-400 font-bold">{formatCurrency(entry.amount)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Manual Revenue Entries */}
-      {revenueEntries?.length > 0 && (
+      {otherRevenueEntries.length > 0 && (
         <div className="bg-[#1A1A1A] rounded-xl border border-[#333333] p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -1254,7 +1294,7 @@ const AccountingDashboard = ({ user, onRefresh }) => {
             </div>
           </div>
           <div className="space-y-2">
-            {revenueEntries.map((entry) => (
+            {otherRevenueEntries.map((entry) => (
               <div key={entry._id} className="flex items-center justify-between p-3 bg-[#252525] rounded-lg">
                 <div>
                   <p className="text-white font-medium">{entry.description}</p>
@@ -1389,22 +1429,31 @@ const AccountingDashboard = ({ user, onRefresh }) => {
                       </tr>
                     </thead>
                     <tbody>
-                      {allRevenueEntries.map((entry) => (
-                        <tr key={entry._id} className="border-b border-[#252525] hover:bg-[#252525]">
+                      {allRevenueEntries.map((entry) => {
+                        const isWalletTopup = entry.category === "wallet_topup";
+                        return (
+                        <tr key={entry._id} className={`border-b border-[#252525] hover:bg-[#252525] ${isWalletTopup ? "bg-blue-500/5" : ""}`}>
                           <td className="py-2 px-3 text-white">
                             {new Date(entry.revenue_date).toLocaleDateString()}
                           </td>
                           <td className="py-2 px-3 text-gray-300 capitalize">
-                            {entry.category.replace(/_/g, " ")}
+                            {isWalletTopup ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400">
+                                <Wallet className="w-3 h-3" /> Capital
+                              </span>
+                            ) : entry.category.replace(/_/g, " ")}
                           </td>
                           <td className="py-2 px-3 text-white">{entry.description}</td>
                           <td className="py-2 px-3 text-blue-400 text-xs">
-                            {entry.received_to_cash ? "Cash" : entry.received_to_asset_id ? "Asset" : "-"}
+                            {isWalletTopup ? "Wallet" : entry.received_to_cash ? "Cash" : entry.received_to_asset_id ? "Asset" : "-"}
                           </td>
-                          <td className="py-2 px-3 text-green-400 font-medium text-right">
+                          <td className={`py-2 px-3 font-medium text-right ${isWalletTopup ? "text-blue-400" : "text-green-400"}`}>
                             {formatCurrency(entry.amount)}
                           </td>
                           <td className="py-2 px-3 text-center">
+                            {isWalletTopup ? (
+                              <span className="text-xs text-gray-500">Auto</span>
+                            ) : (
                             <div className="flex items-center justify-center gap-2">
                               <button
                                 onClick={() => {
@@ -1424,9 +1473,11 @@ const AccountingDashboard = ({ user, onRefresh }) => {
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
+                            )}
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

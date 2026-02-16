@@ -24,6 +24,7 @@ import SettlementApprovalQueue from '../../components/admin/SettlementApprovalQu
 import WalletOverviewDashboard from '../../components/admin/WalletOverviewDashboard'
 import BranchCustomerAnalytics from '../../components/admin/BranchCustomerAnalytics'
 import DeliveryOrdersManagement from '../../components/admin/DeliveryOrdersManagement'
+import DamageClaimsManagement from '../../components/admin/DamageClaimsManagement'
 import DefaultServicesManager from '../../components/admin/DefaultServicesManager'
 import ShopBannerManagement from '../../components/admin/ShopBannerManagement'
 import ShopConfigPanel from '../../components/admin/ShopConfigPanel'
@@ -290,6 +291,13 @@ function AdminDashboard() {
           <div className="text-center text-gray-400">You do not have access to delivery orders management.</div>
         )
 
+      case 'damage_claims':
+        return user?.role === 'super_admin' ? (
+          <DamageClaimsManagement user={user} />
+        ) : (
+          <div className="text-center text-gray-400">You do not have access to damage claims management.</div>
+        )
+
       case 'shop_banners':
         return user?.role === 'super_admin' ? (
           <ShopBannerManagement />
@@ -323,6 +331,7 @@ function AdminDashboard() {
       { id: 'shop_config', label: 'Shop Config', icon: 'shopping-cart', category: 'Commerce' },
       { id: 'shop_banners', label: 'Banners', icon: 'image', category: 'Commerce' },
       { id: 'delivery_orders', label: 'Deliveries', icon: 'truck', category: 'Commerce' },
+      { id: 'damage_claims', label: 'Damage Claims', icon: 'alert-triangle', category: 'Commerce' },
       // Finance category
       { id: 'pl', label: 'P&L', icon: 'pie-chart', category: 'Finance' },
       { id: 'balance_sheet', label: 'Balance Sheet', icon: 'scale', category: 'Finance' },

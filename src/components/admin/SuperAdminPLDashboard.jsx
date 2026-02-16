@@ -546,6 +546,7 @@ const exportToCSV = (data, filename) => {
     ["REVENUE", ""],
     ["Royalty Income", data.revenue_breakdown.royalty_income],
     ["Product Order Income", data.revenue_breakdown.product_order_income],
+    ["Commission Income", data.revenue_breakdown.commission_income || 0],
     ["Other Revenue", data.revenue_breakdown.other_revenue],
     ["Total Revenue", data.total_revenue],
     ["", ""],
@@ -604,6 +605,7 @@ const exportToPDF = (data, period) => {
         <tr><th>Category</th><th class="amount">Amount</th></tr>
         <tr class="highlight"><td>Royalty Income</td><td class="amount">${formatCurrency(data.revenue_breakdown.royalty_income)}</td></tr>
         <tr class="highlight"><td>Product Order Income</td><td class="amount">${formatCurrency(data.revenue_breakdown.product_order_income)}</td></tr>
+        <tr class="highlight"><td>Commission Income</td><td class="amount">${formatCurrency(data.revenue_breakdown.commission_income || 0)}</td></tr>
         <tr><td>Other Revenue</td><td class="amount">${formatCurrency(data.revenue_breakdown.other_revenue)}</td></tr>
         <tr class="total"><td>Total Revenue</td><td class="amount">${formatCurrency(data.total_revenue)}</td></tr>
       </table>
@@ -841,6 +843,7 @@ const SuperAdminPLDashboard = () => {
     ? [
         { label: "Royalty Income (Auto)", value: plSummary.revenue_breakdown.royalty_income },
         { label: "Product Orders (Auto)", value: plSummary.revenue_breakdown.product_order_income },
+        { label: "Commission Income (Auto)", value: plSummary.revenue_breakdown.commission_income || 0 },
         { label: "Other Revenue (Manual)", value: plSummary.revenue_breakdown.other_revenue },
       ]
     : [];
@@ -928,7 +931,7 @@ const SuperAdminPLDashboard = () => {
       </div>
 
       {/* Summary Cards */}
-      <div data-tour="pl-summary" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div data-tour="pl-summary" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <MetricCard
           title="Royalty Income"
           value={plSummary?.revenue_breakdown?.royalty_income || 0}
@@ -943,6 +946,14 @@ const SuperAdminPLDashboard = () => {
           icon={Package}
           color="blue"
           subtitle={`${plSummary?.product_order_count || 0} orders`}
+          isLoading={isLoading}
+        />
+        <MetricCard
+          title="Commission Income"
+          value={plSummary?.revenue_breakdown?.commission_income || 0}
+          icon={Wallet}
+          color="green"
+          subtitle={`${plSummary?.revenue_breakdown?.commission_count || 0} settlements`}
           isLoading={isLoading}
         />
         <MetricCard

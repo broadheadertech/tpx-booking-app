@@ -3,6 +3,12 @@ import { action, mutation, query } from "../_generated/server";
 import { throwUserError, ERROR_CODES, validateInput } from "../utils/errors";
 import { getCurrentUser } from "../lib/clerkAuth";
 
+// Reusable validator for certification entries (backward compatible: string | object with optional image)
+const certificationEntry = v.union(
+  v.string(),
+  v.object({ name: v.string(), imageId: v.optional(v.id("_storage")) })
+);
+
 // ============================================================================
 // SECURE BARBER QUERIES (Story 13-6: Barber Personal Data Isolation)
 // ============================================================================
@@ -441,6 +447,8 @@ export const updateBarber = mutation({
     }))),
     custom_booking_enabled: v.optional(v.boolean()),
     weekly_goal: v.optional(v.number()),
+    certifications: v.optional(v.array(certificationEntry)),
+    years_of_experience: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const { id, ...updates } = args;
@@ -1512,5 +1520,272 @@ export const getBarberActivities = query({
     return activities
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, limit);
+  },
+});
+
+// ============================================================================
+// BARBER BIO APPROVAL WORKFLOW
+// ============================================================================
+
+/**
+ * Submit bio changes for branch admin review.
+ * Structured fields (specialties, years_of_experience) save immediately.
+ * Text fields (bio, certifications) go to pending review.
+ */
+export const submitBioForReview = mutation({
+  args: {
+    barber_id: v.id("barbers"),
+    bio: v.optional(v.string()),
+    certifications: v.optional(v.array(certificationEntry)),
+    specialties: v.optional(v.array(v.string())),
+    years_of_experience: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const barber = await ctx.db.get(args.barber_id);
+    if (!barber) {
+      throwUserError(ERROR_CODES.BARBER_NOT_FOUND);
+      return;
+    }
+
+    const now = Date.now();
+
+    // Structured fields save immediately (no approval needed)
+    const immediateUpdates: Record<string, any> = { updatedAt: now };
+    if (args.specialties !== undefined) {
+      immediateUpdates.specialties = args.specialties;
+    }
+    if (args.years_of_experience !== undefined) {
+      immediateUpdates.years_of_experience = args.years_of_experience;
+    }
+
+    // Text fields go to pending review
+    const hasPendingChanges = args.bio !== undefined || args.certifications !== undefined;
+    if (hasPendingChanges) {
+      if (args.bio !== undefined && args.bio.length > 200) {
+        throwUserError(ERROR_CODES.INVALID_INPUT, "Bio too long", "About Me must be 200 characters or less.");
+        return;
+      }
+      if (args.bio !== undefined) {
+        immediateUpdates.pending_bio = args.bio;
+      }
+      if (args.certifications !== undefined) {
+        immediateUpdates.pending_certifications = args.certifications;
+      }
+      immediateUpdates.bio_approval_status = "pending";
+      // Clear previous rejection reason
+      immediateUpdates.bio_rejection_reason = "";
+    }
+
+    await ctx.db.patch(args.barber_id, immediateUpdates);
+
+    // Notify branch admin if there are pending changes
+    if (hasPendingChanges) {
+      await ctx.db.insert("notifications", {
+        title: "Bio Review Requested",
+        message: `${barber.full_name} has submitted bio changes for review.`,
+        type: "alert" as const,
+        priority: "medium" as const,
+        recipient_type: "admin" as const,
+        branch_id: barber.branch_id,
+        is_read: false,
+        is_archived: false,
+        action_label: "Review Bio",
+        metadata: {
+          barber_id: args.barber_id,
+          type: "bio_review",
+        },
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return { hasPendingChanges };
+  },
+});
+
+/**
+ * Branch admin approves pending bio changes.
+ * Copies pending content to live fields.
+ */
+export const approveBioSubmission = mutation({
+  args: {
+    barber_id: v.id("barbers"),
+    approved_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const barber = await ctx.db.get(args.barber_id);
+    if (!barber) {
+      throwUserError(ERROR_CODES.BARBER_NOT_FOUND);
+      return;
+    }
+
+    if (barber.bio_approval_status !== "pending") {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "No pending bio", "This barber has no pending bio changes to approve.");
+      return;
+    }
+
+    const now = Date.now();
+    const updates: Record<string, any> = {
+      bio_approval_status: "approved",
+      bio_reviewed_by: args.approved_by,
+      bio_reviewed_at: now,
+      bio_rejection_reason: "",
+      updatedAt: now,
+    };
+
+    // Copy pending to live, clear pending fields
+    if (barber.pending_bio !== undefined && barber.pending_bio !== null) {
+      updates.bio = barber.pending_bio;
+      updates.pending_bio = "";
+    }
+    if (barber.pending_certifications !== undefined && barber.pending_certifications !== null) {
+      updates.certifications = barber.pending_certifications;
+      updates.pending_certifications = [];
+    }
+
+    await ctx.db.patch(args.barber_id, updates);
+
+    // Notify barber
+    await ctx.db.insert("notifications", {
+      title: "Bio Approved",
+      message: "Your bio changes have been approved and are now live!",
+      type: "system" as const,
+      priority: "low" as const,
+      recipient_type: "barber" as const,
+      recipient_id: barber.user,
+      is_read: false,
+      is_archived: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return args.barber_id;
+  },
+});
+
+/**
+ * Branch admin rejects pending bio changes with feedback.
+ */
+export const rejectBioSubmission = mutation({
+  args: {
+    barber_id: v.id("barbers"),
+    rejected_by: v.id("users"),
+    rejection_reason: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const barber = await ctx.db.get(args.barber_id);
+    if (!barber) {
+      throwUserError(ERROR_CODES.BARBER_NOT_FOUND);
+      return;
+    }
+
+    if (barber.bio_approval_status !== "pending") {
+      throwUserError(ERROR_CODES.INVALID_INPUT, "No pending bio", "This barber has no pending bio changes to reject.");
+      return;
+    }
+
+    const now = Date.now();
+
+    await ctx.db.patch(args.barber_id, {
+      bio_approval_status: "rejected",
+      bio_reviewed_by: args.rejected_by,
+      bio_reviewed_at: now,
+      bio_rejection_reason: args.rejection_reason,
+      updatedAt: now,
+    });
+
+    // Notify barber
+    await ctx.db.insert("notifications", {
+      title: "Bio Changes Rejected",
+      message: `Your bio submission was rejected. Reason: ${args.rejection_reason}`,
+      type: "alert" as const,
+      priority: "medium" as const,
+      recipient_type: "barber" as const,
+      recipient_id: barber.user,
+      is_read: false,
+      is_archived: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return args.barber_id;
+  },
+});
+
+/**
+ * Get all barbers with pending bio reviews for a branch.
+ */
+export const getPendingBioReviews = query({
+  args: {
+    branch_id: v.id("branches"),
+  },
+  handler: async (ctx, args) => {
+    const barbers = await ctx.db
+      .query("barbers")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+
+    return barbers
+      .filter((b) => b.bio_approval_status === "pending")
+      .map((b) => ({
+        _id: b._id,
+        full_name: b.full_name,
+        avatar: b.avatar,
+        avatarStorageId: b.avatarStorageId,
+        pending_bio: b.pending_bio,
+        pending_certifications: b.pending_certifications,
+        current_bio: b.bio,
+        current_certifications: b.certifications,
+        specialties: b.specialties,
+        years_of_experience: b.years_of_experience,
+      }));
+  },
+});
+
+/**
+ * Get auto-generated bio stats for a barber (rating, bookings, repeat client %).
+ */
+export const getBarberBioStats = query({
+  args: {
+    barber_id: v.id("barbers"),
+  },
+  handler: async (ctx, args) => {
+    const barber = await ctx.db.get(args.barber_id);
+    if (!barber) {
+      return null;
+    }
+
+    // Get completed bookings for repeat client calculation
+    const bookings = await ctx.db
+      .query("bookings")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("barber"), args.barber_id),
+          q.eq(q.field("status"), "completed")
+        )
+      )
+      .collect();
+
+    // Count unique customers and repeat customers
+    const customerBookingCounts: Record<string, number> = {};
+    for (const booking of bookings) {
+      if (booking.customer) {
+        const customerId = booking.customer.toString();
+        customerBookingCounts[customerId] = (customerBookingCounts[customerId] || 0) + 1;
+      }
+    }
+
+    const uniqueCustomers = Object.keys(customerBookingCounts).length;
+    const repeatCustomers = Object.values(customerBookingCounts).filter((count) => count >= 2).length;
+    const repeatClientPercentage = uniqueCustomers > 0
+      ? Math.round((repeatCustomers / uniqueCustomers) * 100)
+      : 0;
+
+    return {
+      rating: barber.rating,
+      totalBookings: barber.totalBookings,
+      repeatClientPercentage,
+      uniqueCustomers,
+    };
   },
 });

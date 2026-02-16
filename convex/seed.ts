@@ -1,5 +1,7 @@
 import { mutation } from "./_generated/server";
+import { v } from "convex/values";
 import { hashPassword } from "./utils/password";
+import { encryptApiKey } from "./lib/encryption";
 
 /**
  * Production seed data
@@ -158,6 +160,7 @@ export const devSeed = mutation({
       "branchPaymentConfig", "paymentAuditLog", "pendingPayments",
       "permissionAuditLog", "flash_promotions", "promo_usage",
       "walletConfig", "shopConfig", "branchWalletSettings", "branchWalletEarnings", "branchSettlements",
+      "branch_wallets", "branch_wallet_transactions", "pendingBranchWalletTopups",
       "user_style_preferences", "style_swipe_history", "barber_match_history",
       "feed_interactions", "user_feed_profile", "wishlists", "user_addresses",
       "shopBanners", "maintenanceConfig", "push_tokens",
@@ -655,6 +658,546 @@ export const devSeed = mutation({
             "customer@example.com (customer)",
             "123@gmail.com (customer)",
           ],
+        },
+      },
+    };
+  },
+});
+
+/**
+ * Seed Wallet Config for Branch Wallet PayMongo Top-Up Testing
+ *
+ * Run via Convex dashboard or CLI:
+ *   npx convex run seed:seedWalletConfig '{"public_key":"pk_test_xxx","secret_key":"sk_test_xxx","webhook_secret":"whsec_xxx"}'
+ *
+ * Required env var: PAYMONGO_ENCRYPTION_KEY (64 hex chars) must be set in Convex dashboard.
+ *
+ * This seeds the HQ-level walletConfig with PayMongo test credentials,
+ * enabling the branch wallet online top-up flow.
+ */
+export const seedWalletConfig = mutation({
+  args: {
+    public_key: v.string(),
+    secret_key: v.string(),
+    webhook_secret: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Validate inputs
+    if (!args.public_key || !args.secret_key || !args.webhook_secret) {
+      return {
+        success: false,
+        message: "All three keys are required: public_key, secret_key, webhook_secret",
+      };
+    }
+
+    // Get encryption key
+    const encryptionKey = process.env.PAYMONGO_ENCRYPTION_KEY;
+    if (!encryptionKey) {
+      return {
+        success: false,
+        message: "PAYMONGO_ENCRYPTION_KEY env var is not set in Convex. Set it in the Convex dashboard under Settings > Environment Variables.",
+      };
+    }
+
+    // Encrypt secret key and webhook secret
+    const secretResult = await encryptApiKey(args.secret_key, encryptionKey);
+    const webhookResult = await encryptApiKey(args.webhook_secret, encryptionKey);
+
+    const secretKeyEncrypted = `${secretResult.iv}:${secretResult.encrypted}`;
+    const webhookSecretEncrypted = `${webhookResult.iv}:${webhookResult.encrypted}`;
+
+    const now = Date.now();
+
+    // Check if walletConfig already exists (upsert)
+    const existing = await ctx.db.query("walletConfig").first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        paymongo_public_key: args.public_key,
+        paymongo_secret_key: secretKeyEncrypted,
+        paymongo_webhook_secret: webhookSecretEncrypted,
+        is_test_mode: true,
+        default_commission_percent: 5,
+        default_settlement_frequency: "weekly",
+        min_settlement_amount: 500,
+        bonus_tiers: [
+          { minAmount: 500, bonus: 25 },
+          { minAmount: 1000, bonus: 75 },
+          { minAmount: 2500, bonus: 200 },
+          { minAmount: 5000, bonus: 500 },
+        ],
+        monthly_bonus_cap: 0,
+        updated_at: now,
+      });
+
+      return {
+        success: true,
+        message: "Wallet config updated with PayMongo test credentials.",
+        config_id: existing._id,
+        is_update: true,
+        settings: {
+          is_test_mode: true,
+          commission: "5%",
+          settlement_frequency: "weekly",
+          min_settlement: "₱500",
+        },
+      };
+    }
+
+    // Create new
+    const configId = await ctx.db.insert("walletConfig", {
+      paymongo_public_key: args.public_key,
+      paymongo_secret_key: secretKeyEncrypted,
+      paymongo_webhook_secret: webhookSecretEncrypted,
+      is_test_mode: true,
+      default_commission_percent: 5,
+      default_settlement_frequency: "weekly",
+      min_settlement_amount: 500,
+      bonus_tiers: [
+        { minAmount: 500, bonus: 25 },
+        { minAmount: 1000, bonus: 75 },
+        { minAmount: 2500, bonus: 200 },
+        { minAmount: 5000, bonus: 500 },
+      ],
+      monthly_bonus_cap: 0,
+      created_at: now,
+      updated_at: now,
+    });
+
+    return {
+      success: true,
+      message: "Wallet config seeded with PayMongo test credentials.",
+      config_id: configId,
+      is_update: false,
+      settings: {
+        is_test_mode: true,
+        commission: "5%",
+        settlement_frequency: "weekly",
+        min_settlement: "₱500",
+        bonus_tiers: "4 tiers (₱500/₱1000/₱2500/₱5000)",
+      },
+    };
+  },
+});
+
+/**
+ * Seed Product Catalog (Central Warehouse)
+ *
+ * Populates the HQ product catalog with barbershop products across all categories.
+ * Branches can then order from this catalog.
+ *
+ * Run via: npx convex run seed:seedProductCatalog
+ */
+export const seedProductCatalog = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Check if already seeded
+    const existing = await ctx.db.query("productCatalog").first();
+    if (existing) {
+      return { success: false, message: "Product catalog already has products. Clear first if you want to re-seed." };
+    }
+
+    // Find super admin as created_by
+    const superAdmin = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("role"), "super_admin"))
+      .first();
+
+    if (!superAdmin) {
+      return { success: false, message: "No super_admin user found. Run devSeed or seedAll first." };
+    }
+
+    const now = Date.now();
+
+    const products = [
+      // ── Hair Care ──
+      {
+        name: "TPX Strong Hold Pomade",
+        description: "Water-based pomade with strong hold and high shine. Perfect for slicked-back and classic styles.",
+        price: 350,
+        cost: 140,
+        category: "hair-care",
+        brand: "TPX Grooming",
+        sku: "TPX-POM-001",
+        stock: 100,
+        minStock: 15,
+      },
+      {
+        name: "TPX Matte Clay",
+        description: "Medium hold matte clay for textured, natural-looking styles. Easy to restyle throughout the day.",
+        price: 380,
+        cost: 150,
+        category: "hair-care",
+        brand: "TPX Grooming",
+        sku: "TPX-CLY-001",
+        stock: 80,
+        minStock: 15,
+      },
+      {
+        name: "TPX Hair Wax",
+        description: "Flexible hold wax with matte finish. Ideal for messy, textured looks.",
+        price: 300,
+        cost: 120,
+        category: "hair-care",
+        brand: "TPX Grooming",
+        sku: "TPX-WAX-001",
+        stock: 90,
+        minStock: 15,
+      },
+      {
+        name: "TPX Sea Salt Spray",
+        description: "Texturizing sea salt spray for beachy, tousled waves. Adds volume and grit.",
+        price: 280,
+        cost: 100,
+        category: "hair-care",
+        brand: "TPX Grooming",
+        sku: "TPX-SSS-001",
+        stock: 60,
+        minStock: 10,
+      },
+      {
+        name: "TPX Anti-Dandruff Shampoo",
+        description: "Deep-cleansing anti-dandruff shampoo with tea tree oil. For daily use.",
+        price: 250,
+        cost: 90,
+        category: "hair-care",
+        brand: "TPX Grooming",
+        sku: "TPX-SHP-001",
+        stock: 120,
+        minStock: 20,
+      },
+      {
+        name: "TPX Moisturizing Conditioner",
+        description: "Hydrating conditioner that softens and detangles. Works with all hair types.",
+        price: 280,
+        cost: 95,
+        category: "hair-care",
+        brand: "TPX Grooming",
+        sku: "TPX-CND-001",
+        stock: 100,
+        minStock: 20,
+      },
+      {
+        name: "TPX Hair Tonic",
+        description: "Cooling hair tonic that promotes scalp health and adds shine. Menthol-infused.",
+        price: 220,
+        cost: 80,
+        category: "hair-care",
+        brand: "TPX Grooming",
+        sku: "TPX-TNK-001",
+        stock: 70,
+        minStock: 10,
+      },
+      {
+        name: "TPX Hair Spray Strong Hold",
+        description: "All-day strong hold finishing spray. Humidity resistant, non-flaking formula.",
+        price: 320,
+        cost: 110,
+        category: "hair-care",
+        brand: "TPX Grooming",
+        sku: "TPX-HSP-001",
+        stock: 50,
+        minStock: 10,
+      },
+      // ── Beard Care ──
+      {
+        name: "TPX Beard Oil - Classic",
+        description: "Premium beard oil with jojoba and argan. Softens, conditions, and reduces itch.",
+        price: 320,
+        cost: 110,
+        category: "beard-care",
+        brand: "TPX Grooming",
+        sku: "TPX-BOL-001",
+        stock: 80,
+        minStock: 15,
+      },
+      {
+        name: "TPX Beard Oil - Sandalwood",
+        description: "Sandalwood-scented beard oil. Rich, warm fragrance with deep conditioning.",
+        price: 350,
+        cost: 120,
+        category: "beard-care",
+        brand: "TPX Grooming",
+        sku: "TPX-BOL-002",
+        stock: 60,
+        minStock: 10,
+      },
+      {
+        name: "TPX Beard Balm",
+        description: "Leave-in beard balm for shaping and conditioning. Light hold with shea butter.",
+        price: 380,
+        cost: 130,
+        category: "beard-care",
+        brand: "TPX Grooming",
+        sku: "TPX-BBM-001",
+        stock: 50,
+        minStock: 10,
+      },
+      {
+        name: "TPX Beard Wash",
+        description: "Gentle beard shampoo that cleans without stripping natural oils. Sulfate-free.",
+        price: 280,
+        cost: 95,
+        category: "beard-care",
+        brand: "TPX Grooming",
+        sku: "TPX-BWS-001",
+        stock: 70,
+        minStock: 15,
+      },
+      {
+        name: "TPX Mustache Wax",
+        description: "Strong hold mustache wax for precise styling. Beeswax-based, long-lasting.",
+        price: 200,
+        cost: 70,
+        category: "beard-care",
+        brand: "TPX Grooming",
+        sku: "TPX-MWX-001",
+        stock: 40,
+        minStock: 10,
+      },
+      // ── Shaving ──
+      {
+        name: "TPX Shaving Cream - Classic",
+        description: "Rich lathering shaving cream with aloe vera. Provides smooth, irritation-free shave.",
+        price: 250,
+        cost: 85,
+        category: "shaving",
+        brand: "TPX Grooming",
+        sku: "TPX-SHC-001",
+        stock: 80,
+        minStock: 15,
+      },
+      {
+        name: "TPX Pre-Shave Oil",
+        description: "Prep oil that softens stubble and protects skin. Apply before shaving cream.",
+        price: 300,
+        cost: 100,
+        category: "shaving",
+        brand: "TPX Grooming",
+        sku: "TPX-PSO-001",
+        stock: 50,
+        minStock: 10,
+      },
+      {
+        name: "TPX After-Shave Balm",
+        description: "Soothing alcohol-free after-shave balm. Calms irritation and moisturizes.",
+        price: 280,
+        cost: 90,
+        category: "shaving",
+        brand: "TPX Grooming",
+        sku: "TPX-ASB-001",
+        stock: 60,
+        minStock: 10,
+      },
+      {
+        name: "TPX Alum Block",
+        description: "Natural alum block for post-shave treatment. Antiseptic and astringent.",
+        price: 150,
+        cost: 40,
+        category: "shaving",
+        brand: "TPX Grooming",
+        sku: "TPX-ALM-001",
+        stock: 40,
+        minStock: 10,
+      },
+      {
+        name: "TPX Styptic Pencil",
+        description: "Quick-stop styptic pencil for minor nicks and cuts. Essential barbershop supply.",
+        price: 80,
+        cost: 25,
+        category: "shaving",
+        brand: "TPX Grooming",
+        sku: "TPX-STP-001",
+        stock: 100,
+        minStock: 20,
+      },
+      // ── Tools ──
+      {
+        name: "TPX Professional Comb Set",
+        description: "Set of 3 professional barber combs: wide-tooth, fine-tooth, and taper comb.",
+        price: 450,
+        cost: 180,
+        category: "tools",
+        brand: "TPX Grooming",
+        sku: "TPX-CMB-001",
+        stock: 30,
+        minStock: 8,
+      },
+      {
+        name: "TPX Neck Brush",
+        description: "Soft bristle neck brush for clean finishing after haircuts.",
+        price: 280,
+        cost: 100,
+        category: "tools",
+        brand: "TPX Grooming",
+        sku: "TPX-NBR-001",
+        stock: 25,
+        minStock: 5,
+      },
+      {
+        name: "TPX Barber Cape - Black",
+        description: "Professional water-resistant barber cape. Snap closure, one size fits all.",
+        price: 500,
+        cost: 200,
+        category: "tools",
+        brand: "TPX Grooming",
+        sku: "TPX-CAP-001",
+        stock: 20,
+        minStock: 5,
+      },
+      {
+        name: "TPX Spray Bottle 300ml",
+        description: "Fine mist spray bottle for wetting hair during cuts. Continuous spray action.",
+        price: 180,
+        cost: 60,
+        category: "tools",
+        brand: "TPX Grooming",
+        sku: "TPX-SPB-001",
+        stock: 40,
+        minStock: 10,
+      },
+      // ── Accessories ──
+      {
+        name: "TPX Branded T-Shirt",
+        description: "Premium cotton TPX branded t-shirt. Available for retail and staff uniform.",
+        price: 650,
+        cost: 250,
+        category: "accessories",
+        brand: "TPX Grooming",
+        sku: "TPX-TSH-001",
+        stock: 50,
+        minStock: 10,
+      },
+      {
+        name: "TPX Branded Cap",
+        description: "Snapback cap with embroidered TPX logo. One size fits most.",
+        price: 450,
+        cost: 170,
+        category: "accessories",
+        brand: "TPX Grooming",
+        sku: "TPX-HCP-001",
+        stock: 40,
+        minStock: 8,
+      },
+      {
+        name: "TPX Grooming Kit Pouch",
+        description: "Canvas grooming kit pouch. Holds pomade, comb, and beard oil. Great gift item.",
+        price: 380,
+        cost: 140,
+        category: "accessories",
+        brand: "TPX Grooming",
+        sku: "TPX-PCH-001",
+        stock: 30,
+        minStock: 5,
+      },
+      {
+        name: "TPX Air Freshener - Barbershop",
+        description: "Signature barbershop scent car/room air freshener. Classic barbershop fragrance.",
+        price: 120,
+        cost: 35,
+        category: "accessories",
+        brand: "TPX Grooming",
+        sku: "TPX-AFR-001",
+        stock: 100,
+        minStock: 20,
+      },
+    ];
+
+    let count = 0;
+    for (const product of products) {
+      await ctx.db.insert("productCatalog", {
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        cost: product.cost,
+        category: product.category,
+        brand: product.brand,
+        sku: product.sku,
+        stock: product.stock,
+        minStock: product.minStock,
+        is_active: true,
+        price_enforced: false,
+        created_at: now,
+        created_by: superAdmin._id,
+      });
+      count++;
+    }
+
+    return {
+      success: true,
+      message: `Seeded ${count} products in the central catalog.`,
+      data: {
+        total: count,
+        categories: {
+          "hair-care": 8,
+          "beard-care": 5,
+          "shaving": 5,
+          "tools": 4,
+          "accessories": 4,
+        },
+      },
+    };
+  },
+});
+
+/**
+ * Seed Default Services (Templates for New Branches)
+ *
+ * Populates the defaultServices table so new branches auto-load these services.
+ * Same data as defaultServices.ts seedDefaultServices but accessible from seed.ts.
+ *
+ * Run via: npx convex run seed:seedDefaultServices
+ */
+export const seedDefaultServices = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Check if already seeded
+    const existing = await ctx.db.query("defaultServices").first();
+    if (existing) {
+      return { success: false, message: "Default services already exist. Clear first if you want to re-seed." };
+    }
+
+    const now = Date.now();
+
+    const defaults = [
+      { name: "Tipuno X Classico", description: "Consultation, Haircut", duration_minutes: 30, price: 150, category: "haircut" },
+      { name: "Tipuno X Signature", description: "Consultation, Haircut, Rinse Hot and Cold Towel Finish", duration_minutes: 60, price: 500, category: "haircut" },
+      { name: "Tipuno X Deluxe", description: "Consultation, Haircut, Hair Spa Treatment, Rinse Hot and Cold Towel Finish", duration_minutes: 90, price: 800, category: "premium-package" },
+      { name: "Beard Shave/Shaping/Sculpting", description: "More than a shave. It's a service you'll feel.", duration_minutes: 30, price: 200, category: "beard-care" },
+      { name: "FACVNDO ELITE BARBERING SERVICE", description: "If you are looking for wedding haircuts, trust the elite hands that turn grooms into legends.", duration_minutes: 0, price: 10000, category: "premium-package" },
+      { name: "Package 1", description: "Consultation, Haircut, Shaving, Styling", duration_minutes: 45, price: 500, category: "premium-package" },
+      { name: "Package 2", description: "Consultation, Haircut, Hair Color or With Single Bleach, Rinse, Styling.\nNote: Short hair only, add 250 per length", duration_minutes: 60, price: 850, category: "premium-package" },
+      { name: "Package 3", description: "Consultation, Haircut, Hair Color or With Single Bleach, Hair Spa Treatment, Rinse, Styling.\nNote: Short hair only, add 250 per length", duration_minutes: 60, price: 1400, category: "premium-package" },
+      { name: "Mustache/Beard Trim", description: "Precision mustache and beard trimming.", duration_minutes: 30, price: 170, category: "beard-care" },
+      { name: "Hair Spa", description: "Deep conditioning hair spa treatment for damaged hair.", duration_minutes: 30, price: 600, category: "hair-treatment" },
+      { name: "Hair and Scalp Treatment", description: "Intensive hair and scalp treatment for healthy growth.", duration_minutes: 60, price: 1500, category: "hair-treatment" },
+      { name: "Hair Color", description: "Full hair coloring service with premium dye.", duration_minutes: 60, price: 800, category: "hair-styling" },
+      { name: "Perm", description: "Professional perming service for curls and waves.", duration_minutes: 60, price: 1500, category: "hair-styling" },
+      { name: "Hair Tattoo", description: "Creative hair tattoo / hair art design.", duration_minutes: 60, price: 100, category: "hair-styling" },
+    ];
+
+    for (let i = 0; i < defaults.length; i++) {
+      await ctx.db.insert("defaultServices", {
+        ...defaults[i],
+        is_active: true,
+        sort_order: i,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return {
+      success: true,
+      message: `Seeded ${defaults.length} default services.`,
+      data: {
+        total: defaults.length,
+        categories: {
+          haircut: 2,
+          "premium-package": 4,
+          "beard-care": 2,
+          "hair-treatment": 2,
+          "hair-styling": 3,
+          "elite": 1,
         },
       },
     };

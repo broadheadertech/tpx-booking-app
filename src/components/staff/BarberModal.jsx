@@ -17,6 +17,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Trash2,
+  Award,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  FileText,
+  Users,
 } from "lucide-react";
 import {
   format,
@@ -37,6 +43,10 @@ import LoadingSpinner from "../common/LoadingSpinner";
 import ErrorDisplay from "../common/ErrorDisplay";
 import { parseError } from "../../utils/errorHandler";
 import TimeOffManager from "../barber/TimeOffManager";
+import { useCurrentUser } from "../../hooks/useCurrentUser";
+import { normalizeCerts } from "../../utils/certifications";
+import CertificationTag from "../common/CertificationTag";
+import CertificationLightbox from "../common/CertificationLightbox";
 const BarberModal = ({
   isOpen,
   onClose,
@@ -67,6 +77,8 @@ const BarberModal = ({
     },
   });
 
+  const { user: currentAdminUser } = useCurrentUser();
+
   const [alertState, setAlertState] = useState({
     isOpen: false,
     type: "info",
@@ -75,6 +87,73 @@ const BarberModal = ({
   });
 
   const updateBarberMutation = useMutation(api.services.barbers.updateBarber);
+  const approveBioMutation = useMutation(api.services.barbers.approveBioSubmission);
+  const rejectBioMutation = useMutation(api.services.barbers.rejectBioSubmission);
+
+  // Reactive barber data for Bio tab (prop may be stale)
+  const liveBarber = useQuery(
+    api.services.barbers.getBarberById,
+    barber?._id ? { id: barber._id } : "skip"
+  );
+  // Use live data for bio fields, fall back to prop
+  const bioBarber = liveBarber || barber;
+
+  const bioStats = useQuery(
+    api.services.barbers.getBarberBioStats,
+    barber?._id ? { barber_id: barber._id } : "skip"
+  );
+
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [showRejectForm, setShowRejectForm] = useState(false);
+  const [bioProcessing, setBioProcessing] = useState(false);
+  const [selectedCert, setSelectedCert] = useState(null);
+
+  const handleApproveBio = async () => {
+    if (!barber?._id) return;
+    setBioProcessing(true);
+    try {
+      await approveBioMutation({
+        barber_id: barber._id,
+        approved_by: currentAdminUser._id,
+      });
+      setAlertState({
+        isOpen: true,
+        type: "success",
+        title: "Bio Approved",
+        message: "The barber's bio is now live.",
+      });
+      onRefresh?.();
+    } catch (err) {
+      setError(parseError(err));
+    } finally {
+      setBioProcessing(false);
+    }
+  };
+
+  const handleRejectBio = async () => {
+    if (!barber?._id || !rejectionReason.trim()) return;
+    setBioProcessing(true);
+    try {
+      await rejectBioMutation({
+        barber_id: barber._id,
+        rejected_by: currentAdminUser._id,
+        rejection_reason: rejectionReason.trim(),
+      });
+      setAlertState({
+        isOpen: true,
+        type: "info",
+        title: "Bio Rejected",
+        message: "The barber has been notified with your feedback.",
+      });
+      setShowRejectForm(false);
+      setRejectionReason("");
+      onRefresh?.();
+    } catch (err) {
+      setError(parseError(err));
+    } finally {
+      setBioProcessing(false);
+    }
+  };
 
   const handleToggleBookings = async (newValue) => {
     if (!barber?._id) return;
@@ -454,6 +533,19 @@ const BarberModal = ({
                 onClick={() => setActiveView("dayoff")}
               >
                 Day Off
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveView("bio")}
+                className={`py-2 px-2 border-b-2 font-medium text-sm cursor-pointer select-none flex items-center gap-1 ${activeView === "bio"
+                  ? "border-[var(--color-primary)] text-[var(--color-primary)]"
+                  : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-500"
+                  } transition-colors`}
+              >
+                Bio
+                {bioBarber?.bio_approval_status === "pending" && (
+                  <span className="w-2 h-2 bg-amber-500 rounded-full" />
+                )}
               </button>
             </nav>
           </div>
@@ -1130,6 +1222,164 @@ const BarberModal = ({
                   </div>
                 )}
               </div>
+            ) : activeView === "bio" ? (
+              <div className="space-y-4">
+                {/* Auto-Stats */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-[#171717] rounded-xl p-3 border border-[#2A2A2A] text-center">
+                    <p className="text-lg font-bold text-[var(--color-primary)]">{bioBarber?.rating || 0}</p>
+                    <p className="text-xs text-gray-500">Rating</p>
+                  </div>
+                  <div className="bg-[#171717] rounded-xl p-3 border border-[#2A2A2A] text-center">
+                    <p className="text-lg font-bold text-white">{bioBarber?.totalBookings || 0}</p>
+                    <p className="text-xs text-gray-500">Bookings</p>
+                  </div>
+                  <div className="bg-[#171717] rounded-xl p-3 border border-[#2A2A2A] text-center">
+                    <p className="text-lg font-bold text-blue-400">{bioStats?.repeatClientPercentage ?? 0}%</p>
+                    <p className="text-xs text-gray-500">Repeat</p>
+                  </div>
+                </div>
+
+                {/* Current Live Bio */}
+                <div className="bg-[#171717] rounded-xl p-4 border border-[#2A2A2A]">
+                  <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-[var(--color-primary)]" />
+                    Current Live Bio
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">About Me</label>
+                      <p className="text-sm text-gray-300">{bioBarber?.bio || <span className="text-gray-600 italic">No bio set</span>}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Specialties</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {bioBarber?.specialties?.length > 0 ? bioBarber.specialties.map((s, i) => (
+                          <span key={i} className="px-2 py-0.5 bg-[#2A2A2A] text-gray-300 rounded text-xs border border-[#3A3A3A]">{s}</span>
+                        )) : <span className="text-gray-600 text-xs italic">None</span>}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Years of Experience</label>
+                      <p className="text-sm text-gray-300">{bioBarber?.years_of_experience != null ? `${bioBarber.years_of_experience} years` : <span className="text-gray-600 italic">Not set</span>}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Certifications</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {normalizeCerts(bioBarber?.certifications).length > 0 ? normalizeCerts(bioBarber.certifications).map((c, i) => (
+                          <CertificationTag key={i} cert={c} size="sm" onClick={setSelectedCert} />
+                        )) : <span className="text-gray-600 text-xs italic">None</span>}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pending Changes */}
+                {bioBarber?.bio_approval_status === "pending" && (
+                  <div className="bg-amber-500/5 rounded-xl p-4 border border-amber-500/30">
+                    <h4 className="text-sm font-medium text-amber-400 mb-3 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4" />
+                      Pending Changes (Awaiting Your Review)
+                    </h4>
+                    <div className="space-y-3">
+                      {bioBarber.pending_bio && bioBarber.pending_bio !== "" && (
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">About Me (New)</label>
+                          <div className="bg-[#1A1A1A] rounded-lg p-3 border border-amber-500/20">
+                            <p className="text-sm text-white">{bioBarber.pending_bio}</p>
+                          </div>
+                          {bioBarber.bio && (
+                            <p className="text-xs text-gray-500 mt-1">Current: {bioBarber.bio}</p>
+                          )}
+                        </div>
+                      )}
+                      {bioBarber.pending_certifications?.length > 0 && (
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Certifications (New)</label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {normalizeCerts(bioBarber.pending_certifications).map((c, i) => (
+                              <CertificationTag key={i} cert={c} size="sm" onClick={setSelectedCert} className="border-amber-500/30" />
+                            ))}
+                          </div>
+                          {bioBarber.certifications?.length > 0 && (
+                            <p className="text-xs text-gray-500 mt-1">Current: {normalizeCerts(bioBarber.certifications).map(c => c.name).join(", ")}</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Approve / Reject Actions */}
+                      <div className="pt-3 border-t border-amber-500/20">
+                        {showRejectForm ? (
+                          <div className="space-y-2">
+                            <textarea
+                              value={rejectionReason}
+                              onChange={(e) => setRejectionReason(e.target.value)}
+                              placeholder="Reason for rejection..."
+                              className="w-full p-3 bg-[#1A1A1A] border border-[#3A3A3A] rounded-lg text-white text-sm resize-none focus:outline-none focus:border-red-500"
+                              rows="2"
+                            />
+                            <div className="flex gap-2">
+                              <button
+                                onClick={handleRejectBio}
+                                disabled={bioProcessing || !rejectionReason.trim()}
+                                className="flex-1 px-3 py-2 bg-red-500/20 text-red-400 rounded-lg text-sm font-medium hover:bg-red-500/30 disabled:opacity-50 flex items-center justify-center gap-1"
+                              >
+                                <XCircle className="w-4 h-4" />
+                                Confirm Reject
+                              </button>
+                              <button
+                                onClick={() => { setShowRejectForm(false); setRejectionReason(""); }}
+                                className="px-3 py-2 bg-[#2A2A2A] text-gray-400 rounded-lg text-sm hover:text-white"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            <button
+                              onClick={handleApproveBio}
+                              disabled={bioProcessing}
+                              className="flex-1 px-3 py-2 bg-green-500/20 text-green-400 rounded-lg text-sm font-medium hover:bg-green-500/30 disabled:opacity-50 flex items-center justify-center gap-1"
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => setShowRejectForm(true)}
+                              disabled={bioProcessing}
+                              className="flex-1 px-3 py-2 bg-red-500/20 text-red-400 rounded-lg text-sm font-medium hover:bg-red-500/30 disabled:opacity-50 flex items-center justify-center gap-1"
+                            >
+                              <XCircle className="w-4 h-4" />
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Rejection Info */}
+                {bioBarber?.bio_approval_status === "rejected" && (
+                  <div className="bg-red-500/5 rounded-xl p-4 border border-red-500/30">
+                    <h4 className="text-sm font-medium text-red-400 mb-1 flex items-center gap-2">
+                      <XCircle className="w-4 h-4" />
+                      Last Submission Rejected
+                    </h4>
+                    {bioBarber.bio_rejection_reason && (
+                      <p className="text-xs text-red-400/70">Reason: {bioBarber.bio_rejection_reason}</p>
+                    )}
+                  </div>
+                )}
+
+                {bioBarber?.bio_approval_status === "approved" && (
+                  <div className="bg-green-500/5 rounded-xl p-3 border border-green-500/30 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-400" />
+                    <p className="text-sm text-green-400">Bio is approved and live.</p>
+                  </div>
+                )}
+              </div>
             ) : activeView === "dayoff" ? (
               <div className="mt-6">
                 <h3 className="text-xl font-semibold text-white mb-4">
@@ -1310,6 +1560,9 @@ const BarberModal = ({
           </div>
         </div>
       </div>
+      {selectedCert && (
+        <CertificationLightbox cert={selectedCert} onClose={() => setSelectedCert(null)} />
+      )}
     </div>,
     document.body
   );

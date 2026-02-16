@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Star, Clock, Award, Scissors, CheckCircle, Heart, MessageCircle, Calendar } from 'lucide-react'
+import { normalizeCerts } from '../../../utils/certifications'
 
 /**
  * BarberCard - Enhanced barber selection card
@@ -27,21 +28,13 @@ const BarberCard = ({
   // Get availability status
   const isAvailable = barber.is_accepting_bookings !== false
 
-  // Mock data for demo - in production these would come from the barber object
-  const rating = barber.rating || 4.8
-  const reviewCount = barber.review_count || Math.floor(Math.random() * 200) + 50
-  const completedBookings = barber.completed_bookings || Math.floor(Math.random() * 500) + 100
-  const specialties = barber.specialties || getDefaultSpecialties(barber)
+  const rating = barber.rating || 0
+  const reviewCount = barber.review_count || 0
+  const completedBookings = barber.totalBookings || barber.completed_bookings || 0
+  const specialties = barber.specialties || []
   const nextAvailable = barber.next_available || 'Today'
-  const yearsExperience = barber.years_experience || Math.floor(Math.random() * 10) + 2
-
-  // Generate default specialties based on barber name/services
-  function getDefaultSpecialties(barber) {
-    const defaultTags = ['Fades', 'Classic Cuts', 'Beard Trim', 'Hot Towel', 'Kids Cuts', 'Senior Cuts']
-    // Pick 2-3 random specialties
-    const shuffled = defaultTags.sort(() => 0.5 - Math.random())
-    return shuffled.slice(0, Math.floor(Math.random() * 2) + 2)
-  }
+  const yearsExperience = barber.years_of_experience || barber.years_experience || null
+  const certifications = normalizeCerts(barber.certifications)
 
   // Get initials for fallback avatar
   const getInitials = () => {
@@ -150,7 +143,7 @@ const BarberCard = ({
               </div>
               <span className="text-xs text-gray-500">({reviewCount} reviews)</span>
               <span className="text-gray-600">•</span>
-              <span className="text-xs text-gray-500">{completedBookings}+ cuts</span>
+              <span className="text-xs text-gray-500">{completedBookings} cuts</span>
             </div>
 
             {/* Specialties */}
@@ -177,15 +170,31 @@ const BarberCard = ({
           <div className="mt-4 pt-4 border-t border-[#2A2A2A]">
             {/* Experience & Next Available */}
             <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                <Award className="w-3.5 h-3.5" />
-                <span>{yearsExperience}+ years experience</span>
-              </div>
+              {yearsExperience ? (
+                <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                  <Award className="w-3.5 h-3.5" />
+                  <span>{yearsExperience}+ years experience</span>
+                </div>
+              ) : (
+                <div />
+              )}
               <div className="flex items-center gap-1.5 text-xs text-green-400">
                 <Calendar className="w-3.5 h-3.5" />
                 <span>Next: {nextAvailable}</span>
               </div>
             </div>
+
+            {/* Certifications */}
+            {certifications.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {certifications.slice(0, 3).map((cert, i) => (
+                  <span key={i} className="inline-flex items-center px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded text-[10px] border border-amber-500/20">
+                    <Award className="w-2.5 h-2.5 mr-0.5" />
+                    {cert.name}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* Why Choose Me */}
             {barber.bio && (

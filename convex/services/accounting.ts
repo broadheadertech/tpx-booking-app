@@ -949,6 +949,20 @@ export const getConsolidatedPLSummary = query({
     }
 
     // ========================================
+    // AUTOMATED REVENUE - Commission Income (Settlement)
+    // ========================================
+    const commissionRevenue = manualRevenue.filter(
+      (r) =>
+        r.is_automated &&
+        r.category === "commission_income" &&
+        r.revenue_date >= args.start_date &&
+        r.revenue_date <= args.end_date
+    );
+    const commissionIncome = commissionRevenue.reduce(
+      (sum, r) => sum + (r.amount || 0), 0
+    );
+
+    // ========================================
     // EXPENSES - From superAdminExpenses table
     // ========================================
     const allExpenses = await ctx.db.query("superAdminExpenses").collect();
@@ -972,7 +986,7 @@ export const getConsolidatedPLSummary = query({
     // ========================================
     // CALCULATE TOTALS
     // ========================================
-    const totalAutomatedRevenue = royaltyIncome + productOrderIncome;
+    const totalAutomatedRevenue = royaltyIncome + productOrderIncome + commissionIncome;
     const totalRevenue = totalAutomatedRevenue + otherRevenue;
     const totalExpenses = fixedExpenses + operatingExpenses;
     const netIncome = totalRevenue - totalExpenses;
@@ -987,6 +1001,8 @@ export const getConsolidatedPLSummary = query({
       revenue_breakdown: {
         royalty_income: royaltyIncome,
         product_order_income: productOrderIncome,
+        commission_income: commissionIncome,
+        commission_count: commissionRevenue.length,
         other_revenue: otherRevenue,
         automated_total: totalAutomatedRevenue,
         by_category: revenueByCategory,

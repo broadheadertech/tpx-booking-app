@@ -41,6 +41,8 @@ export const createEarningRecord = mutation({
     staff_id: v.optional(v.id("users")),
     service_name: v.string(),
     gross_amount: v.number(),
+    processed_via: v.optional(v.string()),    // "admin" | "branch"
+    payment_source: v.optional(v.string()),   // "online_paymongo" | "wallet"
   },
   handler: async (ctx, args) => {
     // Validate gross_amount
@@ -103,6 +105,8 @@ export const createEarningRecord = mutation({
       net_amount: netAmount,
       status: EARNING_STATUS.PENDING,
       created_at: now,
+      processed_via: args.processed_via || "branch",
+      payment_source: args.payment_source || "wallet",
     });
 
     console.log("[BRANCH_EARNINGS] Created earning record:", {

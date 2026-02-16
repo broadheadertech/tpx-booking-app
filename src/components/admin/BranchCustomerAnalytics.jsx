@@ -2,7 +2,6 @@ import React, { useState, useCallback } from 'react'
 import {
   Users,
   UserCheck,
-  UserMinus,
   UserX,
   RefreshCw,
   TrendingUp,
@@ -12,13 +11,13 @@ import {
   Building2,
   Phone,
   Mail,
-  Clock,
   DollarSign,
   Send,
   ChevronDown,
   ChevronUp,
   Target,
-  HelpCircle
+  HelpCircle,
+  Search,
 } from 'lucide-react'
 import WalkthroughOverlay from '../common/WalkthroughOverlay'
 import { customerAnalyticsSteps } from '../../config/walkthroughSteps'
@@ -47,13 +46,15 @@ const BranchCustomerAnalytics = ({ branchId }) => {
   const [selectedStatus, setSelectedStatus] = useState('all')
   const [showAtRiskList, setShowAtRiskList] = useState(true)
   const [showTopCustomers, setShowTopCustomers] = useState(true)
+  const [selectedCustomerId, setSelectedCustomerId] = useState(null)
+  const [customerSearch, setCustomerSearch] = useState('')
 
   const isSuperAdmin = user?.role === 'super_admin'
   const isBranchAdmin = user?.role === 'branch_admin' || user?.role === 'admin'
 
   // Get all branches for super admin
   const branches = useQuery(
-    api.services.branches?.getAllBranches || api.branches?.getAll,
+    api.services.branches.getAllBranches,
     isSuperAdmin ? {} : 'skip'
   )
 
@@ -90,6 +91,28 @@ const BranchCustomerAnalytics = ({ branchId }) => {
       ? { branchId: activeBranchId, status: selectedStatus }
       : 'skip'
   )
+
+  // Get all users for customer list (super admin only)
+  const allUsers = useQuery(
+    api.services.auth.getAllUsers,
+    isSuperAdmin ? undefined : 'skip'
+  )
+
+  // Filter to customers only + apply search
+  const customerList = React.useMemo(() => {
+    if (!allUsers) return []
+    let customers = allUsers.filter((u) => u.role === 'customer')
+    if (customerSearch.trim()) {
+      const q = customerSearch.toLowerCase()
+      customers = customers.filter(
+        (u) =>
+          (u.nickname || u.username || '').toLowerCase().includes(q) ||
+          (u.email || '').toLowerCase().includes(q) ||
+          (u.mobile_number || '').toLowerCase().includes(q)
+      )
+    }
+    return customers
+  }, [allUsers, customerSearch])
 
   // Format currency
   const formatPeso = (amount) => {
@@ -141,8 +164,9 @@ const BranchCustomerAnalytics = ({ branchId }) => {
     }
   }
 
-  // Loading state
-  if (!churnMetrics) {
+  // Loading state — only block for branch admins who have a fixed branch
+  // Super admin can see the page without a branch selected (wallet section doesn't need one)
+  if (!isSuperAdmin && !churnMetrics) {
     return (
       <div className="flex items-center justify-center h-64">
         <RefreshCw className="w-8 h-8 text-[var(--color-primary)] animate-spin" />
@@ -197,6 +221,16 @@ const BranchCustomerAnalytics = ({ branchId }) => {
         )}
       </div>
 
+      {/* Branch-specific sections — require a branch to be selected */}
+      {isSuperAdmin && !activeBranchId && (
+        <div className="bg-gradient-to-br from-[#1A1A1A] to-[#252525] rounded-xl border border-[#333] p-8 text-center">
+          <Building2 className="w-12 h-12 text-gray-500 mx-auto mb-3" />
+          <p className="text-gray-400 text-sm">Select a branch above to view customer activity, churn metrics, and top customers.</p>
+        </div>
+      )}
+
+      {churnMetrics && (
+      <>
       {/* Status Cards */}
       <div data-tour="analytics-status-cards" className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {/* Total Customers */}
@@ -463,8 +497,9 @@ const BranchCustomerAnalytics = ({ branchId }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#333]">
-                  {topCustomers.map((customer, index) => (
-                    <tr key={customer._id} className="hover:bg-[#252525]/50 transition-colors">
+                  {topCustomers.map((customer, index) => {
+                    return (
+                    <tr key={customer._id} className="hover:bg-[#252525]/50 transition-colors cursor-pointer" onClick={() => setSelectedCustomerId(customer.customer_id)}>
                       <td className="px-4 py-3">
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
                           index === 0 ? 'bg-yellow-500/20 text-yellow-400' :
@@ -512,7 +547,8 @@ const BranchCustomerAnalytics = ({ branchId }) => {
                         </span>
                       </td>
                     </tr>
-                  ))}
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -588,6 +624,92 @@ const BranchCustomerAnalytics = ({ branchId }) => {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      </>
+      )}
+
+      {/* All Customers List (Super Admin Only) */}
+      {isSuperAdmin && customerList && (
+        <div className="bg-gradient-to-br from-[#1A1A1A] to-[#252525] rounded-xl border border-[#333] overflow-hidden">
+          <div className="flex items-center justify-between p-4 border-b border-[#333]">
+            <div className="flex items-center gap-3">
+              <Users className="w-5 h-5 text-[var(--color-primary)]" />
+              <h3 className="text-lg font-semibold text-white">
+                All Customers
+                <span className="text-gray-400 ml-2">({customerList.length})</span>
+              </h3>
+            </div>
+          </div>
+
+          <div className="p-3 border-b border-[#333]">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search by name, email, or phone..."
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 bg-[#0A0A0A] border border-[#333] rounded-lg text-white text-sm placeholder:text-gray-500 focus:outline-none focus:border-[var(--color-primary)]"
+              />
+            </div>
+          </div>
+
+          <div className="overflow-x-auto max-h-[500px]">
+            <table className="w-full">
+              <thead className="bg-[#252525] sticky top-0">
+                <tr>
+                  <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3">Customer</th>
+                  <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3">Contact</th>
+                  <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3">Status</th>
+                  <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3">Joined</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#333]">
+                {customerList.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="text-center py-8 text-gray-500 text-sm">
+                      {customerSearch ? 'No customers match your search' : 'No customers found'}
+                    </td>
+                  </tr>
+                ) : (
+                  customerList.map((c) => (
+                    <tr key={c._id} className="hover:bg-[#252525]/50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-[var(--color-primary)]/20 flex items-center justify-center">
+                            <span className="text-[var(--color-primary)] font-semibold text-sm">
+                              {(c.nickname || c.username || '?').charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-white font-medium text-sm">{c.nickname || c.username || 'Unknown'}</p>
+                            <p className="text-gray-500 text-xs">{c.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-gray-300 text-sm">{c.mobile_number || '—'}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${c.is_active !== false ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                          {c.is_active !== false ? 'Active' : 'Inactive'}
+                        </span>
+                        {c.is_guest && (
+                          <span className="ml-1 px-1.5 py-0.5 text-[10px] font-medium bg-orange-500/20 text-orange-400 rounded">Guest</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-gray-400 text-sm">
+                          {c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

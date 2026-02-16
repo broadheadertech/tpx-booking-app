@@ -215,6 +215,100 @@ http.route({
     const sessionId = eventData?.id || "";
     const metadata = eventData?.attributes?.metadata || {};
 
+    // Route by metadata type
+    if (metadata?.type === "branch_wallet_topup") {
+      // ---- BRANCH WALLET TOP-UP ----
+      console.log("[SA-Wallet Webhook] Routing to branch wallet top-up handler");
+
+      const sigResult = await ctx.runAction(internal.services.branchWalletTopup.verifyBranchWalletWebhookSignature, {
+        signature,
+        rawBody: body,
+      });
+
+      if (!sigResult.valid) {
+        console.error("[Branch-Wallet Webhook] Invalid signature:", sigResult.error);
+        return new Response(JSON.stringify({ error: "Invalid signature" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      const bwPaymentIntent = eventData?.attributes?.payment_intent;
+      const bwAmountCentavos = bwPaymentIntent?.attributes?.amount || 0;
+      const bwPayments = bwPaymentIntent?.attributes?.payments || [];
+      const bwPaymentId = bwPayments[0]?.id || `webhook_${Date.now()}`;
+      const bwPaymentMethod = bwPayments[0]?.attributes?.source?.type || "unknown";
+
+      const bwResult = await ctx.runAction(internal.services.branchWalletTopup.processBranchWalletTopupWebhook, {
+        sessionId,
+        paymentId: bwPaymentId,
+        amount: bwAmountCentavos / 100,
+        paymentMethod: bwPaymentMethod,
+      });
+
+      if (!bwResult.success) {
+        console.error("[Branch-Wallet Webhook] Processing failed:", bwResult.error);
+        return new Response(JSON.stringify({ error: bwResult.error }), {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      console.log("[Branch-Wallet Webhook] Top-up processed successfully:", {
+        branchId: bwResult.branchId,
+        amount: bwResult.amount,
+      });
+
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Route booking payment events to the main PayMongo webhook processor
+    // This happens when SA's PayMongo processes a branch booking payment (fallback)
+    if (metadata?.type === "booking_payment" || metadata?.deferred_booking === "true") {
+      console.log("[SA-Wallet Webhook] Routing booking payment to processWebhook");
+
+      const bkPaymentIntent = eventData?.attributes?.payment_intent;
+      const bkAmount = bkPaymentIntent?.attributes?.amount
+        ? bkPaymentIntent.attributes.amount / 100
+        : 0;
+      const bkPayments = bkPaymentIntent?.attributes?.payments || [];
+      const bkPaymentId = bkPayments[0]?.id || "";
+      const bkPaymentMethod = bkPayments[0]?.attributes?.source?.type || "unknown";
+
+      const bkPaymentType = metadata?.payment_type || "";
+
+      const bkResult = await ctx.runAction(internal.services.paymongo.processWebhook, {
+        signature,
+        rawBody: body,
+        eventType: eventType || "unknown",
+        linkId: sessionId,
+        bookingIdStr: "",
+        paymentType: bkPaymentType,
+        amount: bkAmount,
+        paymentMethod: bkPaymentMethod,
+        paymentId: bkPaymentId,
+        ipAddress,
+        rawPayload: payload,
+      });
+
+      if (!bkResult.success) {
+        console.error("[SA-Wallet Webhook] Booking payment processing failed:", bkResult.error);
+        return new Response(JSON.stringify({ error: bkResult.error }), {
+          status: bkResult.status || 500,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      console.log("[SA-Wallet Webhook] Booking payment processed successfully");
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     // Verify this is a SA wallet top-up
     if (metadata?.type !== "sa_wallet_topup") {
       console.log("[SA-Wallet Webhook] Not a SA wallet top-up, ignoring");
@@ -547,6 +641,7 @@ interface WebhookPayload {
             amount: number;
           }>;
           metadata?: {
+            type?: string;
             payment_type?: string;
             deferred_booking?: string;
           };

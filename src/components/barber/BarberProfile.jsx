@@ -1,12 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   User, Mail, Phone, Star, Save, X, Camera, Award,
-  Clock, LogOut, Briefcase, ChevronRight, Shield
+  Clock, LogOut, Briefcase, ChevronRight, Shield,
+  AlertCircle, CheckCircle2, Plus, FileText, Users
 } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { useAppModal } from '../../context/AppModalContext'
+import { normalizeCerts, certToSchemaFormat } from '../../utils/certifications'
+import CertificationTag from '../common/CertificationTag'
+import CertificationLightbox from '../common/CertificationLightbox'
 
 const BarberProfile = () => {
   const { showConfirm } = useAppModal()
@@ -38,9 +42,15 @@ const BarberProfile = () => {
     experience: '',
     specialties: [],
     bio: '',
-    avatar: ''
+    avatar: '',
+    years_of_experience: '',
+    certifications: [],
   })
   const [newSpecialty, setNewSpecialty] = useState('')
+  const [newCertification, setNewCertification] = useState('')
+  const [selectedCert, setSelectedCert] = useState(null)
+  const certFileInputRef = useRef(null)
+  const [uploadingCertIndex, setUploadingCertIndex] = useState(null)
 
   // Get barber data
   const barbers = user?.branch_id
@@ -51,11 +61,16 @@ const BarberProfile = () => {
   // Mutations
   const updateUserProfile = useMutation(api.services.auth.updateUserProfile)
   const updateBarberMutation = useMutation(api.services.barbers.updateBarber)
+  const submitBioForReview = useMutation(api.services.barbers.submitBioForReview)
   const createBarberProfile = useMutation(api.services.barbers.createBarberProfile)
   const generateUploadUrl = useMutation(api.services.barbers.generateUploadUrl)
   const getImageUrl = useQuery(
     api.services.barbers.getImageUrl,
     currentBarber?.avatarStorageId ? { storageId: currentBarber.avatarStorageId } : "skip"
+  )
+  const bioStats = useQuery(
+    api.services.barbers.getBarberBioStats,
+    currentBarber?._id ? { barber_id: currentBarber._id } : "skip"
   )
 
   // Auto-create barber profile
@@ -76,7 +91,9 @@ const BarberProfile = () => {
         experience: currentBarber.experience || '',
         specialties: currentBarber.specialties || [],
         bio: currentBarber.bio || '',
-        avatar: getImageUrl || currentBarber.avatar || ''
+        avatar: getImageUrl || currentBarber.avatar || '',
+        years_of_experience: currentBarber.years_of_experience ?? '',
+        certifications: normalizeCerts(currentBarber.certifications),
       })
     }
   }, [currentBarber, user, getImageUrl])
@@ -100,6 +117,62 @@ const BarberProfile = () => {
       ...prev,
       specialties: prev.specialties.filter(s => s !== specialty)
     }))
+  }
+
+  const addCertification = () => {
+    if (newCertification.trim() && !editForm.certifications.some(c => c.name === newCertification.trim())) {
+      setEditForm(prev => ({
+        ...prev,
+        certifications: [...prev.certifications, { name: newCertification.trim(), imageId: null }]
+      }))
+      setNewCertification('')
+    }
+  }
+
+  const removeCertification = (certName) => {
+    setEditForm(prev => ({
+      ...prev,
+      certifications: prev.certifications.filter(c => c.name !== certName)
+    }))
+  }
+
+  const handleCertImageUpload = async (e, certIndex) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      setErrorMessage('Please select an image file')
+      setShowErrorModal(true)
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage('Image must be less than 5MB')
+      setShowErrorModal(true)
+      return
+    }
+    setUploadingCertIndex(certIndex)
+    try {
+      const uploadUrl = await generateUploadUrl()
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      })
+      if (!response.ok) throw new Error('Upload failed')
+      const { storageId } = await response.json()
+      setEditForm(prev => ({
+        ...prev,
+        certifications: prev.certifications.map((c, i) =>
+          i === certIndex ? { ...c, imageId: storageId } : c
+        )
+      }))
+    } catch (error) {
+      console.error('Cert image upload error:', error)
+      setErrorMessage('Failed to upload certification image.')
+      setShowErrorModal(true)
+    } finally {
+      setUploadingCertIndex(null)
+      if (certFileInputRef.current) certFileInputRef.current.value = ''
+    }
   }
 
   // Handle avatar upload
@@ -168,15 +241,39 @@ const BarberProfile = () => {
     setIsSaving(true)
     try {
       if (currentBarber?._id) {
+        // Save basic profile fields directly (no approval)
         await updateBarberMutation({
           id: currentBarber._id,
           full_name: editForm.full_name,
           email: editForm.email,
           phone: editForm.phone,
           experience: editForm.experience,
-          specialties: editForm.specialties,
-          bio: editForm.bio,
         })
+
+        // Submit bio fields through approval workflow
+        const bioChanged = editForm.bio !== (currentBarber.bio || '')
+        const currentCertsNormalized = normalizeCerts(currentBarber.certifications).map(certToSchemaFormat)
+        const editCertsFormatted = editForm.certifications.map(certToSchemaFormat)
+        const certsChanged = JSON.stringify(editCertsFormatted) !== JSON.stringify(currentCertsNormalized)
+        const specialtiesChanged = JSON.stringify(editForm.specialties) !== JSON.stringify(currentBarber.specialties || [])
+        const yearsChanged = editForm.years_of_experience !== '' &&
+          Number(editForm.years_of_experience) !== (currentBarber.years_of_experience ?? undefined)
+
+        if (bioChanged || certsChanged || specialtiesChanged || yearsChanged) {
+          const bioArgs = { barber_id: currentBarber._id }
+          if (specialtiesChanged) bioArgs.specialties = editForm.specialties
+          if (yearsChanged) bioArgs.years_of_experience = Number(editForm.years_of_experience)
+          if (bioChanged) bioArgs.bio = editForm.bio
+          if (certsChanged) bioArgs.certifications = editCertsFormatted
+
+          const result = await submitBioForReview(bioArgs)
+          if (result?.hasPendingChanges) {
+            setIsEditing(false)
+            setShowSuccessModal(true)
+            setTimeout(() => setShowSuccessModal(false), 3000)
+            return
+          }
+        }
       }
 
       setIsEditing(false)
@@ -200,7 +297,9 @@ const BarberProfile = () => {
         experience: currentBarber.experience || '',
         specialties: currentBarber.specialties || [],
         bio: currentBarber.bio || '',
-        avatar: getImageUrl || currentBarber.avatar || ''
+        avatar: getImageUrl || currentBarber.avatar || '',
+        years_of_experience: currentBarber.years_of_experience ?? '',
+        certifications: normalizeCerts(currentBarber.certifications),
       })
     }
     setIsEditing(false)
@@ -358,13 +457,45 @@ const BarberProfile = () => {
             </div>
           </div>
 
-          {/* Bio */}
+          {/* Bio Approval Status Banner */}
+          {currentBarber.bio_approval_status === 'pending' && (
+            <div className="mt-4 flex items-center gap-2 px-3 py-2 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+              <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+              <p className="text-amber-400 text-xs">Your bio changes are pending admin review.</p>
+            </div>
+          )}
+          {currentBarber.bio_approval_status === 'rejected' && (
+            <div className="mt-4 flex items-start gap-2 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-xl">
+              <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-red-400 text-xs font-medium">Bio changes rejected.</p>
+                {currentBarber.bio_rejection_reason && (
+                  <p className="text-red-400/70 text-xs mt-0.5">Reason: {currentBarber.bio_rejection_reason}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* About Me */}
           <div className="mt-4 pt-4 border-t border-[#2A2A2A]">
-            <label className="text-xs text-gray-500 mb-2 block">Bio</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs text-gray-500 flex items-center gap-1">
+                About Me
+                {currentBarber.bio_approval_status === 'approved' && (
+                  <CheckCircle2 className="w-3 h-3 text-green-400" />
+                )}
+              </label>
+              {isEditing && (
+                <span className={`text-xs ${(editForm.bio?.length || 0) > 200 ? 'text-red-400' : 'text-gray-500'}`}>
+                  {editForm.bio?.length || 0}/200
+                </span>
+              )}
+            </div>
             {isEditing ? (
               <textarea
                 value={editForm.bio}
                 onChange={(e) => handleInputChange('bio', e.target.value)}
+                maxLength={200}
                 className="w-full p-3 bg-[#2A2A2A] border border-[#3A3A3A] rounded-xl text-white text-sm resize-none focus:outline-none focus:border-[var(--color-primary)]"
                 rows="2"
                 placeholder="Write a short bio about yourself..."
@@ -376,7 +507,7 @@ const BarberProfile = () => {
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] text-center">
             <p className="text-xl font-bold text-white">{currentBarber.totalBookings || 0}</p>
             <p className="text-xs text-gray-500">Total Jobs</p>
@@ -384,6 +515,10 @@ const BarberProfile = () => {
           <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] text-center">
             <p className="text-xl font-bold text-[var(--color-primary)]">{currentBarber.rating || 0}</p>
             <p className="text-xs text-gray-500">Rating</p>
+          </div>
+          <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] text-center">
+            <p className="text-xl font-bold text-blue-400">{bioStats?.repeatClientPercentage ?? 0}%</p>
+            <p className="text-xs text-gray-500">Repeat</p>
           </div>
           <div className="bg-[#1A1A1A] rounded-2xl p-4 border border-[#2A2A2A] text-center">
             <p className="text-xl font-bold text-white">&#8369;{(currentBarber.monthlyRevenue || 0).toLocaleString()}</p>
@@ -439,17 +574,23 @@ const BarberProfile = () => {
           </div>
           <div className="divide-y divide-[#2A2A2A]">
             <div className="p-4">
-              <label className="text-xs text-gray-500 mb-1 block">Experience</label>
+              <label className="text-xs text-gray-500 mb-1 block">Years of Experience</label>
               {isEditing ? (
                 <input
-                  type="text"
-                  value={editForm.experience}
-                  onChange={(e) => handleInputChange('experience', e.target.value)}
+                  type="number"
+                  min="0"
+                  max="50"
+                  value={editForm.years_of_experience}
+                  onChange={(e) => handleInputChange('years_of_experience', e.target.value)}
                   className="w-full bg-[#2A2A2A] border border-[#3A3A3A] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[var(--color-primary)]"
-                  placeholder="e.g., 5 years"
+                  placeholder="e.g., 5"
                 />
               ) : (
-                <p className="text-white text-sm">{currentBarber.experience || 'Not specified'}</p>
+                <p className="text-white text-sm">
+                  {currentBarber.years_of_experience != null
+                    ? `${currentBarber.years_of_experience} year${currentBarber.years_of_experience !== 1 ? 's' : ''}`
+                    : currentBarber.experience || 'Not specified'}
+                </p>
               )}
             </div>
             <div className="p-4">
@@ -506,6 +647,91 @@ const BarberProfile = () => {
                 </div>
               )}
             </div>
+            {/* Certifications */}
+            <div className="p-4">
+              <label className="text-xs text-gray-500 mb-2 flex items-center gap-1">
+                <Award className="w-3 h-3" />
+                Certifications & Training
+              </label>
+              {isEditing ? (
+                <div className="space-y-2">
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={newCertification}
+                      onChange={(e) => setNewCertification(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && addCertification()}
+                      className="flex-1 bg-[#2A2A2A] border border-[#3A3A3A] rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[var(--color-primary)]"
+                      placeholder="e.g., Certified in Korean Perm"
+                    />
+                    <button
+                      onClick={addCertification}
+                      className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg text-sm font-medium"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  <input
+                    ref={certFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleCertImageUpload(e, Number(certFileInputRef.current.dataset.certIndex))}
+                    className="hidden"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    {editForm.certifications.map((cert, index) => (
+                      <span
+                        key={index}
+                        className="inline-flex items-center px-3 py-1 bg-amber-500/10 text-amber-300 rounded-lg text-xs border border-amber-500/20"
+                      >
+                        <Award className="w-3 h-3 mr-1" />
+                        {cert.name}
+                        <button
+                          onClick={() => {
+                            certFileInputRef.current.dataset.certIndex = index
+                            certFileInputRef.current.click()
+                          }}
+                          className="ml-1.5 text-amber-400/50 hover:text-amber-300"
+                          title={cert.imageId ? 'Change image' : 'Attach image'}
+                        >
+                          {uploadingCertIndex === index ? (
+                            <div className="w-3 h-3 border border-amber-300 border-t-transparent rounded-full animate-spin" />
+                          ) : cert.imageId ? (
+                            <CheckCircle2 className="w-3 h-3 text-green-400" />
+                          ) : (
+                            <Camera className="w-3 h-3" />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => removeCertification(cert.name)}
+                          className="ml-1 text-amber-400 hover:text-white"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  {editForm.certifications.length > 0 && (
+                    <p className="text-[10px] text-gray-600">Tap <Camera className="w-2.5 h-2.5 inline" /> to attach a certificate image</p>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {normalizeCerts(currentBarber.certifications).length > 0 ? (
+                    normalizeCerts(currentBarber.certifications).map((cert, index) => (
+                      <CertificationTag
+                        key={index}
+                        cert={cert}
+                        size="md"
+                        onClick={setSelectedCert}
+                      />
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-sm">No certifications added</p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -543,7 +769,11 @@ const BarberProfile = () => {
                 </svg>
               </div>
               <h3 className="text-lg font-bold text-white mb-1">Profile Updated</h3>
-              <p className="text-gray-500 text-sm">Your changes have been saved</p>
+              <p className="text-gray-500 text-sm">
+                {currentBarber?.bio_approval_status === 'pending'
+                  ? 'Saved! Bio changes submitted for admin review.'
+                  : 'Your changes have been saved'}
+              </p>
             </div>
           </div>
         </div>
@@ -568,6 +798,11 @@ const BarberProfile = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Certification Lightbox */}
+      {selectedCert && (
+        <CertificationLightbox cert={selectedCert} onClose={() => setSelectedCert(null)} />
       )}
     </div>
   )

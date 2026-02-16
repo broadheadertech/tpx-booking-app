@@ -108,6 +108,41 @@ export const addProduct = mutation({
       created_by: args.created_by,
     });
 
+    // Auto-sync: Create this product in all active branches with stock=0
+    const VALID_CATEGORIES = ["hair-care", "beard-care", "shaving", "tools", "accessories"] as const;
+    type ProductCategory = (typeof VALID_CATEGORIES)[number];
+    const category = args.category as string;
+    if (VALID_CATEGORIES.includes(category as ProductCategory)) {
+      const branches = await ctx.db
+        .query("branches")
+        .withIndex("by_active", (q) => q.eq("is_active", true))
+        .collect();
+
+      for (const branch of branches) {
+        const buyingPrice = args.price;
+        const defaultSellingPrice = Math.ceil(buyingPrice * 1.10); // 10% markup
+        await ctx.db.insert("products", {
+          branch_id: branch._id,
+          catalog_product_id: productId,
+          name: args.name.trim(),
+          description: args.description?.trim() || "",
+          price: defaultSellingPrice, // Default selling price = buying + 10% (branch admin can change)
+          cost: buyingPrice, // Buying price = catalog price (what branch pays HQ)
+          category: category as ProductCategory,
+          brand: args.brand?.trim() || "",
+          sku: args.sku?.trim() || "",
+          stock: 0,
+          minStock: args.minStock ?? 10,
+          imageUrl: args.image_url,
+          imageStorageId: args.image_storage_id,
+          status: "active",
+          soldThisMonth: 0,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+    }
+
     return {
       success: true,
       productId,
@@ -199,6 +234,45 @@ export const updateProduct = mutation({
 
     await ctx.db.patch(args.product_id, updates);
 
+    // Sync changes to all linked branch products
+    // Note: catalog price = branch COST (buying price). Branch selling price is set independently.
+    const syncFields: Record<string, unknown> = {};
+    if (args.name !== undefined) syncFields.name = args.name.trim();
+    if (args.description !== undefined) syncFields.description = args.description?.trim() || "";
+    if (args.price !== undefined) syncFields.cost = args.price; // Catalog price → branch cost (buying price)
+    if (args.category !== undefined) syncFields.category = args.category;
+    if (args.brand !== undefined) syncFields.brand = args.brand?.trim() || "";
+    if (args.sku !== undefined) syncFields.sku = args.sku?.trim() || "";
+    if (args.image_url !== undefined) syncFields.imageUrl = args.image_url;
+    if (args.image_storage_id !== undefined) syncFields.imageStorageId = args.image_storage_id;
+
+    if (Object.keys(syncFields).length > 0) {
+      // Find all branch products linked to this catalog product
+      const allProducts = await ctx.db.query("products").collect();
+      const linkedProducts = allProducts.filter(
+        (p) => p.catalog_product_id === args.product_id
+      );
+      const now = Date.now();
+      for (const bp of linkedProducts) {
+        await ctx.db.patch(bp._id, { ...syncFields, updatedAt: now });
+      }
+    }
+
+    // If deactivated, only deactivate branch products with 0 stock.
+    // Branches with remaining stock keep their product active to sell out.
+    if (args.is_active === false) {
+      const allProducts = await ctx.db.query("products").collect();
+      const linkedProducts = allProducts.filter(
+        (p) => p.catalog_product_id === args.product_id
+      );
+      const now = Date.now();
+      for (const bp of linkedProducts) {
+        if (bp.stock <= 0) {
+          await ctx.db.patch(bp._id, { status: "inactive", updatedAt: now });
+        }
+      }
+    }
+
     return { success: true };
   },
 });
@@ -220,6 +294,20 @@ export const deleteProduct = mutation({
     }
 
     await ctx.db.patch(args.product_id, { is_active: false });
+
+    // Soft-delete branch products: only deactivate those with 0 stock.
+    // Branches with remaining stock keep their product active to sell out.
+    const allProducts = await ctx.db.query("products").collect();
+    const linkedProducts = allProducts.filter(
+      (p) => p.catalog_product_id === args.product_id
+    );
+    const now = Date.now();
+    for (const bp of linkedProducts) {
+      if (bp.stock <= 0) {
+        await ctx.db.patch(bp._id, { status: "inactive", updatedAt: now });
+      }
+    }
+
     return { success: true };
   },
 });
@@ -318,6 +406,29 @@ export const receiveStock = mutation({
     // Update product total stock
     const newStock = product.stock + args.quantity;
     await ctx.db.patch(args.product_id, { stock: newStock });
+
+    // If product was previously out of stock, notify all branches about restock
+    if (product.stock === 0) {
+      const branches = await ctx.db.query("branches").collect();
+      const notifTime = Date.now();
+      for (const branch of branches) {
+        await ctx.db.insert("notifications", {
+          title: "Product Restocked!",
+          message: `${product.name} is now back in stock with ${args.quantity} units available. Order now!`,
+          type: "alert" as const,
+          priority: "high" as const,
+          recipient_type: "admin" as const,
+          branch_id: branch._id,
+          is_read: false,
+          is_archived: false,
+          action_url: "/staff/ordering",
+          action_label: "Order Now",
+          metadata: { product_id: args.product_id, product_name: product.name, quantity: args.quantity },
+          createdAt: notifTime,
+          updatedAt: notifTime,
+        });
+      }
+    }
 
     return {
       success: true,
@@ -423,11 +534,15 @@ export const getCatalogProducts = query({
           }
         }
 
-        // Determine stock status
+        // Calculate available stock (total minus reserved by approved orders)
+        const reservedStock = product.reserved_stock ?? 0;
+        const availableStock = Math.max(0, product.stock - reservedStock);
+
+        // Determine stock status based on available stock
         let stockStatus: "in-stock" | "low-stock" | "out-of-stock" = "in-stock";
-        if (product.stock === 0) {
+        if (availableStock === 0) {
           stockStatus = "out-of-stock";
-        } else if (product.stock <= product.minStock) {
+        } else if (availableStock <= product.minStock) {
           stockStatus = "low-stock";
         }
 
@@ -435,6 +550,8 @@ export const getCatalogProducts = query({
           ...product,
           resolvedImageUrl,
           stockStatus,
+          availableStock,
+          reservedStock,
         };
       })
     );
@@ -648,5 +765,82 @@ export const getInventorySummary = query({
       totalCost,
       potentialProfit: totalValue - totalCost,
     };
+  },
+});
+
+/**
+ * Sync all active catalog products to a specific branch.
+ * Used when a new branch is created or to backfill existing branches.
+ * Skips products that already exist in the branch (by catalog_product_id).
+ */
+export const syncCatalogToBranch = mutation({
+  args: {
+    branch_id: v.id("branches"),
+  },
+  handler: async (ctx, args) => {
+    const branch = await ctx.db.get(args.branch_id);
+    if (!branch) {
+      throw new ConvexError({
+        code: "BRANCH_NOT_FOUND",
+        message: "Branch not found",
+      });
+    }
+
+    // Get all active catalog products
+    const catalogProducts = await ctx.db
+      .query("productCatalog")
+      .withIndex("by_is_active", (q) => q.eq("is_active", true))
+      .collect();
+
+    // Get existing branch products to check for duplicates
+    const existingProducts = await ctx.db
+      .query("products")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .collect();
+
+    const existingCatalogIds = new Set(
+      existingProducts
+        .filter((p) => p.catalog_product_id)
+        .map((p) => p.catalog_product_id as string)
+    );
+
+    const VALID_CATEGORIES = ["hair-care", "beard-care", "shaving", "tools", "accessories"] as const;
+    type ProductCategory = (typeof VALID_CATEGORIES)[number];
+    const now = Date.now();
+    let synced = 0;
+
+    for (const cp of catalogProducts) {
+      // Skip if already exists in branch
+      if (existingCatalogIds.has(cp._id as string)) continue;
+
+      // Only sync if category is valid for branch products
+      const category = cp.category as string;
+      if (!VALID_CATEGORIES.includes(category as ProductCategory)) continue;
+
+      const buyingPrice = cp.price;
+      const defaultSellingPrice = Math.ceil(buyingPrice * 1.10); // 10% markup
+      await ctx.db.insert("products", {
+        branch_id: args.branch_id,
+        catalog_product_id: cp._id,
+        name: cp.name,
+        description: cp.description || "",
+        price: defaultSellingPrice, // Default selling price = buying + 10% (branch admin can change)
+        cost: buyingPrice, // Buying price = catalog price (what branch pays HQ)
+        category: category as ProductCategory,
+        brand: cp.brand || "",
+        sku: cp.sku || "",
+        stock: 0,
+        minStock: cp.minStock ?? 10,
+        imageUrl: cp.image_url,
+        imageStorageId: cp.image_storage_id,
+        status: "active",
+        soldThisMonth: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+      synced++;
+    }
+
+    return { success: true, synced };
   },
 });

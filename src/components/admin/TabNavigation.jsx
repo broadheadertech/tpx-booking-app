@@ -30,6 +30,7 @@ import {
   DollarSign,
   Megaphone,
   Scissors,
+  AlertTriangle,
 } from 'lucide-react'
 
 // Category definitions for primary nav
@@ -87,6 +88,7 @@ const TabNavigation = ({ tabs, activeTab, onTabChange }) => {
       shop_config: ShoppingCart,
       shop_banners: Image,
       delivery_orders: Truck,
+      damage_claims: AlertTriangle,
       // Category icons
       Commerce: ShoppingCart,
       Finance: DollarSign,
