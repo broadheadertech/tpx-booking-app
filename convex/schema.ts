@@ -566,6 +566,10 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
     completed_at: v.optional(v.number()), // Timestamp when booking was marked complete
+    // Email notification tracking flags
+    email_reminder_sent: v.optional(v.boolean()),
+    late_notice_sent: v.optional(v.boolean()),
+    no_show_email_sent: v.optional(v.boolean()),
   })
     .index("by_customer", ["customer"])
     .index("by_barber", ["barber"])
@@ -1608,11 +1612,41 @@ export default defineSchema({
   // Email templates for customizable email content
   email_templates: defineTable({
     template_type: v.union(
+      // Existing
       v.literal("password_reset"),
       v.literal("voucher"),
       v.literal("booking_confirmation"),
       v.literal("booking_reminder"),
-      v.literal("welcome")
+      v.literal("welcome"),
+      // Booking lifecycle
+      v.literal("booking_cancellation_to_branch"),
+      v.literal("booking_cancellation_to_customer"),
+      v.literal("booking_late_notice"),
+      v.literal("booking_no_show"),
+      // Financial
+      v.literal("settlement_requested"),
+      v.literal("settlement_approved"),
+      v.literal("settlement_completed"),
+      v.literal("settlement_rejected"),
+      v.literal("branch_wallet_topup"),
+      v.literal("customer_wallet_topup"),
+      v.literal("wallet_low_balance"),
+      // Product orders
+      v.literal("new_product_order"),
+      v.literal("order_approved"),
+      v.literal("order_rejected"),
+      v.literal("order_shipped"),
+      v.literal("order_delivered"),
+      v.literal("order_payment_receipt"),
+      v.literal("customer_order_confirmation"),
+      // Operational
+      v.literal("low_stock_alert"),
+      v.literal("monthly_earnings_summary"),
+      v.literal("weekly_payroll"),
+      v.literal("branch_offline"),
+      v.literal("damage_claim_filed"),
+      v.literal("account_banned"),
+      v.literal("scheduled_maintenance")
     ),
     subject: v.string(),
     heading: v.string(),

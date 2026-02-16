@@ -1452,6 +1452,34 @@ export const createBookingFromPending = mutation({
       }
     }
 
+    // Send booking confirmation email (was missing for PayMongo bookings)
+    try {
+      const customer = pending.customer_id ? await ctx.db.get(pending.customer_id) : null;
+      const branch = await ctx.db.get(pending.branch_id);
+      const barber = pending.barber_id ? await ctx.db.get(pending.barber_id) : null;
+      const customerEmail = pending.customer_email || (customer as any)?.email;
+      const customerName = pending.customer_name || (customer as any)?.nickname || (customer as any)?.username || "Customer";
+
+      if (customerEmail && branch) {
+        await ctx.scheduler.runAfter(0, api.services.auth.sendBookingConfirmationEmail, {
+          email: customerEmail,
+          customerName,
+          bookingCode,
+          serviceName: service.name,
+          servicePrice: finalPrice,
+          barberName: (barber as any)?.full_name || "Any Available",
+          branchName: branch.name || "Our Branch",
+          branchAddress: branch.address,
+          date: pending.date,
+          time: pending.time,
+          bookingId: bookingId.toString(),
+        });
+        console.log("[PAYMONGO] Booking confirmation email scheduled for:", customerEmail);
+      }
+    } catch (emailError) {
+      console.error("[PAYMONGO] Failed to send booking email:", emailError);
+    }
+
     return { bookingId, alreadyProcessed: false, bookingCode };
   },
 });

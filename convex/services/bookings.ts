@@ -1655,6 +1655,45 @@ export const cancelBooking = mutation({
       // Don't fail the cancellation if notifications fail
     }
 
+    // Send cancellation email notifications
+    try {
+      const cancelService = await ctx.db.get(booking.service);
+      const cancelBranch = await ctx.db.get(booking.branch_id);
+      const cancelCustomer = booking.customer ? await ctx.db.get(booking.customer) : null;
+      const cancelCustomerEmail = booking.customer_email || cancelCustomer?.email;
+      const cancelCustomerName = booking.customer_name || cancelCustomer?.nickname || cancelCustomer?.username || "Customer";
+
+      // Email branch admin about cancellation
+      await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationToRole, {
+        notification_type: "booking_cancellation_to_branch",
+        role: "branch_admin",
+        branch_id: booking.branch_id,
+        variables: {
+          customer_name: cancelCustomerName,
+          service_name: cancelService?.name || "Service",
+          date: booking.date,
+          time: booking.time,
+          reason: args.reason || "No reason provided",
+        },
+      });
+
+      // Email customer about cancellation
+      if (cancelCustomerEmail) {
+        await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationEmail, {
+          notification_type: "booking_cancellation_to_customer",
+          to_email: cancelCustomerEmail,
+          to_name: cancelCustomerName,
+          variables: {
+            service_name: cancelService?.name || "Service",
+            branch_name: cancelBranch?.name || "Our Branch",
+            date: booking.date,
+            time: booking.time,
+            reason: args.reason || "No reason provided",
+          },
+        });
+      }
+    } catch (e) { console.error("[BOOKINGS] Cancellation email failed:", e); }
+
     return { success: true, booking_id: args.id };
   },
 });

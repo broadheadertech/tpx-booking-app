@@ -13,6 +13,7 @@
 
 import { internalMutation } from "../_generated/server";
 import { v } from "convex/values";
+import { api } from "../_generated/api";
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -384,6 +385,21 @@ export const handleUserDeleted = internalMutation({
     });
 
     console.log("[ClerkSync] Soft deleted user:", user._id);
+
+    // Send account suspension email
+    if (user.email) {
+      try {
+        await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationEmail, {
+          notification_type: "account_banned",
+          to_email: user.email,
+          to_name: (user as any).nickname || (user as any).username || "Customer",
+          variables: {
+            customer_name: (user as any).nickname || (user as any).username || "there",
+            reason: "Your account has been removed by an administrator.",
+          },
+        });
+      } catch (e) { console.error("[CLERK_SYNC] Account banned email failed:", e); }
+    }
 
     // Audit log: User soft deleted via Clerk webhook
     console.log("[ClerkSync] AUDIT: User soft deleted via webhook", {

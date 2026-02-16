@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { action, internalMutation, mutation, query } from "../_generated/server";
 import { Doc, Id } from "../_generated/dataModel";
 import { throwUserError, ERROR_CODES } from "../utils/errors";
-import { internal } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 
 // Generate a unique branch code
 function generateBranchCode(name: string): string {
@@ -668,10 +668,28 @@ export const toggleBranchStatus = mutation({
       throwUserError(ERROR_CODES.RESOURCE_NOT_FOUND, "Branch not found", "The branch you are trying to update does not exist.");
     }
 
+    const goingOffline = branch.is_active === true;
     await ctx.db.patch(args.id, {
       is_active: !branch.is_active,
       updatedAt: Date.now(),
     });
+
+    // Email SA + BA when branch goes offline
+    if (goingOffline) {
+      try {
+        await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationToRole, {
+          notification_type: "branch_offline",
+          role: "super_admin",
+          variables: { branch_name: branch.name || "Unknown Branch" },
+        });
+        await ctx.scheduler.runAfter(0, api.services.emailNotifications.sendNotificationToRole, {
+          notification_type: "branch_offline",
+          role: "branch_admin",
+          branch_id: args.id,
+          variables: { branch_name: branch.name || "Unknown Branch" },
+        });
+      } catch (e) { console.error("[BRANCHES] Offline email failed:", e); }
+    }
 
     return args.id;
   },

@@ -430,6 +430,27 @@ export const processBranchWalletTopupWebhook = internalAction({
       newBalance: creditResult.newBalance,
     });
 
+    // Email SA + BA about branch wallet top-up
+    try {
+      await ctx.runAction(api.services.emailNotifications.sendNotificationToRole, {
+        notification_type: "branch_wallet_topup",
+        role: "super_admin",
+        variables: {
+          amount: `₱${pending.amount.toLocaleString()}`,
+          payment_method: args.paymentMethod,
+        },
+      });
+      await ctx.runAction(api.services.emailNotifications.sendNotificationToRole, {
+        notification_type: "branch_wallet_topup",
+        role: "branch_admin",
+        branch_id: pending.branch_id,
+        variables: {
+          amount: `₱${pending.amount.toLocaleString()}`,
+          payment_method: args.paymentMethod,
+        },
+      });
+    } catch (e) { console.error("[BRANCH_WALLET_WEBHOOK] Email failed:", e); }
+
     return {
       success: true,
       branchId: pending.branch_id,

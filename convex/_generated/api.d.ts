@@ -49,6 +49,7 @@ import type * as services_customerBranchActivity from "../services/customerBranc
 import type * as services_damageClaims from "../services/damageClaims.js";
 import type * as services_defaultServices from "../services/defaultServices.js";
 import type * as services_emailMarketing from "../services/emailMarketing.js";
+import type * as services_emailNotifications from "../services/emailNotifications.js";
 import type * as services_emailTemplates from "../services/emailTemplates.js";
 import type * as services_events from "../services/events.js";
 import type * as services_expenses from "../services/expenses.js";
@@ -145,6 +146,7 @@ declare const fullApi: ApiFromModules<{
   "services/damageClaims": typeof services_damageClaims;
   "services/defaultServices": typeof services_defaultServices;
   "services/emailMarketing": typeof services_emailMarketing;
+  "services/emailNotifications": typeof services_emailNotifications;
   "services/emailTemplates": typeof services_emailTemplates;
   "services/events": typeof services_events;
   "services/expenses": typeof services_expenses;
