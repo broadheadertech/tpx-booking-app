@@ -12,6 +12,7 @@ import { Doc } from "../_generated/dataModel";
  * User roles in the system
  */
 export type UserRole =
+  | "it_admin"
   | "super_admin"
   | "admin_staff"
   | "branch_admin"
@@ -24,6 +25,7 @@ export type UserRole =
  * Used for role comparison checks
  */
 export const ROLE_HIERARCHY: Record<UserRole, number> = {
+  it_admin: 7,
   super_admin: 6,
   admin_staff: 5,
   branch_admin: 4,
@@ -168,7 +170,7 @@ export function isBranchScoped(role: UserRole): boolean {
  * @returns true if the role can view/switch between all branches
  */
 export function canViewAllBranches(role: UserRole): boolean {
-  return ["super_admin", "admin_staff"].includes(role);
+  return ["it_admin", "super_admin", "admin_staff"].includes(role);
 }
 
 /**
@@ -178,7 +180,7 @@ export function canViewAllBranches(role: UserRole): boolean {
  * @returns true if the role has admin-level privileges
  */
 export function isAdminRole(role: UserRole): boolean {
-  return ["super_admin", "admin_staff", "branch_admin"].includes(role);
+  return ["it_admin", "super_admin", "admin_staff", "branch_admin"].includes(role);
 }
 
 /**
@@ -201,9 +203,14 @@ export function canCreateUserWithRole(
   const creatorLevel = ROLE_HIERARCHY[creatorRole];
   const targetLevel = ROLE_HIERARCHY[targetRole];
 
-  // super_admin can create any role
+  // it_admin can only create other it_admins (avoid conflict of interest)
+  if (creatorRole === "it_admin") {
+    return targetRole === "it_admin";
+  }
+
+  // super_admin can create any role except it_admin
   if (creatorRole === "super_admin") {
-    return true;
+    return targetRole !== "it_admin";
   }
 
   // admin_staff can create roles below branch_admin
@@ -264,6 +271,7 @@ export function getDefaultPageAccess(role: UserRole): PageAccessV2 {
   };
 
   switch (role) {
+    case "it_admin":
     case "super_admin":
     case "admin_staff":
       // Full access to all pages
@@ -315,8 +323,8 @@ export function hasPagePermission(
 ): boolean {
   const role = user.role as UserRole;
 
-  // Super admin bypasses all checks
-  if (role === "super_admin") {
+  // IT admin and super admin bypass all checks
+  if (role === "it_admin" || role === "super_admin") {
     return true;
   }
 
@@ -355,8 +363,8 @@ export function hasPagePermission(
 export function getAccessiblePages(user: Doc<"users">): string[] {
   const role = user.role as UserRole;
 
-  // Super admin can view all pages
-  if (role === "super_admin" || role === "admin_staff") {
+  // IT admin and super admin can view all pages
+  if (role === "it_admin" || role === "super_admin" || role === "admin_staff") {
     return [...ALL_PAGE_IDS];
   }
 
@@ -413,6 +421,7 @@ export function isValidRole(role: string): role is UserRole {
  */
 export function getRoleDisplayName(role: UserRole): string {
   const displayNames: Record<UserRole, string> = {
+    it_admin: "IT Administrator",
     super_admin: "Super Admin",
     admin_staff: "Admin Staff",
     branch_admin: "Branch Admin",
@@ -431,6 +440,8 @@ export function getRoleDisplayName(role: UserRole): string {
  */
 export function getAssignableRoles(userRole: UserRole): UserRole[] {
   switch (userRole) {
+    case "it_admin":
+      return ["it_admin"];
     case "super_admin":
       return ["super_admin", "admin_staff", "branch_admin", "staff", "barber", "customer"];
     case "admin_staff":

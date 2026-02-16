@@ -60,8 +60,8 @@ export async function checkPermission(
 
   const role = user.role as UserRole;
 
-  // Super admin bypasses all checks
-  if (role === "super_admin") {
+  // IT admin and super admin bypass all checks
+  if (role === "it_admin" || role === "super_admin") {
     return true;
   }
 
@@ -134,8 +134,8 @@ export async function checkBranchAccess(
 
   const role = user.role as UserRole;
 
-  // Super admin can access any branch
-  if (role === "super_admin") {
+  // IT admin and super admin can access any branch
+  if (role === "it_admin" || role === "super_admin") {
     return true;
   }
 
@@ -176,8 +176,8 @@ export async function getBranchFilter(
 
   const role = user.role as UserRole;
 
-  // Super admin sees all branches (unless filtering specifically)
-  if (role === "super_admin") {
+  // IT admin and super admin see all branches (unless filtering specifically)
+  if (role === "it_admin" || role === "super_admin") {
     return selectedBranchContext || null;
   }
 
@@ -284,6 +284,7 @@ export const getAssignableRolesQuery = query({
 export const hasRole = query({
   args: {
     role: v.union(
+      v.literal("it_admin"),
       v.literal("super_admin"),
       v.literal("admin_staff"),
       v.literal("branch_admin"),
@@ -441,6 +442,7 @@ export const updateUserRole = mutation({
   args: {
     userId: v.id("users"),
     newRole: v.union(
+      v.literal("it_admin"),
       v.literal("super_admin"),
       v.literal("admin_staff"),
       v.literal("branch_admin"),
@@ -533,8 +535,8 @@ export const getAuditTrail = query({
       return { entries: [], total: 0 };
     }
 
-    // Only super_admin can view full audit trail
-    if (currentUser.role !== "super_admin") {
+    // Only it_admin and super_admin can view full audit trail
+    if (currentUser.role !== "it_admin" && currentUser.role !== "super_admin") {
       return { entries: [], total: 0 };
     }
 
@@ -600,7 +602,7 @@ export const getAuditTrailStats = query({
   handler: async (ctx) => {
     const currentUser = await getCurrentUser(ctx);
 
-    if (!currentUser || currentUser.role !== "super_admin") {
+    if (!currentUser || (currentUser.role !== "it_admin" && currentUser.role !== "super_admin")) {
       return null;
     }
 

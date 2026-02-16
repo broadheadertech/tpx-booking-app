@@ -811,6 +811,7 @@ export const payBookingWithWallet = mutation({
           await ctx.db.patch(args.bookingId, {
             payment_status: "paid",
             payment_method: "wallet",
+            amount_paid: args.amount,
             updatedAt: now,
           });
           console.log("[WALLET_PAY] Booking payment status updated");

@@ -1315,6 +1315,9 @@ export const createBookingFromPending = mutation({
     const discountAmount = pending.discount_amount || 0;
     const finalPrice = pending.price - discountAmount;
 
+    // Track actual amount paid by customer (for price adjustment tracking on edits)
+    const amountPaid = paymentStatus === "paid" ? finalPrice : (convenienceFeePaid || 0);
+
     // Determine payment method based on payment type
     const paymentMethod = args.payment_type === "combo_wallet_online"
       ? "combo"
@@ -1342,6 +1345,7 @@ export const createBookingFromPending = mutation({
       booking_code: bookingCode,
       payment_status: paymentStatus,
       payment_method: paymentMethod,
+      amount_paid: amountPaid,
       paymongo_link_id: args.paymongo_link_id,
       paymongo_payment_id: args.paymongo_payment_id,
       convenience_fee_paid: convenienceFeePaid,
@@ -2053,6 +2057,13 @@ export const updateBookingPaymentStatus = mutation({
 
     if (args.convenience_fee_paid !== undefined) {
       updates.convenience_fee_paid = args.convenience_fee_paid;
+    }
+
+    // Track actual amount paid for price adjustment tracking on edits
+    if (args.payment_status === "paid" && booking) {
+      updates.amount_paid = booking.final_price || booking.price || 0;
+    } else if (args.convenience_fee_paid !== undefined) {
+      updates.amount_paid = args.convenience_fee_paid;
     }
 
     await ctx.db.patch(args.booking_id, updates);

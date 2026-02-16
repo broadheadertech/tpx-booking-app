@@ -42,6 +42,14 @@ function AdminDashboard() {
   // Use unified hook that supports both Clerk and legacy auth
   const { user, logout } = useCurrentUser()
   const navigate = useNavigate()
+
+  // Redirect IT admins to their dedicated dashboard
+  React.useEffect(() => {
+    if (user?.role === 'it_admin') {
+      navigate('/it-admin/dashboard', { replace: true })
+    }
+  }, [user?.role, navigate])
+
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('admin_dashboard_active_tab') || 'overview'
   })
@@ -177,21 +185,21 @@ function AdminDashboard() {
         return <GlobalSettings onRefresh={handleRefresh} />
 
       case 'branding':
-        return user?.role === 'super_admin' ? (
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <BrandingManagement />
         ) : (
           <div className="text-center text-gray-400">You do not have access to branding management.</div>
         )
 
       case 'emails':
-        return user?.role === 'super_admin' ? (
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <EmailNotificationSettings />
         ) : (
           <div className="text-center text-gray-400">You do not have access to email notification settings.</div>
         )
 
       case 'email_marketing':
-        return user?.role === 'super_admin' ? (
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <SAEmailMarketing />
         ) : (
           <div className="text-center text-gray-400">You do not have access to email marketing.</div>
@@ -204,56 +212,56 @@ function AdminDashboard() {
         return <DefaultServicesManager />
 
       case 'catalog':
-        return user?.role === 'super_admin' ? (
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <ProductCatalogManager />
         ) : (
           <div className="text-center text-gray-400">You do not have access to product catalog management.</div>
         )
 
       case 'royalty':
-        return user?.role === 'super_admin' ? (
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <RoyaltyManagement />
         ) : (
           <div className="text-center text-gray-400">You do not have access to royalty management.</div>
         )
 
       case 'pl':
-        return user?.role === 'super_admin' ? (
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <SuperAdminPLDashboard />
         ) : (
           <div className="text-center text-gray-400">You do not have access to P&L reports.</div>
         )
 
       case 'balance_sheet':
-        return user?.role === 'super_admin' ? (
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <SuperAdminBalanceSheet />
         ) : (
           <div className="text-center text-gray-400">You do not have access to balance sheet.</div>
         )
 
       case 'audit_trail':
-        return user?.role === 'super_admin' ? (
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <AuditTrailViewer />
         ) : (
           <div className="text-center text-gray-400">You do not have access to audit trail.</div>
         )
 
       case 'loyalty':
-        return user?.role === 'super_admin' ? (
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <PointsConfigPanel />
         ) : (
           <div className="text-center text-gray-400">You do not have access to loyalty configuration.</div>
         )
 
       case 'promotions':
-        return user?.role === 'super_admin' ? (
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <FlashPromotionsPage />
         ) : (
           <div className="text-center text-gray-400">You do not have access to promotions management.</div>
         )
 
       case 'wallet':
-        return user?.role === 'super_admin' ? (
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <div className="space-y-8">
             <WalletConfigPanel />
             <BranchWalletSettingsPanel />
@@ -263,14 +271,14 @@ function AdminDashboard() {
         )
 
       case 'settlements':
-        return user?.role === 'super_admin' ? (
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <SettlementApprovalQueue />
         ) : (
           <div className="text-center text-gray-400">You do not have access to settlement management.</div>
         )
 
       case 'wallet_analytics':
-        return user?.role === 'super_admin' ? (
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <WalletOverviewDashboard />
         ) : (
           <div className="text-center text-gray-400">You do not have access to wallet analytics.</div>
@@ -278,35 +286,35 @@ function AdminDashboard() {
 
       case 'customer_analytics':
         // Available for super_admin (all branches) and branch_admin (their branch only)
-        return (user?.role === 'super_admin' || user?.role === 'branch_admin' || user?.role === 'admin') ? (
+        return (user?.role === 'super_admin' || user?.role === 'it_admin' || user?.role === 'branch_admin' || user?.role === 'admin') ? (
           <BranchCustomerAnalytics branchId={user?.branch_id} />
         ) : (
           <div className="text-center text-gray-400">You do not have access to customer analytics.</div>
         )
 
       case 'delivery_orders':
-        return user?.role === 'super_admin' ? (
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <DeliveryOrdersManagement />
         ) : (
           <div className="text-center text-gray-400">You do not have access to delivery orders management.</div>
         )
 
       case 'damage_claims':
-        return user?.role === 'super_admin' ? (
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <DamageClaimsManagement user={user} />
         ) : (
           <div className="text-center text-gray-400">You do not have access to damage claims management.</div>
         )
 
       case 'shop_banners':
-        return user?.role === 'super_admin' ? (
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <ShopBannerManagement />
         ) : (
           <div className="text-center text-gray-400">You do not have access to shop banner management.</div>
         )
 
       case 'shop_config':
-        return user?.role === 'super_admin' ? (
+        return user?.role === 'super_admin' || user?.role === 'it_admin' ? (
           <ShopConfigPanel />
         ) : (
           <div className="text-center text-gray-400">You do not have access to shop configuration.</div>
@@ -318,7 +326,7 @@ function AdminDashboard() {
   }
 
   // Tab configuration for admin - categorized hub-style navigation
-  const tabs = user?.role === 'super_admin'
+  const tabs = (user?.role === 'super_admin' || user?.role === 'it_admin')
     ? [
       // Simple tabs (no category - direct navigation)
       { id: 'overview', label: 'Overview', icon: 'dashboard' },

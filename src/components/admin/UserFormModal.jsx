@@ -218,7 +218,7 @@ const UserFormModal = ({
         break
         
       case 'branch_id':
-        if (formData.role !== 'super_admin' && !value) {
+        if (formData.role !== 'super_admin' && formData.role !== 'it_admin' && !value) {
           errors.branch_id = 'Branch is required for this role'
         } else {
           delete errors.branch_id
@@ -277,7 +277,7 @@ const UserFormModal = ({
     
     // Validate all fields
     const fieldsToValidate = ['username', 'email', 'password', 'mobile_number']
-    if (formData.role !== 'super_admin') {
+    if (formData.role !== 'super_admin' && formData.role !== 'it_admin') {
       fieldsToValidate.push('branch_id')
     }
     
@@ -304,7 +304,7 @@ const UserFormModal = ({
   const isFormValid = () => {
     const requiredFields = ['username', 'email']
     if (!isEditMode) requiredFields.push('password')
-    if (formData.role !== 'super_admin') requiredFields.push('branch_id')
+    if (formData.role !== 'super_admin' && formData.role !== 'it_admin') requiredFields.push('branch_id')
     
     return requiredFields.every(field => {
       const value = formData[field]
@@ -484,7 +484,7 @@ const UserFormModal = ({
                     />
                   </div>
 
-                  {formData.role !== 'super_admin' && (
+                  {formData.role !== 'super_admin' && formData.role !== 'it_admin' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-300 mb-2">
                         Branch *

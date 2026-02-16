@@ -38,6 +38,12 @@ export default defineSchema({
         website: v.optional(v.string()),
       })
     ),
+    // IT Admin: Branch suspension fields
+    is_suspended: v.optional(v.boolean()),
+    suspension_reason: v.optional(v.string()),
+    suspended_at: v.optional(v.number()),
+    suspended_by: v.optional(v.id("users")),
+
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -226,7 +232,8 @@ export default defineSchema({
       v.literal("barber"),
       v.literal("super_admin"),
       v.literal("branch_admin"),
-      v.literal("admin_staff") // Clerk RBAC: Cross-branch operations role
+      v.literal("admin_staff"), // Clerk RBAC: Cross-branch operations role
+      v.literal("it_admin") // IT Administrator: Highest role (level 7) - platform management
     ),
     branch_id: v.optional(v.id("branches")), // Optional for super_admin and customers, required for staff/barber/admin/branch_admin
     is_active: v.boolean(),
@@ -334,6 +341,12 @@ export default defineSchema({
     })),
     ot_hourly_rate: v.optional(v.number()), // OT pay per hour for staff
     penalty_hourly_rate: v.optional(v.number()), // Late/UT penalty deduction per hour for staff
+
+    // IT Admin: User ban fields
+    is_banned: v.optional(v.boolean()),
+    ban_reason: v.optional(v.string()),
+    banned_at: v.optional(v.number()),
+    banned_by: v.optional(v.id("users")),
 
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -558,6 +571,7 @@ export default defineSchema({
     booking_fee: v.optional(v.number()), // Booking fee applied
     late_fee: v.optional(v.number()), // Late fee applied
     final_price: v.optional(v.number()), // Price after discount
+    amount_paid: v.optional(v.number()), // Actual amount collected from customer (online/wallet). Used to calculate balance when service is edited.
     notes: v.optional(v.string()),
     reminder_sent: v.optional(v.boolean()),
     check_in_reminder_sent: v.optional(v.boolean()),
@@ -3489,4 +3503,171 @@ export default defineSchema({
     .index("by_session", ["paymongo_session_id"])
     .index("by_branch", ["branch_id"])
     .index("by_branch_status", ["branch_id", "status"]),
+
+  // ============================================================================
+  // IT ADMIN: PLATFORM MANAGEMENT TABLES
+  // ============================================================================
+
+  // Per-branch SaaS subscriptions
+  subscriptions: defineTable({
+    branch_id: v.id("branches"),
+    plan: v.union(
+      v.literal("free"),
+      v.literal("basic"),
+      v.literal("pro"),
+      v.literal("enterprise")
+    ),
+    status: v.union(
+      v.literal("active"),
+      v.literal("past_due"),
+      v.literal("suspended"),
+      v.literal("cancelled"),
+      v.literal("trial")
+    ),
+    billing_cycle: v.union(
+      v.literal("monthly"),
+      v.literal("quarterly"),
+      v.literal("annual")
+    ),
+    amount: v.number(),
+    currency: v.optional(v.string()),
+    start_date: v.number(),
+    end_date: v.optional(v.number()),
+    next_renewal: v.optional(v.number()),
+    last_payment_date: v.optional(v.number()),
+    payment_status: v.union(
+      v.literal("paid"),
+      v.literal("pending"),
+      v.literal("failed"),
+      v.literal("overdue")
+    ),
+    auto_renew: v.boolean(),
+    notes: v.optional(v.string()),
+    created_by: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"])
+    .index("by_next_renewal", ["next_renewal"])
+    .index("by_plan", ["plan"]),
+
+  // Branch license keys
+  licenses: defineTable({
+    branch_id: v.id("branches"),
+    license_key: v.string(),
+    issued_at: v.number(),
+    expires_at: v.number(),
+    is_active: v.boolean(),
+    max_users: v.optional(v.number()),
+    features: v.optional(v.array(v.string())),
+    notes: v.optional(v.string()),
+    created_by: v.id("users"),
+    revoked_at: v.optional(v.number()),
+    revoked_by: v.optional(v.id("users")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_license_key", ["license_key"])
+    .index("by_active", ["is_active"])
+    .index("by_expires_at", ["expires_at"]),
+
+  // System error tracking
+  error_logs: defineTable({
+    source: v.union(
+      v.literal("convex_function"),
+      v.literal("http_endpoint"),
+      v.literal("scheduled_job"),
+      v.literal("client_error"),
+      v.literal("webhook")
+    ),
+    function_name: v.optional(v.string()),
+    severity: v.union(
+      v.literal("info"),
+      v.literal("warning"),
+      v.literal("error"),
+      v.literal("critical")
+    ),
+    message: v.string(),
+    stack_trace: v.optional(v.string()),
+    user_id: v.optional(v.id("users")),
+    branch_id: v.optional(v.id("branches")),
+    metadata: v.optional(v.string()),
+    resolved: v.optional(v.boolean()),
+    resolved_by: v.optional(v.id("users")),
+    resolved_at: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_severity", ["severity"])
+    .index("by_source", ["source"])
+    .index("by_created_at", ["createdAt"])
+    .index("by_resolved", ["resolved"])
+    .index("by_branch", ["branch_id"]),
+
+  // Suspicious activity / security event monitoring
+  security_events: defineTable({
+    event_type: v.union(
+      v.literal("login_attempt"),
+      v.literal("login_failed"),
+      v.literal("brute_force_detected"),
+      v.literal("unusual_transaction"),
+      v.literal("suspicious_ip"),
+      v.literal("role_escalation_attempt"),
+      v.literal("data_export"),
+      v.literal("bulk_operation"),
+      v.literal("api_abuse")
+    ),
+    severity: v.union(
+      v.literal("low"),
+      v.literal("medium"),
+      v.literal("high"),
+      v.literal("critical")
+    ),
+    user_id: v.optional(v.id("users")),
+    branch_id: v.optional(v.id("branches")),
+    ip_address: v.optional(v.string()),
+    user_agent: v.optional(v.string()),
+    description: v.string(),
+    metadata: v.optional(v.string()),
+    is_resolved: v.optional(v.boolean()),
+    resolved_by: v.optional(v.id("users")),
+    resolved_at: v.optional(v.number()),
+    resolution_notes: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_event_type", ["event_type"])
+    .index("by_severity", ["severity"])
+    .index("by_user", ["user_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_created_at", ["createdAt"])
+    .index("by_resolved", ["is_resolved"]),
+
+  // Booking Edit Requests — Staff edits require branch_admin approval
+  booking_edit_requests: defineTable({
+    booking_id: v.id("bookings"),
+    booking_code: v.string(),
+    branch_id: v.id("branches"),
+    changes: v.object({
+      service: v.optional(v.object({ old: v.id("services"), new: v.id("services") })),
+      barber: v.optional(v.object({ old: v.optional(v.id("barbers")), new: v.optional(v.id("barbers")) })),
+      date: v.optional(v.object({ old: v.string(), new: v.string() })),
+      time: v.optional(v.object({ old: v.string(), new: v.string() })),
+      notes: v.optional(v.object({ old: v.optional(v.string()), new: v.optional(v.string()) })),
+    }),
+    change_summary: v.string(),
+    reason: v.string(),
+    status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected")),
+    requested_by: v.id("users"),
+    requested_at: v.number(),
+    reviewed_by: v.optional(v.id("users")),
+    reviewed_at: v.optional(v.number()),
+    rejection_reason: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_booking", ["booking_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_branch_status", ["branch_id", "status"])
+    .index("by_requested_by", ["requested_by"]),
 });

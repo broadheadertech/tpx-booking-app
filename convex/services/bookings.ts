@@ -934,11 +934,27 @@ export const updateBooking = mutation({
       throwUserError(ERROR_CODES.BOOKING_NOT_FOUND);
     }
 
+    // Block editing completed or cancelled bookings (service/barber/date/time/notes changes)
+    // Status changes are still allowed (e.g., marking as completed)
+    const hasFieldEdits = args.service || args.barber || args.date || args.time || args.notes !== undefined;
+    if (hasFieldEdits && (currentBooking.status === "completed" || currentBooking.status === "cancelled")) {
+      throwUserError(
+        ERROR_CODES.BOOKING_NOT_FOUND,
+        "Booking cannot be edited",
+        `This booking has already been ${currentBooking.status}. Completed or cancelled bookings cannot be modified.`
+      );
+    }
+
     // Validate referenced entities if updated
+    let newServicePrice: number | undefined;
     if (args.service) {
       const service = await ctx.db.get(args.service);
       if (!service) {
         throwUserError(ERROR_CODES.BOOKING_SERVICE_UNAVAILABLE, "Service not found", "The selected service does not exist.");
+      }
+      // Track new price if service actually changed
+      if (args.service !== currentBooking.service) {
+        newServicePrice = service!.price;
       }
     }
 
@@ -957,8 +973,30 @@ export const updateBooking = mutation({
     const barberChanged = args.barber && args.barber !== currentBooking.barber;
     const previousBarber = currentBooking.barber;
 
+    // Build price updates if service changed
+    const priceUpdates: Record<string, any> = {};
+    if (newServicePrice !== undefined) {
+      priceUpdates.price = newServicePrice;
+      const discountAmount = currentBooking.discount_amount || 0;
+      const newFinalPrice = Math.max(0, newServicePrice - discountAmount);
+      priceUpdates.final_price = newFinalPrice;
+
+      // Adjust payment_status if customer already paid and new price differs
+      const amountPaid = currentBooking.amount_paid;
+      if (amountPaid !== undefined && amountPaid > 0) {
+        if (newFinalPrice > amountPaid) {
+          // Customer owes more — mark as partial
+          priceUpdates.payment_status = "partial";
+        } else {
+          // Same or less — keep as paid (overpayment handled as credit/refund at POS)
+          priceUpdates.payment_status = "paid";
+        }
+      }
+    }
+
     await ctx.db.patch(id, {
       ...updates,
+      ...priceUpdates,
       updatedAt: Date.now(),
     });
 
