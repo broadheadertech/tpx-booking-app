@@ -19,13 +19,18 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
-  HelpCircle
+  HelpCircle,
+  Wallet,
+  Sparkles,
+  TrendingUp,
+  Zap,
 } from 'lucide-react'
 import WalkthroughOverlay from '../common/WalkthroughOverlay'
 import { branchOrderingSteps } from '../../config/walkthroughSteps'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import Modal from '../common/Modal'
+import DamageReportModal from './DamageReportModal'
 
 // Product image component for catalog items
 const CatalogProductImage = ({ imageUrl, imageStorageId, productName, className }) => {
@@ -77,24 +82,25 @@ const OrderStatusBadge = ({ status }) => {
   )
 }
 
-// Stock status badge
-const StockBadge = ({ stock, minStock }) => {
-  if (stock === 0) {
+// Stock status badge (uses available stock accounting for reservations)
+const StockBadge = ({ stock, minStock, availableStock }) => {
+  const qty = availableStock ?? stock
+  if (qty <= 0) {
     return (
       <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/20 text-red-400">
         Out of Stock
       </span>
     )
-  } else if (stock <= minStock) {
+  } else if (qty <= minStock) {
     return (
       <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-500/20 text-yellow-400">
-        Low Stock
+        Low Stock ({qty})
       </span>
     )
   }
   return (
     <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-400">
-      In Stock
+      In Stock ({qty})
     </span>
   )
 }
@@ -111,6 +117,8 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
   const [showOrderDetails, setShowOrderDetails] = useState(null)
   const [expandedOrder, setExpandedOrder] = useState(null)
   const [orderStatusFilter, setOrderStatusFilter] = useState('all')
+  const [showTopUpInfo, setShowTopUpInfo] = useState(false)
+  const [damageReportOrder, setDamageReportOrder] = useState(null)
 
   // Queries
   const catalogProducts = useQuery(api.services.productCatalog.getCatalogProducts) || []
@@ -118,11 +126,67 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
     user?.branch_id ? api.services.productOrders.getOrdersByBranch : undefined,
     user?.branch_id ? { branch_id: user.branch_id } : undefined
   ) || []
+  const branchWallet = useQuery(
+    api.services.branchWallet.getBranchWallet,
+    user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+  )
+  const branchClaims = useQuery(
+    api.services.damageClaims.getClaimsByBranch,
+    user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+  ) || []
+  const smartSuggestions = useQuery(
+    api.services.smartOrdering.getSmartSuggestions,
+    user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+  )
+  const [showSuggestions, setShowSuggestions] = useState(true)
 
   // Mutations
   const createOrder = useMutation(api.services.productOrders.createOrder)
   const cancelOrder = useMutation(api.services.productOrders.cancelOrder)
   const receiveOrder = useMutation(api.services.productOrders.receiveOrder)
+
+  // Add a single suggestion to cart
+  const addSuggestionToCart = (suggestion) => {
+    const product = catalogProducts.find(p => p._id === suggestion.catalog_product_id)
+    if (!product) return
+    const maxQty = product.availableStock ?? product.stock
+    if (maxQty <= 0) return
+    const qty = Math.min(suggestion.suggested_qty, maxQty)
+    const existing = cart.find(item => item.product_id === product._id)
+    if (existing) {
+      const newQty = Math.min(existing.quantity + qty, maxQty)
+      setCart(cart.map(item =>
+        item.product_id === product._id ? { ...item, quantity: newQty } : item
+      ))
+    } else {
+      setCart([...cart, { product_id: product._id, product, quantity: qty }])
+    }
+  }
+
+  // Add all critical/low suggestions to cart at once
+  const addAllSuggestionsToCart = () => {
+    if (!smartSuggestions?.suggestions) return
+    const urgent = smartSuggestions.suggestions.filter(
+      s => s.urgency === 'critical' || s.urgency === 'low' || s.urgency === 'reorder'
+    )
+    let newCart = [...cart]
+    for (const suggestion of urgent) {
+      const product = catalogProducts.find(p => p._id === suggestion.catalog_product_id)
+      if (!product) continue
+      const maxQty = product.availableStock ?? product.stock
+      if (maxQty <= 0) continue
+      const qty = Math.min(suggestion.suggested_qty, maxQty)
+      const existingIdx = newCart.findIndex(item => item.product_id === product._id)
+      if (existingIdx >= 0) {
+        const newQty = Math.min(newCart[existingIdx].quantity + qty, maxQty)
+        newCart[existingIdx] = { ...newCart[existingIdx], quantity: newQty }
+      } else {
+        newCart.push({ product_id: product._id, product, quantity: qty })
+      }
+    }
+    setCart(newCart)
+    showAlert('Smart Cart', `Added ${urgent.length} suggested products to your cart.`)
+  }
 
   // Filter products
   const filteredProducts = catalogProducts.filter(product => {
@@ -141,14 +205,17 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
 
   // Cart functions
   const addToCart = (product) => {
+    const maxQty = product.availableStock ?? product.stock
     const existing = cart.find(item => item.product_id === product._id)
     if (existing) {
+      if (existing.quantity >= maxQty) return
       setCart(cart.map(item =>
         item.product_id === product._id
           ? { ...item, quantity: item.quantity + 1 }
           : item
       ))
     } else {
+      if (maxQty <= 0) return
       setCart([...cart, { product_id: product._id, product, quantity: 1 }])
     }
   }
@@ -161,9 +228,11 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
     if (quantity <= 0) {
       removeFromCart(productId)
     } else {
+      const cartItem = cart.find(i => i.product_id === productId)
+      const maxQty = cartItem?.product?.availableStock ?? cartItem?.product?.stock ?? Infinity
       setCart(cart.map(item =>
         item.product_id === productId
-          ? { ...item, quantity }
+          ? { ...item, quantity: Math.min(quantity, maxQty) }
           : item
       ))
     }
@@ -177,9 +246,20 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
     return cart.reduce((sum, item) => sum + item.quantity, 0)
   }
 
-  // Submit order
+  // Submit order with confirmation
   const handleSubmitOrder = async () => {
     if (!user?.branch_id || cart.length === 0) return
+
+    const total = getCartTotal()
+    const itemCount = getCartItemCount()
+    const itemSummary = cart.map(item => `${item.quantity}x ${item.product.name}`).join(', ')
+
+    const confirmed = await showConfirm({
+      title: 'Confirm Order',
+      message: `You are about to place an order for ${itemCount} item${itemCount !== 1 ? 's' : ''} totaling ₱${total.toLocaleString()}.\n\n${itemSummary}\n\nThis amount will be held from your Branch Wallet. Continue?`,
+      type: 'warning',
+    })
+    if (!confirmed) return
 
     setIsSubmitting(true)
     try {
@@ -200,6 +280,7 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
       setOrderNotes('')
       setActiveTab('orders')
       onRefresh?.()
+      showAlert({ title: 'Order Placed', message: `Order submitted successfully! ₱${total.toLocaleString()} has been held from your wallet.`, type: 'success' })
     } catch (error) {
       console.error('Error creating order:', error)
       showAlert({ title: 'Order Error', message: error.message || 'Failed to create order', type: 'error' })
@@ -355,12 +436,135 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
             </div>
           </div>
 
+          {/* Smart Suggestions */}
+          {smartSuggestions?.suggestions?.length > 0 && showSuggestions && (
+            <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-xl border border-purple-500/20 overflow-hidden">
+              <div className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-purple-400" />
+                  <h3 className="text-white font-semibold text-sm">Smart Reorder Suggestions</h3>
+                  <span className="text-gray-400 text-xs">
+                    Based on {smartSuggestions.meta.analysis_period_days}d sales data
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {smartSuggestions.suggestions.filter(s => s.urgency !== 'healthy').length > 0 && (
+                    <button
+                      onClick={addAllSuggestionsToCart}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                    >
+                      <Zap className="w-3 h-3" />
+                      Add All to Cart
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowSuggestions(false)}
+                    className="text-gray-500 hover:text-gray-300 p-1"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="px-4 pb-4 flex gap-3 overflow-x-auto">
+                {smartSuggestions.suggestions.slice(0, 8).map(suggestion => {
+                  const inCart = cart.some(item => item.product_id === suggestion.catalog_product_id)
+                  return (
+                    <div
+                      key={suggestion.catalog_product_id}
+                      className={`flex-shrink-0 w-56 p-3 rounded-xl border transition-all ${
+                        suggestion.urgency === 'critical'
+                          ? 'bg-red-500/10 border-red-500/30'
+                          : suggestion.urgency === 'low'
+                            ? 'bg-yellow-500/10 border-yellow-500/30'
+                            : 'bg-[#1A1A1A] border-[#2A2A2A]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+                          suggestion.urgency === 'critical'
+                            ? 'bg-red-500/20 text-red-400'
+                            : suggestion.urgency === 'low'
+                              ? 'bg-yellow-500/20 text-yellow-400'
+                              : 'bg-blue-500/20 text-blue-400'
+                        }`}>
+                          {suggestion.urgency === 'critical' ? 'Urgent' : suggestion.urgency === 'low' ? 'Low Stock' : 'Reorder'}
+                        </span>
+                        <span className="text-gray-500 text-[10px]">
+                          {suggestion.days_of_supply === 999 ? '∞' : suggestion.days_of_supply + 'd'} supply
+                        </span>
+                      </div>
+
+                      <h4 className="text-white text-sm font-medium truncate" title={suggestion.product_name}>
+                        {suggestion.product_name}
+                      </h4>
+
+                      <div className="mt-1 flex items-center gap-2 text-[11px]">
+                        <span className="text-gray-400">
+                          Stock: <span className="text-white font-medium">{suggestion.current_stock}</span>
+                        </span>
+                        <span className="text-gray-600">•</span>
+                        <span className="text-gray-400 flex items-center gap-0.5">
+                          <TrendingUp className="w-3 h-3" />
+                          {suggestion.daily_sales_rate}/day
+                        </span>
+                      </div>
+
+                      <p className="text-gray-500 text-[10px] mt-1 truncate" title={suggestion.reason}>
+                        {suggestion.reason}
+                      </p>
+
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className="text-purple-400 text-xs font-bold">
+                          Qty: {suggestion.suggested_qty}
+                        </span>
+                        <button
+                          onClick={() => addSuggestionToCart(suggestion)}
+                          disabled={inCart}
+                          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                            inCart
+                              ? 'bg-green-500/20 text-green-400 cursor-default'
+                              : 'bg-purple-600 hover:bg-purple-700 text-white'
+                          }`}
+                        >
+                          {inCart ? (
+                            <>
+                              <CheckCircle className="w-3 h-3" />
+                              In Cart
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="w-3 h-3" />
+                              Add
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Collapsed suggestion toggle */}
+          {smartSuggestions?.suggestions?.length > 0 && !showSuggestions && (
+            <button
+              onClick={() => setShowSuggestions(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-lg text-purple-400 text-sm hover:bg-purple-500/20 transition-colors"
+            >
+              <Sparkles className="w-4 h-4" />
+              Show Smart Suggestions ({smartSuggestions.suggestions.filter(s => s.urgency !== 'healthy').length} items need reorder)
+            </button>
+          )}
+
           {/* Products Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredProducts.map(product => {
               const cartItem = cart.find(item => item.product_id === product._id)
               const inCart = !!cartItem
-              const outOfStock = product.stock === 0
+              const availableStock = product.availableStock ?? product.stock
+              const outOfStock = availableStock <= 0
 
               return (
                 <div
@@ -382,7 +586,7 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute top-2 right-2">
-                      <StockBadge stock={product.stock} minStock={product.minStock} />
+                      <StockBadge stock={product.stock} minStock={product.minStock} availableStock={product.availableStock} />
                     </div>
                     {inCart && (
                       <div className="absolute top-2 left-2 bg-[var(--color-primary)] text-white text-xs px-2 py-1 rounded-full">
@@ -405,7 +609,10 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
                           ₱{product.price?.toLocaleString()}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {product.stock} available
+                          {availableStock} available
+                          {(product.reservedStock ?? 0) > 0 && (
+                            <span className="text-yellow-500 ml-1">({product.reservedStock} reserved)</span>
+                          )}
                         </div>
                       </div>
 
@@ -424,7 +631,8 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
                           </span>
                           <button
                             onClick={() => updateQuantity(product._id, cartItem.quantity + 1)}
-                            className="p-1.5 bg-[var(--color-primary)] text-white rounded-lg hover:brightness-110 transition-all"
+                            disabled={cartItem.quantity >= availableStock}
+                            className="p-1.5 bg-[var(--color-primary)] text-white rounded-lg hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                           >
                             <Plus className="h-4 w-4" />
                           </button>
@@ -516,7 +724,8 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
                         <span className="text-white font-bold w-8 text-center">{item.quantity}</span>
                         <button
                           onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
-                          className="p-2 bg-[var(--color-primary)] text-white rounded-lg hover:brightness-110 transition-all"
+                          disabled={item.quantity >= (item.product.availableStock ?? item.product.stock)}
+                          className="p-2 bg-[var(--color-primary)] text-white rounded-lg hover:brightness-110 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           <Plus className="h-4 w-4" />
                         </button>
@@ -565,9 +774,48 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
                   </span>
                 </div>
 
+                {/* Branch Wallet Payment (Mandatory) */}
+                <div className="mt-4 p-4 bg-[#1A1A1A] rounded-xl border border-[#2A2A2A]">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-gray-300 text-sm font-medium flex items-center gap-1.5">
+                      <Wallet className="w-4 h-4" />
+                      Payment via Branch Wallet
+                    </span>
+                    <span className={`font-bold text-sm ${branchWallet && branchWallet.balance >= getCartTotal() ? 'text-green-400' : 'text-red-400'}`}>
+                      ₱{(branchWallet?.balance ?? 0).toLocaleString()}
+                    </span>
+                  </div>
+
+                  {branchWallet && branchWallet.balance >= getCartTotal() ? (
+                    <p className="text-xs text-green-400 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      ₱{getCartTotal().toLocaleString()} will be held from your wallet until delivery is confirmed.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-xs text-red-400 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        Insufficient balance. Need ₱{(getCartTotal() - (branchWallet?.balance ?? 0)).toLocaleString()} more.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // Navigate to wallet/finance tab for top-up
+                          window.location.hash = '#finance'
+                          showAlert({ title: 'Top Up Required', message: 'Please top up your Branch Wallet first, then return to place your order.', type: 'warning' })
+                        }}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                      >
+                        <Wallet className="w-4 h-4" />
+                        Top Up Wallet
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 <button
                   onClick={handleSubmitOrder}
-                  disabled={isSubmitting || cart.length === 0}
+                  disabled={isSubmitting || cart.length === 0 || !branchWallet || branchWallet.balance < getCartTotal()}
                   className="w-full mt-6 flex items-center justify-center space-x-2 px-6 py-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-bold rounded-xl hover:brightness-110 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
@@ -584,7 +832,7 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
                 </button>
 
                 <p className="text-center text-xs text-gray-500 mt-3">
-                  Your order will be reviewed by the super admin before processing.
+                  Payment is held from your wallet. Your order will be reviewed by HQ before processing.
                 </p>
               </div>
             </>
@@ -724,6 +972,28 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
                         </div>
                       )}
 
+                      {/* Damage Claim Status */}
+                      {order.status === 'received' && (() => {
+                        const claim = branchClaims.find(c => c.order_id === order._id)
+                        if (!claim) return null
+                        const claimColors = {
+                          pending: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400',
+                          approved: 'bg-green-500/10 border-green-500/20 text-green-400',
+                          rejected: 'bg-red-500/10 border-red-500/20 text-red-400',
+                        }
+                        return (
+                          <div className={`border rounded-lg p-3 ${claimColors[claim.status]}`}>
+                            <h4 className="text-xs font-medium mb-0.5">
+                              Damage Claim — {claim.status.charAt(0).toUpperCase() + claim.status.slice(1)}
+                            </h4>
+                            <p className="text-xs opacity-80">
+                              ₱{claim.total_damage_amount.toLocaleString()} claimed
+                              {claim.credit_amount ? ` • ₱${claim.credit_amount.toLocaleString()} credited` : ''}
+                            </p>
+                          </div>
+                        )
+                      })()}
+
                       {/* Actions */}
                       <div className="flex justify-end space-x-3 pt-2">
                         {order.status === 'pending' && (
@@ -751,6 +1021,19 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
                             <span>Confirm Receipt</span>
                           </button>
                         )}
+
+                        {order.status === 'received' && !branchClaims.find(c => c.order_id === order._id) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDamageReportOrder(order)
+                            }}
+                            className="flex items-center space-x-2 px-4 py-2 bg-orange-500/20 text-orange-400 rounded-lg hover:bg-orange-500/30 transition-colors text-sm"
+                          >
+                            <AlertCircle className="h-4 w-4" />
+                            <span>Report Damage</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}
@@ -763,6 +1046,15 @@ const BranchProductOrdering = ({ user, onRefresh }) => {
       </div>
 
       <WalkthroughOverlay steps={branchOrderingSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
+
+      {/* Damage Report Modal */}
+      {damageReportOrder && (
+        <DamageReportModal
+          order={damageReportOrder}
+          userId={user._id}
+          onClose={() => setDamageReportOrder(null)}
+        />
+      )}
     </div>
   )
 }

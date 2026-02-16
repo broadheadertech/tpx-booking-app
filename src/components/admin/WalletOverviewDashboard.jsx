@@ -26,8 +26,15 @@ import {
   Users,
   Activity,
   ChevronDown,
+  ChevronUp,
   Gift,
   HelpCircle,
+  Search,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  ArrowDownLeft,
+  ArrowUpLeft,
 } from "lucide-react";
 import WalkthroughOverlay from '../common/WalkthroughOverlay'
 import { walletAnalyticsSteps } from '../../config/walkthroughSteps'
@@ -234,6 +241,20 @@ function MonthlyMetricCard({ title, value, count, icon: Icon, color }) {
 }
 
 /**
+ * Sort icon for sortable table columns
+ */
+function SortIcon({ column, sortColumn, sortDirection }) {
+  if (sortColumn !== column) {
+    return <ArrowUpDown className="w-3.5 h-3.5 text-gray-600" />;
+  }
+  return sortDirection === "asc" ? (
+    <ArrowUp className="w-3.5 h-3.5 text-blue-400" />
+  ) : (
+    <ArrowDown className="w-3.5 h-3.5 text-blue-400" />
+  );
+}
+
+/**
  * Quick stat badge
  */
 function QuickStatBadge({ label, value, icon: Icon }) {
@@ -295,6 +316,20 @@ export function WalletOverviewDashboard() {
     [selectedPeriod]
   );
 
+  const [showCustomerWallets, setShowCustomerWallets] = useState(true);
+  const [customerWalletSearch, setCustomerWalletSearch] = useState("");
+  const [walletSortColumn, setWalletSortColumn] = useState("totalBalance");
+  const [walletSortDirection, setWalletSortDirection] = useState("desc");
+
+  const handleWalletSort = useCallback((column) => {
+    if (walletSortColumn === column) {
+      setWalletSortDirection(walletSortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setWalletSortColumn(column);
+      setWalletSortDirection("desc");
+    }
+  }, [walletSortColumn, walletSortDirection]);
+
   // AC #4: Real-time data via Convex subscriptions
   const overview = useQuery(api.services.walletAnalytics.getWalletOverview);
   const monthlyMetrics = useQuery(api.services.walletAnalytics.getMonthlyMetrics, {
@@ -302,6 +337,36 @@ export function WalletOverviewDashboard() {
     endDate: dateRange.endDate,
   });
   const quickStats = useQuery(api.services.walletAnalytics.getQuickStats);
+
+  // Cash flow summary (uses same date range as monthly metrics)
+  const cashFlow = useQuery(api.services.walletAnalytics.getCashFlowSummary, {
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+  });
+
+  // Customer wallets for the wallet table
+  const allCustomerWallets = useQuery(api.services.wallet.getAllCustomerWallets, { limit: 500 });
+
+  const filteredCustomerWallets = useMemo(() => {
+    if (!allCustomerWallets) return [];
+    let wallets = [...allCustomerWallets];
+    if (customerWalletSearch.trim()) {
+      const q = customerWalletSearch.toLowerCase();
+      wallets = wallets.filter(
+        (w) => w.userName?.toLowerCase().includes(q) || w.userEmail?.toLowerCase().includes(q) || w.primaryBranchName?.toLowerCase().includes(q)
+      );
+    }
+    wallets.sort((a, b) => {
+      let aVal = a[walletSortColumn];
+      let bVal = b[walletSortColumn];
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      if (aVal < bVal) return walletSortDirection === 'asc' ? -1 : 1;
+      if (aVal > bVal) return walletSortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return wallets;
+  }, [allCustomerWallets, customerWalletSearch, walletSortColumn, walletSortDirection]);
 
   // AC #5: Loading state
   const isLoading =
@@ -407,37 +472,73 @@ export function WalletOverviewDashboard() {
         </div>
       )}
 
-      {/* AC #1: Primary metrics - Float, Outstanding, Available */}
-      <div data-tour="wallet-analytics-metrics" className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* AC #1: Primary metrics - Total Float, Customer, Branch, Outstanding, Available */}
+      <div data-tour="wallet-analytics-metrics" className="space-y-4">
         {isLoading ? (
-          <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <MetricCardSkeleton />
             <MetricCardSkeleton />
             <MetricCardSkeleton />
-          </>
+            <MetricCardSkeleton />
+          </div>
         ) : (
           <>
-            <PrimaryMetricCard
-              title="Total Float"
-              value={overview?.totalFloat || 0}
-              subtitle={`${overview?.walletCount || 0} customer wallets`}
-              icon={Wallet}
-              variant="primary"
-            />
-            <PrimaryMetricCard
-              title="Outstanding to Branches"
-              value={overview?.outstandingToBranches || 0}
-              subtitle={`${overview?.pendingEarningsCount || 0} pending earnings`}
-              icon={Building2}
-              variant="warning"
-            />
-            <PrimaryMetricCard
-              title="Available for Operations"
-              value={overview?.availableForOps || 0}
-              subtitle="Float minus outstanding"
-              icon={TrendingUp}
-              variant="success"
-            />
+            {/* Total System Float - Hero card */}
+            <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-2xl p-6 border border-blue-700/40">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-400 mb-1">Total System Float</p>
+                  <p className="text-3xl font-bold text-white">
+                    {formatCurrency((overview?.totalFloat || 0) + (overview?.branchWalletBalance || 0) + (overview?.bookingFloat || 0) + (overview?.commissionEarned || 0))}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
+                    <span className="text-xs text-gray-500">Customer: {formatCurrency(overview?.totalFloat || 0)}</span>
+                    <span className="text-xs text-gray-500">Branch: {formatCurrency(overview?.branchWalletBalance || 0)}</span>
+                    {(overview?.bookingFloat || 0) > 0 && (
+                      <span className="text-xs text-green-400/80">Booking Float: {formatCurrency(overview?.bookingFloat || 0)} ({overview?.bookingFloatCount || 0} pending)</span>
+                    )}
+                    {(overview?.commissionEarned || 0) > 0 && (
+                      <span className="text-xs text-yellow-400/80">Commission: {formatCurrency(overview?.commissionEarned || 0)} ({overview?.commissionEarnedCount || 0} settlements)</span>
+                    )}
+                  </div>
+                </div>
+                <div className="p-3 rounded-xl bg-blue-500/20">
+                  <DollarSign className="w-7 h-7 text-blue-400" />
+                </div>
+              </div>
+            </div>
+
+            {/* Detail cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <PrimaryMetricCard
+                title="Customer Wallet Float"
+                value={overview?.totalFloat || 0}
+                subtitle={`${overview?.walletCount || 0} customer wallets`}
+                icon={Wallet}
+                variant="primary"
+              />
+              <PrimaryMetricCard
+                title="Branch Wallet Capital"
+                value={overview?.branchWalletBalance || 0}
+                subtitle={`${overview?.branchWalletCount || 0} branch wallets • ${formatCurrency(overview?.branchWalletHeld || 0)} held`}
+                icon={Building2}
+                variant="default"
+              />
+              <PrimaryMetricCard
+                title="Outstanding to Branches"
+                value={overview?.outstandingToBranches || 0}
+                subtitle={`${overview?.pendingEarningsCount || 0} pending earnings`}
+                icon={BanknoteIcon}
+                variant="warning"
+              />
+              <PrimaryMetricCard
+                title="Available for Operations"
+                value={overview?.availableForOps || 0}
+                subtitle="All float minus outstanding"
+                icon={TrendingUp}
+                variant="success"
+              />
+            </div>
           </>
         )}
       </div>
@@ -454,10 +555,11 @@ export function WalletOverviewDashboard() {
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <MonthlyMetricCard
-              title="Top-ups"
+              title="All Wallet Top-ups"
               value={monthlyMetrics?.totalTopUps || 0}
               count={monthlyMetrics?.topUpCount}
               icon={ArrowUpRight}
+              color="green"
             />
             <MonthlyMetricCard
               title="Bonuses Given"
@@ -493,11 +595,14 @@ export function WalletOverviewDashboard() {
           <h3 className="text-sm font-medium text-gray-400 mb-3">
             Today's Summary
           </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div>
-              <p className="text-xs text-gray-500">Top-ups Today</p>
+              <p className="text-xs text-gray-500">All Top-ups Today</p>
               <p className="text-lg font-semibold text-green-400">
                 {formatCurrency(quickStats.todayTopUps)}
+              </p>
+              <p className="text-[10px] text-gray-600 mt-0.5">
+                Customer: {formatCurrency(quickStats.todayCustomerTopUps || 0)} • Branch: {formatCurrency(quickStats.todayBranchTopUps || 0)}
               </p>
             </div>
             <div>
@@ -524,6 +629,12 @@ export function WalletOverviewDashboard() {
                 {quickStats.todayTransactionCount}
               </p>
             </div>
+            <div>
+              <p className="text-xs text-gray-500">Branch Wallets</p>
+              <p className="text-lg font-semibold text-blue-400">
+                {quickStats.branchWalletCount || 0}
+              </p>
+            </div>
           </div>
         </div>
       )}
@@ -542,11 +653,301 @@ export function WalletOverviewDashboard() {
               <p className="text-xs text-gray-500">Coverage Ratio</p>
               <p className="text-lg font-semibold text-green-400">
                 {overview.outstandingToBranches > 0
-                  ? `${((overview.totalFloat / overview.outstandingToBranches) * 100).toFixed(0)}%`
+                  ? `${(((overview.totalFloat + (overview.bookingFloat || 0) + (overview.commissionEarned || 0)) / overview.outstandingToBranches) * 100).toFixed(0)}%`
                   : "∞"}
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Cash Flow Statement */}
+      {cashFlow && (
+        <div className="bg-[#1A1A1A] rounded-2xl border border-[#2A2A2A] overflow-hidden">
+          <div className="p-5 border-b border-[#2A2A2A]">
+            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Activity className="w-5 h-5 text-purple-400" />
+              Cash Flow
+              <span className="text-sm font-normal text-gray-500">({currentPeriodLabel})</span>
+            </h2>
+            <p className="text-xs text-gray-500 mt-1">Actual money movement in the wallet system</p>
+          </div>
+
+          {/* Net Cash Flow Hero */}
+          <div className="p-5 border-b border-[#2A2A2A]">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wider">Net Cash Flow</p>
+                <p className={`text-3xl font-bold mt-1 ${cashFlow.netCashFlow >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {cashFlow.netCashFlow >= 0 ? '+' : ''}{formatCurrency(cashFlow.netCashFlow)}
+                </p>
+              </div>
+              <div className="flex gap-6">
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">Total Inflows</p>
+                  <p className="text-lg font-semibold text-green-400">+{formatCurrency(cashFlow.inflows.total)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500">Total Outflows</p>
+                  <p className="text-lg font-semibold text-red-400">-{formatCurrency(cashFlow.outflows.total)}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Inflows & Outflows Breakdown */}
+          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#2A2A2A]">
+            {/* Inflows */}
+            <div className="p-5">
+              <h3 className="text-sm font-semibold text-green-400 flex items-center gap-2 mb-4">
+                <ArrowUpLeft className="w-4 h-4" />
+                Inflows (Money In)
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-400" />
+                    <span className="text-sm text-gray-300">Customer Wallet Top-ups</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-white">{formatCurrency(cashFlow.inflows.customerTopUps)}</p>
+                    <p className="text-[10px] text-gray-600">{cashFlow.inflows.customerTopUpCount} transactions</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-purple-400" />
+                    <span className="text-sm text-gray-300">Branch Wallet Top-ups</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-white">{formatCurrency(cashFlow.inflows.branchTopUps)}</p>
+                    <p className="text-[10px] text-gray-600">{cashFlow.inflows.branchTopUpCount} transactions</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-400" />
+                    <span className="text-sm text-gray-300">Online Booking Payments</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-white">{formatCurrency(cashFlow.inflows.bookingPayments || 0)}</p>
+                    <p className="text-[10px] text-gray-600">{cashFlow.inflows.bookingPaymentCount || 0} bookings</p>
+                  </div>
+                </div>
+                {/* Inflow total bar */}
+                <div className="pt-2 border-t border-[#2A2A2A]">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400 font-medium">Total Inflows</span>
+                    <span className="text-green-400 font-semibold">{formatCurrency(cashFlow.inflows.total)}</span>
+                  </div>
+                  {cashFlow.inflows.total > 0 && (
+                    <div className="flex gap-1 mt-2 h-2 rounded-full overflow-hidden bg-[#0A0A0A]">
+                      <div
+                        className="bg-blue-500 rounded-l-full"
+                        style={{ width: `${(cashFlow.inflows.customerTopUps / cashFlow.inflows.total) * 100}%` }}
+                      />
+                      <div
+                        className="bg-purple-500"
+                        style={{ width: `${(cashFlow.inflows.branchTopUps / cashFlow.inflows.total) * 100}%` }}
+                      />
+                      <div
+                        className="bg-green-500 rounded-r-full"
+                        style={{ width: `${((cashFlow.inflows.bookingPayments || 0) / cashFlow.inflows.total) * 100}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Outflows */}
+            <div className="p-5">
+              <h3 className="text-sm font-semibold text-red-400 flex items-center gap-2 mb-4">
+                <ArrowDownLeft className="w-4 h-4" />
+                Outflows (Money Out)
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-orange-400" />
+                    <span className="text-sm text-gray-300">Settlements to Branches</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-white">{formatCurrency(cashFlow.outflows.settlementsPaid)}</p>
+                    <p className="text-[10px] text-gray-600">{cashFlow.outflows.settlementsCount} settlements</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-red-400" />
+                    <span className="text-sm text-gray-300">Refunds</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-white">{formatCurrency(cashFlow.outflows.refunds)}</p>
+                    <p className="text-[10px] text-gray-600">{cashFlow.outflows.refundCount} refunds</p>
+                  </div>
+                </div>
+                {cashFlow.outflows.branchCredits > 0 && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-yellow-400" />
+                      <span className="text-sm text-gray-300">Branch Credits/Adjustments</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-white">{formatCurrency(cashFlow.outflows.branchCredits)}</p>
+                      <p className="text-[10px] text-gray-600">{cashFlow.outflows.branchCreditCount} credits</p>
+                    </div>
+                  </div>
+                )}
+                {/* Outflow total bar */}
+                <div className="pt-2 border-t border-[#2A2A2A]">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400 font-medium">Total Outflows</span>
+                    <span className="text-red-400 font-semibold">{formatCurrency(cashFlow.outflows.total)}</span>
+                  </div>
+                  {cashFlow.outflows.total > 0 && (
+                    <div className="flex gap-1 mt-2 h-2 rounded-full overflow-hidden bg-[#0A0A0A]">
+                      <div
+                        className="bg-orange-500 rounded-l-full"
+                        style={{ width: `${(cashFlow.outflows.settlementsPaid / cashFlow.outflows.total) * 100}%` }}
+                      />
+                      <div
+                        className="bg-red-500"
+                        style={{ width: `${(cashFlow.outflows.refunds / cashFlow.outflows.total) * 100}%` }}
+                      />
+                      {cashFlow.outflows.branchCredits > 0 && (
+                        <div
+                          className="bg-yellow-500 rounded-r-full"
+                          style={{ width: `${(cashFlow.outflows.branchCredits / cashFlow.outflows.total) * 100}%` }}
+                        />
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Wallets Table */}
+      {allCustomerWallets && (
+        <div className="bg-[#1A1A1A] rounded-2xl border border-blue-700/30 overflow-hidden">
+          <button
+            onClick={() => setShowCustomerWallets(!showCustomerWallets)}
+            className="w-full flex items-center justify-between p-5 hover:bg-[#252525] transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-blue-900/50">
+                <Users className="w-5 h-5 text-blue-400" />
+              </div>
+              <div className="text-left">
+                <h2 className="text-lg font-semibold text-white">
+                  Customer Wallets
+                  <span className="text-blue-400 ml-2">({allCustomerWallets.length})</span>
+                </h2>
+                <p className="text-xs text-gray-500">
+                  Total Float: {formatCurrency((overview?.totalFloat || 0))}
+                </p>
+              </div>
+            </div>
+            {showCustomerWallets ? (
+              <ChevronUp className="w-5 h-5 text-gray-400" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            )}
+          </button>
+
+          {showCustomerWallets && (
+            <div className="border-t border-[#2A2A2A]">
+              <div className="p-3 border-b border-[#2A2A2A]">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <input
+                    type="text"
+                    placeholder="Search by name, email, or branch..."
+                    value={customerWalletSearch}
+                    onChange={(e) => setCustomerWalletSearch(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2 bg-[#0A0A0A] border border-[#2A2A2A] rounded-lg text-white text-sm placeholder:text-gray-500 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+              <div className="overflow-x-auto max-h-96">
+                <table className="w-full">
+                  <thead className="bg-[#0A0A0A] sticky top-0">
+                    <tr>
+                      <th onClick={() => handleWalletSort("userName")} className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3 cursor-pointer hover:text-white select-none">
+                        <span className="flex items-center gap-1">Customer <SortIcon column="userName" sortColumn={walletSortColumn} sortDirection={walletSortDirection} /></span>
+                      </th>
+                      <th onClick={() => handleWalletSort("primaryBranchName")} className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3 cursor-pointer hover:text-white select-none">
+                        <span className="flex items-center gap-1">Branch <SortIcon column="primaryBranchName" sortColumn={walletSortColumn} sortDirection={walletSortDirection} /></span>
+                      </th>
+                      <th onClick={() => handleWalletSort("balance")} className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3 cursor-pointer hover:text-white select-none">
+                        <span className="flex items-center gap-1 justify-end">Balance <SortIcon column="balance" sortColumn={walletSortColumn} sortDirection={walletSortDirection} /></span>
+                      </th>
+                      <th onClick={() => handleWalletSort("bonusBalance")} className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3 cursor-pointer hover:text-white select-none">
+                        <span className="flex items-center gap-1 justify-end">Bonus <SortIcon column="bonusBalance" sortColumn={walletSortColumn} sortDirection={walletSortDirection} /></span>
+                      </th>
+                      <th onClick={() => handleWalletSort("totalBalance")} className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3 cursor-pointer hover:text-white select-none">
+                        <span className="flex items-center gap-1 justify-end">Total <SortIcon column="totalBalance" sortColumn={walletSortColumn} sortDirection={walletSortDirection} /></span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#2A2A2A]">
+                    {filteredCustomerWallets.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="text-center py-8 text-gray-500 text-sm">
+                          {customerWalletSearch ? 'No customers match your search' : 'No customer wallets found'}
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredCustomerWallets.map((w) => (
+                        <tr key={w.walletId} className="hover:bg-[#252525]/50 transition-colors">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                                <span className="text-blue-400 font-semibold text-sm">
+                                  {w.userName?.charAt(0)?.toUpperCase() || '?'}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="text-white font-medium text-sm">{w.userName || 'Unknown'}</p>
+                                <p className="text-gray-500 text-xs">{w.userEmail}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1.5">
+                              <Building2 className="w-3.5 h-3.5 text-gray-500" />
+                              <span className="text-gray-300 text-sm">{w.primaryBranchName || '—'}</span>
+                              {w.branchCount > 1 && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-400">+{w.branchCount - 1}</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className={`text-sm font-medium ${w.balance > 0 ? 'text-white' : 'text-gray-500'}`}>
+                              {formatCurrency(w.balance / 100)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className={`text-sm ${w.bonusBalance > 0 ? 'text-purple-400' : 'text-gray-500'}`}>
+                              {formatCurrency(w.bonusBalance / 100)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className={`text-sm font-bold ${w.totalBalance > 0 ? 'text-blue-400' : 'text-gray-500'}`}>
+                              {formatCurrency(w.totalBalance / 100)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

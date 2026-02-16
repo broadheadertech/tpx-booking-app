@@ -42,11 +42,34 @@ export const getWalletOverview = query({
       0
     );
 
+    // Booking Float: Money SA holds in PayMongo from online bookings (platform fallback)
+    // Uses gross_amount because SA received the FULL amount (commission + net)
+    const bookingFloatPesos = pendingEarnings
+      .filter((e) => e.payment_source === "online_paymongo")
+      .reduce((sum, e) => sum + (e.gross_amount || 0), 0);
+    const bookingFloatCount = pendingEarnings
+      .filter((e) => e.payment_source === "online_paymongo").length;
+
+    // Branch wallets: Sum of all branch ordering wallet balances (stored in pesos)
+    const branchWallets = await ctx.db.query("branch_wallets").collect();
+    const totalBranchWalletBalance = branchWallets.reduce((sum, w) => sum + (w.balance || 0), 0);
+    const totalBranchWalletHeld = branchWallets.reduce((sum, w) => sum + (w.held_balance || 0), 0);
+    const totalBranchWalletToppedUp = branchWallets.reduce((sum, w) => sum + (w.total_topped_up || 0), 0);
+
     // Convert wallet balance from centavos to pesos for display
     const totalFloatPesos = totalFloatCentavos / 100;
 
-    // Available for Operations: Float minus Outstanding (both now in pesos)
-    const availableForOpsPesos = totalFloatPesos - outstandingToBranchesPesos;
+    // Commission Earned: money SA kept from completed settlements (recorded in superAdminRevenue)
+    const commissionRevenue = await ctx.db
+      .query("superAdminRevenue")
+      .withIndex("by_category", (q) => q.eq("category", "commission_income"))
+      .collect();
+    const commissionEarnedPesos = commissionRevenue.reduce(
+      (sum, r) => sum + (r.amount || 0), 0
+    );
+
+    // Available for Operations: All float + booking float + commission earned - outstanding
+    const availableForOpsPesos = totalFloatPesos + totalBranchWalletBalance + bookingFloatPesos + commissionEarnedPesos - outstandingToBranchesPesos;
 
     return {
       totalFloat: totalFloatPesos,
@@ -54,6 +77,17 @@ export const getWalletOverview = query({
       availableForOps: availableForOpsPesos,
       walletCount: wallets.length,
       pendingEarningsCount: pendingEarnings.length,
+      // Branch wallet data
+      branchWalletBalance: totalBranchWalletBalance,
+      branchWalletHeld: totalBranchWalletHeld,
+      branchWalletToppedUp: totalBranchWalletToppedUp,
+      branchWalletCount: branchWallets.length,
+      // Booking Float: money SA holds from platform PayMongo bookings
+      bookingFloat: bookingFloatPesos,
+      bookingFloatCount: bookingFloatCount,
+      // Commission Earned: money SA kept from settled earnings
+      commissionEarned: commissionEarnedPesos,
+      commissionEarnedCount: commissionRevenue.length,
     };
   },
 });
@@ -82,7 +116,7 @@ export const getMonthlyMetrics = query({
     const startDate = args.startDate ?? startOfMonth.getTime();
     const endDate = args.endDate ?? now;
 
-    // Total Top-ups: Sum of wallet_transactions where type=topup AND completed
+    // Customer wallet top-ups: wallet_transactions where type=topup AND completed
     const allTransactions = await ctx.db.query("wallet_transactions").collect();
     const topUpTransactions = allTransactions.filter(
       (t) =>
@@ -91,12 +125,28 @@ export const getMonthlyMetrics = query({
         t.createdAt >= startDate &&
         t.createdAt <= endDate
     );
-    const totalTopUps = topUpTransactions.reduce(
+    const customerTopUps = topUpTransactions.reduce(
       (sum, t) => sum + (t.amount || 0),
       0
     );
 
-    // Total Bonuses Given: Sum of bonus_amount from topup transactions
+    // Branch wallet top-ups: branch_wallet_transactions where type=topup
+    const allBranchWalletTxns = await ctx.db.query("branch_wallet_transactions").collect();
+    const branchTopUpTxns = allBranchWalletTxns.filter(
+      (t) =>
+        t.type === "topup" &&
+        t.createdAt >= startDate &&
+        t.createdAt <= endDate
+    );
+    const branchTopUps = branchTopUpTxns.reduce(
+      (sum, t) => sum + (t.amount || 0),
+      0
+    );
+
+    // Combined top-ups (customer + branch wallets)
+    const totalTopUps = customerTopUps + branchTopUps;
+
+    // Total Bonuses Given: Sum of bonus_amount from customer topup transactions
     const totalBonusGiven = topUpTransactions.reduce(
       (sum, t) => sum + ((t as any).bonus_amount || 0),
       0
@@ -157,7 +207,11 @@ export const getMonthlyMetrics = query({
     // are all stored in PESOS (not centavos), so no conversion needed
     return {
       totalTopUps: totalTopUps,
-      topUpCount: topUpTransactions.length,
+      topUpCount: topUpTransactions.length + branchTopUpTxns.length,
+      customerTopUps: customerTopUps,
+      customerTopUpCount: topUpTransactions.length,
+      branchTopUps: branchTopUps,
+      branchTopUpCount: branchTopUpTxns.length,
       totalPayments: Math.abs(totalPayments), // Payments are stored as negative, return absolute value
       paymentCount: paymentTransactions.length,
       commissionEarned: commissionEarned,
@@ -264,6 +318,213 @@ export const getMonthlyTrends = query({
 });
 
 /**
+ * Get cash flow summary for wallet system
+ *
+ * Tracks actual money movement:
+ * - Inflows: Customer top-ups, Branch top-ups
+ * - Outflows: Settlements paid, Refunds
+ * - Net cash flow
+ *
+ * @param startDate - Start timestamp (defaults to start of current month)
+ * @param endDate - End timestamp (defaults to now)
+ */
+export const getCashFlowSummary = query({
+  args: {
+    startDate: v.optional(v.number()),
+    endDate: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const startDate = args.startDate ?? startOfMonth.getTime();
+    const endDate = args.endDate ?? now;
+
+    // === INFLOWS ===
+
+    // Customer wallet top-ups (wallet_transactions type=topup, completed)
+    const allWalletTxns = await ctx.db.query("wallet_transactions").collect();
+    const customerTopUps = allWalletTxns.filter(
+      (t) =>
+        t.type === "topup" &&
+        t.status === "completed" &&
+        t.createdAt >= startDate &&
+        t.createdAt <= endDate
+    );
+    const customerTopUpAmount = customerTopUps.reduce(
+      (sum, t) => sum + (t.amount || 0),
+      0
+    );
+
+    // Branch wallet top-ups (branch_wallet_transactions type=topup)
+    const allBranchWalletTxns = await ctx.db
+      .query("branch_wallet_transactions")
+      .collect();
+    const branchTopUps = allBranchWalletTxns.filter(
+      (t) =>
+        t.type === "topup" &&
+        t.createdAt >= startDate &&
+        t.createdAt <= endDate
+    );
+    const branchTopUpAmount = branchTopUps.reduce(
+      (sum, t) => sum + (t.amount || 0),
+      0
+    );
+
+    // Online booking payments via SA's PayMongo (platform fallback inflow)
+    const allEarnings = await ctx.db.query("branchWalletEarnings").collect();
+    const periodBookingInflows = allEarnings.filter(
+      (e) =>
+        e.payment_source === "online_paymongo" &&
+        e.created_at >= startDate &&
+        e.created_at <= endDate
+    );
+    const bookingInflowAmount = periodBookingInflows.reduce(
+      (sum, e) => sum + (e.gross_amount || 0),
+      0
+    );
+
+    // === OUTFLOWS ===
+
+    // Settlements paid to branches (completed settlements)
+    const allSettlements = await ctx.db.query("branchSettlements").collect();
+    const completedSettlements = allSettlements.filter(
+      (s) =>
+        s.status === "completed" &&
+        s.completed_at &&
+        s.completed_at >= startDate &&
+        s.completed_at <= endDate
+    );
+    const settlementsPaid = completedSettlements.reduce(
+      (sum, s) => sum + (s.amount || 0),
+      0
+    );
+
+    // Refunds (wallet_transactions type=refund, completed)
+    const refunds = allWalletTxns.filter(
+      (t) =>
+        t.type === "refund" &&
+        t.status === "completed" &&
+        t.createdAt >= startDate &&
+        t.createdAt <= endDate
+    );
+    const refundAmount = refunds.reduce(
+      (sum, t) => sum + Math.abs(t.amount || 0),
+      0
+    );
+
+    // Branch wallet credits/adjustments (type=credit)
+    const branchCredits = allBranchWalletTxns.filter(
+      (t) =>
+        t.type === "credit" &&
+        t.createdAt >= startDate &&
+        t.createdAt <= endDate
+    );
+    const branchCreditAmount = branchCredits.reduce(
+      (sum, t) => sum + (t.amount || 0),
+      0
+    );
+
+    // === TOTALS ===
+    const totalInflows = customerTopUpAmount + branchTopUpAmount + bookingInflowAmount;
+    const totalOutflows = settlementsPaid + refundAmount + branchCreditAmount;
+    const netCashFlow = totalInflows - totalOutflows;
+
+    return {
+      // Period
+      periodStart: startDate,
+      periodEnd: endDate,
+      // Inflows
+      inflows: {
+        customerTopUps: customerTopUpAmount,
+        customerTopUpCount: customerTopUps.length,
+        branchTopUps: branchTopUpAmount,
+        branchTopUpCount: branchTopUps.length,
+        bookingPayments: bookingInflowAmount,
+        bookingPaymentCount: periodBookingInflows.length,
+        total: totalInflows,
+      },
+      // Outflows
+      outflows: {
+        settlementsPaid,
+        settlementsCount: completedSettlements.length,
+        refunds: refundAmount,
+        refundCount: refunds.length,
+        branchCredits: branchCreditAmount,
+        branchCreditCount: branchCredits.length,
+        total: totalOutflows,
+      },
+      // Net
+      netCashFlow,
+    };
+  },
+});
+
+/**
+ * Get the 10 most recent top-up transactions across customer + branch wallets
+ */
+export const getRecentTopUps = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 10;
+
+    // Customer wallet top-ups
+    const customerTxns = await ctx.db.query("wallet_transactions").order("desc").collect();
+    const customerTopUps = customerTxns
+      .filter((t) => t.type === "topup" && t.status === "completed")
+      .slice(0, limit);
+
+    // Get user info for customer top-ups
+    const customerResults = await Promise.all(
+      customerTopUps.map(async (t) => {
+        const user = await ctx.db.get(t.user_id);
+        return {
+          id: t._id,
+          source: "customer" as const,
+          amount: t.amount || 0,
+          date: t.createdAt,
+          name: user?.nickname || user?.username || "Unknown",
+          email: user?.email || "",
+          description: (t as any).description || "Customer wallet top-up",
+        };
+      })
+    );
+
+    // Branch wallet top-ups
+    const branchTxns = await ctx.db.query("branch_wallet_transactions").order("desc").collect();
+    const branchTopUps = branchTxns
+      .filter((t) => t.type === "topup")
+      .slice(0, limit);
+
+    // Get branch info for branch top-ups
+    const allBranches = await ctx.db.query("branches").collect();
+    const branchMap: Record<string, string> = {};
+    for (const b of allBranches) {
+      branchMap[b._id] = b.name;
+    }
+
+    const branchResults = branchTopUps.map((t) => ({
+      id: t._id,
+      source: "branch" as const,
+      amount: t.amount || 0,
+      date: t.createdAt,
+      name: branchMap[t.branch_id as string] || "Unknown Branch",
+      email: "",
+      description: t.description || "Branch wallet top-up",
+    }));
+
+    // Merge + sort by date desc, take top N
+    const all = [...customerResults, ...branchResults]
+      .sort((a, b) => b.date - a.date)
+      .slice(0, limit);
+
+    return all;
+  },
+});
+
+/**
  * Get quick summary stats for dashboard header
  */
 export const getQuickStats = query({
@@ -295,20 +556,32 @@ export const getQuickStats = query({
     const todayTransactions = transactions.filter(
       (t) => t.createdAt >= todayStartTime && t.status === "completed"
     );
-    const todayTopUps = todayTransactions
+    const todayCustomerTopUps = todayTransactions
       .filter((t) => t.type === "topup")
       .reduce((sum, t) => sum + (t.amount || 0), 0);
     const todayPayments = todayTransactions
       .filter((t) => t.type === "payment")
       .reduce((sum, t) => sum + (t.amount || 0), 0);
 
+    // Branch wallet top-ups today
+    const branchWalletTxns = await ctx.db.query("branch_wallet_transactions").collect();
+    const todayBranchTopUps = branchWalletTxns
+      .filter((t) => t.type === "topup" && t.createdAt >= todayStartTime)
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
+
+    // Branch wallets count
+    const branchWallets = await ctx.db.query("branch_wallets").collect();
+
     // NOTE: wallet_transactions.amount is stored in PESOS (not centavos)
     return {
       activeWallets,
       totalWallets: wallets.length,
+      branchWalletCount: branchWallets.length,
       branchesWithPending,
       pendingSettlements,
-      todayTopUps: todayTopUps,
+      todayTopUps: todayCustomerTopUps + todayBranchTopUps,
+      todayCustomerTopUps: todayCustomerTopUps,
+      todayBranchTopUps: todayBranchTopUps,
       todayPayments: Math.abs(todayPayments), // Payments are stored as negative
       todayTransactionCount: todayTransactions.length,
     };
@@ -336,9 +609,10 @@ export const getBranchWalletSummaries = query({
     const branches = await ctx.db.query("branches").collect();
 
     // Query all data ONCE (optimization)
-    const [allEarnings, allSettlements] = await Promise.all([
+    const [allEarnings, allSettlements, allBranchWallets] = await Promise.all([
       ctx.db.query("branchWalletEarnings").collect(),
       ctx.db.query("branchSettlements").collect(),
+      ctx.db.query("branch_wallets").collect(),
     ]);
 
     // Build summaries for each branch
@@ -372,6 +646,11 @@ export const getBranchWalletSummaries = query({
         (a, b) => (b.completed_at || 0) - (a.completed_at || 0)
       )[0];
 
+      // Branch prepaid wallet data
+      const branchWallet = allBranchWallets.find(
+        (w) => w.branch_id === branch._id
+      );
+
       // NOTE: branchWalletEarnings amounts are stored in PESOS (not centavos)
       return {
         branchId: branch._id,
@@ -387,11 +666,18 @@ export const getBranchWalletSummaries = query({
             s.branch_id === branch._id &&
             (s.status === "pending" || s.status === "approved" || s.status === "processing")
         ).length,
+        // Branch prepaid wallet (ordering wallet)
+        walletBalance: branchWallet?.balance ?? 0,
+        walletHeldBalance: branchWallet?.held_balance ?? 0,
+        walletTotalToppedUp: branchWallet?.total_topped_up ?? 0,
+        walletTotalSpent: branchWallet?.total_spent ?? 0,
       };
     });
 
-    // Filter out branches with no wallet activity
-    const activeBranches = summaries.filter((s) => s.transactionCount > 0);
+    // Filter out branches with no wallet activity AND no prepaid wallet
+    const activeBranches = summaries.filter(
+      (s) => s.transactionCount > 0 || s.walletTotalToppedUp > 0
+    );
 
     // Sort by total earnings descending by default
     activeBranches.sort((a, b) => b.totalEarnings - a.totalEarnings);
@@ -436,6 +722,40 @@ export const getBranchWalletDetail = query({
 
     // Commission rate: use branch override if set, otherwise global
     const commissionRate = branchSettings?.commission_override ?? globalCommissionRate;
+
+    // Get recent branch wallet top-ups (last 10)
+    const allBranchWalletTxns = await ctx.db
+      .query("branch_wallet_transactions")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branchId))
+      .collect();
+    const recentTopUps = allBranchWalletTxns
+      .filter((t) => t.type === "topup")
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 10);
+
+    // Enrich top-ups with creator name
+    const topUpCreatorIds = [...new Set(recentTopUps.map((t) => t.created_by))];
+    const topUpCreators: Record<string, string> = {};
+    await Promise.all(
+      topUpCreatorIds.map(async (id) => {
+        const user = await ctx.db.get(id);
+        topUpCreators[id as string] = user?.nickname || user?.username || "Unknown";
+      })
+    );
+
+    const formattedTopUps = recentTopUps.map((t) => ({
+      id: t._id,
+      amount: t.amount || 0,
+      balanceAfter: t.balance_after || 0,
+      description: t.description || "Top-up",
+      reference: t.reference_id || null,
+      createdBy: topUpCreators[t.created_by as string] || "Unknown",
+      createdAt: t.createdAt,
+    }));
+
+    const totalToppedUp = allBranchWalletTxns
+      .filter((t) => t.type === "topup")
+      .reduce((sum, t) => sum + (t.amount || 0), 0);
 
     // Get recent earnings (last 20)
     const allEarnings = await ctx.db
@@ -516,6 +836,9 @@ export const getBranchWalletDetail = query({
       },
       recentEarnings,
       recentSettlements,
+      recentTopUps: formattedTopUps,
+      totalToppedUp,
+      topUpCount: allBranchWalletTxns.filter((t) => t.type === "topup").length,
     };
   },
 });

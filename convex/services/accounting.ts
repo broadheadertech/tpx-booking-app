@@ -105,6 +105,8 @@ export const getPLSummary = query({
     let bonusExpense = 0;
     let allowanceExpense = 0;
     let deductionsTotal = 0;
+    let staffPayrollExpense = 0;
+    let staffSalaryExpense = 0;
 
     for (const period of relevantPeriods) {
       // Only include records that have been marked as "paid"
@@ -135,7 +137,26 @@ export const getPLSummary = query({
         // Deductions
         deductionsTotal += record.total_deductions || 0;
       }
+
+      // Staff payroll records - also count as payroll expense
+      const staffRecords = await ctx.db
+        .query("staff_payroll_records")
+        .withIndex("by_payroll_period", (q) =>
+          q.eq("payroll_period_id", period._id)
+        )
+        .filter((q) => q.eq(q.field("status"), "paid"))
+        .collect();
+
+      for (const record of staffRecords) {
+        staffPayrollExpense += record.net_pay || 0;
+        staffSalaryExpense += record.daily_pay || 0;
+        deductionsTotal += record.total_deductions || 0;
+      }
     }
+
+    // Combine barber + staff payroll
+    payrollExpense += staffPayrollExpense;
+    salaryExpense += staffSalaryExpense;
 
     // IMPORTANT: Gross Payroll = Salary (daily_pay) + Allowances (fees)
     // Commission and bonus are NOT added because they're already included in daily_pay
@@ -199,6 +220,9 @@ export const getPLSummary = query({
           allowance: allowanceExpense,
           deductions: deductionsTotal,
           net_pay: payrollExpense,
+          // Staff payroll (separate from barber)
+          staff_payroll: staffPayrollExpense,
+          staff_salary: staffSalaryExpense,
         },
         fixed_expenses: fixedExpenses,
         operating_expenses: operatingExpenses,
@@ -925,6 +949,20 @@ export const getConsolidatedPLSummary = query({
     }
 
     // ========================================
+    // AUTOMATED REVENUE - Commission Income (Settlement)
+    // ========================================
+    const commissionRevenue = manualRevenue.filter(
+      (r) =>
+        r.is_automated &&
+        r.category === "commission_income" &&
+        r.revenue_date >= args.start_date &&
+        r.revenue_date <= args.end_date
+    );
+    const commissionIncome = commissionRevenue.reduce(
+      (sum, r) => sum + (r.amount || 0), 0
+    );
+
+    // ========================================
     // EXPENSES - From superAdminExpenses table
     // ========================================
     const allExpenses = await ctx.db.query("superAdminExpenses").collect();
@@ -948,7 +986,7 @@ export const getConsolidatedPLSummary = query({
     // ========================================
     // CALCULATE TOTALS
     // ========================================
-    const totalAutomatedRevenue = royaltyIncome + productOrderIncome;
+    const totalAutomatedRevenue = royaltyIncome + productOrderIncome + commissionIncome;
     const totalRevenue = totalAutomatedRevenue + otherRevenue;
     const totalExpenses = fixedExpenses + operatingExpenses;
     const netIncome = totalRevenue - totalExpenses;
@@ -963,6 +1001,8 @@ export const getConsolidatedPLSummary = query({
       revenue_breakdown: {
         royalty_income: royaltyIncome,
         product_order_income: productOrderIncome,
+        commission_income: commissionIncome,
+        commission_count: commissionRevenue.length,
         other_revenue: otherRevenue,
         automated_total: totalAutomatedRevenue,
         by_category: revenueByCategory,

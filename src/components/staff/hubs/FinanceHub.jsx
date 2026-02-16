@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { DollarSign, Banknote, Percent, PieChart, Scale, Receipt, TrendingUp } from 'lucide-react'
+import { DollarSign, Banknote, Percent, PieChart, Scale, Receipt, TrendingUp, Wallet } from 'lucide-react'
 import PayrollManagement from '../PayrollManagement'
 import CashAdvanceApproval from '../CashAdvanceApproval'
 import BranchRoyaltyHistory from '../BranchRoyaltyHistory'
@@ -7,6 +7,7 @@ import AccountingDashboard from '../AccountingDashboard'
 import BalanceSheetDashboard from '../BalanceSheetDashboard'
 import PaymentHistory from '../PaymentHistory'
 import WalletEarningsDashboard from '../WalletEarningsDashboard'
+import BranchAdminWallet from '../BranchAdminWallet'
 
 /**
  * Finance Hub - Consolidated finance & accounting management
@@ -28,12 +29,13 @@ const FinanceHub = ({ user, onRefresh, pendingAdvancesCount = 0 }) => {
     },
     { id: 'royalty', label: 'Royalty', icon: Percent },
     { id: 'payments', label: 'Payments', icon: Receipt },
-    { id: 'wallet_earnings', label: 'Wallet', icon: TrendingUp },
+    { id: 'wallet_earnings', label: 'Earnings', icon: TrendingUp },
+    { id: 'branch_wallet', label: 'Branch Wallet', icon: Wallet },
   ]
 
   // Filter sections by page_access_v2 permissions
   // If hub is enabled but no sub-section keys are configured, show all sub-sections
-  const SUB_KEYS = ['accounting', 'balance_sheet', 'payroll', 'cash_advances', 'royalty', 'payments', 'wallet_earnings']
+  const SUB_KEYS = ['accounting', 'balance_sheet', 'payroll', 'cash_advances', 'royalty', 'payments', 'wallet_earnings', 'branch_wallet']
   const hasV2 = user?.page_access_v2 && Object.keys(user.page_access_v2).length > 0
   const hasSubConfig = hasV2 && SUB_KEYS.some(k => k in user.page_access_v2)
   const sections = hasV2 && hasSubConfig
@@ -62,6 +64,8 @@ const FinanceHub = ({ user, onRefresh, pendingAdvancesCount = 0 }) => {
         return <PaymentHistory />
       case 'wallet_earnings':
         return <WalletEarningsDashboard />
+      case 'branch_wallet':
+        return <BranchAdminWallet />
       default:
         return <AccountingDashboard user={user} onRefresh={onRefresh} />
     }

@@ -320,6 +320,21 @@ export default defineSchema({
     has_seen_tutorial: v.optional(v.boolean()), // false/undefined = show tutorial
     tutorial_completed_at: v.optional(v.number()), // Timestamp of tutorial completion
 
+    // ============================================================================
+    // STAFF SCHEDULE & PAYROLL FIELDS
+    // ============================================================================
+    schedule: v.optional(v.object({
+      monday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      tuesday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      wednesday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      thursday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      friday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      saturday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+      sunday: v.object({ available: v.boolean(), start: v.string(), end: v.string() }),
+    })),
+    ot_hourly_rate: v.optional(v.number()), // OT pay per hour for staff
+    penalty_hourly_rate: v.optional(v.number()), // Late/UT penalty deduction per hour for staff
+
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -352,6 +367,22 @@ export default defineSchema({
     totalBookings: v.number(),
     monthlyRevenue: v.number(),
     specialties: v.array(v.string()),
+
+    // Structured bio fields (no approval needed)
+    certifications: v.optional(v.array(
+      v.union(v.string(), v.object({ name: v.string(), imageId: v.optional(v.id("_storage")) }))
+    )),
+    years_of_experience: v.optional(v.number()),
+
+    // Bio approval workflow
+    bio_approval_status: v.optional(v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected"))),
+    pending_bio: v.optional(v.string()),
+    pending_certifications: v.optional(v.array(
+      v.union(v.string(), v.object({ name: v.string(), imageId: v.optional(v.id("_storage")) }))
+    )),
+    bio_reviewed_by: v.optional(v.id("users")),
+    bio_reviewed_at: v.optional(v.number()),
+    bio_rejection_reason: v.optional(v.string()),
     schedule: v.object({
       monday: v.object({
         available: v.boolean(),
@@ -464,7 +495,8 @@ export default defineSchema({
     .index("by_user", ["user"])
     .index("by_active", ["is_active"])
     .index("by_branch", ["branch_id"])
-    .index("by_custom_booking", ["custom_booking_enabled"]),
+    .index("by_custom_booking", ["custom_booking_enabled"])
+    .index("by_bio_approval_status", ["bio_approval_status"]),
 
   // Services table
   services: defineTable({
@@ -529,6 +561,8 @@ export default defineSchema({
     notes: v.optional(v.string()),
     reminder_sent: v.optional(v.boolean()),
     check_in_reminder_sent: v.optional(v.boolean()),
+    // PayMongo fallback tracking
+    processed_via_admin: v.optional(v.boolean()), // true if admin's PayMongo was used as fallback
     createdAt: v.number(),
     updatedAt: v.number(),
     completed_at: v.optional(v.number()), // Timestamp when booking was marked complete
@@ -707,6 +741,7 @@ export default defineSchema({
   // Products table (Branch-level inventory)
   products: defineTable({
     branch_id: v.id("branches"), // Which branch owns this product
+    catalog_product_id: v.optional(v.id("productCatalog")), // Link to central catalog (auto-synced)
     name: v.string(),
     description: v.string(),
     price: v.number(),
@@ -739,7 +774,8 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_stock", ["stock"])
     .index("by_branch_category", ["branch_id", "category"])
-    .index("by_branch_status", ["branch_id", "status"]),
+    .index("by_branch_status", ["branch_id", "status"])
+    .index("by_branch_catalog", ["branch_id", "catalog_product_id"]),
 
   // POS Transactions table
   transactions: defineTable({
@@ -930,6 +966,7 @@ export default defineSchema({
     branch_id: v.id("branches"),
     default_commission_rate: v.number(), // Default commission percentage (e.g., 10 for 10%)
     payout_frequency: v.union(
+      v.literal("daily"),
       v.literal("weekly"),
       v.literal("bi_weekly"),
       v.literal("monthly")
@@ -975,6 +1012,7 @@ export default defineSchema({
     period_start: v.number(), // Start timestamp of payroll period
     period_end: v.number(), // End timestamp of payroll period
     period_type: v.union(
+      v.literal("daily"),
       v.literal("weekly"),
       v.literal("bi_weekly"),
       v.literal("monthly")
@@ -999,6 +1037,8 @@ export default defineSchema({
     is_locked: v.optional(v.boolean()), // Whether period is locked from changes
     locked_at: v.optional(v.number()), // When period was locked
     locked_by: v.optional(v.id("users")), // Who locked the period
+    // Target: barber or staff (defaults to barber for backward compatibility)
+    payroll_target: v.optional(v.union(v.literal("barber"), v.literal("staff"))),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -1721,6 +1761,7 @@ export default defineSchema({
     image_storage_id: v.optional(v.id("_storage")), // Convex storage ID
     // Inventory fields
     stock: v.number(), // Current total stock in central warehouse
+    reserved_stock: v.optional(v.number()), // Stock reserved by approved orders (not yet shipped)
     minStock: v.number(), // Low stock threshold
     is_active: v.boolean(),
     price_enforced: v.boolean(), // If true, branches cannot change price
@@ -1804,10 +1845,15 @@ export default defineSchema({
       v.literal("bank_transfer"),
       v.literal("check"),
       v.literal("gcash"),
-      v.literal("maya")
+      v.literal("maya"),
+      v.literal("branch_wallet")
     )),
     payment_reference: v.optional(v.string()),
     payment_notes: v.optional(v.string()),
+
+    // Branch wallet payment tracking
+    wallet_hold_amount: v.optional(v.number()),
+    wallet_transaction_id: v.optional(v.string()),
 
     // Manual order flag (created by super admin, not branch request)
     is_manual_order: v.optional(v.boolean()),
@@ -1818,6 +1864,49 @@ export default defineSchema({
     .index("by_created_at", ["created_at"])
     .index("by_order_number", ["order_number"])
     .index("by_paid", ["is_paid"]),
+
+  // Damage claims for product orders (branch reports damaged items after receipt)
+  damage_claims: defineTable({
+    order_id: v.id("productOrders"),
+    order_number: v.string(), // Denormalized for display
+    branch_id: v.id("branches"),
+    items: v.array(
+      v.object({
+        catalog_product_id: v.id("productCatalog"),
+        product_name: v.string(),
+        quantity_damaged: v.number(),
+        unit_price: v.number(),
+        damage_reason: v.union(
+          v.literal("packaging"),
+          v.literal("defect"),
+          v.literal("shipping"),
+          v.literal("expired"),
+          v.literal("wrong_item"),
+          v.literal("other")
+        ),
+        reason_note: v.optional(v.string()),
+      })
+    ),
+    total_damage_amount: v.number(), // Sum of qty × unit_price for all damaged items
+    description: v.string(), // Overall description of the damage
+    images: v.optional(v.array(v.id("_storage"))), // Evidence photos
+    status: v.union(
+      v.literal("pending"),   // Awaiting super admin review
+      v.literal("approved"),  // Approved + wallet credit issued
+      v.literal("rejected")   // Denied by super admin
+    ),
+    submitted_by: v.id("users"),
+    submitted_at: v.number(),
+    reviewed_by: v.optional(v.id("users")),
+    reviewed_at: v.optional(v.number()),
+    rejection_reason: v.optional(v.string()),
+    credit_amount: v.optional(v.number()), // Actual amount credited (may differ from total)
+    wallet_transaction_id: v.optional(v.string()), // Reference to wallet credit transaction
+  })
+    .index("by_order", ["order_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"])
+    .index("by_submitted_at", ["submitted_at"]),
 
   // Branch expenses for P&L tracking
   expenses: defineTable({
@@ -1871,12 +1960,14 @@ export default defineSchema({
       v.literal("gift_card_sales"),    // Gift card sales
       v.literal("rental_income"),      // Chair rental, space rental
       v.literal("training_income"),    // Training fees
+      v.literal("wallet_topup"),       // Branch wallet top-up (capital injection)
       v.literal("other")               // Other revenue
     ),
     description: v.string(),
     amount: v.number(),
     revenue_date: v.number(),           // Date of revenue
     notes: v.optional(v.string()),
+    is_automated: v.optional(v.boolean()), // true = system-generated (wallet topup, etc.)
     // Payment destination tracking (double-entry: debit cash/asset, credit revenue)
     received_to_asset_id: v.optional(v.id("assets")), // Specific manual asset
     received_to_cash: v.optional(v.boolean()), // true = received to cash on hand
@@ -2213,6 +2304,7 @@ export default defineSchema({
     category: v.union(
       v.literal("royalty_income"),      // Royalty payments from branches (automated)
       v.literal("product_order_income"), // Product order payments (automated)
+      v.literal("commission_income"),   // Settlement commission income (automated)
       v.literal("consulting"),          // Consulting fees
       v.literal("franchise_fee"),       // Initial franchise fees
       v.literal("training_fee"),        // Training program fees
@@ -2223,9 +2315,10 @@ export default defineSchema({
     amount: v.number(),
     revenue_date: v.number(),           // Date of revenue
     reference_id: v.optional(v.string()), // External reference if applicable
-    // Link to automated source (for royalty/product orders)
+    // Link to automated source (for royalty/product orders/settlements)
     royalty_payment_id: v.optional(v.id("royaltyPayments")),
     product_order_id: v.optional(v.id("productOrders")),
+    settlement_id: v.optional(v.id("branchSettlements")),
     notes: v.optional(v.string()),
     is_automated: v.boolean(),          // true for system-generated entries
     // Payment destination tracking (double-entry: debit cash/asset, credit revenue)
@@ -2240,6 +2333,7 @@ export default defineSchema({
     .index("by_automated", ["is_automated"])
     .index("by_royalty_payment", ["royalty_payment_id"])
     .index("by_product_order", ["product_order_id"])
+    .index("by_settlement", ["settlement_id"])
     .index("by_received_to_sales_cash", ["received_to_sales_cash"]),
 
   // Super Admin Expenses - manual expense entries
@@ -2634,6 +2728,9 @@ export default defineSchema({
     is_combo_payment: v.optional(v.boolean()),  // True if paying with wallet + PayMongo
     wallet_portion: v.optional(v.number()),     // Amount paid from wallet
 
+    // PayMongo fallback tracking
+    processed_via_admin: v.optional(v.boolean()), // true if admin's PayMongo was used as fallback
+
     // Payment info
     payment_type: v.union(v.literal("pay_now"), v.literal("pay_later")),
     paymongo_link_id: v.optional(v.string()),   // PayMongo link ID
@@ -2823,6 +2920,9 @@ export default defineSchema({
     net_amount: v.number(), // Branch earnings after commission
     settlement_id: v.optional(v.id("branchSettlements")), // Linked when settled
     status: v.string(), // "pending" | "settled"
+    // PayMongo fallback tracking
+    processed_via: v.optional(v.string()), // "admin" | "branch" — whose PayMongo processed the payment
+    payment_source: v.optional(v.string()), // "online_paymongo" | "wallet" — how customer paid
     created_at: v.number(),
   })
     .index("by_branch", ["branch_id"])
@@ -3199,4 +3299,160 @@ export default defineSchema({
   })
     .index("by_branch", ["branch_id"])
     .index("by_fingerprint", ["device_fingerprint"]),
+
+  // ============================================================================
+  // STAFF PAYROLL TABLES
+  // ============================================================================
+
+  // Staff daily rates table (mirrors barber_daily_rates for non-barber staff)
+  staff_daily_rates: defineTable({
+    user_id: v.id("users"),
+    branch_id: v.id("branches"),
+    daily_rate: v.number(),
+    effective_from: v.number(),
+    effective_until: v.optional(v.number()),
+    is_active: v.boolean(),
+    created_by: v.id("users"),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["user_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_user_active", ["user_id", "is_active"]),
+
+  // Staff payroll records (simplified: daily rate only, no commission)
+  staff_payroll_records: defineTable({
+    payroll_period_id: v.id("payroll_periods"),
+    user_id: v.id("users"),
+    branch_id: v.id("branches"),
+
+    // Daily pay
+    daily_rate: v.number(),
+    days_worked: v.number(),
+    daily_pay: v.number(),
+
+    // Attendance (OT/UT/Late)
+    attendance_summary: v.optional(v.object({
+      total_late_minutes: v.number(),
+      total_undertime_minutes: v.number(),
+      total_overtime_minutes: v.number(),
+      total_ot_pay: v.number(),
+      total_late_penalty: v.number(),
+      total_ut_penalty: v.number(),
+      total_penalty: v.number(),
+      days_late: v.number(),
+      days_undertime: v.number(),
+      days_overtime: v.number(),
+      daily_details: v.array(v.object({
+        date: v.string(),
+        scheduled_start: v.string(),
+        scheduled_end: v.string(),
+        actual_clock_in: v.string(),
+        actual_clock_out: v.string(),
+        late_minutes: v.number(),
+        undertime_minutes: v.number(),
+        overtime_minutes: v.number(),
+      })),
+    })),
+
+    // Deductions
+    cash_advance_deduction: v.optional(v.number()),
+    cash_advance_details: v.optional(v.array(v.object({
+      id: v.id("cashAdvances"),
+      amount: v.number(),
+      requested_at: v.number(),
+      paid_out_at: v.optional(v.number()),
+    }))),
+    total_deductions: v.number(),
+
+    // Final
+    net_pay: v.number(),
+
+    // Payment
+    payment_method: v.optional(v.union(
+      v.literal("cash"),
+      v.literal("bank_transfer"),
+      v.literal("check"),
+      v.literal("digital_wallet")
+    )),
+    payment_reference: v.optional(v.string()),
+    paid_at: v.optional(v.number()),
+    paid_by: v.optional(v.id("users")),
+
+    status: v.union(
+      v.literal("calculated"),
+      v.literal("paid"),
+      v.literal("cancelled")
+    ),
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_payroll_period", ["payroll_period_id"])
+    .index("by_user", ["user_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_status", ["status"])
+    .index("by_user_period", ["user_id", "payroll_period_id"]),
+
+  // ============================================================================
+  // BRANCH ADMIN WALLET (for product ordering)
+  // ============================================================================
+
+  // Branch Admin Ordering Wallet - prepaid wallet for product orders
+  branch_wallets: defineTable({
+    branch_id: v.id("branches"),
+    balance: v.number(),           // Available balance in whole pesos
+    held_balance: v.number(),      // Locked for pending/approved/shipped orders
+    total_topped_up: v.number(),   // Lifetime top-ups
+    total_spent: v.number(),       // Lifetime order payments
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_branch", ["branch_id"]),
+
+  // Branch Wallet Transaction Audit Trail
+  branch_wallet_transactions: defineTable({
+    branch_id: v.id("branches"),
+    wallet_id: v.id("branch_wallets"),
+    type: v.union(
+      v.literal("topup"),         // Money added to wallet
+      v.literal("hold"),          // Balance moved to held_balance for pending order
+      v.literal("release_hold"),  // held_balance returned to balance (cancel/reject)
+      v.literal("payment"),       // held_balance deducted (order received, finalized)
+      v.literal("credit"),        // Refund or adjustment credit
+    ),
+    amount: v.number(),           // Positive for topup/release/credit, negative for hold/payment
+    balance_after: v.number(),
+    held_balance_after: v.number(),
+    reference_type: v.optional(v.string()),  // "product_order", "manual_topup", "adjustment"
+    reference_id: v.optional(v.string()),    // Order number or other reference
+    description: v.string(),
+    created_by: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_branch", ["branch_id"])
+    .index("by_wallet", ["wallet_id"])
+    .index("by_created_at", ["createdAt"]),
+
+  // Pending Branch Wallet Top-ups (PayMongo online payments to HQ)
+  pendingBranchWalletTopups: defineTable({
+    branch_id: v.id("branches"),
+    amount: v.number(),
+    paymongo_session_id: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("paid"),
+      v.literal("expired"),
+      v.literal("failed")
+    ),
+    created_by: v.id("users"),
+    description: v.optional(v.string()),
+    paymongo_payment_id: v.optional(v.string()),
+    payment_method: v.optional(v.string()),
+    created_at: v.number(),
+    expires_at: v.number(),
+    paid_at: v.optional(v.number()),
+  })
+    .index("by_session", ["paymongo_session_id"])
+    .index("by_branch", ["branch_id"])
+    .index("by_branch_status", ["branch_id", "status"]),
 });

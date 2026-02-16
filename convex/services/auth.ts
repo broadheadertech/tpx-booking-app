@@ -555,11 +555,15 @@ export const createUserWithClerk = action({
     }
 
     try {
-      // Sanitize username for Clerk (only allows [a-zA-Z0-9_-])
-      const sanitizedUsername = args.username
+      // Sanitize username for Clerk (only allows [a-zA-Z0-9_-], min 4 chars)
+      let sanitizedUsername: string | undefined = args.username
         .replace(/[^a-zA-Z0-9_-]/g, '_')
         .replace(/_+/g, '_')
         .replace(/^_|_$/g, '') || undefined;
+      // Clerk requires username to be 4-64 chars; skip if too short
+      if (sanitizedUsername && (sanitizedUsername.length < 4 || sanitizedUsername.length > 64)) {
+        sanitizedUsername = undefined;
+      }
 
       const response = await fetch("https://api.clerk.com/v1/users", {
         method: "POST",
@@ -569,7 +573,7 @@ export const createUserWithClerk = action({
         },
         body: JSON.stringify({
           email_address: [args.email],
-          username: sanitizedUsername,
+          ...(sanitizedUsername ? { username: sanitizedUsername } : {}),
           password: args.password,
           skip_password_checks: true,
         }),
@@ -634,6 +638,96 @@ export const linkClerkToUser = mutation({
       migration_status: "completed",
       updatedAt: Date.now(),
     });
+  },
+});
+
+// Sync an existing Convex user to Clerk (retry for users who failed initial Clerk creation)
+export const syncUserToClerk = action({
+  args: {
+    userId: v.id("users"),
+    password: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { api } = require("../_generated/api");
+
+    // Get the user from Convex
+    const user = await ctx.runQuery(api.services.auth.getUserById, { userId: args.userId });
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (user.clerk_user_id) {
+      return { success: true, message: "User already synced to Clerk", clerk_user_id: user.clerk_user_id };
+    }
+
+    const clerkSecretKey = process.env.CLERK_SECRET_KEY;
+    if (!clerkSecretKey) {
+      throw new Error("CLERK_SECRET_KEY not configured in Convex environment");
+    }
+
+    // Sanitize username for Clerk (only allows [a-zA-Z0-9_-], min 4 chars)
+    let sanitizedUsername: string | undefined = user.username
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '') || undefined;
+    // Clerk requires username to be 4-64 chars; skip if too short
+    if (sanitizedUsername && (sanitizedUsername.length < 4 || sanitizedUsername.length > 64)) {
+      sanitizedUsername = undefined;
+    }
+
+    // Try to create in Clerk
+    const response = await fetch("https://api.clerk.com/v1/users", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${clerkSecretKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email_address: [user.email],
+        ...(sanitizedUsername ? { username: sanitizedUsername } : {}),
+        password: args.password,
+        skip_password_checks: true,
+      }),
+    });
+
+    let clerkUserId: string | null = null;
+
+    if (!response.ok) {
+      const errorData = await response.json();
+
+      // If user already exists in Clerk, find and link
+      if (errorData.errors?.[0]?.code === "form_identifier_exists") {
+        const findResponse = await fetch(
+          `https://api.clerk.com/v1/users?email_address=${encodeURIComponent(user.email)}`,
+          { headers: { Authorization: `Bearer ${clerkSecretKey}` } }
+        );
+        if (findResponse.ok) {
+          const existingUsers = await findResponse.json();
+          if (existingUsers[0]) {
+            clerkUserId = existingUsers[0].id;
+          }
+        }
+      }
+
+      if (!clerkUserId) {
+        const errMsg = errorData.errors?.[0]?.long_message || errorData.errors?.[0]?.message || JSON.stringify(errorData);
+        throw new Error(`Clerk API error: ${errMsg}`);
+      }
+    } else {
+      const clerkUser = await response.json();
+      clerkUserId = clerkUser.id;
+    }
+
+    // Link Clerk user ID to Convex user
+    if (clerkUserId) {
+      await ctx.runMutation(api.services.auth.linkClerkToUser, {
+        userId: args.userId,
+        clerk_user_id: clerkUserId,
+      });
+      return { success: true, message: "User synced to Clerk successfully", clerk_user_id: clerkUserId };
+    }
+
+    throw new Error("Failed to sync user to Clerk");
   },
 });
 
@@ -1395,6 +1489,14 @@ export const resetPassword = mutation({
   },
 });
 
+// Get a single user by ID
+export const getUserById = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.userId);
+  },
+});
+
 // Get users by branch (for branch admins/staff)
 export const getUsersByBranch = query({
   args: { branch_id: v.id("branches") },
@@ -1418,6 +1520,8 @@ export const getUsersByBranch = query({
       is_active: user.is_active,
       isVerified: user.isVerified,
       createdAt: user._creationTime,
+      clerk_user_id: user.clerk_user_id,
+      address: user.address,
       // Customer analytics fields for AI Email Marketing segmentation
       lastBookingDate: user.lastBookingDate,
       totalBookings: user.totalBookings,
@@ -2336,6 +2440,237 @@ export const sendBookingConfirmationEmail = action({
         bookingCode: args.bookingCode,
       });
       // Don't throw error - email failure shouldn't block booking
+      return { success: false, error: error.message };
+    }
+  },
+});
+
+// Send barber notification email when a new booking is assigned to them
+export const sendBarberBookingNotificationEmail = action({
+  args: {
+    email: v.string(),
+    barberName: v.string(),
+    customerName: v.string(),
+    bookingCode: v.string(),
+    serviceName: v.string(),
+    servicePrice: v.number(),
+    branchName: v.string(),
+    branchAddress: v.optional(v.string()),
+    date: v.string(),
+    time: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { api } = require("../_generated/api");
+
+    const branding = await ctx.runQuery(api.services.branding.getGlobalBranding, {});
+
+    const primaryColor = branding?.primary_color || '#000000';
+    const accentColor = branding?.accent_color || '#000000';
+    const brandName = branding?.display_name || '';
+    const primaryLight = `${primaryColor}1a`;
+    const primaryBorder = `${primaryColor}40`;
+
+    const formattedDate = new Date(args.date).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    const emailData = {
+      from: `${brandName} <no-reply@tipunox.broadheader.com>`,
+      to: args.email,
+      subject: `New Appointment - ${args.customerName} on ${formattedDate}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New Appointment - ${brandName}</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+              background-color: #f5f5f5;
+              color: #333;
+              line-height: 1.6;
+            }
+            .container {
+              max-width: 500px;
+              margin: 0 auto;
+              background: #ffffff;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+            .header {
+              background: linear-gradient(135deg, ${primaryColor} 0%, ${accentColor} 100%);
+              padding: 24px;
+              text-align: center;
+              color: white;
+            }
+            .header h1 {
+              font-size: 24px;
+              font-weight: 700;
+              margin: 0;
+              letter-spacing: -0.5px;
+            }
+            .body {
+              padding: 28px 24px;
+            }
+            .greeting {
+              font-size: 15px;
+              color: #555;
+              margin-bottom: 24px;
+              line-height: 1.5;
+              text-align: center;
+            }
+            .booking-card {
+              background: ${primaryLight};
+              border: 2px solid ${primaryBorder};
+              border-radius: 10px;
+              padding: 20px;
+              margin-bottom: 24px;
+            }
+            .booking-code {
+              font-size: 24px;
+              font-weight: 800;
+              color: ${primaryColor};
+              font-family: 'Courier New', monospace;
+              letter-spacing: 2px;
+              margin-bottom: 8px;
+              text-align: center;
+              word-break: break-all;
+            }
+            .booking-label {
+              font-size: 12px;
+              color: #999;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              font-weight: 600;
+              text-align: center;
+              margin-bottom: 16px;
+            }
+            .booking-details {
+              border-top: 1px solid ${primaryBorder};
+              padding-top: 16px;
+            }
+            .detail-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 8px 0;
+              border-bottom: 1px solid #f0f0f0;
+            }
+            .detail-row:last-child {
+              border-bottom: none;
+            }
+            .detail-label {
+              font-size: 13px;
+              color: #666;
+              font-weight: 500;
+            }
+            .detail-value {
+              font-size: 13px;
+              color: #333;
+              font-weight: 600;
+              text-align: right;
+            }
+            .footer {
+              background: #f9f9f9;
+              border-top: 1px solid #efefef;
+              padding: 16px 24px;
+              text-align: center;
+              font-size: 11px;
+              color: #999;
+            }
+            .footer p {
+              margin: 2px 0;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>📋 New Appointment</h1>
+            </div>
+
+            <div class="body">
+              <div class="greeting">
+                Hi <strong>${args.barberName}</strong>! You have a new appointment booked.
+              </div>
+
+              <div class="booking-card">
+                <div class="booking-label">Booking Code</div>
+                <div class="booking-code">${args.bookingCode}</div>
+
+                <div class="booking-details">
+                  <div class="detail-row">
+                    <span class="detail-label">👤 Customer</span>
+                    <span class="detail-value">${args.customerName}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">📅 Date</span>
+                    <span class="detail-value">${formattedDate}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">🕐 Time</span>
+                    <span class="detail-value">${args.time}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">✂️ Service</span>
+                    <span class="detail-value">${args.serviceName}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">💰 Price</span>
+                    <span class="detail-value">₱${args.servicePrice.toLocaleString()}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">📍 Branch</span>
+                    <span class="detail-value">${args.branchName}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="footer">
+              <p><strong>${brandName}</strong></p>
+              ${args.branchAddress ? `<p>${args.branchAddress}</p>` : ''}
+              <p>This is an automated message. Please do not reply.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    try {
+      console.log('📧 Attempting to send barber booking notification email:', {
+        to: args.email,
+        barberName: args.barberName,
+        bookingCode: args.bookingCode,
+        service: args.serviceName,
+      });
+
+      const result = await resend.emails.send(emailData as any);
+
+      if (result.error) {
+        console.error('📧 Barber notification email service error:', result.error);
+        return { success: false, error: result.error.message };
+      }
+
+      console.log('📧 Barber notification email sent successfully:', {
+        messageId: result.data?.id,
+        to: args.email,
+      });
+      return { success: true, messageId: result.data?.id };
+    } catch (error: any) {
+      console.error('📧 Failed to send barber notification email:', {
+        error: error.message,
+        to: args.email,
+      });
       return { success: false, error: error.message };
     }
   },

@@ -175,9 +175,20 @@ function TransactionRow({ earning }) {
 
           {/* Service & Customer */}
           <div className="flex flex-col flex-1 min-w-0">
-            <span className="text-sm font-medium text-white truncate">
-              {earning.service_name}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-medium text-white truncate">
+                {earning.service_name}
+              </span>
+              {earning.payment_source === 'online_paymongo' ? (
+                <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                  Online
+                </span>
+              ) : earning.payment_source === 'wallet' ? (
+                <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold bg-green-500/20 text-green-400 border border-green-500/30">
+                  Wallet
+                </span>
+              ) : null}
+            </div>
             <span className="text-xs text-gray-400 flex items-center gap-1 truncate">
               <User className="w-3 h-3" />
               {earning.customer_name}

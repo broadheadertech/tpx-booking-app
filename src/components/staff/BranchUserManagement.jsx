@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
-import { User, UserPlus, Edit, Trash2, Building, Users, Search, Filter, X, AlertCircle, Shield, HelpCircle, Scan } from 'lucide-react'
+import { User, UserPlus, Edit, Trash2, Building, Users, Search, Filter, X, AlertCircle, Shield, HelpCircle, Scan, RefreshCw, CheckCircle } from 'lucide-react'
 import UserFormModal from '../admin/UserFormModal'
 import PermissionConfigModal from '../admin/PermissionConfigModal'
 import FaceEnrollment from './FaceEnrollment'
@@ -146,6 +146,13 @@ export default function BranchUserManagement() {
   const createUser = useAction(api.services.auth.createUserWithClerk)
   const updateUser = useMutation(api.services.auth.updateUser)
   const deleteUser = useMutation(api.services.auth.deleteUser)
+  const syncToClerk = useAction(api.services.auth.syncUserToClerk)
+
+  const [showSyncModal, setShowSyncModal] = useState(false)
+  const [syncTargetUser, setSyncTargetUser] = useState(null)
+  const [syncPassword, setSyncPassword] = useState('')
+  const [syncing, setSyncing] = useState(false)
+  const [syncError, setSyncError] = useState('')
 
   // Filter to only show staff (not customers, admins, or barbers)
   const staffOnly = branchUsers.filter(u => u.role === 'staff')
@@ -309,6 +316,27 @@ export default function BranchUserManagement() {
     }
   }
 
+  const handleSyncToClerk = async (e) => {
+    e.preventDefault()
+    if (!syncPassword.trim()) {
+      setSyncError('Password is required to create Clerk account')
+      return
+    }
+    setSyncing(true)
+    setSyncError('')
+    try {
+      await syncToClerk({ userId: syncTargetUser._id, password: syncPassword })
+      setShowSyncModal(false)
+      setSyncTargetUser(null)
+      setSyncPassword('')
+    } catch (err) {
+      console.error('Clerk sync error:', err)
+      setSyncError(err.message || 'Failed to sync user to Clerk')
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   const formatDate = (timestamp) => {
     return new Date(timestamp).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -446,8 +474,15 @@ export default function BranchUserManagement() {
                           </div>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-white">
+                          <div className="text-sm font-medium text-white flex items-center gap-1.5">
                             {branchUser.username}
+                            {branchUser.clerk_user_id ? (
+                              <CheckCircle className="h-3.5 w-3.5 text-green-400" title="Clerk synced" />
+                            ) : (
+                              <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded" title="Not synced to Clerk - cannot use Clerk login">
+                                No Clerk
+                              </span>
+                            )}
                           </div>
                           <div className="text-sm text-gray-400">
                             {branchUser.email}
@@ -477,6 +512,16 @@ export default function BranchUserManagement() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
+                        {/* Clerk Sync */}
+                        {!branchUser.clerk_user_id && (
+                          <button
+                            onClick={() => { setSyncTargetUser(branchUser); setSyncPassword(''); setSyncError(''); setShowSyncModal(true) }}
+                            className="text-amber-400 hover:text-amber-300 transition-colors"
+                            title="Sync to Clerk (enable login)"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </button>
+                        )}
                         {/* Face Enrollment */}
                         <button
                           onClick={() => setEnrollUser(branchUser)}
@@ -614,6 +659,55 @@ export default function BranchUserManagement() {
         barberName={enrollUser?.nickname || enrollUser?.username || 'Staff'}
         branchId={user?.branch_id}
       />
+
+      {/* Clerk Sync Modal */}
+      {showSyncModal && syncTargetUser && createPortal(
+        <div className="fixed inset-0 z-[9999] overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowSyncModal(false)} />
+            <div className="relative w-full max-w-md rounded-2xl bg-[#1A1A1A] shadow-2xl z-[10000] border border-[#2A2A2A]/50">
+              <div className="flex items-center justify-between p-6 border-b border-[#444444]/30">
+                <h3 className="text-lg font-bold text-white">Sync to Clerk</h3>
+                <button onClick={() => setShowSyncModal(false)} className="p-2 text-gray-400 hover:text-white hover:bg-[#333333] rounded-lg">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <form onSubmit={handleSyncToClerk} className="p-6 space-y-4">
+                {syncError && (
+                  <div className="p-3 bg-red-400/20 border border-red-400/30 rounded-lg flex items-center space-x-2">
+                    <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
+                    <p className="text-sm text-red-400">{syncError}</p>
+                  </div>
+                )}
+                <p className="text-sm text-gray-300">
+                  Create a Clerk account for <span className="font-semibold text-white">{syncTargetUser.username}</span> ({syncTargetUser.email}) so they can log in.
+                </p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Password for Clerk account</label>
+                  <input
+                    type="password"
+                    value={syncPassword}
+                    onChange={(e) => setSyncPassword(e.target.value)}
+                    placeholder="Enter password"
+                    className="w-full px-3 py-2 bg-[#2A2A2A] border border-[#444444] text-white rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent text-sm"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-gray-500">This will be the password for the staff member's login.</p>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <button type="button" onClick={() => setShowSyncModal(false)} className="px-4 py-2 bg-[#2A2A2A] text-white rounded-lg text-sm hover:bg-[#3A3A3A]">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={syncing} className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg text-sm hover:bg-[var(--color-accent)] disabled:opacity-50 flex items-center gap-1">
+                    {syncing ? <><RefreshCw className="h-4 w-4 animate-spin" /> Syncing...</> : <><RefreshCw className="h-4 w-4" /> Sync to Clerk</>}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       <WalkthroughOverlay steps={branchUserSteps} isVisible={showTutorial} onComplete={() => setShowTutorial(false)} onSkip={() => setShowTutorial(false)} />
     </div>

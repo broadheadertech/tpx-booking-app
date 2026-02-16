@@ -25,6 +25,10 @@ import {
   BanknoteIcon,
   Clock,
   FileText,
+  Sparkles,
+  Zap,
+  BarChart3,
+  CheckCircle,
 } from "lucide-react";
 import { EarningsTransactionList } from "./EarningsTransactionList";
 import { SettlementRequestForm } from "./SettlementRequestForm";
@@ -238,6 +242,12 @@ export function WalletEarningsDashboard({ branchId: propBranchId }) {
   // Story 25.1: Get settlement params for minimum amount (no role check needed)
   const settlementParams = useQuery(api.services.walletConfig.getSettlementParams);
 
+  // AI Settlement Insights
+  const settlementInsights = useQuery(
+    api.services.settlementInsights.getBranchSettlementInsights,
+    branchId ? { branch_id: branchId } : "skip"
+  );
+
   // AC #4: Show skeleton while loading (data === undefined)
   if (pendingTotal === undefined && branchId) {
     return <DashboardSkeleton />;
@@ -379,6 +389,88 @@ export function WalletEarningsDashboard({ branchId: propBranchId }) {
                 </p>
               )}
             </div>
+
+            {/* AI Settlement Insights */}
+            {settlementInsights && (
+              <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-xl border border-purple-500/20 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles className="w-4 h-4 text-purple-400" />
+                  <h3 className="text-white font-semibold text-sm">Settlement Insights</h3>
+                </div>
+
+                {/* Timing Recommendation */}
+                <div className={`flex items-start gap-3 p-3 rounded-lg mb-3 ${
+                  settlementInsights.recommendation.timing_type === 'ready'
+                    ? 'bg-green-500/10 border border-green-500/20'
+                    : settlementInsights.recommendation.timing_type === 'soon'
+                      ? 'bg-yellow-500/10 border border-yellow-500/20'
+                      : 'bg-[#1A1A1A] border border-[#2A2A2A]'
+                }`}>
+                  {settlementInsights.recommendation.timing_type === 'ready' ? (
+                    <CheckCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                  ) : settlementInsights.recommendation.timing_type === 'soon' ? (
+                    <Zap className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
+                  ) : (
+                    <Clock className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                  )}
+                  <div>
+                    <p className={`text-sm font-medium ${
+                      settlementInsights.recommendation.timing_type === 'ready'
+                        ? 'text-green-400'
+                        : settlementInsights.recommendation.timing_type === 'soon'
+                          ? 'text-yellow-400'
+                          : 'text-gray-300'
+                    }`}>
+                      {settlementInsights.recommendation.message}
+                    </p>
+                    {settlementInsights.recommendation.performance_note && (
+                      <p className="text-gray-500 text-xs mt-1">
+                        {settlementInsights.recommendation.performance_note}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Stats Row */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {settlementInsights.velocity.daily_earnings_rate > 0 && (
+                    <div className="bg-[#1A1A1A] rounded-lg px-3 py-2 border border-[#2A2A2A]">
+                      <span className="text-gray-500 text-[10px] block">Daily Rate</span>
+                      <span className="text-white text-sm font-bold">
+                        ₱{settlementInsights.velocity.daily_earnings_rate.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+
+                  {settlementInsights.history.avg_processing_hours > 0 && (
+                    <div className="bg-[#1A1A1A] rounded-lg px-3 py-2 border border-[#2A2A2A]">
+                      <span className="text-gray-500 text-[10px] block">Avg Processing</span>
+                      <span className="text-white text-sm font-bold">
+                        {settlementInsights.history.avg_processing_hours}h
+                      </span>
+                    </div>
+                  )}
+
+                  {settlementInsights.history.completed_count > 0 && (
+                    <div className="bg-[#1A1A1A] rounded-lg px-3 py-2 border border-[#2A2A2A]">
+                      <span className="text-gray-500 text-[10px] block">Approval Rate</span>
+                      <span className="text-white text-sm font-bold">
+                        {settlementInsights.history.approval_rate}%
+                      </span>
+                    </div>
+                  )}
+
+                  {settlementInsights.history.settled_this_month > 0 && (
+                    <div className="bg-[#1A1A1A] rounded-lg px-3 py-2 border border-[#2A2A2A]">
+                      <span className="text-gray-500 text-[10px] block">Settled This Month</span>
+                      <span className="text-white text-sm font-bold">
+                        ₱{settlementInsights.history.settled_this_month.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Transaction History - Story 22.3 */}
             <div className="pt-4">

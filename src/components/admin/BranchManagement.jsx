@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
-import { Building, MapPin, Phone, Mail, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Eye, Users, Calendar } from 'lucide-react'
+import { Building, MapPin, Phone, Mail, CheckCircle, XCircle, AlertCircle, Search, Filter, Plus, Edit, Trash2, RotateCcw, Eye, Users, Calendar, Wallet, DollarSign, TrendingUp } from 'lucide-react'
 import BranchFormModal from './BranchFormModal'
 import { formatErrorForDisplay } from '../../utils/errorHandler'
 
@@ -25,7 +25,8 @@ export default function BranchManagement() {
 
   // Queries
   const branches = useQuery(api.services.branches.getAllBranches) || []
-  
+  const branchFinancials = useQuery(api.services.branchWallet.getAllBranchFinancials) || {}
+
   // Mutations
   const createBranch = useMutation(api.services.branches.createBranch)
   const updateBranch = useMutation(api.services.branches.updateBranch)
@@ -76,8 +77,13 @@ export default function BranchManagement() {
       const weekAgo = new Date()
       weekAgo.setDate(weekAgo.getDate() - 7)
       return createdDate >= weekAgo
-    }).length
+    }).length,
+    totalRevenue: Object.values(branchFinancials).reduce((sum, f) => sum + (f?.totalRevenue || 0), 0),
+    totalWalletBalance: Object.values(branchFinancials).reduce((sum, f) => sum + (f?.walletBalance || 0), 0),
+    totalTransactions: Object.values(branchFinancials).reduce((sum, f) => sum + (f?.transactionCount || 0), 0),
   }
+
+  const formatPeso = (amount) => `₱${(amount || 0).toLocaleString()}`
 
   const resetForm = () => {
     setFormData({
@@ -203,7 +209,7 @@ export default function BranchManagement() {
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -213,7 +219,7 @@ export default function BranchManagement() {
             <Building className="h-8 w-8 text-[var(--color-primary)] opacity-30" />
           </div>
         </div>
-        
+
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
@@ -237,10 +243,30 @@ export default function BranchManagement() {
         <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-300">Recent</p>
-              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.recent}</p>
+              <p className="text-sm font-medium text-gray-300">Total Revenue</p>
+              <p className="text-xl font-bold text-green-400">{formatPeso(stats.totalRevenue)}</p>
             </div>
-            <Calendar className="h-8 w-8 text-[var(--color-primary)] opacity-30" />
+            <DollarSign className="h-8 w-8 text-green-400 opacity-30" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-[#444444]/50 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-300">Transactions</p>
+              <p className="text-2xl font-bold text-blue-400">{stats.totalTransactions.toLocaleString()}</p>
+            </div>
+            <TrendingUp className="h-8 w-8 text-blue-400 opacity-30" />
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-[#2A2A2A] to-[#333333] p-4 rounded-lg border border-blue-500/30 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-300">Wallet Balance</p>
+              <p className="text-xl font-bold text-blue-400">{formatPeso(stats.totalWalletBalance)}</p>
+            </div>
+            <Wallet className="h-8 w-8 text-blue-400 opacity-30" />
           </div>
         </div>
       </div>
@@ -319,8 +345,14 @@ export default function BranchManagement() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                  Created
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  Revenue
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  Transactions
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
+                  Wallet
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
                   Actions
@@ -331,6 +363,7 @@ export default function BranchManagement() {
               {filteredBranches.map((branch) => {
                 const statusConfig = getStatusConfig(branch.is_active)
                 const StatusIcon = statusConfig.icon
+                const fin = branchFinancials[branch._id]
 
                 return (
                   <tr key={branch._id} className="hover:bg-[#333333]/50 transition-colors">
@@ -373,10 +406,28 @@ export default function BranchManagement() {
                         {statusConfig.label}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-white">
-                        {formatDate(branch.createdAt)}
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <div className="text-sm font-bold text-green-400">
+                        {formatPeso(fin?.totalRevenue || 0)}
                       </div>
+                      <div className="text-xs text-gray-500">
+                        {fin?.completedTransactions || 0} completed
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <div className="text-sm font-medium text-white">
+                        {(fin?.transactionCount || 0).toLocaleString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <div className={`text-sm font-bold ${(fin?.walletBalance || 0) > 0 ? 'text-blue-400' : 'text-gray-500'}`}>
+                        {formatPeso(fin?.walletBalance || 0)}
+                      </div>
+                      {(fin?.walletHeldBalance || 0) > 0 && (
+                        <div className="text-xs text-yellow-400">
+                          {formatPeso(fin.walletHeldBalance)} held
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">

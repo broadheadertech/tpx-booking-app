@@ -22,6 +22,7 @@ import {
   Clock,
   AlertCircle,
   ArrowRight,
+  ArrowUpCircle,
 } from "lucide-react";
 
 /**
@@ -354,6 +355,56 @@ export function BranchWalletDetailModal({ branchId, isOpen, onClose }) {
                                 </span>
                               </div>
                               <EarningStatusBadge status={earning.status} />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Recent Top-Ups */}
+              <div className="bg-[#0F0F0F] rounded-xl border border-[#2A2A2A] overflow-hidden">
+                <div className="p-3 border-b border-[#2A2A2A]">
+                  <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                    <ArrowUpCircle className="w-4 h-4 text-blue-500" />
+                    Recent Top-Ups
+                    <span className="text-xs text-gray-500 font-normal">
+                      ({branchDetail.topUpCount || 0} total &middot; {formatCurrency(branchDetail.totalToppedUp || 0)})
+                    </span>
+                  </h3>
+                </div>
+                <div className="max-h-48 overflow-y-auto">
+                  {(!branchDetail.recentTopUps || branchDetail.recentTopUps.length === 0) ? (
+                    <div className="p-4 text-center text-gray-500 text-sm">
+                      No top-ups recorded yet
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-[#2A2A2A]">
+                      {branchDetail.recentTopUps.map((topUp) => (
+                        <div key={topUp.id} className="p-3 hover:bg-[#1A1A1A]">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-white font-medium">
+                                {topUp.description}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {formatDateTime(topUp.createdAt)} &middot; by {topUp.createdBy}
+                              </p>
+                              {topUp.reference && (
+                                <p className="text-xs text-gray-600 font-mono">
+                                  Ref: {topUp.reference}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-green-400 font-medium">
+                                +{formatCurrency(topUp.amount)}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Bal: {formatCurrency(topUp.balanceAfter)}
+                              </p>
                             </div>
                           </div>
                         </div>

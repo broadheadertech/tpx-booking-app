@@ -6,12 +6,56 @@ import { useCurrentUser } from '../../hooks/useCurrentUser'
 import { Camera, Check, X, AlertCircle, Loader2, ArrowLeft, Clock, Scan, ShieldCheck, UserX } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
+// Philippines timezone offset: UTC+8
+const PHT_OFFSET_MS = 8 * 60 * 60 * 1000
+const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+
+function timeToMinutes(timeStr) {
+  if (!timeStr) return 0
+  const [h, m] = timeStr.split(':').map(Number)
+  return h * 60 + m
+}
+
+function timestampToPHTMinutes(timestamp) {
+  const phtDate = new Date(timestamp + PHT_OFFSET_MS)
+  return phtDate.getUTCHours() * 60 + phtDate.getUTCMinutes()
+}
+
+function getShiftInsight(clockInTime, clockOutTime, schedule) {
+  if (!schedule || !clockInTime) return null
+  const phtDate = new Date(clockInTime + PHT_OFFSET_MS)
+  const dayName = DAY_NAMES[phtDate.getUTCDay()]
+  const daySchedule = schedule[dayName]
+  if (!daySchedule || !daySchedule.available) return null
+
+  const schedStart = timeToMinutes(daySchedule.start)
+  const schedEnd = timeToMinutes(daySchedule.end)
+  const actualIn = timestampToPHTMinutes(clockInTime)
+  const actualOut = clockOutTime ? timestampToPHTMinutes(clockOutTime) : null
+
+  const lateMin = Math.max(0, actualIn - schedStart)
+  const undertimeMin = actualOut !== null ? Math.max(0, schedEnd - actualOut) : 0
+  const overtimeMin = actualOut !== null ? Math.max(0, actualOut - schedEnd) : 0
+
+  return { lateMin, undertimeMin, overtimeMin, scheduledStart: daySchedule.start, scheduledEnd: daySchedule.end }
+}
+
+function formatMinsCompact(mins) {
+  if (!mins || mins <= 0) return ''
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  if (h === 0) return `${m}m`
+  if (m === 0) return `${h}h`
+  return `${h}h ${m}m`
+}
+
 const STATES = {
   LOADING: 'loading',
   IDLE: 'idle',
   DETECTING: 'detecting',
   LIVENESS: 'liveness',
   MATCHING: 'matching',
+  CONFIRM_EARLY_OUT: 'confirm_early_out',
   GREETING: 'greeting',
   CONFIRMED: 'confirmed',
   REJECTED: 'rejected',
@@ -30,6 +74,7 @@ const FaceCheckIn = () => {
   const [turnDirection, setTurnDirection] = useState('left')
   const [error, setError] = useState(null)
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [pendingClockOut, setPendingClockOut] = useState(null) // holds { best, storageId, undertimeMin } during early-out confirmation
 
   const loopRef = useRef(null)
   const stableCountRef = useRef(0)
@@ -226,7 +271,19 @@ const FaceCheckIn = () => {
           : { user_id: best.user_id }
 
         if (isClockedIn) {
-          // Clock out
+          // Check if clocking out early (undertime)
+          const schedule = personStatus?.schedule
+          const clockInTime = personStatus?.clockInTime
+          const insight = getShiftInsight(clockInTime, Date.now(), schedule)
+
+          if (insight && insight.undertimeMin > 0) {
+            // Show confirmation prompt for early clock-out
+            setPendingClockOut({ best, storageId, undertimeMin: insight.undertimeMin, idArgs, scheduledEnd: insight.scheduledEnd })
+            setState(STATES.CONFIRM_EARLY_OUT)
+            return
+          }
+
+          // Clock out normally
           const result = await clockOutFR({
             ...idArgs,
             confidence_score: best.confidence,
@@ -285,6 +342,44 @@ const FaceCheckIn = () => {
     }, 8000)
     return () => clearTimeout(t)
   }, [state])
+
+  // CONFIRM_EARLY_OUT → auto-cancel after 15 sec if no response
+  useEffect(() => {
+    if (state !== STATES.CONFIRM_EARLY_OUT) return
+    const t = setTimeout(() => {
+      setPendingClockOut(null)
+      setMatchResult(null)
+      setState(STATES.IDLE)
+    }, 15000)
+    return () => clearTimeout(t)
+  }, [state])
+
+  // Handle early clock-out confirmation
+  const handleConfirmEarlyOut = async () => {
+    if (!pendingClockOut) return
+    const { best, storageId, idArgs } = pendingClockOut
+    try {
+      const result = await clockOutFR({
+        ...idArgs,
+        confidence_score: best.confidence,
+        photo_storage_id: storageId,
+        liveness_passed: true,
+      })
+      setClockResult({ ...result, action: 'clock_out', barberName: best.barber_name })
+      setPendingClockOut(null)
+      setState(STATES.GREETING)
+    } catch (err) {
+      setError(err.data?.message || err.message || 'Clock-out failed')
+      setPendingClockOut(null)
+      setState(STATES.REJECTED)
+    }
+  }
+
+  const handleCancelEarlyOut = () => {
+    setPendingClockOut(null)
+    setMatchResult(null)
+    setState(STATES.IDLE)
+  }
 
   const formatTime = (date) => {
     return date.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
@@ -389,7 +484,51 @@ const FaceCheckIn = () => {
           </div>
         )}
 
-        {(state === STATES.GREETING || state === STATES.CONFIRMED) && matchResult && clockResult && (
+        {state === STATES.CONFIRM_EARLY_OUT && pendingClockOut && matchResult && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+            <div className="bg-[#1A1A1A]/95 rounded-2xl p-8 text-center mx-4 max-w-sm border border-amber-500/30">
+              <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-4">
+                <Clock className="w-8 h-8 text-amber-500" />
+              </div>
+              <p className="text-white font-semibold text-lg mb-2">
+                Early Clock-Out
+              </p>
+              <p className="text-gray-300 text-sm mb-1">
+                Hi <strong>{matchResult.barber_name}</strong>, your shift is scheduled until <strong>{pendingClockOut.scheduledEnd}</strong>.
+              </p>
+              <p className="text-gray-400 text-sm mb-5">
+                Clocking out now will result in <span className="text-amber-400 font-medium">{formatMinsCompact(pendingClockOut.undertimeMin)} undertime</span>.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCancelEarlyOut}
+                  className="flex-1 py-3 rounded-xl border border-[#2A2A2A] text-white font-medium hover:bg-[#2A2A2A] transition-colors"
+                >
+                  Stay
+                </button>
+                <button
+                  onClick={handleConfirmEarlyOut}
+                  className="flex-1 py-3 rounded-xl bg-amber-600 text-white font-medium hover:bg-amber-500 transition-colors"
+                >
+                  Clock Out
+                </button>
+              </div>
+              <p className="text-gray-600 text-xs mt-3">Auto-cancels in 15 seconds</p>
+            </div>
+          </div>
+        )}
+
+        {(state === STATES.GREETING || state === STATES.CONFIRMED) && matchResult && clockResult && (() => {
+          // Calculate late/undertime/overtime insight
+          const personStatus = barberStatuses?.find((b) =>
+            matchResult.barber_id ? b.barber_id === matchResult.barber_id : b.user_id === matchResult.user_id
+          )
+          const schedule = personStatus?.schedule
+          const insight = clockResult.action === 'clock_in'
+            ? getShiftInsight(clockResult.clockInTime, null, schedule)
+            : getShiftInsight(personStatus?.clockInTime || (Date.now() - (clockResult.shiftDuration || 0)), Date.now(), schedule)
+
+          return (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
             <div className="bg-[#1A1A1A]/95 rounded-2xl p-8 text-center mx-4 max-w-sm border border-green-500/30">
               <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
@@ -404,6 +543,41 @@ const FaceCheckIn = () => {
                   : `Clocked out. Shift: ${formatDuration(clockResult.shiftDuration)}`
                 }
               </p>
+              {/* Late / Undertime / Overtime labels */}
+              {insight && (
+                <div className="flex items-center justify-center gap-2 mb-3 flex-wrap">
+                  {clockResult.action === 'clock_in' && insight.lateMin > 0 && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-red-500/20 text-red-400">
+                      Late {formatMinsCompact(insight.lateMin)}
+                    </span>
+                  )}
+                  {clockResult.action === 'clock_in' && insight.lateMin === 0 && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">
+                      On time
+                    </span>
+                  )}
+                  {clockResult.action === 'clock_out' && insight.overtimeMin > 0 && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-purple-500/20 text-purple-400">
+                      OT +{formatMinsCompact(insight.overtimeMin)}
+                    </span>
+                  )}
+                  {clockResult.action === 'clock_out' && insight.undertimeMin > 0 && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-amber-500/20 text-amber-400">
+                      Undertime {formatMinsCompact(insight.undertimeMin)}
+                    </span>
+                  )}
+                  {clockResult.action === 'clock_out' && insight.overtimeMin === 0 && insight.undertimeMin === 0 && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400">
+                      Full shift
+                    </span>
+                  )}
+                  {insight.scheduledStart && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-[#2A2A2A] text-gray-400">
+                      Sched: {insight.scheduledStart}–{insight.scheduledEnd}
+                    </span>
+                  )}
+                </div>
+              )}
               <div className="flex items-center justify-center gap-2">
                 <span className={`text-xs px-2 py-1 rounded-full ${
                   clockResult.autoApproved ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'
@@ -419,7 +593,8 @@ const FaceCheckIn = () => {
               )}
             </div>
           </div>
-        )}
+          )
+        })()}
 
         {state === STATES.REJECTED && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
@@ -473,6 +648,7 @@ const FaceCheckIn = () => {
             {state === STATES.DETECTING && 'Face detected...'}
             {state === STATES.LIVENESS && 'Liveness check...'}
             {state === STATES.MATCHING && 'Matching...'}
+            {state === STATES.CONFIRM_EARLY_OUT && 'Confirm early clock-out'}
             {state === STATES.GREETING && 'Welcome!'}
             {state === STATES.CONFIRMED && 'Recorded'}
             {state === STATES.REJECTED && 'Not recognized'}

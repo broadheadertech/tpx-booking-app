@@ -135,12 +135,28 @@ const OrderStatusBadge = ({ status }) => {
 /**
  * Payment Status Badge Component
  */
-const PaymentBadge = ({ isPaid, paidAt }) => {
+const PaymentBadge = ({ isPaid, paymentMethod, walletHoldAmount }) => {
+  if (isPaid && paymentMethod === "branch_wallet") {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+        <DollarSign className="w-3 h-3" />
+        Paid via Branch Wallet
+      </span>
+    );
+  }
   if (isPaid) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
         <DollarSign className="w-3 h-3" />
         Paid
+      </span>
+    );
+  }
+  if (walletHoldAmount > 0) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30">
+        <CreditCard className="w-3 h-3" />
+        Wallet Hold ₱{walletHoldAmount.toLocaleString()}
       </span>
     );
   }
@@ -156,11 +172,7 @@ const PaymentBadge = ({ isPaid, paidAt }) => {
  * Payment Methods for dropdown
  */
 const PAYMENT_METHODS = [
-  { id: "cash", label: "Cash" },
-  { id: "bank_transfer", label: "Bank Transfer" },
-  { id: "check", label: "Check" },
-  { id: "gcash", label: "GCash" },
-  { id: "maya", label: "Maya" },
+  { id: "branch_wallet", label: "Branch Wallet" },
 ];
 
 /**
@@ -1327,7 +1339,7 @@ const MarkAsPaidModal = ({ isOpen, onClose, order, onSuccess }) => {
   const markAsPaid = useMutation(api.services.productOrders.markOrderAsPaid);
 
   const [formData, setFormData] = useState({
-    payment_method: "cash",
+    payment_method: "branch_wallet",
     payment_reference: "",
     payment_notes: "",
   });
@@ -1342,7 +1354,7 @@ const MarkAsPaidModal = ({ isOpen, onClose, order, onSuccess }) => {
       await markAsPaid({
         order_id: order._id,
         paid_by: user._id,
-        payment_method: formData.payment_method,
+        payment_method: "branch_wallet",
         payment_reference: formData.payment_reference || undefined,
         payment_notes: formData.payment_notes || undefined,
       });
@@ -1357,7 +1369,7 @@ const MarkAsPaidModal = ({ isOpen, onClose, order, onSuccess }) => {
   };
 
   const handleClose = () => {
-    setFormData({ payment_method: "cash", payment_reference: "", payment_notes: "" });
+    setFormData({ payment_method: "branch_wallet", payment_reference: "", payment_notes: "" });
     onClose();
   };
 
@@ -1444,7 +1456,7 @@ const ManualOrderModal = ({ isOpen, onClose }) => {
     notes: "",
     auto_approve: true,
     mark_as_paid: false,
-    payment_method: "cash",
+    payment_method: "branch_wallet",
     payment_reference: "",
   });
   const [orderItems, setOrderItems] = useState([]);
@@ -1495,7 +1507,7 @@ const ManualOrderModal = ({ isOpen, onClose }) => {
         notes: formData.notes || undefined,
         auto_approve: formData.auto_approve,
         mark_as_paid: formData.mark_as_paid,
-        payment_method: formData.mark_as_paid ? formData.payment_method : undefined,
+        payment_method: formData.mark_as_paid ? "branch_wallet" : undefined,
         payment_reference: formData.mark_as_paid ? formData.payment_reference : undefined,
       });
       toast.success("Success", `Order ${result.orderNumber} created`);
@@ -1744,6 +1756,8 @@ const BranchOrdersTab = () => {
   };
 
   const canMarkAsPaid = (order) => {
+    // Wallet-funded orders are auto-paid on receipt, no manual action needed
+    if (order.wallet_hold_amount > 0) return false;
     return !order.is_paid && order.status !== "pending" && order.status !== "cancelled" && order.status !== "rejected";
   };
 
@@ -1830,7 +1844,7 @@ const BranchOrdersTab = () => {
                   <div className="flex items-center gap-2 flex-wrap mb-2">
                     <span className="text-white font-semibold">{order.order_number}</span>
                     <OrderStatusBadge status={order.status} />
-                    <PaymentBadge isPaid={order.is_paid} paidAt={order.paid_at} />
+                    <PaymentBadge isPaid={order.is_paid} paymentMethod={order.payment_method} walletHoldAmount={order.wallet_hold_amount || 0} />
                     {order.is_manual_order && (
                       <span className="px-2 py-0.5 text-xs bg-blue-500/20 text-blue-400 rounded-full">Manual</span>
                     )}
@@ -1891,7 +1905,7 @@ const BranchOrdersTab = () => {
               </div>
               <div className="flex gap-2">
                 <OrderStatusBadge status={selectedOrder.status} />
-                <PaymentBadge isPaid={selectedOrder.is_paid} />
+                <PaymentBadge isPaid={selectedOrder.is_paid} paymentMethod={selectedOrder.payment_method} walletHoldAmount={selectedOrder.wallet_hold_amount || 0} />
               </div>
             </div>
 

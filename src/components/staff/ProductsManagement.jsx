@@ -47,6 +47,7 @@ const ProductsManagement = ({ onRefresh, user }) => {
   const [filterStock, setFilterStock] = useState('all')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState(null)
+  const [batchViewProduct, setBatchViewProduct] = useState(null) // FIFO batch viewer
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -63,13 +64,25 @@ const ProductsManagement = ({ onRefresh, user }) => {
   const [formErrors, setFormErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Convex queries and mutations
-  const products = useQuery(api.services.products.getAllProducts) || []
+  // Check if editing product is synced from catalog (restricted edit)
+  const isCatalogSynced = editingProduct?.catalog_product_id != null
+
+  // Convex queries and mutations — filter by branch
+  const products = useQuery(
+    api.services.products.getProductsByBranch,
+    user?.branch_id ? { branch_id: user.branch_id } : 'skip'
+  ) || []
   const createProductMutation = useMutation(api.services.products.createProduct)
   const updateProductMutation = useMutation(api.services.products.updateProduct)
   const deleteProductMutation = useMutation(api.services.products.deleteProduct)
   const generateUploadUrl = useMutation(api.services.products.generateUploadUrl)
   const deleteImage = useMutation(api.services.products.deleteImage)
+
+  // FIFO batch data for selected product
+  const batchData = useQuery(
+    api.services.products.getBranchProductWithBatches,
+    batchViewProduct ? { product_id: batchViewProduct._id } : 'skip'
+  )
 
   // Product transaction history
   const productTransactionHistory = useQuery(
@@ -165,27 +178,37 @@ const ProductsManagement = ({ onRefresh, user }) => {
   const validateForm = () => {
     const errors = {}
 
-    if (!formData.name.trim()) errors.name = 'Product name is required'
-    if (!formData.description.trim()) errors.description = 'Description is required'
-    if (!formData.price || formData.price <= 0) errors.price = 'Valid price is required'
-    if (!formData.cost || formData.cost < 0) errors.cost = 'Valid cost is required'
-    if (!formData.brand.trim()) errors.brand = 'Brand is required'
-    if (!formData.sku.trim()) errors.sku = 'SKU is required'
-    if (!formData.stock || formData.stock < 0) errors.stock = 'Valid stock quantity is required'
-    if (!formData.minStock || formData.minStock < 0) errors.minStock = 'Valid minimum stock is required'
+    if (isCatalogSynced) {
+      // For catalog-synced products, only validate editable fields
+      if (!formData.price || formData.price <= 0) errors.price = 'Valid selling price is required'
+      if (!formData.minStock || formData.minStock < 0) errors.minStock = 'Valid minimum stock is required'
+      // Selling price must be >= cost (buying price)
+      if (formData.price && formData.cost && parseFloat(formData.price) < parseFloat(formData.cost)) {
+        errors.price = 'Selling price must be at least the buying price (₱' + parseFloat(formData.cost).toLocaleString() + ')'
+      }
+    } else {
+      if (!formData.name.trim()) errors.name = 'Product name is required'
+      if (!formData.description.trim()) errors.description = 'Description is required'
+      if (!formData.price || formData.price <= 0) errors.price = 'Valid price is required'
+      if (!formData.cost || formData.cost < 0) errors.cost = 'Valid cost is required'
+      if (!formData.brand.trim()) errors.brand = 'Brand is required'
+      if (!formData.sku.trim()) errors.sku = 'SKU is required'
+      if (!formData.stock || formData.stock < 0) errors.stock = 'Valid stock quantity is required'
+      if (!formData.minStock || formData.minStock < 0) errors.minStock = 'Valid minimum stock is required'
 
-    // Price validation
-    if (formData.price && formData.cost && parseFloat(formData.price) <= parseFloat(formData.cost)) {
-      errors.price = 'Price must be higher than cost'
-    }
+      // Price validation
+      if (formData.price && formData.cost && parseFloat(formData.price) <= parseFloat(formData.cost)) {
+        errors.price = 'Price must be higher than cost'
+      }
 
-    // SKU uniqueness check (excluding current product when editing)
-    const existingSku = products.find(p =>
-      p.sku.toLowerCase() === formData.sku.toLowerCase() &&
-      (!editingProduct || p._id !== editingProduct._id)
-    )
-    if (existingSku) {
-      errors.sku = 'SKU already exists'
+      // SKU uniqueness check (excluding current product when editing)
+      const existingSku = products.find(p =>
+        p.sku.toLowerCase() === formData.sku.toLowerCase() &&
+        (!editingProduct || p._id !== editingProduct._id)
+      )
+      if (existingSku) {
+        errors.sku = 'SKU already exists'
+      }
     }
 
     setFormErrors(errors)
@@ -198,45 +221,52 @@ const ProductsManagement = ({ onRefresh, user }) => {
 
     setIsSubmitting(true)
     try {
-      // Upload image if selected
-      let imageStorageId = formData.imageStorageId
-      if (selectedImage) {
-        imageStorageId = await handleImageUpload()
-        if (!imageStorageId) {
-          return // Upload failed, error already set
-        }
-      }
-
-      const productData = {
-        name: formData.name,
-        description: formData.description,
-        price: parseFloat(formData.price),
-        cost: parseFloat(formData.cost),
-        category: formData.category,
-        brand: formData.brand,
-        sku: formData.sku,
-        stock: parseInt(formData.stock),
-        minStock: parseInt(formData.minStock),
-        imageStorageId: imageStorageId || undefined,
-        status: formData.status
-      }
-
-      if (editingProduct) {
-        // Update existing product
+      if (isCatalogSynced && editingProduct) {
+        // Catalog-synced product: only update selling price and minStock
         await updateProductMutation({
           id: editingProduct._id,
-          ...productData
+          price: parseFloat(formData.price),
+          minStock: parseInt(formData.minStock),
         })
       } else {
-        // Create new product - include branch_id
-        if (!user?.branch_id) {
-          setFormErrors({ submit: 'User branch not found. Please ensure you are assigned to a branch.' })
-          return
+        // Manual product: full edit
+        let imageStorageId = formData.imageStorageId
+        if (selectedImage) {
+          imageStorageId = await handleImageUpload()
+          if (!imageStorageId) {
+            return
+          }
         }
-        await createProductMutation({
-          ...productData,
-          branch_id: user.branch_id
-        })
+
+        const productData = {
+          name: formData.name,
+          description: formData.description,
+          price: parseFloat(formData.price),
+          cost: parseFloat(formData.cost),
+          category: formData.category,
+          brand: formData.brand,
+          sku: formData.sku,
+          stock: parseInt(formData.stock),
+          minStock: parseInt(formData.minStock),
+          imageStorageId: imageStorageId || undefined,
+          status: formData.status
+        }
+
+        if (editingProduct) {
+          await updateProductMutation({
+            id: editingProduct._id,
+            ...productData
+          })
+        } else {
+          if (!user?.branch_id) {
+            setFormErrors({ submit: 'User branch not found. Please ensure you are assigned to a branch.' })
+            return
+          }
+          await createProductMutation({
+            ...productData,
+            branch_id: user.branch_id
+          })
+        }
       }
 
       handleCloseModal()
@@ -690,22 +720,37 @@ const ProductsManagement = ({ onRefresh, user }) => {
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <div className="text-lg font-bold text-[var(--color-primary)]">₱{product.price.toLocaleString()}</div>
-                      <div className="text-xs text-gray-500">Cost: ₱{product.cost.toLocaleString()}</div>
+                      <div className="text-xs text-gray-500">{product.catalog_product_id ? 'Buying' : 'Cost'}: ₱{product.cost.toLocaleString()}</div>
                       <div className="text-xs text-green-400">+{profitMargin}% margin</div>
                     </div>
                   </div>
 
+                  {/* Catalog sync indicator */}
+                  {product.catalog_product_id && (
+                    <div className="flex items-center gap-1.5 mb-2 px-2 py-1 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                      <Package className="w-3 h-3 text-blue-400" />
+                      <span className="text-xs text-blue-400">Synced from HQ Catalog</span>
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500 capitalize">{product.category.replace('-', ' ')}</span>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => setBatchViewProduct(product)}
+                        className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-400/20 rounded-lg transition-colors"
+                        title="View Batches (FIFO)"
+                      >
+                        <History className="h-4 w-4" />
+                      </button>
                       <button
                         onClick={() => handleEdit(product)}
                         className="p-2 text-gray-400 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 rounded-lg transition-colors"
-                        title="Edit Product"
+                        title={product.catalog_product_id ? "Edit Selling Price & Min Stock" : "Edit Product"}
                       >
                         <Edit className="h-4 w-4" />
                       </button>
-                      {(user?.role === "branch_admin" ||
+                      {!product.catalog_product_id && (user?.role === "branch_admin" ||
                         user?.role === "super_admin") && (
                           <button
                             onClick={() => handleDelete(product._id)}
@@ -749,15 +794,192 @@ const ProductsManagement = ({ onRefresh, user }) => {
       )}
       </div>
 
+      {/* FIFO Batch Viewer Modal */}
+      {batchViewProduct && (
+        <Modal
+          isOpen={!!batchViewProduct}
+          onClose={() => setBatchViewProduct(null)}
+          title={`Inventory Batches — ${batchViewProduct.name}`}
+          size="lg"
+          variant="dark"
+        >
+          <div className="space-y-4">
+            {/* Product Summary */}
+            <div className="bg-[#252525] rounded-xl p-4 border border-[#333333]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-white font-semibold">{batchViewProduct.name}</p>
+                  <p className="text-gray-400 text-sm">{batchViewProduct.brand} · {batchViewProduct.sku}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-white">{batchViewProduct.stock}</p>
+                  <p className="text-xs text-gray-400">Total Stock</p>
+                </div>
+              </div>
+            </div>
+
+            {/* FIFO Batch List */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">
+                Batches (Oldest First — FIFO)
+              </h4>
+              {batchData?.batches && batchData.batches.length > 0 ? (
+                <div className="space-y-2">
+                  {batchData.batches.map((batch, idx) => (
+                    <div key={batch._id} className={`p-3 rounded-xl border ${idx === 0 ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-[#1A1A1A] border-[#2A2A2A]'}`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          {idx === 0 && <span className="px-1.5 py-0.5 text-[10px] font-bold bg-yellow-500/20 text-yellow-400 rounded">NEXT OUT</span>}
+                          <span className="text-xs font-mono text-gray-400">{batch.batch_number}</span>
+                        </div>
+                        <span className="text-sm font-bold text-white">{batch.quantity} / {batch.initial_quantity} units</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>Received: {new Date(batch.received_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        {batch.cost_per_unit != null && <span>Cost: ₱{batch.cost_per_unit.toLocaleString()}/unit</span>}
+                      </div>
+                      {batch.supplier && <p className="text-xs text-gray-500 mt-1">From: {batch.supplier}</p>}
+                      {batch.notes && <p className="text-xs text-gray-400 mt-1">{batch.notes}</p>}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 bg-[#1A1A1A] rounded-xl border border-[#2A2A2A]">
+                  <Package className="mx-auto h-10 w-10 text-gray-600 mb-2" />
+                  <p className="text-gray-400 text-sm">No batch records found</p>
+                  <p className="text-gray-500 text-xs mt-1">Batches are created when orders are received from HQ</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* Create/Edit Product Modal */}
       <Modal
         isOpen={showCreateModal}
         onClose={handleCloseModal}
-        title={editingProduct ? 'Edit Product' : 'Add New Product'}
-        size="xl"
+        title={isCatalogSynced ? 'Edit Selling Price' : (editingProduct ? 'Edit Product' : 'Add New Product')}
+        size={isCatalogSynced ? 'md' : 'xl'}
         variant="dark"
       >
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Catalog-synced product: simplified edit (selling price + minStock only) */}
+          {isCatalogSynced ? (
+            <div className="space-y-5">
+              {/* Product Info (read-only) */}
+              <div className="bg-[#252525] rounded-xl p-4 border border-[#333333]">
+                <div className="flex items-center gap-2 mb-3">
+                  <Package className="w-4 h-4 text-blue-400" />
+                  <span className="text-xs font-medium text-blue-400">Synced from HQ Catalog — only selling price and min stock can be edited</span>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Product</span>
+                    <span className="text-white font-medium">{formData.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Brand</span>
+                    <span className="text-gray-300">{formData.brand}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Category</span>
+                    <span className="text-gray-300 capitalize">{formData.category?.replace('-', ' ')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">SKU</span>
+                    <span className="text-gray-300 font-mono">{formData.sku}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Current Stock</span>
+                    <span className="text-white font-semibold">{formData.stock} units</span>
+                  </div>
+                  <div className="flex justify-between border-t border-[#333333] pt-2 mt-2">
+                    <span className="text-gray-400">Buying Price (from HQ)</span>
+                    <span className="text-yellow-400 font-bold">₱{parseFloat(formData.cost || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Editable Fields */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">
+                    Selling Price (₱) <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.price}
+                    onChange={(e) => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                    min={formData.cost || 0}
+                    step="0.01"
+                    className={`w-full px-4 py-2.5 bg-[#1A1A1A] border rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200 ${formErrors.price ? 'border-red-500/50 bg-red-500/10' : 'border-[#333333] hover:border-[#444444]'}`}
+                    placeholder="0.00"
+                  />
+                  {formErrors.price && (
+                    <p className="mt-1.5 text-sm text-red-400 flex items-center">
+                      <AlertCircle className="h-3.5 w-3.5 mr-1" />{formErrors.price}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">
+                    Min. Stock Alert <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.minStock}
+                    onChange={(e) => setFormData(prev => ({ ...prev, minStock: e.target.value }))}
+                    min="0"
+                    className={`w-full px-4 py-2.5 bg-[#1A1A1A] border rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200 ${formErrors.minStock ? 'border-red-500/50 bg-red-500/10' : 'border-[#333333] hover:border-[#444444]'}`}
+                    placeholder="10"
+                  />
+                  {formErrors.minStock && (
+                    <p className="mt-1.5 text-sm text-red-400 flex items-center">
+                      <AlertCircle className="h-3.5 w-3.5 mr-1" />{formErrors.minStock}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Profit Preview */}
+              {formData.price && formData.cost && parseFloat(formData.price) > parseFloat(formData.cost) && (
+                <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-green-400">
+                        Profit Margin: {(((parseFloat(formData.price) - parseFloat(formData.cost)) / parseFloat(formData.price)) * 100).toFixed(1)}%
+                      </h4>
+                      <p className="text-xs text-green-400/70">₱{(parseFloat(formData.price) - parseFloat(formData.cost)).toFixed(2)} per unit</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {formErrors.submit && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+                  <p className="text-sm text-red-400 flex items-center">
+                    <AlertCircle className="h-4 w-4 mr-2" />{formErrors.submit}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex justify-end space-x-3 pt-4 border-t border-[#333333]">
+                <button type="button" onClick={handleCloseModal} className="px-5 py-2.5 bg-[#333333] text-gray-300 font-semibold rounded-xl hover:bg-[#444444] transition-colors">
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-6 py-2.5 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] text-white font-bold rounded-xl hover:brightness-110 transition-all flex items-center space-x-2 disabled:opacity-50"
+                >
+                  {isSubmitting ? <><RefreshCw className="w-4 h-4 animate-spin" /><span>Saving...</span></> : <><Save className="w-4 h-4" /><span>Update Pricing</span></>}
+                </button>
+              </div>
+            </div>
+          ) : (
+          <>
+          {/* Original full form for non-catalog products */}
           {/* Product Image Section */}
           <div className="bg-[#252525] rounded-2xl p-5 border border-[#333333]">
             <h3 className="text-base font-bold text-white mb-4 flex items-center">
@@ -1113,6 +1335,8 @@ const ProductsManagement = ({ onRefresh, user }) => {
               )}
             </button>
           </div>
+          </>
+          )}
         </form>
       </Modal>
 

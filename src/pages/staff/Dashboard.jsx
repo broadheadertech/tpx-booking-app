@@ -13,6 +13,7 @@ import ProductsHub from "../../components/staff/hubs/ProductsHub";
 import FinanceHub from "../../components/staff/hubs/FinanceHub";
 import MarketingHub from "../../components/staff/hubs/MarketingHub";
 import BranchSettings from "../../components/staff/BranchSettings";
+import MorningBriefing from "../../components/staff/MorningBriefing";
 import DashboardFooter from "../../components/common/DashboardFooter";
 import {
   NotificationModal,
@@ -195,6 +196,7 @@ function StaffDashboard() {
 
     return (
       <div className="space-y-6">
+        <MorningBriefing user={user} />
         <StatsCards
           stats={[
             {

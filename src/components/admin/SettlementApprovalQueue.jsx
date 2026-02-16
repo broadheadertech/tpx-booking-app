@@ -12,7 +12,12 @@ import {
   ChevronRight,
   FileText,
   RefreshCw,
-  HelpCircle
+  HelpCircle,
+  Sparkles,
+  ShieldCheck,
+  ShieldAlert,
+  Eye,
+  TrendingUp,
 } from 'lucide-react';
 import SettlementDetailModal from './SettlementDetailModal';
 import WalkthroughOverlay from '../common/WalkthroughOverlay'
@@ -66,6 +71,7 @@ export default function SettlementApprovalQueue() {
   const [activeTab, setActiveTab] = useState('pending');
   const [selectedSettlementId, setSelectedSettlementId] = useState(null);
   const [showTutorial, setShowTutorial] = useState(false)
+  const [showInsights, setShowInsights] = useState(true)
   const handleTutorialDone = useCallback(() => setShowTutorial(false), [])
 
   // Query settlements by status (real-time via Convex)
@@ -76,6 +82,20 @@ export default function SettlementApprovalQueue() {
 
   // Query settlement summary for badge counts
   const summary = useQuery(api.services.settlements.getSettlementSummary);
+
+  // Source breakdown for pending earnings (online vs wallet)
+  const sourceSummary = useQuery(api.services.settlements.getPendingEarningsSourceSummary);
+
+  // AI Insights for pending settlements
+  const aiInsights = useQuery(api.services.settlementInsights.getPendingSettlementInsights);
+
+  // Map insights by settlement ID for quick lookup
+  const insightMap = {};
+  if (aiInsights?.insights) {
+    for (const insight of aiInsights.insights) {
+      insightMap[insight.settlement_id] = insight;
+    }
+  }
 
   const formatDate = (timestamp) => {
     return new Date(timestamp).toLocaleDateString('en-PH', {
@@ -122,10 +142,26 @@ export default function SettlementApprovalQueue() {
 
         {/* Summary Stats */}
         {summary && (
-          <div className="flex items-center gap-4 text-sm">
-            <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-4 py-2">
-              <span className="text-gray-400">Pending:</span>
-              <span className="ml-2 text-[var(--color-primary)] font-semibold">
+          <div className="flex items-center gap-2 sm:gap-4 text-sm flex-wrap">
+            {sourceSummary && sourceSummary.online.count > 0 && (
+              <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-3 py-2">
+                <span className="text-gray-400">Online:</span>
+                <span className="ml-1.5 text-blue-400 font-semibold">
+                  ₱{sourceSummary.online.total?.toLocaleString() || 0}
+                </span>
+              </div>
+            )}
+            {sourceSummary && sourceSummary.wallet.count > 0 && (
+              <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-3 py-2">
+                <span className="text-gray-400">Wallet:</span>
+                <span className="ml-1.5 text-green-400 font-semibold">
+                  ₱{sourceSummary.wallet.total?.toLocaleString() || 0}
+                </span>
+              </div>
+            )}
+            <div className="bg-[#1A1A1A] border border-[#2A2A2A] rounded-lg px-3 py-2">
+              <span className="text-gray-400">Total Pending:</span>
+              <span className="ml-1.5 text-[var(--color-primary)] font-semibold">
                 ₱{summary.totalPendingAmount?.toLocaleString() || 0}
               </span>
             </div>
@@ -170,6 +206,66 @@ export default function SettlementApprovalQueue() {
         </div>
       </div>
 
+      {/* AI Insights Panel */}
+      {activeTab === 'pending' && aiInsights?.summary && aiInsights.summary.total_pending > 0 && showInsights && (
+        <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-xl border border-purple-500/20 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-purple-400" />
+              <h3 className="text-white font-semibold text-sm">AI Settlement Analysis</h3>
+            </div>
+            <button onClick={() => setShowInsights(false)} className="text-gray-500 hover:text-gray-300 text-xs">
+              Hide
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-[#1A1A1A] rounded-lg p-3 border border-[#2A2A2A]">
+              <div className="flex items-center gap-1.5 mb-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-green-400" />
+                <span className="text-gray-400 text-[11px]">Auto-Approvable</span>
+              </div>
+              <span className="text-green-400 text-xl font-bold">{aiInsights.summary.auto_approvable}</span>
+              <span className="text-gray-500 text-xs ml-1">of {aiInsights.summary.total_pending}</span>
+            </div>
+
+            <div className="bg-[#1A1A1A] rounded-lg p-3 border border-[#2A2A2A]">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Eye className="w-3.5 h-3.5 text-yellow-400" />
+                <span className="text-gray-400 text-[11px]">Needs Review</span>
+              </div>
+              <span className="text-yellow-400 text-xl font-bold">{aiInsights.summary.needs_review}</span>
+            </div>
+
+            <div className="bg-[#1A1A1A] rounded-lg p-3 border border-[#2A2A2A]">
+              <div className="flex items-center gap-1.5 mb-1">
+                <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
+                <span className="text-gray-400 text-[11px]">Flagged</span>
+              </div>
+              <span className="text-red-400 text-xl font-bold">{aiInsights.summary.flagged}</span>
+            </div>
+
+            <div className="bg-[#1A1A1A] rounded-lg p-3 border border-[#2A2A2A]">
+              <div className="flex items-center gap-1.5 mb-1">
+                <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
+                <span className="text-gray-400 text-[11px]">Total Pending</span>
+              </div>
+              <span className="text-blue-400 text-lg font-bold">₱{aiInsights.summary.total_pending_amount?.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'pending' && aiInsights?.summary && aiInsights.summary.total_pending > 0 && !showInsights && (
+        <button
+          onClick={() => setShowInsights(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-purple-500/10 border border-purple-500/20 rounded-lg text-purple-400 text-sm hover:bg-purple-500/20 transition-colors"
+        >
+          <Sparkles className="w-4 h-4" />
+          Show AI Analysis ({aiInsights.summary.auto_approvable} auto-approvable)
+        </button>
+      )}
+
       {/* Settlement List */}
       <div data-tour="settlement-list" className="bg-gradient-to-br from-[#1A1A1A] to-[#2A2A2A] rounded-xl border border-[#333333] overflow-hidden">
         {/* Desktop Table */}
@@ -189,6 +285,11 @@ export default function SettlementApprovalQueue() {
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                   Requested
                 </th>
+                {activeTab === 'pending' && (
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    AI Score
+                  </th>
+                )}
                 <th className="px-4 py-3 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">
                   Status
                 </th>
@@ -224,7 +325,7 @@ export default function SettlementApprovalQueue() {
                 ))
               ) : settlements?.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-16 text-center">
+                  <td colSpan={activeTab === 'pending' ? 7 : 6} className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="p-4 bg-[#333333] rounded-full">
                         <FileText className="w-8 h-8 text-gray-500" />
@@ -269,6 +370,37 @@ export default function SettlementApprovalQueue() {
                       <p className="text-white text-sm">{formatDate(settlement.created_at)}</p>
                       <p className="text-gray-500 text-xs">{formatTime(settlement.created_at)}</p>
                     </td>
+                    {activeTab === 'pending' && (() => {
+                      const insight = insightMap[settlement._id];
+                      if (!insight) return (
+                        <td className="px-4 py-4 text-center">
+                          <span className="text-gray-500 text-xs">—</span>
+                        </td>
+                      );
+                      const scoreColor = insight.confidence_score >= 80
+                        ? 'text-green-400 bg-green-500/20 border-green-500/30'
+                        : insight.confidence_score >= 50
+                          ? 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30'
+                          : 'text-red-400 bg-red-500/20 border-red-500/30';
+                      const RecoIcon = insight.recommendation === 'approve'
+                        ? ShieldCheck
+                        : insight.recommendation === 'review'
+                          ? Eye
+                          : ShieldAlert;
+                      return (
+                        <td className="px-4 py-4 text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border ${scoreColor}`}>
+                              <RecoIcon className="w-3 h-3" />
+                              {insight.confidence_score}
+                            </span>
+                            <span className="text-gray-500 text-[10px] capitalize">
+                              {insight.recommendation}
+                            </span>
+                          </div>
+                        </td>
+                      );
+                    })()}
                     <td className="px-4 py-4 text-center">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadgeClasses(settlement.status)}`}>
                         {getStatusIcon(settlement.status)}
@@ -278,9 +410,13 @@ export default function SettlementApprovalQueue() {
                     <td className="px-4 py-4 text-right">
                       <button
                         onClick={() => setSelectedSettlementId(settlement._id)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white text-sm font-medium rounded-lg transition-colors min-h-[44px]"
+                        className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors min-h-[44px] ${
+                          activeTab === 'completed' || activeTab === 'rejected'
+                            ? 'bg-[#333333] hover:bg-[#444444] text-gray-300'
+                            : 'bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white'
+                        }`}
                       >
-                        Review
+                        {activeTab === 'completed' || activeTab === 'rejected' ? 'View Details' : 'Review'}
                         <ChevronRight className="w-4 h-4" />
                       </button>
                     </td>
@@ -352,6 +488,23 @@ export default function SettlementApprovalQueue() {
                     <span className="text-gray-500">
                       {formatDate(settlement.created_at)}
                     </span>
+                    {activeTab === 'pending' && insightMap[settlement._id] && (() => {
+                      const insight = insightMap[settlement._id];
+                      const scoreColor = insight.confidence_score >= 80
+                        ? 'text-green-400 bg-green-500/20 border-green-500/30'
+                        : insight.confidence_score >= 50
+                          ? 'text-yellow-400 bg-yellow-500/20 border-yellow-500/30'
+                          : 'text-red-400 bg-red-500/20 border-red-500/30';
+                      return (
+                        <>
+                          <span className="text-gray-600">•</span>
+                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border ${scoreColor}`}>
+                            <Sparkles className="w-2.5 h-2.5" />
+                            {insight.confidence_score}
+                          </span>
+                        </>
+                      );
+                    })()}
                   </div>
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${getStatusBadgeClasses(settlement.status)}`}>
                     {getStatusIcon(settlement.status)}
@@ -361,9 +514,13 @@ export default function SettlementApprovalQueue() {
 
                 <button
                   onClick={() => setSelectedSettlementId(settlement._id)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white font-medium rounded-lg transition-colors min-h-[44px]"
+                  className={`w-full flex items-center justify-center gap-2 px-4 py-3 font-medium rounded-lg transition-colors min-h-[44px] ${
+                    activeTab === 'completed' || activeTab === 'rejected'
+                      ? 'bg-[#333333] hover:bg-[#444444] text-gray-300'
+                      : 'bg-[var(--color-primary)] hover:bg-[var(--color-accent)] text-white'
+                  }`}
                 >
-                  Review Settlement
+                  {activeTab === 'completed' || activeTab === 'rejected' ? 'View Details' : 'Review Settlement'}
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>

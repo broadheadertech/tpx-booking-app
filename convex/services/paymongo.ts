@@ -2,6 +2,11 @@ import { action, mutation, query } from "../_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "../_generated/api";
 import { encryptApiKey, decryptApiKey } from "../lib/encryption";
+import {
+  calculateCommission,
+  DEFAULT_COMMISSION_PERCENT,
+  EARNING_STATUS,
+} from "../lib/walletUtils";
 
 const PAYMONGO_SECRET_KEY = process.env.PAYMONGO_SECRET_KEY || "";
 
@@ -352,6 +357,44 @@ export const savePaymentConfig = mutation({
 });
 
 /**
+ * Toggle branch PayMongo on/off
+ * When OFF: payments route through super admin's PayMongo (fallback)
+ * When ON: payments route through branch's own PayMongo keys
+ */
+export const toggleBranchPaymongo = mutation({
+  args: {
+    branch_id: v.id("branches"),
+    enabled: v.boolean(),
+    updated_by: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const config = await ctx.db
+      .query("branchPaymentConfig")
+      .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
+      .first();
+
+    if (!config) {
+      if (args.enabled) {
+        throw new Error("Please configure PayMongo API keys first to use your own account");
+      }
+      return { success: true, status: "already_fallback" };
+    }
+
+    if (args.enabled && (!config.public_key_encrypted || !config.secret_key_encrypted)) {
+      throw new Error("Please configure PayMongo API keys first to enable your own account");
+    }
+
+    await ctx.db.patch(config._id, {
+      is_enabled: args.enabled,
+      updated_at: Date.now(),
+      updated_by: args.updated_by,
+    });
+
+    return { success: true, status: args.enabled ? "enabled" : "disabled" };
+  },
+});
+
+/**
  * Update payment settings without changing API keys
  * Use this when you just want to update toggles or convenience fee settings
  */
@@ -451,36 +494,56 @@ export const getPaymentConfig = query({
       .withIndex("by_branch", (q) => q.eq("branch_id", args.branch_id))
       .first();
 
-    if (!config) {
-      return null;
+    if (config && config.is_enabled) {
+      // Branch has its own active PayMongo config
+      return {
+        _id: config._id,
+        branch_id: config.branch_id,
+        provider: config.provider,
+        is_enabled: config.is_enabled,
+        is_fallback: false,
+        has_own_config: true,
+        has_public_key: !!config.public_key_encrypted,
+        has_secret_key: !!config.secret_key_encrypted,
+        has_webhook_secret: !!config.webhook_secret_encrypted,
+        pay_now_enabled: config.pay_now_enabled,
+        pay_later_enabled: config.pay_later_enabled,
+        pay_at_shop_enabled: config.pay_at_shop_enabled,
+        convenience_fee_type: config.convenience_fee_type || "percent",
+        convenience_fee_percent: config.convenience_fee_percent,
+        convenience_fee_amount: config.convenience_fee_amount,
+        created_at: config.created_at,
+        updated_at: config.updated_at,
+      };
     }
 
-    // Debug: Log what's in the database
-    console.log('[getPaymentConfig] Raw database value:', {
-      convenience_fee_type: config.convenience_fee_type,
-      convenience_fee_percent: config.convenience_fee_percent,
-      convenience_fee_amount: config.convenience_fee_amount,
-    });
+    // Fallback: Check if SA wallet config has PayMongo keys
+    const saConfig = await ctx.db.query("walletConfig").first();
+    if (saConfig && saConfig.paymongo_secret_key && saConfig.paymongo_public_key) {
+      // has_own_config: true means branch has keys saved but disabled (can re-enable)
+      const hasOwnConfig = !!config && !!config.public_key_encrypted && !!config.secret_key_encrypted;
+      return {
+        _id: config?._id,
+        branch_id: args.branch_id,
+        provider: "paymongo",
+        is_enabled: true,
+        is_fallback: true,
+        has_own_config: hasOwnConfig,
+        has_public_key: true,
+        has_secret_key: true,
+        has_webhook_secret: !!saConfig.paymongo_webhook_secret,
+        pay_now_enabled: true,
+        pay_later_enabled: false,
+        pay_at_shop_enabled: true,
+        convenience_fee_type: "percent" as const,
+        convenience_fee_percent: undefined,
+        convenience_fee_amount: undefined,
+        created_at: undefined,
+        updated_at: undefined,
+      };
+    }
 
-    // Return config WITHOUT decrypted keys
-    // Only return metadata about whether keys are configured
-    return {
-      _id: config._id,
-      branch_id: config.branch_id,
-      provider: config.provider,
-      is_enabled: config.is_enabled,
-      has_public_key: !!config.public_key_encrypted,
-      has_secret_key: !!config.secret_key_encrypted,
-      has_webhook_secret: !!config.webhook_secret_encrypted,
-      pay_now_enabled: config.pay_now_enabled,
-      pay_later_enabled: config.pay_later_enabled,
-      pay_at_shop_enabled: config.pay_at_shop_enabled,
-      convenience_fee_type: config.convenience_fee_type || "percent",
-      convenience_fee_percent: config.convenience_fee_percent,
-      convenience_fee_amount: config.convenience_fee_amount,
-      created_at: config.created_at,
-      updated_at: config.updated_at,
-    };
+    return null;
   },
 });
 
@@ -663,12 +726,17 @@ export const updateBookingPaymentLink = mutation({
   args: {
     booking_id: v.id("bookings"),
     paymongo_link_id: v.string(),
+    processed_via_admin: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.booking_id, {
+    const updates: Record<string, any> = {
       paymongo_link_id: args.paymongo_link_id,
       updatedAt: Date.now(),
-    });
+    };
+    if (args.processed_via_admin) {
+      updates.processed_via_admin = true;
+    }
+    await ctx.db.patch(args.booking_id, updates);
     return { success: true };
   },
 });
@@ -799,10 +867,11 @@ export const createPaymentLink = action({
     const linkId = data.data.id;
     const checkoutUrl = data.data.attributes.checkout_url;
 
-    // Update booking with payment link ID
+    // Update booking with payment link ID (and fallback flag if using admin's PayMongo)
     await ctx.runMutation(internal.services.paymongo.updateBookingPaymentLink, {
       booking_id: args.booking_id,
       paymongo_link_id: linkId,
+      processed_via_admin: config.is_fallback || false,
     });
 
     // Log successful link creation (FR27)
@@ -981,6 +1050,7 @@ export const createPaymentLinkDeferred = action({
           cancel_url: cancelUrl,
           description: `${description} - ${args.payment_type === "pay_now" ? "Full Payment" : args.payment_type === "combo_wallet_online" ? "Partial Payment" : "Convenience Fee"}`,
           metadata: {
+            type: "booking_payment",
             payment_type: args.payment_type,
             deferred_booking: "true",
             is_combo_payment: args.is_combo_payment ? "true" : "false",
@@ -1055,6 +1125,8 @@ export const createPaymentLinkDeferred = action({
       // Combo payment fields
       is_combo_payment: args.is_combo_payment || false,
       wallet_portion: walletPortion,
+      // PayMongo fallback tracking
+      processed_via_admin: config.is_fallback || false,
     });
 
     // Log successful checkout session creation
@@ -1104,6 +1176,8 @@ export const createPendingPayment = mutation({
     // Combo payment fields
     is_combo_payment: v.optional(v.boolean()),
     wallet_portion: v.optional(v.number()),
+    // PayMongo fallback tracking
+    processed_via_admin: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("pendingPayments", {
@@ -1287,6 +1361,51 @@ export const createBookingFromPending = mutation({
       paid_at: now,
     });
 
+    // Create earning record for admin-processed online payments (settlement tracking)
+    // This runs in the same mutation as booking creation for reliability
+    if (pending.processed_via_admin) {
+      try {
+        // Get commission rate: branch override > global config > default
+        const branchSettings = await ctx.db
+          .query("branchWalletSettings")
+          .withIndex("by_branch", (q) => q.eq("branch_id", pending.branch_id))
+          .first();
+        const globalConfig = await ctx.db.query("walletConfig").first();
+        const commissionPercent =
+          branchSettings?.commission_override ??
+          globalConfig?.default_commission_percent ??
+          DEFAULT_COMMISSION_PERCENT;
+
+        const grossAmount = args.amount_paid;
+        const { commissionAmount, netAmount } = calculateCommission(grossAmount, commissionPercent);
+
+        await ctx.db.insert("branchWalletEarnings", {
+          branch_id: pending.branch_id,
+          booking_id: bookingId,
+          customer_id: pending.customer_id,
+          service_name: service?.name || "Online Booking Payment",
+          gross_amount: grossAmount,
+          commission_percent: commissionPercent,
+          commission_amount: commissionAmount,
+          net_amount: netAmount,
+          status: EARNING_STATUS.PENDING,
+          processed_via: "admin",
+          payment_source: "online_paymongo",
+          created_at: now,
+        });
+
+        console.log("[PAYMONGO_FALLBACK] Earning record created in booking mutation:", {
+          bookingId,
+          gross: grossAmount,
+          commission: commissionAmount,
+          net: netAmount,
+          rate: commissionPercent,
+        });
+      } catch (earningError) {
+        console.error("[PAYMONGO_FALLBACK] Failed to create earning record:", earningError);
+      }
+    }
+
     // Award loyalty points for pay_now and combo_wallet_online payments
     // (Pay later doesn't earn points until full payment at branch)
     let pointsAwarded = null;
@@ -1447,11 +1566,24 @@ export const getPaymentStatusByLink = query({
 });
 
 /**
+ * Internal query to get SA wallet config (for PayMongo fallback)
+ * Used when a branch has no PayMongo config — falls back to super admin's PayMongo
+ */
+export const getSAWalletConfig = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("walletConfig").first();
+  },
+});
+
+/**
  * Internal action to get decrypted config (for use in other actions)
+ * Falls back to super admin's PayMongo config when branch has none
  */
 export const getDecryptedConfigInternal = action({
   args: {
     branch_id: v.id("branches"),
+    force_admin_fallback: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     // Validate encryption key is configured
@@ -1464,11 +1596,53 @@ export const getDecryptedConfigInternal = action({
       branch_id: args.branch_id,
     });
 
-    if (!config || !config.is_enabled) {
-      return null;
+    if (!config || !config.is_enabled || args.force_admin_fallback) {
+      // Fallback: Use super admin's PayMongo config
+      const saConfig = await ctx.runQuery(internal.services.paymongo.getSAWalletConfig);
+      if (!saConfig || !saConfig.paymongo_secret_key) {
+        return null;
+      }
+
+      try {
+        // SA wallet config stores keys in "iv:encrypted" format
+        const [secretIv, secretEncrypted] = saConfig.paymongo_secret_key.split(":");
+        const [webhookIv, webhookEncrypted] = saConfig.paymongo_webhook_secret.split(":");
+
+        if (!secretIv || !secretEncrypted || !webhookIv || !webhookEncrypted) {
+          console.error("[PAYMONGO_FALLBACK] SA wallet config keys not properly encrypted");
+          return null;
+        }
+
+        const secretKey = await decryptApiKey(secretEncrypted, secretIv, PAYMONGO_ENCRYPTION_KEY);
+        const webhookSecret = await decryptApiKey(webhookEncrypted, webhookIv, PAYMONGO_ENCRYPTION_KEY);
+
+        // Public key is stored in plaintext in walletConfig
+        const publicKey = saConfig.paymongo_public_key;
+
+        console.log("[PAYMONGO_FALLBACK] Using SA PayMongo for branch:", args.branch_id);
+
+        return {
+          branch_id: args.branch_id,
+          provider: "paymongo" as const,
+          is_enabled: true,
+          is_fallback: true, // Flag indicating admin's PayMongo is being used
+          public_key: publicKey,
+          secret_key: secretKey,
+          webhook_secret: webhookSecret,
+          pay_now_enabled: true,
+          pay_later_enabled: false,
+          pay_at_shop_enabled: true,
+          convenience_fee_type: "percent" as const,
+          convenience_fee_percent: undefined,
+          convenience_fee_amount: undefined,
+        };
+      } catch (error) {
+        console.error("[PAYMONGO_FALLBACK] Failed to decrypt SA config:", error);
+        return null;
+      }
     }
 
-    // Decrypt the API keys
+    // Decrypt the branch's API keys
     const publicKey = await decryptApiKey(
       config.public_key_encrypted,
       config.encryption_iv,
@@ -1489,6 +1663,7 @@ export const getDecryptedConfigInternal = action({
       branch_id: config.branch_id,
       provider: config.provider,
       is_enabled: config.is_enabled,
+      is_fallback: false, // Branch's own PayMongo
       public_key: publicKey,
       secret_key: secretKey,
       webhook_secret: webhookSecret,
@@ -1609,8 +1784,10 @@ export const processWebhook = action({
       });
 
       // Get branch payment config to verify signature
+      // Force admin fallback if this payment was originally processed via admin's PayMongo
       const config = await ctx.runAction(internal.services.paymongo.getDecryptedConfigInternal, {
         branch_id: pendingPayment.branch_id,
+        force_admin_fallback: pendingPayment.processed_via_admin || false,
       });
 
       if (!config) {
@@ -1665,6 +1842,9 @@ export const processWebhook = action({
           amount_paid: args.amount,
         });
 
+        // Note: Earning record for admin-processed payments is now created
+        // inside createBookingFromPending mutation for reliability
+
         // Log payment completed
         await ctx.runMutation(internal.services.paymongo.logPaymentEvent, {
           branch_id: pendingPayment.branch_id,
@@ -1707,8 +1887,10 @@ export const processWebhook = action({
     });
 
     // Get branch payment config to verify signature
+    // Force admin fallback if this booking was originally processed via admin's PayMongo
     const config = await ctx.runAction(internal.services.paymongo.getDecryptedConfigInternal, {
       branch_id: booking.branch_id,
+      force_admin_fallback: booking.processed_via_admin || false,
     });
 
     if (!config) {
@@ -1774,6 +1956,10 @@ export const processWebhook = action({
         paymongo_payment_id: args.paymentId,
         convenience_fee_paid: convenienceFeePaid,
       });
+
+      // Note: For regular bookings with admin-processed payments, earning record
+      // would need to be created here if needed in the future.
+      // Currently, deferred bookings (the primary flow) handle this in createBookingFromPending.
 
       // Log payment completed (FR28)
       await ctx.runMutation(internal.services.paymongo.logPaymentEvent, {
