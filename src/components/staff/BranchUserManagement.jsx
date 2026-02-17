@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useQuery, useMutation, useAction } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import { useCurrentUser } from '../../hooks/useCurrentUser'
-import { User, UserPlus, Edit, Trash2, Building, Users, Search, Filter, X, AlertCircle, Shield, HelpCircle, Scan, RefreshCw, CheckCircle } from 'lucide-react'
+import { User, UserPlus, Edit, Building, Users, Search, Filter, X, AlertCircle, Shield, HelpCircle, Scan, RefreshCw, CheckCircle, UserX, UserCheck } from 'lucide-react'
 import UserFormModal from '../admin/UserFormModal'
 import PermissionConfigModal from '../admin/PermissionConfigModal'
 import FaceEnrollment from './FaceEnrollment'
@@ -10,9 +10,12 @@ import { createPortal } from 'react-dom'
 import WalkthroughOverlay from '../common/WalkthroughOverlay'
 import { branchUserSteps } from '../../config/walkthroughSteps'
 
-// Delete User Modal Component
-const DeleteUserModal = React.memo(({ isOpen, onClose, onConfirm, user, loading, error }) => {
+// Toggle User Status Modal Component (Deactivate / Reactivate)
+const ToggleStatusModal = React.memo(({ isOpen, onClose, onConfirm, user, loading, error }) => {
   if (!isOpen) return null
+
+  const isActive = user?.is_active !== false
+  const action = isActive ? 'Deactivate' : 'Reactivate'
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] overflow-y-auto">
@@ -24,7 +27,7 @@ const DeleteUserModal = React.memo(({ isOpen, onClose, onConfirm, user, loading,
         <div className="relative w-full max-w-md transform rounded-2xl bg-[#1A1A1A] shadow-2xl transition-all z-[10000] border border-[#2A2A2A]/50">
           {/* Modal Header */}
           <div className="flex items-center justify-between p-6 border-b border-[#444444]/30">
-            <h3 className="text-xl font-bold text-white">Delete User</h3>
+            <h3 className="text-xl font-bold text-white">{action} User</h3>
             <button
               onClick={onClose}
               className="p-2 text-gray-400 hover:text-white hover:bg-[#333333] rounded-lg transition-colors"
@@ -43,16 +46,22 @@ const DeleteUserModal = React.memo(({ isOpen, onClose, onConfirm, user, loading,
             )}
 
             <div className="text-center">
-              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Trash2 className="h-8 w-8 text-red-400" />
+              <div className={`w-16 h-16 ${isActive ? 'bg-red-500/20' : 'bg-green-500/20'} rounded-full flex items-center justify-center mx-auto mb-4`}>
+                {isActive ? (
+                  <UserX className="h-8 w-8 text-red-400" />
+                ) : (
+                  <UserCheck className="h-8 w-8 text-green-400" />
+                )}
               </div>
 
-              <h4 className="text-lg font-semibold text-white mb-2">Confirm Deletion</h4>
+              <h4 className="text-lg font-semibold text-white mb-2">Confirm {action}</h4>
               <p className="text-gray-400 mb-4">
-                Are you sure you want to delete <strong>{user?.username}</strong>?
+                Are you sure you want to {action.toLowerCase()} <strong>{user?.username}</strong>?
               </p>
               <p className="text-sm text-gray-500 mb-6">
-                This action cannot be undone. The user will be permanently removed from the system.
+                {isActive
+                  ? 'This user will no longer be able to log in until reactivated.'
+                  : 'This user will be able to log in again.'}
               </p>
 
               <div className="bg-gray-500/10 border border-gray-500/30 rounded-lg p-3 mb-6 text-left">
@@ -76,17 +85,17 @@ const DeleteUserModal = React.memo(({ isOpen, onClose, onConfirm, user, loading,
                   type="button"
                   onClick={onConfirm}
                   disabled={loading}
-                  className="flex items-center space-x-2 px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className={`flex items-center space-x-2 px-6 py-2 ${isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors`}
                 >
                   {loading ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Deleting...</span>
+                      <span>{isActive ? 'Deactivating...' : 'Reactivating...'}</span>
                     </>
                   ) : (
                     <>
-                      <Trash2 className="h-4 w-4" />
-                      <span>Delete User</span>
+                      {isActive ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                      <span>{action} User</span>
                     </>
                   )}
                 </button>
@@ -145,7 +154,6 @@ export default function BranchUserManagement() {
   // Mutations
   const createUser = useAction(api.services.auth.createUserWithClerk)
   const updateUser = useMutation(api.services.auth.updateUser)
-  const deleteUser = useMutation(api.services.auth.deleteUser)
   const syncToClerk = useAction(api.services.auth.syncUserToClerk)
 
   const [showSyncModal, setShowSyncModal] = useState(false)
@@ -180,8 +188,8 @@ export default function BranchUserManagement() {
 
   const stats = {
     total: staffOnly.length,
-    staff: staffOnly.filter(u => u.role === 'staff').length,
-    barbers: 0 // Barbers are hidden
+    active: staffOnly.filter(u => u.is_active !== false).length,
+    inactive: staffOnly.filter(u => u.is_active === false).length,
   }
 
   const resetForm = () => {
@@ -297,20 +305,21 @@ export default function BranchUserManagement() {
     }
   }
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmToggleStatus = async () => {
     if (!selectedUser?._id) {
       setError('User ID is missing')
       return
     }
 
+    const newStatus = selectedUser.is_active !== false ? false : true
     setLoading(true)
     try {
-      await deleteUser({ userId: selectedUser._id })
+      await updateUser({ userId: selectedUser._id, is_active: newStatus })
       setShowDeleteModal(false)
       setSelectedUser(null)
     } catch (error) {
-      console.error('Error deleting user:', error)
-      setError(error.message || 'Failed to delete user')
+      console.error('Error updating user status:', error)
+      setError(error.message || 'Failed to update user status')
     } finally {
       setLoading(false)
     }
@@ -392,9 +401,9 @@ export default function BranchUserManagement() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-300">Active</p>
-              <p className="text-2xl font-bold text-[var(--color-primary)]">{stats.staff}</p>
+              <p className="text-2xl font-bold text-green-400">{stats.active}</p>
             </div>
-            <User className="h-6 w-6 text-[var(--color-primary)] opacity-30" />
+            <UserCheck className="h-6 w-6 text-green-400 opacity-30" />
           </div>
         </div>
       </div>
@@ -465,7 +474,7 @@ export default function BranchUserManagement() {
                 const roleConfig = getRoleColor(branchUser.role)
 
                 return (
-                  <tr key={branchUser._id} className="hover:bg-[#333333]/50 transition-colors">
+                  <tr key={branchUser._id} className={`hover:bg-[#333333]/50 transition-colors ${branchUser.is_active === false ? 'opacity-60' : ''}`}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
@@ -476,6 +485,11 @@ export default function BranchUserManagement() {
                         <div className="ml-4">
                           <div className="text-sm font-medium text-white flex items-center gap-1.5">
                             {branchUser.username}
+                            {branchUser.is_active === false && (
+                              <span className="text-[10px] px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded font-medium">
+                                Inactive
+                              </span>
+                            )}
                             {branchUser.clerk_user_id ? (
                               <CheckCircle className="h-3.5 w-3.5 text-green-400" title="Clerk synced" />
                             ) : (
@@ -550,10 +564,10 @@ export default function BranchUserManagement() {
                         {(user?.role === 'branch_admin' || user?.role === 'super_admin') && (
                           <button
                             onClick={() => handleDelete(branchUser)}
-                            className="text-red-400 hover:text-red-300 transition-colors"
-                            title="Delete user"
+                            className={`${branchUser.is_active === false ? 'text-green-400 hover:text-green-300' : 'text-red-400 hover:text-red-300'} transition-colors`}
+                            title={branchUser.is_active === false ? 'Reactivate user' : 'Deactivate user'}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            {branchUser.is_active === false ? <UserCheck className="h-4 w-4" /> : <UserX className="h-4 w-4" />}
                           </button>
                         )}
                       </div>
@@ -622,15 +636,15 @@ export default function BranchUserManagement() {
         isEditMode={true}
       />
 
-      {/* Delete User Modal */}
-      <DeleteUserModal
+      {/* Toggle Status Modal (Deactivate/Reactivate) */}
+      <ToggleStatusModal
         isOpen={showDeleteModal}
         onClose={() => {
           setShowDeleteModal(false)
           setSelectedUser(null)
           setError('')
         }}
-        onConfirm={handleConfirmDelete}
+        onConfirm={handleConfirmToggleStatus}
         user={selectedUser}
         loading={loading}
         error={error}
