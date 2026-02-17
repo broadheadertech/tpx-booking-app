@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { User, Star, Clock, Calendar, DollarSign, Search, Filter, UserCheck, UserX, Phone, Mail, Scissors, Plus, Edit, Trash2, RotateCcw, Eye, BookOpen, X, Save, Camera, Upload, HelpCircle, Scan } from 'lucide-react'
+import { User, Star, Clock, Calendar, DollarSign, Search, Filter, UserCheck, UserX, Phone, Mail, Scissors, Plus, Edit, RotateCcw, Eye, BookOpen, X, Save, Camera, Upload, HelpCircle, Scan } from 'lucide-react'
 import { useQuery, useMutation } from 'convex/react'
 import { api } from '../../../convex/_generated/api'
 import CreateBarberModal from './CreateBarberModal'
@@ -76,7 +76,6 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
   // Convex mutations
   const createBarber = useMutation(api.services.barbers.createBarber)
   const updateBarber = useMutation(api.services.barbers.updateBarber)
-  const deleteBarber = useMutation(api.services.barbers.deleteBarber)
   const generateUploadUrl = useMutation(api.services.barbers.generateUploadUrl)
 
   // Image upload function using Convex storage
@@ -213,14 +212,15 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
     onRefresh()
   }
 
-  const handleDelete = async (barber) => {
+  const handleToggleStatus = async (barber) => {
+    const newStatus = barber.is_active !== false ? false : true
     setLoading(true)
     try {
-      await deleteBarber({ id: barber._id })
+      await updateBarber({ id: barber._id, is_active: newStatus })
       setShowDeleteConfirm(null)
       onRefresh()
     } catch (err) {
-      setError(err.message || 'Failed to delete barber')
+      setError(err.message || 'Failed to update barber status')
     } finally {
       setLoading(false)
     }
@@ -240,42 +240,49 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
 
 
 
-  const DeleteConfirmModal = ({ barber, onClose, onConfirm }) => (
-    <div
-      className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-[99997] p-2 sm:p-4 transition-all duration-300 ease-in-out animate-in fade-in-0"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="bg-white rounded-xl max-w-md w-full p-4 sm:p-6 shadow-2xl transform transition-all duration-300 ease-out animate-in slide-in-from-bottom-4 fade-in-0 zoom-in-95 mx-auto">
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-            <Trash2 className="h-5 w-5 text-red-600" />
+  const ToggleStatusConfirmModal = ({ barber, onClose, onConfirm }) => {
+    const isActive = barber.is_active !== false
+    const action = isActive ? 'Deactivate' : 'Reactivate'
+
+    return (
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[99997] p-2 sm:p-4 transition-all duration-300 ease-in-out animate-in fade-in-0"
+        onClick={(e) => e.target === e.currentTarget && onClose()}
+      >
+        <div className="bg-[#1A1A1A] rounded-xl max-w-md w-full p-4 sm:p-6 shadow-2xl transform transition-all duration-300 ease-out animate-in slide-in-from-bottom-4 fade-in-0 zoom-in-95 mx-auto border border-[#2A2A2A]/50">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className={`flex-shrink-0 w-10 h-10 ${isActive ? 'bg-red-500/20' : 'bg-green-500/20'} rounded-full flex items-center justify-center`}>
+              {isActive ? <UserX className="h-5 w-5 text-red-400" /> : <UserCheck className="h-5 w-5 text-green-400" />}
+            </div>
+            <div>
+              <h3 className="text-lg font-medium text-white">{action} Barber</h3>
+              <p className="text-sm text-gray-400">
+                {isActive ? 'This barber will no longer be able to log in' : 'This barber will be able to log in again'}
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg font-medium text-gray-900">Delete Barber</h3>
-            <p className="text-sm text-gray-500">This action cannot be undone</p>
+          <p className="text-sm text-gray-300 mb-6">
+            Are you sure you want to {action.toLowerCase()} <strong className="text-white">{barber.full_name}</strong>?
+          </p>
+          <div className="flex flex-col-reverse sm:flex-row justify-end space-y-reverse space-y-3 sm:space-y-0 sm:space-x-3">
+            <button
+              onClick={onClose}
+              className="w-full sm:w-auto px-4 py-2 border border-gray-500 text-gray-300 rounded-lg hover:bg-gray-500/20 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={loading}
+              className={`w-full sm:w-auto px-4 py-2 ${isActive ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'} text-white rounded-lg disabled:opacity-50 transition-colors`}
+            >
+              {loading ? (isActive ? 'Deactivating...' : 'Reactivating...') : action}
+            </button>
           </div>
-        </div>
-        <p className="text-sm text-gray-600 mb-6">
-          Are you sure you want to delete <strong>{barber.full_name}</strong>? This will permanently remove the barber from the system.
-        </p>
-        <div className="flex flex-col-reverse sm:flex-row justify-end space-y-reverse space-y-3 sm:space-y-0 sm:space-x-3">
-          <button
-            onClick={onClose}
-            className="w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            className="w-full sm:w-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
-          >
-            {loading ? 'Deleting...' : 'Delete'}
-          </button>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -430,7 +437,7 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
                 }
 
                 return (
-                  <tr key={barber._id} className="hover:bg-[#333333]/50">
+                  <tr key={barber._id} className={`hover:bg-[#333333]/50 ${barber.is_active === false ? 'opacity-60' : ''}`}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="relative flex-shrink-0 h-10 w-10">
@@ -515,10 +522,10 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
                         {(user?.role === 'branch_admin' || user?.role === 'super_admin') && (
                           <button
                             onClick={() => setShowDeleteConfirm(barber)}
-                            className="text-red-400 hover:text-red-300 p-1 rounded"
-                            title="Delete"
+                            className={`${barber.is_active === false ? 'text-green-400 hover:text-green-300' : 'text-red-400 hover:text-red-300'} p-1 rounded`}
+                            title={barber.is_active === false ? 'Reactivate' : 'Deactivate'}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            {barber.is_active === false ? <UserCheck className="h-4 w-4" /> : <UserX className="h-4 w-4" />}
                           </button>
                         )}
                       </div>
@@ -559,12 +566,12 @@ const BarbersManagement = ({ barbers = [], onRefresh, user }) => {
         />
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Toggle Status Confirmation Modal */}
       {showDeleteConfirm && (
-        <DeleteConfirmModal
+        <ToggleStatusConfirmModal
           barber={showDeleteConfirm}
           onClose={() => setShowDeleteConfirm(null)}
-          onConfirm={() => handleDelete(showDeleteConfirm)}
+          onConfirm={() => handleToggleStatus(showDeleteConfirm)}
         />
       )}
 

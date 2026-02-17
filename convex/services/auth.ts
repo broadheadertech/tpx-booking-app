@@ -26,7 +26,7 @@ export const registerUser = mutation({
     address: v.optional(v.string()),
     nickname: v.optional(v.string()),
     birthday: v.optional(v.string()),
-    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("super_admin"), v.literal("branch_admin")),
+    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("super_admin"), v.literal("branch_admin"), v.literal("it_admin")),
     branch_id: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
@@ -447,7 +447,7 @@ export const createUser = mutation({
     password: v.string(),
     mobile_number: v.optional(v.string()),
     address: v.optional(v.string()),
-    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("super_admin"), v.literal("branch_admin")),
+    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("super_admin"), v.literal("branch_admin"), v.literal("it_admin")),
     branch_id: v.optional(v.id("branches")),
     page_access: v.optional(v.array(v.string())),
   },
@@ -528,7 +528,7 @@ export const createUserWithClerk = action({
     password: v.string(),
     mobile_number: v.optional(v.string()),
     address: v.optional(v.string()),
-    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("super_admin"), v.literal("branch_admin")),
+    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("super_admin"), v.literal("branch_admin"), v.literal("it_admin")),
     branch_id: v.optional(v.id("branches")),
     page_access: v.optional(v.array(v.string())),
   },
@@ -994,7 +994,7 @@ export const updateUser = mutation({
     password: v.optional(v.string()),
     mobile_number: v.optional(v.string()),
     address: v.optional(v.string()),
-    role: v.optional(v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("super_admin"), v.literal("branch_admin"))),
+    role: v.optional(v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("super_admin"), v.literal("branch_admin"), v.literal("it_admin"))),
     branch_id: v.optional(v.id("branches")),
     page_access: v.optional(v.array(v.string())),
     is_active: v.optional(v.boolean()),
@@ -1805,7 +1805,7 @@ export const markTutorialComplete = mutation({
 // Get users by role within a branch
 export const getUsersByRoleAndBranch = query({
   args: {
-    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("branch_admin")),
+    role: v.union(v.literal("staff"), v.literal("customer"), v.literal("admin"), v.literal("barber"), v.literal("branch_admin"), v.literal("it_admin")),
     branch_id: v.optional(v.id("branches"))
   },
   handler: async (ctx, args) => {
